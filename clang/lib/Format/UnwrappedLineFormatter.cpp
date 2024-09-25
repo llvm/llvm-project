@@ -368,7 +368,8 @@ private:
     if (TheLine->Last->is(tok::l_brace)) {
       if (Style.AllowShortNamespacesOnASingleLine &&
           TheLine->First->is(tok::kw_namespace)) {
-        if (unsigned result = tryMergeNamespace(I, E, Limit))
+        unsigned result = tryMergeNamespace(I, E, Limit);
+        if (result > 0)
           return result;
       }
     }
@@ -643,26 +644,27 @@ private:
     if (!nextTwoLinesFitInto(I, Limit))
       return 0;
 
-    // Check if it's a namespace inside a namespace, and call recursively if so
+    // Check if it's a namespace inside a namespace, and call recursively if so.
     // '3' is the sizes of the whitespace and closing brace for " _inner_ }".
     if (I[1]->First->is(tok::kw_namespace)) {
-      if (I[1]->Last->is(TT_LineComment))
+      if (I[1]->Last->is(tok::comment))
         return 0;
 
       const unsigned InnerLimit = Limit - I[1]->Last->TotalLength - 3;
       const unsigned MergedLines = tryMergeNamespace(I + 1, E, InnerLimit);
       if (!MergedLines)
         return 0;
+      const auto N = MergedLines + 2;
       // Check if there is even a line after the inner result.
-      if (std::distance(I, E) <= MergedLines + 2)
+      if (std::distance(I, E) <= N)
         return 0;
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
-      if (I[2 + MergedLines]->First->is(tok::r_brace) &&
-          !I[2 + MergedLines]->First->MustBreakBefore &&
-          !I[1 + MergedLines]->Last->is(TT_LineComment) &&
-          nextNLinesFitInto(I, I + 2 + MergedLines + 1, Limit)) {
-        return 2 + MergedLines;
+      if (I[N]->First->is(tok::r_brace) &&
+          !I[N]->First->MustBreakBefore &&
+          !I[MergedLines + 1]->Last->is(tok::comment) &&
+          nextNLinesFitInto(I, I + N + 1, Limit)) {
+        return N;
       }
       return 0;
     }

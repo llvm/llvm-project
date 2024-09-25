@@ -988,8 +988,7 @@ struct FormatStyle {
   /// \version 3.7
   bool AllowShortLoopsOnASingleLine;
 
-  /// If ``true``, ``namespace a { class b; }`` can be put on a single a single
-  /// line.
+  /// If ``true``, ``namespace a { class b; }`` can be put on a single line.
   /// \version 20
   bool AllowShortNamespacesOnASingleLine;
 

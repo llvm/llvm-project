@@ -28407,7 +28407,7 @@ TEST_F(FormatTest, ShortNamespacesOption) {
 
   // If we can't merge an outer nested namespaces, but can merge an inner
   // nested namespace, then CompactNamespaces will merge the outer namespace
-  // first, preventing the merging of the inner namespace
+  // first, preventing the merging of the inner namespace.
   verifyFormat("namespace foo { namespace baz {\n"
                "class qux;\n"
                "} // comment\n"
