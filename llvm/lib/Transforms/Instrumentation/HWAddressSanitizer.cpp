@@ -395,15 +395,40 @@ private:
   ///
   /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
   /// ring buffer for storing stack allocations on targets that support it.
-  struct ShadowMapping {
+  class ShadowMapping {
     uint8_t Scale;
     uint64_t Offset;
     bool InGlobal;
     bool InTls;
     bool WithFrameRecord;
 
+  public:
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     Align getObjectAlignment() const { return Align(1ULL << Scale); }
+    bool isInGlobal() const {
+      return !InGlobal && !InTls && Offset == kDynamicShadowSentinel;
+    }
+    bool isInIfunc() const {
+      assert(!InGlobal || !InTls);
+      assert(!InGlobal || Offset == kDynamicShadowSentinel);
+      return InGlobal;
+    }
+    bool isInTls() const {
+      assert(!InTls || !InGlobal);
+      assert(!InTls || Offset == kDynamicShadowSentinel);
+      return InTls;
+    }
+    bool isFixed() const {
+      assert(Offset == kDynamicShadowSentinel || !InTls);
+      assert(Offset == kDynamicShadowSentinel || !InGlobal);
+      return Offset != kDynamicShadowSentinel;
+    }
+    uint8_t scale() const { return Scale; };
+    uint64_t offset() const {
+      assert(isFixed());
+      return Offset;
+    };
+    bool withFrameRecord() const { return WithFrameRecord; };
   };
 
   ShadowMapping Mapping;
@@ -803,13 +828,13 @@ Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getShadowNonTls(IRBuilder<> &IRB) {
-  if (Mapping.Offset != kDynamicShadowSentinel) {
+  if (Mapping.isFixed()) {
     return getOpaqueNoopCast(
         IRB, ConstantExpr::getIntToPtr(
-                 ConstantInt::get(IntptrTy, Mapping.Offset), PtrTy));
+                 ConstantInt::get(IntptrTy, Mapping.offset()), PtrTy));
   }
 
-  if (Mapping.InGlobal)
+  if (Mapping.isInIfunc())
     return getDynamicShadowIfunc(IRB);
 
   Value *GlobalDynamicAddress =
@@ -941,8 +966,8 @@ void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
 
 Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
   // Mem >> Scale
-  Value *Shadow = IRB.CreateLShr(Mem, Mapping.Scale);
-  if (Mapping.Offset == 0)
+  Value *Shadow = IRB.CreateLShr(Mem, Mapping.scale());
+  if (Mapping.isFixed() && Mapping.offset() == 0)
     return IRB.CreateIntToPtr(Shadow, PtrTy);
   // (Mem >> Scale) + Offset
   return IRB.CreatePtrAdd(ShadowBase, Shadow);
@@ -1008,10 +1033,10 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   // representable.
   // In particular, an offset of 4TB (1024 << 32) is representable, and
   // ought to be good enough for anybody.
-  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
-    uint16_t OffsetShifted = Mapping.Offset >> 32;
+  if (TargetTriple.isAArch64() && Mapping.isFixed()) {
+    uint16_t OffsetShifted = Mapping.offset() >> 32;
     UseFixedShadowIntrinsic =
-        static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.Offset;
+        static_cast<uint64_t>(OffsetShifted) << 32 == Mapping.offset();
   }
 
   if (UseFixedShadowIntrinsic) {
@@ -1021,7 +1046,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
                    ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
                    : Intrinsic::hwasan_check_memaccess_fixedshadow),
         {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
-         ConstantInt::get(Int64Ty, Mapping.Offset)});
+         ConstantInt::get(Int64Ty, Mapping.offset())});
   } else {
     IRB.CreateCall(Intrinsic::getDeclaration(
                        M, UseShortGranules
@@ -1194,7 +1219,7 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                    {IRB.CreatePointerCast(AI, PtrTy), Tag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
-    size_t ShadowSize = Size >> Mapping.Scale;
+    size_t ShadowSize = Size >> Mapping.scale();
     Value *AddrLong = untagPointer(IRB, IRB.CreatePointerCast(AI, IntptrTy));
     Value *ShadowPtr = memToShadow(AddrLong, IRB);
     // If this memset is not inlined, it will be intercepted in the hwasan
@@ -1352,7 +1377,7 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
-  if (!Mapping.InTls)
+  if (!Mapping.isInTls())
     ShadowBase = getShadowNonTls(IRB);
   else if (!WithFrameRecord && TargetTriple.isAndroid())
     ShadowBase = getDynamicShadowIfunc(IRB);
@@ -1677,7 +1702,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
   IRBuilder<> EntryIRB(&F.getEntryBlock(), InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory != none &&
-                   Mapping.WithFrameRecord &&
+                   Mapping.withFrameRecord() &&
                    !SInfo.AllocasToInstrument.empty());
 
   if (!SInfo.AllocasToInstrument.empty()) {
