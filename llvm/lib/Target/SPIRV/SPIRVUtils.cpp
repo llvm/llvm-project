@@ -259,9 +259,12 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
   // We don't need aliases for Invocation and CrossDevice, as we already have
   // them covered by "singlethread" and "" strings respectively (see
   // implementation of LLVMContext::LLVMContext()).
-  llvm::SyncScope::ID SubGroup = Ctx.getOrInsertSyncScopeID("subgroup");
-  llvm::SyncScope::ID WorkGroup = Ctx.getOrInsertSyncScopeID("workgroup");
-  llvm::SyncScope::ID Device = Ctx.getOrInsertSyncScopeID("device");
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
