@@ -105,7 +105,7 @@ private:
   yaml::bolt::BinaryProfile YamlBP;
 
   /// Map a function ID from a YAML profile to a BinaryFunction object.
-  std::vector<BinaryFunction *> YamlProfileToFunction;
+  DenseMap<uint32_t, BinaryFunction *> YamlProfileToFunction;
 
   using FunctionSet = std::unordered_set<const BinaryFunction *>;
   /// To keep track of functions that have a matched profile before the profile
@@ -162,8 +162,6 @@ private:
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,
                               BinaryFunction &BF) {
-    if (YamlBF.Id >= YamlProfileToFunction.size())
-      YamlProfileToFunction.resize(YamlBF.Id + 1);
     YamlProfileToFunction[YamlBF.Id] = &BF;
     YamlBF.Used = true;
 
