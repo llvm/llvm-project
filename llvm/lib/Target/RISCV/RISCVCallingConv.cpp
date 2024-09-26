@@ -129,7 +129,7 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
   static const MCPhysReg ArgIGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15,
                                        RISCV::X16, RISCV::X17};
-  // The GPRs used for passing arguments in the ILP32E/ILP64E ABI.
+  // The GPRs used for passing arguments in the ILP32E/LP64E ABI.
   static const MCPhysReg ArgEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                        RISCV::X13, RISCV::X14, RISCV::X15};
 
@@ -147,7 +147,7 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
       RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15,
       RISCV::X16, RISCV::X17, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31};
 
-  // The GPRs used for passing arguments in the FastCC when using ILP32E/ILP64E.
+  // The GPRs used for passing arguments in the FastCC when using ILP32E/LP64E.
   static const MCPhysReg FastCCEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
                                           RISCV::X13, RISCV::X14, RISCV::X15};
 

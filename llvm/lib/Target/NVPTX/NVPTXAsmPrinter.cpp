@@ -573,9 +573,30 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
   const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
-  if (STI->getSmVersion() >= 90)
+
+  if (STI->getSmVersion() >= 90) {
+    std::optional<unsigned> ClusterX = getClusterDimx(F);
+    std::optional<unsigned> ClusterY = getClusterDimy(F);
+    std::optional<unsigned> ClusterZ = getClusterDimz(F);
+
+    if (ClusterX || ClusterY || ClusterZ) {
+      O << ".explicitcluster\n";
+      if (ClusterX.value_or(1) != 0) {
+        assert(ClusterY.value_or(1) && ClusterZ.value_or(1) &&
+               "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
+               "should be non-zero as well");
+
+        O << ".reqnctapercluster " << ClusterX.value_or(1) << ", "
+          << ClusterY.value_or(1) << ", " << ClusterZ.value_or(1) << "\n";
+      } else {
+        assert(!ClusterY.value_or(1) && !ClusterZ.value_or(1) &&
+               "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
+               "should be 0 as well");
+      }
+    }
     if (const auto Maxclusterrank = getMaxClusterRank(F))
       O << ".maxclusterrank " << *Maxclusterrank << "\n";
+  }
 }
 
 std::string NVPTXAsmPrinter::getVirtualRegisterName(unsigned Reg) const {
