@@ -4453,7 +4453,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
     return std::nullopt;
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
   int NumParts = TTI->getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= NumScalars)
+  if (NumParts == 0 || NumParts >= NumScalars ||
+      VecTy->getNumElements() % NumParts != 0)
     NumParts = 1;
   SmallVector<int> ExtractMask;
   SmallVector<int> Mask;
@@ -5372,8 +5373,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
             UndefCnt > Sz / 2)
           return std::nullopt;
         UsedVals.set(Val);
-        for (unsigned K = 0; K < NumParts; ++K)
-          ResOrder[Val + Sz * K] = I + K;
+        for (unsigned K = 0; K < NumParts; ++K) {
+          unsigned Idx = Val + Sz * K;
+          if (Idx < VF)
+            ResOrder[Idx] = I + K;
+        }
       }
       return std::move(ResOrder);
     }
@@ -6457,7 +6461,8 @@ static void gatherPossiblyVectorizableLoads(
   if (NumScalars > 1) {
     auto *VecTy = getWidenedType(ScalarTy, NumScalars);
     NumParts = TTI.getNumberOfParts(VecTy);
-    if (NumParts == 0 || NumParts >= NumScalars)
+    if (NumParts == 0 || NumParts >= NumScalars ||
+        VecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
   }
   unsigned VF = PowerOf2Ceil(NumScalars / NumParts);
@@ -7559,7 +7564,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   auto TryToFindDuplicates = [&](const InstructionsState &S,
                                  bool DoNotFail = false) {
     // Check that every instruction appears once in this bundle.
-    DenseMap<Value *, unsigned> UniquePositions(VL.size());
+    SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
     for (Value *V : VL) {
       if (isConstant(V)) {
         ReuseShuffleIndices.emplace_back(
@@ -9955,7 +9960,8 @@ public:
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    if (NumParts == 0 || NumParts >= Mask.size())
+    if (NumParts == 0 || NumParts >= Mask.size() ||
+        MaskVecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -9972,7 +9978,8 @@ public:
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    if (NumParts == 0 || NumParts >= Mask.size())
+    if (NumParts == 0 || NumParts >= Mask.size() ||
+        MaskVecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -10669,8 +10676,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
-          CostKind, {TTI::OK_AnyValue, TTI::OP_None},
-          {TTI::OK_AnyValue, TTI::OP_None}, VI);
+          CostKind, getOperandInfo(VI->getOperand(0)),
+          getOperandInfo(VI->getOperand(1)), VI);
       InstructionCost IntrinsicCost = GetMinMaxCost(OrigScalarTy, VI);
       if (IntrinsicCost.isValid())
         ScalarCost = IntrinsicCost;
@@ -10682,8 +10689,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       InstructionCost VecCost =
           TTI->getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy, VecPred,
-                                  CostKind, {TTI::OK_AnyValue, TTI::OP_None},
-                                  {TTI::OK_AnyValue, TTI::OP_None}, VL0);
+                                  CostKind, getOperandInfo(E->getOperand(0)),
+                                  getOperandInfo(E->getOperand(1)), VL0);
       if (auto *SI = dyn_cast<SelectInst>(VL0)) {
         auto *CondType =
             getWidenedType(SI->getCondition()->getType(), VL.size());
@@ -13623,7 +13630,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   Type *OrigScalarTy = GatheredScalars.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
   unsigned NumParts = TTI->getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= GatheredScalars.size())
+  if (NumParts == 0 || NumParts >= GatheredScalars.size() ||
+      VecTy->getNumElements() % NumParts != 0)
     NumParts = 1;
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
@@ -18545,7 +18553,8 @@ public:
       for (Value *V : Candidates)
         TrackedVals.try_emplace(V, V);
 
-    auto At = [](MapVector<Value *, unsigned> &MV, Value *V) -> unsigned & {
+    auto At = [](SmallMapVector<Value *, unsigned, 16> &MV,
+                 Value *V) -> unsigned & {
       auto *It = MV.find(V);
       assert(It != MV.end() && "Unable to find given key.");
       return It->second;
@@ -18632,7 +18641,7 @@ public:
                                     RdxKind != RecurKind::FMul &&
                                     RdxKind != RecurKind::FMulAdd;
       // Gather same values.
-      MapVector<Value *, unsigned> SameValuesCounter;
+      SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
         for (Value *V : Candidates) {
           Value *OrigV = TrackedToOrig.at(V);
@@ -19251,10 +19260,10 @@ private:
 
   /// Emits actual operation for the scalar identity values, found during
   /// horizontal reduction analysis.
-  Value *emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
-                       BoUpSLP &R,
-                       const MapVector<Value *, unsigned> &SameValuesCounter,
-                       const DenseMap<Value *, Value *> &TrackedToOrig) {
+  Value *
+  emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
+                const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
+                const DenseMap<Value *, Value *> &TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");

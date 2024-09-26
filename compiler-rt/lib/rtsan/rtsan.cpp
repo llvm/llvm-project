@@ -13,10 +13,12 @@
 #include "rtsan/rtsan_diagnostics.h"
 #include "rtsan/rtsan_flags.h"
 #include "rtsan/rtsan_interceptors.h"
+#include "rtsan/rtsan_stats.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
 using namespace __rtsan;
@@ -46,7 +48,33 @@ static InitializationState GetInitializationState() {
 
 static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
-    __rtsan::PrintDiagnostics(info);
+    IncrementTotalErrorCount();
+
+    BufferedStackTrace stack;
+
+    // We use the unwind_on_fatal flag here because of precedent with other
+    // sanitizers, this action is not necessarily fatal if halt_on_error=false
+    stack.Unwind(info.pc, info.bp, nullptr,
+                 common_flags()->fast_unwind_on_fatal);
+
+    // If in the future we interop with other sanitizers, we will
+    // need to make our own stackdepot
+    StackDepotHandle handle = StackDepotPut_WithHandle(stack);
+
+    const bool is_stack_novel = handle.use_count() == 0;
+
+    // Marked UNLIKELY as if user is runing with halt_on_error=false
+    // we expect a high number of duplicate stacks. We are willing
+    // To pay for the first insertion.
+    if (UNLIKELY(is_stack_novel)) {
+      IncrementUniqueErrorCount();
+
+      PrintDiagnostics(info);
+      stack.Print();
+
+      handle.inc_use_count_unsafe();
+    }
+
     if (flags().halt_on_error)
       Die();
   };
@@ -61,6 +89,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
   InitializeInterceptors();
+
+  if (flags().print_stats_on_exit)
+    Atexit(PrintStatisticsSummary);
 
   SetInitializationState(InitializationState::Initialized);
 }
