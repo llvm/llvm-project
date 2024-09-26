@@ -1391,18 +1391,18 @@ bool GCNTTIImpl::shouldPrefetchAddressSpace(unsigned AS) const {
   return AMDGPU::isFlatGlobalAddrSpace(AS);
 }
 
-void GCNTTIImpl::forEachLaunchBound(
+void GCNTTIImpl::collectLaunchBounds(
     const Function &F,
-    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   auto AmdgpuMaxNumWorkgroups = ST->getMaxNumWorkGroups(F);
-  Body("AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]);
-  Body("AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]);
-  Body("AmdgpuMaxNumWorkgroupsZ", AmdgpuMaxNumWorkgroups[2]);
+  LB.push_back({"AmdgpuMaxNumWorkgroupsX", AmdgpuMaxNumWorkgroups[0]});
+  LB.push_back({"AmdgpuMaxNumWorkgroupsY", AmdgpuMaxNumWorkgroups[1]});
+  LB.push_back({"AmdgpuMaxNumWorkgroupsZ", AmdgpuMaxNumWorkgroups[2]});
   auto AmdgpuFlatWorkGroupSize = ST->getFlatWorkGroupSizes(F);
-  Body("AmdgpuFlatWorkGroupSizeMin", AmdgpuFlatWorkGroupSize.first);
-  Body("AmdgpuFlatWorkGroupSizeMax", AmdgpuFlatWorkGroupSize.second);
+  LB.push_back({"AmdgpuFlatWorkGroupSizeMin", AmdgpuFlatWorkGroupSize.first});
+  LB.push_back({"AmdgpuFlatWorkGroupSizeMax", AmdgpuFlatWorkGroupSize.second});
   auto AmdgpuWavesPerEU = ST->getWavesPerEU(F);
-  Body("AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first);
-  Body("AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second);
+  LB.push_back({"AmdgpuWavesPerEUMin", AmdgpuWavesPerEU.first});
+  LB.push_back({"AmdgpuWavesPerEUMax", AmdgpuWavesPerEU.second});
   // TODO: Any others we should add?
 }

@@ -40,11 +40,8 @@ public:
   /// Whether the function has external linkage and is not a kernel function.
   bool ExternalNotKernel = false;
 
-  /// OpenMP Launch bounds.
-  ///@{
-  std::optional<int64_t> OmpTargetNumTeams;
-  std::optional<int64_t> OmpTargetThreadLimit;
-  ///@}
+  /// Launch bounds.
+  SmallVector<std::pair<StringRef, int64_t>> LaunchBounds;
 
   /// The number of alloca instructions inside the function, the number of those
   /// with allocation sizes that cannot be determined at compile time, and the
@@ -276,13 +273,6 @@ static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
   });
 }
 
-static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
-                           StringRef Name, std::optional<int64_t> Value) {
-  if (!Value)
-    return;
-  remarkProperty(ORE, F, Name, Value.value());
-}
-
 static std::optional<int64_t> parseFnAttrAsInteger(Function &F,
                                                    StringRef Name) {
   if (!F.hasFnAttribute(Name))
@@ -298,8 +288,11 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 
   // Record function properties.
   KI.ExternalNotKernel = F.hasExternalLinkage() && !isKernelFunction(F);
-  KI.OmpTargetNumTeams = parseFnAttrAsInteger(F, "omp_target_num_teams");
-  KI.OmpTargetThreadLimit = parseFnAttrAsInteger(F, "omp_target_thread_limit");
+  if (auto Val = parseFnAttrAsInteger(F, "omp_target_num_teams"))
+    KI.LaunchBounds.push_back({"OmpTargetNumTeams", *Val});
+  if (auto Val = parseFnAttrAsInteger(F, "omp_target_thread_limit"))
+    KI.LaunchBounds.push_back({"OmpTargetThreadLimit", *Val});
+  TheTTI.collectLaunchBounds(F, KI.LaunchBounds);
 
   const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -310,11 +303,8 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)
   REMARK_PROPERTY(ExternalNotKernel);
-  REMARK_PROPERTY(OmpTargetNumTeams);
-  REMARK_PROPERTY(OmpTargetThreadLimit);
-  TheTTI.forEachLaunchBound(F, [&](StringRef Name, unsigned Value) {
-    remarkProperty(ORE, F, Name, Value);
-  });
+  for (auto LB : KI.LaunchBounds)
+    remarkProperty(ORE, F, LB.first, LB.second);
   REMARK_PROPERTY(Allocas);
   REMARK_PROPERTY(AllocasStaticSizeSum);
   REMARK_PROPERTY(AllocasDyn);

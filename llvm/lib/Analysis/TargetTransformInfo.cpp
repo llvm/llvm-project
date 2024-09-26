@@ -1354,10 +1354,10 @@ bool TargetTransformInfo::hasActiveVectorLength(unsigned Opcode, Type *DataType,
   return TTIImpl->hasActiveVectorLength(Opcode, DataType, Alignment);
 }
 
-void TargetTransformInfo::forEachLaunchBound(
+void TargetTransformInfo::collectLaunchBounds(
     const Function &F,
-    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
-  return TTIImpl->forEachLaunchBound(F, Body);
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
+  return TTIImpl->collectLaunchBounds(F, LB);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

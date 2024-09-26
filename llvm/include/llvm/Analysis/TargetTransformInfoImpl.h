@@ -979,9 +979,9 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
-  void forEachLaunchBound(
+  void collectLaunchBounds(
       const Function &F,
-      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {}
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

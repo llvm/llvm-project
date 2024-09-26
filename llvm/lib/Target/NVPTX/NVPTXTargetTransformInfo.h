@@ -123,9 +123,9 @@ public:
       return true;
     }
   }
-  void forEachLaunchBound(
-      const Function &F,
-      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const;
+  void
+  collectLaunchBounds(const Function &F,
+                      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 };
 
 } // end namespace llvm

@@ -443,16 +443,16 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-void NVPTXTTIImpl::forEachLaunchBound(
+void NVPTXTTIImpl::collectLaunchBounds(
     const Function &F,
-    llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const {
+    SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {
   if (auto Val = getMaxClusterRank(F))
-    Body("Maxclusterrank", *Val);
+    LB.push_back({"Maxclusterrank", *Val});
   if (auto Val = getMaxNTIDx(F))
-    Body("Maxntidx", *Val);
+    LB.push_back({"Maxntidx", *Val});
   if (auto Val = getMaxNTIDy(F))
-    Body("Maxntidy", *Val);
+    LB.push_back({"Maxntidy", *Val});
   if (auto Val = getMaxNTIDz(F))
-    Body("Maxntidz", *Val);
+    LB.push_back({"Maxntidz", *Val});
   // TODO: Any others we should add?
 }

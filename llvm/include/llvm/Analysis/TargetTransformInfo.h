@@ -1794,10 +1794,10 @@ public:
 
   /// @}
 
-  /// For \p F, call \p Body with the name and value of each launch bound.
-  void forEachLaunchBound(
-      const Function &F,
-      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const;
+  /// Collect launch bounds for \p F into \p LB.
+  void
+  collectLaunchBounds(const Function &F,
+                      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 
 private:
   /// The abstract base class used to type erase specific TTI
@@ -2191,9 +2191,9 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
-  virtual void forEachLaunchBound(
+  virtual void collectLaunchBounds(
       const Function &F,
-      llvm::function_ref<void(StringRef Name, int64_t Value)> Body) const = 0;
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
 };
 
 template <typename T>
@@ -2973,11 +2973,10 @@ public:
     return Impl.getMaxNumArgs();
   }
 
-  void
-  forEachLaunchBound(const Function &F,
-                     llvm::function_ref<void(StringRef Name, int64_t Value)>
-                         Body) const override {
-    return Impl.forEachLaunchBound(F, Body);
+  void collectLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
+    Impl.collectLaunchBounds(F, LB);
   }
 };
 
