@@ -158,6 +158,21 @@ namespace VirtualBases {
     /// Calls the constructor of D.
     D d;
   }
+
+#if __cplusplus >= 202302L
+  struct VBase {};
+  struct HasVBase : virtual VBase {}; // all23-note 1{{virtual base class declared here}}
+  struct Derived : HasVBase {
+    constexpr Derived() {} // all23-error {{constexpr constructor not allowed in struct with virtual base class}}
+  };
+  template<typename T> struct DerivedFromVBase : T {
+    constexpr DerivedFromVBase();
+  };
+  constexpr int f(DerivedFromVBase<HasVBase>) {}
+  template<typename T> constexpr DerivedFromVBase<T>::DerivedFromVBase() : T() {}
+  constexpr int nVBase = (DerivedFromVBase<HasVBase>(), 0); // all23-error {{constant expression}} \
+                                                            // all23-note {{cannot construct object of type 'DerivedFromVBase<VirtualBases::HasVBase>' with virtual base class in a constant expression}}
+#endif
 }
 
 namespace LabelGoto {
