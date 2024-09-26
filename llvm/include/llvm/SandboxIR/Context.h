@@ -18,6 +18,7 @@ namespace llvm::sandboxir {
 class Module;
 class Value;
 class Argument;
+class Constant;
 
 class Context {
 protected:
@@ -69,9 +70,8 @@ protected:
     return getOrCreateValueInternal(LLVMV, 0);
   }
   /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
-  Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
-    return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
-  }
+  Constant *getOrCreateConstant(llvm::Constant *LLVMC);
+
   // Friends for getOrCreateConstant().
 #define DEF_CONST(ID, CLASS) friend class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
@@ -158,9 +158,7 @@ protected:
   friend FCmpInst; // For createFCmpInst()
 
 public:
-  Context(LLVMContext &LLVMCtx)
-      : LLVMCtx(LLVMCtx), IRTracker(*this),
-        LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
+  Context(LLVMContext &LLVMCtx);
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
