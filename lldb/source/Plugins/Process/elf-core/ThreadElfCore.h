@@ -153,7 +153,6 @@ struct ThreadData {
   lldb::tid_t tid;
   int signo = 0;
   int code = 0;
-  void *sigaddr = nullptr;
   int prstatus_sig = 0;
   std::string description;
   std::string name;
