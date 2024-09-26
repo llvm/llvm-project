@@ -75,8 +75,11 @@ static auto OnViolationAction(DiagnosticsInfo info) {
       handle.inc_use_count_unsafe();
     }
 
-    if (flags().halt_on_error)
+    if (flags().halt_on_error) {
+      if (flags().print_stats_on_exit)
+        PrintStatisticsSummary();
       Die();
+    }
   };
 }
 
