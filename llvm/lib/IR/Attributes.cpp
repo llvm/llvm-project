@@ -958,11 +958,10 @@ AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
 
 std::optional<AttributeSet>
 AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
-	//  return std::nullopt;
   if (*this == Other)
     return *this;
-  AttrBuilder Intersected(C);
 
+  AttrBuilder Intersected(C);
   // Iterate over both attr sets at once.
   auto ItBegin0 = begin();
   auto ItEnd0 = end();
