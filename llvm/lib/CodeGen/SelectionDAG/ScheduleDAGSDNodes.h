@@ -184,8 +184,7 @@ class InstrItineraryData;
     void BuildSchedUnits();
     void AddSchedEdges();
 
-    void EmitPhysRegCopy(SUnit *SU,
-                         SmallDenseMap<SUnit *, Register, 16> &VRBaseMap,
+    void EmitPhysRegCopy(SUnit *SU, DenseMap<SUnit*, Register> &VRBaseMap,
                          MachineBasicBlock::iterator InsertPos);
   };
 
