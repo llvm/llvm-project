@@ -1177,12 +1177,15 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   SmallVector<OpFoldResult> readOffsets(srcRank, zeroIdxAttr);
   SmallVector<OpFoldResult> readStrides(srcRank, oneIdxAttr);
   SmallVector<OpFoldResult> readSizes;
-  SmallVector<int64_t> readShape;
+  SmallVector<OpFoldResult> transShapeForEmpty;
+  SmallVector<int64_t> readShapeForExtractSlice;
   for (auto i : llvm::seq<unsigned>(0, srcRank)) {
     if (dimAndTileMapping.count(i)) {
-      readShape.push_back(getConstantIntValue(dimAndTileMapping[i])
-                              .value_or(ShapedType::kDynamic));
+      readShapeForExtractSlice.push_back(
+          getConstantIntValue(dimAndTileMapping[i])
+              .value_or(ShapedType::kDynamic));
       readSizes.push_back(dimAndTileMapping[i]);
+      transShapeForEmpty.push_back(dimAndTileMapping[i]);
       continue;
     }
     if (ShapedType::isDynamic(inputShape[i])) {
@@ -1191,12 +1194,14 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
     } else {
       readSizes.push_back(rewriter.getIndexAttr(inputShape[i]));
     }
-    if (inputShape[i] != 1)
-      readShape.push_back(inputShape[i]);
+    if (inputShape[i] != 1) {
+      readShapeForExtractSlice.push_back(inputShape[i]);
+      transShapeForEmpty.push_back(rewriter.getIndexAttr(inputShape[i]));
+    }
   }
 
   Type elemType = packOp.getSourceType().getElementType();
-  auto readType = RankedTensorType::get(readShape, elemType);
+  auto readType = RankedTensorType::get(readShapeForExtractSlice, elemType);
 
   Value tile = rewriter.create<tensor::ExtractSliceOp>(
       loc, readType, input, readOffsets, readSizes, readStrides);
@@ -1208,8 +1213,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   LLVM_DEBUG(DBGS() << "Pack permutation: " << packOp << "\n";
              llvm::interleaveComma(perm, DBGS() << "perm: "); DBGSNL(););
 
-  SmallVector<int64_t> transpShape = readShape;
-  applyPermutationToVector<int64_t>(transpShape, perm);
+  applyPermutationToVector<OpFoldResult>(transShapeForEmpty, perm);
 
   // If there's a tile with a dynamic size, retrieve its size. ATM only 1
   // dynamic tile is allowed.
@@ -1222,10 +1226,7 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
 
   Value empty =
-      ShapedType::isDynamicShape(cast<ShapedType>(input.getType()).getShape())
-          ? rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType,
-                                             dynDimSize)
-          : rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType);
+      rewriter.create<tensor::EmptyOp>(loc, transShapeForEmpty, elemType);
   auto transposedOp =
       rewriter.create<linalg::TransposeOp>(loc, tile, empty, perm);
 
