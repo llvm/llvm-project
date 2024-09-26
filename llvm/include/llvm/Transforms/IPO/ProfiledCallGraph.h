@@ -50,10 +50,9 @@ struct ProfiledCallGraphNode {
   using edges = std::set<edge, ProfiledCallGraphEdgeComparer>;
   using iterator = edges::iterator;
   using const_iterator = edges::const_iterator;
-  
-  ProfiledCallGraphNode(FunctionId FName = FunctionId()) : Name(FName)
-  {}
-  
+
+  ProfiledCallGraphNode(FunctionId FName = FunctionId()) : Name(FName) {}
+
   FunctionId Name;
   edges Edges;
 };
@@ -62,23 +61,20 @@ class PrehashedFunctionId {
 public:
   PrehashedFunctionId() = default;
 
-  PrehashedFunctionId(FunctionId FId)
-      : Id(FId), Hash(hash_value(Id)) {}
+  PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
 
-  uint64_t GetHash() const {
-    return Hash;
-  }
+  uint64_t GetHash() const { return Hash; }
 
-  const FunctionId& GetId() const {
-    return Id;
-  }
+  const FunctionId &GetId() const { return Id; }
 
 private:
   FunctionId Id;
   uint64_t Hash;
 };
 
-inline uint64_t hash_value(const PrehashedFunctionId &Obj) { return Obj.GetHash(); }
+inline uint64_t hash_value(const PrehashedFunctionId &Obj) {
+  return Obj.GetHash();
+}
 
 class ProfiledCallGraph {
 public:
@@ -155,13 +151,13 @@ public:
   iterator begin() { return Root.Edges.begin(); }
   iterator end() { return Root.Edges.end(); }
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
-  
+
   void addProfiledFunction(FunctionId Name) {
     addProfiledFunction(PrehashedFunctionId{Name});
   }
 
 private:
-  void addProfiledFunction(const PrehashedFunctionId& Name) {
+  void addProfiledFunction(const PrehashedFunctionId &Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
@@ -173,14 +169,15 @@ private:
     }
   }
 
-  void addProfiledCall(const PrehashedFunctionId& CallerName,
-                       const PrehashedFunctionId& CalleeName, uint64_t Weight = 0) {
+  void addProfiledCall(const PrehashedFunctionId &CallerName,
+                       const PrehashedFunctionId &CalleeName,
+                       uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
-    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
-                               CalleeIt->second, Weight);
+    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName], CalleeIt->second,
+                               Weight);
     auto &Edges = Edge.Source->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
     if (!Inserted) {
