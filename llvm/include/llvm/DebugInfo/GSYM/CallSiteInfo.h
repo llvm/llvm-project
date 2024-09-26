@@ -34,7 +34,6 @@ namespace gsym {
 class FileWriter;
 struct FunctionInfo;
 struct CallSiteInfo {
-public:
   enum Flags : uint8_t {
     None = 0,
     // This flag specifies that the call site can only call a function within
@@ -52,7 +51,7 @@ public:
   std::vector<uint32_t> MatchRegex;
 
   /// Bitwise OR of CallSiteInfo::Flags values
-  uint8_t Flags;
+  uint8_t Flags = CallSiteInfo::Flags::None;
 
   /// Decode a CallSiteInfo object from a binary data stream.
   ///
@@ -73,15 +72,7 @@ public:
 };
 
 struct CallSiteInfoCollection {
-public:
   std::vector<CallSiteInfo> CallSites;
-
-  void clear() { CallSites.clear(); }
-
-  /// Query if a CallSiteInfoCollection object is valid.
-  ///
-  /// \returns True if the collection is not empty.
-  bool isValid() const { return !CallSites.empty(); }
 
   /// Decode a CallSiteInfoCollection object from a binary data stream.
   ///
@@ -156,54 +147,27 @@ private:
   /// \returns A 32-bit unsigned integer representing the offset of the string.
   uint32_t offsetFromString(StringRef str);
 
-  /// Reads the content of the YAML file specified by `YAMLFile` into
-  /// `yamlContent`.
-  ///
-  /// \param YAMLFile A StringRef representing the path to the YAML file.
-  /// \param Buffer The memory buffer containing the YAML content.
-  ///
-  /// \returns An `llvm::Error` indicating success or describing any issues
-  /// encountered while reading the file.
-  llvm::Error readYAMLFile(StringRef YAMLFile,
-                           std::unique_ptr<llvm::MemoryBuffer> &Buffer);
-
-  /// Parses the YAML content and populates `functionsYAML` with the parsed
-  /// data.
-  ///
-  /// \param Buffer The memory buffer containing the YAML content.
-  /// \param functionsYAML A reference to an llvm::yaml::FunctionsYAML object to
-  /// be populated.
-  ///
-  /// \returns An `llvm::Error` indicating success or describing any issues
-  /// encountered during parsing.
-  llvm::Error parseYAML(llvm::MemoryBuffer &Buffer,
-                        llvm::yaml::FunctionsYAML &functionsYAML);
-
   /// Builds a map from function names to FunctionInfo pointers based on the
   /// provided `Funcs` vector.
   ///
   /// \param Funcs A reference to a vector of FunctionInfo objects.
   ///
-  /// \returns An unordered_map mapping function names (std::string) to their
+  /// \returns A StringMap mapping function names (StringRef) to their
   /// corresponding FunctionInfo pointers.
-  std::unordered_map<std::string, FunctionInfo *>
-  buildFunctionMap(std::vector<FunctionInfo> &Funcs);
+  StringMap<FunctionInfo *> buildFunctionMap(std::vector<FunctionInfo> &Funcs);
 
   /// Processes the parsed YAML functions and updates the `FuncMap` accordingly.
   ///
   /// \param functionsYAML A constant reference to an llvm::yaml::FunctionsYAML
   /// object containing parsed YAML data.
-  /// \param FuncMap A reference to an unordered_map mapping function names to
+  /// \param FuncMap A reference to a StringMap mapping function names to
   /// FunctionInfo pointers.
-  /// \param YAMLFile A StringRef representing the name of the YAML file (used
-  /// for error messages).
   ///
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during processing.
   llvm::Error
   processYAMLFunctions(const llvm::yaml::FunctionsYAML &functionsYAML,
-                       std::unordered_map<std::string, FunctionInfo *> &FuncMap,
-                       StringRef YAMLFile);
+                       StringMap<FunctionInfo *> &FuncMap);
 
   /// Map of existing string offsets to CachedHashStringRef.
   DenseMap<uint64_t, CachedHashStringRef> &StringOffsetMap;

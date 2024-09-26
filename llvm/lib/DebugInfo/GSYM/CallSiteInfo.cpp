@@ -162,49 +162,32 @@ uint32_t CallSiteInfoLoader::offsetFromString(StringRef str) {
 
 llvm::Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
                                          StringRef YAMLFile) {
-  std::unique_ptr<llvm::MemoryBuffer> Buffer;
   // Step 1: Read YAML file
-  if (auto Err = readYAMLFile(YAMLFile, Buffer))
-    return Err;
+  auto BufferOrError = llvm::MemoryBuffer::getFile(YAMLFile);
+  if (!BufferOrError)
+    return errorCodeToError(BufferOrError.getError());
+
+  std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*BufferOrError);
 
   // Step 2: Parse YAML content
   llvm::yaml::FunctionsYAML functionsYAML;
-  if (auto Err = parseYAML(*Buffer, functionsYAML))
-    return Err;
+  llvm::yaml::Input yin(Buffer->getMemBufferRef());
+  yin >> functionsYAML;
+  if (yin.error()) {
+    return llvm::createStringError(yin.error(), "Error parsing YAML file: %s\n",
+                                   Buffer->getBufferIdentifier().str().c_str());
+  }
 
   // Step 3: Build function map from Funcs
   auto FuncMap = buildFunctionMap(Funcs);
 
   // Step 4: Process parsed YAML functions and update FuncMap
-  return processYAMLFunctions(functionsYAML, FuncMap, YAMLFile);
+  return processYAMLFunctions(functionsYAML, FuncMap);
 }
 
-llvm::Error
-CallSiteInfoLoader::readYAMLFile(StringRef YAMLFile,
-                                 std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
-  auto BufferOrError = llvm::MemoryBuffer::getFile(YAMLFile);
-  if (!BufferOrError)
-    return errorCodeToError(BufferOrError.getError());
-  Buffer = std::move(*BufferOrError);
-  return llvm::Error::success();
-}
-
-llvm::Error
-CallSiteInfoLoader::parseYAML(llvm::MemoryBuffer &Buffer,
-                              llvm::yaml::FunctionsYAML &functionsYAML) {
-  // Use the MemoryBufferRef constructor
-  llvm::yaml::Input yin(Buffer.getMemBufferRef());
-  yin >> functionsYAML;
-  if (yin.error()) {
-    return llvm::createStringError(yin.error(), "Error parsing YAML file: %s\n",
-                                   Buffer.getBufferIdentifier().str().c_str());
-  }
-  return llvm::Error::success();
-}
-
-std::unordered_map<std::string, FunctionInfo *>
+StringMap<FunctionInfo *>
 CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
-  std::unordered_map<std::string, FunctionInfo *> FuncMap;
+  StringMap<FunctionInfo *> FuncMap;
   auto insertFunc = [&](auto &Function) {
     std::string FuncName = stringFromOffset(Function.Name).str();
     // If the function name is already in the map, don't update it. This way we
@@ -227,8 +210,7 @@ CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
 
 llvm::Error CallSiteInfoLoader::processYAMLFunctions(
     const llvm::yaml::FunctionsYAML &functionsYAML,
-    std::unordered_map<std::string, FunctionInfo *> &FuncMap,
-    StringRef YAMLFile) {
+    StringMap<FunctionInfo *> &FuncMap) {
   // For each function in the YAML file
   for (const auto &FuncYAML : functionsYAML.functions) {
     auto it = FuncMap.find(FuncYAML.name);
@@ -247,9 +229,9 @@ llvm::Error CallSiteInfoLoader::processYAMLFunctions(
       // Since YAML has specifies relative return offsets, add the function
       // start address to make the offset absolute.
       CSI.ReturnAddress = FuncInfo->Range.start() + CallSiteYAML.return_offset;
-      for (const auto &regex : CallSiteYAML.match_regex) {
-        CSI.MatchRegex.push_back(offsetFromString(regex));
-      }
+      for (const auto &Regex : CallSiteYAML.match_regex)
+        CSI.MatchRegex.push_back(offsetFromString(Regex));
+
       // Initialize flags to None
       CSI.Flags = CallSiteInfo::None;
       // Parse flags and combine them
