@@ -37,6 +37,9 @@ for header in public_headers:
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 {lit_header_restrictions.get(header, '')}
 
 #include <{header}>
@@ -61,6 +64,9 @@ print(
 
 // TODO: Investigate this failure
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+
+// TODO: Investigate why this doesn't work on Picolibc once the locale base API is refactored
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
 
 @import std;
 
