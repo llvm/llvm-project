@@ -48,6 +48,9 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
   if (!RV.isConstant() || RV.isZeroConstant())
     return;
 
+  if (C.getSourceManager().isInSystemMacro(B->getRHS()->getBeginLoc()))
+    return;
+
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     // FIXME: improve grammar in the following strings:
     constexpr llvm::StringLiteral Msg =

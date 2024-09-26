@@ -169,6 +169,9 @@ private:
   bool selectFloatDot(Register ResVReg, const SPIRVType *ResType,
                       MachineInstr &I) const;
 
+  bool selectOverflowArith(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I, unsigned Opcode) const;
+
   bool selectIntegerDot(Register ResVReg, const SPIRVType *ResType,
                         MachineInstr &I) const;
 
@@ -386,11 +389,22 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   return false;
 }
 
+static bool mayApplyGenericSelection(unsigned Opcode) {
+  switch (Opcode) {
+  case TargetOpcode::G_CONSTANT:
+    return false;
+  case TargetOpcode::G_SADDO:
+  case TargetOpcode::G_SSUBO:
+    return true;
+  }
+  return isTypeFoldingSupported(Opcode);
+}
+
 bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I) const {
   const unsigned Opcode = I.getOpcode();
-  if (isTypeFoldingSupported(Opcode) && Opcode != TargetOpcode::G_CONSTANT)
+  if (mayApplyGenericSelection(Opcode))
     return selectImpl(I, *CoverageInfo);
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
@@ -566,6 +580,21 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::s_sub_sat);
   case TargetOpcode::G_USUBSAT:
     return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
+
+  case TargetOpcode::G_UADDO:
+    return selectOverflowArith(ResVReg, ResType, I,
+                               ResType->getOpcode() == SPIRV::OpTypeVector
+                                   ? SPIRV::OpIAddCarryV
+                                   : SPIRV::OpIAddCarryS);
+  case TargetOpcode::G_USUBO:
+    return selectOverflowArith(ResVReg, ResType, I,
+                               ResType->getOpcode() == SPIRV::OpTypeVector
+                                   ? SPIRV::OpISubBorrowV
+                                   : SPIRV::OpISubBorrowS);
+  case TargetOpcode::G_UMULO:
+    return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpUMulExtended);
+  case TargetOpcode::G_SMULO:
+    return selectOverflowArith(ResVReg, ResType, I, SPIRV::OpSMulExtended);
 
   case TargetOpcode::G_SEXT:
     return selectExt(ResVReg, ResType, I, true);
@@ -1054,6 +1083,71 @@ bool SPIRVInstructionSelector::selectFence(MachineInstr &I) const {
       .addUse(ScopeReg)
       .addUse(MemSemReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   unsigned Opcode) const {
+  Type *ResTy = nullptr;
+  StringRef ResName;
+  if (!GR.findValueAttrs(&I, ResTy, ResName))
+    report_fatal_error(
+        "Not enough info to select the arithmetic with overflow instruction");
+  if (!ResTy || !ResTy->isStructTy())
+    report_fatal_error("Expect struct type result for the arithmetic "
+                       "with overflow instruction");
+  // "Result Type must be from OpTypeStruct. The struct must have two members,
+  // and the two members must be the same type."
+  Type *ResElemTy = cast<StructType>(ResTy)->getElementType(0);
+  ResTy = StructType::create(SmallVector<Type *, 2>{ResElemTy, ResElemTy});
+  // Build SPIR-V types and constant(s) if needed.
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVType *StructType = GR.getOrCreateSPIRVType(
+      ResTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  assert(I.getNumDefs() > 1 && "Not enought operands");
+  SPIRVType *BoolType = GR.getOrCreateSPIRVBoolType(I, TII);
+  unsigned N = GR.getScalarOrVectorComponentCount(ResType);
+  if (N > 1)
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, N, I, TII);
+  Register BoolTypeReg = GR.getSPIRVTypeID(BoolType);
+  Register ZeroReg = buildZerosVal(ResType, I);
+  // A new virtual register to store the result struct.
+  Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
+  // Build the result name if needed.
+  if (ResName.size() > 0)
+    buildOpName(StructVReg, ResName, MIRBuilder);
+  // Build the arithmetic with overflow instruction.
+  MachineBasicBlock &BB = *I.getParent();
+  auto MIB =
+      BuildMI(BB, MIRBuilder.getInsertPt(), I.getDebugLoc(), TII.get(Opcode))
+          .addDef(StructVReg)
+          .addUse(GR.getSPIRVTypeID(StructType));
+  for (unsigned i = I.getNumDefs(); i < I.getNumOperands(); ++i)
+    MIB.addUse(I.getOperand(i).getReg());
+  bool Status = MIB.constrainAllUses(TII, TRI, RBI);
+  // Build instructions to extract fields of the instruction's result.
+  // A new virtual register to store the higher part of the result struct.
+  Register HigherVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  MRI->setRegClass(HigherVReg, &SPIRV::iIDRegClass);
+  for (unsigned i = 0; i < I.getNumDefs(); ++i) {
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
+            .addDef(i == 1 ? HigherVReg : I.getOperand(i).getReg())
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(StructVReg)
+            .addImm(i);
+    Status &= MIB.constrainAllUses(TII, TRI, RBI);
+  }
+  // Build boolean value from the higher part.
+  Status &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpINotEqual))
+                .addDef(I.getOperand(1).getReg())
+                .addUse(BoolTypeReg)
+                .addUse(HigherVReg)
+                .addUse(ZeroReg)
+                .constrainAllUses(TII, TRI, RBI);
+  return Status;
 }
 
 bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
@@ -2460,6 +2554,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_step:
     return selectStep(ResVReg, ResType, I);
+  case Intrinsic::spv_value_md:
+    // ignore the intrinsic
+    break;
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
