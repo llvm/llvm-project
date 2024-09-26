@@ -8424,6 +8424,8 @@ void ASTReader::InitializeSema(Sema &S) {
       SemaObj->addDeclWithEffects(FD, FD->getFunctionEffects());
     else if (auto *BD = dyn_cast<BlockDecl>(D))
       SemaObj->addDeclWithEffects(BD, BD->getFunctionEffects());
+    else
+      llvm_unreachable("unexpected Decl type in DeclsWithEffectsToVerify");
   }
   DeclsWithEffectsToVerify.clear();
 

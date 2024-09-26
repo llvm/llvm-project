@@ -4715,13 +4715,13 @@ class FunctionEffect {
 public:
   /// Identifies the particular effect.
   enum class Kind : uint8_t {
-    NonBlocking = 0,
-    NonAllocating = 1,
-    Blocking = 2,
-    Allocating = 3,
-
+    NonBlocking,
+    NonAllocating,
+    Blocking,
+    Allocating,
+    Last = Allocating
   };
-  constexpr static size_t KindCount = 4;
+  constexpr static size_t KindCount = static_cast<size_t>(Kind::Last) + 1;
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;

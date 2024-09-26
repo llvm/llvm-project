@@ -26,7 +26,8 @@ namespace {
 
 enum class ViolationID : uint8_t {
   None = 0, // Sentinel for an empty Violation.
-  // These first few map to a %select{} in a diagnostic.
+  // These first 5 map to a %select{} in one of several FunctionEffects
+  // diagnostic, e.g. warn_func_effect_violation.
   BaseDiagnosticIndex,
   AllocatesMemory = BaseDiagnosticIndex,
   ThrowsOrCatchesExceptions,
@@ -50,9 +51,9 @@ enum class ViolationID : uint8_t {
 class ViolationSite {
 public:
   enum class Kind : uint8_t {
-    Default = 0, // Function body.
-    MemberInitializer = 1,
-    DefaultArgExpr = 2
+    Default, // Function body.
+    MemberInitializer,
+    DefaultArgExpr
   };
 
 private:
