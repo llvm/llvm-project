@@ -119,13 +119,6 @@ test0:
     #i32.trunc_sat_f32_s
     global.get  __stack_pointer
     global.set  __stack_pointer
-    # FIXME Currently block parameter and return types are not handled
-    # correctly, causing some types to remain on the stack. This test will be
-    # fixed to be valid with the follow-up PR. Until then, to suppress the
-    # return type error, we add some drops here.
-    drop
-    drop
-    drop
     end_function
 
     .section    .rodata..L.str,"",@
@@ -262,9 +255,6 @@ empty_exnref_table:
 # CHECK-NEXT:  .LBB0_4:
 # CHECK-NEXT:      global.get  __stack_pointer
 # CHECK-NEXT:      global.set  __stack_pointer
-# CHECK-NEXT:      drop
-# CHECK-NEXT:      drop
-# CHECK-NEXT:      drop
 # CHECK-NEXT:      end_function
 
 # CHECK:           .section    .rodata..L.str,"",@

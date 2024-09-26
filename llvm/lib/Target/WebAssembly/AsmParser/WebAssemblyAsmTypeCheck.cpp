@@ -60,7 +60,7 @@ void WebAssemblyAsmTypeCheck::localDecl(
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
-  LLVM_DEBUG({ dbgs() << Msg << getTypesString(Stack, 0); });
+  LLVM_DEBUG({ dbgs() << Msg << getTypesString(Stack, 0) << "\n"; });
 }
 
 bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
@@ -304,7 +304,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
 }
 
 bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc, bool ExactMatch) {
-  bool Error = checkTypes(ErrorLoc, ReturnTypes, ExactMatch);
+  bool Error = checkAndPopTypes(ErrorLoc, ReturnTypes, ExactMatch);
   Unreachable = true;
   return Error;
 }
