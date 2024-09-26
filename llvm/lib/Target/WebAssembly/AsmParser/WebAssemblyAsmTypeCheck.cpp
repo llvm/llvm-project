@@ -272,7 +272,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck:getSignature(SMLoc ErrorLoc,
+bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
                                            const MCOperand &SigOp,
                                            wasm::WasmSymbolType Type,
                                            const wasm::WasmSignature *&Sig) {
