@@ -50,15 +50,11 @@ class TargetRegisterInfo;
     class MergePotentialsElt {
       unsigned Hash;
       MachineBasicBlock *Block;
-      // We use MDNode rather than DebugLoc here because under certain CMake
-      // options*, DebugLoc may contain a SmallVector used for introspection
-      // purposes, which causes errors when stored here.
-      // *LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN
-      MDNode *BranchDebugLoc;
+      DebugLoc BranchDebugLoc;
 
     public:
-      MergePotentialsElt(unsigned h, MachineBasicBlock *b, MDNode *bdl)
-          : Hash(h), Block(b), BranchDebugLoc(bdl) {}
+      MergePotentialsElt(unsigned h, MachineBasicBlock *b, DebugLoc bdl)
+          : Hash(h), Block(b), BranchDebugLoc(std::move(bdl)) {}
 
       unsigned getHash() const { return Hash; }
       MachineBasicBlock *getBlock() const { return Block; }
@@ -67,7 +63,7 @@ class TargetRegisterInfo;
         Block = MBB;
       }
 
-      const DebugLoc getBranchDebugLoc() { return DebugLoc(BranchDebugLoc); }
+      const DebugLoc &getBranchDebugLoc() { return BranchDebugLoc; }
 
       bool operator<(const MergePotentialsElt &) const;
     };

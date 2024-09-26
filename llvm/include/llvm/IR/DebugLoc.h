@@ -74,8 +74,8 @@ namespace llvm {
   // allowing Debugify to ignore intentionally-empty DebugLocs and display the
   // code responsible for generating unintentionally-empty DebugLocs.
   // Currently we only need to track the Origin of this DILoc when using a
-  // DebugLoc that is Normal and empty, so only collect the origin stacktrace in
-  // those cases.
+  // DebugLoc that is not annotated (i.e. has DebugLocKind::Normal) and has a
+  // null DILocation, so only collect the origin stacktrace in those cases.
   class DILocAndCoverageTracking : public TrackingMDNodeRef,
                                    public DbgLocOrigin {
   public:

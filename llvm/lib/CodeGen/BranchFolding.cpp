@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -933,12 +934,18 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
+#if ENABLE_DEBUGLOC_ORIGIN_TRACKING
+  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
+  // type, so we need std::sort instead.
+  std::sort(MergePotentials.begin(), MergePotentials.end());
+#else
   array_pod_sort(MergePotentials.begin(), MergePotentials.end());
+#endif
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
     unsigned CurHash = MergePotentials.back().getHash();
-    const DebugLoc BranchDL = MergePotentials.back().getBranchDebugLoc();
+    const DebugLoc &BranchDL = MergePotentials.back().getBranchDebugLoc();
 
     // Build SameTails, identifying the set of blocks with this hash code
     // and with the maximum number of instructions in common.
