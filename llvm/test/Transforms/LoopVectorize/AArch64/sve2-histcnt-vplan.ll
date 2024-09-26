@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -mattr=+sve2 -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -force-vector-interleave=1 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -85,7 +85,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 
-define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %N) {
 entry:
   br label %for.body
 
@@ -100,13 +100,8 @@ for.body:
   store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %N
-  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !0
+  br i1 %exitcond, label %for.exit, label %for.body
 
 for.exit:
   ret void
 }
-
-attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.interleave.count", i32 1}

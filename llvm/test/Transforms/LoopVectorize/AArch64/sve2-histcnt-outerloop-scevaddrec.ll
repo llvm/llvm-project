@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -mattr=+sve2 -passes=loop-vectorize,instcombine -enable-histogram-loop-vectorization -sve-gather-overhead=2 -sve-scatter-overhead=2 -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "aarch64-unknown-linux-gnu"
@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: LV: Can't vectorize due to memory conflicts
 ; CHECK-NEXT: LV: Not vectorizing: Cannot prove legality.
 
-define void @outer_loop_scevaddrec(ptr noalias %buckets, ptr readonly %indices, i64 %N, i64 %M) #0 {
+define void @outer_loop_scevaddrec(ptr noalias %buckets, ptr readonly %indices, i64 %N, i64 %M) {
 entry:
   br label %outer.header
 
@@ -38,5 +38,3 @@ outer.latch:
 outer.exit:
   ret void
 }
-
-attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
