@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Process/POSIX/CrashReason.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -43,7 +42,6 @@
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
 
-#include "bits/types/siginfo_t.h"
 #include <memory>
 
 using namespace lldb;
@@ -564,32 +562,30 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   if (data.GetAddressByteSize() == 8)
     offset += 4;
   switch (si_signo) {
-    case SIGFPE:
-    case SIGILL:
-    case SIGSEGV:
-    case SIGBUS:
-    case SIGTRAP:
-      addr = (void*)data.GetAddress(&offset);
-      addr_lsb = data.GetU16(&offset);
-      return error;
-    default:
-      return error;
+  case SIGFPE:
+  case SIGILL:
+  case SIGSEGV:
+  case SIGBUS:
+  case SIGTRAP:
+    addr = (void *)data.GetAddress(&offset);
+    addr_lsb = data.GetU16(&offset);
+    return error;
+  default:
+    return error;
   }
 }
 
 std::string ELFLinuxSigInfo::GetDescription() {
   switch (si_signo) {
-    case SIGFPE:
-    case SIGILL:
-    case SIGSEGV:
-    case SIGBUS:
-    case SIGTRAP:
-      return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
-        si_signo, si_code,
-        reinterpret_cast<uintptr_t>(addr));
-    default:
-      return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
-        si_signo, si_code
-      );
+  case SIGFPE:
+  case SIGILL:
+  case SIGSEGV:
+  case SIGBUS:
+  case SIGTRAP:
+    return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+        si_signo, si_code, reinterpret_cast<uintptr_t>(addr));
+  default:
+    return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+        si_signo, si_code);
   }
 }

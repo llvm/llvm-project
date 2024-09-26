@@ -75,16 +75,16 @@ struct ELFLinuxPrStatus {
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
-union ELFSigval { 
-  int sival_int; 
-  void *sival_ptr; 
+union ELFSigval {
+  int sival_int;
+  void *sival_ptr;
 };
 
 struct ELFLinuxSigInfo {
   int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
   int32_t si_code;
-  void *addr;         /* faulting insn/memory ref. */
+  void *addr;       /* faulting insn/memory ref. */
   int32_t addr_lsb; /* Valid LSB of the reported address.  */
 
   ELFLinuxSigInfo();
@@ -153,7 +153,7 @@ struct ThreadData {
   lldb::tid_t tid;
   int signo = 0;
   int code = 0;
-  void* sigaddr = nullptr;
+  void *sigaddr = nullptr;
   int prstatus_sig = 0;
   std::string description;
   std::string name;
