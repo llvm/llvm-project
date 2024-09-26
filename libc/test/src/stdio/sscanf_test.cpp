@@ -8,13 +8,10 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
-
 #include "src/stdio/sscanf.h"
-
-#include <stdio.h> // For EOF
-
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <hdr/stdio_macros.h> // For EOF
 
 TEST(LlvmLibcSScanfTest, SimpleStringConv) {
   int ret_val;

@@ -15,7 +15,6 @@
 #include "test/UnitTest/Test.h"
 
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
 
 TEST(LlvmLibcFgetsTest, WriteAndReadCharacters) {
   constexpr char FILENAME[] = "testdata/fgets.test";
