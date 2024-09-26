@@ -1185,6 +1185,16 @@ void PointerToAnyOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::ULEB128Value(SizeInBits) << MatchTable::LineBreak;
 }
 
+//===- IntPtrOperandMatcher -----------------------------------------===//
+
+void IntPtrOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
+                                                RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIM_CheckIntPtr") << MatchTable::Comment("MI")
+        << MatchTable::ULEB128Value(InsnVarID) << MatchTable::Comment("Op")
+        << MatchTable::ULEB128Value(OpIdx) << MatchTable::Comment("SizeInBits")
+        << MatchTable::ULEB128Value(SizeInBits) << MatchTable::LineBreak;
+}
+
 //===- RecordNamedOperandMatcher ------------------------------------------===//
 
 void RecordNamedOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
@@ -1391,8 +1401,11 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
   if (!VTy.isMachineValueType())
     return failUnsupported("unsupported typeset");
 
-  if (VTy.getMachineValueType() == MVT::iPTR && OperandIsAPointer) {
-    addPredicate<PointerToAnyOperandMatcher>(0);
+  if (VTy.getMachineValueType() == MVT::iPTR) {
+    if (OperandIsAPointer)
+      addPredicate<PointerToAnyOperandMatcher>(0);
+    else
+      addPredicate<IntPtrOperandMatcher>(0);
     return Error::success();
   }
 

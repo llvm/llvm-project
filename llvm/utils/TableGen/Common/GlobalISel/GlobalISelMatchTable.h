@@ -826,6 +826,7 @@ public:
     OPM_LiteralInt,
     OPM_LLT,
     OPM_PointerToAny,
+    OPM_IntPtr,
     OPM_RegBank,
     OPM_MBB,
     OPM_RecordNamedOperand,
@@ -997,6 +998,28 @@ public:
   bool isIdentical(const PredicateMatcher &B) const override {
     return OperandPredicateMatcher::isIdentical(B) &&
            SizeInBits == cast<PointerToAnyOperandMatcher>(&B)->SizeInBits;
+  }
+
+  void emitPredicateOpcodes(MatchTable &Table,
+                            RuleMatcher &Rule) const override;
+};
+
+class IntPtrOperandMatcher : public OperandPredicateMatcher {
+protected:
+  unsigned SizeInBits;
+
+public:
+  IntPtrOperandMatcher(unsigned InsnVarID, unsigned OpIdx, unsigned SizeInBits)
+      : OperandPredicateMatcher(OPM_IntPtr, InsnVarID, OpIdx),
+        SizeInBits(SizeInBits) {}
+
+  static bool classof(const PredicateMatcher *P) {
+    return P->getKind() == OPM_IntPtr;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return OperandPredicateMatcher::isIdentical(B) &&
+           SizeInBits == cast<IntPtrOperandMatcher>(&B)->SizeInBits;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
