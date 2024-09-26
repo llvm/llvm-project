@@ -2709,6 +2709,10 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   /// Generate the wide load or gather.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenLoadEVLRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2786,6 +2790,10 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 
   /// Generate the wide store or scatter.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenStoreEVLRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
