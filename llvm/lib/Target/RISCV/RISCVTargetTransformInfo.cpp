@@ -1184,8 +1184,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // vmv.v.i v8, 0
       // vmerge.vim v8, v8, -1, v0
       return DstLT.first *
-             getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                     DstLT.second, CostKind) +
+                 getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
+                                         DstLT.second, CostKind) +
              DstLT.first - 1;
     }
     break;
@@ -1197,8 +1197,8 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // vand.vi v8, v8, 1
       // vmsne.vi v0, v8, 0
       return SrcLT.first *
-             getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
-                                     SrcLT.second, CostKind) +
+                 getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                         SrcLT.second, CostKind) +
              SrcLT.first - 1;
     }
     break;
