@@ -1,8 +1,0 @@
---- !ELF
-FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  OSABI:           ELFOSABI_FREEBSD
-  Type:            ET_EXEC
-  Machine:         EM_X86_64
-  Entry:           0xFFFFFFFF8037C000
