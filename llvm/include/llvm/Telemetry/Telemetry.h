@@ -89,7 +89,7 @@ struct TelemetryInfo {
   std::string SessionId;
 
   TelemetryInfo() = default;
-  ~TelemetryInfo() = default;
+  virtual ~TelemetryInfo() = default;
 
   virtual json::Object serializeToJson() const;
 
@@ -127,7 +127,7 @@ public:
   // Invoked upon tool exit.
   virtual void atExit(llvm::StringRef ToolPath, TelemetryInfo *Entry) = 0;
 
-  virtual void addDestination(Destination *Destination) = 0;
+  virtual void addDestination(std::unique_ptr<Destination> Destination) = 0;
 };
 
 } // namespace telemetry

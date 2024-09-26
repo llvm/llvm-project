@@ -198,7 +198,7 @@ Logging the tool init-process:
 
 Similar code can be used for logging the tool's exit.
 
-Additionall, at any other point in the tool's lifetime, it can also log telemetry:
+Additionally, at any other point in the tool's lifetime, it can also log telemetry:
 
 .. code-block:: c++
 

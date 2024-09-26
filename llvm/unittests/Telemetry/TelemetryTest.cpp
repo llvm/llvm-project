@@ -49,9 +49,6 @@ struct TestContext {
   std::string ExpectedUuid = "";
 };
 
-// This is set by the test body.
-static thread_local TestContext *CurrentContext = nullptr;
-
 namespace llvm {
 namespace telemetry {
 namespace vendor_code {
@@ -118,14 +115,7 @@ struct StartupEvent : public VendorCommonTelemetryInfo {
   std::string MagicStartupMsg;
 
   StartupEvent() = default;
-  StartupEvent(const StartupEvent &E) {
-    SessionId = E.SessionId;
-    Stats = E.Stats;
-    ExitDesc = E.ExitDesc;
-    Counter = E.Counter;
-
-    MagicStartupMsg = E.MagicStartupMsg;
-  }
+  StartupEvent(const StartupEvent &E) = default;
 
   static bool classof(const TelemetryInfo *T) {
     if (T == nullptr)
@@ -154,14 +144,7 @@ struct ExitEvent : public VendorCommonTelemetryInfo {
   ExitEvent() = default;
   // Provide a copy ctor because we may need to make a copy
   // before sanitizing the Entry.
-  ExitEvent(const ExitEvent &E) {
-    SessionId = E.SessionId;
-    Stats = E.Stats;
-    ExitDesc = E.ExitDesc;
-    Counter = E.Counter;
-
-    MagicExitMsg = E.MagicExitMsg;
-  }
+  ExitEvent(const ExitEvent &E) = default;
 
   static bool classof(const TelemetryInfo *T) {
     if (T == nullptr)
@@ -195,14 +178,7 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
   std::vector<std::string> Msgs;
 
   CustomTelemetryEvent() = default;
-  CustomTelemetryEvent(const CustomTelemetryEvent &E) {
-    SessionId = E.SessionId;
-    Stats = E.Stats;
-    ExitDesc = E.ExitDesc;
-    Counter = E.Counter;
-
-    Msgs = E.Msgs;
-  }
+  CustomTelemetryEvent(const CustomTelemetryEvent &E) = default;
 
   void serializeToStream(llvm::raw_ostream &OS) const override {
     OS << "SessionId:" << SessionId << "\n";
@@ -290,7 +266,8 @@ private:
 // This Destination sends data to some "blackbox" in form of JSON.
 class JsonStreamDestination : public Destination {
 public:
-  JsonStreamDestination(bool ShouldSanitize) : ShouldSanitize(ShouldSanitize) {}
+  JsonStreamDestination(bool ShouldSanitize, TestContext *Ctxt)
+      : ShouldSanitize(ShouldSanitize), CurrentContext(Ctxt) {}
 
   Error emitEntry(const TelemetryInfo *Entry) override {
     if (auto *E = dyn_cast<VendorCommonTelemetryInfo>(Entry)) {
@@ -298,21 +275,17 @@ public:
         if (isa<StartupEvent>(E) || isa<ExitEvent>(E)) {
           // There is nothing to sanitize for this type of data, so keep as-is.
           return SendToBlackbox(E->serializeToJson());
-        } else if (isa<CustomTelemetryEvent>(E)) {
+        }
+        if (isa<CustomTelemetryEvent>(E)) {
           auto Sanitized = sanitizeFields(dyn_cast<CustomTelemetryEvent>(E));
           return SendToBlackbox(Sanitized.serializeToJson());
-        } else {
-          llvm_unreachable("unexpected type");
         }
-      } else {
-        return SendToBlackbox(E->serializeToJson());
+        llvm_unreachable("unexpected type");
       }
-    } else {
-      // Unfamiliar entries, just send the entry's ID
-      return SendToBlackbox(json::Object{{"SessionId", Entry->SessionId}});
+      return SendToBlackbox(E->serializeToJson());
     }
-    return make_error<StringError>("unhandled codepath in emitEntry",
-                                   inconvertibleErrorCode());
+    // Unfamiliar entries, just send the entry's ID
+    return SendToBlackbox(json::Object{{"SessionId", Entry->SessionId}});
   }
 
   llvm::StringLiteral name() const override { return JSON_DEST; }
@@ -339,6 +312,7 @@ private:
     return Error::success();
   }
   bool ShouldSanitize;
+  TestContext *CurrentContext;
 };
 
 // Custom vendor-defined Telemeter that has additional data-collection point.
@@ -346,7 +320,8 @@ class TestTelemeter : public Telemeter {
 public:
   TestTelemeter(std::string SessionId) : Uuid(SessionId), Counter(0) {}
 
-  static std::unique_ptr<TestTelemeter> createInstance(Config *config) {
+  static std::unique_ptr<TestTelemeter>
+  createInstance(Config *config, TestContext *CurrentContext) {
     if (!config->EnableTelemetry)
       return nullptr;
     CurrentContext->ExpectedUuid = nextUuid();
@@ -356,17 +331,20 @@ public:
     for (const std::string &Dest : config->AdditionalDestinations) {
       // The destination(s) are ALSO defined by vendor, so it should understand
       // what the name of each destination signifies.
-      if (Dest == JSON_DEST.str()) {
-        Telemeter->addDestination(new vendor_code::JsonStreamDestination(
-            CurrentContext->SanitizeData));
-      } else if (Dest == STRING_DEST.str()) {
-        Telemeter->addDestination(new vendor_code::StringDestination(
-            CurrentContext->SanitizeData, CurrentContext->Buffer));
+      if (llvm::StringRef(Dest) == JSON_DEST) {
+        Telemeter->addDestination(
+            std::make_unique<vendor_code::JsonStreamDestination>(
+                CurrentContext->SanitizeData, CurrentContext));
+      } else if (llvm::StringRef(Dest) == STRING_DEST) {
+        Telemeter->addDestination(
+            std::make_unique<vendor_code::StringDestination>(
+                CurrentContext->SanitizeData, CurrentContext->Buffer));
       } else {
         llvm_unreachable(
             llvm::Twine("unknown destination: ", Dest).str().c_str());
       }
     }
+    Telemeter->CurrentContext = CurrentContext;
     return Telemeter;
   }
 
@@ -397,8 +375,8 @@ public:
     emitToDestinations(Entry);
   }
 
-  void addDestination(Destination *Dest) override {
-    Destinations.push_back(Dest);
+  void addDestination(std::unique_ptr<Destination> Dest) override {
+    Destinations.push_back(std::move(Dest));
   }
 
   void atMidpoint(TelemetryInfo *Entry) {
@@ -414,10 +392,7 @@ public:
 
   const std::string &getUuid() const { return Uuid; }
 
-  ~TestTelemeter() {
-    for (auto *Dest : Destinations)
-      delete Dest;
-  }
+  ~TestTelemeter() = default;
 
   template <typename T> T makeDefaultTelemetryInfo() {
     T Ret;
@@ -426,9 +401,11 @@ public:
     return Ret;
   }
 
+  TestContext *CurrentContext = nullptr;
+
 private:
   void emitToDestinations(TelemetryInfo *Entry) {
-    for (Destination *Dest : Destinations) {
+    for (const auto &Dest : Destinations) {
       llvm::Error err = Dest->emitEntry(Entry);
       if (err) {
         // Log it and move on.
@@ -439,7 +416,7 @@ private:
   const std::string Uuid;
   size_t Counter;
   std::string ToolName;
-  std::vector<Destination *> Destinations;
+  std::vector<std::unique_ptr<Destination>> Destinations;
 };
 
 // Pretend to be a "weakly" defined vendor-specific function.
@@ -458,7 +435,8 @@ void ApplyCommonConfig(llvm::telemetry::Config *config) {
   // .....
 }
 
-std::shared_ptr<llvm::telemetry::Config> GetTelemetryConfig() {
+std::shared_ptr<llvm::telemetry::Config>
+GetTelemetryConfig(TestContext *CurrentContext) {
   // Telemetry is disabled by default.
   // The vendor can enable in their config.
   auto Config = std::make_shared<llvm::telemetry::Config>();
@@ -512,8 +490,8 @@ void AtToolExit(std::string ToolName, vendor_code::TestTelemeter *T) {
       T->makeDefaultTelemetryInfo<vendor_code::ExitEvent>();
   Entry.Stats = {ExitTime, ExitCompleteTime};
 
-  if (CurrentContext->HasExitError) {
-    Entry.ExitDesc = {1, CurrentContext->ExitMsg};
+  if (T->CurrentContext->HasExitError) {
+    Entry.ExitDesc = {1, T->CurrentContext->ExitMsg};
   }
   T->atExit(ToolName, &Entry);
 }
@@ -525,23 +503,17 @@ void AtToolMidPoint(vendor_code::TestTelemeter *T) {
   T->atMidpoint(&Entry);
 }
 
-// Helper function to print the given object content to string.
-static std::string ValueToString(const json::Value *V) {
-  std::string Ret;
-  llvm::raw_string_ostream P(Ret);
-  P << *V;
-  return Ret;
-}
-
 // Without vendor's implementation, telemetry is not enabled by default.
 TEST(TelemetryTest, TelemetryDefault) {
   // Preset some test params.
   TestContext Context;
   Context.HasVendorConfig = false;
-  CurrentContext = &Context;
+  TestContext *CurrentContext = &Context;
 
-  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
-  auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
+  std::shared_ptr<llvm::telemetry::Config> Config =
+      GetTelemetryConfig(CurrentContext);
+  auto Tool =
+      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
 
   EXPECT_EQ(nullptr, Tool.get());
 }
@@ -555,15 +527,17 @@ TEST(TelemetryTest, TelemetryEnabled) {
   Context.SanitizeData = false;
   Context.Buffer.clear();
   Context.EmittedJsons.clear();
-  CurrentContext = &Context;
+  TestContext *CurrentContext = &Context;
 
-  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
+  std::shared_ptr<llvm::telemetry::Config> Config =
+      GetTelemetryConfig(CurrentContext);
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST.str());
   Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
-  auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
+  auto Tool =
+      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
 
   AtToolStart(ToolName, Tool.get());
   AtToolMidPoint(Tool.get());
@@ -595,34 +569,32 @@ TEST(TelemetryTest, TelemetryEnabled) {
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(
+    llvm::Expected<json::Value> ExpectedStartup = json::parse(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
          "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
-            .str()
-            .c_str(),
-        ValueToString(StartupEntry).c_str());
+            .str());
+    ASSERT_TRUE((bool)ExpectedStartup);
+    EXPECT_EQ(ExpectedStartup.get(), *StartupEntry);
 
     const json::Value *MidpointEntry =
         CurrentContext->EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
-    // TODO: This is a bit flaky in that the json string printer sort the
-    // entries (for now), so the "UUID" field is put at the end of the array
-    // even though it was emitted first.
-    EXPECT_STREQ(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\","
-                  "\"SessionId\":\"" +
-                  llvm::Twine(CurrentContext->ExpectedUuid) + "\"}")
-                     .str()
-                     .c_str(),
-                 ValueToString(MidpointEntry).c_str());
+    llvm::Expected<json::Value> ExpectedMidpoint =
+        json::parse(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\","
+                     "\"SessionId\":\"" +
+                     llvm::Twine(CurrentContext->ExpectedUuid) + "\"}")
+                        .str());
+    ASSERT_TRUE((bool)ExpectedMidpoint);
+    EXPECT_EQ(ExpectedMidpoint.get(), *MidpointEntry);
 
     const json::Value *ExitEntry = CurrentContext->EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(
+    llvm::Expected<json::Value> ExpectedExit = json::parse(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
          "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
-            .str()
-            .c_str(),
-        ValueToString(ExitEntry).c_str());
+            .str());
+    ASSERT_TRUE((bool)ExpectedExit);
+    EXPECT_EQ(ExpectedExit.get(), *ExitEntry);
   }
 }
 
@@ -637,15 +609,17 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
   Context.SanitizeData = true;
   Context.Buffer.clear();
   Context.EmittedJsons.clear();
-  CurrentContext = &Context;
 
-  std::shared_ptr<llvm::telemetry::Config> Config = GetTelemetryConfig();
+  TestContext *CurrentContext = &Context;
+  std::shared_ptr<llvm::telemetry::Config> Config =
+      GetTelemetryConfig(CurrentContext);
 
   // Add some destinations
   Config->AdditionalDestinations.push_back(vendor_code::STRING_DEST.str());
   Config->AdditionalDestinations.push_back(vendor_code::JSON_DEST.str());
 
-  auto Tool = vendor_code::TestTelemeter::createInstance(Config.get());
+  auto Tool =
+      vendor_code::TestTelemeter::createInstance(Config.get(), CurrentContext);
 
   AtToolStart(ToolName, Tool.get());
   AtToolMidPoint(Tool.get());
@@ -675,32 +649,38 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    EXPECT_STREQ(
+    llvm::Expected<json::Value> ExpectedStartup = json::parse(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
          "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
             .str()
-            .c_str(),
-        ValueToString(StartupEntry).c_str());
+
+    );
+    ASSERT_TRUE((bool)ExpectedStartup);
+    EXPECT_EQ(ExpectedStartup.get(), *StartupEntry);
 
     const json::Value *MidpointEntry =
         CurrentContext->EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
-    EXPECT_STREQ(
+    llvm::Expected<json::Value> ExpectedMidpoint = json::parse(
         ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"SessionId\":\"" +
          llvm::Twine(CurrentContext->ExpectedUuid) + "\"}")
             .str()
-            .c_str(),
-        ValueToString(MidpointEntry).c_str());
+
+    );
+    ASSERT_TRUE((bool)ExpectedMidpoint);
+    EXPECT_EQ(ExpectedMidpoint.get(), *MidpointEntry);
 
     const json::Value *ExitEntry = CurrentContext->EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    EXPECT_STREQ(
+    llvm::Expected<json::Value> ExpectedExit = json::parse(
         ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
          "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
             .str()
-            .c_str(),
-        ValueToString(ExitEntry).c_str());
+
+    );
+    ASSERT_TRUE((bool)ExpectedExit);
+    EXPECT_EQ(ExpectedExit.get(), *ExitEntry);
   }
 }
 
