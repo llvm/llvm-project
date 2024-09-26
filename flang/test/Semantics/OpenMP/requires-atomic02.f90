@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=50 -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
 ! Ensure that requires atomic_default_mem_order is used to update atomic
 ! operations with no explicit memory order set. ACQ_REL clause tested here.
 program requires
