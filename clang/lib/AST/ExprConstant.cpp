@@ -54,8 +54,10 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SipHash.h"
@@ -2061,13 +2063,19 @@ static bool EvaluateIgnoredValue(EvalInfo &Info, const Expr *E) {
   return true;
 }
 
-/// Should this call expression be treated as a no-op?
-static bool IsNoOpCall(const CallExpr *E) {
+/// Should this call expression be treated as forming an opaque constant?
+static bool IsOpaqueConstantCall(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
           Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
           Builtin == Builtin::BI__builtin_function_start);
+}
+
+static bool IsOpaqueConstantCall(const LValue &LVal) {
+  const auto *BaseExpr =
+      llvm::dyn_cast_if_present<CallExpr>(LVal.Base.dyn_cast<const Expr *>());
+  return BaseExpr && IsOpaqueConstantCall(BaseExpr);
 }
 
 static bool IsGlobalLValue(APValue::LValueBase B) {
@@ -2115,7 +2123,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return IsNoOpCall(cast<CallExpr>(E));
+    return IsOpaqueConstantCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -2142,11 +2150,91 @@ static const ValueDecl *GetLValueBaseDecl(const LValue &LVal) {
   return LVal.Base.dyn_cast<const ValueDecl*>();
 }
 
-static bool IsLiteralLValue(const LValue &Value) {
-  if (Value.getLValueCallIndex())
+// Information about an LValueBase that is some kind of string.
+struct LValueBaseString {
+  std::string ObjCEncodeStorage;
+  StringRef Bytes;
+  int CharWidth;
+};
+
+// Gets the lvalue base of LVal as a string.
+static bool GetLValueBaseAsString(const EvalInfo &Info, const LValue &LVal,
+                                  LValueBaseString &AsString) {
+  const auto *BaseExpr = LVal.Base.dyn_cast<const Expr *>();
+  if (!BaseExpr)
     return false;
-  const Expr *E = Value.Base.dyn_cast<const Expr*>();
-  return E && !isa<MaterializeTemporaryExpr>(E);
+
+  // For ObjCEncodeExpr, we need to compute and store the string.
+  if (const auto *EE = dyn_cast<ObjCEncodeExpr>(BaseExpr)) {
+    Info.Ctx.getObjCEncodingForType(EE->getEncodedType(),
+                                    AsString.ObjCEncodeStorage);
+    AsString.Bytes = AsString.ObjCEncodeStorage;
+    AsString.CharWidth = 1;
+    return true;
+  }
+
+  // Otherwise, we have a StringLiteral.
+  const auto *Lit = dyn_cast<StringLiteral>(BaseExpr);
+  if (const auto *PE = dyn_cast<PredefinedExpr>(BaseExpr))
+    Lit = PE->getFunctionName();
+
+  if (!Lit)
+    return false;
+
+  AsString.Bytes = Lit->getBytes();
+  AsString.CharWidth = Lit->getCharByteWidth();
+  return true;
+}
+
+// Determine whether two string literals potentially overlap. This will be the
+// case if they agree on the values of all the bytes on the overlapping region
+// between them.
+//
+// The overlapping region is the portion of the two string literals that must
+// overlap in memory if the pointers actually point to the same address at
+// runtime. For example, if LHS is "abcdef" + 3 and RHS is "cdef\0gh" + 1 then
+// the overlapping region is "cdef\0", which in this case does agree, so the
+// strings are potentially overlapping. Conversely, for "foobar" + 3 versus
+// "bazbar" + 3, the overlapping region contains all of both strings, so they
+// are not potentially overlapping, even though they agree from the given
+// addresses onwards.
+//
+// See open core issue CWG2765 which is discussing the desired rule here.
+static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
+                                                    const LValue &LHS,
+                                                    const LValue &RHS) {
+  LValueBaseString LHSString, RHSString;
+  if (!GetLValueBaseAsString(Info, LHS, LHSString) ||
+      !GetLValueBaseAsString(Info, RHS, RHSString))
+    return false;
+
+  // This is the byte offset to the location of the first character of LHS
+  // within RHS. We don't need to look at the characters of one string that
+  // would appear before the start of the other string if they were merged.
+  CharUnits Offset = RHS.Offset - LHS.Offset;
+  if (Offset.isNegative())
+    LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
+  else
+    RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
+
+  bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
+  StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
+  StringRef Shorter = LHSIsLonger ? RHSString.Bytes : LHSString.Bytes;
+  int ShorterCharWidth = (LHSIsLonger ? RHSString : LHSString).CharWidth;
+
+  // The null terminator isn't included in the string data, so check for it
+  // manually. If the longer string doesn't have a null terminator where the
+  // shorter string ends, they aren't potentially overlapping.
+  for (int NullByte : llvm::seq(ShorterCharWidth)) {
+    if (Shorter.size() + NullByte >= Longer.size())
+      break;
+    if (Longer[Shorter.size() + NullByte])
+      return false;
+  }
+
+  // Otherwise, they're potentially overlapping if and only if the overlapping
+  // region is the same.
+  return Shorter == Longer.take_front(Shorter.size());
 }
 
 static bool IsWeakLValue(const LValue &Value) {
@@ -8573,7 +8661,10 @@ public:
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
-  bool VisitStringLiteral(const StringLiteral *E) { return Success(E); }
+  bool VisitStringLiteral(const StringLiteral *E) {
+    return Success(APValue::LValueBase(
+        E, 0, Info.getASTContext().getNextStringLiteralVersion()));
+  }
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E) { return Success(E); }
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitCXXUuidofExpr(const CXXUuidofExpr *E);
@@ -9639,7 +9730,7 @@ static bool isOneByteCharacterType(QualType T) {
 
 bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                                 unsigned BuiltinOp) {
-  if (IsNoOpCall(E))
+  if (IsOpaqueConstantCall(E))
     return Success(E);
 
   switch (BuiltinOp) {
@@ -13889,13 +13980,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
           (!RHSValue.Base && !RHSValue.Offset.isZero()))
         return DiagComparison(diag::note_constexpr_pointer_constant_comparison,
                               !RHSValue.Base);
-      // It's implementation-defined whether distinct literals will have
-      // distinct addresses. In clang, the result of such a comparison is
-      // unspecified, so it is not a constant expression. However, we do know
-      // that the address of a literal will be non-null.
-      if ((IsLiteralLValue(LHSValue) || IsLiteralLValue(RHSValue)) &&
-          LHSValue.Base && RHSValue.Base)
+      // C++2c [intro.object]/10:
+      //   Two objects [...] may have the same address if [...] they are both
+      //   potentially non-unique objects.
+      // C++2c [intro.object]/9:
+      //   An object is potentially non-unique if it is a string literal object,
+      //   the backing array of an initializer list, or a subobject thereof.
+      //
+      // This makes the comparison result unspecified, so it's not a constant
+      // expression.
+      //
+      // TODO: Do we need to handle the initializer list case here?
+      if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
         return DiagComparison(diag::note_constexpr_literal_comparison);
+      if (IsOpaqueConstantCall(LHSValue) || IsOpaqueConstantCall(RHSValue))
+        return DiagComparison(diag::note_constexpr_opaque_call_comparison,
+                              !IsOpaqueConstantCall(LHSValue));
       // We can't tell whether weak symbols will end up pointing to the same
       // object.
       if (IsWeakLValue(LHSValue) || IsWeakLValue(RHSValue))
