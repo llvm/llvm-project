@@ -471,13 +471,13 @@ static void EmitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
     std::vector<std::pair<std::vector<std::string>, StringRef>>
         HelpTextsForVariants;
-    for (Record *VisibilityHelp :
+    for (const Record *VisibilityHelp :
          R.getValueAsListOfDefs("HelpTextsForVariants")) {
       ArrayRef<Init *> Visibilities =
           VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
 
       std::vector<std::string> VisibilityNames;
-      for (Init *Visibility : Visibilities)
+      for (const Init *Visibility : Visibilities)
         VisibilityNames.push_back(Visibility->getAsUnquotedString());
 
       HelpTextsForVariants.push_back(std::make_pair(
