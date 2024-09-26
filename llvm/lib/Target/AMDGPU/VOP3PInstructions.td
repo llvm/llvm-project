@@ -405,8 +405,15 @@ defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
+// v_dot4_u32_u8 does not allow op_sel Pre-GFX11
+defm V_DOT4_U32_U8_PREGFX11  : VOP3PInst<"v_dot4_u32_u8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot4, 1>;
+
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
+  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot8, 1>;
+// v_dot8_u32_u4 does not allow op_sel Pre-GFX11
+defm V_DOT8_U32_U4_PREGFX11  : VOP3PInst<"v_dot8_u32_u4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>, int_amdgcn_udot8, 1>;
 } // End OtherPredicates = [HasDot7Insts]
 
@@ -433,7 +440,7 @@ defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
 
 multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
   let IsDOT = 1 in
-  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>,
+  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>,
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
@@ -2097,8 +2104,8 @@ defm V_DOT2_I32_I16 : VOP3P_Real_vi <0x26>;
 defm V_DOT2_U32_U16 : VOP3P_Real_vi <0x27>;
 
 defm V_DOT2_F32_F16 : VOP3P_Real_vi <0x23>;
-defm V_DOT4_U32_U8  : VOP3P_Real_vi <0x29>;
-defm V_DOT8_U32_U4  : VOP3P_Real_vi <0x2b>;
+defm V_DOT4_U32_U8_PREGFX11  : VOP3P_Real_vi <0x29>;
+defm V_DOT8_U32_U4_PREGFX11  : VOP3P_Real_vi <0x2b>;
 
 defm V_DOT4_I32_I8  : VOP3P_Real_vi <0x28>;
 defm V_DOT8_I32_I4  : VOP3P_Real_vi <0x2a>;
@@ -2256,8 +2263,10 @@ defm V_DOT2_I32_I16 : VOP3P_Real_gfx10 <0x14>;
 defm V_DOT2_U32_U16 : VOP3P_Real_gfx10 <0x15>;
 
 defm V_DOT2_F32_F16 : VOP3P_Real_gfx10_gfx11_gfx12_Triple<0x13>;
-defm V_DOT4_U32_U8  : VOP3P_Real_gfx10_gfx11_gfx12<0x17>;
-defm V_DOT8_U32_U4  : VOP3P_Real_gfx10_gfx11_gfx12<0x19>;
+defm V_DOT4_U32_U8  : VOP3P_Real_gfx11_gfx12<0x17>;
+defm V_DOT4_U32_U8_PREGFX11  : VOP3P_Real_gfx10<0x17>;
+defm V_DOT8_U32_U4  : VOP3P_Real_gfx11_gfx12<0x19>;
+defm V_DOT8_U32_U4_PREGFX11  : VOP3P_Real_gfx10<0x19>;
 
 defm V_DOT4_I32_I8  : VOP3P_Real_gfx10 <0x16>;
 defm V_DOT8_I32_I4  : VOP3P_Real_gfx10 <0x18>;
