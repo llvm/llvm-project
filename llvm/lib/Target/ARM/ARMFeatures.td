@@ -372,10 +372,10 @@ def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
 def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true",
                                              "Prefer 32-bit Thumb instrs">;
 
-def FeaturePrefBranchAlign32 : SubtargetFeature<"loop-align", "PrefBranchLogAlignment","2",
+def FeaturePreferBranchAlign32 : SubtargetFeature<"branch-align", "PreferBranchLogAlignment","2",
                                               "Prefer 32-bit alignment for branch targets">;
 
-def FeaturePrefBranchAlign64 : SubtargetFeature<"loop-align-64", "PrefBranchLogAlignment","3",
+def FeaturePreferBranchAlign64 : SubtargetFeature<"branch-align-64", "PreferBranchLogAlignment","3",
                                               "Prefer 64-bit alignment for branch targets">;
 
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
