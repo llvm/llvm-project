@@ -25,6 +25,7 @@ using namespace llvm::omp::target::plugin;
 struct offload_device_handle_t_ {
   int DeviceNum;
   GenericDeviceTy &Device;
+  offload_platform_handle_t Platform;
 };
 
 struct offload_platform_handle_t_ {
@@ -59,7 +60,7 @@ void initPlugins() {
          DevNum++) {
       if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
         Platform.Devices.emplace_back(offload_device_handle_t_{
-            DevNum, Platform.Plugin->getDevice(DevNum)});
+            DevNum, Platform.Plugin->getDevice(DevNum), &Platform});
       }
     }
   }
@@ -173,6 +174,8 @@ offload_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
   };
 
   switch (propName) {
+  case OFFLOAD_DEVICE_INFO_PLATFORM:
+    return ReturnValue(hDevice->Platform);
   case OFFLOAD_DEVICE_INFO_TYPE:
     return ReturnValue(OFFLOAD_DEVICE_TYPE_GPU);
   case OFFLOAD_DEVICE_INFO_NAME:
@@ -183,7 +186,7 @@ offload_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
     return ReturnValue(
         GetInfo({"CUDA Driver Version", "HSA Runtime Version"}).c_str());
   default:
-    return OFFLOAD_RESULT_ERROR_UNSUPPORTED_ENUMERATION;
+    return OFFLOAD_RESULT_ERROR_INVALID_ENUMERATION;
   }
 
   return OFFLOAD_RESULT_SUCCESS;
