@@ -87,6 +87,7 @@ set(hlsl_h
 set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_intrinsics.h
+  hlsl/hlsl_detail.h
   )
 set(hlsl_files
   ${hlsl_h}
@@ -155,6 +156,7 @@ set(x86_files
   avx10_2_512satcvtintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
+  avx10_2copyintrin.h
   avx10_2minmaxintrin.h
   avx10_2niintrin.h
   avx10_2satcvtdsintrin.h

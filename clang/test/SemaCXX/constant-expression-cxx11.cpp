@@ -358,9 +358,11 @@ struct Str {
 
 extern char externalvar[];
 constexpr bool constaddress = (void *)externalvar == (void *)0x4000UL; // expected-error {{must be initialized by a constant expression}} expected-note {{reinterpret_cast}}
-constexpr bool litaddress = "foo" == "foo"; // cxx20_23-warning {{comparison between two arrays is deprecated}}
+constexpr bool litaddress = "foo" == "foo"; // expected-error {{must be initialized by a constant expression}}
+// expected-note@-1 {{comparison of addresses of literals has unspecified value}}
+// cxx20_23-warning@-2 {{comparison between two arrays is deprecated}}
 static_assert(0 != "foo", "");
-static_assert("foo" != "foo", "");// cxx20_23-warning {{comparison between two arrays is deprecated}}
+
 }
 
 namespace MaterializeTemporary {

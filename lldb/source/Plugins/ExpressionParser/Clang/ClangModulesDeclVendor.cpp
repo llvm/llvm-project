@@ -147,7 +147,6 @@ void StoringDiagnosticConsumer::HandleDiagnostic(
   // Print the diagnostic to m_output.
   m_output.clear();
   m_diag_printer->HandleDiagnostic(DiagLevel, info);
-  m_os->flush();
 
   // Store the diagnostic for later.
   m_diagnostics.push_back(IDAndDiagnostic(DiagLevel, m_output));

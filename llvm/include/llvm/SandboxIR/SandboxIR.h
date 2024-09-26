@@ -105,11 +105,16 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 
@@ -128,8 +133,15 @@ class DSOLocalEquivalent;
 class ConstantTokenNone;
 class GlobalValue;
 class GlobalObject;
+class GlobalIFunc;
+class GlobalVariable;
+class GlobalAlias;
+class NoCFIValue;
+class ConstantPtrAuth;
+class ConstantExpr;
 class Context;
 class Function;
+class Module;
 class Instruction;
 class VAArgInst;
 class FreezeInst;
@@ -210,240 +222,6 @@ public:
   OperandUseIterator operator+(unsigned Num) const;
   OperandUseIterator operator-(unsigned Num) const;
   int operator-(const OperandUseIterator &Other) const;
-};
-
-/// Iterator for the `Use` edges of a Value's users.
-/// \Returns a `Use` when dereferenced.
-class UserUseIterator {
-  sandboxir::Use Use;
-  /// Don't let the user create a non-empty UserUseIterator.
-  UserUseIterator(const class Use &Use) : Use(Use) {}
-  friend class Value; // For constructor
-
-public:
-  using difference_type = std::ptrdiff_t;
-  using value_type = sandboxir::Use;
-  using pointer = value_type *;
-  using reference = value_type &;
-  using iterator_category = std::input_iterator_tag;
-
-  UserUseIterator() = default;
-  value_type operator*() const { return Use; }
-  UserUseIterator &operator++();
-  bool operator==(const UserUseIterator &Other) const {
-    return Use == Other.Use;
-  }
-  bool operator!=(const UserUseIterator &Other) const {
-    return !(*this == Other);
-  }
-  const sandboxir::Use &getUse() const { return Use; }
-};
-
-/// A SandboxIR Value has users. This is the base class.
-class Value {
-public:
-  enum class ClassID : unsigned {
-#define DEF_VALUE(ID, CLASS) ID,
-#define DEF_USER(ID, CLASS) ID,
-#define DEF_CONST(ID, CLASS) ID,
-#define DEF_INSTR(ID, OPC, CLASS) ID,
-#include "llvm/SandboxIR/SandboxIRValues.def"
-  };
-
-protected:
-  static const char *getSubclassIDStr(ClassID ID) {
-    switch (ID) {
-#define DEF_VALUE(ID, CLASS)                                                   \
-  case ClassID::ID:                                                            \
-    return #ID;
-#define DEF_USER(ID, CLASS)                                                    \
-  case ClassID::ID:                                                            \
-    return #ID;
-#define DEF_CONST(ID, CLASS)                                                   \
-  case ClassID::ID:                                                            \
-    return #ID;
-#define DEF_INSTR(ID, OPC, CLASS)                                              \
-  case ClassID::ID:                                                            \
-    return #ID;
-#include "llvm/SandboxIR/SandboxIRValues.def"
-    }
-    llvm_unreachable("Unimplemented ID");
-  }
-
-  /// For isa/dyn_cast.
-  ClassID SubclassID;
-#ifndef NDEBUG
-  /// A unique ID used for forming the name (used for debugging).
-  unsigned UID;
-#endif
-  /// The LLVM Value that corresponds to this SandboxIR Value.
-  /// NOTE: Some sandboxir Instructions, like Packs, may include more than one
-  /// value and in these cases `Val` points to the last instruction in program
-  /// order.
-  llvm::Value *Val = nullptr;
-
-  friend class Context;               // For getting `Val`.
-  friend class User;                  // For getting `Val`.
-  friend class Use;                   // For getting `Val`.
-  friend class VAArgInst;             // For getting `Val`.
-  friend class FreezeInst;            // For getting `Val`.
-  friend class FenceInst;             // For getting `Val`.
-  friend class SelectInst;            // For getting `Val`.
-  friend class ExtractElementInst;    // For getting `Val`.
-  friend class InsertElementInst;     // For getting `Val`.
-  friend class ShuffleVectorInst;     // For getting `Val`.
-  friend class ExtractValueInst;      // For getting `Val`.
-  friend class InsertValueInst;       // For getting `Val`.
-  friend class BranchInst;            // For getting `Val`.
-  friend class LoadInst;              // For getting `Val`.
-  friend class StoreInst;             // For getting `Val`.
-  friend class ReturnInst;            // For getting `Val`.
-  friend class CallBase;              // For getting `Val`.
-  friend class CallInst;              // For getting `Val`.
-  friend class InvokeInst;            // For getting `Val`.
-  friend class CallBrInst;            // For getting `Val`.
-  friend class LandingPadInst;        // For getting `Val`.
-  friend class FuncletPadInst;        // For getting `Val`.
-  friend class CatchPadInst;          // For getting `Val`.
-  friend class CleanupPadInst;        // For getting `Val`.
-  friend class CatchReturnInst;       // For getting `Val`.
-  friend class GetElementPtrInst;     // For getting `Val`.
-  friend class ResumeInst;            // For getting `Val`.
-  friend class CatchSwitchInst;       // For getting `Val`.
-  friend class CleanupReturnInst;     // For getting `Val`.
-  friend class SwitchInst;            // For getting `Val`.
-  friend class UnaryOperator;         // For getting `Val`.
-  friend class BinaryOperator;        // For getting `Val`.
-  friend class AtomicRMWInst;         // For getting `Val`.
-  friend class AtomicCmpXchgInst;     // For getting `Val`.
-  friend class AllocaInst;            // For getting `Val`.
-  friend class CastInst;              // For getting `Val`.
-  friend class PHINode;               // For getting `Val`.
-  friend class UnreachableInst;       // For getting `Val`.
-  friend class CatchSwitchAddHandler; // For `Val`.
-  friend class CmpInst;               // For getting `Val`.
-  friend class ConstantArray;         // For `Val`.
-  friend class ConstantStruct;        // For `Val`.
-  friend class ConstantAggregateZero; // For `Val`.
-  friend class ConstantPointerNull;   // For `Val`.
-  friend class UndefValue;            // For `Val`.
-  friend class PoisonValue;           // For `Val`.
-  friend class BlockAddress;          // For `Val`.
-  friend class GlobalValue;           // For `Val`.
-  friend class DSOLocalEquivalent;    // For `Val`.
-  friend class GlobalObject;          // For `Val`.
-
-  /// All values point to the context.
-  Context &Ctx;
-  // This is used by eraseFromParent().
-  void clearValue() { Val = nullptr; }
-  template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
-
-  Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
-  /// Disable copies.
-  Value(const Value &) = delete;
-  Value &operator=(const Value &) = delete;
-
-public:
-  virtual ~Value() = default;
-  ClassID getSubclassID() const { return SubclassID; }
-
-  using use_iterator = UserUseIterator;
-  using const_use_iterator = UserUseIterator;
-
-  use_iterator use_begin();
-  const_use_iterator use_begin() const {
-    return const_cast<Value *>(this)->use_begin();
-  }
-  use_iterator use_end() { return use_iterator(Use(nullptr, nullptr, Ctx)); }
-  const_use_iterator use_end() const {
-    return const_cast<Value *>(this)->use_end();
-  }
-
-  iterator_range<use_iterator> uses() {
-    return make_range<use_iterator>(use_begin(), use_end());
-  }
-  iterator_range<const_use_iterator> uses() const {
-    return make_range<const_use_iterator>(use_begin(), use_end());
-  }
-
-  /// Helper for mapped_iterator.
-  struct UseToUser {
-    User *operator()(const Use &Use) const { return &*Use.getUser(); }
-  };
-
-  using user_iterator = mapped_iterator<sandboxir::UserUseIterator, UseToUser>;
-  using const_user_iterator = user_iterator;
-
-  user_iterator user_begin();
-  user_iterator user_end() {
-    return user_iterator(Use(nullptr, nullptr, Ctx), UseToUser());
-  }
-  const_user_iterator user_begin() const {
-    return const_cast<Value *>(this)->user_begin();
-  }
-  const_user_iterator user_end() const {
-    return const_cast<Value *>(this)->user_end();
-  }
-
-  iterator_range<user_iterator> users() {
-    return make_range<user_iterator>(user_begin(), user_end());
-  }
-  iterator_range<const_user_iterator> users() const {
-    return make_range<const_user_iterator>(user_begin(), user_end());
-  }
-  /// \Returns the number of user edges (not necessarily to unique users).
-  /// WARNING: This is a linear-time operation.
-  unsigned getNumUses() const;
-  /// Return true if this value has N uses or more.
-  /// This is logically equivalent to getNumUses() >= N.
-  /// WARNING: This can be expensive, as it is linear to the number of users.
-  bool hasNUsesOrMore(unsigned Num) const {
-    unsigned Cnt = 0;
-    for (auto It = use_begin(), ItE = use_end(); It != ItE; ++It) {
-      if (++Cnt >= Num)
-        return true;
-    }
-    return false;
-  }
-  /// Return true if this Value has exactly N uses.
-  bool hasNUses(unsigned Num) const {
-    unsigned Cnt = 0;
-    for (auto It = use_begin(), ItE = use_end(); It != ItE; ++It) {
-      if (++Cnt > Num)
-        return false;
-    }
-    return Cnt == Num;
-  }
-
-  Type *getType() const;
-
-  Context &getContext() const { return Ctx; }
-
-  void replaceUsesWithIf(Value *OtherV,
-                         llvm::function_ref<bool(const Use &)> ShouldReplace);
-  void replaceAllUsesWith(Value *Other);
-
-  /// \Returns the LLVM IR name of the bottom-most LLVM value.
-  StringRef getName() const { return Val->getName(); }
-
-#ifndef NDEBUG
-  /// Should crash if there is something wrong with the instruction.
-  virtual void verify() const = 0;
-  /// Returns the unique id in the form 'SB<number>.' like 'SB1.'
-  std::string getUid() const;
-  virtual void dumpCommonHeader(raw_ostream &OS) const;
-  void dumpCommonFooter(raw_ostream &OS) const;
-  void dumpCommonPrefix(raw_ostream &OS) const;
-  void dumpCommonSuffix(raw_ostream &OS) const;
-  void printAsOperandCommon(raw_ostream &OS) const;
-  friend raw_ostream &operator<<(raw_ostream &OS, const sandboxir::Value &V) {
-    V.dumpOS(OS);
-    return OS;
-  }
-  virtual void dumpOS(raw_ostream &OS) const = 0;
-  LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
 /// Argument of a sandboxir::Function.
@@ -1128,6 +906,7 @@ protected:
   friend class Context; // For constructor.
 
 public:
+  using LinkageTypes = llvm::GlobalValue::LinkageTypes;
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     switch (From->getSubclassID()) {
@@ -1285,6 +1064,385 @@ public:
   }
 };
 
+/// Provides API functions, like getIterator() and getReverseIterator() to
+/// GlobalIFunc, Function, GlobalVariable and GlobalAlias. In LLVM IR these are
+/// provided by ilist_node.
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+class GlobalWithNodeAPI : public ParentT {
+  /// Helper for mapped_iterator.
+  struct LLVMGVToGV {
+    Context &Ctx;
+    LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
+    GlobalT &operator()(LLVMGlobalT &LLVMGV) const;
+  };
+
+public:
+  GlobalWithNodeAPI(Value::ClassID ID, LLVMParentT *C, Context &Ctx)
+      : ParentT(ID, C, Ctx) {}
+
+  Module *getParent() const {
+    llvm::Module *LLVMM = cast<LLVMGlobalT>(this->Val)->getParent();
+    return this->Ctx.getModule(LLVMM);
+  }
+
+  using iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getIterator()), LLVMGVToGV>;
+  using reverse_iterator = mapped_iterator<
+      decltype(static_cast<LLVMGlobalT *>(nullptr)->getReverseIterator()),
+      LLVMGVToGV>;
+  iterator getIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getIterator(), ToGV);
+  }
+  reverse_iterator getReverseIterator() const {
+    auto *LLVMGV = cast<LLVMGlobalT>(this->Val);
+    LLVMGVToGV ToGV(this->Ctx);
+    return map_iterator(LLVMGV->getReverseIterator(), ToGV);
+  }
+};
+
+class GlobalIFunc final
+    : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                               llvm::GlobalObject> {
+  GlobalIFunc(llvm::GlobalObject *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalIFunc, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalIFunc;
+  }
+
+  // TODO: Missing create() because we don't have a sandboxir::Module yet.
+
+  // TODO: Missing functions: copyAttributesFrom(), removeFromParent(),
+  // eraseFromParent()
+
+  void setResolver(Constant *Resolver);
+
+  Constant *getResolver() const;
+
+  // Return the resolver function after peeling off potential ConstantExpr
+  // indirection.
+  Function *getResolverFunction();
+  const Function *getResolverFunction() const {
+    return const_cast<GlobalIFunc *>(this)->getResolverFunction();
+  }
+
+  static bool isValidLinkage(LinkageTypes L) {
+    return llvm::GlobalIFunc::isValidLinkage(L);
+  }
+
+  // TODO: Missing applyAlongResolverPath().
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::GlobalIFunc>(Val) && "Expected a GlobalIFunc!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class GlobalVariable final
+    : public GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                               GlobalObject, llvm::GlobalObject> {
+  GlobalVariable(llvm::GlobalObject *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalVariable, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  /// Helper for mapped_iterator.
+  struct LLVMGVToGV {
+    Context &Ctx;
+    LLVMGVToGV(Context &Ctx) : Ctx(Ctx) {}
+    GlobalVariable &operator()(llvm::GlobalVariable &LLVMGV) const;
+  };
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalVariable;
+  }
+
+  /// Definitions have initializers, declarations don't.
+  ///
+  inline bool hasInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasInitializer();
+  }
+
+  /// hasDefinitiveInitializer - Whether the global variable has an initializer,
+  /// and any other instances of the global (this can happen due to weak
+  /// linkage) are guaranteed to have the same initializer.
+  ///
+  /// Note that if you want to transform a global, you must use
+  /// hasUniqueInitializer() instead, because of the *_odr linkage type.
+  ///
+  /// Example:
+  ///
+  /// @a = global SomeType* null - Initializer is both definitive and unique.
+  ///
+  /// @b = global weak SomeType* null - Initializer is neither definitive nor
+  /// unique.
+  ///
+  /// @c = global weak_odr SomeType* null - Initializer is definitive, but not
+  /// unique.
+  inline bool hasDefinitiveInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasDefinitiveInitializer();
+  }
+
+  /// hasUniqueInitializer - Whether the global variable has an initializer, and
+  /// any changes made to the initializer will turn up in the final executable.
+  inline bool hasUniqueInitializer() const {
+    return cast<llvm::GlobalVariable>(Val)->hasUniqueInitializer();
+  }
+
+  /// getInitializer - Return the initializer for this global variable.  It is
+  /// illegal to call this method if the global is external, because we cannot
+  /// tell what the value is initialized to!
+  ///
+  Constant *getInitializer() const;
+  /// setInitializer - Sets the initializer for this global variable, removing
+  /// any existing initializer if InitVal==NULL. The initializer must have the
+  /// type getValueType().
+  void setInitializer(Constant *InitVal);
+
+  // TODO: Add missing replaceInitializer(). Requires special tracker
+
+  /// If the value is a global constant, its value is immutable throughout the
+  /// runtime execution of the program.  Assigning a value into the constant
+  /// leads to undefined behavior.
+  ///
+  bool isConstant() const {
+    return cast<llvm::GlobalVariable>(Val)->isConstant();
+  }
+  void setConstant(bool V);
+
+  bool isExternallyInitialized() const {
+    return cast<llvm::GlobalVariable>(Val)->isExternallyInitialized();
+  }
+  void setExternallyInitialized(bool Val);
+
+  // TODO: Missing copyAttributesFrom()
+
+  // TODO: Missing removeFromParent(), eraseFromParent(), dropAllReferences()
+
+  // TODO: Missing addDebugInfo(), getDebugInfo()
+
+  // TODO: Missing attribute setter functions: addAttribute(), setAttributes().
+  //       There seems to be no removeAttribute() so we can't undo them.
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(Attribute::AttrKind Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttribute(Kind);
+  }
+
+  /// Return true if the attribute exists.
+  bool hasAttribute(StringRef Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttribute(Kind);
+  }
+
+  /// Return true if any attributes exist.
+  bool hasAttributes() const {
+    return cast<llvm::GlobalVariable>(Val)->hasAttributes();
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(Attribute::AttrKind Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttribute(Kind);
+  }
+
+  /// Return the attribute object.
+  Attribute getAttribute(StringRef Kind) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttribute(Kind);
+  }
+
+  /// Return the attribute set for this global
+  AttributeSet getAttributes() const {
+    return cast<llvm::GlobalVariable>(Val)->getAttributes();
+  }
+
+  /// Return attribute set as list with index.
+  /// FIXME: This may not be required once ValueEnumerators
+  /// in bitcode-writer can enumerate attribute-set.
+  AttributeList getAttributesAsList(unsigned Index) const {
+    return cast<llvm::GlobalVariable>(Val)->getAttributesAsList(Index);
+  }
+
+  /// Check if section name is present
+  bool hasImplicitSection() const {
+    return cast<llvm::GlobalVariable>(Val)->hasImplicitSection();
+  }
+
+  /// Get the custom code model raw value of this global.
+  ///
+  unsigned getCodeModelRaw() const {
+    return cast<llvm::GlobalVariable>(Val)->getCodeModelRaw();
+  }
+
+  /// Get the custom code model of this global if it has one.
+  ///
+  /// If this global does not have a custom code model, the empty instance
+  /// will be returned.
+  std::optional<CodeModel::Model> getCodeModel() const {
+    return cast<llvm::GlobalVariable>(Val)->getCodeModel();
+  }
+
+  // TODO: Missing setCodeModel(). Requires custom tracker.
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::GlobalVariable>(Val) && "Expected a GlobalVariable!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class GlobalAlias final
+    : public GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                               llvm::GlobalValue> {
+  GlobalAlias(llvm::GlobalAlias *C, Context &Ctx)
+      : GlobalWithNodeAPI(ClassID::GlobalAlias, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::GlobalAlias;
+  }
+
+  // TODO: Missing create() due to unimplemented sandboxir::Module.
+
+  // TODO: Missing copyAttributresFrom().
+  // TODO: Missing removeFromParent(), eraseFromParent().
+
+  void setAliasee(Constant *Aliasee);
+  Constant *getAliasee() const;
+
+  const GlobalObject *getAliaseeObject() const;
+  GlobalObject *getAliaseeObject() {
+    return const_cast<GlobalObject *>(
+        static_cast<const GlobalAlias *>(this)->getAliaseeObject());
+  }
+
+  static bool isValidLinkage(LinkageTypes L) {
+    return llvm::GlobalAlias::isValidLinkage(L);
+  }
+};
+
+class NoCFIValue final : public Constant {
+  NoCFIValue(llvm::NoCFIValue *C, Context &Ctx)
+      : Constant(ClassID::NoCFIValue, C, Ctx) {}
+  friend class Context; // For constructor.
+
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
+
+public:
+  /// Return a NoCFIValue for the specified function.
+  static NoCFIValue *get(GlobalValue *GV);
+
+  GlobalValue *getGlobalValue() const;
+
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::NoCFIValue;
+  }
+
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
+
+#ifndef NDEBUG
+  void verify() const override {
+    assert(isa<llvm::NoCFIValue>(Val) && "Expected a NoCFIValue!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif
+};
+
+class ConstantPtrAuth final : public Constant {
+  ConstantPtrAuth(llvm::ConstantPtrAuth *C, Context &Ctx)
+      : Constant(ClassID::ConstantPtrAuth, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// Return a pointer signed with the specified parameters.
+  static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
+                              ConstantInt *Disc, Constant *AddrDisc);
+  /// The pointer that is signed in this ptrauth signed pointer.
+  Constant *getPointer() const;
+
+  /// The Key ID, an i32 constant.
+  ConstantInt *getKey() const;
+
+  /// The integer discriminator, an i64 constant, or 0.
+  ConstantInt *getDiscriminator() const;
+
+  /// The address discriminator if any, or the null constant.
+  /// If present, this must be a value equivalent to the storage location of
+  /// the only global-initializer user of the ptrauth signed pointer.
+  Constant *getAddrDiscriminator() const;
+
+  /// Whether there is any non-null address discriminator.
+  bool hasAddressDiscriminator() const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasAddressDiscriminator();
+  }
+
+  /// Whether the address uses a special address discriminator.
+  /// These discriminators can't be used in real pointer-auth values; they
+  /// can only be used in "prototype" values that indicate how some real
+  /// schema is supposed to be produced.
+  bool hasSpecialAddressDiscriminator(uint64_t Value) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->hasSpecialAddressDiscriminator(
+        Value);
+  }
+
+  /// Check whether an authentication operation with key \p Key and (possibly
+  /// blended) discriminator \p Discriminator is known to be compatible with
+  /// this ptrauth signed pointer.
+  bool isKnownCompatibleWith(const Value *Key, const Value *Discriminator,
+                             const DataLayout &DL) const {
+    return cast<llvm::ConstantPtrAuth>(Val)->isKnownCompatibleWith(
+        Key->Val, Discriminator->Val, DL);
+  }
+
+  /// Produce a new ptrauth expression signing the given value using
+  /// the same schema as is stored in one.
+  ConstantPtrAuth *getWithSameSchema(Constant *Pointer) const;
+
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantPtrAuth;
+  }
+};
+
+class ConstantExpr : public Constant {
+  ConstantExpr(llvm::ConstantExpr *C, Context &Ctx)
+      : Constant(ClassID::ConstantExpr, C, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::ConstantExpr;
+  }
+  // TODO: Missing functions.
+};
+
 class BlockAddress final : public Constant {
   BlockAddress(llvm::BlockAddress *C, Context &Ctx)
       : Constant(ClassID::BlockAddress, C, Ctx) {}
@@ -1416,6 +1574,8 @@ public:
   /// \Returns the SBInstruction that corresponds to this iterator, or null if
   /// the instruction is not found in the IR-to-SandboxIR tables.
   pointer get() const { return getInstr(It); }
+  /// \Returns the parent BB.
+  BasicBlock *getNodeParent() const;
 };
 
 /// Contains a list of sandboxir::Instruction's.
@@ -1538,6 +1698,63 @@ public:
   /// \Returns this Instruction's opcode. Note that SandboxIR has its own opcode
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
+
+  const char *getOpcodeName() const { return getOpcodeName(Opc); }
+
+  // Note that these functions below are calling into llvm::Instruction.
+  // A sandbox IR instruction could introduce a new opcode that could change the
+  // behavior of one of these functions. It is better that these functions are
+  // only added as needed and new sandbox IR instructions must explicitly check
+  // if any of these functions could have a different behavior.
+
+  bool isTerminator() const {
+    return cast<llvm::Instruction>(Val)->isTerminator();
+  }
+  bool isUnaryOp() const { return cast<llvm::Instruction>(Val)->isUnaryOp(); }
+  bool isBinaryOp() const { return cast<llvm::Instruction>(Val)->isBinaryOp(); }
+  bool isIntDivRem() const {
+    return cast<llvm::Instruction>(Val)->isIntDivRem();
+  }
+  bool isShift() const { return cast<llvm::Instruction>(Val)->isShift(); }
+  bool isCast() const { return cast<llvm::Instruction>(Val)->isCast(); }
+  bool isFuncletPad() const {
+    return cast<llvm::Instruction>(Val)->isFuncletPad();
+  }
+  bool isSpecialTerminator() const {
+    return cast<llvm::Instruction>(Val)->isSpecialTerminator();
+  }
+  bool isOnlyUserOfAnyOperand() const {
+    return cast<llvm::Instruction>(Val)->isOnlyUserOfAnyOperand();
+  }
+  bool isLogicalShift() const {
+    return cast<llvm::Instruction>(Val)->isLogicalShift();
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Metadata manipulation.
+  //===--------------------------------------------------------------------===//
+
+  /// Return true if the instruction has any metadata attached to it.
+  bool hasMetadata() const {
+    return cast<llvm::Instruction>(Val)->hasMetadata();
+  }
+
+  /// Return true if this instruction has metadata attached to it other than a
+  /// debug location.
+  bool hasMetadataOtherThanDebugLoc() const {
+    return cast<llvm::Instruction>(Val)->hasMetadataOtherThanDebugLoc();
+  }
+
+  /// Return true if this instruction has the given type of metadata attached.
+  bool hasMetadata(unsigned KindID) const {
+    return cast<llvm::Instruction>(Val)->hasMetadata(KindID);
+  }
+
+  // TODO: Implement getMetadata and getAllMetadata after sandboxir::MDNode is
+  // available.
+
+  // TODO: More missing functions
+
   /// Detach this from its parent BasicBlock without deleting it.
   void removeFromParent();
   /// Detach this Value from its parent and delete it.
@@ -1557,6 +1774,14 @@ public:
   /// Move this instruction after \p After.
   void moveAfter(Instruction *After) {
     moveBefore(*After->getParent(), std::next(After->getIterator()));
+  }
+  // TODO: This currently relies on LLVM IR Instruction::comesBefore which is
+  // can be linear-time.
+  /// Given an instruction Other in the same basic block as this instruction,
+  /// return true if this instruction comes before Other.
+  bool comesBefore(const Instruction *Other) const {
+    return cast<llvm::Instruction>(Val)->comesBefore(
+        cast<llvm::Instruction>(Other->Val));
   }
   /// \Returns the BasicBlock containing this Instruction, or null if it is
   /// detached.
@@ -1655,6 +1880,81 @@ public:
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
   void copyFastMathFlags(FastMathFlags FMF);
+
+  bool isAssociative() const {
+    return cast<llvm::Instruction>(Val)->isAssociative();
+  }
+
+  bool isCommutative() const {
+    return cast<llvm::Instruction>(Val)->isCommutative();
+  }
+
+  bool isIdempotent() const {
+    return cast<llvm::Instruction>(Val)->isIdempotent();
+  }
+
+  bool isNilpotent() const {
+    return cast<llvm::Instruction>(Val)->isNilpotent();
+  }
+
+  bool mayWriteToMemory() const {
+    return cast<llvm::Instruction>(Val)->mayWriteToMemory();
+  }
+
+  bool mayReadFromMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadFromMemory();
+  }
+  bool mayReadOrWriteMemory() const {
+    return cast<llvm::Instruction>(Val)->mayReadOrWriteMemory();
+  }
+
+  bool isAtomic() const { return cast<llvm::Instruction>(Val)->isAtomic(); }
+
+  bool hasAtomicLoad() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicLoad();
+  }
+
+  bool hasAtomicStore() const {
+    return cast<llvm::Instruction>(Val)->hasAtomicStore();
+  }
+
+  bool isVolatile() const { return cast<llvm::Instruction>(Val)->isVolatile(); }
+
+  Type *getAccessType() const;
+
+  bool mayThrow(bool IncludePhaseOneUnwind = false) const {
+    return cast<llvm::Instruction>(Val)->mayThrow(IncludePhaseOneUnwind);
+  }
+
+  bool isFenceLike() const {
+    return cast<llvm::Instruction>(Val)->isFenceLike();
+  }
+
+  bool mayHaveSideEffects() const {
+    return cast<llvm::Instruction>(Val)->mayHaveSideEffects();
+  }
+
+  // TODO: Missing functions.
+
+  bool isStackSaveOrRestoreIntrinsic() const {
+    auto *I = cast<llvm::Instruction>(Val);
+    return match(I,
+                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
+           match(I, PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
+  }
+
+  /// We consider \p I as a Memory Dependency Candidate instruction if it
+  /// reads/write memory or if it has side-effects. This is used by the
+  /// dependency graph.
+  bool isMemDepCandidate() const {
+    auto *I = cast<llvm::Instruction>(Val);
+    return I->mayReadOrWriteMemory() &&
+           (!isa<llvm::IntrinsicInst>(I) ||
+            (cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
+                 Intrinsic::sideeffect &&
+             cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
+                 Intrinsic::pseudoprobe));
+  }
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -4040,186 +4340,8 @@ public:
   }
 };
 
-class Context {
-protected:
-  LLVMContext &LLVMCtx;
-  friend class Type;        // For LLVMCtx.
-  friend class PointerType; // For LLVMCtx.
-  friend class CmpInst; // For LLVMCtx. TODO: cleanup when sandboxir::VectorType
-                        // is complete
-  friend class IntegerType;   // For LLVMCtx.
-  friend class StructType;    // For LLVMCtx.
-  friend class TargetExtType; // For LLVMCtx.
-  Tracker IRTracker;
-
-  /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
-  /// SandboxIR objects.
-  DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
-      LLVMValueToValueMap;
-
-  /// Type has a protected destructor to prohibit the user from managing the
-  /// lifetime of the Type objects. Context is friend of Type, and this custom
-  /// deleter can destroy Type.
-  struct TypeDeleter {
-    void operator()(Type *Ty) { delete Ty; }
-  };
-  /// Maps LLVM Type to the corresonding sandboxir::Type. Owns all Sandbox IR
-  /// Type objects.
-  DenseMap<llvm::Type *, std::unique_ptr<Type, TypeDeleter>> LLVMTypeToTypeMap;
-
-  /// Remove \p V from the maps and returns the unique_ptr.
-  std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
-  /// Remove \p SBV from all SandboxIR maps and stop owning it. This effectively
-  /// detaches \p V from the underlying IR.
-  std::unique_ptr<Value> detach(Value *V);
-  friend void Instruction::eraseFromParent(); // For detach().
-  /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
-  Value *registerValue(std::unique_ptr<Value> &&VPtr);
-  friend class EraseFromParent; // For registerValue().
-  /// This is the actual function that creates sandboxir values for \p V,
-  /// and among others handles all instruction types.
-  Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
-  /// Get or create a sandboxir::Argument for an existing LLVM IR \p LLVMArg.
-  Argument *getOrCreateArgument(llvm::Argument *LLVMArg) {
-    auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
-    auto It = Pair.first;
-    if (Pair.second) {
-      It->second = std::unique_ptr<Argument>(new Argument(LLVMArg, *this));
-      return cast<Argument>(It->second.get());
-    }
-    return cast<Argument>(It->second.get());
-  }
-  /// Get or create a sandboxir::Value for an existing LLVM IR \p LLVMV.
-  Value *getOrCreateValue(llvm::Value *LLVMV) {
-    return getOrCreateValueInternal(LLVMV, 0);
-  }
-  /// Get or create a sandboxir::Constant from an existing LLVM IR \p LLVMC.
-  Constant *getOrCreateConstant(llvm::Constant *LLVMC) {
-    return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
-  }
-  // Friends for getOrCreateConstant().
-#define DEF_CONST(ID, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
-
-  /// Create a sandboxir::BasicBlock for an existing LLVM IR \p BB. This will
-  /// also create all contents of the block.
-  BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
-  friend class BasicBlock; // For getOrCreateValue().
-
-  IRBuilder<ConstantFolder> LLVMIRBuilder;
-  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
-
-  VAArgInst *createVAArgInst(llvm::VAArgInst *SI);
-  friend VAArgInst; // For createVAArgInst()
-  FreezeInst *createFreezeInst(llvm::FreezeInst *SI);
-  friend FreezeInst; // For createFreezeInst()
-  FenceInst *createFenceInst(llvm::FenceInst *SI);
-  friend FenceInst; // For createFenceInst()
-  SelectInst *createSelectInst(llvm::SelectInst *SI);
-  friend SelectInst; // For createSelectInst()
-  InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
-  friend InsertElementInst; // For createInsertElementInst()
-  ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
-  friend ExtractElementInst; // For createExtractElementInst()
-  ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
-  friend ShuffleVectorInst; // For createShuffleVectorInst()
-  ExtractValueInst *createExtractValueInst(llvm::ExtractValueInst *IVI);
-  friend ExtractValueInst; // For createExtractValueInst()
-  InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
-  friend InsertValueInst; // For createInsertValueInst()
-  BranchInst *createBranchInst(llvm::BranchInst *I);
-  friend BranchInst; // For createBranchInst()
-  LoadInst *createLoadInst(llvm::LoadInst *LI);
-  friend LoadInst; // For createLoadInst()
-  StoreInst *createStoreInst(llvm::StoreInst *SI);
-  friend StoreInst; // For createStoreInst()
-  ReturnInst *createReturnInst(llvm::ReturnInst *I);
-  friend ReturnInst; // For createReturnInst()
-  CallInst *createCallInst(llvm::CallInst *I);
-  friend CallInst; // For createCallInst()
-  InvokeInst *createInvokeInst(llvm::InvokeInst *I);
-  friend InvokeInst; // For createInvokeInst()
-  CallBrInst *createCallBrInst(llvm::CallBrInst *I);
-  friend CallBrInst; // For createCallBrInst()
-  LandingPadInst *createLandingPadInst(llvm::LandingPadInst *I);
-  friend LandingPadInst; // For createLandingPadInst()
-  CatchPadInst *createCatchPadInst(llvm::CatchPadInst *I);
-  friend CatchPadInst; // For createCatchPadInst()
-  CleanupPadInst *createCleanupPadInst(llvm::CleanupPadInst *I);
-  friend CleanupPadInst; // For createCleanupPadInst()
-  CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
-  friend CatchReturnInst; // For createCatchReturnInst()
-  CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
-  friend CleanupReturnInst; // For createCleanupReturnInst()
-  GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
-  friend GetElementPtrInst; // For createGetElementPtrInst()
-  CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
-  friend CatchSwitchInst; // For createCatchSwitchInst()
-  ResumeInst *createResumeInst(llvm::ResumeInst *I);
-  friend ResumeInst; // For createResumeInst()
-  SwitchInst *createSwitchInst(llvm::SwitchInst *I);
-  friend SwitchInst; // For createSwitchInst()
-  UnaryOperator *createUnaryOperator(llvm::UnaryOperator *I);
-  friend UnaryOperator; // For createUnaryOperator()
-  BinaryOperator *createBinaryOperator(llvm::BinaryOperator *I);
-  friend BinaryOperator; // For createBinaryOperator()
-  AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
-  friend AtomicRMWInst; // For createAtomicRMWInst()
-  AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
-  friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
-  AllocaInst *createAllocaInst(llvm::AllocaInst *I);
-  friend AllocaInst; // For createAllocaInst()
-  CastInst *createCastInst(llvm::CastInst *I);
-  friend CastInst; // For createCastInst()
-  PHINode *createPHINode(llvm::PHINode *I);
-  friend PHINode; // For createPHINode()
-  UnreachableInst *createUnreachableInst(llvm::UnreachableInst *UI);
-  friend UnreachableInst; // For createUnreachableInst()
-  CmpInst *createCmpInst(llvm::CmpInst *I);
-  friend CmpInst; // For createCmpInst()
-  ICmpInst *createICmpInst(llvm::ICmpInst *I);
-  friend ICmpInst; // For createICmpInst()
-  FCmpInst *createFCmpInst(llvm::FCmpInst *I);
-  friend FCmpInst; // For createFCmpInst()
-
-public:
-  Context(LLVMContext &LLVMCtx)
-      : LLVMCtx(LLVMCtx), IRTracker(*this),
-        LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
-
-  Tracker &getTracker() { return IRTracker; }
-  /// Convenience function for `getTracker().save()`
-  void save() { IRTracker.save(); }
-  /// Convenience function for `getTracker().revert()`
-  void revert() { IRTracker.revert(); }
-  /// Convenience function for `getTracker().accept()`
-  void accept() { IRTracker.accept(); }
-
-  sandboxir::Value *getValue(llvm::Value *V) const;
-  const sandboxir::Value *getValue(const llvm::Value *V) const {
-    return getValue(const_cast<llvm::Value *>(V));
-  }
-
-  Type *getType(llvm::Type *LLVMTy) {
-    if (LLVMTy == nullptr)
-      return nullptr;
-    auto Pair = LLVMTypeToTypeMap.insert({LLVMTy, nullptr});
-    auto It = Pair.first;
-    if (Pair.second)
-      It->second = std::unique_ptr<Type, TypeDeleter>(new Type(LLVMTy, *this));
-    return It->second.get();
-  }
-
-  /// Create a sandboxir::Function for an existing LLVM IR \p F, including all
-  /// blocks and instructions.
-  /// This is the main API function for creating Sandbox IR.
-  Function *createFunction(llvm::Function *F);
-
-  /// \Returns the number of values registered with Context.
-  size_t getNumValues() const { return LLVMValueToValueMap.size(); }
-};
-
-class Function : public GlobalObject {
+class Function : public GlobalWithNodeAPI<Function, llvm::Function,
+                                          GlobalObject, llvm::GlobalObject> {
   /// Helper for mapped_iterator.
   struct LLVMBBToBB {
     Context &Ctx;
@@ -4230,13 +4352,17 @@ class Function : public GlobalObject {
   };
   /// Use Context::createFunction() instead.
   Function(llvm::Function *F, sandboxir::Context &Ctx)
-      : GlobalObject(ClassID::Function, F, Ctx) {}
+      : GlobalWithNodeAPI(ClassID::Function, F, Ctx) {}
   friend class Context; // For constructor.
 
 public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Function;
+  }
+
+  Module *getParent() {
+    return Ctx.getModule(cast<llvm::Function>(Val)->getParent());
   }
 
   Argument *getArg(unsigned Idx) const {

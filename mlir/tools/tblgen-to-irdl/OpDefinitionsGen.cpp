@@ -177,6 +177,15 @@ Value createConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   }
 
   if (predRec.isSubClassOf("TypeDef")) {
+    auto dialect = predRec.getValueAsDef("dialect")->getValueAsString("name");
+    if (dialect == selectedDialect) {
+      std::string combined = ("!" + predRec.getValueAsString("mnemonic")).str();
+      SmallVector<FlatSymbolRefAttr> nested = {
+          SymbolRefAttr::get(ctx, combined)};
+      auto typeSymbol = SymbolRefAttr::get(ctx, dialect, nested);
+      auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx), typeSymbol);
+      return op.getOutput();
+    }
     std::string typeName = ("!" + predRec.getValueAsString("typeName")).str();
     auto op = builder.create<irdl::BaseOp>(UnknownLoc::get(ctx),
                                            StringAttr::get(ctx, typeName));
@@ -250,6 +259,12 @@ static StringRef getOperatorName(tblgen::Operator &tblgenOp) {
   return opName;
 }
 
+/// Returns the name of the type without the dialect prefix.
+static StringRef getTypeName(tblgen::TypeDef &tblgenType) {
+  StringRef opName = tblgenType.getDef()->getValueAsString("mnemonic");
+  return opName;
+}
+
 /// Extract an operation to IRDL.
 irdl::OperationOp createIRDLOperation(OpBuilder &builder,
                                       tblgen::Operator &tblgenOp) {
@@ -300,6 +315,19 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   return op;
 }
 
+irdl::TypeOp createIRDLType(OpBuilder &builder, tblgen::TypeDef &tblgenType) {
+  MLIRContext *ctx = builder.getContext();
+  StringRef typeName = getTypeName(tblgenType);
+  std::string combined = ("!" + typeName).str();
+
+  irdl::TypeOp op = builder.create<irdl::TypeOp>(
+      UnknownLoc::get(ctx), StringAttr::get(ctx, combined));
+
+  op.getBody().emplaceBlock();
+
+  return op;
+}
+
 static irdl::DialectOp createIRDLDialect(OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   return builder.create<irdl::DialectOp>(UnknownLoc::get(ctx),
@@ -321,6 +349,14 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   irdl::DialectOp dialect = createIRDLDialect(builder);
   // Set insertion point to start of DialectOp.
   builder = builder.atBlockBegin(&dialect.getBody().emplaceBlock());
+
+  for (const Record *type :
+       recordKeeper.getAllDerivedDefinitionsIfDefined("TypeDef")) {
+    tblgen::TypeDef tblgenType(type);
+    if (tblgenType.getDialect().getName() != selectedDialect)
+      continue;
+    createIRDLType(builder, tblgenType);
+  }
 
   for (const Record *def :
        recordKeeper.getAllDerivedDefinitionsIfDefined("Op")) {

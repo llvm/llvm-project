@@ -502,8 +502,8 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
   // IR name could be empty, use the stable sort preserves the relative order.
-  llvm::stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
-                             const std::unique_ptr<RVVIntrinsic> &B) {
+  stable_sort(Defs, [](const std::unique_ptr<RVVIntrinsic> &A,
+                       const std::unique_ptr<RVVIntrinsic> &B) {
     if (A->getIRName() == B->getIRName())
       return (A->getPolicyAttrs() < B->getPolicyAttrs());
     return (A->getIRName() < B->getIRName());
@@ -606,7 +606,7 @@ void RVVEmitter::createRVVIntrinsics(
         BasicPrototype, /*IsMasked=*/false,
         /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
         DefaultPolicy, IsTuple);
-    llvm::SmallVector<PrototypeDescriptor> MaskedPrototype;
+    SmallVector<PrototypeDescriptor> MaskedPrototype;
     if (HasMasked)
       MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
           BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,

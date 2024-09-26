@@ -373,6 +373,10 @@ public:
 
   bool useColdCCForColdCall(Function &F) const { return false; }
 
+  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
+    return false;
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
@@ -601,7 +605,7 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 ArrayRef<const Value *> Args = {},
                                  const Instruction *CxtI = nullptr) const {
     return 1;
   }
@@ -662,6 +666,8 @@ public:
   InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                      CmpInst::Predicate VecPred,
                                      TTI::TargetCostKind CostKind,
+                                     TTI::OperandValueInfo Op1Info,
+                                     TTI::OperandValueInfo Op2Info,
                                      const Instruction *I) const {
     return 1;
   }
@@ -854,7 +860,7 @@ public:
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const {
-    unsigned OpSizeInBytes = AtomicCpySize ? *AtomicCpySize : 1;
+    unsigned OpSizeInBytes = AtomicCpySize.value_or(1);
     Type *OpType = Type::getIntNTy(Context, OpSizeInBytes * 8);
     for (unsigned i = 0; i != RemainingBytes; i += OpSizeInBytes)
       OpsOut.push_back(OpType);
@@ -1172,7 +1178,7 @@ public:
         Cost += static_cast<T *>(this)->getArithmeticInstrCost(
             Instruction::Add, GEP->getType(), CostKind,
             {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
-            std::nullopt);
+            {});
       } else {
         SmallVector<const Value *> Indices(GEP->indices());
         Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
@@ -1328,19 +1334,23 @@ public:
             match(U, m_LogicalOr()) ? Instruction::Or : Instruction::And, Ty,
             CostKind, Op1Info, Op2Info, Operands, I);
       }
+      const auto Op1Info = TTI::getOperandInfo(Operands[1]);
+      const auto Op2Info = TTI::getOperandInfo(Operands[2]);
       Type *CondTy = Operands[0]->getType();
       return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
                                            CmpInst::BAD_ICMP_PREDICATE,
-                                           CostKind, I);
+                                           CostKind, Op1Info, Op2Info, I);
     }
     case Instruction::ICmp:
     case Instruction::FCmp: {
+      const auto Op1Info = TTI::getOperandInfo(Operands[0]);
+      const auto Op2Info = TTI::getOperandInfo(Operands[1]);
       Type *ValTy = Operands[0]->getType();
       // TODO: Also handle ICmp/FCmp constant expressions.
       return TargetTTI->getCmpSelInstrCost(Opcode, ValTy, U->getType(),
                                            I ? cast<CmpInst>(I)->getPredicate()
                                              : CmpInst::BAD_ICMP_PREDICATE,
-                                           CostKind, I);
+                                           CostKind, Op1Info, Op2Info, I);
     }
     case Instruction::InsertElement: {
       auto *IE = dyn_cast<InsertElementInst>(U);

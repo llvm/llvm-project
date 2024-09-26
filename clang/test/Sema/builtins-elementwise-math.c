@@ -505,6 +505,39 @@ void test_builtin_elementwise_log2(int i, float f, double d, float4 v, int3 iv, 
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_popcount(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_popcount(i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'int'}}
+
+  i = __builtin_elementwise_popcount();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_popcount(f);
+  // expected-error@-1 {{1st argument must be a vector of integers (was 'float')}}
+
+  i = __builtin_elementwise_popcount(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_popcount(d);
+  // expected-error@-1 {{1st argument must be a vector of integers (was 'double')}}
+
+  v = __builtin_elementwise_popcount(v);
+  // expected-error@-1 {{1st argument must be a vector of integers (was 'float4' (vector of 4 'float' values))}}
+
+  int2 i2 = __builtin_elementwise_popcount(iv);
+  // expected-error@-1 {{initializing 'int2' (vector of 2 'int' values) with an expression of incompatible type 'int3' (vector of 3 'int' values)}}
+
+  iv = __builtin_elementwise_popcount(i2);
+  // expected-error@-1 {{assigning to 'int3' (vector of 3 'int' values) from incompatible type 'int2' (vector of 2 'int' values)}}
+
+  unsigned3 u3 = __builtin_elementwise_popcount(iv);
+  // expected-error@-1 {{initializing 'unsigned3' (vector of 3 'unsigned int' values) with an expression of incompatible type 'int3' (vector of 3 'int' values)}}
+
+  iv = __builtin_elementwise_popcount(u3);
+  // expected-error@-1 {{assigning to 'int3' (vector of 3 'int' values) from incompatible type 'unsigned3' (vector of 3 'unsigned int' values)}}
+}
+
 void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_pow(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}

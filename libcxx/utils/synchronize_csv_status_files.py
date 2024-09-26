@@ -128,9 +128,6 @@ class PaperStatus:
         }
         return self._original if self._original is not None else mapping[self._status]
 
-    def is_done(self) -> bool:
-        return self._status == PaperStatus.DONE or self._status == PaperStatus.NOTHING_TO_DO
-
 class PaperInfo:
     paper_number: str
     """
@@ -250,21 +247,25 @@ def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
     row with the newer status. Otherwise, report an error if they have a different status because
     something must be wrong.
 
+    We don't update issues from 'To Do' to 'In Progress', since that only creates churn and the
+    status files aim to document user-facing functionality in releases, for which 'In Progress'
+    is not useful.
+
     In case we don't update the CSV row's status, we still take any updated notes coming
     from the Github issue.
     """
-    if paper.status < gh.status:
-        return gh
-    elif paper.status != gh.status:
-        print(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
-        return paper
+    if paper.status == PaperStatus(PaperStatus.TODO) and gh.status == PaperStatus(PaperStatus.IN_PROGRESS):
+        result = copy.deepcopy(paper)
+        result.notes = gh.notes
+    elif paper.status < gh.status:
+        result = copy.deepcopy(gh)
+    elif paper.status == gh.status:
+        result = copy.deepcopy(paper)
+        result.notes = gh.notes
     else:
-        # Retain the notes from the Github issue, if any
-        if gh.notes is not None:
-            cp = copy.deepcopy(paper)
-            cp.notes = gh.notes
-            return cp
-        return paper
+        print(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
+        result = copy.deepcopy(paper)
+    return result
 
 def load_csv(file: pathlib.Path) -> List[Tuple]:
     rows = []

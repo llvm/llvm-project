@@ -304,10 +304,10 @@ private:
       if (auto E = TI.takeError()) {
         errs() << "Error obtaining instruction printer: "
                << toString(std::move(E)) << "\n";
-        return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+        return;
       }
       Inst.dump_pretty(ErrMsgStream, TI->InstPrinter.get());
-      return std::make_pair(EvalResult(ErrMsgStream.str()), "");
+      return;
     };
 
     if (OpIdx >= Inst.getNumOperands()) {
@@ -319,7 +319,8 @@ private:
                    << format("%i", Inst.getNumOperands())
                    << " operands.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     const MCOperand &Op = Inst.getOperand(OpIdx);
@@ -329,7 +330,8 @@ private:
       ErrMsgStream << "Operand '" << format("%i", OpIdx) << "' of instruction '"
                    << Symbol << "' is not an immediate.\nInstruction is:\n  ";
 
-      return printInst(Symbol, Inst, ErrMsgStream);
+      printInst(Symbol, Inst, ErrMsgStream);
+      return {EvalResult(std::move(ErrMsg)), ""};
     }
 
     return std::make_pair(EvalResult(Op.getImm()), RemainingExpr);

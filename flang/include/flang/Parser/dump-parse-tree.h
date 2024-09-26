@@ -875,7 +875,7 @@ protected:
       ss << x;
     }
     if (ss.tell()) {
-      return ss.str();
+      return buf;
     }
     if constexpr (std::is_same_v<T, Name>) {
       return x.source.ToString();

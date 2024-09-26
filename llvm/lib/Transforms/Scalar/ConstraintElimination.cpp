@@ -1857,7 +1857,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     std::string S;
     raw_string_ostream StringS(S);
     ReproducerModule->print(StringS, nullptr);
-    StringS.flush();
     OptimizationRemark Rem(DEBUG_TYPE, "Reproducer", &F);
     Rem << ore::NV("module") << S;
     ORE.emit(Rem);

@@ -105,111 +105,7 @@ int OperandUseIterator::operator-(const OperandUseIterator &Other) const {
   return ThisOpNo - OtherOpNo;
 }
 
-Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
-    : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
-  UID = Ctx.getNumValues();
-#endif
-}
-
-Value::use_iterator Value::use_begin() {
-  llvm::Use *LLVMUse = nullptr;
-  if (Val->use_begin() != Val->use_end())
-    LLVMUse = &*Val->use_begin();
-  User *User = LLVMUse != nullptr ? cast_or_null<sandboxir::User>(Ctx.getValue(
-                                        Val->use_begin()->getUser()))
-                                  : nullptr;
-  return use_iterator(Use(LLVMUse, User, Ctx));
-}
-
-Value::user_iterator Value::user_begin() {
-  auto UseBegin = Val->use_begin();
-  auto UseEnd = Val->use_end();
-  bool AtEnd = UseBegin == UseEnd;
-  llvm::Use *LLVMUse = AtEnd ? nullptr : &*UseBegin;
-  User *User =
-      AtEnd ? nullptr
-            : cast_or_null<sandboxir::User>(Ctx.getValue(&*LLVMUse->getUser()));
-  return user_iterator(Use(LLVMUse, User, Ctx), UseToUser());
-}
-
-unsigned Value::getNumUses() const { return range_size(Val->users()); }
-
-Type *Value::getType() const { return Ctx.getType(Val->getType()); }
-
-void Value::replaceUsesWithIf(
-    Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
-  assert(getType() == OtherV->getType() && "Can't replace with different type");
-  llvm::Value *OtherVal = OtherV->Val;
-  // We are delegating RUWIf to LLVM IR's RUWIf.
-  Val->replaceUsesWithIf(
-      OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
-        User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
-        if (DstU == nullptr)
-          return false;
-        Use UseToReplace(&LLVMUse, DstU, Ctx);
-        if (!ShouldReplace(UseToReplace))
-          return false;
-        Ctx.getTracker().emplaceIfTracking<UseSet>(UseToReplace);
-        return true;
-      });
-}
-
-void Value::replaceAllUsesWith(Value *Other) {
-  assert(getType() == Other->getType() &&
-         "Replacing with Value of different type!");
-  auto &Tracker = Ctx.getTracker();
-  if (Tracker.isTracking()) {
-    for (auto Use : uses())
-      Tracker.track(std::make_unique<UseSet>(Use));
-  }
-  // We are delegating RAUW to LLVM IR's RAUW.
-  Val->replaceAllUsesWith(Other->Val);
-}
-
-#ifndef NDEBUG
-std::string Value::getUid() const {
-  std::stringstream SS;
-  SS << "SB" << UID << ".";
-  return SS.str();
-}
-
-void Value::dumpCommonHeader(raw_ostream &OS) const {
-  OS << getUid() << " " << getSubclassIDStr(SubclassID) << " ";
-}
-
-void Value::dumpCommonFooter(raw_ostream &OS) const {
-  OS.indent(2) << "Val: ";
-  if (Val)
-    OS << *Val;
-  else
-    OS << "NULL";
-  OS << "\n";
-}
-
-void Value::dumpCommonPrefix(raw_ostream &OS) const {
-  if (Val)
-    OS << *Val;
-  else
-    OS << "NULL ";
-}
-
-void Value::dumpCommonSuffix(raw_ostream &OS) const {
-  OS << " ; " << getUid() << " (" << getSubclassIDStr(SubclassID) << ")";
-}
-
-void Value::printAsOperandCommon(raw_ostream &OS) const {
-  if (Val)
-    Val->printAsOperand(OS);
-  else
-    OS << "NULL ";
-}
-
-void Value::dump() const {
-  dumpOS(dbgs());
-  dbgs() << "\n";
-}
-
 void Argument::printAsOperand(raw_ostream &OS) const {
   printAsOperandCommon(OS);
 }
@@ -304,6 +200,11 @@ BBIterator &BBIterator::operator--() {
   assert(std::prev(It, Num - 1) != BB->begin() && "Already at begin!");
   It = std::prev(It, Num);
   return *this;
+}
+
+BasicBlock *BBIterator::getNodeParent() const {
+  llvm::BasicBlock *Parent = const_cast<BBIterator *>(this)->It.getNodeParent();
+  return cast<BasicBlock>(Ctx->getValue(Parent));
 }
 
 const char *Instruction::getOpcodeName(Opcode Opc) {
@@ -562,6 +463,10 @@ void Instruction::copyFastMathFlags(FastMathFlags FMF) {
       .emplaceIfTracking<GenericSetter<&Instruction::getFastMathFlags,
                                        &Instruction::copyFastMathFlags>>(this);
   cast<llvm::Instruction>(Val)->copyFastMathFlags(FMF);
+}
+
+Type *Instruction::getAccessType() const {
+  return Ctx.getType(cast<llvm::Instruction>(Val)->getAccessType());
 }
 
 void Instruction::setHasApproxFunc(bool B) {
@@ -1357,9 +1262,9 @@ BasicBlock *PHINode::LLVMBBToBB::operator()(llvm::BasicBlock *LLVMBB) const {
 PHINode *PHINode::create(Type *Ty, unsigned NumReservedValues,
                          Instruction *InsertBefore, Context &Ctx,
                          const Twine &Name) {
-  llvm::PHINode *NewPHI =
-      llvm::PHINode::Create(Ty->LLVMTy, NumReservedValues, Name,
-                            InsertBefore->getTopmostLLVMInstruction());
+  llvm::PHINode *NewPHI = llvm::PHINode::Create(
+      Ty->LLVMTy, NumReservedValues, Name,
+      InsertBefore->getTopmostLLVMInstruction()->getIterator());
   return Ctx.createPHINode(NewPHI);
 }
 
@@ -2519,6 +2424,94 @@ void GlobalObject::setSection(StringRef S) {
   cast<llvm::GlobalObject>(Val)->setSection(S);
 }
 
+template <typename GlobalT, typename LLVMGlobalT, typename ParentT,
+          typename LLVMParentT>
+GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
+    LLVMGVToGV::operator()(LLVMGlobalT &LLVMGV) const {
+  return cast<GlobalT>(*Ctx.getValue(&LLVMGV));
+}
+
+namespace llvm::sandboxir {
+// Explicit instantiations.
+template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
+                                 llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                                 GlobalObject, llvm::GlobalObject>;
+template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                                 llvm::GlobalValue>;
+} // namespace llvm::sandboxir
+
+void GlobalIFunc::setResolver(Constant *Resolver) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalIFunc::getResolver, &GlobalIFunc::setResolver>>(
+          this);
+  cast<llvm::GlobalIFunc>(Val)->setResolver(
+      cast<llvm::Constant>(Resolver->Val));
+}
+
+Constant *GlobalIFunc::getResolver() const {
+  return Ctx.getOrCreateConstant(cast<llvm::GlobalIFunc>(Val)->getResolver());
+}
+
+Function *GlobalIFunc::getResolverFunction() {
+  return cast<Function>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalIFunc>(Val)->getResolverFunction()));
+}
+
+GlobalVariable &
+GlobalVariable::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV) const {
+  return cast<GlobalVariable>(*Ctx.getValue(&LLVMGV));
+}
+
+Constant *GlobalVariable::getInitializer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::GlobalVariable>(Val)->getInitializer());
+}
+
+void GlobalVariable::setInitializer(Constant *InitVal) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getInitializer,
+                                       &GlobalVariable::setInitializer>>(this);
+  cast<llvm::GlobalVariable>(Val)->setInitializer(
+      cast<llvm::Constant>(InitVal->Val));
+}
+
+void GlobalVariable::setConstant(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::isConstant,
+                                       &GlobalVariable::setConstant>>(this);
+  cast<llvm::GlobalVariable>(Val)->setConstant(V);
+}
+
+void GlobalVariable::setExternallyInitialized(bool V) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalVariable::isExternallyInitialized,
+                        &GlobalVariable::setExternallyInitialized>>(this);
+  cast<llvm::GlobalVariable>(Val)->setExternallyInitialized(V);
+}
+
+void GlobalAlias::setAliasee(Constant *Aliasee) {
+  Ctx.getTracker()
+      .emplaceIfTracking<
+          GenericSetter<&GlobalAlias::getAliasee, &GlobalAlias::setAliasee>>(
+          this);
+  cast<llvm::GlobalAlias>(Val)->setAliasee(cast<llvm::Constant>(Aliasee->Val));
+}
+
+Constant *GlobalAlias::getAliasee() const {
+  return cast<Constant>(
+      Ctx.getOrCreateConstant(cast<llvm::GlobalAlias>(Val)->getAliasee()));
+}
+
+const GlobalObject *GlobalAlias::getAliaseeObject() const {
+  return cast<GlobalObject>(Ctx.getOrCreateConstant(
+      cast<llvm::GlobalAlias>(Val)->getAliaseeObject()));
+}
+
 void GlobalValue::setUnnamedAddr(UnnamedAddr V) {
   Ctx.getTracker()
       .emplaceIfTracking<GenericSetter<&GlobalValue::getUnnamedAddr,
@@ -2531,6 +2524,54 @@ void GlobalValue::setVisibility(VisibilityTypes V) {
       .emplaceIfTracking<GenericSetter<&GlobalValue::getVisibility,
                                        &GlobalValue::setVisibility>>(this);
   cast<llvm::GlobalValue>(Val)->setVisibility(V);
+}
+
+NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
+  auto *LLVMC = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(GV->Val));
+  return cast<NoCFIValue>(GV->getContext().getOrCreateConstant(LLVMC));
+}
+
+GlobalValue *NoCFIValue::getGlobalValue() const {
+  auto *LLVMC = cast<llvm::NoCFIValue>(Val)->getGlobalValue();
+  return cast<GlobalValue>(Ctx.getOrCreateConstant(LLVMC));
+}
+
+PointerType *NoCFIValue::getType() const {
+  return cast<PointerType>(Ctx.getType(cast<llvm::NoCFIValue>(Val)->getType()));
+}
+
+ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
+                                      ConstantInt *Disc, Constant *AddrDisc) {
+  auto *LLVMC = llvm::ConstantPtrAuth::get(
+      cast<llvm::Constant>(Ptr->Val), cast<llvm::ConstantInt>(Key->Val),
+      cast<llvm::ConstantInt>(Disc->Val), cast<llvm::Constant>(AddrDisc->Val));
+  return cast<ConstantPtrAuth>(Ptr->getContext().getOrCreateConstant(LLVMC));
+}
+
+Constant *ConstantPtrAuth::getPointer() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getPointer());
+}
+
+ConstantInt *ConstantPtrAuth::getKey() const {
+  return cast<ConstantInt>(
+      Ctx.getOrCreateConstant(cast<llvm::ConstantPtrAuth>(Val)->getKey()));
+}
+
+ConstantInt *ConstantPtrAuth::getDiscriminator() const {
+  return cast<ConstantInt>(Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getDiscriminator()));
+}
+
+Constant *ConstantPtrAuth::getAddrDiscriminator() const {
+  return Ctx.getOrCreateConstant(
+      cast<llvm::ConstantPtrAuth>(Val)->getAddrDiscriminator());
+}
+
+ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
+  auto *LLVMC = cast<llvm::ConstantPtrAuth>(Val)->getWithSameSchema(
+      cast<llvm::Constant>(Pointer->Val));
+  return cast<ConstantPtrAuth>(Ctx.getOrCreateConstant(LLVMC));
 }
 
 BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
@@ -2616,636 +2657,6 @@ void Function::dumpOS(raw_ostream &OS) const {
 BasicBlock::iterator::pointer
 BasicBlock::iterator::getInstr(llvm::BasicBlock::iterator It) const {
   return cast_or_null<Instruction>(Ctx->getValue(&*It));
-}
-
-std::unique_ptr<Value> Context::detachLLVMValue(llvm::Value *V) {
-  std::unique_ptr<Value> Erased;
-  auto It = LLVMValueToValueMap.find(V);
-  if (It != LLVMValueToValueMap.end()) {
-    auto *Val = It->second.release();
-    Erased = std::unique_ptr<Value>(Val);
-    LLVMValueToValueMap.erase(It);
-  }
-  return Erased;
-}
-
-std::unique_ptr<Value> Context::detach(Value *V) {
-  assert(V->getSubclassID() != Value::ClassID::Constant &&
-         "Can't detach a constant!");
-  assert(V->getSubclassID() != Value::ClassID::User && "Can't detach a user!");
-  return detachLLVMValue(V->Val);
-}
-
-Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
-  assert(VPtr->getSubclassID() != Value::ClassID::User &&
-         "Can't register a user!");
-
-  // Track creation of instructions.
-  // Please note that we don't allow the creation of detached instructions,
-  // meaning that the instructions need to be inserted into a block upon
-  // creation. This is why the tracker class combines creation and insertion.
-  if (auto *I = dyn_cast<Instruction>(VPtr.get()))
-    getTracker().emplaceIfTracking<CreateAndInsertInst>(I);
-
-  Value *V = VPtr.get();
-  [[maybe_unused]] auto Pair =
-      LLVMValueToValueMap.insert({VPtr->Val, std::move(VPtr)});
-  assert(Pair.second && "Already exists!");
-  return V;
-}
-
-Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMV, nullptr});
-  auto It = Pair.first;
-  if (!Pair.second)
-    return It->second.get();
-
-  if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
-    switch (C->getValueID()) {
-    case llvm::Value::ConstantIntVal:
-      It->second = std::unique_ptr<ConstantInt>(
-          new ConstantInt(cast<llvm::ConstantInt>(C), *this));
-      return It->second.get();
-    case llvm::Value::ConstantFPVal:
-      It->second = std::unique_ptr<ConstantFP>(
-          new ConstantFP(cast<llvm::ConstantFP>(C), *this));
-      return It->second.get();
-    case llvm::Value::BlockAddressVal:
-      It->second = std::unique_ptr<BlockAddress>(
-          new BlockAddress(cast<llvm::BlockAddress>(C), *this));
-      return It->second.get();
-    case llvm::Value::ConstantTokenNoneVal:
-      It->second = std::unique_ptr<ConstantTokenNone>(
-          new ConstantTokenNone(cast<llvm::ConstantTokenNone>(C), *this));
-      return It->second.get();
-    case llvm::Value::ConstantAggregateZeroVal: {
-      auto *CAZ = cast<llvm::ConstantAggregateZero>(C);
-      It->second = std::unique_ptr<ConstantAggregateZero>(
-          new ConstantAggregateZero(CAZ, *this));
-      auto *Ret = It->second.get();
-      // Must create sandboxir for elements.
-      auto EC = CAZ->getElementCount();
-      if (EC.isFixed()) {
-        for (auto ElmIdx : seq<unsigned>(0, EC.getFixedValue()))
-          getOrCreateValueInternal(CAZ->getElementValue(ElmIdx), CAZ);
-      }
-      return Ret;
-    }
-    case llvm::Value::ConstantPointerNullVal:
-      It->second = std::unique_ptr<ConstantPointerNull>(
-          new ConstantPointerNull(cast<llvm::ConstantPointerNull>(C), *this));
-      return It->second.get();
-    case llvm::Value::PoisonValueVal:
-      It->second = std::unique_ptr<PoisonValue>(
-          new PoisonValue(cast<llvm::PoisonValue>(C), *this));
-      return It->second.get();
-    case llvm::Value::UndefValueVal:
-      It->second = std::unique_ptr<UndefValue>(
-          new UndefValue(cast<llvm::UndefValue>(C), *this));
-      return It->second.get();
-    case llvm::Value::DSOLocalEquivalentVal: {
-      auto *DSOLE = cast<llvm::DSOLocalEquivalent>(C);
-      It->second = std::unique_ptr<DSOLocalEquivalent>(
-          new DSOLocalEquivalent(DSOLE, *this));
-      auto *Ret = It->second.get();
-      getOrCreateValueInternal(DSOLE->getGlobalValue(), DSOLE);
-      return Ret;
-    }
-    case llvm::Value::ConstantArrayVal:
-      It->second = std::unique_ptr<ConstantArray>(
-          new ConstantArray(cast<llvm::ConstantArray>(C), *this));
-      break;
-    case llvm::Value::ConstantStructVal:
-      It->second = std::unique_ptr<ConstantStruct>(
-          new ConstantStruct(cast<llvm::ConstantStruct>(C), *this));
-      break;
-    case llvm::Value::ConstantVectorVal:
-      It->second = std::unique_ptr<ConstantVector>(
-          new ConstantVector(cast<llvm::ConstantVector>(C), *this));
-      break;
-    case llvm::Value::FunctionVal:
-      It->second = std::unique_ptr<Function>(
-          new Function(cast<llvm::Function>(C), *this));
-      break;
-    default:
-      It->second = std::unique_ptr<Constant>(new Constant(C, *this));
-      break;
-    }
-    auto *NewC = It->second.get();
-    for (llvm::Value *COp : C->operands())
-      getOrCreateValueInternal(COp, C);
-    return NewC;
-  }
-  if (auto *Arg = dyn_cast<llvm::Argument>(LLVMV)) {
-    It->second = std::unique_ptr<Argument>(new Argument(Arg, *this));
-    return It->second.get();
-  }
-  if (auto *BB = dyn_cast<llvm::BasicBlock>(LLVMV)) {
-    assert(isa<llvm::BlockAddress>(U) &&
-           "This won't create a SBBB, don't call this function directly!");
-    if (auto *SBBB = getValue(BB))
-      return SBBB;
-    return nullptr;
-  }
-  assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
-
-  switch (cast<llvm::Instruction>(LLVMV)->getOpcode()) {
-  case llvm::Instruction::VAArg: {
-    auto *LLVMVAArg = cast<llvm::VAArgInst>(LLVMV);
-    It->second = std::unique_ptr<VAArgInst>(new VAArgInst(LLVMVAArg, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Freeze: {
-    auto *LLVMFreeze = cast<llvm::FreezeInst>(LLVMV);
-    It->second = std::unique_ptr<FreezeInst>(new FreezeInst(LLVMFreeze, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Fence: {
-    auto *LLVMFence = cast<llvm::FenceInst>(LLVMV);
-    It->second = std::unique_ptr<FenceInst>(new FenceInst(LLVMFence, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Select: {
-    auto *LLVMSel = cast<llvm::SelectInst>(LLVMV);
-    It->second = std::unique_ptr<SelectInst>(new SelectInst(LLVMSel, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::ExtractElement: {
-    auto *LLVMIns = cast<llvm::ExtractElementInst>(LLVMV);
-    It->second = std::unique_ptr<ExtractElementInst>(
-        new ExtractElementInst(LLVMIns, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::InsertElement: {
-    auto *LLVMIns = cast<llvm::InsertElementInst>(LLVMV);
-    It->second = std::unique_ptr<InsertElementInst>(
-        new InsertElementInst(LLVMIns, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::ShuffleVector: {
-    auto *LLVMIns = cast<llvm::ShuffleVectorInst>(LLVMV);
-    It->second = std::unique_ptr<ShuffleVectorInst>(
-        new ShuffleVectorInst(LLVMIns, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::ExtractValue: {
-    auto *LLVMIns = cast<llvm::ExtractValueInst>(LLVMV);
-    It->second =
-        std::unique_ptr<ExtractValueInst>(new ExtractValueInst(LLVMIns, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::InsertValue: {
-    auto *LLVMIns = cast<llvm::InsertValueInst>(LLVMV);
-    It->second =
-        std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Br: {
-    auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
-    It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Load: {
-    auto *LLVMLd = cast<llvm::LoadInst>(LLVMV);
-    It->second = std::unique_ptr<LoadInst>(new LoadInst(LLVMLd, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Store: {
-    auto *LLVMSt = cast<llvm::StoreInst>(LLVMV);
-    It->second = std::unique_ptr<StoreInst>(new StoreInst(LLVMSt, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Ret: {
-    auto *LLVMRet = cast<llvm::ReturnInst>(LLVMV);
-    It->second = std::unique_ptr<ReturnInst>(new ReturnInst(LLVMRet, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Call: {
-    auto *LLVMCall = cast<llvm::CallInst>(LLVMV);
-    It->second = std::unique_ptr<CallInst>(new CallInst(LLVMCall, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Invoke: {
-    auto *LLVMInvoke = cast<llvm::InvokeInst>(LLVMV);
-    It->second = std::unique_ptr<InvokeInst>(new InvokeInst(LLVMInvoke, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CallBr: {
-    auto *LLVMCallBr = cast<llvm::CallBrInst>(LLVMV);
-    It->second = std::unique_ptr<CallBrInst>(new CallBrInst(LLVMCallBr, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::LandingPad: {
-    auto *LLVMLPad = cast<llvm::LandingPadInst>(LLVMV);
-    It->second =
-        std::unique_ptr<LandingPadInst>(new LandingPadInst(LLVMLPad, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CatchPad: {
-    auto *LLVMCPI = cast<llvm::CatchPadInst>(LLVMV);
-    It->second =
-        std::unique_ptr<CatchPadInst>(new CatchPadInst(LLVMCPI, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CleanupPad: {
-    auto *LLVMCPI = cast<llvm::CleanupPadInst>(LLVMV);
-    It->second =
-        std::unique_ptr<CleanupPadInst>(new CleanupPadInst(LLVMCPI, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CatchRet: {
-    auto *LLVMCRI = cast<llvm::CatchReturnInst>(LLVMV);
-    It->second =
-        std::unique_ptr<CatchReturnInst>(new CatchReturnInst(LLVMCRI, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CleanupRet: {
-    auto *LLVMCRI = cast<llvm::CleanupReturnInst>(LLVMV);
-    It->second = std::unique_ptr<CleanupReturnInst>(
-        new CleanupReturnInst(LLVMCRI, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::GetElementPtr: {
-    auto *LLVMGEP = cast<llvm::GetElementPtrInst>(LLVMV);
-    It->second = std::unique_ptr<GetElementPtrInst>(
-        new GetElementPtrInst(LLVMGEP, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::CatchSwitch: {
-    auto *LLVMCatchSwitchInst = cast<llvm::CatchSwitchInst>(LLVMV);
-    It->second = std::unique_ptr<CatchSwitchInst>(
-        new CatchSwitchInst(LLVMCatchSwitchInst, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Resume: {
-    auto *LLVMResumeInst = cast<llvm::ResumeInst>(LLVMV);
-    It->second =
-        std::unique_ptr<ResumeInst>(new ResumeInst(LLVMResumeInst, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Switch: {
-    auto *LLVMSwitchInst = cast<llvm::SwitchInst>(LLVMV);
-    It->second =
-        std::unique_ptr<SwitchInst>(new SwitchInst(LLVMSwitchInst, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::FNeg: {
-    auto *LLVMUnaryOperator = cast<llvm::UnaryOperator>(LLVMV);
-    It->second = std::unique_ptr<UnaryOperator>(
-        new UnaryOperator(LLVMUnaryOperator, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Add:
-  case llvm::Instruction::FAdd:
-  case llvm::Instruction::Sub:
-  case llvm::Instruction::FSub:
-  case llvm::Instruction::Mul:
-  case llvm::Instruction::FMul:
-  case llvm::Instruction::UDiv:
-  case llvm::Instruction::SDiv:
-  case llvm::Instruction::FDiv:
-  case llvm::Instruction::URem:
-  case llvm::Instruction::SRem:
-  case llvm::Instruction::FRem:
-  case llvm::Instruction::Shl:
-  case llvm::Instruction::LShr:
-  case llvm::Instruction::AShr:
-  case llvm::Instruction::And:
-  case llvm::Instruction::Or:
-  case llvm::Instruction::Xor: {
-    auto *LLVMBinaryOperator = cast<llvm::BinaryOperator>(LLVMV);
-    It->second = std::unique_ptr<BinaryOperator>(
-        new BinaryOperator(LLVMBinaryOperator, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::AtomicRMW: {
-    auto *LLVMAtomicRMW = cast<llvm::AtomicRMWInst>(LLVMV);
-    It->second =
-        std::unique_ptr<AtomicRMWInst>(new AtomicRMWInst(LLVMAtomicRMW, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::AtomicCmpXchg: {
-    auto *LLVMAtomicCmpXchg = cast<llvm::AtomicCmpXchgInst>(LLVMV);
-    It->second = std::unique_ptr<AtomicCmpXchgInst>(
-        new AtomicCmpXchgInst(LLVMAtomicCmpXchg, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Alloca: {
-    auto *LLVMAlloca = cast<llvm::AllocaInst>(LLVMV);
-    It->second = std::unique_ptr<AllocaInst>(new AllocaInst(LLVMAlloca, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::ZExt:
-  case llvm::Instruction::SExt:
-  case llvm::Instruction::FPToUI:
-  case llvm::Instruction::FPToSI:
-  case llvm::Instruction::FPExt:
-  case llvm::Instruction::PtrToInt:
-  case llvm::Instruction::IntToPtr:
-  case llvm::Instruction::SIToFP:
-  case llvm::Instruction::UIToFP:
-  case llvm::Instruction::Trunc:
-  case llvm::Instruction::FPTrunc:
-  case llvm::Instruction::BitCast:
-  case llvm::Instruction::AddrSpaceCast: {
-    auto *LLVMCast = cast<llvm::CastInst>(LLVMV);
-    It->second = std::unique_ptr<CastInst>(new CastInst(LLVMCast, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::PHI: {
-    auto *LLVMPhi = cast<llvm::PHINode>(LLVMV);
-    It->second = std::unique_ptr<PHINode>(new PHINode(LLVMPhi, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::ICmp: {
-    auto *LLVMICmp = cast<llvm::ICmpInst>(LLVMV);
-    It->second = std::unique_ptr<ICmpInst>(new ICmpInst(LLVMICmp, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::FCmp: {
-    auto *LLVMFCmp = cast<llvm::FCmpInst>(LLVMV);
-    It->second = std::unique_ptr<FCmpInst>(new FCmpInst(LLVMFCmp, *this));
-    return It->second.get();
-  }
-  case llvm::Instruction::Unreachable: {
-    auto *LLVMUnreachable = cast<llvm::UnreachableInst>(LLVMV);
-    It->second = std::unique_ptr<UnreachableInst>(
-        new UnreachableInst(LLVMUnreachable, *this));
-    return It->second.get();
-  }
-  default:
-    break;
-  }
-
-  It->second = std::unique_ptr<OpaqueInst>(
-      new OpaqueInst(cast<llvm::Instruction>(LLVMV), *this));
-  return It->second.get();
-}
-
-BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
-  assert(getValue(LLVMBB) == nullptr && "Already exists!");
-  auto NewBBPtr = std::unique_ptr<BasicBlock>(new BasicBlock(LLVMBB, *this));
-  auto *BB = cast<BasicBlock>(registerValue(std::move(NewBBPtr)));
-  // Create SandboxIR for BB's body.
-  BB->buildBasicBlockFromLLVMIR(LLVMBB);
-  return BB;
-}
-
-VAArgInst *Context::createVAArgInst(llvm::VAArgInst *SI) {
-  auto NewPtr = std::unique_ptr<VAArgInst>(new VAArgInst(SI, *this));
-  return cast<VAArgInst>(registerValue(std::move(NewPtr)));
-}
-
-FreezeInst *Context::createFreezeInst(llvm::FreezeInst *SI) {
-  auto NewPtr = std::unique_ptr<FreezeInst>(new FreezeInst(SI, *this));
-  return cast<FreezeInst>(registerValue(std::move(NewPtr)));
-}
-
-FenceInst *Context::createFenceInst(llvm::FenceInst *SI) {
-  auto NewPtr = std::unique_ptr<FenceInst>(new FenceInst(SI, *this));
-  return cast<FenceInst>(registerValue(std::move(NewPtr)));
-}
-
-SelectInst *Context::createSelectInst(llvm::SelectInst *SI) {
-  auto NewPtr = std::unique_ptr<SelectInst>(new SelectInst(SI, *this));
-  return cast<SelectInst>(registerValue(std::move(NewPtr)));
-}
-
-ExtractElementInst *
-Context::createExtractElementInst(llvm::ExtractElementInst *EEI) {
-  auto NewPtr =
-      std::unique_ptr<ExtractElementInst>(new ExtractElementInst(EEI, *this));
-  return cast<ExtractElementInst>(registerValue(std::move(NewPtr)));
-}
-
-InsertElementInst *
-Context::createInsertElementInst(llvm::InsertElementInst *IEI) {
-  auto NewPtr =
-      std::unique_ptr<InsertElementInst>(new InsertElementInst(IEI, *this));
-  return cast<InsertElementInst>(registerValue(std::move(NewPtr)));
-}
-
-ShuffleVectorInst *
-Context::createShuffleVectorInst(llvm::ShuffleVectorInst *SVI) {
-  auto NewPtr =
-      std::unique_ptr<ShuffleVectorInst>(new ShuffleVectorInst(SVI, *this));
-  return cast<ShuffleVectorInst>(registerValue(std::move(NewPtr)));
-}
-
-ExtractValueInst *Context::createExtractValueInst(llvm::ExtractValueInst *EVI) {
-  auto NewPtr =
-      std::unique_ptr<ExtractValueInst>(new ExtractValueInst(EVI, *this));
-  return cast<ExtractValueInst>(registerValue(std::move(NewPtr)));
-}
-
-InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
-  auto NewPtr =
-      std::unique_ptr<InsertValueInst>(new InsertValueInst(IVI, *this));
-  return cast<InsertValueInst>(registerValue(std::move(NewPtr)));
-}
-
-BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
-  auto NewPtr = std::unique_ptr<BranchInst>(new BranchInst(BI, *this));
-  return cast<BranchInst>(registerValue(std::move(NewPtr)));
-}
-
-LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
-  auto NewPtr = std::unique_ptr<LoadInst>(new LoadInst(LI, *this));
-  return cast<LoadInst>(registerValue(std::move(NewPtr)));
-}
-
-StoreInst *Context::createStoreInst(llvm::StoreInst *SI) {
-  auto NewPtr = std::unique_ptr<StoreInst>(new StoreInst(SI, *this));
-  return cast<StoreInst>(registerValue(std::move(NewPtr)));
-}
-
-ReturnInst *Context::createReturnInst(llvm::ReturnInst *I) {
-  auto NewPtr = std::unique_ptr<ReturnInst>(new ReturnInst(I, *this));
-  return cast<ReturnInst>(registerValue(std::move(NewPtr)));
-}
-
-CallInst *Context::createCallInst(llvm::CallInst *I) {
-  auto NewPtr = std::unique_ptr<CallInst>(new CallInst(I, *this));
-  return cast<CallInst>(registerValue(std::move(NewPtr)));
-}
-
-InvokeInst *Context::createInvokeInst(llvm::InvokeInst *I) {
-  auto NewPtr = std::unique_ptr<InvokeInst>(new InvokeInst(I, *this));
-  return cast<InvokeInst>(registerValue(std::move(NewPtr)));
-}
-
-CallBrInst *Context::createCallBrInst(llvm::CallBrInst *I) {
-  auto NewPtr = std::unique_ptr<CallBrInst>(new CallBrInst(I, *this));
-  return cast<CallBrInst>(registerValue(std::move(NewPtr)));
-}
-
-UnreachableInst *Context::createUnreachableInst(llvm::UnreachableInst *UI) {
-  auto NewPtr =
-      std::unique_ptr<UnreachableInst>(new UnreachableInst(UI, *this));
-  return cast<UnreachableInst>(registerValue(std::move(NewPtr)));
-}
-LandingPadInst *Context::createLandingPadInst(llvm::LandingPadInst *I) {
-  auto NewPtr = std::unique_ptr<LandingPadInst>(new LandingPadInst(I, *this));
-  return cast<LandingPadInst>(registerValue(std::move(NewPtr)));
-}
-CatchPadInst *Context::createCatchPadInst(llvm::CatchPadInst *I) {
-  auto NewPtr = std::unique_ptr<CatchPadInst>(new CatchPadInst(I, *this));
-  return cast<CatchPadInst>(registerValue(std::move(NewPtr)));
-}
-CleanupPadInst *Context::createCleanupPadInst(llvm::CleanupPadInst *I) {
-  auto NewPtr = std::unique_ptr<CleanupPadInst>(new CleanupPadInst(I, *this));
-  return cast<CleanupPadInst>(registerValue(std::move(NewPtr)));
-}
-CatchReturnInst *Context::createCatchReturnInst(llvm::CatchReturnInst *I) {
-  auto NewPtr = std::unique_ptr<CatchReturnInst>(new CatchReturnInst(I, *this));
-  return cast<CatchReturnInst>(registerValue(std::move(NewPtr)));
-}
-CleanupReturnInst *
-Context::createCleanupReturnInst(llvm::CleanupReturnInst *I) {
-  auto NewPtr =
-      std::unique_ptr<CleanupReturnInst>(new CleanupReturnInst(I, *this));
-  return cast<CleanupReturnInst>(registerValue(std::move(NewPtr)));
-}
-GetElementPtrInst *
-Context::createGetElementPtrInst(llvm::GetElementPtrInst *I) {
-  auto NewPtr =
-      std::unique_ptr<GetElementPtrInst>(new GetElementPtrInst(I, *this));
-  return cast<GetElementPtrInst>(registerValue(std::move(NewPtr)));
-}
-CatchSwitchInst *Context::createCatchSwitchInst(llvm::CatchSwitchInst *I) {
-  auto NewPtr = std::unique_ptr<CatchSwitchInst>(new CatchSwitchInst(I, *this));
-  return cast<CatchSwitchInst>(registerValue(std::move(NewPtr)));
-}
-ResumeInst *Context::createResumeInst(llvm::ResumeInst *I) {
-  auto NewPtr = std::unique_ptr<ResumeInst>(new ResumeInst(I, *this));
-  return cast<ResumeInst>(registerValue(std::move(NewPtr)));
-}
-SwitchInst *Context::createSwitchInst(llvm::SwitchInst *I) {
-  auto NewPtr = std::unique_ptr<SwitchInst>(new SwitchInst(I, *this));
-  return cast<SwitchInst>(registerValue(std::move(NewPtr)));
-}
-UnaryOperator *Context::createUnaryOperator(llvm::UnaryOperator *I) {
-  auto NewPtr = std::unique_ptr<UnaryOperator>(new UnaryOperator(I, *this));
-  return cast<UnaryOperator>(registerValue(std::move(NewPtr)));
-}
-BinaryOperator *Context::createBinaryOperator(llvm::BinaryOperator *I) {
-  auto NewPtr = std::unique_ptr<BinaryOperator>(new BinaryOperator(I, *this));
-  return cast<BinaryOperator>(registerValue(std::move(NewPtr)));
-}
-AtomicRMWInst *Context::createAtomicRMWInst(llvm::AtomicRMWInst *I) {
-  auto NewPtr = std::unique_ptr<AtomicRMWInst>(new AtomicRMWInst(I, *this));
-  return cast<AtomicRMWInst>(registerValue(std::move(NewPtr)));
-}
-AtomicCmpXchgInst *
-Context::createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I) {
-  auto NewPtr =
-      std::unique_ptr<AtomicCmpXchgInst>(new AtomicCmpXchgInst(I, *this));
-  return cast<AtomicCmpXchgInst>(registerValue(std::move(NewPtr)));
-}
-AllocaInst *Context::createAllocaInst(llvm::AllocaInst *I) {
-  auto NewPtr = std::unique_ptr<AllocaInst>(new AllocaInst(I, *this));
-  return cast<AllocaInst>(registerValue(std::move(NewPtr)));
-}
-CastInst *Context::createCastInst(llvm::CastInst *I) {
-  auto NewPtr = std::unique_ptr<CastInst>(new CastInst(I, *this));
-  return cast<CastInst>(registerValue(std::move(NewPtr)));
-}
-PHINode *Context::createPHINode(llvm::PHINode *I) {
-  auto NewPtr = std::unique_ptr<PHINode>(new PHINode(I, *this));
-  return cast<PHINode>(registerValue(std::move(NewPtr)));
-}
-ICmpInst *Context::createICmpInst(llvm::ICmpInst *I) {
-  auto NewPtr = std::unique_ptr<ICmpInst>(new ICmpInst(I, *this));
-  return cast<ICmpInst>(registerValue(std::move(NewPtr)));
-}
-FCmpInst *Context::createFCmpInst(llvm::FCmpInst *I) {
-  auto NewPtr = std::unique_ptr<FCmpInst>(new FCmpInst(I, *this));
-  return cast<FCmpInst>(registerValue(std::move(NewPtr)));
-}
-CmpInst *CmpInst::create(Predicate P, Value *S1, Value *S2,
-                         Instruction *InsertBefore, Context &Ctx,
-                         const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  auto *LLVMI = Builder.CreateCmp(P, S1->Val, S2->Val, Name);
-  if (dyn_cast<llvm::ICmpInst>(LLVMI))
-    return Ctx.createICmpInst(cast<llvm::ICmpInst>(LLVMI));
-  return Ctx.createFCmpInst(cast<llvm::FCmpInst>(LLVMI));
-}
-CmpInst *CmpInst::createWithCopiedFlags(Predicate P, Value *S1, Value *S2,
-                                        const Instruction *F,
-                                        Instruction *InsertBefore, Context &Ctx,
-                                        const Twine &Name) {
-  CmpInst *Inst = create(P, S1, S2, InsertBefore, Ctx, Name);
-  cast<llvm::CmpInst>(Inst->Val)->copyIRFlags(F->Val);
-  return Inst;
-}
-
-Type *CmpInst::makeCmpResultType(Type *OpndType) {
-  if (auto *VT = dyn_cast<VectorType>(OpndType)) {
-    // TODO: Cleanup when we have more complete support for
-    // sandboxir::VectorType
-    return OpndType->getContext().getType(llvm::VectorType::get(
-        llvm::Type::getInt1Ty(OpndType->getContext().LLVMCtx),
-        cast<llvm::VectorType>(VT->LLVMTy)->getElementCount()));
-  }
-  return Type::getInt1Ty(OpndType->getContext());
-}
-
-void CmpInst::setPredicate(Predicate P) {
-  Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&CmpInst::getPredicate, &CmpInst::setPredicate>>(this);
-  cast<llvm::CmpInst>(Val)->setPredicate(P);
-}
-
-void CmpInst::swapOperands() {
-  if (ICmpInst *IC = dyn_cast<ICmpInst>(this))
-    IC->swapOperands();
-  else
-    cast<FCmpInst>(this)->swapOperands();
-}
-
-void ICmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::ICmpInst>(Val)->swapOperands();
-}
-
-void FCmpInst::swapOperands() {
-  Ctx.getTracker().emplaceIfTracking<CmpSwapOperands>(this);
-  cast<llvm::FCmpInst>(Val)->swapOperands();
-}
-
-#ifndef NDEBUG
-void CmpInst::dumpOS(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-
-void CmpInst::dump() const {
-  dumpOS(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
-Value *Context::getValue(llvm::Value *V) const {
-  auto It = LLVMValueToValueMap.find(V);
-  if (It != LLVMValueToValueMap.end())
-    return It->second.get();
-  return nullptr;
-}
-
-Function *Context::createFunction(llvm::Function *F) {
-  assert(getValue(F) == nullptr && "Already exists!");
-  auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
-  auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
-  // Create arguments.
-  for (auto &Arg : F->args())
-    getOrCreateArgument(&Arg);
-  // Create BBs.
-  for (auto &BB : *F)
-    createBasicBlock(&BB);
-  return SBF;
 }
 
 Function *BasicBlock::getParent() const {

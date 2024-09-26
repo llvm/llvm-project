@@ -123,9 +123,6 @@ define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <2 x i64> [[STEP_ADD1]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 9, [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 4
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <2 x i64> [[VEC_IND]], <i64 3, i64 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <2 x i64> [[STEP_ADD]], <i64 3, i64 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i64> [[STEP_ADD1]], <i64 3, i64 3>
@@ -135,9 +132,6 @@ define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK-NEXT:    [[TMP14:%.*]] = sitofp <2 x i64> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    [[TMP15:%.*]] = sitofp <2 x i64> [[TMP11]] to <2 x float>
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 4

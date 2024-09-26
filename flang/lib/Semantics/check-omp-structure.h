@@ -139,6 +139,7 @@ public:
   }
 
 private:
+  bool CheckAllowedClause(llvmOmpClause clause);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
@@ -193,6 +194,7 @@ private:
   void CheckAtomicUpdateStmt(const parser::AssignmentStmt &);
   void CheckAtomicCaptureStmt(const parser::AssignmentStmt &);
   void CheckAtomicWriteStmt(const parser::AssignmentStmt &);
+  void CheckAtomicCaptureConstruct(const parser::OmpAtomicCapture &);
   void CheckAtomicConstructStructure(const parser::OpenMPAtomicConstruct &);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);

@@ -705,7 +705,7 @@ BasicBlock *CreateFailBB(Function *F, const Triple &Trip) {
     StackChkFail = M->getOrInsertFunction("__stack_smash_handler",
                                           Type::getVoidTy(Context),
                                           PointerType::getUnqual(Context));
-    Args.push_back(B.CreateGlobalStringPtr(F->getName(), "SSH"));
+    Args.push_back(B.CreateGlobalString(F->getName(), "SSH"));
   } else {
     StackChkFail =
         M->getOrInsertFunction("__stack_chk_fail", Type::getVoidTy(Context));

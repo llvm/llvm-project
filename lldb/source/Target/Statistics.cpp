@@ -414,7 +414,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       llvm::raw_string_ostream ss(buffer);
       json::OStream json_os(ss);
       transcript.Serialize(json_os);
-      if (auto json_transcript = llvm::json::parse(ss.str()))
+      if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
