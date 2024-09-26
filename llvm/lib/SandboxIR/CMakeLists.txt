@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMSandboxIR
+  Argument.cpp
   Context.cpp
   Module.cpp
   Pass.cpp
