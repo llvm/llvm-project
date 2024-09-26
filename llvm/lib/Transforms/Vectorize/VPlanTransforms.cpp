@@ -713,7 +713,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // TODO: Further simplifications are possible
   //      1. Replace inductions with constants.
   //      2. Replace vector loop region with VPBasicBlock.
-  //
 }
 
 /// Sink users of \p FOR after the recipe defining the previous value \p
@@ -1664,8 +1663,6 @@ void VPlanTransforms::createInterleaveGroups(
 
 static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
   if (auto *W = dyn_cast_or_null<VPWidenLoadRecipe>(V->getDefiningRecipe())) {
-    if (W->getMask())
-      return false;
     return !W->getMask() && (R0->getOperand(0) == V || R0->getOperand(1) == V);
   }
 
@@ -1726,9 +1723,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
       auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != Lane0->getOpcode())
         return;
-      // Work around captured structured bindings being a C++20 extension.
-      auto Idx = I;
-      if (any_of(R->operands(), [Lane0, Idx](VPValue *V) {
+      if (any_of(R->operands(), [Lane0, Idx=I](VPValue *V) {
             return !supportedLoad(Lane0, V, Idx);
           }))
         return;
