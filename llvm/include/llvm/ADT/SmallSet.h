@@ -161,26 +161,10 @@ public:
   /// Returns a pair. The first value of it is an iterator to the inserted
   /// element or the existing element in the set. The second value is true
   /// if the element is inserted (it was not in the set before).
-  std::pair<const_iterator, bool> insert(const T &V) {
-    if (!isSmall()) {
-      auto [I, Inserted] = Set.insert(V);
-      return std::make_pair(const_iterator(I), Inserted);
-    }
+  std::pair<const_iterator, bool> insert(const T &V) { return insertImpl(V); }
 
-    auto I = std::find(Vector.begin(), Vector.end(), V);
-    if (I != Vector.end())    // Don't reinsert if it already exists.
-      return std::make_pair(const_iterator(I), false);
-    if (Vector.size() < N) {
-      Vector.push_back(V);
-      return std::make_pair(const_iterator(std::prev(Vector.end())), true);
-    }
-
-    // Otherwise, grow from vector to set.
-    while (!Vector.empty()) {
-      Set.insert(Vector.back());
-      Vector.pop_back();
-    }
-    return std::make_pair(const_iterator(Set.insert(V).first), true);
+  std::pair<const_iterator, bool> insert(T &&V) {
+    return insertImpl(std::move(V));
   }
 
   template <typename IterT>
@@ -226,6 +210,30 @@ public:
 
 private:
   bool isSmall() const { return Set.empty(); }
+
+  template <typename ArgType>
+  std::pair<const_iterator, bool> insertImpl(ArgType &&V) {
+    static_assert(std::is_convertible_v<ArgType, T>,
+                  "ArgType must be convertible to T!");
+    if (!isSmall()) {
+      auto [I, Inserted] = Set.insert(std::forward<ArgType>(V));
+      return {const_iterator(I), Inserted};
+    }
+
+    auto I = std::find(Vector.begin(), Vector.end(), V);
+    if (I != Vector.end()) // Don't reinsert if it already exists.
+      return {const_iterator(I), false};
+    if (Vector.size() < N) {
+      Vector.push_back(std::forward<ArgType>(V));
+      return {const_iterator(std::prev(Vector.end())), true};
+    }
+
+    // Otherwise, grow from vector to set.
+    Set.insert(std::make_move_iterator(Vector.begin()),
+               std::make_move_iterator(Vector.end()));
+    Vector.clear();
+    return {const_iterator(Set.insert(std::forward<ArgType>(V)).first), true};
+  }
 };
 
 /// If this set is of pointer values, transparently switch over to using
