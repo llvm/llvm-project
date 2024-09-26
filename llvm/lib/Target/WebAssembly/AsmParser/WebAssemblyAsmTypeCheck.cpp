@@ -154,10 +154,7 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
 bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
                                                ArrayRef<wasm::ValType> ValTypes,
                                                bool ExactMatch) {
-  SmallVector<StackType, 4> Types(ValTypes.size());
-  std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
-                 [](wasm::ValType Val) -> StackType { return Val; });
-  return checkAndPopTypes(ErrorLoc, Types, ExactMatch);
+  return checkAndPopTypes(ErrorLoc, valTypeToStackType(ValTypes), ExactMatch);
 }
 
 bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
@@ -275,7 +272,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
+bool WebAssemblyAsmTypeCheck:getSignature(SMLoc ErrorLoc,
                                            const MCOperand &SigOp,
                                            wasm::WasmSymbolType Type,
                                            const wasm::WasmSignature *&Sig) {
@@ -295,7 +292,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
       TypeName = "tag";
       break;
     default:
-      assert(false);
+      llvm_unreachable("Signature symbol should either be a function or a tag");
     }
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                    ": missing ." + TypeName + "type");
