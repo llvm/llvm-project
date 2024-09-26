@@ -338,7 +338,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
-      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
       if (IID == Intrinsic::not_intrinsic)
         // Don't do anything for unknown intrinsics.
         continue;
@@ -6301,7 +6301,7 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
   // intrinsics in the new debug info format.
   if (!Name.starts_with("llvm.dbg."))
     return false;
-  Intrinsic::ID FnID = Function::lookupIntrinsicID(Name);
+  Intrinsic::ID FnID = Intrinsic::lookupIntrinsicID(Name);
   return FnID == Intrinsic::dbg_declare || FnID == Intrinsic::dbg_value ||
          FnID == Intrinsic::dbg_assign;
 }
