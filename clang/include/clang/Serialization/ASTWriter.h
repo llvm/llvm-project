@@ -233,6 +233,14 @@ private:
   /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
   llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
 
+  /// Mapping from FunctionDecl to the list of lambda IDs inside the function.
+  ///
+  /// These lambdas have to be loaded right after the function they belong to.
+  /// In order to have canonical declaration for lambda class from the same
+  /// module as enclosing function during deserialization.
+  llvm::DenseMap<const Decl *, SmallVector<LocalDeclID, 4>>
+      FunctionToLambdasMap;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;

@@ -168,8 +168,8 @@ entry:
 ; gaps.
 ;
 ; VF_2-LABEL: Checking a loop in 'i64_factor_8'
-; VF_2:         Found an estimated cost of 16 for VF 2 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
-; VF_2-NEXT:    Found an estimated cost of 0 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
+; VF_2:         Found an estimated cost of 8 for VF 2 For instruction: %tmp2 = load i64, ptr %tmp0, align 8
+; VF_2-NEXT:    Found an estimated cost of 8 for VF 2 For instruction: %tmp3 = load i64, ptr %tmp1, align 8
 ; VF_2-NEXT:    Found an estimated cost of 12 for VF 2 For instruction: store i64 %tmp2, ptr %tmp0, align 8
 ; VF_2-NEXT:    Found an estimated cost of 12 for VF 2 For instruction: store i64 %tmp3, ptr %tmp1, align 8
 for.body:

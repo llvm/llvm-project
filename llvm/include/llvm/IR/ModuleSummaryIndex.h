@@ -1544,14 +1544,7 @@ public:
         continue; // skip over non-root nodes
       Edges.push_back(std::make_pair(P.first, CalleeInfo{}));
     }
-    if (Edges.empty()) {
-      // Failed to find root - return an empty node
-      return FunctionSummary::makeDummyFunctionSummary(
-          SmallVector<FunctionSummary::EdgeTy, 0>());
-    }
-    auto CallGraphRoot =
-        FunctionSummary::makeDummyFunctionSummary(std::move(Edges));
-    return CallGraphRoot;
+    return FunctionSummary::makeDummyFunctionSummary(std::move(Edges));
   }
 
   bool withGlobalValueDeadStripping() const {

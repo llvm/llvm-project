@@ -1322,6 +1322,12 @@ def ElementwiseLog10 : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwisePopcount : Builtin {
+  let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwisePow : Builtin {
   let Spellings = ["__builtin_elementwise_pow"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4759,6 +4765,25 @@ def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_saturate"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+
+def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_select"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSign : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_sign"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLStep: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_step"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

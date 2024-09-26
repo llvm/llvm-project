@@ -12,7 +12,7 @@
 namespace Fortran::runtime {
 extern "C" {
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 // SET_EXPONENT (16.9.171)
 F128Type RTDEF(SetExponent16)(F128Type x, std::int64_t p) {
   return SetExponent(x, p);

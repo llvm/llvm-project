@@ -210,7 +210,8 @@ private:
 // or procedure pointer reference in a ProcedureDesignator.
 MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   const Symbol &last{ref.GetLastSymbol()};
-  const Symbol &symbol{BypassGeneric(last).GetUltimate()};
+  const Symbol &specific{BypassGeneric(last)};
+  const Symbol &symbol{specific.GetUltimate()};
   if (semantics::IsProcedure(symbol)) {
     if (symbol.attrs().test(semantics::Attr::ABSTRACT)) {
       Say("Abstract procedure interface '%s' may not be used as a designator"_err_en_US,
@@ -226,6 +227,10 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
     } else if (!symbol.attrs().test(semantics::Attr::INTRINSIC)) {
       if (symbol.has<semantics::GenericDetails>()) {
         Say("'%s' is not a specific procedure"_err_en_US, last.name());
+      } else if (IsProcedurePointer(specific)) {
+        // For procedure pointers, retain associations so that data accesses
+        // from client modules will work.
+        return Expr<SomeType>{ProcedureDesignator{specific}};
       } else {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
@@ -293,7 +298,7 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
     // Subscripts of named constants are checked in folding.
     // Subscripts of DATA statement objects are checked in data statement
     // conversion to initializers.
-    CheckConstantSubscripts(ref);
+    CheckSubscripts(ref);
   }
   return Designate(DataRef{std::move(ref)});
 }
@@ -321,7 +326,7 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
       std::move(dataRef.u));
 }
 
-void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
+void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
   const Symbol &arraySymbol{ref.base().GetLastSymbol()};
   Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
@@ -385,6 +390,13 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   for (Subscript &ss : ref.subscript()) {
     auto dimLB{ToInt64(lb[dim])};
     auto dimUB{ToInt64(ub[dim])};
+    if (dimUB && dimLB && *dimUB < *dimLB) {
+      AttachDeclaration(
+          Say("Empty array dimension %d cannot be subscripted as an element or non-empty array section"_err_en_US,
+              dim + 1),
+          arraySymbol);
+      break;
+    }
     std::optional<ConstantSubscript> val[2];
     int vals{0};
     if (auto *triplet{std::get_if<Triplet>(&ss.u)}) {
@@ -1956,7 +1968,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
 
 // Check if implicit conversion of expr to the symbol type is legal (if needed),
 // and make it explicit if requested.
-static MaybeExpr implicitConvertTo(const semantics::Symbol &sym,
+static MaybeExpr ImplicitConvertTo(const semantics::Symbol &sym,
     Expr<SomeType> &&expr, bool keepConvertImplicit) {
   if (!keepConvertImplicit) {
     return ConvertToType(sym, std::move(expr));
@@ -2196,7 +2208,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         // convert would cause a segfault. Lowering will deal with
         // conditionally converting and preserving the lower bounds in this
         // case.
-        if (MaybeExpr converted{implicitConvertTo(
+        if (MaybeExpr converted{ImplicitConvertTo(
                 *symbol, std::move(*value), IsAllocatable(*symbol))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
             if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
@@ -2739,7 +2751,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
               (!procedure->IsElemental() && nonElemental)) {
             int d{ComputeCudaMatchingDistance(
                 context_.languageFeatures(), *procedure, localActuals)};
-            llvm::errs() << "matching distance: " << d << "\n";
             if (d != crtMatchingDistance) {
               if (d > crtMatchingDistance) {
                 continue;
@@ -3212,7 +3223,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, callStmt);
       Say("Internal error: Expression analysis failed on CALL statement: %s"_err_en_US,
-          dump.str());
+          buf);
     }
   }
 }
@@ -3836,8 +3847,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       std::string buf;
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, x);
-      Say("Internal error: Expression analysis failed on: %s"_err_en_US,
-          dump.str());
+      Say("Internal error: Expression analysis failed on: %s"_err_en_US, buf);
     }
     return std::nullopt;
   }

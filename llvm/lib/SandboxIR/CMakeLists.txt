@@ -1,4 +1,8 @@
 add_llvm_component_library(LLVMSandboxIR
+  Context.cpp
+  Module.cpp
+  Pass.cpp
+  PassManager.cpp
   SandboxIR.cpp
   Tracker.cpp
   Type.cpp
@@ -9,5 +13,6 @@ add_llvm_component_library(LLVMSandboxIR
   LINK_COMPONENTS
   Core
   Support
+  Analysis
   )
 

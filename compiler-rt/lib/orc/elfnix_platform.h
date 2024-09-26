@@ -29,7 +29,7 @@ ORC_RT_INTERFACE int __orc_rt_elfnix_jit_dlclose(void *dso_handle);
 ORC_RT_INTERFACE void *__orc_rt_elfnix_jit_dlsym(void *dso_handle,
                                                  const char *symbol);
 
-namespace __orc_rt {
+namespace orc_rt {
 namespace elfnix {
 
 struct ELFNixPerObjectSectionsToRegister {
@@ -65,7 +65,7 @@ enum dlopen_mode : int {
   ORC_RT_RTLD_GLOBAL = 0x8
 };
 
-} // end namespace elfnix
+} // namespace elfnix
 
 using SPSELFNixPerObjectSectionsToRegister =
     SPSTuple<SPSExecutorAddrRange, SPSExecutorAddrRange>;
@@ -126,6 +126,6 @@ public:
   }
 };
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_ELFNIX_PLATFORM_H

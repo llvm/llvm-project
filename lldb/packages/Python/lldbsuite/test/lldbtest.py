@@ -1317,7 +1317,18 @@ class Base(unittest.TestCase):
         # Need to do something different for non-Linux/Android targets
         cpuinfo_path = self.getBuildArtifact("cpuinfo")
         if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
+            self.runCmd(
+                'platform get-file "/proc/cpuinfo" ' + cpuinfo_path, check=False
+            )
+            if not self.res.Succeeded():
+                if self.TraceOn():
+                    print(
+                        'Failed to get /proc/cpuinfo from remote: "{}"'.format(
+                            self.res.GetOutput().strip()
+                        )
+                    )
+                    print("All cpuinfo feature checks will fail.")
+                return ""
         else:
             cpuinfo_path = "/proc/cpuinfo"
 
@@ -1358,6 +1369,9 @@ class Base(unittest.TestCase):
         if self.getArchitecture() == "arm64e":
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
+
+    def isAArch64FPMR(self):
+        return self.isAArch64() and "fpmr" in self.getCPUInfo()
 
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""

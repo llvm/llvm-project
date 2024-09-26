@@ -60,44 +60,45 @@ public:
     return attrs;
   }
 
-  dw_offset_t
-  GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
-                    DWARFFormValue &formValue,
-                    dw_offset_t *end_attr_offset_ptr = nullptr,
-                    bool check_specification_or_abstract_origin = false) const;
+  dw_offset_t GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
+                                DWARFFormValue &formValue,
+                                dw_offset_t *end_attr_offset_ptr = nullptr,
+                                bool check_elaborating_dies = false) const;
 
-  const char *GetAttributeValueAsString(
-      const DWARFUnit *cu, const dw_attr_t attr, const char *fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  const char *
+  GetAttributeValueAsString(const DWARFUnit *cu, const dw_attr_t attr,
+                            const char *fail_value,
+                            bool check_elaborating_dies = false) const;
 
-  uint64_t GetAttributeValueAsUnsigned(
-      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  uint64_t
+  GetAttributeValueAsUnsigned(const DWARFUnit *cu, const dw_attr_t attr,
+                              uint64_t fail_value,
+                              bool check_elaborating_dies = false) const;
 
   std::optional<uint64_t> GetAttributeValueAsOptionalUnsigned(
       const DWARFUnit *cu, const dw_attr_t attr,
-      bool check_specification_or_abstract_origin = false) const;
+      bool check_elaborating_dies = false) const;
 
-  DWARFDIE GetAttributeValueAsReference(
-      const DWARFUnit *cu, const dw_attr_t attr,
-      bool check_specification_or_abstract_origin = false) const;
+  DWARFDIE
+  GetAttributeValueAsReference(const DWARFUnit *cu, const dw_attr_t attr,
+                               bool check_elaborating_dies = false) const;
 
-  uint64_t GetAttributeValueAsAddress(
-      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  uint64_t
+  GetAttributeValueAsAddress(const DWARFUnit *cu, const dw_attr_t attr,
+                             uint64_t fail_value,
+                             bool check_elaborating_dies = false) const;
 
-  dw_addr_t
-  GetAttributeHighPC(const DWARFUnit *cu, dw_addr_t lo_pc, uint64_t fail_value,
-                     bool check_specification_or_abstract_origin = false) const;
+  dw_addr_t GetAttributeHighPC(const DWARFUnit *cu, dw_addr_t lo_pc,
+                               uint64_t fail_value,
+                               bool check_elaborating_dies = false) const;
 
-  bool GetAttributeAddressRange(
-      const DWARFUnit *cu, dw_addr_t &lo_pc, dw_addr_t &hi_pc,
-      uint64_t fail_value,
-      bool check_specification_or_abstract_origin = false) const;
+  bool GetAttributeAddressRange(const DWARFUnit *cu, dw_addr_t &lo_pc,
+                                dw_addr_t &hi_pc, uint64_t fail_value,
+                                bool check_elaborating_dies = false) const;
 
-  DWARFRangeList GetAttributeAddressRanges(
-      DWARFUnit *cu, bool check_hi_lo_pc,
-      bool check_specification_or_abstract_origin = false) const;
+  DWARFRangeList
+  GetAttributeAddressRanges(DWARFUnit *cu, bool check_hi_lo_pc,
+                            bool check_elaborating_dies = false) const;
 
   const char *GetName(const DWARFUnit *cu) const;
 

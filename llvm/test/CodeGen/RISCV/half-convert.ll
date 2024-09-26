@@ -2033,8 +2033,6 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    call __fixsfdi
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -2792,8 +2790,6 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __extendhfsf2
 ; RV32I-NEXT:    call __fixunssfdi
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload

@@ -14,7 +14,7 @@ operator<<(std::ostream &OS, const LLT Ty) {
   std::string Repr;
   raw_string_ostream SS{Repr};
   Ty.print(SS);
-  OS << SS.str();
+  OS << Repr;
   return OS;
 }
 
@@ -23,7 +23,7 @@ operator<<(std::ostream &OS, const MachineFunction &MF) {
   std::string Repr;
   raw_string_ostream SS{Repr};
   MF.print(SS);
-  OS << SS.str();
+  OS << Repr;
   return OS;
 }
 

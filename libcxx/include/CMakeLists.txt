@@ -424,6 +424,7 @@ set(files
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
+  __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -440,6 +441,7 @@ set(files
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/variant.h
   __fwd/vector.h
   __hash_table
   __ios/fpos.h
@@ -554,6 +556,7 @@ set(files
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
+  __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
   __memory/voidify.h
@@ -925,7 +928,6 @@ set(files
   exception
   execution
   expected
-  experimental/__config
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h

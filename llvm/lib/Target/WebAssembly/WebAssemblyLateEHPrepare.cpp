@@ -37,6 +37,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   void recordCatchRetBBs(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
   bool addCatchAlls(MachineFunction &MF);
+  bool addCatchRefsAndThrowRefs(MachineFunction &MF);
   bool replaceFuncletReturns(MachineFunction &MF);
   bool removeUnnecessaryUnreachables(MachineFunction &MF);
   bool restoreStackPointer(MachineFunction &MF);
@@ -127,6 +128,8 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     Changed |= hoistCatches(MF);
     Changed |= addCatchAlls(MF);
     Changed |= replaceFuncletReturns(MF);
+    if (WebAssembly::WasmEnableExnref)
+      Changed |= addCatchRefsAndThrowRefs(MF);
   }
   Changed |= removeUnnecessaryUnreachables(MF);
   if (MF.getFunction().hasPersonalityFn())
@@ -214,9 +217,12 @@ bool WebAssemblyLateEHPrepare::addCatchAlls(MachineFunction &MF) {
     if (InsertPos == MBB.end() ||
         !WebAssembly::isCatch(InsertPos->getOpcode())) {
       Changed = true;
+      unsigned CatchAllOpcode = WebAssembly::WasmEnableExnref
+                                    ? WebAssembly::CATCH_ALL
+                                    : WebAssembly::CATCH_ALL_LEGACY;
       BuildMI(MBB, InsertPos,
               InsertPos == MBB.end() ? DebugLoc() : InsertPos->getDebugLoc(),
-              TII.get(WebAssembly::CATCH_ALL_LEGACY));
+              TII.get(CatchAllOpcode));
     }
   }
   return Changed;
@@ -248,6 +254,10 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
     case WebAssembly::CLEANUPRET: {
       // Replace a cleanupret with a rethrow. For C++ support, currently
       // rethrow's immediate argument is always 0 (= the latest exception).
+      //
+      // Even when -wasm-enable-exnref is true, we use a RETHROW here for the
+      // moment. This will be converted to a THROW_REF in
+      // addCatchRefsAndThrowRefs.
       BuildMI(MBB, TI, TI->getDebugLoc(), TII.get(WebAssembly::RETHROW))
           .addImm(0);
       TI->eraseFromParent();
@@ -259,14 +269,74 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
   return Changed;
 }
 
-// Remove unnecessary unreachables after a throw or rethrow.
+// Add CATCH_REF and CATCH_ALL_REF pseudo instructions to EH pads, and convert
+// RETHROWs to THROW_REFs.
+bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
+  bool Changed = false;
+  const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  auto &MRI = MF.getRegInfo();
+  DenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
+
+  // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == WebAssembly::RETHROW) {
+        Changed = true;
+        auto *EHPad = getMatchingEHPad(&MI);
+        EHPadToRethrows[EHPad].push_back(&MI);
+      }
+    }
+  }
+
+  // Convert CATCH into CATCH_REF and CATCH_ALL into CATCH_ALL_REF, when the
+  // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
+  for (auto &[EHPad, Rethrows] : EHPadToRethrows) {
+    auto *Catch = WebAssembly::findCatch(EHPad);
+    auto *InsertPos = Catch->getIterator()->getNextNode();
+    auto ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
+    if (Catch->getOpcode() == WebAssembly::CATCH) {
+      MachineInstrBuilder MIB = BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
+                                        TII.get(WebAssembly::CATCH_REF));
+      // Copy defs (= extracted values) from the old CATCH to the new CATCH_REF
+      for (const auto &Def : Catch->defs())
+        MIB.addDef(Def.getReg());
+      MIB.addDef(ExnReg); // Attach the exnref def after extracted values
+      // Copy the tag symbol (The only use operand a CATCH can have is the tag
+      // symbol)
+      for (const auto &Use : Catch->uses()) {
+        MIB.addExternalSymbol(Use.getSymbolName());
+        break;
+      }
+    } else if (Catch->getOpcode() == WebAssembly::CATCH_ALL) {
+      BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
+              TII.get(WebAssembly::CATCH_ALL_REF))
+          .addDef(ExnReg);
+    } else {
+      assert(false);
+    }
+    Catch->eraseFromParent();
+
+    for (auto *Rethrow : Rethrows) {
+      auto InsertPos = std::next(Rethrow->getIterator());
+      BuildMI(*Rethrow->getParent(), InsertPos, Rethrow->getDebugLoc(),
+              TII.get(WebAssembly::THROW_REF))
+          .addReg(ExnReg);
+      Rethrow->eraseFromParent();
+    }
+  }
+
+  return Changed;
+}
+
+// Remove unnecessary unreachables after a throw/rethrow/throw_ref.
 bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
     MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.getOpcode() != WebAssembly::THROW &&
-          MI.getOpcode() != WebAssembly::RETHROW)
+          MI.getOpcode() != WebAssembly::RETHROW &&
+          MI.getOpcode() != WebAssembly::THROW_REF)
         continue;
       Changed = true;
 

@@ -80,7 +80,6 @@ REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
 REM   NSIS with the strlen_8192 patch,
-REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
 REM   Perl (for the OpenMP run-time).
 REM
 REM

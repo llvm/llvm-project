@@ -384,7 +384,7 @@ void ArithToAMDGPUConversionPass::runOnOperation() {
   }
 
   bool convertFP8Arithmetic =
-      (*maybeChipset).majorVersion == 9 && (*maybeChipset).minorVersion >= 0x40;
+      maybeChipset->majorVersion == 9 && *maybeChipset >= Chipset(9, 4, 0);
   arith::populateArithToAMDGPUConversionPatterns(
       patterns, convertFP8Arithmetic, saturateFP8Truncf, allowPackedF16Rtz,
       *maybeChipset);

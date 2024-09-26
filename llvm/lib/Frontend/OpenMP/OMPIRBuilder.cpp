@@ -886,8 +886,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr,
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
-    SrcLocStr = Builder.CreateGlobalStringPtr(LocStr, /* Name */ "",
-                                              /* AddressSpace */ 0, &M);
+    SrcLocStr = Builder.CreateGlobalString(LocStr, /* Name */ "",
+                                           /* AddressSpace */ 0, &M);
   }
   return SrcLocStr;
 }
@@ -6606,7 +6606,7 @@ static Function *createOutlinedFunction(
         // TODO: We are using nullopt for arguments at the moment. This will
         // need to be updated when debug data is being generated for variables.
         DISubroutineType *Ty =
-            DB.createSubroutineType(DB.getOrCreateTypeArray(std::nullopt));
+            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
         DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
                                           DISubprogram::SPFlagOptimized |
                                           DISubprogram::SPFlagLocalToUnit;

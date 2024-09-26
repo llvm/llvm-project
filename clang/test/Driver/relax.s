@@ -8,5 +8,7 @@
 // RUN: llvm-readobj -r %t | FileCheck --check-prefix=REL %s
 
 // REL: R_X86_64_REX_GOTPCRELX foo
+// REL: R_X86_64_REX2_GOTPCRELX foo
 
         movq	foo@GOTPCREL(%rip), %rax
+        movq	foo@GOTPCREL(%rip), %r16

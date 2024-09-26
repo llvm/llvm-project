@@ -95,6 +95,22 @@ private:
   uptr ReleasedPagesCount = 0;
 };
 
+template <uptr GroupSize, uptr NumGroups>
+class MemoryGroupFragmentationRecorder {
+public:
+  const uptr NumPagesInOneGroup = GroupSize / getPageSizeCached();
+
+  void releasePageRangeToOS(uptr From, uptr To) {
+    for (uptr I = From / getPageSizeCached(); I < To / getPageSizeCached(); ++I)
+      ++FreePagesCount[I / NumPagesInOneGroup];
+  }
+
+  uptr getNumFreePages(uptr GroupId) { return FreePagesCount[GroupId]; }
+
+private:
+  uptr FreePagesCount[NumGroups] = {};
+};
+
 // A buffer pool which holds a fixed number of static buffers of `uptr` elements
 // for fast buffer allocation. If the request size is greater than
 // `StaticBufferNumElements` or if all the static buffers are in use, it'll

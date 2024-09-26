@@ -1310,15 +1310,14 @@ define float @rcp_v4f32(<4 x float> %x) nounwind {
 define float @rcp_v8f32(<8 x float> %x) nounwind {
 ; X64-LABEL: rcp_v8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrcpps %ymm0, %ymm0
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-NEXT:    vrcpss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: rcp_v8f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vrcpps %ymm0, %ymm0
+; X86-NEXT:    vrcpss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -1351,15 +1350,14 @@ define float @rsqrt_v4f32(<4 x float> %x) nounwind {
 define float @rsqrt_v8f32(<8 x float> %x) nounwind {
 ; X64-LABEL: rsqrt_v8f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    vrsqrtps %ymm0, %ymm0
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: rsqrt_v8f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vrsqrtps %ymm0, %ymm0
+; X86-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax

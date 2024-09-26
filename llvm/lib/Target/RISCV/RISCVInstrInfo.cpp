@@ -168,13 +168,23 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
-  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
-      MI.getOperand(1).isUndef() &&
-      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
-         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
-         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
-      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
-    return true;
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  case RISCV::VMV_V_X:
+  case RISCV::VFMV_V_F:
+  case RISCV::VMV_V_I:
+  case RISCV::VMV_S_X:
+  case RISCV::VFMV_S_F:
+  case RISCV::VID_V:
+    if (MI.getOperand(1).isUndef() &&
+        /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl
+           and vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+           i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+        !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+      return true;
+    break;
+  default:
+    break;
+  }
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
@@ -726,8 +736,6 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex, LiveIntervals *LIS,
     VirtRegMap *VRM) const {
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-
   // The below optimizations narrow the load so they are only valid for little
   // endian.
   // TODO: Support big endian by adding an offset into the frame object?
@@ -753,6 +761,29 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       LoadOpc = RISCV::LBU;
       break;
     }
+    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
+      unsigned Log2SEW =
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+      if (STI.getXLen() < (1 << Log2SEW))
+        return nullptr;
+      switch (Log2SEW) {
+      case 3:
+        LoadOpc = RISCV::LB;
+        break;
+      case 4:
+        LoadOpc = RISCV::LH;
+        break;
+      case 5:
+        LoadOpc = RISCV::LW;
+        break;
+      case 6:
+        LoadOpc = RISCV::LD;
+        break;
+      default:
+        llvm_unreachable("Unexpected SEW");
+      }
+      break;
+    }
     return nullptr;
   case RISCV::SEXT_H:
     LoadOpc = RISCV::LH;
@@ -766,17 +797,11 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     break;
   }
 
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo::getFixedStack(MF, FrameIndex),
-      MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIndex),
-      MFI.getObjectAlign(FrameIndex));
-
   Register DstReg = MI.getOperand(0).getReg();
   return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(LoadOpc),
                  DstReg)
       .addFrameIndex(FrameIndex)
-      .addImm(0)
-      .addMemOperand(MMO);
+      .addImm(0);
 }
 
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
@@ -2908,7 +2933,7 @@ RISCVInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // if any possible.
     if (MO.getTargetFlags() == RISCVII::MO_PCREL_LO &&
         (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
-         F.hasSection()))
+         F.hasSection() || F.getSectionPrefix()))
       return outliner::InstrType::Illegal;
   }
 
@@ -3015,7 +3040,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
        << (Policy & RISCVII::MASK_AGNOSTIC ? "ma" : "mu");
   }
 
-  OS.flush();
   return Comment;
 }
 

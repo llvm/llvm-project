@@ -235,7 +235,6 @@ std::string AtomicChange::toYAMLString() {
 
   llvm::yaml::Output YAML(YamlContentStream);
   YAML << *this;
-  YamlContentStream.flush();
   return YamlContent;
 }
 

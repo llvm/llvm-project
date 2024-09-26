@@ -113,9 +113,13 @@ class TreeTransform {
   class ForgetPartiallySubstitutedPackRAII {
     Derived &Self;
     TemplateArgument Old;
+    // Set the pack expansion index to -1 to avoid pack substitution and
+    // indicate that parameter packs should be instantiated as themselves.
+    Sema::ArgumentPackSubstitutionIndexRAII ResetPackSubstIndex;
 
   public:
-    ForgetPartiallySubstitutedPackRAII(Derived &Self) : Self(Self) {
+    ForgetPartiallySubstitutedPackRAII(Derived &Self)
+        : Self(Self), ResetPackSubstIndex(Self.getSema(), -1) {
       Old = Self.ForgetPartiallySubstitutedPack();
     }
 
@@ -7473,8 +7477,17 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     return QualType();
 
   QualType ContainedTy = QualType();
-  if (!oldType->getContainedType().isNull())
-    ContainedTy = getDerived().TransformType(TLB, TL.getContainedLoc());
+  QualType OldContainedTy = oldType->getContainedType();
+  if (!OldContainedTy.isNull()) {
+    TypeSourceInfo *oldContainedTSI = TL.getContainedTypeSourceInfo();
+    if (!oldContainedTSI)
+      oldContainedTSI = getSema().getASTContext().getTrivialTypeSourceInfo(
+          OldContainedTy, SourceLocation());
+    TypeSourceInfo *ContainedTSI = getDerived().TransformType(oldContainedTSI);
+    if (!ContainedTSI)
+      return QualType();
+    ContainedTy = ContainedTSI->getType();
+  }
 
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
@@ -11846,13 +11859,14 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc()))
     return StmtError();
 
-  llvm::SmallVector<OpenACCClause *> TransformedClauses =
-      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
-                                              C->clauses());
   // Transform Structured Block.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
                                                 C->getDirectiveKind());
@@ -11871,13 +11885,13 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
 
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
-    return StmtError();
-
   llvm::SmallVector<OpenACCClause *> TransformedClauses =
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
 
   // Transform Loop.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),

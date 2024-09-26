@@ -219,7 +219,6 @@ define arm_aapcs_vfpcc <8 x i16> @vmvn_v16i8_m1() {
   ret <8 x i16> <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
 }
 
-; FIXME: This is incorrect for BE
 define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
 ; CHECK-LE-LABEL: and_v8i16_m1:
 ; CHECK-LE:       @ %bb.0:
@@ -228,15 +227,14 @@ define arm_aapcs_vfpcc <8 x i16> @and_v8i16_m1(<8 x i16> %a) {
 ;
 ; CHECK-BE-LABEL: and_v8i16_m1:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vrev64.32 q8, q0
+; CHECK-BE-NEXT:    vrev64.16 q8, q0
 ; CHECK-BE-NEXT:    vbic.i32 q8, #0x10000
-; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    vrev64.16 q0, q8
 ; CHECK-BE-NEXT:    bx lr
   %b = and <8 x i16> %a, <i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534, i16 65535, i16 65534>
   ret <8 x i16> %b
 }
 
-; FIXME: This is incorrect for BE
 define arm_aapcs_vfpcc <8 x i16> @or_v8i16_1(<8 x i16> %a) {
 ; CHECK-LE-LABEL: or_v8i16_1:
 ; CHECK-LE:       @ %bb.0:
@@ -245,9 +243,9 @@ define arm_aapcs_vfpcc <8 x i16> @or_v8i16_1(<8 x i16> %a) {
 ;
 ; CHECK-BE-LABEL: or_v8i16_1:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vrev64.32 q8, q0
+; CHECK-BE-NEXT:    vrev64.16 q8, q0
 ; CHECK-BE-NEXT:    vorr.i32 q8, #0x10000
-; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    vrev64.16 q0, q8
 ; CHECK-BE-NEXT:    bx lr
   %b = or <8 x i16> %a, <i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1>
   ret <8 x i16> %b

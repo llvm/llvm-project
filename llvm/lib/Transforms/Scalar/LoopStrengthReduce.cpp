@@ -2186,6 +2186,12 @@ class LSRInstance {
   /// Induction variables that were generated and inserted by the SCEV Expander.
   SmallVector<llvm::WeakVH, 2> ScalarEvolutionIVs;
 
+  // Inserting instructions in the loop and using them as PHI's input could
+  // break LCSSA in case if PHI's parent block is not a loop exit (i.e. the
+  // corresponding incoming block is not loop exiting). So collect all such
+  // instructions to form LCSSA for them later.
+  SmallSetVector<Instruction *, 4> InsertedNonLCSSAInsts;
+
   void OptimizeShadowIV();
   bool FindIVUserForCond(ICmpInst *Cond, IVStrideUse *&CondUse);
   ICmpInst *OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse);
@@ -2276,9 +2282,9 @@ class LSRInstance {
                 SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
   void RewriteForPHI(PHINode *PN, const LSRUse &LU, const LSRFixup &LF,
                      const Formula &F,
-                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
+                     SmallVectorImpl<WeakTrackingVH> &DeadInsts);
   void Rewrite(const LSRUse &LU, const LSRFixup &LF, const Formula &F,
-               SmallVectorImpl<WeakTrackingVH> &DeadInsts) const;
+               SmallVectorImpl<WeakTrackingVH> &DeadInsts);
   void ImplementSolution(const SmallVectorImpl<const Formula *> &Solution);
 
 public:
@@ -5858,16 +5864,10 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 /// Helper for Rewrite. PHI nodes are special because the use of their operands
 /// effectively happens in their predecessor blocks, so the expression may need
 /// to be expanded in multiple places.
-void LSRInstance::RewriteForPHI(
-    PHINode *PN, const LSRUse &LU, const LSRFixup &LF, const Formula &F,
-    SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
+void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
+                                const LSRFixup &LF, const Formula &F,
+                                SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   DenseMap<BasicBlock *, Value *> Inserted;
-
-  // Inserting instructions in the loop and using them as PHI's input could
-  // break LCSSA in case if PHI's parent block is not a loop exit (i.e. the
-  // corresponding incoming block is not loop exiting). So collect all such
-  // instructions to form LCSSA for them later.
-  SmallVector<Instruction *, 4> InsertedNonLCSSAInsts;
 
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
     if (PN->getIncomingValue(i) == LF.OperandValToReplace) {
@@ -5939,7 +5939,7 @@ void LSRInstance::RewriteForPHI(
         // the inserted value.
         if (auto *I = dyn_cast<Instruction>(FullV))
           if (L->contains(I) && !L->contains(BB))
-            InsertedNonLCSSAInsts.push_back(I);
+            InsertedNonLCSSAInsts.insert(I);
 
         PN->setIncomingValue(i, FullV);
         Pair.first->second = FullV;
@@ -5983,8 +5983,6 @@ void LSRInstance::RewriteForPHI(
             }
       }
     }
-
-  formLCSSAForInstructions(InsertedNonLCSSAInsts, DT, LI, &SE);
 }
 
 /// Emit instructions for the leading candidate expression for this LSRUse (this
@@ -5992,7 +5990,7 @@ void LSRInstance::RewriteForPHI(
 /// expanded value.
 void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
                           const Formula &F,
-                          SmallVectorImpl<WeakTrackingVH> &DeadInsts) const {
+                          SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
   // First, find an insertion point that dominates UserInst. For PHI nodes,
   // find the nearest block which dominates all the relevant uses.
   if (PHINode *PN = dyn_cast<PHINode>(LF.UserInst)) {
@@ -6079,6 +6077,9 @@ void LSRInstance::ImplementSolution(
       Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], DeadInsts);
       Changed = true;
     }
+
+  auto InsertedInsts = InsertedNonLCSSAInsts.takeVector();
+  formLCSSAForInstructions(InsertedInsts, DT, LI, &SE);
 
   for (const IVChain &Chain : IVChainVec) {
     GenerateIVChain(Chain, DeadInsts);
