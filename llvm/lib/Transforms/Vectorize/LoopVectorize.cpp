@@ -505,8 +505,7 @@ public:
   /// inclusive. Uses the VPValue operands from \p RepRecipe instead of \p
   /// Instr's operands.
   void scalarizeInstruction(const Instruction *Instr,
-                            VPReplicateRecipe *RepRecipe,
-                            const VPIteration &Instance,
+                            VPReplicateRecipe *RepRecipe, const VPLane &Lane,
                             VPTransformState &State);
 
   /// Fix the non-induction PHIs in \p Plan.
@@ -2322,14 +2321,14 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 
 void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
                                                VPReplicateRecipe *RepRecipe,
-                                               const VPIteration &Instance,
+                                               const VPLane &Lane,
                                                VPTransformState &State) {
   assert(!Instr->getType()->isAggregateType() && "Can't handle vectors");
 
   // llvm.experimental.noalias.scope.decl intrinsics must only be duplicated for
   // the first lane and part.
   if (isa<NoAliasScopeDeclInst>(Instr))
-    if (!Instance.isFirstIteration())
+    if (!Lane.isFirstLane())
       return;
 
   // Does this instruction return a value ?
@@ -2354,18 +2353,18 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
   for (const auto &I : enumerate(RepRecipe->operands())) {
-    auto InputInstance = Instance;
+    auto InputLane = Lane;
     VPValue *Operand = I.value();
     if (vputils::isUniformAfterVectorization(Operand))
-      InputInstance.Lane = VPLane::getFirstLane();
-    Cloned->setOperand(I.index(), State.get(Operand, InputInstance));
+      InputLane = VPLane::getFirstLane();
+    Cloned->setOperand(I.index(), State.get(Operand, InputLane));
   }
   State.addNewMetadata(Cloned, Instr);
 
   // Place the cloned scalar in the new loop.
   State.Builder.Insert(Cloned);
 
-  State.set(RepRecipe, Cloned, Instance);
+  State.set(RepRecipe, Cloned, Lane);
 
   // If we just cloned a new assumption, add it the assumption cache.
   if (auto *II = dyn_cast<AssumeInst>(Cloned))
@@ -2784,7 +2783,7 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       VPValue *StepVPV = Plan.getSCEVExpansion(II.getStep());
       assert(StepVPV && "step must have been expanded during VPlan execution");
       Value *Step = StepVPV->isLiveIn() ? StepVPV->getLiveInIRValue()
-                                        : State.get(StepVPV, {0, 0});
+                                        : State.get(StepVPV, VPLane(0));
       Value *Escape =
           emitTransformedIndex(B, CountMinusOne, II.getStartValue(), Step,
                                II.getKind(), II.getInductionBinOp());
@@ -7435,8 +7434,7 @@ static void createAndCollectMergePhiForReduction(
   auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-  Value *FinalValue =
-      State.get(RedResult, VPIteration(0, VPLane::getFirstLane()));
+  Value *FinalValue = State.get(RedResult, VPLane(VPLane::getFirstLane()));
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
   if (VectorizingEpilogue && RecurrenceDescriptor::isAnyOfRecurrenceKind(
@@ -7525,7 +7523,7 @@ LoopVectorizationPlanner::executePlan(
     BestVPlan.getPreheader()->execute(&State);
   }
   if (!ILV.getTripCount())
-    ILV.setTripCount(State.get(BestVPlan.getTripCount(), {0, 0}));
+    ILV.setTripCount(State.get(BestVPlan.getTripCount(), VPLane(0)));
   else
     assert(IsEpilogueVectorization && "should only re-use the existing trip "
                                       "count during epilogue vectorization");
@@ -9409,48 +9407,48 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 }
 
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
-  assert(!State.Instance && "VPDerivedIVRecipe being replicated.");
+  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
   if (FPBinOp)
     State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
 
-  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
-  Value *CanonicalIV = State.get(getOperand(1), VPIteration(0, 0));
+  Value *Step = State.get(getStepValue(), VPLane(0));
+  Value *CanonicalIV = State.get(getOperand(1), VPLane(0));
   Value *DerivedIV = emitTransformedIndex(
       State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
       Kind, cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName("offset.idx");
   assert(DerivedIV != CanonicalIV && "IV didn't need transforming?");
 
-  State.set(this, DerivedIV, VPIteration(0, 0));
+  State.set(this, DerivedIV, VPLane(0));
 }
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
-  if (State.Instance) { // Generate a single instance.
+  if (State.Lane) { // Generate a single instance.
     assert((State.VF.isScalar() || !isUniform()) &&
            "uniform recipe shouldn't be predicated");
     assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    State.ILV->scalarizeInstruction(UI, this, *State.Instance, State);
+    State.ILV->scalarizeInstruction(UI, this, *State.Lane, State);
     // Insert scalar instance packing it into a vector.
     if (State.VF.isVector() && shouldPack()) {
       // If we're constructing lane 0, initialize to start from poison.
-      if (State.Instance->Lane.isFirstLane()) {
+      if (State.Lane->isFirstLane()) {
         assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Poison = PoisonValue::get(
             VectorType::get(UI->getType(), State.VF));
         State.set(this, Poison);
       }
-      State.packScalarIntoVectorValue(this, *State.Instance);
+      State.packScalarIntoVectorValue(this, *State.Lane);
     }
     return;
   }
 
   if (IsUniform) {
     // Uniform within VL means we need to generate lane 0.
-    State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), State);
+    State.ILV->scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
 
@@ -9459,7 +9457,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   if (isa<StoreInst>(UI) &&
       vputils::isUniformAfterVectorization(getOperand(1))) {
     auto Lane = VPLane::getLastLaneForVF(State.VF);
-    State.ILV->scalarizeInstruction(UI, this, VPIteration(0, Lane), State);
+    State.ILV->scalarizeInstruction(UI, this, VPLane(Lane), State);
     return;
   }
 
@@ -9467,7 +9465,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
   for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-    State.ILV->scalarizeInstruction(UI, this, VPIteration(0, Lane), State);
+    State.ILV->scalarizeInstruction(UI, this, VPLane(Lane), State);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
