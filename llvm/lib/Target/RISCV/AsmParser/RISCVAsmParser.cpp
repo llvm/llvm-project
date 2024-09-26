@@ -3161,22 +3161,26 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
         return true;
 
       if (*Length == 0 || (*Length % 2) != 0)
-        return Error(ErrorLoc, "instruction lengths must be a non-zero multiple of two");
+        return Error(ErrorLoc,
+                     "instruction lengths must be a non-zero multiple of two");
 
       // TODO: Support Instructions > 64 bits.
       if (Length > 8)
         return Error(ErrorLoc,
-                    "instruction lengths over 64 bits are not supported");
+                     "instruction lengths over 64 bits are not supported");
     }
 
-    // We only derive a length from the encoding for 16- and 32-bit instructions, as
-    // the encodings for longer instructions are not frozen in the spec.
+    // We only derive a length from the encoding for 16- and 32-bit
+    // instructions, as the encodings for longer instructions are not frozen in
+    // the spec.
     int64_t EncodingDerivedLength = ((Value & 0b11) == 0b11) ? 4 : 2;
 
     if (Length) {
-      // Only check the length against the encoding if the length is present and could match
+      // Only check the length against the encoding if the length is present and
+      // could match
       if ((*Length <= 4) && (*Length != EncodingDerivedLength))
-        return Error(ErrorLoc, "instruction length does not match the encoding");
+        return Error(ErrorLoc,
+                     "instruction length does not match the encoding");
 
       if (!isUIntN(*Length * 8, Value))
         return Error(ErrorLoc, "encoding value does not fit into instruction");
@@ -3192,7 +3196,6 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
       getParser().eatToEndOfStatement();
       return true;
     }
-
 
     unsigned Opcode;
     if (Length) {
