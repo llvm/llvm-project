@@ -253,7 +253,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
-  llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
+  mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -1369,9 +1369,20 @@ public:
   /// calling T.withConst().
   QualType getConstType(QualType T) const { return T.withConst(); }
 
+  /// Rebuild a type, preserving any existing type sugar. For function types,
+  /// you probably want to just use \c adjustFunctionResultType and friends
+  /// instead.
+  QualType adjustType(QualType OldType,
+                      llvm::function_ref<QualType(QualType)> Adjust) const;
+
   /// Change the ExtInfo on a function type.
   const FunctionType *adjustFunctionType(const FunctionType *Fn,
                                          FunctionType::ExtInfo EInfo);
+
+  /// Change the result type of a function type, preserving sugar such as
+  /// attributed types.
+  QualType adjustFunctionResultType(QualType FunctionType,
+                                    QualType NewResultType);
 
   /// Adjust the given function result type.
   CanQualType getCanonicalFunctionResultType(QualType ResultType) const;
@@ -1702,7 +1713,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
-                                   QualType Wrapped);
+                                   QualType Wrapped) const;
 
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
