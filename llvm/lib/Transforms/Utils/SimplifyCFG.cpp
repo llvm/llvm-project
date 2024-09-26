@@ -1791,30 +1791,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
       return false;
 
-  auto *BI = dyn_cast<BranchInst>(TI);
-  if (BI && HoistLoadsStoresWithCondFaulting &&
-      Options.HoistLoadsStoresWithCondFaulting) {
-    SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
-    for (auto *Succ : successors(BB)) {
-      for (Instruction &I : *Succ) {
-        if (I.isTerminator()) {
-          if (I.getNumSuccessors() > 1)
-            return false;
-          continue;
-        } else if (!isSafeCheapLoadStore(&I, TTI) ||
-                   SpeculatedConditionalLoadsStores.size() ==
-                       HoistLoadsStoresWithCondFaultingThreshold) {
-          return false;
-        }
-        SpeculatedConditionalLoadsStores.push_back(&I);
-      }
-    }
-
-    if (!SpeculatedConditionalLoadsStores.empty())
-      return hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                         std::nullopt);
-  }
-
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
@@ -7859,6 +7835,33 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (HoistCommon &&
           hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
+
+      if (BI && HoistLoadsStoresWithCondFaulting &&
+          Options.HoistLoadsStoresWithCondFaulting) {
+        SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
+        auto CanSpeculateConditionalLoadsStores = [&]() {
+          for (auto *Succ : successors(BB)) {
+            for (Instruction &I : *Succ) {
+              if (I.isTerminator()) {
+                if (I.getNumSuccessors() > 1)
+                  return false;
+                continue;
+              } else if (!isSafeCheapLoadStore(&I, TTI) ||
+                         SpeculatedConditionalLoadsStores.size() ==
+                             HoistLoadsStoresWithCondFaultingThreshold) {
+                return false;
+              }
+              SpeculatedConditionalLoadsStores.push_back(&I);
+            }
+          }
+          return !SpeculatedConditionalLoadsStores.empty();
+        };
+
+        if (CanSpeculateConditionalLoadsStores() &&
+            hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
+                                        std::nullopt))
+          return requestResimplify();
+      }
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
