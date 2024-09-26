@@ -31,11 +31,7 @@ int main() {
   return 0;
 }
 
-// CHECK: ==ERROR:
-// CHECK: ==ERROR:
-// CHECK: ==ERROR:
-// CHECK: ==ERROR:
-
+// CHECK-COUNT-4: ==ERROR:
 // CHECK-NOT: ==ERROR:
 
 // CHECK: RealtimeSanitizer exit stats:
