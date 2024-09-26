@@ -2,11 +2,14 @@
 
 portability-template-virtual-member-function
 ============================================
-Per C++ ``[temp.inst#11]``: "It is unspecified whether or not an implementation 
-implicitly instantiates a virtual member function of a class template if the virtual 
-member function would not otherwise be instantiated."
 
-In the following snippets the virtual member function is not instantiated by gcc and clang,
+Upon instantiating a template class, non-virtual member functions don't have to be 
+instantiated unless they are used. Virtual member function instantiation on the other hand 
+is unspecified and depends on the implementation of the compiler. This check intends to find 
+cases when a virtual member function is not instantiated but it might be with a different 
+compiler.
+
+In the following snippets the virtual member function is not instantiated by GCC and Clang,
 but it is instantiated by MSVC, so while the snippet is accepted by the former compilers,
 it is rejected by the latter.
 

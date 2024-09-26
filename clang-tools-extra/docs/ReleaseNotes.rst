@@ -124,9 +124,11 @@ New checks
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
-  Detects C++ [temp.inst#11]: "It is unspecified whether or not an implementation 
-  implicitly instantiates a virtual member function of a class template if the 
-  virtual member function would not otherwise be instantiated."
+  Upon instantiating a template class, non-virtual member functions don't have 
+  to be instantiated unless they are used. Virtual member function instantiation 
+  on the other hand is unspecified and depends on the implementation of the compiler.
+  This check intends to find cases when a virtual member function is not instantiated 
+  but it might be with a different compiler.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
