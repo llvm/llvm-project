@@ -177,10 +177,7 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV32-NEXT:    #NO_APP
 ; RV32-NEXT:    beqz a0, .LBB4_2
 ; RV32-NEXT:  # %bb.1: # %truebb
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
 ; RV32-NEXT:    j .LBB4_3
 ; RV32-NEXT:  .LBB4_2: # %falsebb
 ; RV32-NEXT:    fcvt.d.w fa0, zero
