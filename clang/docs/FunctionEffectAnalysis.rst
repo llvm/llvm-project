@@ -375,7 +375,7 @@ A construct like this can be used to exempt code from the checks described here:
 
 .. code-block:: c++
 
-  #define NONBLOCKING_UNSAFE(...)                                         \
+  #define NONBLOCKING_UNSAFE(...)                                    \
     _Pragma("clang diagnostic push")                                 \
     _Pragma("clang diagnostic ignored \"-Wunknown-warning-option\"") \
     _Pragma("clang diagnostic ignored \"-Wfunction-effects\"")       \
