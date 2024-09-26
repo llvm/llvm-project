@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/BasicBlock.h"
+#include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/User.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
 
