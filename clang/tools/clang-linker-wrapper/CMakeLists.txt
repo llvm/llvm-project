@@ -26,7 +26,7 @@ if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen LinkerWrapperOpts)
 endif()
 
-add_clang_tool(clang-linker-wrapper DISABLE_CLANG_LINK_DYLIB
+add_clang_tool(clang-linker-wrapper
   ClangLinkerWrapper.cpp
 
   DEPENDS

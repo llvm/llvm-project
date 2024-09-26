@@ -7,7 +7,6 @@
 # //===--------------------------------------------------------------------===//
 
 set(LLVM_LINK_COMPONENTS Support)
-add_clang_tool(nvptx-arch DISABLE_CLANG_LINK_DYLIB
-NVPTXArch.cpp)
+add_clang_tool(nvptx-arch NVPTXArch.cpp)
 
 target_link_libraries(nvptx-arch PRIVATE clangBasic)
