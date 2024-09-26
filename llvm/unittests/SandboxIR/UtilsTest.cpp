@@ -104,22 +104,19 @@ define void @foo(ptr %ptr) {
   auto *L0 = cast<sandboxir::LoadInst>(&*It++);
   auto *L1 = cast<sandboxir::LoadInst>(&*It++);
   auto *L2 = cast<sandboxir::LoadInst>(&*It++);
-  auto *L3 = cast<sandboxir::LoadInst>(&*It++);
-  (void)L3;
+  [[maybe_unused]] auto *L3 = cast<sandboxir::LoadInst>(&*It++);
 
   auto *V2L0 = cast<sandboxir::LoadInst>(&*It++);
   auto *V2L1 = cast<sandboxir::LoadInst>(&*It++);
   auto *V2L2 = cast<sandboxir::LoadInst>(&*It++);
   auto *V2L3 = cast<sandboxir::LoadInst>(&*It++);
 
-  auto *V3L0 = cast<sandboxir::LoadInst>(&*It++);
-  (void)V3L0;
+  [[maybe_unused]] auto *V3L0 = cast<sandboxir::LoadInst>(&*It++);
   auto *V3L1 = cast<sandboxir::LoadInst>(&*It++);
-  auto *V3L2 = cast<sandboxir::LoadInst>(&*It++);
-  (void)V3L2;
-  auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
-  (void)V3L3;
+  [[maybe_unused]] auto *V3L2 = cast<sandboxir::LoadInst>(&*It++);
+  [[maybe_unused]] auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
+  // getPointerDiffInBytes
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE, DL), 4);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE, DL), 8);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE, DL), -4);
@@ -130,4 +127,9 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE, DL), 8);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE, DL), 12);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE, DL), -12);
+
+  // atLowerAddress
+  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE, DL));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE, DL));
+  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE, DL));
 }
