@@ -35,11 +35,15 @@ void EmitClangDeclContext(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS);
 void EmitClangASTNodes(const llvm::RecordKeeper &RK, llvm::raw_ostream &OS,
                        const std::string &N, const std::string &S,
                        std::string_view PriorizeIfSubclassOf = "");
-void EmitClangBasicReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangBasicWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangBasicReader(const llvm::RecordKeeper &Records,
+                          llvm::raw_ostream &OS);
+void EmitClangBasicWriter(const llvm::RecordKeeper &Records,
+                          llvm::raw_ostream &OS);
 void EmitClangTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangTypeReader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangTypeWriter(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitClangTypeReader(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
+void EmitClangTypeWriter(const llvm::RecordKeeper &Records,
+                         llvm::raw_ostream &OS);
 void EmitClangAttrParserStringSwitches(const llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrSubjectMatchRulesParserStringSwitches(

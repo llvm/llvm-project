@@ -862,6 +862,30 @@ define double @pow_libcall_half_no_FMF(double %x) {
   ret double %retval
 }
 
+define double @pow_libcall_half_fromdomcondition(double %x) {
+; CHECK-LABEL: define double @pow_libcall_half_fromdomcondition(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[A:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; CHECK-NEXT:    [[C:%.*]] = fcmp oeq double [[A]], 0x7FF0000000000000
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret double 0.000000e+00
+; CHECK:       else:
+; CHECK-NEXT:    [[RETVAL:%.*]] = call double @pow(double [[X]], double 5.000000e-01)
+; CHECK-NEXT:    ret double [[RETVAL]]
+;
+  %a = call double @llvm.fabs.f64(double %x)
+  %c = fcmp oeq double %a, 0x7FF0000000000000
+  br i1 %c, label %then, label %else
+
+then:
+  ret double 0.0
+
+else:
+  %retval = call double @pow(double %x, double 0.5)
+  ret double %retval
+}
+
 define double @pow_libcall_half_no_FMF_noerrno(double %x) {
 ; LIB-LABEL: define double @pow_libcall_half_no_FMF_noerrno(
 ; LIB-SAME: double [[X:%.*]]) {

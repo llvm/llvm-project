@@ -1813,6 +1813,15 @@ module std_private_tuple_tuple_like_no_subrange [system] {
 module std_private_tuple_sfinae_helpers         [system] { header "__tuple/sfinae_helpers.h" }
 module std_private_tuple_tuple_element          [system] { header "__tuple/tuple_element.h" }
 module std_private_tuple_tuple_fwd              [system] { header "__fwd/tuple.h" }
+module std_private_get_fwd                      [system] {
+  header "__fwd/get.h"
+  export std_private_array_array_fwd
+  export std_private_complex_complex_fwd
+  export std_private_ranges_subrange_fwd
+  export std_private_tuple_tuple_fwd
+  export std_private_utility_pair_fwd
+  export std_private_variant_fwd
+}
 module std_private_tuple_tuple_indices          [system] { header "__tuple/tuple_indices.h" }
 module std_private_tuple_tuple_like             [system] {
   header "__tuple/tuple_like.h"
@@ -2103,5 +2112,6 @@ module std_private_utility_to_underlying           [system] { header "__utility/
 module std_private_utility_unreachable             [system] { header "__utility/unreachable.h" }
 
 module std_private_variant_monostate               [system] { header "__variant/monostate.h" }
+module std_private_variant_fwd                     [system] { header "__fwd/variant.h" }
 
 module std_private_vector_fwd                      [system] { header "__fwd/vector.h" }

@@ -136,7 +136,7 @@ __search_n_impl(_Iter1 __first, _Sent1 __last, _DiffT __count, const _Type& __va
 }
 
 template <class _ForwardIterator, class _Size, class _Tp, class _BinaryPredicate>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator search_n(
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator search_n(
     _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value, _BinaryPredicate __pred) {
   static_assert(
       __is_callable<_BinaryPredicate&, decltype(*__first), const _Tp&>::value, "The comparator has to be callable");
@@ -145,7 +145,7 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Fo
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   return std::search_n(__first, __last, std::__convert_to_integral(__count), __value, __equal_to());
 }

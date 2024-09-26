@@ -1116,15 +1116,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_USING_IF_EXISTS
 #  endif
 
-#  if __has_cpp_attribute(__nodiscard__)
-#    define _LIBCPP_NODISCARD [[__nodiscard__]]
-#  else
-// We can't use GCC's [[gnu::warn_unused_result]] and
-// __attribute__((warn_unused_result)), because GCC does not silence them via
-// (void) cast.
-#    define _LIBCPP_NODISCARD
-#  endif
-
 #  if __has_attribute(__no_destroy__)
 #    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
 #  else

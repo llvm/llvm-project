@@ -63,13 +63,36 @@ DISASM-NEXT: 180002000: ff 25 02 10 00 00            jmpq    *0x1002(%rip)      
 
 RUN: llvm-readobj --hex-dump=.test out.dll | FileCheck --check-prefix=TESTSEC %s
 RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=TESTSEC %s
-TESTSEC:      0x180006000 08300000 00300000 10300000 20300000
-TESTSEC-NEXT: 0x180006010 08100000 1c100000          00200000
+TESTSEC:      0x180007000 08500000 00300000 10500000 20500000
+TESTSEC-NEXT: 0x180007010 08300000 00500000 10300000 20300000
+TESTSEC-NEXT: 0x180007020 08100000 1c100000 00200000
 
 RUN: llvm-readobj --headers out.dll | FileCheck -check-prefix=HEADERS %s
 HEADERS:  LoadConfigTableRVA: 0x4010
 HEADERS:  IATRVA: 0x3000
 HEADERS:  IATSize: 0x1000
+
+RUN: llvm-readobj --coff-load-config out.dll | FileCheck -check-prefix=LOADCONFIG %s
+LOADCONFIG: AuxiliaryIAT: 0x5000
+
+RUN: llvm-readobj --hex-dump=.rdata out.dll | FileCheck -check-prefix=RDATA %s
+RDATA:      0x180005000 00000000 00000000 08100080 01000000
+RDATA-NEXT: 0x180005010 1c100080 01000000 00000000 00000000
+RDATA-NEXT: 0x180005020 30100080 01000000 00000000 00000000
+
+RUN: llvm-readobj --coff-basereloc out.dll | FileCheck -check-prefix=BASERELOC %s
+BASERELOC:      BaseReloc [
+BASERELOC-NOT:      Address: 0x5000
+BASERELOC:          Address: 0x5008
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x5010
+BASERELOC-NEXT:   }
+BASERELOC-NEXT:   Entry {
+BASERELOC-NEXT:     Type: DIR64
+BASERELOC-NEXT:     Address: 0x5020
+BASERELOC-NEXT:   }
 
 #--- test.s
     .section .test, "r"
@@ -80,6 +103,10 @@ arm64ec_data_sym:
     .rva __imp_data
     .rva __imp_func2
     .rva __imp_t2func
+    .rva __imp_aux_func
+    .rva __imp_aux_data
+    .rva __imp_aux_func2
+    .rva __imp_aux_t2func
     .rva __impchk_func
     .rva __impchk_func2
     .rva func
