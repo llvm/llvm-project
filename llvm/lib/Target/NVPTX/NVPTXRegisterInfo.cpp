@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXRegisterInfo.h"
+#include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
@@ -140,4 +141,48 @@ NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
   const NVPTXTargetMachine &TM =
       static_cast<const NVPTXTargetMachine &>(MF.getTarget());
   return TM.is64Bit() ? NVPTX::VRFrameLocal64 : NVPTX::VRFrameLocal32;
+}
+
+void NVPTXRegisterInfo::clearDebugRegisterMap() const {
+  debugRegisterMap.clear();
+}
+
+static uint64_t encodeRegisterForDwarf(std::string registerName) {
+  if (registerName.length() > 8) {
+    // The name is more than 8 characters long, and so won't fit into 64 bits.
+    return 0;
+  }
+
+  // Encode the name string into a DWARF register number using cuda-gdb's
+  // encoding.  See cuda_check_dwarf2_reg_ptx_virtual_register in cuda-tdep.c,
+  // https://github.com/NVIDIA/cuda-gdb/blob/e5cf3bddae520ffb326f95b4d98ce5c7474b828b/gdb/cuda/cuda-tdep.c#L353
+  // IE the bytes of the string are concatenated in reverse into a single
+  // number, which is stored in ULEB128, but in practice must be no more than 8
+  // bytes (excluding null terminator, which is not included).
+  uint64_t result = 0;
+  for (int i = 0; i < registerName.length(); ++i) {
+    result = result << 8;
+    unsigned char c = registerName[i];
+    result |= c;
+  }
+  return result;
+}
+
+void NVPTXRegisterInfo::addToDebugRegisterMap(
+    uint64_t preEncodedVirtualRegister, std::string registerName) const {
+  uint64_t mapped = encodeRegisterForDwarf(registerName);
+  if (mapped == 0)
+    return;
+  debugRegisterMap.insert({preEncodedVirtualRegister, mapped});
+}
+
+int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
+  if (Register::isPhysicalRegister(RegNum)) {
+    std::string name = NVPTXInstPrinter::getRegisterName(RegNum.id());
+    return encodeRegisterForDwarf(name);
+  }
+  uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
+  if (lookup)
+    return lookup;
+  return -1;
 }
