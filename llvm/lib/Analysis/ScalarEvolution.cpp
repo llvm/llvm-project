@@ -10152,11 +10152,12 @@ SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
   if (SE.getMinTrailingZeros(B) < Mult2) {
     if (!Predicates)
       return SE.getCouldNotCompute();
-    // Try to add a predicate ensuring B is a multiple of A.
+    // Try to add a predicate ensuring B is a multiple of 1 << Mult2.
     const SCEV *URem =
         SE.getURemExpr(B, SE.getConstant(B->getType(), 1 << Mult2));
     const SCEV *Zero = SE.getZero(B->getType());
-    assert(!SE.isKnownPredicate(CmpInst::ICMP_EQ, URem, Zero));
+    assert(!SE.isKnownPredicate(CmpInst::ICMP_EQ, URem, Zero) &&
+           "No remainder for 1 << Mult2 but missed by getTrailingBits?");
     // Avoid adding a predicate that is known to be false.
     if (SE.isKnownPredicate(CmpInst::ICMP_NE, URem, Zero))
       return SE.getCouldNotCompute();
