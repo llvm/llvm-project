@@ -1,10 +1,10 @@
 ! Test the -Xoffload-linker flag that forwards link commands to the clang-linker-wrapper used
 ! to help link offloading device libraries
 
-! RUN: %flang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=gfx90a -Xoffload-linker a %s 2>&1 | FileCheck --check-prefixes=CHECK-XLINKER %s
+! RUN: %flang -### %s -o %t 2>&1 -fopenmp --offload-arch=gfx90a --target=aarch64-unknown-linux-gnu -nogpulib -Xoffload-linker a | FileCheck %s --check-prefix=CHECK-XLINKER
 
-! CHECK-XLINKER: -device-linker=a{{.*}}-
+! CHECK-XLINKER: "{{[^"]*}}clang-linker-wrapper{{.*}}"{{.*}}"--device-linker=a"{{.*}}
 
-! RUN: %flang -### --target=x86_64-unknown-linux-gnu -fopenmp --offload-arch=gfx90a -Xoffload-linker a -Xoffload-linker-amdgcn-amd-amdhsa b %s 2>&1 | FileCheck --check-prefixes=CHECK-XLINKER-AMDGCN %s
+! RUN: %flang -### %s -o %t 2>&1 -fopenmp --offload-arch=gfx90a --target=aarch64-unknown-linux-gnu -nogpulib -Xoffload-linker a -Xoffload-linker-amdgcn-amd-amdhsa b | FileCheck %s --check-prefix=CHECK-XLINKER-AMDGCN
 
-! CHECK-XLINKER-AMDGCN: -device-linker=a{{.*}}-device-linker=amdgcn-amd-amdhsa=b{{.*}}--
+! CHECK-XLINKER-AMDGCN: "{{[^"]*}}clang-linker-wrapper{{.*}}"{{.*}}"--device-linker=a"{{.*}}"--device-linker=amdgcn-amd-amdhsa=b"{{.*}}
