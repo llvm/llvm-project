@@ -1357,7 +1357,7 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
 
-static void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitInstrInfo(const RecordKeeper &RK, raw_ostream &OS) {
   RK.startTimer("Analyze DAG patterns");
   InstrInfoEmitter(RK).run(OS);
   RK.startTimer("Emit map table");
