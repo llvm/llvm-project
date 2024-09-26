@@ -4397,7 +4397,8 @@ public:
   }
   RValue EmitCall(QualType FnType, const CGCallee &Callee, const CallExpr *E,
                   ReturnValueSlot ReturnValue, llvm::Value *Chain = nullptr,
-                  llvm::CallBase **CallOrInvoke = nullptr);
+                  llvm::CallBase **CallOrInvoke = nullptr,
+                  CGFunctionInfo const **ResolvedFnInfo = nullptr);
 
   // If a Call or Invoke instruction was emitted for this CallExpr, this method
   // writes the pointer to `CallOrInvoke` if it's not null.
