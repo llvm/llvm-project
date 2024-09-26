@@ -27,7 +27,7 @@ namespace {
 enum class ViolationID : uint8_t {
   None = 0, // Sentinel for an empty Violation.
   // These first 5 map to a %select{} in one of several FunctionEffects
-  // diagnostic, e.g. warn_func_effect_violation.
+  // diagnostics, e.g. warn_func_effect_violation.
   BaseDiagnosticIndex,
   AllocatesMemory = BaseDiagnosticIndex,
   ThrowsOrCatchesExceptions,

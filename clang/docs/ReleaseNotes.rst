@@ -572,8 +572,9 @@ New features
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
 
 - Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
-  attributes, are now verified. For example, functions declared with the ``nonblocking`` attribute
-  can be analyzed for the use of any language features, or calls to other functions, which may block.
+  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+  attribute, the compiler can generate warnings about the use of any language features, or calls to
+  other functions, which may block.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
