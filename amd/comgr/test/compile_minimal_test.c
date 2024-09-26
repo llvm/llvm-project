@@ -137,6 +137,9 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_create_data_set(&DataSetReloc);
   checkError(Status, "amd_comgr_create_data_set");
 
+  Status = amd_comgr_action_info_set_device_lib_linking(DataAction, true);
+  checkError(Status, "amd_comgr_action_info_set_device_lib_linking");
+
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE,
                                DataAction, DataSetLinked, DataSetReloc);
   checkError(Status, "amd_comgr_do_action");

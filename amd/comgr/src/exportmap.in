@@ -89,3 +89,6 @@ global: amd_comgr_action_info_set_bundle_entry_ids;
         amd_comgr_action_info_get_bundle_entry_id_count;
         amd_comgr_action_info_get_bundle_entry_id;
 } @amd_comgr_NAME@_2.7;
+@amd_comgr_NAME@_2.9 {
+global: amd_comgr_action_info_set_device_lib_linking;
+} @amd_comgr_NAME@_2.8;

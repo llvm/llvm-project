@@ -223,10 +223,16 @@ extern "C" {
 #define AMD_COMGR_VERSION_2_7
 
 /**
- * The function was introduced or changed in version 2.7 of the interface
- * and has the symbol version string of ``"@amd_comgr_NAME@_2.7"``.
+ * The function was introduced or changed in version 2.8 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.8"``.
  */
 #define AMD_COMGR_VERSION_2_8
+
+/**
+ * The function was introduced or changed in version 2.9 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.9"``.
+ */
+#define AMD_COMGR_VERSION_2_9
 
 /** @} */
 
@@ -1495,6 +1501,29 @@ amd_comgr_action_info_get_bundle_entry_id(
   size_t index,
   size_t *size,
   char *bundle_entry_id) AMD_COMGR_VERSION_2_8;
+
+/**
+ * @brief Set the device library linking behavior of an action info object.
+ *
+ * Device library linking can be either enforced or omitted for compilation
+ * actions.
+ *
+ * @param[in] action_info A handle to the action info object to be
+ * updated.
+ *
+ * @param[in] should_link_device_libs A boolean that directs the choice to
+ * link the device libraries.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_set_device_lib_linking(
+  amd_comgr_action_info_t action_info,
+  bool should_link_device_libs) AMD_COMGR_VERSION_2_9;
 
 /**
  * @brief Set the working directory of an action info object.

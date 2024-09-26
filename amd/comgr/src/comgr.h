@@ -237,6 +237,7 @@ struct DataAction {
   char *Path;
   amd_comgr_language_t Language;
   bool Logging;
+  bool ShouldLinkDeviceLibs = false;
 
   std::vector<std::string> BundleEntryIDs;
 

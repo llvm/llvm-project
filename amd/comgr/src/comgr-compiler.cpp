@@ -1149,7 +1149,8 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
   Args.push_back("-fshort-wchar");
 #endif
 
-  if (WithDeviceLibs) {
+  // TODO: Deprecate WithDeviceLibs in favor of ActionInfo->ShouldLinkDeviceLibs
+  if (WithDeviceLibs || ActionInfo->ShouldLinkDeviceLibs) {
     if (auto Status = addDeviceLibraries()) {
       return Status;
     }
@@ -1188,8 +1189,12 @@ amd_comgr_status_t AMDGPUCompiler::compileToExecutable() {
   Args.push_back("-fshort-wchar");
 #endif
 
-  if (auto Status = addDeviceLibraries()) {
-    return Status;
+  // TODO: Remove "true" conditional once dependent APIs have included new
+  // new *_set_device_lib_linking API
+  if (ActionInfo->ShouldLinkDeviceLibs || true) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_EXECUTABLE, ".so");
@@ -1227,8 +1232,12 @@ amd_comgr_status_t AMDGPUCompiler::compileToRelocatable() {
   Args.push_back("-fshort-wchar");
 #endif
 
-  if (auto Status = addDeviceLibraries()) {
-    return Status;
+  // TODO: Remove "true" conditional once dependent APIs have included new
+  // new *_set_device_lib_linking API
+  if (ActionInfo->ShouldLinkDeviceLibs || true) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
@@ -1729,6 +1738,12 @@ amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToRelocatable() {
     }
   }
 
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
+  }
+
   Args.push_back("-c");
 
   Args.push_back("-mllvm");
@@ -1744,6 +1759,12 @@ amd_comgr_status_t AMDGPUCompiler::codeGenBitcodeToAssembly() {
 
   if (ActionInfo->IsaName) {
     if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
+      return Status;
+    }
+  }
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
       return Status;
     }
   }
@@ -1766,6 +1787,12 @@ amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
 
   if (auto Status = addIncludeFlags()) {
     return Status;
+  }
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
   }
 
   Args.push_back("-c");
@@ -1854,6 +1881,12 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
       return Status;
     }
     Args.push_back(Inputs.back().c_str());
+  }
+
+  if (ActionInfo->ShouldLinkDeviceLibs) {
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
+    }
   }
 
   amd_comgr_data_t OutputT;

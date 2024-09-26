@@ -1273,6 +1273,22 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_device_lib_linking
+    //
+    (amd_comgr_action_info_t ActionInfo, bool ShouldLinkDeviceLibs) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ActionP->ShouldLinkDeviceLibs = ShouldLinkDeviceLibs;
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_working_directory_path
     //
     (amd_comgr_action_info_t ActionInfo, const char *Path) {

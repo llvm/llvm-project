@@ -25,6 +25,19 @@ device library from v4 to v5
 (libamd\_comgr.dll -> libamd\_comgr\_X.dll, where X is the major version)
 - oclc\_daz\_opt\_on.bc and oclc\_daz\_opt\_off.bc, and the corresponding
   variable \_\_oclc\_daz\_opt are no longer necessary.
+- Updated default device library linking behavior for several actions.
+  Previously, linking was done for some actions and not others, and not
+  controllable by the user. Now, linking is not done by default, but can
+  optionally be enabled via the
+  amd\_comgr\_action\_info\_set\_device\_lib\_linking() API. Users relying
+  on enabled-by-default behavior should update to use the new API to avoid
+  changes in behavior.
+
+  Note: This does not apply to the \*COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC
+  action. This action is not affected by the
+  amd\_comgr\_action\_info\_set\_device\_lib\_linking() API. The new API will
+  allow us to deprecate and remove this action in favor of the
+  \*COMPILE\_SOURCE\_TO\_BC action.
 
 New Features
 ------------
@@ -98,10 +111,14 @@ New APIs
     - For a given executable and ELF virtual address, return a code object
     offset. This API will benifet the ROCm debugger and profilier
 - amd\_comgr\_action\_info\_set\_bundle\_entry\_ids() (v2.8)
-- amd\_comgr\_action\_info\_get\_bundle\_entry\_id_count() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_id\_count() (v2.8)
 - amd\_comgr\_action\_info\_get\_bundle\_entry\_id() (v2.8)
     - A user can provide a set of bundle entry IDs, which are processed when
     calling the AMD\_COMGR\_UNBUNDLE action
+- amd\_comgr\_action\_info\_set\_device\_lib\_linking() (v2.9)
+    - By setting this ActionInfo property, a user can explicitly dictate if
+    device libraries should be linked for a given action. (Previouly, the
+    action type implicitly determined device library linking).
 
 
 Deprecated APIs
