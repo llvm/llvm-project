@@ -2325,6 +2325,59 @@ std::pair<SDValue, MachinePointerInfo> ARMTargetLowering::computeAddrForCallArg(
   return std::make_pair(DstAddr, DstInfo);
 }
 
+// Returns the type of copying which is required to set up a byval argument to
+// a tail-called function. This isn't needed for non-tail calls, because they
+// always need the equivalent of CopyOnce, but tail-calls sometimes need two to
+// avoid clobbering another argument (CopyViaTemp), and sometimes can be
+// optimised to zero copies when forwarding an argument from the caller's
+// caller (NoCopy).
+ARMTargetLowering::ByValCopyKind ARMTargetLowering::ByValNeedsCopyForTailCall(
+    SelectionDAG &DAG, SDValue Src, SDValue Dst, ISD::ArgFlagsTy Flags) const {
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  ARMFunctionInfo *AFI = DAG.getMachineFunction().getInfo<ARMFunctionInfo>();
+
+  // Globals are always safe to copy from.
+  if (isa<GlobalAddressSDNode>(Src) || isa<ExternalSymbolSDNode>(Src))
+    return CopyOnce;
+
+  // Can only analyse frame index nodes, conservatively assume we need a
+  // temporary.
+  auto *SrcFrameIdxNode = dyn_cast<FrameIndexSDNode>(Src);
+  auto *DstFrameIdxNode = dyn_cast<FrameIndexSDNode>(Dst);
+  if (!SrcFrameIdxNode || !DstFrameIdxNode)
+    return CopyViaTemp;
+
+  int SrcFI = SrcFrameIdxNode->getIndex();
+  int DstFI = DstFrameIdxNode->getIndex();
+  assert(MFI.isFixedObjectIndex(DstFI) &&
+         "byval passed in non-fixed stack slot");
+
+  int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
+  int64_t DstOffset = MFI.getObjectOffset(DstFI);
+
+  // If the source is in the local frame, then the copy to the argument memory
+  // is always valid.
+  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
+  if (!FixedSrc ||
+      (FixedSrc && SrcOffset < -(int64_t)AFI->getArgRegsSaveSize()))
+    return CopyOnce;
+
+  // In the case of byval arguments split between registers and the stack,
+  // computeAddrForCallArg returns a FrameIndex which corresponds only to the
+  // stack portion, but the Src SDValue will refer to the full value, including
+  // the local stack memory that the register portion gets stored into. We only
+  // need to compare them for equality, so normalise on the full value version.
+  uint64_t RegSize = Flags.getByValSize() - MFI.getObjectSize(DstFI);
+  DstOffset -= RegSize;
+
+  // If the value is already in the correct location, then no copying is
+  // needed. If not, then we need to copy via a temporary.
+  if (SrcOffset == DstOffset)
+    return NoCopy;
+  else
+    return CopyViaTemp;
+}
+
 void ARMTargetLowering::PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG,
                                          SDValue Chain, SDValue &Arg,
                                          RegsToPassVector &RegsToPass,
@@ -2499,37 +2552,58 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // overwritten by the stores of the outgoing arguments. To avoid this, we
   // need to make a temporary copy of them in local stack space, then copy back
   // to the argument area.
-  // TODO This could be optimised to skip byvals which are already being copied
-  // from local stack space, or which are copied from the incoming stack at the
-  // exact same location.
   DenseMap<unsigned, SDValue> ByValTemporaries;
   SDValue ByValTempChain;
   if (isTailCall) {
-    for (unsigned ArgIdx = 0, e = OutVals.size(); ArgIdx != e; ++ArgIdx) {
-      SDValue Arg = OutVals[ArgIdx];
+    SmallVector<SDValue, 8> ByValCopyChains;
+    for (const CCValAssign &VA : ArgLocs) {
+      unsigned ArgIdx = VA.getValNo();
+      SDValue Src = OutVals[ArgIdx];
       ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
 
-      if (Flags.isByVal()) {
-        int FrameIdx = MFI.CreateStackObject(
+      if (!Flags.isByVal())
+        continue;
+
+      SDValue Dst;
+      MachinePointerInfo DstInfo;
+      std::tie(Dst, DstInfo) =
+          computeAddrForCallArg(dl, DAG, VA, SDValue(), true, SPDiff);
+      ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
+
+      if (Copy == NoCopy) {
+        // If the argument is already at the correct offset on the stack
+        // (because we are forwarding a byval argument from our caller), we
+        // don't need any copying.
+        continue;
+      } else if (Copy == CopyOnce) {
+        // If the argument is in our local stack frame, no other argument
+        // preparation can clobber it, so we can copy it to the final location
+        // later.
+        ByValTemporaries[ArgIdx] = Src;
+      } else {
+        assert(Copy == CopyViaTemp && "unexpected enum value");
+        // If we might be copying this argument from the outgoing argument
+        // stack area, we need to copy via a temporary in the local stack
+        // frame.
+        int TempFrameIdx = MFI.CreateStackObject(
             Flags.getByValSize(), Flags.getNonZeroByValAlign(), false);
-        SDValue Dst =
-            DAG.getFrameIndex(FrameIdx, getPointerTy(DAG.getDataLayout()));
+        SDValue Temp =
+            DAG.getFrameIndex(TempFrameIdx, getPointerTy(DAG.getDataLayout()));
 
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
         SDValue AlignNode =
             DAG.getConstant(Flags.getNonZeroByValAlign().value(), dl, MVT::i32);
 
         SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-        SDValue Ops[] = { Chain, Dst, Arg, SizeNode, AlignNode};
-        MemOpChains.push_back(DAG.getNode(ARMISD::COPY_STRUCT_BYVAL, dl, VTs,
-                                          Ops));
-        ByValTemporaries[ArgIdx] = Dst;
+        SDValue Ops[] = {Chain, Temp, Src, SizeNode, AlignNode};
+        ByValCopyChains.push_back(
+            DAG.getNode(ARMISD::COPY_STRUCT_BYVAL, dl, VTs, Ops));
+        ByValTemporaries[ArgIdx] = Temp;
       }
     }
-    if (!MemOpChains.empty()) {
-      ByValTempChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
-      MemOpChains.clear();
-    }
+    if (!ByValCopyChains.empty())
+      ByValTempChain =
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other, ByValCopyChains);
   }
 
   // During a tail call, stores to the argument area must happen after all of
@@ -2644,13 +2718,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       unsigned CurByValIdx = CCInfo.getInRegsParamsProcessed();
 
       SDValue ByValSrc;
-      if (ByValTemporaries.contains(realArgIdx))
+      bool NeedsStackCopy;
+      if (ByValTemporaries.contains(realArgIdx)) {
         ByValSrc = ByValTemporaries[realArgIdx];
-      else
+        NeedsStackCopy = true;
+      } else {
         ByValSrc = Arg;
+        NeedsStackCopy = !isTailCall;
+      }
 
+      // If part of the argument is in registers, load them.
       if (CurByValIdx < ByValArgsCount) {
-
         unsigned RegBegin, RegEnd;
         CCInfo.getInRegsParamInfo(CurByValIdx, RegBegin, RegEnd);
 
@@ -2674,7 +2752,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         CCInfo.nextInRegsParam();
       }
 
-      if (Flags.getByValSize() > 4*offset) {
+      // If the memory part of the argument isn't already in the correct place
+      // (which can happen with tail calls), copy it into the argument area.
+      if (NeedsStackCopy && Flags.getByValSize() > 4 * offset) {
         auto PtrVT = getPointerTy(DAG.getDataLayout());
         SDValue Dst;
         MachinePointerInfo DstInfo;
