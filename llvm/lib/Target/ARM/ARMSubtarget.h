@@ -133,7 +133,7 @@ protected:
   int PreISelOperandLatencyAdjustment = 2;
 
   /// What alignment is preferred for loop bodies and functions, in log2(bytes).
-  unsigned PrefBranchInstLogAlignment = 0;
+  unsigned PrefBranchLogAlignment = 0;
 
   /// The cost factor for MVE instructions, representing the multiple beats an
   // instruction can take. The default is 2, (set in initSubtargetFeatures so
@@ -476,8 +476,8 @@ public:
     return isROPI() || !isTargetELF();
   }
 
-  unsigned getPrefBranchInstLogAlignment() const {
-    return PrefBranchInstLogAlignment;
+  unsigned getPrefBranchLogAlignment() const {
+    return PrefBranchLogAlignment;
   }
 
   unsigned

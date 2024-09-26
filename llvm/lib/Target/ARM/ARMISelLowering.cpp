@@ -1636,9 +1636,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget->getSchedModel().isOutOfOrder();
 
   setPrefLoopAlignment(
-      Align(1ULL << Subtarget->getPrefBranchInstLogAlignment()));
+      Align(1ULL << Subtarget->getPrefBranchLogAlignment()));
   setPrefFunctionAlignment(
-      Align(1ULL << Subtarget->getPrefBranchInstLogAlignment()));
+      Align(1ULL << Subtarget->getPrefBranchLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
 }

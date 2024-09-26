@@ -302,7 +302,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     LdStMultipleTiming = SingleIssuePlusExtras;
     MaxInterleaveFactor = 4;
     if (!isThumb())
-      PrefBranchInstLogAlignment = 3;
+      PrefBranchLogAlignment = 3;
     break;
   case Kryo:
     break;
