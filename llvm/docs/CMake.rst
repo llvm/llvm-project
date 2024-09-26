@@ -487,9 +487,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   `COVERAGE`, and `COVERAGE_AND_ORIGIN`. `COVERAGE` tracks whether and why a
   line number was intentionally dropped or not generated for an instruction,
   allowing Debugify to avoid reporting these as errors. `COVERAGE_AND_ORIGIN`
-  additionally stores a stacktrace of the point where each DebugLoc is
+  additionally stores a stack trace of the point where each DebugLoc is
   unintentionally dropped, allowing for much easier bug triaging at the cost of
-  a ~10x performance slowdown.
+  a ~10x performance slowdown. ABI-breaking.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
