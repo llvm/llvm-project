@@ -9169,6 +9169,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   using namespace VPlanPatternMatch;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
   for (VPRecipeBase &R : Header->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
@@ -9187,13 +9189,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       for (VPUser *U : Cur->users()) {
         auto *UserRecipe = cast<VPSingleDefRecipe>(U);
         if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
-          assert((match(U, m_Binary<VPInstruction::ExtractFromEnd>(
-                               m_VPValue(), m_VPValue())) ||
-                  (isa<VPReplicateRecipe>(U) &&
-                   cast<VPReplicateRecipe>(U)->getUnderlyingValue() ==
-                       RdxDesc.IntermediateStore)) &&
-                 "U must be either an ExtractFromEnd VPInstruction or a "
-                 "uniform store sourced from the intermediate store.");
+          assert(UserRecipe->getParent() == MiddleVPBB &&
+                 "U must be either in the loop region or the middle block.");
           continue;
         }
         Worklist.insert(UserRecipe);
@@ -9298,8 +9295,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   }
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*LatchVPBB->begin());
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
