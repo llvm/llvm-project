@@ -1817,8 +1817,8 @@ enum class VectorKind;
 /// There are also non-canonical "sugar" types, which also describe e.g. what
 /// typedef was used. For example:
 ///
-///   using Integer = int; // BuiltinType(kind = int)
-///   Integer* x;          // PointerType(pointee = TypedefType(decl = Integer))
+///     using Integer = int; // BuiltinType(kind = int)
+///     Integer* x;          // PointerType(pointee = TypedefType(decl=Integer))
 ///
 /// The Type obtained from the VarDecl for x reflects how that declaration was
 /// written. This is useful for diagnostic messages, for example.

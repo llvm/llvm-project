@@ -651,9 +651,9 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// The SourceManager describes the compiler's view of source code.
 ///
 /// This includes:
-///   - sources before preprocessing: raw code from disk
-///   - code after preprocessing e.g. expanded from an `assert()` macro
-///   - the relationship between the two, e.g. where the `assert()` was written
+/// - sources before preprocessing: raw code from disk
+/// - code after preprocessing e.g. expanded from an `assert()` macro
+/// - the relationship between the two, e.g. where the `assert()` was written
 ///
 /// SourceManager is designed to represent this information compactly. 
 /// AST nodes hold SourceLocations pointing at tokens that were parsed,
@@ -666,14 +666,16 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// SourceManager does not generally know about tokens or AST nodes, the lexer
 /// and parser are layered above SourceManager.
 /// 
-/// ====== SourceLocations, FileIDs, and SLocEntrys =======
+/// SourceLocations, FileIDs, and SLocEntrys
+/// ----------------------------------------
 ///
 /// A SourceLocation can point at any byte of code. Rather than store
 /// (file, offset) pairs, it is a single offset into a virtual buffer of all
 /// files concatenated together.
 ///
-/// [--file1--][----file2----][file3]
-///               ^
+///     [--file1--][----file2----][file3]
+///                   ^
+///
 /// This buffer does not exist in memory. Instead SourceManager keeps an array
 /// of SLocEntry objects, each describing one file and its offset in the buffer.
 /// Each entry is assigned a FileID, and SourceManager can encode/decode a
@@ -685,12 +687,14 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// SourceLocations can also point at code produced by macro expansion.
 /// To achieve this, every macro expansion has its own SLocEntry and FileID.
 ///
-/// [--file1--][----file2----][expn of INT_MAX][file3][another expn of INT_MAX]
-///                                ^
+///     [--file1--][----file2----][expn of INT_MAX][file3][another INT_MAX expn]
+///                                  ^
+///
 /// Again, the expanded code does not exist in memory, only as address space.
 /// In this case, the SLocEntry stores two SourceLocations:
 ///  - expansion location: where the macro was used (i.e. the text "INT_MAX")
 ///  - spelling location: the macro's definition (i.e. the text "2147483647")
+///
 /// Either or both may be relevant to the user.
 /// See get[Immediate]ExpansionRange and get[Immediate]SpellingLoc.
 ///

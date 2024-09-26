@@ -58,8 +58,10 @@ class UnresolvedUsingTypenameDecl;
 /// which is parallel to the hierarchy of Types.
 ///
 /// The following code has three TypeLocs:
-///   using Integer = int;
-///   Integer* x;
+///
+///     using Integer = int;
+///     Integer* x;
+///
 /// - a BuiltinTypeLoc for `int` on line 1
 /// - a PointerTypeLoc for `Integer*` on line 2
 /// - a TypedefTypeLoc for `Integer` on line 2.
@@ -81,7 +83,8 @@ class UnresolvedUsingTypenameDecl;
 /// TypeLocs are passed by value, and are most easily understood as non-owning
 /// reference types (like llvm::StringRef).
 ///
-/// ====== Data model and layout =====
+/// Data model and layout
+/// ----------------------------------
 ///
 /// A TypeLoc is a fat pointer (Type*, void* data).
 ///
@@ -98,37 +101,37 @@ class UnresolvedUsingTypenameDecl;
 /// This data model is best motivated by an example:
 /// Naively, a PointerTypeLoc for `Integer* x` could look like:
 ///
-///   PointerTypeLoc(
-///      type = PointerType(pointee = TypedefType(decl = Integer)),
-///      starLoc = <loc1>,
-///      pointeeLoc = TypedefTypeLoc(
-///        type = TypedefType(decl = Integer),
-///        nameLoc = <loc2>
-///      )
-///  )
+///     PointerTypeLoc(
+///        type = PointerType(pointee = TypedefType(decl = Integer)),
+///        starLoc = <loc1>,
+///        pointeeLoc = TypedefTypeLoc(
+///          type = TypedefType(decl = Integer),
+///          nameLoc = <loc2>
+///        )
+///     )
 ///
 /// There is a lot of redundancy here: the PointerTypeLoc structure mirrors
 /// the corresponding PointerType, and we're just adding some SourceLocations.
 /// 
 /// Instead, this more compact representation is used:
 ///
-///   PointerTypeLoc(
-///     data = [<loc1><loc2>],  // not owned!
-///     type = PointerType(pointee = TypedefType(decl = Integer)),
-///   )
+///     PointerTypeLoc(
+///       data = [<loc1><loc2>],  // not owned!
+///       type = PointerType(pointee = TypedefType(decl = Integer)),
+///     )
 ///
 /// The front of the data buffer has the starLoc "local" to PointerTypeLoc.
 /// The back of the data buffer has the data for the lexically-nested types.
 ///
 /// PointerTypeLoc's implementation is:
-///   getStarLoc() returns data[0].
-///   getPointeeLoc() returns TypeLoc(&data[1], type->getPointeeType())
+/// - getStarLoc() returns `data[0]`.
+/// - getPointeeLoc() returns `TypeLoc(&data[1], type->getPointeeType())`
 ///
 /// ----------------------------------
 ///
 /// One quirk here is how the TypeLoc inheritance hierarchy and casting work.
 ///
-/// All subclasses of TypeLoc have exactly the same layout: (Type*, void*).
+/// All subclasses of TypeLoc have exactly the same layout: `(Type*, void*)`.
 /// We downcast a TypeLoc to e.g. PointerTypeLoc *by value*, by simply creating
 /// a PointerTypeLoc with the same type and buffer.
 /// (The cast can be checked by examining the Type).
