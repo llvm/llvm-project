@@ -6968,8 +6968,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   // Try to vectorize postponed load entries, previously marked as gathered.
   for (unsigned Idx : LoadEntriesToVectorize) {
     const TreeEntry &E = *VectorizableTree[Idx];
-    SmallVector<Value *> GatheredScalars(E.Scalars.begin(),
-                                         E.Scalars.end());
+    SmallVector<Value *> GatheredScalars(E.Scalars.begin(), E.Scalars.end());
     // Avoid reordering, if possible.
     if (!E.ReorderIndices.empty()) {
       // Build a mask out of the reorder indices and reorder scalars per this
