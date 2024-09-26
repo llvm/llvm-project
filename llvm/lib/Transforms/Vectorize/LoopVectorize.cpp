@@ -8985,12 +8985,13 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         Operands = {OpRange.begin(), OpRange.end()};
       }
 
-      // Invariant stores inside loop will be deleted and a single store
-      // with the final reduction value will be added to the exit block
+      // The stores with invariant address inside the loop will be deleted, and
+      // in the exit block, a uniform store recipe will be created for the final
+      // invariant store of the reduction.
       StoreInst *SI;
       if ((SI = dyn_cast<StoreInst>(&I)) &&
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
-        // Only create recipe for the last intermediate store of the reduction.
+        // Only create recipe for the final invariant store of the reduction.
         if (!Legal->isInvariantStoreOfReduction(SI))
           continue;
         auto *Recipe = new VPReplicateRecipe(
