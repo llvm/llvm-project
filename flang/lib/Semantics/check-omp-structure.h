@@ -139,6 +139,7 @@ public:
   }
 
 private:
+  bool CheckAllowedClause(llvmOmpClause clause);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);

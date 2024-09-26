@@ -48,6 +48,24 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
+      return false;
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::Or:
+    case Instruction::ICmp:
+    case Instruction::Select:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
+    case VPInstruction::LogicalAnd:
+    case VPInstruction::PtrAdd:
+      return false;
+    default:
+      return true;
+    }
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -137,21 +155,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPScalarCastSC:
     return false;
   case VPInstructionSC:
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return mayWriteToMemory();
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
@@ -1739,7 +1743,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   Type *IndexTy = State.VF.isScalable() && (IsReverse || CurrentPart > 0)
-                      ? DL.getIndexType(IndexedTy->getPointerTo())
+                      ? DL.getIndexType(Builder.getPtrTy(0))
                       : Builder.getInt32Ty();
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();
@@ -2267,6 +2271,31 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   State.set(this, Res);
 }
 
+InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
+                                                  VPCostContext &Ctx) const {
+  if (!Consecutive || IsMasked)
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+
+  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // here because the EVL recipes using EVL to replace the tail mask. But in the
+  // legacy model, it will always calculate the cost of mask.
+  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // don't need to compare to the legacy cost model.
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
+      Ingredient.getOpcode(), Ty, Alignment, AS, CostKind);
+  if (!Reverse)
+    return Cost;
+
+  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                       cast<VectorType>(Ty), {}, CostKind, 0);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                  VPSlotTracker &SlotTracker) const {
@@ -2361,6 +2390,31 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
   State.addMetadata(NewSI, SI);
+}
+
+InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  if (!Consecutive || IsMasked)
+    return VPWidenMemoryRecipe::computeCost(VF, Ctx);
+
+  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // here because the EVL recipes using EVL to replace the tail mask. But in the
+  // legacy model, it will always calculate the cost of mask.
+  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // don't need to compare to the legacy cost model.
+  Type *Ty = ToVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Align Alignment =
+      getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
+  unsigned AS =
+      getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
+      Ingredient.getOpcode(), Ty, Alignment, AS, CostKind);
+  if (!Reverse)
+    return Cost;
+
+  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
+                                       cast<VectorType>(Ty), {}, CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

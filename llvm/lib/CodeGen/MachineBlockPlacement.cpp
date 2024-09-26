@@ -3619,9 +3619,8 @@ void MachineBlockPlacement::applyExtTsp() {
                     << " with profile = " << F->getFunction().hasProfileData()
                     << " (" << F->getName().str() << ")"
                     << "\n");
-  LLVM_DEBUG(
-      dbgs() << format("  original  layout score: %0.2f\n",
-                       calcExtTspScore(BlockSizes, BlockCounts, JumpCounts)));
+  LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n",
+                              calcExtTspScore(BlockSizes, JumpCounts)));
 
   // Run the layout algorithm.
   auto NewOrder = computeExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
@@ -3630,9 +3629,9 @@ void MachineBlockPlacement::applyExtTsp() {
   for (uint64_t Node : NewOrder) {
     NewBlockOrder.push_back(CurrentBlockOrder[Node]);
   }
-  LLVM_DEBUG(dbgs() << format("  optimized layout score: %0.2f\n",
-                              calcExtTspScore(NewOrder, BlockSizes, BlockCounts,
-                                              JumpCounts)));
+  LLVM_DEBUG(
+      dbgs() << format("  optimized layout score: %0.2f\n",
+                       calcExtTspScore(NewOrder, BlockSizes, JumpCounts)));
 
   // Assign new block order.
   assignBlockOrder(NewBlockOrder);
