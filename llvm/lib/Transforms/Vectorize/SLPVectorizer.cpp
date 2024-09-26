@@ -4453,7 +4453,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
     return std::nullopt;
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
   int NumParts = TTI->getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= NumScalars)
+  if (NumParts == 0 || NumParts >= NumScalars ||
+      VecTy->getNumElements() % NumParts != 0)
     NumParts = 1;
   SmallVector<int> ExtractMask;
   SmallVector<int> Mask;
@@ -6457,7 +6458,8 @@ static void gatherPossiblyVectorizableLoads(
   if (NumScalars > 1) {
     auto *VecTy = getWidenedType(ScalarTy, NumScalars);
     NumParts = TTI.getNumberOfParts(VecTy);
-    if (NumParts == 0 || NumParts >= NumScalars)
+    if (NumParts == 0 || NumParts >= NumScalars ||
+        VecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
   }
   unsigned VF = PowerOf2Ceil(NumScalars / NumParts);
@@ -9955,7 +9957,8 @@ public:
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    if (NumParts == 0 || NumParts >= Mask.size())
+    if (NumParts == 0 || NumParts >= Mask.size() ||
+        MaskVecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -9972,7 +9975,8 @@ public:
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    if (NumParts == 0 || NumParts >= Mask.size())
+    if (NumParts == 0 || NumParts >= Mask.size() ||
+        MaskVecTy->getNumElements() % NumParts != 0)
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -13623,7 +13627,8 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   Type *OrigScalarTy = GatheredScalars.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
   unsigned NumParts = TTI->getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= GatheredScalars.size())
+  if (NumParts == 0 || NumParts >= GatheredScalars.size() ||
+      VecTy->getNumElements() % NumParts != 0)
     NumParts = 1;
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
