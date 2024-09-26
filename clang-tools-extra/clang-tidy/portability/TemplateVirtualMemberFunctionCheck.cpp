@@ -14,7 +14,9 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::portability {
 
 void TemplateVirtualMemberFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(classTemplateSpecializationDecl().bind("specialization"),
+  Finder->addMatcher(classTemplateSpecializationDecl(
+                         unless(isExplicitTemplateSpecialization()))
+                         .bind("specialization"),
                      this);
 }
 
@@ -23,10 +25,7 @@ void TemplateVirtualMemberFunctionCheck::check(
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("specialization");
 
-  if (MatchedDecl->isExplicitSpecialization())
-    return;
-
-  for (auto &&Method : MatchedDecl->methods()) {
+  for (const CXXMethodDecl *Method : MatchedDecl->methods()) {
     if (!Method->isVirtual())
       continue;
 

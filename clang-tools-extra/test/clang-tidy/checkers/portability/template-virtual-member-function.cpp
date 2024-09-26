@@ -132,3 +132,42 @@ int main() {
     return 0;
 }
 } // namespace UninstantiatedNonVirtualMemberFunctions
+
+namespace PartialSpecializationError {
+template<typename T, typename U>
+struct CrossPlatformError {};
+
+template<typename U>
+struct CrossPlatformError<int, U>{
+    virtual ~CrossPlatformError() = default;
+
+    static void used() {}
+
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
+    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: template instantiated here
+    virtual void unused() {
+        U MSVCError = this;
+    };
+};
+
+int main() {
+    CrossPlatformError<int, float>::used();
+    return 0;
+}
+} // namespace PartialSpecializationError
+
+namespace PartialSpecializationNoInstantiation {
+template<typename T, typename U>
+struct NoInstantiation {};
+
+template<typename U>
+struct NoInstantiation<int, U>{
+    virtual ~NoInstantiation() = default;
+
+    static void used() {}
+
+    virtual void unused() {
+        U MSVCError = this;
+    };
+};
+} // namespace PartialSpecializationNoInstantiation
