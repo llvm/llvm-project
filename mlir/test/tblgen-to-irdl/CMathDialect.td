@@ -19,12 +19,14 @@ class CMath_Op<string mnemonic, list<Trait> traits = []>
 def f32Orf64Type : Or<[CPred<"::llvm::isa<::mlir::F32>">,
                        CPred<"::llvm::isa<::mlir::F64>">]>;
 
+// CHECK: irdl.type @"!complex"
 def CMath_ComplexType : CMath_Type<"ComplexType", "complex"> {
   let parameters = (ins f32Orf64Type:$elementType);
+  let assemblyFormat = "`<` $elementType `>`";
 }
 
 // CHECK:      irdl.operation @identity {
-// CHECK-NEXT:   %0 = irdl.base "!cmath.complex"
+// CHECK-NEXT:   %0 = irdl.base @cmath::@"!complex"
 // CHECK-NEXT:   irdl.results(%0)
 // CHECK-NEXT: }
 def CMath_IdentityOp : CMath_Op<"identity"> {
@@ -32,9 +34,9 @@ def CMath_IdentityOp : CMath_Op<"identity"> {
 }
 
 // CHECK:      irdl.operation @mul {
-// CHECK-NEXT:   %0 = irdl.base "!cmath.complex"
-// CHECK-NEXT:   %1 = irdl.base "!cmath.complex"
-// CHECK-NEXT:   %2 = irdl.base "!cmath.complex"
+// CHECK-NEXT:   %0 = irdl.base @cmath::@"!complex"
+// CHECK-NEXT:   %1 = irdl.base @cmath::@"!complex"
+// CHECK-NEXT:   %2 = irdl.base @cmath::@"!complex"
 // CHECK-NEXT:   irdl.operands(%0, %1)
 // CHECK-NEXT:   irdl.results(%2)
 // CHECK-NEXT: }
@@ -45,7 +47,7 @@ def CMath_MulOp : CMath_Op<"mul"> {
 
 // CHECK:      irdl.operation @norm {
 // CHECK-NEXT:   %0 = irdl.any
-// CHECK-NEXT:   %1 = irdl.base "!cmath.complex"
+// CHECK-NEXT:   %1 = irdl.base @cmath::@"!complex"
 // CHECK-NEXT:   irdl.operands(%0)
 // CHECK-NEXT:   irdl.results(%1)
 // CHECK-NEXT: }

@@ -364,7 +364,7 @@ private:
   // TODO Use a more generic buffer.
   // That buffer should be light with almost no additional headers. Then
   // it can be use here, the __retarget_buffer, and place that use
-  // the now deprecated get_temporary_buffer
+  // the now removed get_temporary_buffer
 
   basic_string<_CharT, _Traits, _Allocator> __str_;
   bool __emit_on_sync_{false};

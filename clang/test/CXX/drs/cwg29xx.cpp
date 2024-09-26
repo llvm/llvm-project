@@ -6,6 +6,14 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
+namespace cwg2915 { // cwg2915: 20 tentatively ready 2024-08-16
+#if __cplusplus >= 202302L
+struct A {
+  void f(this void); // expected-error {{explicit object parameter cannot have 'void' type}}
+};
+#endif
+}
+
 namespace cwg2917 { // cwg2917: 20 review 2024-07-30
 template <typename>
 class Foo;

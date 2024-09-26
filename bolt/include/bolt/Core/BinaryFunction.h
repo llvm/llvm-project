@@ -117,7 +117,6 @@ inline raw_ostream &operator<<(raw_ostream &OS,
     TotalCount += CSP.Count;
     TotalMispreds += CSP.Mispreds;
   }
-  SS.flush();
 
   OS << TotalCount << " (" << TotalMispreds << " misses) :" << TempString;
   return OS;

@@ -1110,17 +1110,17 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 static bool parseFloatingPointArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
     const llvm::StringRef val = a->getValue();
-    enum LangOptions::FPModeKind fpContractMode;
+    enum Fortran::common::LangOptions::FPModeKind fpContractMode;
 
     if (val == "off")
-      fpContractMode = LangOptions::FPM_Off;
+      fpContractMode = Fortran::common::LangOptions::FPM_Off;
     else if (val == "fast")
-      fpContractMode = LangOptions::FPM_Fast;
+      fpContractMode = Fortran::common::LangOptions::FPM_Fast;
     else {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
           << a->getSpelling() << val;
@@ -1161,7 +1161,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ReciprocalMath = true;
     opts.ApproxFunc = true;
     opts.NoSignedZeros = true;
-    opts.setFPContractMode(LangOptions::FPM_Fast);
+    opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
   return true;
@@ -1194,7 +1194,7 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
     return false;
   }
 
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
   if (vscaleMin) {
     llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
     unsigned vscaleMinVal;
@@ -1531,7 +1531,8 @@ CompilerInvocation::getSemanticsCtx(
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
-      getDefaultKinds(), fortranOptions.features, allCookedSources);
+      getDefaultKinds(), fortranOptions.features, getLangOpts(),
+      allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
@@ -1556,14 +1557,14 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
-  const LangOptions &langOptions = getLangOpts();
+  const Fortran::common::LangOptions &langOptions = getLangOpts();
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,
   //       so that we can just copy it into LoweringOptions.
   mathOpts
       .setFPContractEnabled(langOptions.getFPContractMode() ==
-                            LangOptions::FPM_Fast)
+                            Fortran::common::LangOptions::FPM_Fast)
       .setNoHonorInfs(langOptions.NoHonorInfs)
       .setNoHonorNaNs(langOptions.NoHonorNaNs)
       .setApproxFunc(langOptions.ApproxFunc)

@@ -188,7 +188,7 @@ LoongArch::LoongArch() {
   relativeRel = R_LARCH_RELATIVE;
   iRelativeRel = R_LARCH_IRELATIVE;
 
-  if (config->is64) {
+  if (ctx.arg.is64) {
     symbolicRel = R_LARCH_64;
     tlsModuleIndexRel = R_LARCH_TLS_DTPMOD64;
     tlsOffsetRel = R_LARCH_TLS_DTPREL64;
@@ -213,7 +213,7 @@ LoongArch::LoongArch() {
 }
 
 static uint32_t getEFlags(const InputFile *f) {
-  if (config->is64)
+  if (ctx.arg.is64)
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
@@ -294,7 +294,7 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
     return read64le(buf);
   case R_LARCH_RELATIVE:
   case R_LARCH_IRELATIVE:
-    return config->is64 ? read64le(buf) : read32le(buf);
+    return ctx.arg.is64 ? read64le(buf) : read32le(buf);
   case R_LARCH_NONE:
   case R_LARCH_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
@@ -307,15 +307,15 @@ int64_t LoongArch::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void LoongArch::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->is64)
+  if (ctx.arg.is64)
     write64le(buf, ctx.in.plt->getVA());
   else
     write32le(buf, ctx.in.plt->getVA());
 }
 
 void LoongArch::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends) {
-    if (config->is64)
+  if (ctx.arg.writeAddends) {
+    if (ctx.arg.is64)
       write64le(buf, s.getVA());
     else
       write32le(buf, s.getVA());
@@ -342,18 +342,18 @@ void LoongArch::writePltHeader(uint8_t *buf) const {
   //   ld.[wd]   $t0, $t0, Wordsize               ; t0 = link_map
   //   jr        $t3
   uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
-  uint32_t sub = config->is64 ? SUB_D : SUB_W;
-  uint32_t ld = config->is64 ? LD_D : LD_W;
-  uint32_t addi = config->is64 ? ADDI_D : ADDI_W;
-  uint32_t srli = config->is64 ? SRLI_D : SRLI_W;
+  uint32_t sub = ctx.arg.is64 ? SUB_D : SUB_W;
+  uint32_t ld = ctx.arg.is64 ? LD_D : LD_W;
+  uint32_t addi = ctx.arg.is64 ? ADDI_D : ADDI_W;
+  uint32_t srli = ctx.arg.is64 ? SRLI_D : SRLI_W;
   write32le(buf + 0, insn(PCADDU12I, R_T2, hi20(offset), 0));
   write32le(buf + 4, insn(sub, R_T1, R_T1, R_T3));
   write32le(buf + 8, insn(ld, R_T3, R_T2, lo12(offset)));
   write32le(buf + 12,
             insn(addi, R_T1, R_T1, lo12(-ctx.target->pltHeaderSize - 12)));
   write32le(buf + 16, insn(addi, R_T0, R_T2, lo12(offset)));
-  write32le(buf + 20, insn(srli, R_T1, R_T1, config->is64 ? 1 : 2));
-  write32le(buf + 24, insn(ld, R_T0, R_T0, config->wordsize));
+  write32le(buf + 20, insn(srli, R_T1, R_T1, ctx.arg.is64 ? 1 : 2));
+  write32le(buf + 24, insn(ld, R_T0, R_T0, ctx.arg.wordsize));
   write32le(buf + 28, insn(JIRL, R_ZERO, R_T3, 0));
 }
 
@@ -369,7 +369,7 @@ void LoongArch::writePlt(uint8_t *buf, const Symbol &sym,
   uint32_t offset = sym.getGotPltVA() - pltEntryAddr;
   write32le(buf + 0, insn(PCADDU12I, R_T3, hi20(offset), 0));
   write32le(buf + 4,
-            insn(config->is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
+            insn(ctx.arg.is64 ? LD_D : LD_W, R_T3, R_T3, lo12(offset)));
   write32le(buf + 8, insn(JIRL, R_T1, R_T3, 0));
   write32le(buf + 12, insn(ANDI, R_ZERO, R_ZERO, 0));
 }
@@ -496,7 +496,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_TLSGD_GOT;
   case R_LARCH_TLS_LE_ADD_R:
   case R_LARCH_RELAX:
-    return config->relax ? R_RELAX_HINT : R_NONE;
+    return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_LARCH_ALIGN:
     return R_RELAX_HINT;
   case R_LARCH_TLS_DESC_PC_HI20:
@@ -821,7 +821,7 @@ static bool relax(InputSection &sec) {
 // change in section sizes can have cascading effect and require another
 // relaxation pass.
 bool LoongArch::relaxOnce(int pass) const {
-  if (config->relocatable)
+  if (ctx.arg.relocatable)
     return false;
 
   if (pass == 0)

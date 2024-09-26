@@ -17,6 +17,7 @@
 
 #include <experimental/memory>
 #include <cassert>
+#include <functional>
 
 #include "poisoned_hash_helper.h"
 

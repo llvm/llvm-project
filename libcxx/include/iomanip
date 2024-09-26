@@ -46,6 +46,8 @@ template <class charT, class traits, class Allocator>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 
+#  include <__ostream/basic_ostream.h>
+#  include <ios>
 #  include <istream>
 #  include <version>
 
