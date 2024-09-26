@@ -684,10 +684,6 @@ public:
                                       Qualifiers ThisTypeQuals,
                                       Fn TransformExceptionSpec);
 
-  template <typename Fn>
-  QualType TransformAttributedType(TypeLocBuilder &TLB, AttributedTypeLoc TL,
-                                   Fn TransformModifiedType);
-
   bool TransformExceptionSpec(SourceLocation Loc,
                               FunctionProtoType::ExceptionSpecInfo &ESI,
                               SmallVectorImpl<QualType> &Exceptions,
@@ -7373,11 +7369,10 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
-template <typename Fn>
-QualType TreeTransform<Derived>::TransformAttributedType(
-    TypeLocBuilder &TLB, AttributedTypeLoc TL, Fn TransformModifiedTypeFn) {
+QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
+                                                         AttributedTypeLoc TL) {
   const AttributedType *oldType = TL.getTypePtr();
-  QualType modifiedType = TransformModifiedTypeFn(TLB, TL.getModifiedLoc());
+  QualType modifiedType = getDerived().TransformType(TLB, TL.getModifiedLoc());
   if (modifiedType.isNull())
     return QualType();
 
@@ -7392,12 +7387,27 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    TypeLocBuilder AuxiliaryTLB;
-    AuxiliaryTLB.reserve(TL.getFullDataSize());
-    QualType equivalentType =
-        getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
-    if (equivalentType.isNull())
-      return QualType();
+    // If the equivalent type is equal to the modified type, we don't want to
+    // transform it as well because:
+    //
+    //   1. The transformation would yield the same result and is therefore
+    //      superfluous, and
+    //
+    //   2. Transforming the same type twice can cause problems, e.g. if it
+    //      is a FunctionProtoType, we may end up instantiating the function
+    //      parameters twice, which causes an assertion since the parameters
+    //      are already bound to their counterparts in the template for this
+    //      instantiation.
+    //
+    QualType equivalentType = modifiedType;
+    if (TL.getModifiedLoc().getType() != TL.getEquivalentTypeLoc().getType()) {
+      TypeLocBuilder AuxiliaryTLB;
+      AuxiliaryTLB.reserve(TL.getFullDataSize());
+      equivalentType =
+          getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
+      if (equivalentType.isNull())
+        return QualType();
+    }
 
     // Check whether we can add nullability; it is only represented as
     // type sugar, and therefore cannot be diagnosed in any other way.
@@ -7419,15 +7429,6 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
   newTL.setAttr(newAttr);
   return result;
-}
-
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
-                                                         AttributedTypeLoc TL) {
-  return getDerived().TransformAttributedType(
-      TLB, TL, [&](TypeLocBuilder &TLB, TypeLoc ModifiedLoc) -> QualType {
-        return getDerived().TransformType(TLB, ModifiedLoc);
-      });
 }
 
 template <typename Derived>
@@ -14774,63 +14775,29 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         TPL->containsUnexpandedParameterPack();
   }
 
-  // Transform the type of the original lambda's call operator.
-  // The transformation MUST be done in the CurrentInstantiationScope since
-  // it introduces a mapping of the original to the newly created
-  // transformed parameters.
-  TypeSourceInfo *NewCallOpTSI = nullptr;
-  {
-    auto OldCallOpTypeLoc =
-        E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  TypeLocBuilder NewCallOpTLBuilder;
+  TypeLoc OldCallOpTypeLoc =
+      E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  QualType NewCallOpType =
+      getDerived().TransformType(NewCallOpTLBuilder, OldCallOpTypeLoc);
+  if (NewCallOpType.isNull())
+    return ExprError();
+  LSI->ContainsUnexpandedParameterPack |=
+      NewCallOpType->containsUnexpandedParameterPack();
+  TypeSourceInfo *NewCallOpTSI =
+      NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
 
-    auto TransformFunctionProtoTypeLoc =
-        [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
-      SmallVector<QualType, 4> ExceptionStorage;
-      return this->TransformFunctionProtoType(
-          TLB, FPTL, nullptr, Qualifiers(),
-          [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                          ExceptionStorage, Changed);
-          });
-    };
-
-    QualType NewCallOpType;
-    TypeLocBuilder NewCallOpTLBuilder;
-
-    if (auto ATL = OldCallOpTypeLoc.getAs<AttributedTypeLoc>()) {
-      NewCallOpType = this->TransformAttributedType(
-          NewCallOpTLBuilder, ATL,
-          [&](TypeLocBuilder &TLB, TypeLoc TL) -> QualType {
-            return TransformFunctionProtoTypeLoc(
-                TLB, TL.castAs<FunctionProtoTypeLoc>());
-          });
-    } else {
-      auto FPTL = OldCallOpTypeLoc.castAs<FunctionProtoTypeLoc>();
-      NewCallOpType = TransformFunctionProtoTypeLoc(NewCallOpTLBuilder, FPTL);
-    }
-
-    if (NewCallOpType.isNull())
-      return ExprError();
-    LSI->ContainsUnexpandedParameterPack |=
-        NewCallOpType->containsUnexpandedParameterPack();
-    NewCallOpTSI =
-        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
-  }
-
-  ArrayRef<ParmVarDecl *> Params;
-  if (auto ATL = NewCallOpTSI->getTypeLoc().getAs<AttributedTypeLoc>()) {
-    Params = ATL.getModifiedLoc().castAs<FunctionProtoTypeLoc>().getParams();
-  } else {
-    auto FPTL = NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
-    Params = FPTL.getParams();
-  }
+  // The type may be an AttributedType or some other kind of sugar;
+  // get the actual underlying FunctionProtoType.
+  auto FPTL = NewCallOpTSI->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>();
+  assert(FPTL && "Not a FunctionProtoType?");
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(),
       E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
-      E->getCallOperator()->getStorageClass(), Params,
+      E->getCallOperator()->getStorageClass(), FPTL.getParams(),
       E->hasExplicitResultType());
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
