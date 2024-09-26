@@ -1136,6 +1136,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
+  InterpStateCCOverride CCOverride(S, Func->getDecl()->isImmediateFunction());
   APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
@@ -1295,10 +1296,6 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
   if (!InvalidNewDeleteExpr(S, OpPC, E))
     return false;
-
-  // Assume proper types in std functions.
-  if (S.Current->isStdFunction())
-    return true;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();

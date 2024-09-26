@@ -1685,6 +1685,64 @@ bb1:
 #endif // NDEBUG
 }
 
+TEST_F(SandboxIRTest, Module) {
+  parseIR(C, R"IR(
+@glob0 = global i32 42
+@glob1 = global i32 43
+@internal0 = internal global i32 42
+@const0 = constant i32 42
+@alias0 = dso_local alias void(), ptr @foo
+@ifunc = ifunc void(), ptr @foo
+define void @foo() {
+  ret void
+}
+define void @bar() {
+  ret void
+}
+)IR");
+  llvm::Module *LLVMM = &*M;
+  llvm::Function *LLVMFFoo = &*M->getFunction("foo");
+  llvm::Function *LLVMFBar = &*M->getFunction("bar");
+
+  sandboxir::Context Ctx(C);
+  auto *M = Ctx.createModule(LLVMM);
+  // Check getContext().
+  EXPECT_EQ(&M->getContext(), &Ctx);
+  // Check getFunction().
+  auto *FFoo = M->getFunction("foo");
+  auto *FBar = M->getFunction("bar");
+  EXPECT_EQ(FFoo, Ctx.getValue(LLVMFFoo));
+  EXPECT_EQ(FBar, Ctx.getValue(LLVMFBar));
+  // Check getDataLayout().
+  EXPECT_EQ(&M->getDataLayout(), &LLVMM->getDataLayout());
+  // Check getSourceFileName().
+  EXPECT_EQ(M->getSourceFileName(), LLVMM->getSourceFileName());
+  // Check getGlobalVariable().
+  for (const char *Name : {"global0", "global1", "internal0"})
+    EXPECT_EQ(M->getGlobalVariable(Name),
+              Ctx.getValue(LLVMM->getGlobalVariable(Name)));
+  // Check getGlobalVariable(AllowInternal).
+  {
+    auto *Internal0 = M->getGlobalVariable("internal0", /*AllowInternal=*/true);
+    EXPECT_TRUE(Internal0 != nullptr);
+    EXPECT_EQ(Internal0, Ctx.getValue(LLVMM->getNamedGlobal("internal0")));
+  }
+  // Check getNamedGlobal().
+  {
+    auto *Internal = M->getNamedGlobal("internal0");
+    EXPECT_TRUE(Internal != nullptr);
+    EXPECT_EQ(Internal, Ctx.getValue(LLVMM->getNamedGlobal("internal0")));
+  }
+  // Check getNamedAlias().
+  auto *Alias0 = M->getNamedAlias("alias0");
+  EXPECT_EQ(Alias0, Ctx.getValue(LLVMM->getNamedAlias("alias0")));
+  EXPECT_EQ(M->getNamedAlias("aliasFOO"), nullptr);
+  // Check getNamedIFunc().
+  auto *IFunc0 = M->getNamedIFunc("ifunc0");
+  EXPECT_EQ(IFunc0, Ctx.getValue(LLVMM->getNamedAlias("ifunc0")));
+  EXPECT_EQ(M->getNamedIFunc("ifuncFOO"), nullptr);
+}
+
 TEST_F(SandboxIRTest, BasicBlock) {
   parseIR(C, R"IR(
 define void @foo(i32 %v1) {
@@ -1769,9 +1827,13 @@ bb1:
   store volatile i8 %ld0, ptr %ptr
   %atomicrmw = atomicrmw add ptr %ptr, i8 %v1 acquire
   %udiv = udiv i8 %ld0, %v1
-  call void @foo()
-  ret void
+  %urem = urem i8 %ld0, %v1
+  call void @foo(), !dbg !1
+  ret void, !tbaa !2
 }
+
+!1 = !{}
+!2 = !{}
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
   llvm::BasicBlock *LLVMBB1 = getBasicBlockByName(*LLVMF, "bb1");
@@ -1804,6 +1866,15 @@ bb1:
   EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Add);
   EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Sub);
   EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Ret);
+
+  // Check getOpcodeName().
+  EXPECT_STREQ(I0->getOpcodeName(), "Add");
+  EXPECT_STREQ(I1->getOpcodeName(), "Sub");
+  EXPECT_STREQ(Ret->getOpcodeName(), "Ret");
+
+  EXPECT_STREQ(sandboxir::Instruction::getOpcodeName(
+                   sandboxir::Instruction::Opcode::Alloca),
+               "Alloca");
 
   // Check moveBefore(I).
   I1->moveBefore(I0);
@@ -1861,6 +1932,31 @@ bb1:
 
   for (auto &LLVMI : *LLVMBB1) {
     auto &I = cast<sandboxir::Instruction>(*Ctx.getValue(&LLVMI));
+    // Check isTerminator().
+    EXPECT_EQ(LLVMI.isTerminator(), I.isTerminator());
+    // Check isUnaryOp().
+    EXPECT_EQ(LLVMI.isUnaryOp(), I.isUnaryOp());
+    // Check isBinaryOp().
+    EXPECT_EQ(LLVMI.isBinaryOp(), I.isBinaryOp());
+    // Check isIntDivRem().
+    EXPECT_EQ(LLVMI.isIntDivRem(), I.isIntDivRem());
+    // Check isShift().
+    EXPECT_EQ(LLVMI.isShift(), I.isShift());
+    // Check isCast().
+    EXPECT_EQ(LLVMI.isCast(), I.isCast());
+    // Check isFuncletPad().
+    EXPECT_EQ(LLVMI.isFuncletPad(), I.isFuncletPad());
+    // Check isSpecialTerminator().
+    EXPECT_EQ(LLVMI.isSpecialTerminator(), I.isSpecialTerminator());
+    // Check isOnlyUserOfAnyOperand().
+    EXPECT_EQ(LLVMI.isOnlyUserOfAnyOperand(), I.isOnlyUserOfAnyOperand());
+    // Check isLogicalShift().
+    EXPECT_EQ(LLVMI.isLogicalShift(), I.isLogicalShift());
+    // Check hasMetadata().
+    EXPECT_EQ(LLVMI.hasMetadata(), I.hasMetadata());
+    // Check hasMetadataOtherThanDebugLoc().
+    EXPECT_EQ(LLVMI.hasMetadataOtherThanDebugLoc(),
+              I.hasMetadataOtherThanDebugLoc());
     // Check isAssociative().
     EXPECT_EQ(LLVMI.isAssociative(), I.isAssociative());
     // Check isCommutative().

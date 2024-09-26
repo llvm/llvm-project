@@ -1082,10 +1082,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT}, VT,
+                           Custom);
       else
-        setOperationAction(ISD::SPLAT_VECTOR, EltVT, Custom);
-      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
+                           EltVT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                          ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
+                          ISD::VP_STORE, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+                          ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
+                          ISD::VP_SCATTER},
+                         VT, Custom);
 
       setOperationAction(ISD::FNEG, VT, Expand);
       setOperationAction(ISD::FABS, VT, Expand);
@@ -4449,10 +4456,26 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
   bool HasPassthru = Passthru && !Passthru.isUndef();
   if (!HasPassthru && !Passthru)
     Passthru = DAG.getUNDEF(VT);
-  if (VT.isFloatingPoint())
-    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Passthru, Scalar, VL);
 
+  MVT EltVT = VT.getVectorElementType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  if (VT.isFloatingPoint()) {
+    if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+        EltVT == MVT::bf16) {
+      if ((EltVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) ||
+          (EltVT == MVT::f16 && Subtarget.hasStdExtZfhmin()))
+        Scalar = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Scalar);
+      else
+        Scalar = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Scalar);
+      MVT IVT = VT.changeVectorElementType(MVT::i16);
+      Passthru = DAG.getNode(ISD::BITCAST, DL, IVT, Passthru);
+      SDValue Splat =
+          lowerScalarSplat(Passthru, Scalar, VL, IVT, DL, DAG, Subtarget);
+      return DAG.getNode(ISD::BITCAST, DL, VT, Splat);
+    }
+    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Passthru, Scalar, VL);
+  }
 
   // Simplest case is that the operand needs to be promoted to XLenVT.
   if (Scalar.getValueType().bitsLE(XLenVT)) {
@@ -10152,13 +10175,15 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   unsigned OrigIdx = Op.getConstantOperandVal(2);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
+  if (OrigIdx == 0 && Vec.isUndef())
+    return Op;
+
   // We don't have the ability to slide mask vectors up indexed by their i1
   // elements; the smallest we can do is i8. Often we are able to bitcast to
   // equivalent i8 vectors. Note that when inserting a fixed-length vector
   // into a scalable one, we might not necessarily have enough scalable
   // elements to safely divide by 8: nxv1i1 = insert nxv1i1, v4i1 is valid.
-  if (SubVecVT.getVectorElementType() == MVT::i1 &&
-      (OrigIdx != 0 || !Vec.isUndef())) {
+  if (SubVecVT.getVectorElementType() == MVT::i1) {
     if (VecVT.getVectorMinNumElements() >= 8 &&
         SubVecVT.getVectorMinNumElements() >= 8) {
       assert(OrigIdx % 8 == 0 && "Invalid index");
@@ -10196,8 +10221,6 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // vector group up the full amount.
   const auto VLen = Subtarget.getRealVLen();
   if (SubVecVT.isFixedLengthVector() && !VLen) {
-    if (OrigIdx == 0 && Vec.isUndef() && !VecVT.isFixedLengthVector())
-      return Op;
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VecVT);
@@ -10207,11 +10230,6 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
                          DAG.getUNDEF(ContainerVT), SubVec,
                          DAG.getVectorIdxConstant(0, DL));
-
-    if (OrigIdx == 0 && Vec.isUndef() && VecVT.isFixedLengthVector()) {
-      SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
-      return DAG.getBitcast(Op.getValueType(), SubVec);
-    }
 
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
@@ -10304,8 +10322,12 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
         return Op;
       }
 
+      // Use a insert_subvector that will resolve to an insert subreg.
+      assert(VLen);
+      unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
       SDValue Insert =
-          DAG.getTargetInsertSubreg(SubRegIdx, DL, ContainerVecVT, Vec, SubVec);
+          DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVecVT, Vec, SubVec,
+                      DAG.getConstant(OrigIdx / Vscale, DL, XLenVT));
       if (VecVT.isFixedLengthVector())
         Insert = convertFromScalableVector(VecVT, Insert, DAG, Subtarget);
       return Insert;
@@ -10321,8 +10343,10 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   MVT InterSubVT = ContainerVecVT;
   SDValue AlignedExtract = Vec;
   unsigned AlignedIdx = OrigIdx - RemIdx.getKnownMinValue();
-  if (SubVecVT.isFixedLengthVector())
+  if (SubVecVT.isFixedLengthVector()) {
+    assert(VLen);
     AlignedIdx /= *VLen / RISCV::RVVBitsPerBlock;
+  }
   if (ContainerVecVT.bitsGT(getLMUL1VT(ContainerVecVT))) {
     InterSubVT = getLMUL1VT(ContainerVecVT);
     // Extract a subvector equal to the nearest full vector register type. This
@@ -10499,10 +10523,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // If the Idx has been completely eliminated then this is a subvector extract
   // which naturally aligns to a vector register. These can easily be handled
-  // using subregister manipulation.
+  // using subregister manipulation. We use an extract_subvector that will
+  // resolve to an extract subreg.
   if (RemIdx.isZero()) {
     if (SubVecVT.isFixedLengthVector()) {
-      Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, ContainerSubVecVT, Vec);
+      assert(VLen);
+      unsigned Vscale = *VLen / RISCV::RVVBitsPerBlock;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerSubVecVT, Vec,
+                        DAG.getConstant(OrigIdx / Vscale, DL, XLenVT));
       return convertFromScalableVector(SubVecVT, Vec, DAG, Subtarget);
     }
     return Op;
@@ -10520,9 +10548,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
     // If VecVT has an LMUL > 1, then SubVecVT should have a smaller LMUL, and
     // we should have successfully decomposed the extract into a subregister.
+    // We use an extract_subvector that will resolve to a subreg extract.
     assert(SubRegIdx != RISCV::NoSubRegister);
+    (void)SubRegIdx;
+    unsigned Idx = OrigIdx - RemIdx.getKnownMinValue();
+    if (SubVecVT.isFixedLengthVector()) {
+      assert(VLen);
+      Idx /= *VLen / RISCV::RVVBitsPerBlock;
+    }
     InterSubVT = getLMUL1VT(VecVT);
-    Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, InterSubVT, Vec);
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
+                      DAG.getConstant(Idx, DL, XLenVT));
   }
 
   // Slide this vector register down by the desired number of elements in order
@@ -16971,6 +17007,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Op0.getOperand(0);
     }
 
+    if (ISD::isNormalLoad(Op0.getNode()) && Op0.hasOneUse() &&
+        cast<LoadSDNode>(Op0)->isSimple()) {
+      MVT IVT = MVT::getIntegerVT(Op0.getValueSizeInBits());
+      auto *LN0 = cast<LoadSDNode>(Op0);
+      SDValue Load =
+          DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT, LN0->getChain(),
+                         LN0->getBasePtr(), IVT, LN0->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
+      return Load;
+    }
+
     // This is a target-specific version of a DAGCombine performed in
     // DAGCombiner::visitBITCAST. It performs the equivalent of:
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
@@ -21415,9 +21462,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
   const DataLayout &DL = LI->getDataLayout();
 
@@ -21425,18 +21471,15 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                     LI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VlsegNFunc;
-  Value *VL, *Return;
+  Value *Return;
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
-  SmallVector<Value *, 10> Ops;
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VlsegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
         LI->getModule(), FixedVlsegIntrIds[Factor - 2],
         {ResVTy, LI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Ops.append({LI->getPointerOperand(), VL});
-    Return = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Return = Builder.CreateCall(VlsegNFunc, {LI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
@@ -21450,15 +21493,15 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(LI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
-    VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
-    VL = Constant::getAllOnesValue(XLenTy);
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
-    Ops.append({PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
-                ConstantInt::get(XLenTy, Log2_64(SEW))});
-    Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *Vlseg = Builder.CreateCall(
+        VlsegNFunc, {PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
+                     ConstantInt::get(XLenTy, Log2_64(SEW))});
 
     SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
     Return = PoisonValue::get(StructType::get(LI->getContext(), AggrTypes));
@@ -21486,26 +21529,23 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(II->getType());
-  VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+  VectorType *InVTy = cast<VectorType>(II->getArgOperand(0)->getType());
   const DataLayout &DL = SI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VssegNFunc;
-  Value *VL;
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VssegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
+    Function *VssegNFunc = Intrinsic::getDeclaration(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Builder.CreateCall(VssegNFunc, {II->getArgOperand(0), II->getArgOperand(1),
                                     SI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
@@ -21520,19 +21560,20 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         SI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(SI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
-    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
+    Function *VssegNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
 
-    VL = Constant::getAllOnesValue(XLenTy);
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
     Function *VecInsertFunc = Intrinsic::getDeclaration(
         SI->getModule(), Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy});
     Value *StoredVal = PoisonValue::get(VecTupTy);
     for (unsigned i = 0; i < Factor; ++i)
-      StoredVal = Builder.CreateCall(
-          VecInsertFunc, {StoredVal, II->getOperand(i), Builder.getInt32(i)});
+      StoredVal =
+          Builder.CreateCall(VecInsertFunc, {StoredVal, II->getArgOperand(i),
+                                             Builder.getInt32(i)});
 
     Builder.CreateCall(VssegNFunc, {StoredVal, SI->getPointerOperand(), VL,
                                     ConstantInt::get(XLenTy, Log2_64(SEW))});

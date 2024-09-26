@@ -392,6 +392,24 @@ rpc_status_t handle_server_impl(
     });
     break;
   }
+  case RPC_RENAME: {
+    uint64_t oldsizes[lane_size] = {0};
+    uint64_t newsizes[lane_size] = {0};
+    void *oldpath[lane_size] = {nullptr};
+    void *newpath[lane_size] = {nullptr};
+    port->recv_n(oldpath, oldsizes,
+                 [&](uint64_t size) { return new char[size]; });
+    port->recv_n(newpath, newsizes,
+                 [&](uint64_t size) { return new char[size]; });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          rename(reinterpret_cast<const char *>(oldpath[id]),
+                 reinterpret_cast<const char *>(newpath[id])));
+      delete[] reinterpret_cast<uint8_t *>(oldpath[id]);
+      delete[] reinterpret_cast<uint8_t *>(newpath[id]);
+    });
+    break;
+  }
   case RPC_SYSTEM: {
     uint64_t sizes[lane_size] = {0};
     void *args[lane_size] = {nullptr};

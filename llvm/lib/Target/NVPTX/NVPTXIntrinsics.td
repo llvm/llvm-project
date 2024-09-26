@@ -1619,14 +1619,16 @@ multiclass F_ATOMIC_2_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, SDNode IMM, list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
-  Requires<Pred>;
-  def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
-  Requires<!if(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16")), [Predicate<"false">], Pred)>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+    Requires<Pred>;
+    def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
+    Requires<!if(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16")), [Predicate<"false">], Pred)>;
+  }
 }
 multiclass F_ATOMIC_2<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, SDNode IMM,
@@ -1642,15 +1644,17 @@ multiclass F_ATOMIC_2_NEG_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
-    !strconcat(
-      "{{ \n\t",
-      ".reg \t.s", TypeStr, " temp; \n\t",
-      "neg.s", TypeStr, " \ttemp, $b; \n\t",
-      "atom", SpaceStr, OpcStr, ".u", TypeStr, " \t$dst, [$addr], temp; \n\t",
-      "}}"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
-  Requires<Pred>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
+      !strconcat(
+        "{{ \n\t",
+        ".reg \t.s", TypeStr, " temp; \n\t",
+        "neg.s", TypeStr, " \ttemp, $b; \n\t",
+        "atom", SpaceStr, OpcStr, ".u", TypeStr, " \t$dst, [$addr], temp; \n\t",
+        "}}"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+    Requires<Pred>;
+  }
 }
 multiclass F_ATOMIC_2_NEG<ValueType regT, NVPTXRegClass regclass, string SpaceStr,
   string TypeStr, string OpcStr, PatFrag IntOp, list<Predicate> Pred = []> {
@@ -1665,29 +1669,31 @@ multiclass F_ATOMIC_3_imp<ValueType ptrT, NVPTXRegClass ptrclass,
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
   Operand IMMType, list<Predicate> Pred> {
-  def reg : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, regclass:$b, regclass:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
-  Requires<Pred>;
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def reg : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, regclass:$b, regclass:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
+    Requires<Pred>;
 
-  def imm1 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, IMMType:$b, regclass:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
-  Requires<Pred>;
+    def imm1 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, IMMType:$b, regclass:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
+    Requires<Pred>;
 
-  def imm2 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, regclass:$b, IMMType:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
-  Requires<Pred>;
+    def imm2 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, regclass:$b, IMMType:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
+    Requires<Pred>;
 
-  def imm3 : NVPTXInst<(outs regclass:$dst),
-    (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
-    !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-    [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
-  Requires<Pred>;
+    def imm3 : NVPTXInst<(outs regclass:$dst),
+      (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
+      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
+      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
+    Requires<Pred>;
+  }
 }
 multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
   string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
@@ -2733,9 +2739,134 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
 
+// rotate builtin support
+
+def ROTATE_B32_HW_IMM
+  : NVPTXInst<(outs Int32Regs:$dst),
+              (ins  Int32Regs:$src, i32imm:$amt),
+              "shf.l.wrap.b32 \t$dst, $src, $src, $amt;",
+              [(set Int32Regs:$dst,
+                 (int_nvvm_rotate_b32 Int32Regs:$src, (i32 imm:$amt)))]>,
+              Requires<[hasHWROT32]> ;
+
+def ROTATE_B32_HW_REG
+  : NVPTXInst<(outs Int32Regs:$dst),
+              (ins  Int32Regs:$src, Int32Regs:$amt),
+              "shf.l.wrap.b32 \t$dst, $src, $src, $amt;",
+              [(set Int32Regs:$dst,
+                 (int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt))]>,
+              Requires<[hasHWROT32]> ;
+
+def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, (i32 imm:$amt)),
+          (ROT32imm_sw Int32Regs:$src, imm:$amt, (SUB_FRM_32 node:$amt))>,
+      Requires<[noHWROT32]> ;
+
+def : Pat<(int_nvvm_rotate_b32 Int32Regs:$src, Int32Regs:$amt),
+          (ROTL32reg_sw Int32Regs:$src, Int32Regs:$amt)>,
+      Requires<[noHWROT32]> ;
+
+let hasSideEffects = false in {
+  def GET_LO_INT64 : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
+    !strconcat("{{\n\t",
+               ".reg .b32 %dummy;\n\t",
+               "mov.b64 \t{$dst,%dummy}, $src;\n\t",
+               "}}"),
+          []> ;
+
+  def GET_HI_INT64 : NVPTXInst<(outs Int32Regs:$dst), (ins Int64Regs:$src),
+    !strconcat("{{\n\t",
+               ".reg .b32 %dummy;\n\t",
+               "mov.b64 \t{%dummy,$dst}, $src;\n\t",
+               "}}"),
+          []> ;
+}
+
+let hasSideEffects = false in {
+  def PACK_TWO_INT32
+    : NVPTXInst<(outs Int64Regs:$dst), (ins Int32Regs:$lo, Int32Regs:$hi),
+                "mov.b64 \t$dst, {{$lo, $hi}};", []> ;
+}
+
 def : Pat<(int_nvvm_swap_lo_hi_b64 Int64Regs:$src),
-          (V2I32toI64 (I64toI32H Int64Regs:$src),
-                      (I64toI32L Int64Regs:$src))> ;
+          (PACK_TWO_INT32 (GET_HI_INT64 Int64Regs:$src),
+                          (GET_LO_INT64 Int64Regs:$src))> ;
+
+// Funnel shift, requires >= sm_32.  Does not trap if amt is out of range, so
+// no side effects.
+let hasSideEffects = false in {
+  def SHF_L_WRAP_B32_IMM
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
+                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
+
+  def SHF_L_WRAP_B32_REG
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
+                "shf.l.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
+
+  def SHF_R_WRAP_B32_IMM
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, i32imm:$amt),
+                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
+
+  def SHF_R_WRAP_B32_REG
+    : NVPTXInst<(outs Int32Regs:$dst),
+                (ins  Int32Regs:$lo, Int32Regs:$hi, Int32Regs:$amt),
+                "shf.r.wrap.b32 \t$dst, $lo, $hi, $amt;",[]>,
+      Requires<[hasHWROT32]>;
+}
+
+// HW version of rotate 64
+def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),
+          (PACK_TWO_INT32
+            (SHF_L_WRAP_B32_IMM (GET_HI_INT64 Int64Regs:$src),
+                                (GET_LO_INT64 Int64Regs:$src), imm:$amt),
+            (SHF_L_WRAP_B32_IMM (GET_LO_INT64 Int64Regs:$src),
+                                (GET_HI_INT64 Int64Regs:$src), imm:$amt))>,
+      Requires<[hasHWROT32]>;
+
+def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, Int32Regs:$amt),
+          (PACK_TWO_INT32
+            (SHF_L_WRAP_B32_REG (GET_HI_INT64 Int64Regs:$src),
+                                (GET_LO_INT64 Int64Regs:$src), Int32Regs:$amt),
+            (SHF_L_WRAP_B32_REG (GET_LO_INT64 Int64Regs:$src),
+                               (GET_HI_INT64 Int64Regs:$src), Int32Regs:$amt))>,
+      Requires<[hasHWROT32]>;
+
+
+def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, (i32 imm:$amt)),
+          (PACK_TWO_INT32
+            (SHF_R_WRAP_B32_IMM (GET_LO_INT64 Int64Regs:$src),
+                                (GET_HI_INT64 Int64Regs:$src), imm:$amt),
+            (SHF_R_WRAP_B32_IMM (GET_HI_INT64 Int64Regs:$src),
+                                (GET_LO_INT64 Int64Regs:$src), imm:$amt))>,
+      Requires<[hasHWROT32]>;
+
+def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
+          (PACK_TWO_INT32
+            (SHF_R_WRAP_B32_REG (GET_LO_INT64 Int64Regs:$src),
+                                (GET_HI_INT64 Int64Regs:$src), Int32Regs:$amt),
+            (SHF_R_WRAP_B32_REG (GET_HI_INT64 Int64Regs:$src),
+                               (GET_LO_INT64 Int64Regs:$src), Int32Regs:$amt))>,
+      Requires<[hasHWROT32]>;
+
+// SW version of rotate 64
+def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, (i32 imm:$amt)),
+          (ROT64imm_sw Int64Regs:$src, imm:$amt, (SUB_FRM_64 node:$amt))>,
+      Requires<[noHWROT32]>;
+def : Pat<(int_nvvm_rotate_b64 Int64Regs:$src, Int32Regs:$amt),
+          (ROTL64reg_sw Int64Regs:$src, Int32Regs:$amt)>,
+      Requires<[noHWROT32]>;
+def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, (i32 imm:$amt)),
+          (ROT64imm_sw Int64Regs:$src, (SUB_FRM_64 node:$amt), imm:$amt)>,
+      Requires<[noHWROT32]>;
+def : Pat<(int_nvvm_rotate_right_b64 Int64Regs:$src, Int32Regs:$amt),
+          (ROTR64reg_sw Int64Regs:$src, Int32Regs:$amt)>,
+      Requires<[noHWROT32]>;
+
 
 //-----------------------------------
 // Texture Intrinsics

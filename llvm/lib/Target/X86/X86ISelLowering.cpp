@@ -52983,10 +52983,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
 // combiner.
 static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
                             SelectionDAG &DAG, const X86Subtarget &Subtarget) {
-  // First instruction should be a right shift of a multiply.
-  if (Src.getOpcode() != ISD::SRL ||
-      Src.getOperand(0).getOpcode() != ISD::MUL)
-    return SDValue();
+  using namespace llvm::SDPatternMatch;
 
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -53001,14 +52998,11 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
   if (InVT.getVectorElementType().getSizeInBits() < 32)
     return SDValue();
 
-  // Need a shift by 16.
-  APInt ShiftAmt;
-  if (!ISD::isConstantSplatVector(Src.getOperand(1).getNode(), ShiftAmt) ||
-      ShiftAmt != 16)
+  // First instruction should be a right shift by 16 of a multiply.
+  SDValue LHS, RHS;
+  if (!sd_match(Src,
+                m_Srl(m_Mul(m_Value(LHS), m_Value(RHS)), m_SpecificInt(16))))
     return SDValue();
-
-  SDValue LHS = Src.getOperand(0).getOperand(0);
-  SDValue RHS = Src.getOperand(0).getOperand(1);
 
   // Count leading sign/zero bits on both inputs - if there are enough then
   // truncation back to vXi16 will be cheap - either as a pack/shuffle
@@ -53027,12 +53021,13 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
     return SDValue();
 
   // Check if both inputs are extensions, which will be removed by truncation.
-  bool IsTruncateFree = (LHS.getOpcode() == ISD::SIGN_EXTEND ||
-                         LHS.getOpcode() == ISD::ZERO_EXTEND) &&
-                        (RHS.getOpcode() == ISD::SIGN_EXTEND ||
-                         RHS.getOpcode() == ISD::ZERO_EXTEND) &&
-                        LHS.getOperand(0).getScalarValueSizeInBits() <= 16 &&
-                        RHS.getOperand(0).getScalarValueSizeInBits() <= 16;
+  auto isOpTruncateFree = [](SDValue Op) {
+    if (Op.getOpcode() == ISD::SIGN_EXTEND ||
+        Op.getOpcode() == ISD::ZERO_EXTEND)
+      return Op.getOperand(0).getScalarValueSizeInBits() <= 16;
+    return ISD::isBuildVectorOfConstantSDNodes(Op.getNode());
+  };
+  bool IsTruncateFree = isOpTruncateFree(LHS) && isOpTruncateFree(RHS);
 
   // For AVX2+ targets, with the upper bits known zero, we can perform MULHU on
   // the (bitcasted) inputs directly, and then cheaply pack/truncate the result
