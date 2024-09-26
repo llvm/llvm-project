@@ -31,7 +31,7 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 } // namespace __sanitizer
 
 namespace {
-class Decorator : public __sanitizer::SanitizerCommonDecorator {
+class Decorator : public SanitizerCommonDecorator {
 public:
   Decorator() : SanitizerCommonDecorator() {}
   const char *FunctionName() const { return Green(); }
