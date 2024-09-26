@@ -6797,8 +6797,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
 
   // Special case: for shifts, the RHS always needs a zext.
-  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
-      Op.getOpcode() == ISD::SRA)
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
   else
     RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
@@ -16145,11 +16144,8 @@ static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
 
 static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
   LLVMContext &Ctx = RMW->getContext();
-  SmallVector<StringRef> SSNs;
-  Ctx.getSyncScopeNames(SSNs);
-  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                           ? "system"
-                           : SSNs[RMW->getSyncScopeID()];
+  StringRef SS = Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("");
+  StringRef MemScope = SS.empty() ? StringRef("system") : SS;
 
   return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
          << "Hardware instruction generated for atomic "

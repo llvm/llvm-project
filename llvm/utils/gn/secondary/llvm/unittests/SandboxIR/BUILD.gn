@@ -2,6 +2,7 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("SandboxIRTests") {
   deps = [
+    "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
     "//llvm/lib/SandboxIR",
@@ -11,5 +12,6 @@ unittest("SandboxIRTests") {
     "SandboxIRTest.cpp",
     "TrackerTest.cpp",
     "TypesTest.cpp",
+    "UtilsTest.cpp",
   ]
 }
