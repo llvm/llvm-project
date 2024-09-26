@@ -2157,7 +2157,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvt_f16f32:
   case Intrinsic::aarch64_sve_fcvt_f16f64:
   case Intrinsic::aarch64_sve_fcvt_f32f16:
@@ -2188,7 +2188,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ucvtf_f32i64:
   case Intrinsic::aarch64_sve_ucvtf_f64i32:
     return instCombineSVEAllOrNoActiveUnary(IC, II);
-  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvtnt_f16f32:
   case Intrinsic::aarch64_sve_fcvtnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtxnt_f32f64:

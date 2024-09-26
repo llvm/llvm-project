@@ -5553,6 +5553,14 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
   if (InVT == VT)
     return Op;
 
+  // Look through casts to <n x 16 x i1> when their input has more lanes than
+  // VT. This will increase the chances of removing casts that introduce new
+  // lanes, which have to be explicitly zero'd.
+  if (Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Op.getConstantOperandVal(0) == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op.getOperand(1).getValueType().bitsGT(VT))
+    Op = Op.getOperand(1);
+
   SDValue Reinterpret = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Op);
 
   // We only have to zero the lanes if new lanes are being defined, e.g. when

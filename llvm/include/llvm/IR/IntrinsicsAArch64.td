@@ -2184,8 +2184,8 @@ def int_aarch64_sve_fcvtzs_i32f64   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv2i1
 def int_aarch64_sve_fcvtzs_i64f16   : Builtin_SVCVT<llvm_nxv2i64_ty, llvm_nxv2i1_ty, llvm_nxv8f16_ty>;
 def int_aarch64_sve_fcvtzs_i64f32   : Builtin_SVCVT<llvm_nxv2i64_ty, llvm_nxv2i1_ty, llvm_nxv4f32_ty>;
 
-def int_aarch64_sve_fcvt_bf16f32    : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv8i1_ty, llvm_nxv4f32_ty>;
-def int_aarch64_sve_fcvtnt_bf16f32  : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv8i1_ty, llvm_nxv4f32_ty>;
+def int_aarch64_sve_fcvt_bf16f32_v2   : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv4i1_ty, llvm_nxv4f32_ty>;
+def int_aarch64_sve_fcvtnt_bf16f32_v2 : Builtin_SVCVT<llvm_nxv8bf16_ty, llvm_nxv4i1_ty, llvm_nxv4f32_ty>;
 
 def int_aarch64_sve_fcvtzu_i32f16   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv4i1_ty, llvm_nxv8f16_ty>;
 def int_aarch64_sve_fcvtzu_i32f64   : Builtin_SVCVT<llvm_nxv4i32_ty, llvm_nxv2i1_ty, llvm_nxv2f64_ty>;
