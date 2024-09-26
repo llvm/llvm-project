@@ -3165,7 +3165,7 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
                      "instruction lengths must be a non-zero multiple of two");
 
       // TODO: Support Instructions > 64 bits.
-      if (Length > 8)
+      if (*Length > 8)
         return Error(ErrorLoc,
                      "instruction lengths over 64 bits are not supported");
     }
