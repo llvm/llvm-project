@@ -210,7 +210,6 @@ public:
     // Render diagnostic message to m_output.
     m_output.clear();
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
-    m_os->flush();
 
     lldb::Severity severity;
     bool make_new_diagnostic = true;
