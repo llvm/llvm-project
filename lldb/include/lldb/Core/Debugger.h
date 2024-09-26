@@ -19,6 +19,8 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
+#include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/StreamFile.h"
@@ -31,6 +33,7 @@
 #include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -46,6 +49,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Telemetry/Telemetry.h"
 
 #include <cassert>
 #include <cstddef>
@@ -148,6 +152,10 @@ public:
   StreamFile &GetErrorStream() { return *m_error_stream_sp; }
 
   repro::DataRecorder *GetInputRecorder();
+
+  LldbTelemeter *GetTelemeter() { return m_telemeter.get(); }
+
+  void SendClientTelemetry(const lldb_private::StructuredDataImpl &entry);
 
   Status SetInputString(const char *data);
 
@@ -758,6 +766,8 @@ protected:
   enum {
     eBroadcastBitEventThreadIsListening = (1 << 0),
   };
+
+  std::unique_ptr<LldbTelemeter> m_telemeter;
 
 private:
   // Use Debugger::CreateInstance() to get a shared pointer to a new debugger

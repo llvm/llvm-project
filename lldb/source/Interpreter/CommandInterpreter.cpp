@@ -1886,8 +1886,34 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
+  llvm::telemetry::EventStats start_command_stats(
+      std::chrono::steady_clock::now());
+  LldbTelemeter *telemeter = GetDebugger().GetTelemeter();
+  // Generate a UUID for this command so the logger can match
+  // the start/end entries correctly.
+  const std::string command_uuid = telemeter->GetNextUUID();
+
+  telemeter->LogCommandStart(command_uuid, command_line, start_command_stats,
+                             GetExecutionContext().GetTargetPtr());
+
   std::string command_string(command_line);
   std::string original_command_string(command_line);
+  std::string parsed_command_args;
+  CommandObject *cmd_obj = nullptr;
+
+  auto log_on_exit = llvm::make_scope_exit([&]() {
+    llvm::telemetry::EventStats end_command_stats(
+        start_command_stats.Start, std::chrono::steady_clock::now());
+
+    llvm::StringRef command_name =
+        cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
+    // TODO: this is logging the time the command-handler finishes.
+    // But we may want a finer-grain durations too?
+    // (ie., the execute_time recorded below?)
+    telemeter->LogCommandEnd(command_uuid, command_name, parsed_command_args,
+                             end_command_stats,
+                             GetExecutionContext().GetTargetPtr(), &result);
+  });
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
@@ -1925,9 +1951,9 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   bool empty_command = false;
   bool comment_command = false;
-  if (command_string.empty())
+  if (command_string.empty()) {
     empty_command = true;
-  else {
+  } else {
     const char *k_space_characters = "\t\n\v\f\r ";
 
     size_t non_space = command_string.find_first_not_of(k_space_characters);
@@ -1992,7 +2018,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // From 1 above, we can determine whether the Execute function wants raw
   // input or not.
 
-  CommandObject *cmd_obj = ResolveCommandImpl(command_string, result);
+  cmd_obj = ResolveCommandImpl(command_string, result);
 
   // We have to preprocess the whole command string for Raw commands, since we
   // don't know the structure of the command.  For parsed commands, we only
@@ -2053,30 +2079,29 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     if (add_to_history)
       m_command_history.AppendString(original_command_string);
 
-    std::string remainder;
     const std::size_t actual_cmd_name_len = cmd_obj->GetCommandName().size();
     if (actual_cmd_name_len < command_string.length())
-      remainder = command_string.substr(actual_cmd_name_len);
+      parsed_command_args = command_string.substr(actual_cmd_name_len);
 
     // Remove any initial spaces
-    size_t pos = remainder.find_first_not_of(k_white_space);
+    size_t pos = parsed_command_args.find_first_not_of(k_white_space);
     if (pos != 0 && pos != std::string::npos)
-      remainder.erase(0, pos);
+      parsed_command_args.erase(0, pos);
 
     LLDB_LOGF(
         log, "HandleCommand, command line after removing command name(s): '%s'",
-        remainder.c_str());
+        parsed_command_args.c_str());
 
     // To test whether or not transcript should be saved, `transcript_item` is
     // used instead of `GetSaveTrasncript()`. This is because the latter will
     // fail when the command is "settings set interpreter.save-transcript true".
     if (transcript_item) {
       transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
-      transcript_item->AddStringItem("commandArguments", remainder);
+      transcript_item->AddStringItem("commandArguments", parsed_command_args);
     }
 
     ElapsedTime elapsed(execute_time);
-    cmd_obj->Execute(remainder.c_str(), result);
+    cmd_obj->Execute(parsed_command_args.c_str(), result);
   }
 
   LLDB_LOGF(log, "HandleCommand, command %s",

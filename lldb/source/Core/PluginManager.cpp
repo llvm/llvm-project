@@ -1224,6 +1224,33 @@ FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
   return {};
 }
 
+#pragma mark TelemetryVendor
+
+typedef PluginInstance<TelemetryVendorCreateInstance> TelemetryVendorInstance;
+typedef PluginInstances<TelemetryVendorInstance> TelemetryVendorInstances;
+
+static TelemetryVendorInstances &GetTelemetryVendorInstances() {
+  static TelemetryVendorInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    TelemetryVendorCreateInstance create_callback) {
+  return GetTelemetryVendorInstances().RegisterPlugin(name, description,
+                                                      create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    TelemetryVendorCreateInstance create_callback) {
+  return GetTelemetryVendorInstances().UnregisterPlugin(create_callback);
+}
+
+TelemetryVendorCreateInstance
+PluginManager::GetTelemetryVendorCreateCallbackAtIndex(uint32_t idx) {
+  return GetTelemetryVendorInstances().GetCallbackAtIndex(idx);
+}
+
 #pragma mark Trace
 
 struct TraceInstance

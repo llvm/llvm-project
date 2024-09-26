@@ -236,6 +236,7 @@ class SystemRuntime;
 class Target;
 class TargetList;
 class TargetProperties;
+class TelemetryVendor;
 class Thread;
 class ThreadCollection;
 class ThreadList;
