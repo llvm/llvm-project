@@ -238,3 +238,34 @@ namespace TwosComplementShifts {
   static_assert(-3 >> 1 == -2);
   static_assert(-7 >> 1 == -4);
 }
+
+namespace AnonUnionDtor {
+  struct A {
+    A ();
+    ~A();
+  };
+
+  template <class T>
+  struct opt
+  {
+    union { // all20-note {{is not literal}}
+      char c;
+      T data;
+    };
+
+    constexpr opt() {}
+
+    constexpr ~opt()  {
+     if (engaged)
+       data.~T();
+   }
+
+    bool engaged = false;
+  };
+
+  consteval void foo() {
+    opt<A> a; // all20-error {{variable of non-literal type}}
+  }
+
+  void bar() { foo(); }
+}

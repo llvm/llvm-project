@@ -7300,10 +7300,8 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return false;
 
   auto WarningBegin = std::stable_partition(
-      Attrs.begin(), Attrs.end(), [](const DiagnoseIfAttr *DIA) {
-        return DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_error &&
-               DIA->getWarningGroup().empty();
-      });
+      Attrs.begin(), Attrs.end(),
+      [](const DiagnoseIfAttr *DIA) { return DIA->isError(); });
 
   // Note that diagnose_if attributes are late-parsed, so they appear in the
   // correct order (unlike enable_if attributes).
@@ -7317,32 +7315,11 @@ static bool diagnoseDiagnoseIfAttrsWith(Sema &S, const NamedDecl *ND,
     return true;
   }
 
-  auto ToSeverity = [](DiagnoseIfAttr::DefaultSeverity Sev) {
-    switch (Sev) {
-    case DiagnoseIfAttr::DS_warning:
-      return diag::Severity::Warning;
-    case DiagnoseIfAttr::DS_error:
-      return diag::Severity::Error;
-    }
-    llvm_unreachable("Fully covered switch above!");
-  };
-
   for (const auto *DIA : llvm::make_range(WarningBegin, Attrs.end()))
     if (IsSuccessful(DIA)) {
-      if (DIA->getWarningGroup().empty() &&
-          DIA->getDefaultSeverity() == DiagnoseIfAttr::DS_warning) {
-        S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
-        S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
-            << DIA->getParent() << DIA->getCond()->getSourceRange();
-      } else {
-        auto DiagGroup = S.Diags.getDiagnosticIDs()->getGroupForWarningOption(
-            DIA->getWarningGroup());
-        assert(DiagGroup);
-        auto DiagID = S.Diags.getDiagnosticIDs()->getCustomDiagID(
-            {ToSeverity(DIA->getDefaultSeverity()), "%0",
-             DiagnosticIDs::CLASS_WARNING, false, false, *DiagGroup});
-        S.Diag(Loc, DiagID) << DIA->getMessage();
-      }
+      S.Diag(Loc, diag::warn_diagnose_if_succeeded) << DIA->getMessage();
+      S.Diag(DIA->getLocation(), diag::note_from_diagnose_if)
+          << DIA->getParent() << DIA->getCond()->getSourceRange();
     }
 
   return false;
