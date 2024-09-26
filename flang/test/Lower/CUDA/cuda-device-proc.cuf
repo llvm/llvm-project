@@ -26,11 +26,11 @@ end
 ! CHECK: %{{.*}} = fir.call @__syncthreads_count(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
 ! CHECK: %{{.*}} = fir.call @__syncthreads_or(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
 
-! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads"}
-! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp"}
-! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence"}
-! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block"}
-! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system"}
-! CHECK: func.func private @__syncthreads_and(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_and"}
-! CHECK: func.func private @__syncthreads_count(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_count"}
-! CHECK: func.func private @__syncthreads_or(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_or"}
+! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_and(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_and", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_count(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_count", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @__syncthreads_or(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_or", fir.proc_attrs = #fir.proc_attrs<bind_c>}
