@@ -21462,7 +21462,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
@@ -21497,7 +21497,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(LI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
     VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
                                            {VecTupTy, XLenTy});
@@ -21533,7 +21533,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(II->getType());
   VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
@@ -21567,7 +21567,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         SI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(SI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
     VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
                                            {VecTupTy, XLenTy});
