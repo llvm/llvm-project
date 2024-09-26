@@ -200,11 +200,19 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             verify_locals["pt"]["$__lldb_extensions"] = {
                 "equals": {"autoSummary": "{x:11, y:22}"}
             }
+
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
-            "::g_global": {"equals": {"type": "int", "value": "123"}},
-            "s_global": {"equals": {"type": "int", "value": "234"}},
         }
+        s_global = {"equals": {"type": "int", "value": "234"}}
+        g_global = {"equals": {"type": "int", "value": "123"}}
+        if lldbplatformutil.getHostPlatform() == "windows":
+            verify_globals["::s_global"] = s_global
+            verify_globals["g_global"] = g_global
+        else:
+            verify_globals["s_global"] = s_global
+            verify_globals["::g_global"] = g_global
+
         varref_dict = {}
         self.verify_variables(verify_locals, locals, varref_dict)
         self.verify_variables(verify_globals, globals, varref_dict)
@@ -393,13 +401,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         self.verify_variables(verify_locals, locals)
 
-    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=False
         )
 
-    @skipIfWindows
     def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
         self.do_test_scopes_variables_setVariable_evaluate(
             enableAutoVariableSummaries=True
@@ -600,11 +606,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             if scope["name"] == "Registers":
                 self.assertEqual(scope.get("presentationHint"), "registers")
 
-    @skipIfWindows
     def test_scopes_and_evaluate_expansion(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)
 
-    @skipIfWindows
     def test_scopes_and_evaluate_expansion_with_descriptive_summaries(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=True)
 

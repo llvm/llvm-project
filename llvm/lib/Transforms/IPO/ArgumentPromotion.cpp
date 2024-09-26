@@ -42,6 +42,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -126,6 +127,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // arguments.
   SmallVector<unsigned> NewArgIndices;
   AttributeList PAL = F->getAttributes();
+  OptimizationRemarkEmitter ORE(F);
 
   // First, determine the new argument list
   unsigned ArgNo = 0, NewArgNo = 0;
@@ -139,6 +141,12 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
+               << "eliminating argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
     } else {
       const auto &ArgParts = ArgsToPromote.find(&*I)->second;
@@ -147,6 +155,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
         ArgAttrVec.push_back(AttributeSet());
       }
       ++NumArgumentsPromoted;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentPromoted", F)
+               << "promoting argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ")"
+               << " to pass by value";
+      });
+
       NewArgIndices.push_back((unsigned)-1);
       NewArgNo += ArgParts.size();
     }

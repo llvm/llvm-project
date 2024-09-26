@@ -825,7 +825,7 @@ enum NodeType {
   /// be saturated against signed values, resulting in `S`, which will combine
   /// to `TRUNCATE_SSAT_S`. If the value of C ranges from `0 to 255`, it will
   /// be saturated against unsigned values, resulting in `U`, which will
-  /// combine to `TRUNATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
+  /// combine to `TRUNCATE_SSAT_U`. Similarly, in `truncate(umin(x, C))`, if
   /// value of C ranges from `0 to 255`, it becomes `U` because it is saturated
   /// for unsigned values. As a result, it combines to `TRUNCATE_USAT_U`.
   TRUNCATE_SSAT_S, // saturate signed input to signed result -
@@ -1304,7 +1304,7 @@ enum NodeType {
   /// This corresponds to "load atomic" instruction.
   ATOMIC_LOAD,
 
-  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, ptr, val)
+  /// OUTCHAIN = ATOMIC_STORE(INCHAIN, val, ptr)
   /// This corresponds to "store atomic" instruction.
   ATOMIC_STORE,
 
@@ -1345,6 +1345,8 @@ enum NodeType {
   ATOMIC_LOAD_FMIN,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
+  ATOMIC_LOAD_USUB_COND,
+  ATOMIC_LOAD_USUB_SAT,
 
   /// Masked load and store - consecutive vector load and store operations
   /// with additional mask operand that prevents memory accesses to the
@@ -1371,6 +1373,11 @@ enum NodeType {
   /// is the chain and the second operand is the alloca pointer.
   LIFETIME_START,
   LIFETIME_END,
+
+  /// FAKE_USE represents a use of the operand but does not do anything.
+  /// Its purpose is the extension of the operand's lifetime mainly for
+  /// debugging purposes.
+  FAKE_USE,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary

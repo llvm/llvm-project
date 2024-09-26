@@ -192,6 +192,7 @@ public:
     VK_Invalid,
 
     VK_GOT,
+    VK_GOTENT,
     VK_GOTOFF,
     VK_GOTREL,
     VK_PCREL,

@@ -2255,7 +2255,7 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
 static bool
-CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
+CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
                              SmallVectorImpl<const SCEV *> &NewOps,
                              APInt &AccumulatedConstant,
                              ArrayRef<const SCEV *> Ops, const APInt &Scale,
@@ -2753,7 +2753,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    DenseMap<const SCEV *, APInt> M;
+    SmallDenseMap<const SCEV *, APInt, 16> M;
     SmallVector<const SCEV *, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
@@ -3544,6 +3544,22 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
       // Fold if both operands are constant.
       if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
         return getConstant(LHSC->getAPInt().udiv(RHSC->getAPInt()));
+    }
+  }
+
+  // ((-C + (C smax %x)) /u %x) evaluates to zero, for any positive constant C.
+  if (const auto *AE = dyn_cast<SCEVAddExpr>(LHS);
+      AE && AE->getNumOperands() == 2) {
+    if (const auto *VC = dyn_cast<SCEVConstant>(AE->getOperand(0))) {
+      const APInt &NegC = VC->getAPInt();
+      if (NegC.isNegative() && !NegC.isMinSignedValue()) {
+        const auto *MME = dyn_cast<SCEVSMaxExpr>(AE->getOperand(1));
+        if (MME && MME->getNumOperands() == 2 &&
+            isa<SCEVConstant>(MME->getOperand(0)) &&
+            cast<SCEVConstant>(MME->getOperand(0))->getAPInt() == -NegC &&
+            MME->getOperand(1) == RHS)
+          return getZero(LHS->getType());
+      }
     }
   }
 
@@ -4503,7 +4519,7 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
 ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
-    return std::nullopt;
+    return {};
   return SI->second.getArrayRef();
 }
 
@@ -8175,10 +8191,13 @@ ScalarEvolution::getSmallConstantTripCount(const Loop *L,
   return getConstantTripCount(ExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
+unsigned ScalarEvolution::getSmallConstantMaxTripCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+
   const auto *MaxExitCount =
-      dyn_cast<SCEVConstant>(getConstantMaxBackedgeTakenCount(L));
-  return getConstantTripCount(MaxExitCount);
+      Predicates ? getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
+                 : getConstantMaxBackedgeTakenCount(L);
+  return getConstantTripCount(dyn_cast<SCEVConstant>(MaxExitCount));
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
@@ -8247,9 +8266,25 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
   llvm_unreachable("Invalid ExitCountKind!");
 }
 
-const SCEV *
-ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
-                                                 SmallVector<const SCEVPredicate *, 4> &Preds) {
+const SCEV *ScalarEvolution::getPredicatedExitCount(
+    const Loop *L, const BasicBlock *ExitingBlock,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates, ExitCountKind Kind) {
+  switch (Kind) {
+  case Exact:
+    return getPredicatedBackedgeTakenInfo(L).getExact(ExitingBlock, this,
+                                                      Predicates);
+  case SymbolicMaximum:
+    return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(ExitingBlock, this,
+                                                            Predicates);
+  case ConstantMaximum:
+    return getPredicatedBackedgeTakenInfo(L).getConstantMax(ExitingBlock, this,
+                                                            Predicates);
+  };
+  llvm_unreachable("Invalid ExitCountKind!");
+}
+
+const SCEV *ScalarEvolution::getPredicatedBackedgeTakenCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
 }
 
@@ -8267,8 +8302,13 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 }
 
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
-    const Loop *L, SmallVector<const SCEVPredicate *, 4> &Preds) {
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+}
+
+const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
+  return getPredicatedBackedgeTakenInfo(L).getConstantMax(this, &Preds);
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
@@ -8537,9 +8577,9 @@ void ScalarEvolution::forgetBlockAndLoopDispositions(Value *V) {
 /// is never skipped. This is a valid assumption as long as the loop exits via
 /// that test. For precise results, it is the caller's responsibility to specify
 /// the relevant loop exiting block using getExact(ExitingBlock, SE).
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
-                                             SmallVector<const SCEVPredicate *, 4> *Preds) const {
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
+    const Loop *L, ScalarEvolution *SE,
+    SmallVectorImpl<const SCEVPredicate *> *Preds) const {
   // If any exits were not computable, the loop is not computable.
   if (!isComplete() || ExitNotTaken.empty())
     return SE->getCouldNotCompute();
@@ -8562,8 +8602,7 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
     Ops.push_back(BECount);
 
     if (Preds)
-      for (const auto *P : ENT.Predicates)
-        Preds->push_back(P);
+      append_range(*Preds, ENT.Predicates);
 
     assert((Preds || ENT.hasAlwaysTruePredicate()) &&
            "Predicate should be always true!");
@@ -8575,44 +8614,36 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const Loop *L, ScalarEvolution *SE,
   return SE->getUMinFromMismatchedTypes(Ops, /* Sequential */ true);
 }
 
-/// Get the exact not taken count for this loop exit.
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getExact(const BasicBlock *ExitingBlock,
-                                             ScalarEvolution *SE) const {
+const ScalarEvolution::ExitNotTakenInfo *
+ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
+    const BasicBlock *ExitingBlock,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
   for (const auto &ENT : ExitNotTaken)
-    if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
-      return ENT.ExactNotTaken;
+    if (ENT.ExitingBlock == ExitingBlock) {
+      if (ENT.hasAlwaysTruePredicate())
+        return &ENT;
+      else if (Predicates) {
+        append_range(*Predicates, ENT.Predicates);
+        return &ENT;
+      }
+    }
 
-  return SE->getCouldNotCompute();
-}
-
-const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
-    const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
-  for (const auto &ENT : ExitNotTaken)
-    if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
-      return ENT.ConstantMaxNotTaken;
-
-  return SE->getCouldNotCompute();
-}
-
-const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
-    const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
-  for (const auto &ENT : ExitNotTaken)
-    if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
-      return ENT.SymbolicMaxNotTaken;
-
-  return SE->getCouldNotCompute();
+  return nullptr;
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
-  auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
-    return !ENT.hasAlwaysTruePredicate();
-  };
-
-  if (!getConstantMax() || any_of(ExitNotTaken, PredicateNotAlwaysTrue))
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
+    ScalarEvolution *SE,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
+  if (!getConstantMax())
     return SE->getCouldNotCompute();
+
+  for (const auto &ENT : ExitNotTaken)
+    if (!ENT.hasAlwaysTruePredicate()) {
+      if (!Predicates)
+        return SE->getCouldNotCompute();
+      append_range(*Predicates, ENT.Predicates);
+    }
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
           isa<SCEVConstant>(getConstantMax())) &&
@@ -8622,7 +8653,7 @@ ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
 
 const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
     const Loop *L, ScalarEvolution *SE,
-    SmallVector<const SCEVPredicate *, 4> *Predicates) {
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   if (!SymbolicMax) {
     // Form an expression for the maximum exit count possible for this loop. We
     // merge the max and exact information to approximate a version of
@@ -8638,8 +8669,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
                "dominate latch!");
         ExitCounts.push_back(ExitCount);
         if (Predicates)
-          for (const auto *P : ENT.Predicates)
-            Predicates->push_back(P);
+          append_range(*Predicates, ENT.Predicates);
 
         assert((Predicates || ENT.hasAlwaysTruePredicate()) &&
                "Predicate should be always true!");
@@ -8663,7 +8693,7 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
-    : ExitLimit(E, E, E, false, std::nullopt) {}
+    : ExitLimit(E, E, E, false, {}) {}
 
 ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *ConstantMaxNotTaken,
@@ -13643,7 +13673,21 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   if (ExitingBlocks.size() > 1)
     for (BasicBlock *ExitingBlock : ExitingBlocks) {
       OS << "  exit count for " << ExitingBlock->getName() << ": ";
-      PrintSCEVWithTypeHint(OS, SE->getExitCount(L, ExitingBlock));
+      const SCEV *EC = SE->getExitCount(L, ExitingBlock);
+      PrintSCEVWithTypeHint(OS, EC);
+      if (isa<SCEVCouldNotCompute>(EC)) {
+        // Retry with predicates.
+        SmallVector<const SCEVPredicate *, 4> Predicates;
+        EC = SE->getPredicatedExitCount(L, ExitingBlock, &Predicates);
+        if (!isa<SCEVCouldNotCompute>(EC)) {
+          OS << "\n  predicated exit count for " << ExitingBlock->getName()
+             << ": ";
+          PrintSCEVWithTypeHint(OS, EC);
+          OS << "\n   Predicates:\n";
+          for (const auto *P : Predicates)
+            P->print(OS, 4);
+        }
+      }
       OS << "\n";
     }
 
@@ -13683,12 +13727,27 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
       auto *ExitBTC = SE->getExitCount(L, ExitingBlock,
                                        ScalarEvolution::SymbolicMaximum);
       PrintSCEVWithTypeHint(OS, ExitBTC);
+      if (isa<SCEVCouldNotCompute>(ExitBTC)) {
+        // Retry with predicates.
+        SmallVector<const SCEVPredicate *, 4> Predicates;
+        ExitBTC = SE->getPredicatedExitCount(L, ExitingBlock, &Predicates,
+                                             ScalarEvolution::SymbolicMaximum);
+        if (!isa<SCEVCouldNotCompute>(ExitBTC)) {
+          OS << "\n  predicated symbolic max exit count for "
+             << ExitingBlock->getName() << ": ";
+          PrintSCEVWithTypeHint(OS, ExitBTC);
+          OS << "\n   Predicates:\n";
+          for (const auto *P : Predicates)
+            P->print(OS, 4);
+        }
+      }
       OS << "\n";
     }
 
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (PBT != BTC || !Preds.empty()) {
+  if (PBT != BTC) {
+    assert(!Preds.empty() && "Different predicated BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -13702,11 +13761,33 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     for (const auto *P : Preds)
       P->print(OS, 4);
   }
-
   Preds.clear();
+
+  auto *PredConstantMax =
+      SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
+  if (PredConstantMax != ConstantBTC) {
+    assert(!Preds.empty() &&
+           "different predicated constant max BTC but no predicates");
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    if (!isa<SCEVCouldNotCompute>(PredConstantMax)) {
+      OS << "Predicated constant max backedge-taken count is ";
+      PrintSCEVWithTypeHint(OS, PredConstantMax);
+    } else
+      OS << "Unpredictable predicated constant max backedge-taken count.";
+    OS << "\n";
+    OS << " Predicates:\n";
+    for (const auto *P : Preds)
+      P->print(OS, 4);
+  }
+  Preds.clear();
+
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
+    assert(!Preds.empty() &&
+           "Different predicated symbolic max BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -14755,8 +14836,7 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.
-  for (const auto *P : TransformPreds)
-    Preds.insert(P);
+  Preds.insert(TransformPreds.begin(), TransformPreds.end());
 
   return AddRec;
 }

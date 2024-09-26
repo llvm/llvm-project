@@ -24,13 +24,17 @@
 
 // CHECK-LABEL: @test_svget2_bf16_0(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i64 0)
-// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], 0
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svget2_bf16_014svbfloat16x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i64 0)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 svbfloat16_t test_svget2_bf16_0(svbfloat16x2_t tuple) ATTR
 {
@@ -39,13 +43,17 @@ svbfloat16_t test_svget2_bf16_0(svbfloat16x2_t tuple) ATTR
 
 // CHECK-LABEL: @test_svget2_bf16_1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i64 8)
-// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], 1
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svget2_bf16_114svbfloat16x2_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv16bf16(<vscale x 16 x bfloat> [[TUPLE:%.*]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } poison, <vscale x 8 x bfloat> [[TUPLE_COERCE0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], <vscale x 8 x bfloat> [[TUPLE_COERCE1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP2]]
 //
 svbfloat16_t test_svget2_bf16_1(svbfloat16x2_t tuple) ATTR
 {

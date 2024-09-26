@@ -436,6 +436,17 @@ private:
   std::vector<std::vector<Value>> spIterVals;
 };
 
+//
+// Utils functions to generate sparse loops.
+//
+
+// Generate a while loop that co-iterates over a set of iterators.
+std::pair<Operation *, Value> genCoIteration(OpBuilder &builder, Location loc,
+                                             ArrayRef<SparseIterator *> iters,
+                                             MutableArrayRef<Value> reduc,
+                                             Value uniIdx,
+                                             bool userReducFirst = false);
+
 } // namespace sparse_tensor
 } // namespace mlir
 

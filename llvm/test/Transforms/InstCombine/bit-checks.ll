@@ -809,12 +809,10 @@ define i32 @main7a_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 define i32 @main7b(i32 %argc, i32 %argc2, i32 %argc3x) {
 ; CHECK-LABEL: @main7b(
 ; CHECK-NEXT:    [[ARGC3:%.*]] = mul i32 [[ARGC3X:%.*]], 42
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[ARGC:%.*]], [[ARGC2:%.*]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[ARGC2]], [[AND1]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC]], [[ARGC3]]
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[ARGC3]], [[AND2]]
-; CHECK-NEXT:    [[AND_COND_NOT:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND_NOT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARGC:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %argc3 = mul i32 %argc3x, 42 ; thwart complexity-based canonicalization
@@ -850,12 +848,10 @@ define i32 @main7b_logical(i32 %argc, i32 %argc2, i32 %argc3) {
 define i32 @main7c(i32 %argc, i32 %argc2, i32 %argc3x) {
 ; CHECK-LABEL: @main7c(
 ; CHECK-NEXT:    [[ARGC3:%.*]] = mul i32 [[ARGC3X:%.*]], 42
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[ARGC2:%.*]], [[ARGC:%.*]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[ARGC2]], [[AND1]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[ARGC3]], [[ARGC]]
-; CHECK-NEXT:    [[TOBOOL3:%.*]] = icmp ne i32 [[ARGC3]], [[AND2]]
-; CHECK-NEXT:    [[AND_COND_NOT:%.*]] = or i1 [[TOBOOL]], [[TOBOOL3]]
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND_NOT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[ARGC2:%.*]], [[ARGC3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[ARGC:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[AND_COND:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = zext i1 [[AND_COND]] to i32
 ; CHECK-NEXT:    ret i32 [[STOREMERGE]]
 ;
   %argc3 = mul i32 %argc3x, 42 ; thwart complexity-based canonicalization

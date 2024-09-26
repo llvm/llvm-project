@@ -67,6 +67,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -102,6 +103,8 @@ class Lint : public InstVisitor<Lint> {
   void visitReturnInst(ReturnInst &I);
   void visitLoadInst(LoadInst &I);
   void visitStoreInst(StoreInst &I);
+  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  void visitAtomicRMWInst(AtomicRMWInst &I);
   void visitXor(BinaryOperator &I);
   void visitSub(BinaryOperator &I);
   void visitLShr(BinaryOperator &I);
@@ -124,6 +127,7 @@ class Lint : public InstVisitor<Lint> {
 
 public:
   Module *Mod;
+  Triple TT;
   const DataLayout *DL;
   AliasAnalysis *AA;
   AssumptionCache *AC;
@@ -135,8 +139,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), DL(DL), AA(AA), AC(AC), DT(DT), TLI(TLI),
-        MessagesStr(Messages) {}
+      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
+        AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {
@@ -244,7 +248,8 @@ void Lint::visitCallBase(CallBase &I) {
             // dereferenced anyway.
             if (I.doesNotAccessMemory(ArgNo))
               continue;
-            if (AI != BI && (*BI)->getType()->isPointerTy()) {
+            if (AI != BI && (*BI)->getType()->isPointerTy() &&
+                !isa<ConstantPointerNull>(*BI)) {
               AliasResult Result = AA->alias(*AI, *BI);
               Check(Result != AliasResult::MustAlias &&
                         Result != AliasResult::PartialAlias,
@@ -400,6 +405,11 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
         "Unusual: Address one pointer dereference", &I);
 
   if (Flags & MemRef::Write) {
+    if (TT.isAMDGPU())
+      Check(!AMDGPU::isConstantAddressSpace(
+                UnderlyingObject->getType()->getPointerAddressSpace()),
+            "Undefined behavior: Write to memory in const addrspace", &I);
+
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(UnderlyingObject))
       Check(!GV->isConstant(), "Undefined behavior: Write to read-only memory",
             &I);
@@ -436,8 +446,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
       Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized())
-        BaseSize = DL->getTypeAllocSize(ATy);
+      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
+        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -454,7 +464,8 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
 
     // Accesses from before the start or after the end of the object are not
     // defined.
-    Check(!Loc.Size.hasValue() || BaseSize == MemoryLocation::UnknownSize ||
+    Check(!Loc.Size.hasValue() || Loc.Size.isScalable() ||
+              BaseSize == MemoryLocation::UnknownSize ||
               (Offset >= 0 && Offset + Loc.Size.getValue() <= BaseSize),
           "Undefined behavior: Buffer overflow", &I);
 
@@ -474,6 +485,16 @@ void Lint::visitLoadInst(LoadInst &I) {
 }
 
 void Lint::visitStoreInst(StoreInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
+                       I.getOperand(0)->getType(), MemRef::Write);
+}
+
+void Lint::visitAtomicRMWInst(AtomicRMWInst &I) {
   visitMemoryReference(I, MemoryLocation::get(&I), I.getAlign(),
                        I.getOperand(0)->getType(), MemRef::Write);
 }
@@ -590,19 +611,20 @@ void Lint::visitIndirectBrInst(IndirectBrInst &I) {
 
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
-                                                        /*OffsetOk=*/false)))
-    Check(
-        CI->getValue().ult(
-            cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
-        "Undefined result: extractelement index out of range", &I);
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getVectorOperandType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
+          "Undefined result: extractelement index out of range", &I);
+  }
 }
 
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
-                                                        /*OffsetOk=*/false)))
-    Check(CI->getValue().ult(
-              cast<FixedVectorType>(I.getType())->getNumElements()),
+                                                        /*OffsetOk=*/false))) {
+    ElementCount EC = I.getType()->getElementCount();
+    Check(EC.isScalable() || CI->getValue().ult(EC.getFixedValue()),
           "Undefined result: insertelement index out of range", &I);
+  }
 }
 
 void Lint::visitUnreachableInst(UnreachableInst &I) {

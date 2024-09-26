@@ -81,8 +81,8 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
     : Process(target_sp, listener_sp), m_scripted_metadata(scripted_metadata) {
 
   if (!target_sp) {
-    error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
-                                   __FUNCTION__, "Invalid target");
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedProcess::%s () - ERROR: %s", __FUNCTION__, "Invalid target");
     return;
   }
 
@@ -90,16 +90,16 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
       target_sp->GetDebugger().GetScriptInterpreter();
 
   if (!interpreter) {
-    error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
-                                   __FUNCTION__,
-                                   "Debugger has no Script Interpreter");
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedProcess::%s () - ERROR: %s", __FUNCTION__,
+        "Debugger has no Script Interpreter");
     return;
   }
 
   // Create process instance interface
   m_interface_up = interpreter->CreateScriptedProcessInterface();
   if (!m_interface_up) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "ScriptedProcess::%s () - ERROR: %s", __FUNCTION__,
         "Script interpreter couldn't create Scripted Process Interface");
     return;
@@ -114,16 +114,16 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
-    error.SetErrorString("Failed to create script object.");
+    error = Status::FromErrorString("Failed to create script object.");
     return;
   }
 
   StructuredData::GenericSP object_sp = *obj_or_err;
 
   if (!object_sp || !object_sp->IsValid()) {
-    error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",
-                                   __FUNCTION__,
-                                   "Failed to create valid script object");
+    error = Status::FromErrorStringWithFormat(
+        "ScriptedProcess::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
     return;
   }
 }
@@ -270,7 +270,8 @@ Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
   }
 
   if (bp_site->HardwareRequired()) {
-    return Status("Scripted Processes don't support hardware breakpoints");
+    return Status::FromErrorString(
+        "Scripted Processes don't support hardware breakpoints");
   }
 
   Status error;

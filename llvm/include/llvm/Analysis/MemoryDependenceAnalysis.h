@@ -492,7 +492,7 @@ private:
                                    const MemoryLocation &Loc, bool isLoad,
                                    BasicBlock *BB,
                                    SmallVectorImpl<NonLocalDepResult> &Result,
-                                   DenseMap<BasicBlock *, Value *> &Visited,
+                                   SmallDenseMap<BasicBlock *, Value *, 16> &Visited,
                                    bool SkipFirstBlock = false,
                                    bool IsIncomplete = false);
   MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,

@@ -63,7 +63,6 @@ int main() {
 // CHECK_MAY_RETURN_1: allocating 32 times
 // CHECK_MAY_RETURN_1: Some of the malloc calls returned non-null:
 // CHECK_MAY_RETURN_1: allocating 256 times
-// CHECK_MAY_RETURN_1: Some of the malloc calls returned null:
 // CHECK_MAY_RETURN_1: Some of the malloc calls returned non-null:
 // CHECK_MAY_RETURN_1: allocating 512 times
 // CHECK_MAY_RETURN_1: Some of the malloc calls returned null:

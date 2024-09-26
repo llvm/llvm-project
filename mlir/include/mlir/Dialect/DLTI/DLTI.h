@@ -26,7 +26,7 @@ namespace mlir {
 namespace dlti {
 /// Perform a DLTI-query at `op`, recursively querying each key of `keys` on
 /// query interface-implementing attrs, starting from attr obtained from `op`.
-FailureOr<Attribute> query(Operation *op, ArrayRef<StringAttr> keys,
+FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
                            bool emitError = false);
 } // namespace dlti
 } // namespace mlir

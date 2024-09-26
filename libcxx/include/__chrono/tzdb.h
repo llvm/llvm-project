@@ -21,7 +21,10 @@
 #  include <__chrono/time_zone.h>
 #  include <__chrono/time_zone_link.h>
 #  include <__config>
+#  include <__memory/addressof.h>
+#  include <stdexcept>
 #  include <string>
+#  include <string_view>
 #  include <vector>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

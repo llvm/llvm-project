@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref,both %s
 
 
 using MaxBitInt = _BitInt(128);
@@ -9,13 +9,10 @@ using MaxBitInt = _BitInt(128);
 
 constexpr _BitInt(2) A = 0;
 constexpr _BitInt(2) B = A + 1;
-constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
-                                // ref-warning {{from 2 to -2}}
+constexpr _BitInt(2) C = B + 1; // both-warning {{from 2 to -2}}
 static_assert(C == -2, "");
-static_assert(C - B == A, ""); // expected-error {{not an integral constant expression}} \
-                               // expected-note {{value -3 is outside the range of representable values}} \
-                               // ref-error {{not an integral constant expression}} \
-                               // ref-note {{value -3 is outside the range of representable values}}
+static_assert(C - B == A, ""); // both-error {{not an integral constant expression}} \
+                               // both-note {{value -3 is outside the range of representable values}}
 
 static_assert(B - 1 == 0, "");
 
@@ -38,10 +35,8 @@ static_assert(BI1 == 3, "");
 
 constexpr _BitInt(4) MulA = 5;
 constexpr _BitInt(4) MulB = 7;
-static_assert(MulA * MulB == 50, ""); // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}} \
-                                      // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}}
+static_assert(MulA * MulB == 50, ""); // both-error {{not an integral constant expression}} \
+                                      // both-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}}
 static_assert(MulA * 5 == 25, "");
 static_assert(-1 * MulB == -7, "");
 
@@ -50,29 +45,21 @@ constexpr _BitInt(4) DivA = 2;
 constexpr _BitInt(2) DivB = 1;
 static_assert(DivA / DivB == 2, "");
 
-constexpr _BitInt(4) DivC = DivA / 0; // ref-error {{must be initialized by a constant expression}} \
-                                      // ref-note {{division by zero}} \
-                                      // expected-error {{must be initialized by a constant expression}} \
-                                      // expected-note {{division by zero}}
+constexpr _BitInt(4) DivC = DivA / 0; // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{division by zero}}
 
 constexpr _BitInt(7) RemA = 47;
 constexpr _BitInt(6) RemB = 9;
 static_assert(RemA % RemB == 2, "");
-static_assert(RemA % 0 == 1, ""); // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{division by zero}} \
-                                  // expected-error {{not an integral constant expression}} \
-                                  // expected-note {{division by zero}}
+static_assert(RemA % 0 == 1, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{division by zero}}
 
 constexpr _BitInt(32) bottom = -1;
 constexpr _BitInt(32) top = INT_MIN;
-constexpr _BitInt(32) nope = top / bottom;  // ref-error {{must be initialized by a constant expression}} \
-                                            // ref-note {{value 2147483648 is outside the range}} \
-                                            // expected-error {{must be initialized by a constant expression}} \
-                                            // expected-note {{value 2147483648 is outside the range}}
-constexpr _BitInt(32) noooo = top % bottom; // ref-error {{must be initialized by a constant expression}} \
-                                            // ref-note {{value 2147483648 is outside the range}} \
-                                            // expected-error {{must be initialized by a constant expression}} \
-                                            // expected-note {{value 2147483648 is outside the range}}
+constexpr _BitInt(32) nope = top / bottom;  // both-error {{must be initialized by a constant expression}} \
+                                            // both-note {{value 2147483648 is outside the range}}
+constexpr _BitInt(32) noooo = top % bottom; // both-error {{must be initialized by a constant expression}} \
+                                            // both-note {{value 2147483648 is outside the range}}
 
 namespace APCast {
   constexpr _BitInt(10) A = 1;
@@ -91,55 +78,48 @@ typedef __int128 int128_t;
 typedef unsigned __int128 uint128_t;
 static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
 static_assert(UINT128_MAX == -1, "");
-static_assert(UINT128_MAX == 1, ""); // expected-error {{static assertion failed}} \
-                                     // expected-note {{'340282366920938463463374607431768211455 == 1'}} \
-                                     // ref-error {{static assertion failed}} \
-                                     // ref-note {{'340282366920938463463374607431768211455 == 1'}}
+static_assert(UINT128_MAX == 1, ""); // both-error {{static assertion failed}} \
+                                     // both-note {{'340282366920938463463374607431768211455 == 1'}}
 
 static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
 static_assert(INT128_MAX != 0, "");
-static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
-                                    // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
-                                    // ref-error {{failed}} \
-                                    // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+static_assert(INT128_MAX == 0, ""); // both-error {{failed}} \
+                                    // both-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
 static const __int128_t INT128_MIN = -INT128_MAX - 1;
+
+
+namespace PointerArithmeticOverflow {
+  int n;
+  constexpr int *p = (&n + 1) + (unsigned __int128)-1; // both-error {{constant expression}} \
+                                                       // both-note {{cannot refer to element 3402}}
+}
 
 namespace i128 {
 
   constexpr int128_t I128_1 = 12;
   static_assert(I128_1 == 12, "");
   static_assert(I128_1 != 10, "");
-  static_assert(I128_1 != 12, ""); // expected-error{{failed}} \
-                                   // ref-error{{failed}} \
-                                   // expected-note{{evaluates to}} \
-                                   // ref-note{{evaluates to}}
+  static_assert(I128_1 != 12, ""); // both-error{{failed}} \
+                                   // both-note{{evaluates to}}
 
   static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
   static_assert(UINT128_MAX == -1, "");
-  static_assert(UINT128_MAX == 1, ""); // expected-error {{static assertion failed}} \
-                                       // expected-note {{'340282366920938463463374607431768211455 == 1'}} \
-                                       // ref-error {{static assertion failed}} \
-                                       // ref-note {{'340282366920938463463374607431768211455 == 1'}}
+  static_assert(UINT128_MAX == 1, ""); // both-error {{static assertion failed}} \
+                                       // both-note {{'340282366920938463463374607431768211455 == 1'}}
 
   constexpr uint128_t TooMuch = UINT128_MAX * 2;
 
   static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
   static_assert(INT128_MAX != 0, "");
-  static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
-                                      // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
-                                      // ref-error {{failed}} \
-                                      // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+  static_assert(INT128_MAX == 0, ""); // both-error {{failed}} \
+                                      // both-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
 
-  constexpr int128_t TooMuch2 = INT128_MAX * INT128_MAX; // ref-error {{must be initialized by a constant expression}} \
-                                                // ref-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}} \
-                                                // expected-error {{must be initialized by a constant expression}} \
-                                                // expected-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}}
+  constexpr int128_t TooMuch2 = INT128_MAX * INT128_MAX; // both-error {{must be initialized by a constant expression}} \
+                                                         // both-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}}
 
   static const __int128_t INT128_MIN = -INT128_MAX - 1;
-  constexpr __int128 A = INT128_MAX + 1; // expected-error {{must be initialized by a constant expression}} \
-                                         // expected-note {{value 170141183460469231731687303715884105728 is outside the range}} \
-                                         // ref-error {{must be initialized by a constant expression}} \
-                                         // ref-note {{value 170141183460469231731687303715884105728 is outside the range}}
+  constexpr __int128 A = INT128_MAX + 1; // both-error {{must be initialized by a constant expression}} \
+                                         // both-note {{value 170141183460469231731687303715884105728 is outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
   static_assert(Two, "");
@@ -205,22 +185,17 @@ namespace i128 {
   static_assert(CastTo<long double>(12) == 12, "");
 #endif
 
-  constexpr int128_t Error = __LDBL_MAX__; // ref-warning {{implicit conversion of out of range value}} \
-                                           // ref-error {{must be initialized by a constant expression}} \
-                                           // ref-note {{is outside the range of representable values of type}} \
-                                           // expected-warning {{implicit conversion of out of range value}} \
-                                           // expected-error {{must be initialized by a constant expression}} \
-                                           // expected-note {{is outside the range of representable values of type}}
+  constexpr int128_t Error = __LDBL_MAX__; // both-warning {{implicit conversion of out of range value}} \
+                                           // both-error {{must be initialized by a constant expression}} \
+                                           // both-note {{is outside the range of representable values of type}}
 
   constexpr uint128_t Zero = 0;
   static_assert((Zero -1) == -1, "");
   constexpr int128_t Five = 5;
   static_assert(Five - Zero == Five, "");
 
-  constexpr int128_t Sub1 = INT128_MIN - 1; // expected-error {{must be initialized by a constant expression}} \
-                                            // expected-note {{-170141183460469231731687303715884105729 is outside the range}} \
-                                            // ref-error {{must be initialized by a constant expression}} \
-                                            // ref-note {{-170141183460469231731687303715884105729 is outside the range}}
+  constexpr int128_t Sub1 = INT128_MIN - 1; // both-error {{must be initialized by a constant expression}} \
+                                            // both-note {{-170141183460469231731687303715884105729 is outside the range}}
 }
 
 namespace AddSubOffset {
@@ -236,16 +211,14 @@ namespace Bitfields {
   struct S1 {
     unsigned _BitInt(128) a : 2;
   };
-  constexpr S1 s1{100}; // ref-warning {{changes value from 100 to 0}} \
-                        // expected-warning {{changes value from 100 to 0}}
+  constexpr S1 s1{100}; // both-warning {{changes value from 100 to 0}}
   constexpr S1 s12{3};
   static_assert(s12.a == 3, "");
 
   struct S2 {
     unsigned __int128 a : 2;
   };
-  constexpr S2 s2{100}; // ref-warning {{changes value from 100 to 0}} \
-                        // expected-warning {{changes value from 100 to 0}}
+  constexpr S2 s2{100}; // both-warning {{changes value from 100 to 0}}
 }
 
 namespace BitOps {
@@ -266,21 +239,15 @@ namespace IncDec {
     int128_t a = INT128_MAX;
 
     if (Pre)
-      ++a; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
-           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+      ++a; // both-note {{value 170141183460469231731687303715884105728 is outside the range}}
     else
-      a++; // ref-note {{value 170141183460469231731687303715884105728 is outside the range}} \
-           // expected-note {{value 170141183460469231731687303715884105728 is outside the range}}
+      a++; // both-note {{value 170141183460469231731687303715884105728 is outside the range}}
     return a;
   }
-  static_assert(maxPlus1(true) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to}} \
-                                          // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to}}
-  static_assert(maxPlus1(false) == 0, ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to}} \
-                                           // expected-error {{not an integral constant expression}} \
-                                           // expected-note {{in call to}}
+  static_assert(maxPlus1(true) == 0, ""); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
+  static_assert(maxPlus1(false) == 0, ""); // both-error {{not an integral constant expression}} \
+                                           // both-note {{in call to}}
 
   constexpr int128_t inc1(bool Pre) {
     int128_t A = 0;

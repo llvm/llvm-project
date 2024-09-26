@@ -89,7 +89,7 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 2
 // CK30-DAG: store ptr [[S_PTR1_BEGIN:%.+]], ptr [[PTR]],
 // CK30-DAG: [[S_PTR1]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 4
-// CK30-DAG: [[S_PTR1_BEGIN]] = getelementptr inbounds i32, ptr [[S_PTR1_BEGIN_REF:%.+]], i{{64|32}} 0
+// CK30-DAG: [[S_PTR1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTR1_BEGIN_REF:%.+]], i{{64|32}} 0
 // CK30-DAG: [[S_PTR1_BEGIN_REF]] = load ptr, ptr [[S_PTR1:%.+]],
 // CK30-DAG: [[S_PTR1]] = getelementptr inbounds nuw [[STRUCT]], ptr [[S]], i32 0, i32 4
 
@@ -98,7 +98,7 @@ typedef struct StructWithPtrTag : public Base {
 // CK30-DAG: [[PTR:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i32 0, i32 3
 // CK30-DAG: store ptr [[S_PTRBASE1_BEGIN:%.+]], ptr [[PTR]],
 // CK30-DAG: [[S_PTRBASE1]] = getelementptr inbounds nuw [[BASE]], ptr [[S_BASE:%.+]], i32 0, i32 2
-// CK30-DAG: [[S_PTRBASE1_BEGIN]] = getelementptr inbounds i32, ptr [[S_PTRBASE1_BEGIN_REF:%.+]], i{{64|32}} 0
+// CK30-DAG: [[S_PTRBASE1_BEGIN]] = getelementptr inbounds nuw i32, ptr [[S_PTRBASE1_BEGIN_REF:%.+]], i{{64|32}} 0
 // CK30-DAG: [[S_PTRBASE1_BEGIN_REF]] = load ptr, ptr [[S_PTRBASE1:%.+]],
 // CK30-DAG: [[S_PTRBASE1]] = getelementptr inbounds nuw [[BASE]], ptr [[S_BASE:%.+]], i32 0, i32 2
 void map_with_deep_copy() {

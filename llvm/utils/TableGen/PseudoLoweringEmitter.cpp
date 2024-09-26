@@ -29,7 +29,7 @@ class PseudoLoweringEmitter {
     union {
       unsigned Operand; // Operand number mapped to.
       uint64_t Imm;     // Integer immedate value.
-      Record *Reg;      // Physical register.
+      const Record *Reg; // Physical register.
     } Data;
   };
   struct PseudoExpansion {
@@ -42,24 +42,24 @@ class PseudoLoweringEmitter {
         : Source(s), Dest(d), OperandMap(m) {}
   };
 
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 
   // It's overkill to have an instance of the full CodeGenTarget object,
   // but it loads everything on demand, not in the constructor, so it's
   // lightweight in performance, so it works out OK.
-  CodeGenTarget Target;
+  const CodeGenTarget Target;
 
   SmallVector<PseudoExpansion, 64> Expansions;
 
-  unsigned addDagOperandMapping(Record *Rec, DagInit *Dag,
-                                CodeGenInstruction &Insn,
+  unsigned addDagOperandMapping(const Record *Rec, const DagInit *Dag,
+                                const CodeGenInstruction &Insn,
                                 IndexedMap<OpData> &OperandMap,
                                 unsigned BaseIdx);
-  void evaluateExpansion(Record *Pseudo);
+  void evaluateExpansion(const Record *Pseudo);
   void emitLoweringEmitter(raw_ostream &o);
 
 public:
-  PseudoLoweringEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  PseudoLoweringEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   /// run - Output the pseudo-lowerings.
   void run(raw_ostream &o);
@@ -69,13 +69,12 @@ public:
 // FIXME: This pass currently can only expand a pseudo to a single instruction.
 //        The pseudo expansion really should take a list of dags, not just
 //        a single dag, so we can do fancier things.
-
 unsigned PseudoLoweringEmitter::addDagOperandMapping(
-    Record *Rec, DagInit *Dag, CodeGenInstruction &Insn,
+    const Record *Rec, const DagInit *Dag, const CodeGenInstruction &Insn,
     IndexedMap<OpData> &OperandMap, unsigned BaseIdx) {
   unsigned OpsAdded = 0;
   for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
-    if (DefInit *DI = dyn_cast<DefInit>(Dag->getArg(i))) {
+    if (const DefInit *DI = dyn_cast<DefInit>(Dag->getArg(i))) {
       // Physical register reference. Explicit check for the special case
       // "zero_reg" definition.
       if (DI->getDef()->isSubClassOf("Register") ||
@@ -105,17 +104,15 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
         OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
       OpsAdded += Insn.Operands[i].MINumOperands;
-    } else if (IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
+    } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;
-    } else if (auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      auto *II =
-          cast<IntInit>(BI->convertInitializerTo(IntRecTy::get(Records)));
+    } else if (const auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = II->getValue();
+      OperandMap[BaseIdx + i].Data.Imm = *BI->convertInitializerToInt();
       ++OpsAdded;
-    } else if (DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
+    } else if (const DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
       // Just add the operands recursively. This is almost certainly
       // a constant value for a complex operand (> 1 MI operand).
       unsigned NewOps =
@@ -129,23 +126,23 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
   return OpsAdded;
 }
 
-void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
+void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
   LLVM_DEBUG(dbgs() << "Pseudo definition: " << Rec->getName() << "\n");
 
   // Validate that the result pattern has the corrent number and types
   // of arguments for the instruction it references.
-  DagInit *Dag = Rec->getValueAsDag("ResultInst");
+  const DagInit *Dag = Rec->getValueAsDag("ResultInst");
   assert(Dag && "Missing result instruction in pseudo expansion!");
   LLVM_DEBUG(dbgs() << "  Result: " << *Dag << "\n");
 
-  DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
+  const DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
   if (!OpDef) {
     PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
                         "', result operator is not a record");
     PrintFatalNote(Rec->getValue("ResultInst"),
                    "Result was assigned at the following location:");
   }
-  Record *Operator = OpDef->getDef();
+  const Record *Operator = OpDef->getDef();
   if (!Operator->isSubClassOf("Instruction")) {
     PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
                         "', result operator '" + Operator->getName() +
@@ -173,8 +170,8 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
   }
 
   unsigned NumMIOperands = 0;
-  for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i)
-    NumMIOperands += Insn.Operands[i].MINumOperands;
+  for (const auto &Op : Insn.Operands)
+    NumMIOperands += Op.MINumOperands;
   IndexedMap<OpData> OperandMap;
   OperandMap.grow(NumMIOperands);
 
@@ -192,8 +189,8 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
   // the lowering emitter.
   CodeGenInstruction SourceInsn(Rec);
   StringMap<unsigned> SourceOperands;
-  for (unsigned i = 0, e = SourceInsn.Operands.size(); i != e; ++i)
-    SourceOperands[SourceInsn.Operands[i].Name] = i;
+  for (const auto &[Idx, SrcOp] : enumerate(SourceInsn.Operands))
+    SourceOperands[SrcOp.Name] = Idx;
 
   LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
   for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i) {
@@ -265,7 +262,7 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
               << Expansion.OperandMap[MIOpNo + i].Data.Imm << "));\n";
             break;
           case OpData::Reg: {
-            Record *Reg = Expansion.OperandMap[MIOpNo + i].Data.Reg;
+            const Record *Reg = Expansion.OperandMap[MIOpNo + i].Data.Reg;
             o << "    Inst.addOperand(MCOperand::createReg(";
             // "zero_reg" is special.
             if (Reg->getName() == "zero_reg")
@@ -297,19 +294,18 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
   o << "\n}\n\n";
 }
 
-void PseudoLoweringEmitter::run(raw_ostream &o) {
+void PseudoLoweringEmitter::run(raw_ostream &OS) {
   StringRef Classes[] = {"PseudoInstExpansion", "Instruction"};
-  std::vector<Record *> Insts = Records.getAllDerivedDefinitions(Classes);
 
   // Process the pseudo expansion definitions, validating them as we do so.
   Records.startTimer("Process definitions");
-  for (unsigned i = 0, e = Insts.size(); i != e; ++i)
-    evaluateExpansion(Insts[i]);
+  for (const Record *Inst : Records.getAllDerivedDefinitions(Classes))
+    evaluateExpansion(Inst);
 
   // Generate expansion code to lower the pseudo to an MCInst of the real
   // instruction.
   Records.startTimer("Emit expansion code");
-  emitLoweringEmitter(o);
+  emitLoweringEmitter(OS);
 }
 
 static TableGen::Emitter::OptClass<PseudoLoweringEmitter>

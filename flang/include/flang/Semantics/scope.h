@@ -138,6 +138,8 @@ public:
   const_iterator cend() const { return symbols_.cend(); }
 
   // Return symbols in declaration order (the iterators above are in name order)
+  // When a generic procedure interface shadows a derived type or specific
+  // procedure, only the generic's symbol appears in the output.
   SymbolVector GetSymbols() const;
   MutableSymbolVector GetSymbols();
 

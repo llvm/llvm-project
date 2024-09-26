@@ -81,6 +81,18 @@ constexpr int b() {
 }
 static_assert(b() == 11);
 
+namespace cwg1872 {
+  template<typename T> struct A : T {
+    constexpr int f() const { return 0; }
+  };
+  struct X {};
+  struct Y { virtual int f() const; };
+  struct Z : virtual X {};
+
+  constexpr int z = A<Z>().f(); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{non-literal type 'A<Z>' cannot be used in a constant expression}}
+}
+
 /// The diagnostics between the two interpreters used to be different here.
 struct S { int a; };
 constexpr S getS() { // both-error {{constexpr function never produces a constant expression}}

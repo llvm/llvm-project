@@ -877,6 +877,15 @@ static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
       if (hasNonEmptyRegion)
         continue;
 
+      // Don't allow merging if this block's arguments are used outside of the
+      // original block.
+      bool argHasExternalUsers = llvm::any_of(
+          block->getArguments(), [block](mlir::BlockArgument &arg) {
+            return arg.isUsedOutsideOfBlock(block);
+          });
+      if (argHasExternalUsers)
+        continue;
+
       // Try to add this block to an existing cluster.
       bool addedToCluster = false;
       for (auto &cluster : clusters)

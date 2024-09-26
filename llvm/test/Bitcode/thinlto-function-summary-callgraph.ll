@@ -30,7 +30,7 @@
 ; COMBINED-NEXT:    <FLAGS
 ; Only 2 VALUE_GUID since reference to undefinedglob should not be included in
 ; combined index.
-; COMBINED-NEXT:    <VALUE_GUID op0=[[FUNCID:[0-9]+]] op1=7289175272376759421/>
+; COMBINED-NEXT:    <VALUE_GUID {{.*}} op0=[[FUNCID:[0-9]+]] op1=1697143370 op2=1603531901/>
 ; COMBINED-NEXT:    <VALUE_GUID
 ; COMBINED-NEXT:    <COMBINED_PROFILE
 ; See if the call to func is registered.

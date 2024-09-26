@@ -439,6 +439,11 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
     if (failed(maybePerm))
       return failure();
 
+    SmallVector<SmallVector<OpFoldResult>> unpackOpResultDims;
+    if (failed(reifyResultShapes(rewriter, unPackOp, unpackOpResultDims))) {
+      return failure();
+    }
+
     SmallVector<int64_t> inverseTransposePerm =
         invertPermutationVector(maybePerm.value());
     auto outerDimsPerm = unPackOp.getOuterDimsPerm();
@@ -448,7 +453,6 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
     SmallVector<int64_t> newOuterDimsPermVec;
     SmallVector<int64_t> newInnerDimsPosVec;
     SmallVector<OpFoldResult> newMixedInnerTilesVec;
-
     if (!checkAndPermute(inverseTransposePerm, outerDimsPerm,
                          newOuterDimsPermVec, destRank))
       return rewriter.notifyMatchFailure(
@@ -463,9 +467,10 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
       newInnerDimsPosVec.push_back(innerDimsPos[remappedPosition]);
     }
 
-    Value output = unPackOp.createDestinationTensor(
-        rewriter, unPackOp.getLoc(), linalgOp->getOperand(0),
-        newMixedInnerTilesVec, newInnerDimsPosVec, newOuterDimsPermVec);
+    auto elemType =
+        cast<ShapedType>(unPackOp->getResultTypes()[0]).getElementType();
+    Value output = rewriter.create<tensor::EmptyOp>(
+        unPackOp->getLoc(), unpackOpResultDims[0], elemType);
 
     rewriter.replaceOpWithNewOp<UnPackOp>(
         unPackOp, linalgOp->getOperand(0), output, newInnerDimsPosVec,

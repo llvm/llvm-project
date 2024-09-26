@@ -1130,8 +1130,8 @@ define double @test_floor_double(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_floor_double:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI40_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI40_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB40_2
@@ -1177,8 +1177,8 @@ define double @test_ceil_double(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_ceil_double:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI41_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI41_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB41_2
@@ -1224,8 +1224,8 @@ define double @test_trunc_double(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_trunc_double:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI42_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI42_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB42_2
@@ -1271,8 +1271,8 @@ define double @test_round_double(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_round_double:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI43_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI43_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB43_2
@@ -1318,8 +1318,8 @@ define double @test_roundeven_double(double %x) {
 ;
 ; RV64IZFINXZDINX-LABEL: test_roundeven_double:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lui a1, %hi(.LCPI44_0)
-; RV64IZFINXZDINX-NEXT:    ld a1, %lo(.LCPI44_0)(a1)
+; RV64IZFINXZDINX-NEXT:    li a1, 1075
+; RV64IZFINXZDINX-NEXT:    slli a1, a1, 52
 ; RV64IZFINXZDINX-NEXT:    fabs.d a2, a0
 ; RV64IZFINXZDINX-NEXT:    flt.d a1, a2, a1
 ; RV64IZFINXZDINX-NEXT:    beqz a1, .LBB44_2

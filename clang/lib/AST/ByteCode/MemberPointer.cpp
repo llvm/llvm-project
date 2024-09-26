@@ -79,7 +79,7 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
   if (hasBase())
     return Base.toAPValue(ASTCtx);
 
-  return APValue(cast<ValueDecl>(getDecl()), /*IsDerivedMember=*/false,
+  return APValue(getDecl(), /*IsDerivedMember=*/false,
                  /*Path=*/{});
 }
 

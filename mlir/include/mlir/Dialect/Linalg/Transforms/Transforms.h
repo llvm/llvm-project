@@ -488,8 +488,13 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
-LogicalResult dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
-                           const ControlDropUnitDims &options);
+struct DropUnitDimsResult {
+  linalg::GenericOp resultOp;
+  SmallVector<Value> replacements;
+};
+FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
+                                           GenericOp genericOp,
+                                           const ControlDropUnitDims &options);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
@@ -544,7 +549,7 @@ namespace detail {
 struct PackingResult {
   SmallVector<OpFoldResult> offsets, sizes, strides;
   SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
-  GenericOp maybeTransposeOp;
+  TransposeOp maybeTransposeOp;
   tensor::PadOp hoistedPadOp;
 };
 
@@ -563,9 +568,9 @@ buildPackingLoopNest(RewriterBase &rewriter, tensor::PadOp opToHoist,
 /// a larger tensor. On success, `opToHoist` is replaced by the cloned version
 /// in the packing loop so the caller can continue reasoning about the padding
 /// operation. If `transposeVector` is non-empty, hoist padding introduces a
-/// GenericOp to transpose the padded tensor before inserting it into the packed
-/// tensor. A `transposeVector` can change the storage order of the padded
-/// tensor but does not change the order of the pack or compute loops.
+/// TransposeOp to transpose the padded tensor before inserting it into the
+/// packed tensor. A `transposeVector` can change the storage order of the
+/// padded tensor but does not change the order of the pack or compute loops.
 ///
 /// TODO: In the future, we should consider rewriting as a tensor.pack after
 /// hoisting since this abstraction is now available.
@@ -610,13 +615,13 @@ FailureOr<Value>
 hoistPaddingOnTensors(RewriterBase &rewriter, tensor::PadOp opToHoist,
                       int64_t numLoops, ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 /// Calls into `hoistPaddingOnTensors` with a local IRRewriter.
 FailureOr<Value>
 hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
                       ArrayRef<int64_t> transposeVector,
                       tensor::PadOp &hoistedOp,
-                      SmallVectorImpl<GenericOp> &transposeOps);
+                      SmallVectorImpl<TransposeOp> &transposeOps);
 
 /// Apply padding and hoisting to `linalgOp` according to the configuration
 /// specified in `options`.

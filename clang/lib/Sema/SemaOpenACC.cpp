@@ -1101,51 +1101,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 
   return Result;
 
-  //  switch (Clause.getClauseKind()) {
-  //  case OpenACCClauseKind::PresentOrCopy:
-  //  case OpenACCClauseKind::PCopy:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Copy;
-  //    LLVM_FALLTHROUGH;
-  //  case OpenACCClauseKind::PresentOrCreate:
-  //  case OpenACCClauseKind::PCreate:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Create;
-  //    LLVM_FALLTHROUGH;
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::DType:
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::Gang:
-  //  case OpenACCClauseKind::Worker:
-  //  case OpenACCClauseKind::Vector: {
-  //    // OpenACC 3.3 2.9:
-  //    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq'
-  //    clause
-  //    // appears.
-  //    const auto *Itr =
-  //        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
-  //
-  //    if (Itr != ExistingClauses.end()) {
-  //      Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-  //          << Clause.getClauseKind() << (*Itr)->getClauseKind();
-  //      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-  //    }
-  //    // Not yet implemented, so immediately drop to the 'not yet implemented'
-  //    // diagnostic.
-  //    break;
-  //  }
-  //  */
-
 }
 
 /// OpenACC 3.3 section 2.5.15:
@@ -1210,6 +1165,10 @@ ExprResult SemaOpenACC::CheckReductionVar(Expr *VarExpr) {
 
 void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
                                  SourceLocation DirLoc) {
+  // Start an evaluation context to parse the clause arguments on.
+  SemaRef.PushExpressionEvaluationContext(
+      Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
   switch (K) {
   case OpenACCDirectiveKind::Invalid:
     // Nothing to do here, an invalid kind has nothing we can check here.  We
@@ -1626,6 +1585,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
+  SemaRef.DiscardCleanupsInEvaluationContext();
+  SemaRef.PopExpressionEvaluationContext();
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -1649,6 +1610,7 @@ StmtResult SemaOpenACC::ActOnEndStmtDirective(OpenACCDirectiveKind K,
         ParentlessLoopConstructs);
 
     ParentlessLoopConstructs.clear();
+
     return ComputeConstruct;
   }
   case OpenACCDirectiveKind::Loop: {
@@ -1704,6 +1666,11 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
 
 bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
+  // OpenCC3.3 2.1 (line 889)
+  // A program must not depend on the order of evaluation of expressions in
+  // clause arguments or on any side effects of the evaluations.
+  SemaRef.DiscardCleanupsInEvaluationContext();
+  SemaRef.PopExpressionEvaluationContext();
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }
 

@@ -15,27 +15,29 @@
 #define MODE_ATTR
 #endif
 
-// CHECK-LABEL: define dso_local <vscale x 32 x i1> @test_svundef2_b(
-// CPP-CHECK-LABEL: define dso_local <vscale x 32 x i1> @_Z15test_svundef2_bv(
-//
+// CHECK-LABEL: define dso_local { <vscale x 16 x i1>, <vscale x 16 x i1> } @test_svundef2_b(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <vscale x 32 x i1> undef
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1> } undef
 //
+// CPP-CHECK-LABEL: define dso_local { <vscale x 16 x i1>, <vscale x 16 x i1> } @_Z15test_svundef2_bv(
+// CPP-CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i1> undef
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1> } undef
 //
 svboolx2_t test_svundef2_b(void) MODE_ATTR {
     return svundef2_b();
 }
 
-// CHECK-LABEL: define dso_local <vscale x 64 x i1> @test_svundef4_b(
-// CPP-CHECK-LABEL: define dso_local <vscale x 64 x i1> @_Z15test_svundef4_bv(
-//
+// CHECK-LABEL: define dso_local { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } @test_svundef4_b(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret <vscale x 64 x i1> undef
+// CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } undef
 //
+// CPP-CHECK-LABEL: define dso_local { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } @_Z15test_svundef4_bv(
+// CPP-CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i1> undef
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1> } undef
 //
 svboolx4_t test_svundef4_b(void) MODE_ATTR {
     return svundef4_b();

@@ -301,7 +301,7 @@ static std::string combineBinary(ArrayRef<std::string> children,
   for (unsigned i = 1; i < size; ++i) {
     os << ' ' << combiner << " (" << children[i] << ')';
   }
-  return os.str();
+  return str;
 }
 
 // Prepend negation to the only condition in the predicate expression list.

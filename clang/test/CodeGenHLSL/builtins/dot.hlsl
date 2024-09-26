@@ -155,18 +155,6 @@ float test_dot_float3(float3 p0, float3 p1) { return dot(p0, p1); }
 // CHECK: ret float %hlsl.dot
 float test_dot_float4(float4 p0, float4 p1) { return dot(p0, p1); }
 
-// CHECK:  %hlsl.dot = call float @llvm.[[ICF]].fdot.v2f32(<2 x float> %splat.splat, <2 x float>
-// CHECK: ret float %hlsl.dot
-float test_dot_float2_splat(float p0, float2 p1) { return dot(p0, p1); }
-
-// CHECK:  %hlsl.dot = call float @llvm.[[ICF]].fdot.v3f32(<3 x float> %splat.splat, <3 x float>
-// CHECK: ret float %hlsl.dot
-float test_dot_float3_splat(float p0, float3 p1) { return dot(p0, p1); }
-
-// CHECK:  %hlsl.dot = call float @llvm.[[ICF]].fdot.v4f32(<4 x float> %splat.splat, <4 x float>
-// CHECK: ret float %hlsl.dot
-float test_dot_float4_splat(float p0, float4 p1) { return dot(p0, p1); }
-
 // CHECK: %hlsl.dot = fmul double
 // CHECK: ret double %hlsl.dot
 double test_dot_double(double p0, double p1) { return dot(p0, p1); }

@@ -26,7 +26,7 @@ func.func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
 
 // CMP32-LABEL: @genbool_var_1d_scalable(
 // CMP32-SAME: %[[ARG:.*]]: index)
-// CMP32: %[[T0:.*]] = llvm.intr.experimental.stepvector : vector<[11]xi32>
+// CMP32: %[[T0:.*]] = llvm.intr.stepvector : vector<[11]xi32>
 // CMP32: %[[T1:.*]] = arith.index_cast %[[ARG]] : index to i32
 // CMP32: %[[T2:.*]] = llvm.insertelement %[[T1]], %{{.*}}[%{{.*}} : i32] : vector<[11]xi32>
 // CMP32: %[[T3:.*]] = llvm.shufflevector %[[T2]], %{{.*}} [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[11]xi32>
@@ -35,7 +35,7 @@ func.func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
 
 // CMP64-LABEL: @genbool_var_1d_scalable(
 // CMP64-SAME: %[[ARG:.*]]: index)
-// CMP64: %[[T0:.*]] = llvm.intr.experimental.stepvector : vector<[11]xi64>
+// CMP64: %[[T0:.*]] = llvm.intr.stepvector : vector<[11]xi64>
 // CMP64: %[[T1:.*]] = arith.index_cast %[[ARG]] : index to i64
 // CMP64: %[[T2:.*]] = llvm.insertelement %[[T1]], %{{.*}}[%{{.*}} : i32] : vector<[11]xi64>
 // CMP64: %[[T3:.*]] = llvm.shufflevector %[[T2]], %{{.*}} [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[11]xi64>

@@ -165,6 +165,16 @@ std::string Fortran::lower::mangle::mangleName(
             return mangleName(procBinding.symbol(), scopeBlockIdMap,
                               keepExternalInScope, underscoring);
           },
+          [&](const Fortran::semantics::GenericDetails &generic)
+              -> std::string {
+            if (generic.specific())
+              return mangleName(*generic.specific(), scopeBlockIdMap,
+                                keepExternalInScope, underscoring);
+            else
+              llvm::report_fatal_error(
+                  "attempt to mangle a generic name but "
+                  "it has no specific procedure of the same name");
+          },
           [&](const Fortran::semantics::DerivedTypeDetails &) -> std::string {
             // Derived type mangling must use mangleName(DerivedTypeSpec) so
             // that kind type parameter values can be mangled.

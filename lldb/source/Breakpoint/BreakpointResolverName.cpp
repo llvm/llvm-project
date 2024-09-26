@@ -95,8 +95,8 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   if (success) {
     language = Language::GetLanguageTypeFromString(language_name);
     if (language == eLanguageTypeUnknown) {
-      error.SetErrorStringWithFormatv("BRN::CFSD: Unknown language: {0}.",
-                                      language_name);
+      error = Status::FromErrorStringWithFormatv(
+          "BRN::CFSD: Unknown language: {0}.", language_name);
       return nullptr;
     }
   }
@@ -105,7 +105,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
-    error.SetErrorString("BRN::CFSD: Missing offset entry.");
+    error = Status::FromErrorString("BRN::CFSD: Missing offset entry.");
     return nullptr;
   }
 
@@ -113,7 +113,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::SkipPrologue), skip_prologue);
   if (!success) {
-    error.SetErrorString("BRN::CFSD: Missing Skip prologue entry.");
+    error = Status::FromErrorString("BRN::CFSD: Missing Skip prologue entry.");
     return nullptr;
   }
 
@@ -129,26 +129,27 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::SymbolNameArray), names_array);
     if (!success) {
-      error.SetErrorString("BRN::CFSD: Missing symbol names entry.");
+      error = Status::FromErrorString("BRN::CFSD: Missing symbol names entry.");
       return nullptr;
     }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
     if (!success) {
-      error.SetErrorString("BRN::CFSD: Missing symbol names mask entry.");
+      error = Status::FromErrorString(
+          "BRN::CFSD: Missing symbol names mask entry.");
       return nullptr;
     }
 
     size_t num_elem = names_array->GetSize();
     if (num_elem != names_mask_array->GetSize()) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "BRN::CFSD: names and names mask arrays have different sizes.");
       return nullptr;
     }
 
     if (num_elem == 0) {
-      error.SetErrorString(
+      error = Status::FromErrorString(
           "BRN::CFSD: no name entry in a breakpoint by name breakpoint.");
       return nullptr;
     }
@@ -158,13 +159,15 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
       std::optional<llvm::StringRef> maybe_name =
           names_array->GetItemAtIndexAsString(i);
       if (!maybe_name) {
-        error.SetErrorString("BRN::CFSD: name entry is not a string.");
+        error =
+            Status::FromErrorString("BRN::CFSD: name entry is not a string.");
         return nullptr;
       }
       auto maybe_fnt = names_mask_array->GetItemAtIndexAsInteger<
           std::underlying_type<FunctionNameType>::type>(i);
       if (!maybe_fnt) {
-        error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
+        error = Status::FromErrorString(
+            "BRN::CFSD: name mask entry is not an integer.");
         return nullptr;
       }
       names.push_back(std::string(*maybe_name));

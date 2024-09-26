@@ -1,4 +1,5 @@
 # RUN: llc %s -o - -run-pass=machine-cse -mtriple=x86_64-- | FileCheck %s
+# RUN: llc %s -o - -passes=machine-cse -mtriple=x86_64-- | FileCheck %s
 #
 # This test examines machine-cse's behaviour when dealing with copy propagation,
 # the code for which is lifted from test/CodeGen/X86/machine-cse.ll. There are
