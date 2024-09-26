@@ -132,12 +132,19 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
   auto StackI = Stack.size();
   auto TypeI = Types.size();
   bool Error = false;
+  // Compare elements one by one from the stack top
   for (; StackI > 0 && TypeI > 0; StackI--, TypeI--) {
     if (match(Stack[StackI - 1], Types[TypeI - 1])) {
       Error = true;
       break;
     }
   }
+  // If not all elements of Types has been matched, that means we don't have
+  // enough elements on the stack.
+  //
+  // Also, if not all elements of the Stack has been matched and when
+  // 'ExactMatch' is true, that means we have superfluous elements remaining on
+  // the stack (e.g. at the end of a function).
   if (TypeI > 0 || (ExactMatch && StackI > 0))
     Error = true;
 
