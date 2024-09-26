@@ -1677,7 +1677,8 @@ namespace {
       // Lambdas have already been processed inside their eval contexts.
       if (SemaRef.RebuildingImmediateInvocation)
         return E;
-      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true,
+                                    /*InstantiatingLambda=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
 
       return inherited::TransformLambdaExpr(E);
@@ -2432,8 +2433,18 @@ QualType TemplateInstantiator::TransformFunctionProtoType(TypeLocBuilder &TLB,
                                  CXXRecordDecl *ThisContext,
                                  Qualifiers ThisTypeQuals,
                                  Fn TransformExceptionSpec) {
-  // We need a local instantiation scope for this function prototype.
-  LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
+  // If this is a lambda, the transformation MUST be done in the
+  // CurrentInstantiationScope since it introduces a mapping of
+  // the original to the newly created transformed parameters.
+  //
+  // In that case, TemplateInstantiator::TransformLambdaExpr will
+  // have already pushed a scope for this prototype, so don't create
+  // a second one.
+  LocalInstantiationScope *Current = getSema().CurrentInstantiationScope;
+  std::optional<LocalInstantiationScope> Scope;
+  if (!Current || !Current->isLambda())
+    Scope.emplace(SemaRef, /*CombineWithOuterScope=*/true);
+
   return inherited::TransformFunctionProtoType(
       TLB, TL, ThisContext, ThisTypeQuals, TransformExceptionSpec);
 }
