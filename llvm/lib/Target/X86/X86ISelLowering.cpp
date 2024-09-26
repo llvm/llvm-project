@@ -619,7 +619,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   auto setF16Action = [&] (MVT VT, LegalizeAction Action) {
     setOperationAction(ISD::FABS, VT, Action);
     setOperationAction(ISD::FNEG, VT, Action);
-    setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FREM, VT, Action);
     setOperationAction(ISD::FMA, VT, Action);
     setOperationAction(ISD::FMINNUM, VT, Action);
@@ -691,6 +690,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     // Half type will be promoted by default.
     setF16Action(MVT::f16, Promote);
+    // Expand instead of Promote to clear/flip/copy sign bit by bitcasting to
+    // i16.
+    setOperationAction(ISD::FABS, MVT::f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::f16, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     setOperationAction(ISD::FADD, MVT::f16, Promote);
     setOperationAction(ISD::FSUB, MVT::f16, Promote);
     setOperationAction(ISD::FMUL, MVT::f16, Promote);

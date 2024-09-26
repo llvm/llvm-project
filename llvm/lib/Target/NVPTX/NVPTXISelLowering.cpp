@@ -855,7 +855,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   for (const auto &Op : {ISD::FABS}) {
-    setOperationAction(Op, MVT::f16, Promote);
+    // Expand instead of Promote to clear sign bit by bitcasting to i16
+    setOperationAction(Op, MVT::f16, Expand);
     setOperationAction(Op, MVT::f32, Legal);
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
