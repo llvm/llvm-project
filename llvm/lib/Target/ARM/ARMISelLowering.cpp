@@ -2380,6 +2380,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MachineFunction::CallSiteInfo CSInfo;
   bool isStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   bool isThisReturn = false;
@@ -2492,6 +2493,45 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
+  // If we are doing a tail-call, any byval arguments will be written to stack
+  // space which was used for incoming arguments. If any the values being used
+  // are incoming byval arguments to this function, then they might be
+  // overwritten by the stores of the outgoing arguments. To avoid this, we
+  // need to make a temporary copy of them in local stack space, then copy back
+  // to the argument area.
+  // TODO This could be optimised to skip byvals which are already being copied
+  // from local stack space, or which are copied from the incoming stack at the
+  // exact same location.
+  DenseMap<unsigned, SDValue> ByValTemporaries;
+  SDValue ByValTempChain;
+  if (isTailCall) {
+    for (unsigned ArgIdx = 0, e = OutVals.size(); ArgIdx != e; ++ArgIdx) {
+      SDValue Arg = OutVals[ArgIdx];
+      ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
+
+      if (Flags.isByVal()) {
+        int FrameIdx = MFI.CreateStackObject(
+            Flags.getByValSize(), Flags.getNonZeroByValAlign(), false);
+        SDValue Dst =
+            DAG.getFrameIndex(FrameIdx, getPointerTy(DAG.getDataLayout()));
+
+        SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
+        SDValue AlignNode =
+            DAG.getConstant(Flags.getNonZeroByValAlign().value(), dl, MVT::i32);
+
+        SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
+        SDValue Ops[] = { Chain, Dst, Arg, SizeNode, AlignNode};
+        MemOpChains.push_back(DAG.getNode(ARMISD::COPY_STRUCT_BYVAL, dl, VTs,
+                                          Ops));
+        ByValTemporaries[ArgIdx] = Dst;
+      }
+    }
+    if (!MemOpChains.empty()) {
+      ByValTempChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains);
+      MemOpChains.clear();
+    }
+  }
+
   // During a tail call, stores to the argument area must happen after all of
   // the function's incoming arguments have been loaded because they may alias.
   // This is done by folding in a TokenFactor from LowerFormalArguments, but
@@ -2529,6 +2569,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (isTailCall && VA.isMemLoc() && !AfterFormalArgLoads) {
       Chain = DAG.getStackArgumentTokenFactor(Chain);
+      if (ByValTempChain)
+        Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain,
+                            ByValTempChain);
       AfterFormalArgLoads = true;
     }
 
@@ -2600,6 +2643,12 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       unsigned ByValArgsCount = CCInfo.getInRegsParamsCount();
       unsigned CurByValIdx = CCInfo.getInRegsParamsProcessed();
 
+      SDValue ByValSrc;
+      if (ByValTemporaries.contains(realArgIdx))
+        ByValSrc = ByValTemporaries[realArgIdx];
+      else
+        ByValSrc = Arg;
+
       if (CurByValIdx < ByValArgsCount) {
 
         unsigned RegBegin, RegEnd;
@@ -2610,7 +2659,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned int i, j;
         for (i = 0, j = RegBegin; j < RegEnd; i++, j++) {
           SDValue Const = DAG.getConstant(4*i, dl, MVT::i32);
-          SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, Const);
+          SDValue AddArg = DAG.getNode(ISD::ADD, dl, PtrVT, ByValSrc, Const);
           SDValue Load =
               DAG.getLoad(PtrVT, dl, Chain, AddArg, MachinePointerInfo(),
                           DAG.InferPtrAlign(AddArg));
@@ -2632,7 +2681,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         std::tie(Dst, DstInfo) =
             computeAddrForCallArg(dl, DAG, VA, StackPtr, isTailCall, SPDiff);
         SDValue SrcOffset = DAG.getIntPtrConstant(4*offset, dl);
-        SDValue Src = DAG.getNode(ISD::ADD, dl, PtrVT, Arg, SrcOffset);
+        SDValue Src = DAG.getNode(ISD::ADD, dl, PtrVT, ByValSrc, SrcOffset);
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize() - 4*offset, dl,
                                            MVT::i32);
         SDValue AlignNode =
