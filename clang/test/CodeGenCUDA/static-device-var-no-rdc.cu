@@ -51,7 +51,7 @@ static __device__ int x5;
 
 // Check a static constant variable referenced by host is externalized.
 // DEV-DAG: @_ZL1y ={{.*}} addrspace(4) externally_initialized constant i32 0
-// HOST-DAG: @_ZL1y = internal constant i32 undef
+// HOST-DAG: @_ZL1y = internal global i32 undef
 // HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y\00"
 
 static __constant__ int y;

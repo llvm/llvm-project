@@ -45,6 +45,6 @@ template class A<int>;
 
 //HOST-DAG: @_ZN1AIiE8h_memberE = weak_odr global i32 0, comdat, align 4
 //HOST-DAG: @_ZN1AIiE8d_memberE = internal global i32 undef, comdat, align 4
-//HOST-DAG: @_ZN1AIiE8c_memberE = internal constant i32 undef, comdat, align 4
+//HOST-DAG: @_ZN1AIiE8c_memberE = internal global i32 undef, comdat, align 4
 //HOST-DAG: @_ZN1AIiE8m_memberE = internal externally_initialized global ptr null
 //HOST-DAG: @_ZN1AIiE12const_memberE = weak_odr constant i32 0, comdat, align 4

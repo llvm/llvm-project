@@ -69,9 +69,9 @@
 // WIN-DAG: @"?device_var@@3HA" = internal global i32
 __device__ int device_var;
 
-// NORDC-DAG: @constant_var = internal constant i32
-// RDC-DAG: @constant_var = constant i32
-// WIN-DAG: @"?constant_var@@3HA" = internal constant i32
+// NORDC-DAG: @constant_var = internal global i32
+// RDC-DAG: @constant_var = global i32
+// WIN-DAG: @"?constant_var@@3HA" = internal global i32
 __constant__ int constant_var;
 
 // NORDC-DAG: @shared_var = internal global i32
@@ -105,7 +105,7 @@ extern __device__ int ext_device_var_def;
 __device__ int ext_device_var_def = 1;
 // NORDC-DAG: @ext_device_var_def = internal global i32 undef,
 // RDC-DAG: @ext_device_var_def = global i32 undef,
-// WIN-DAG: @"?ext_constant_var_def@@3HA" = internal constant i32 undef
+// WIN-DAG: @"?ext_constant_var_def@@3HA" = internal global i32 undef
 __constant__ int ext_constant_var_def = 2;
 
 #if __cplusplus > 201402L
