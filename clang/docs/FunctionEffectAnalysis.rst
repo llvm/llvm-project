@@ -55,8 +55,8 @@ of the ``noexcept`` specifier, and the attributes have other similarities to ``n
 placement on a C++ type alias.
 
 Like ``noexcept``, ``nonblocking`` and ``nonallocating`` have an optional argument, a compile-time
-constant boolean expression. By default, the argument is true, so ``[[clang::nonblocking(true)]]``
-is equivalent to ``[[clang::nonblocking]]``, and declares the function type as never locking.
+constant boolean expression. By default, the argument is ``true``, so ``[[clang::nonblocking]]``
+is equivalent to ``[[clang::nonblocking(true)]]``, and declares the function type as never locking.
 
 
 Attribute semantics
@@ -82,8 +82,8 @@ function-like declarations. When applied to a declaration with a body, the compi
 function, as described in the section "Analysis and warnings", below. Functions without an explicit
 performance constraint are not verified.
 
-``nonblocking(false)`` and ``nonallocating(false)`` are synonyms for the attributes ``blocking`` and
-``allocating``. They can be used on a function-like declaration to explicitly disable any potential
+``blocking`` and ``allocating`` are synonyms for ``nonblocking(false)`` and
+``nonallocating(false)``, respectively. They can be used on a function-like declaration to explicitly disable any potential
 inference of ``nonblocking`` or ``nonallocating`` during verification. (Inference is described later
 in this document). ``nonblocking(false)`` and ``nonallocating(false)`` are legal, but superfluous 
 when applied to a function *type*. ``float (int) [[nonblocking(false)]]`` and ``float (int)`` are
@@ -144,7 +144,7 @@ Virtual methods
 ---------------
 
 In C++, when a base class's virtual method has a performance constraint, overriding methods in
-subclasses inherit the attribute.
+subclasses inherit the constraint.
 
 .. code-block:: c++
 
@@ -259,7 +259,7 @@ following rules. Such functions:
   b. The callee is defined in the same translation unit as the caller, does not have the ``false``
      form of the required attribute, and can be verified to be have the same attribute or stronger,
      according to these same rules.
-  c. The callee is a built-in function (other than builtins which are known to block or allocate).
+  c. The callee is a built-in function that is known not to block or allocated.
   d. The callee is declared ``noreturn`` and, if compiling C++, the callee is also declared
      ``noexcept``. This exception excludes functions such as ``abort()`` and ``std::terminate()``
      from the analysis.
