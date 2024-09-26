@@ -92,12 +92,12 @@ public:
   SetVector<MachineInstr *> SChain;
   // Number of SGPR to VGPR copies that are used to put the SALU computation
   // results back to VALU.
-  unsigned NumSVCopies;
+  unsigned NumSVCopies = 0;
 
-  unsigned Score;
+  unsigned Score = 0;
   // Actual count of v_readfirstlane_b32
   // which need to be inserted to keep SChain SALU
-  unsigned NumReadfirstlanes;
+  unsigned NumReadfirstlanes = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
@@ -109,7 +109,7 @@ public:
   SetVector<unsigned> Siblings;
   V2SCopyInfo() : Copy(nullptr), ID(0){};
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
-      : Copy(C), NumSVCopies(0), NumReadfirstlanes(Width / 32), ID(Id){};
+      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()

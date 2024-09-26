@@ -644,6 +644,9 @@ llvm.func @vararg_func(%arg0: i32, ...) {
   %list2 = llvm.alloca %1 x !llvm.struct<"struct.va_list_opaque", (ptr)> : (i32) -> !llvm.ptr
   llvm.intr.vacopy %list to %list2 : !llvm.ptr, !llvm.ptr
 
+  // CHECK: %[[RET:.+]] = llvm.va_arg %[[LIST2]] : (!llvm.ptr) -> i32
+  %ret = llvm.va_arg %list2 : (!llvm.ptr) -> i32
+
   // CHECK: llvm.intr.vaend %[[LIST]] : !llvm.ptr{{$}}
   // CHECK: llvm.intr.vaend %[[LIST2]] : !llvm.ptr{{$}}
   llvm.intr.vaend %list : !llvm.ptr

@@ -110,6 +110,10 @@ class Builder:
         if not cc:
             return []
 
+        exe_ext = ""
+        if lldbplatformutil.getHostPlatform() == "windows":
+            exe_ext = ".exe"
+
         cc = cc.strip()
         cc_path = pathlib.Path(cc)
 
@@ -149,9 +153,9 @@ class Builder:
         cc_dir = cc_path.parent
 
         def getToolchainUtil(util_name):
-            return cc_dir / (cc_prefix + util_name + cc_ext)
+            return os.path.join(configuration.llvm_tools_dir, util_name + exe_ext)
 
-        cxx = getToolchainUtil(cxx_type)
+        cxx = cc_dir / (cc_prefix + cxx_type + cc_ext)
 
         util_names = {
             "OBJCOPY": "objcopy",
@@ -160,6 +164,10 @@ class Builder:
             "DWP": "dwp",
         }
         utils = []
+
+        # Required by API TestBSDArchives.py tests.
+        if not os.getenv("LLVM_AR"):
+            utils.extend(["LLVM_AR=%s" % getToolchainUtil("llvm-ar")])
 
         if not lldbplatformutil.platformIsDarwin():
             if cc_type in ["clang", "cc", "gcc"]:

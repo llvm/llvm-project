@@ -137,7 +137,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
 
 void elf::printHelp() {
   ELFOptTable().printHelp(
-      lld::outs(), (config->progName + " [options] file...").str().c_str(),
+      lld::outs(), (ctx.arg.progName + " [options] file...").str().c_str(),
       "lld", false /*ShowHidden*/, true /*ShowAllAliases*/);
   lld::outs() << "\n";
 
@@ -145,7 +145,7 @@ void elf::printHelp() {
   // targets:.* elf/ in a message for the --help option. If it doesn't match,
   // the scripts assume that the linker doesn't support very basic features
   // such as shared libraries. Therefore, we need to print out at least "elf".
-  lld::outs() << config->progName << ": supported targets: elf\n";
+  lld::outs() << ctx.arg.progName << ": supported targets: elf\n";
 }
 
 static std::string rewritePath(StringRef s) {
@@ -214,7 +214,7 @@ static std::optional<std::string> findFile(StringRef path1,
                                            const Twine &path2) {
   SmallString<128> s;
   if (path1.starts_with("="))
-    path::append(s, config->sysroot, path1.substr(1), path2);
+    path::append(s, ctx.arg.sysroot, path1.substr(1), path2);
   else
     path::append(s, path1, path2);
 
@@ -224,7 +224,7 @@ static std::optional<std::string> findFile(StringRef path1,
 }
 
 std::optional<std::string> elf::findFromSearchPaths(StringRef path) {
-  for (StringRef dir : config->searchPaths)
+  for (StringRef dir : ctx.arg.searchPaths)
     if (std::optional<std::string> s = findFile(dir, path))
       return s;
   return std::nullopt;
@@ -233,8 +233,8 @@ std::optional<std::string> elf::findFromSearchPaths(StringRef path) {
 // This is for -l<basename>. We'll look for lib<basename>.so or lib<basename>.a from
 // search paths.
 std::optional<std::string> elf::searchLibraryBaseName(StringRef name) {
-  for (StringRef dir : config->searchPaths) {
-    if (!config->isStatic)
+  for (StringRef dir : ctx.arg.searchPaths) {
+    if (!ctx.arg.isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))

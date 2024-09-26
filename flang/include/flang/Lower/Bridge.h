@@ -14,8 +14,6 @@
 #define FORTRAN_LOWER_BRIDGE_H
 
 #include "flang/Common/Fortran.h"
-#include "flang/Frontend/CodeGenOptions.h"
-#include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Lower/LoweringOptions.h"
@@ -67,13 +65,11 @@ public:
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
          const Fortran::common::LanguageFeatureControl &languageFeatures,
-         const llvm::TargetMachine &targetMachine,
-         const Fortran::frontend::TargetOptions &targetOptions,
-         const Fortran::frontend::CodeGenOptions &codeGenOptions) {
+         const llvm::TargetMachine &targetMachine, llvm::StringRef tuneCPU) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
                           loweringOptions, envDefaults, languageFeatures,
-                          targetMachine, targetOptions, codeGenOptions);
+                          targetMachine, tuneCPU);
   }
 
   //===--------------------------------------------------------------------===//
@@ -152,9 +148,7 @@ private:
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
       const Fortran::common::LanguageFeatureControl &languageFeatures,
-      const llvm::TargetMachine &targetMachine,
-      const Fortran::frontend::TargetOptions &targetOptions,
-      const Fortran::frontend::CodeGenOptions &codeGenOptions);
+      const llvm::TargetMachine &targetMachine, const llvm::StringRef tuneCPU);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 

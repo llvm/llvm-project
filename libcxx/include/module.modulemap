@@ -1858,7 +1858,9 @@ module std_private_type_traits_common_reference                          [system
 }
 module std_private_type_traits_common_type                               [system] {
   header "__type_traits/common_type.h"
+  export std_private_type_traits_type_identity
   export std_private_utility_declval
+  export std_private_utility_empty
 }
 module std_private_type_traits_conditional                               [system] { header "__type_traits/conditional.h" }
 module std_private_type_traits_conjunction                               [system] { header "__type_traits/conjunction.h" }

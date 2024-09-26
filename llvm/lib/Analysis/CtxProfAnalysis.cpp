@@ -254,6 +254,15 @@ InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   return nullptr;
 }
 
+InstrProfIncrementInstStep *
+CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
+  Instruction *Prev = &SI;
+  while ((Prev = Prev->getPrevNode()))
+    if (auto *Step = dyn_cast<InstrProfIncrementInstStep>(Prev))
+      return Step;
+  return nullptr;
+}
+
 template <class ProfilesTy, class ProfTy>
 static void preorderVisit(ProfilesTy &Profiles,
                           function_ref<void(ProfTy &)> Visitor,
@@ -299,4 +308,26 @@ const CtxProfFlatProfile PGOContextualProfile::flatten() const {
           It->second[I] += Ctx.counters()[I];
       });
   return Flat;
+}
+
+void CtxProfAnalysis::collectIndirectCallPromotionList(
+    CallBase &IC, Result &Profile,
+    SetVector<std::pair<CallBase *, Function *>> &Candidates) {
+  const auto *Instr = CtxProfAnalysis::getCallsiteInstrumentation(IC);
+  if (!Instr)
+    return;
+  Module &M = *IC.getParent()->getModule();
+  const uint32_t CallID = Instr->getIndex()->getZExtValue();
+  Profile.visit(
+      [&](const PGOCtxProfContext &Ctx) {
+        const auto &Targets = Ctx.callsites().find(CallID);
+        if (Targets == Ctx.callsites().end())
+          return;
+        for (const auto &[Guid, _] : Targets->second)
+          if (auto Name = Profile.getFunctionName(Guid); !Name.empty())
+            if (auto *Target = M.getFunction(Name))
+              if (Target->hasFnAttribute(Attribute::AlwaysInline))
+                Candidates.insert({&IC, Target});
+      },
+      IC.getCaller());
 }

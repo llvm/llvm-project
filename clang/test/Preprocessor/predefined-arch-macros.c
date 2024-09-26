@@ -4137,7 +4137,8 @@
 // CHECK_SPARC: #define __sparc__ 1
 // CHECK_SPARC-NOT: #define __sparcv9 1
 // CHECK_SPARC-NOT: #define __sparcv9__ 1
-// CHECK_SPARC: #define __sparcv8 1
+// CHECK_SPARC: #define __sparc_v9__ 1
+// CHECK_SPARC-NOT: #define __sparcv8 1
 // CHECK_SPARC-NOT: #define __sparcv9 1
 // CHECK_SPARC-NOT: #define __sparcv9__ 1
 

@@ -130,22 +130,6 @@ llvm::StringRef fir::getIdent(mlir::ModuleOp mod) {
   return {};
 }
 
-void fir::setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine) {
-  if (cmdLine.empty())
-    return;
-
-  mlir::MLIRContext *ctx = mod.getContext();
-  mod->setAttr(mlir::LLVM::LLVMDialect::getCommandlineAttrName(),
-               mlir::StringAttr::get(ctx, cmdLine));
-}
-
-llvm::StringRef fir::getCommandline(mlir::ModuleOp mod) {
-  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(
-          mlir::LLVM::LLVMDialect::getCommandlineAttrName()))
-    return attr;
-  return {};
-}
-
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")

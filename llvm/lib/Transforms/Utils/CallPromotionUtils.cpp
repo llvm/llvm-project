@@ -623,34 +623,37 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     // All the ctx-es belonging to a function must have the same size counters.
     Ctx.resizeCounters(NewCountersSize);
 
-    // Maybe in this context, the indirect callsite wasn't observed at all
+    // Maybe in this context, the indirect callsite wasn't observed at all. That
+    // would make both direct and indirect BBs cold - which is what we already
+    // have from resising the counters.
     if (!Ctx.hasCallsite(CSIndex))
       return;
     auto &CSData = Ctx.callsite(CSIndex);
-    auto It = CSData.find(CalleeGUID);
 
-    // Maybe we did notice the indirect callsite, but to other targets.
-    if (It == CSData.end())
-      return;
-
-    assert(CalleeGUID == It->second.guid());
-
-    uint32_t DirectCount = It->second.getEntrycount();
-    uint32_t TotalCount = 0;
+    uint64_t TotalCount = 0;
     for (const auto &[_, V] : CSData)
       TotalCount += V.getEntrycount();
+    uint64_t DirectCount = 0;
+    // If we called the direct target, update the DirectCount. If we didn't, we
+    // still want to update the indirect BB (to which the TotalCount goes, in
+    // that case).
+    if (auto It = CSData.find(CalleeGUID); It != CSData.end()) {
+      assert(CalleeGUID == It->second.guid());
+      DirectCount = It->second.getEntrycount();
+      // This direct target needs to be moved to this caller under the
+      // newly-allocated callsite index.
+      assert(Ctx.callsites().count(NewCSID) == 0);
+      Ctx.ingestContext(NewCSID, std::move(It->second));
+      CSData.erase(CalleeGUID);
+    }
+
     assert(TotalCount >= DirectCount);
-    uint32_t IndirectCount = TotalCount - DirectCount;
+    uint64_t IndirectCount = TotalCount - DirectCount;
     // The ICP's effect is as-if the direct BB would have been taken DirectCount
     // times, and the indirect BB, IndirectCount times
     Ctx.counters()[DirectID] = DirectCount;
     Ctx.counters()[IndirectID] = IndirectCount;
 
-    // This particular indirect target needs to be moved to this caller under
-    // the newly-allocated callsite index.
-    assert(Ctx.callsites().count(NewCSID) == 0);
-    Ctx.ingestContext(NewCSID, std::move(It->second));
-    CSData.erase(CalleeGUID);
   };
   CtxProf.update(ProfileUpdater, &Caller);
   return &DirectCall;

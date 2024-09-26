@@ -43,7 +43,7 @@ public:
     return llvm::errc::operation_not_permitted;
   }
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-  openFileForRead(const llvm::Twine &Path, bool IsText = true) override {
+  openFileForRead(const llvm::Twine &Path) override {
     return llvm::errc::operation_not_permitted;
   }
   llvm::vfs::directory_iterator dir_begin(const llvm::Twine &Dir,

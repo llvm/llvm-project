@@ -37,6 +37,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -113,9 +114,8 @@ static std::string getOutputPath(StringRef path, bool isDll, bool isDriver) {
 
 // Returns true if S matches /crtend.?\.o$/.
 static bool isCrtend(StringRef s) {
-  if (!s.ends_with(".o"))
+  if (!s.consume_back(".o"))
     return false;
-  s = s.drop_back(2);
   if (s.ends_with("crtend"))
     return true;
   return !s.empty() && s.drop_back().ends_with("crtend");
@@ -703,6 +703,24 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
     ctx.config.gcroot.push_back(b);
   }
   return b;
+}
+
+void LinkerDriver::addUndefinedGlob(StringRef arg) {
+  Expected<GlobPattern> pat = GlobPattern::create(arg);
+  if (!pat) {
+    error("/includeglob: " + toString(pat.takeError()));
+    return;
+  }
+
+  SmallVector<Symbol *, 0> syms;
+  ctx.symtab.forEachSymbol([&syms, &pat](Symbol *sym) {
+    if (pat->match(sym->getName())) {
+      syms.push_back(sym);
+    }
+  });
+
+  for (Symbol *sym : syms)
+    addUndefined(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -2524,6 +2542,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     } while (run());
   }
+
+  // Handle /includeglob
+  for (StringRef pat : args::getStrings(args, OPT_incl_glob))
+    addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);

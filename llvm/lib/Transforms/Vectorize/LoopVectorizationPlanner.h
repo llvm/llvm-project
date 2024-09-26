@@ -156,6 +156,15 @@ public:
                               DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    if (FMFs)
+      return tryInsertInstruction(
+          new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
+    return createInstruction(Opcode, Operands, DL, Name);
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -164,6 +173,7 @@ public:
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
+
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
@@ -210,6 +220,11 @@ public:
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
+  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL,
+                              const Twine &Name = "") {
+    return createInstruction(VPInstruction::PtrAdd, {Ptr, Offset}, DL, Name);
+  }
+
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPValue *Start,
                                      VPCanonicalIVPHIRecipe *CanonicalIV,
@@ -221,6 +236,11 @@ public:
   VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                        Type *ResultTy) {
     return tryInsertInstruction(new VPScalarCastRecipe(Opcode, Op, ResultTy));
+  }
+
+  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                                     Type *ResultTy) {
+    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
   }
 
   VPScalarIVStepsRecipe *

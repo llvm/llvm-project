@@ -754,7 +754,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       const Expr *Assumption = cast<CXXAssumeAttr>(A)->getAssumption();
       if (getLangOpts().CXXAssumptions && Builder.GetInsertBlock() &&
           !Assumption->HasSideEffects(getContext())) {
-        llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
+        llvm::Value *AssumptionVal = EmitCheckedArgForAssume(Assumption);
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
@@ -815,6 +815,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // C99 6.8.4.1: The first substatement is executed if the expression compares
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
+  ApplyDebugLocation DL(*this, S.getCond());
 
   if (S.getInit())
     EmitStmt(S.getInit());
