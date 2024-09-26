@@ -253,10 +253,12 @@ int llvm_test_dibuilder(void) {
   assert(AddDbgRecordSecond != NULL);
   LLVMDbgRecordRef AddDbgRecordLast = LLVMGetLastDbgRecord(Add);
   assert(AddDbgRecordLast != NULL);
+  (void)AddDbgRecordLast;
   assert(AddDbgRecordSecond == AddDbgRecordLast);
   LLVMDbgRecordRef AddDbgRecordOverTheRange =
       LLVMGetNextDbgRecord(AddDbgRecordSecond);
   assert(AddDbgRecordOverTheRange == NULL);
+  (void)AddDbgRecordOverTheRange;
   LLVMDbgRecordRef AddDbgRecordFirstPrev =
       LLVMGetPreviousDbgRecord(AddDbgRecordSecond);
   assert(AddDbgRecordFirstPrev != NULL);
@@ -264,6 +266,7 @@ int llvm_test_dibuilder(void) {
   LLVMDbgRecordRef AddDbgRecordUnderTheRange =
       LLVMGetPreviousDbgRecord(AddDbgRecordFirstPrev);
   assert(AddDbgRecordUnderTheRange == NULL);
+  (void)AddDbgRecordUnderTheRange;
 
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);

@@ -250,10 +250,6 @@ public:
   /// True if this is an instance of PointerType.
   bool isPointerTy() const { return getTypeID() == PointerTyID; }
 
-  /// True if this is an instance of an opaque PointerType.
-  LLVM_DEPRECATED("Use isPointerTy() instead", "isPointerTy")
-  bool isOpaquePointerTy() const { return isPointerTy(); };
-
   /// Return true if this is a pointer type or a vector of pointer types.
   bool isPtrOrPtrVectorTy() const { return getScalarType()->isPointerTy(); }
 
@@ -405,14 +401,6 @@ public:
   }
 
   inline StringRef getTargetExtName() const;
-
-  /// Only use this method in code that is not reachable with opaque pointers,
-  /// or part of deprecated methods that will be removed as part of the opaque
-  /// pointers transition.
-  [[deprecated("Pointers no longer have element types")]]
-  Type *getNonOpaquePointerElementType() const {
-    llvm_unreachable("Pointers no longer have element types");
-  }
 
   /// Given vector type, change the element type,
   /// whilst keeping the old number of elements.

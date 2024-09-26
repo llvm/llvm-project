@@ -50,6 +50,26 @@ define void @foo(i8 %v0) {
 #ifndef NDEBUG
   EXPECT_DEATH(sandboxir::InstrInterval(I1, I0), ".*before.*");
 #endif // NDEBUG
+  // Check InstrInterval(ArrayRef), from(), to().
+  {
+    sandboxir::InstrInterval Interval(
+        SmallVector<sandboxir::Instruction *>({I0, Ret}));
+    EXPECT_EQ(Interval.top(), I0);
+    EXPECT_EQ(Interval.bottom(), Ret);
+  }
+  {
+    sandboxir::InstrInterval Interval(
+        SmallVector<sandboxir::Instruction *>({Ret, I0}));
+    EXPECT_EQ(Interval.top(), I0);
+    EXPECT_EQ(Interval.bottom(), Ret);
+  }
+  {
+    sandboxir::InstrInterval Interval(
+        SmallVector<sandboxir::Instruction *>({I0, I0}));
+    EXPECT_EQ(Interval.top(), I0);
+    EXPECT_EQ(Interval.bottom(), I0);
+  }
+
   // Check empty().
   EXPECT_FALSE(Interval.empty());
   sandboxir::InstrInterval Empty;

@@ -5,13 +5,13 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-LABEL: @widen_extractvalue(
 ; CHECK:        [[EXTRACT0:%.*]] = extractvalue { i64, i64 } [[SV:%.*]], 0
+; CHECK-NEXT:   [[EXTRACT1:%.*]] = extractvalue { i64, i64 } [[SV]], 1
 ; CHECK-NEXT:   [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[EXTRACT0]], i64 0
 ; CHECK-NEXT:   [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:   [[EXTRACT1:%.*]] = extractvalue { i64, i64 } [[SV]], 1
 ; CHECK-NEXT:   [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[EXTRACT1]], i64 0
 ; CHECK-NEXT:   [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK: vector.body:
 ; CHECK:        [[ADD:%.*]] = add <vscale x 2 x i64> [[DOTSPLAT]], [[DOTSPLAT2]]
+; CHECK: vector.body:
 entry:
   br label %loop.body
 

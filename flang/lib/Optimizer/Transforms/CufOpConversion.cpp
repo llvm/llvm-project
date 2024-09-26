@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Transforms/CufOpConversion.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -473,9 +474,7 @@ public:
                  !mlir::isa<fir::BaseBoxType>(dstTy);
         });
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect>();
-    patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
-    patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
-                    CufFreeOpConversion, CufDataTransferOpConversion>(ctx);
+    cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),
@@ -485,3 +484,12 @@ public:
   }
 };
 } // namespace
+
+void cuf::populateCUFToFIRConversionPatterns(
+    fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
+    mlir::RewritePatternSet &patterns) {
+  patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
+  patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
+                  CufFreeOpConversion, CufDataTransferOpConversion>(
+      patterns.getContext());
+}

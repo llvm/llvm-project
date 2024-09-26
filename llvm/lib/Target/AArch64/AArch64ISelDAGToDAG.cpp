@@ -5640,6 +5640,34 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::SQDMULH_VG4_4Z4Z_S, AArch64::SQDMULH_VG4_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
+    case Intrinsic::aarch64_sme_fp8_scale_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_2ZZ_H, AArch64::FSCALE_2ZZ_S,
+               AArch64::FSCALE_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_4ZZ_H, AArch64::FSCALE_4ZZ_S,
+               AArch64::FSCALE_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_2Z2Z_H, AArch64::FSCALE_2Z2Z_S,
+               AArch64::FSCALE_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_4Z4Z_H, AArch64::FSCALE_4Z4Z_S,
+               AArch64::FSCALE_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
     case Intrinsic::aarch64_sve_whilege_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int1>(
               Node->getValueType(0),
