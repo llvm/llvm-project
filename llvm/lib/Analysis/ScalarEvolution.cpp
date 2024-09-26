@@ -10154,7 +10154,7 @@ SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
       return SE.getCouldNotCompute();
     // Try to add a predicate ensuring B is a multiple of 1 << Mult2.
     const SCEV *URem =
-        SE.getURemExpr(B, SE.getConstant(B->getType(), 1 << Mult2));
+        SE.getURemExpr(B, SE.getConstant(APInt::getOneBitSet(BW, Mult2)));
     const SCEV *Zero = SE.getZero(B->getType());
     assert(!SE.isKnownPredicate(CmpInst::ICMP_EQ, URem, Zero) &&
            "No remainder for 1 << Mult2 but missed by getTrailingBits?");
