@@ -146,17 +146,17 @@ v1f128 pass_v1f128(v1f128 arg) { return arg; }
 
 struct agg_v1i8 { v1i8 a; };
 struct agg_v1i8 pass_agg_v1i8(struct agg_v1i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, i8 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, i8 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, <1 x i8> %{{.*}})
 
 struct agg_v2i8 { v2i8 a; };
 struct agg_v2i8 pass_agg_v2i8(struct agg_v2i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, i16 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, i16 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, <2 x i8> %{{.*}})
 
 struct agg_v4i8 { v4i8 a; };
 struct agg_v4i8 pass_agg_v4i8(struct agg_v4i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, i32 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, <4 x i8> %{{.*}})
 
 struct agg_v8i8 { v8i8 a; };
@@ -189,8 +189,8 @@ struct agg_novector2 pass_agg_novector2(struct agg_novector2 arg) { return arg; 
 
 struct agg_novector3 { v4i8 a; int : 0; };
 struct agg_novector3 pass_agg_novector3(struct agg_novector3 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 %{{.*}})
-// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 noext %{{.*}})
+// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_novector4 { v4i8 a __attribute__((aligned (8))); };
 struct agg_novector4 pass_agg_novector4(struct agg_novector4 arg) { return arg; }

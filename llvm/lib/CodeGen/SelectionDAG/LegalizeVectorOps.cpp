@@ -1806,7 +1806,7 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
 
   // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
   if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) ||
-      !(TLI.isOperationLegalOrCustom(ISD::FSUB, VT) || VT.isScalableVector()))
+      !(TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) || VT.isScalableVector()))
     return SDValue();
 
   SDLoc DL(Node);

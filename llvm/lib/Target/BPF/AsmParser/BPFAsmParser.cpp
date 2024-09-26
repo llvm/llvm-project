@@ -34,7 +34,7 @@ class BPFAsmParser : public MCTargetAsmParser {
 
   bool PreMatchCheck(OperandVector &Operands);
 
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -43,7 +43,7 @@ class BPFAsmParser : public MCTargetAsmParser {
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
 
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   // "=" is used as assignment operator for assembly statment, so can't be used
@@ -304,7 +304,7 @@ bool BPFAsmParser::PreMatchCheck(OperandVector &Operands) {
   return false;
 }
 
-bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool BPFAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
@@ -483,9 +483,8 @@ ParseStatus BPFAsmParser::parseImmediate(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// ParseInstruction - Parse an BPF instruction which is in BPF verifier
-/// format.
-bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+/// Parse an BPF instruction which is in BPF verifier format.
+bool BPFAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   // The first operand could be either register or actually an operator.
   unsigned RegNo = MatchRegisterName(Name);
