@@ -58,18 +58,27 @@ struct ProfiledCallGraphNode {
   edges Edges;
 };
 
-struct PrehashedFunctionId {
-
+class PrehashedFunctionId {
+public:
   PrehashedFunctionId() = default;
 
-  /* implicit */ PrehashedFunctionId(FunctionId FId)
+  PrehashedFunctionId(FunctionId FId)
       : Id(FId), Hash(hash_value(Id)) {}
 
+  uint64_t GetHash() const {
+    return Hash;
+  }
+
+  const FunctionId& GetId() const {
+    return Id;
+  }
+
+private:
   FunctionId Id;
   uint64_t Hash;
 };
 
-inline uint64_t hash_value(const PrehashedFunctionId &Obj) { return Obj.Hash; }
+inline uint64_t hash_value(const PrehashedFunctionId &Obj) { return Obj.GetHash(); }
 
 class ProfiledCallGraph {
 public:
@@ -152,20 +161,20 @@ public:
   }
 
 private:
-  void addProfiledFunction(PrehashedFunctionId Name) {
+  void addProfiledFunction(const PrehashedFunctionId& Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       // Store the pointer of the node because the map can be rehashed.
       auto &Node = ProfiledCallGraphNodeList.emplace_back(
-          ProfiledCallGraphNode(Name.Id));
+          ProfiledCallGraphNode(Name.GetId()));
       ProfiledFunctions[Name] = &Node;
       Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
     }
   }
 
-  void addProfiledCall(PrehashedFunctionId CallerName,
-                       PrehashedFunctionId CalleeName, uint64_t Weight = 0) {
+  void addProfiledCall(const PrehashedFunctionId& CallerName,
+                       const PrehashedFunctionId& CalleeName, uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
