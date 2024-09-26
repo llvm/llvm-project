@@ -10357,8 +10357,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
               unsigned SrcBWSz = DL->getTypeSizeInBits(UserScalarTy);
               unsigned VecOpcode;
-              auto *UserVecTy =
-                  getWidenedType(UserScalarTy, E->getVectorFactor());
+              auto *UserVecTy = getWidenedType(UserScalarTy, E->Scalars.size());
               if (BWSz > SrcBWSz)
                 VecOpcode = Instruction::Trunc;
               else
