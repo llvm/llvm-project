@@ -88,7 +88,8 @@ int main(int argc, const char **argv) {
   llvm::InitLLVM x(argc, argv);
   llvm::SmallVector<const char *, 256> args(argv, argv + argc);
 
-  clang::driver::ParsedClangName targetandMode("flang", "--driver-mode=flang");
+  clang::driver::ParsedClangName targetandMode =
+      clang::driver::ToolChain::getTargetAndModeFromProgramName(argv[0]);
   std::string driverPath = getExecutablePath(args[0]);
 
   llvm::BumpPtrAllocator a;

@@ -36,3 +36,7 @@ if(FLANG_PLUGIN_SUPPORT)
 endif()
 
 install(TARGETS flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+# Keep "flang-new" as a symlink for backwards compatiblity. Remove once "flang"
+# is a widely adopted name.
+add_flang_symlink(flang-new flang)
