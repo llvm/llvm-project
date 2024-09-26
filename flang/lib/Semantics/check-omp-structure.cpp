@@ -181,12 +181,12 @@ bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
       return 0u;
     }()};
 
-    auto clauseName{parser::ToUpperCaseLetters(getClauseName(clause).str())};
-    auto dirName{parser::ToUpperCaseLetters(getDirectiveName(dir).str())};
-
     // Only report it if there is a later version that allows it.
     // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion != 0) {
+      auto clauseName{parser::ToUpperCaseLetters(getClauseName(clause).str())};
+      auto dirName{parser::ToUpperCaseLetters(getDirectiveName(dir).str())};
+
       std::string thisVersion{
           std::to_string(version / 10) + "." + std::to_string(version % 10)};
       std::string goodVersion{std::to_string(allowedInVersion)};
