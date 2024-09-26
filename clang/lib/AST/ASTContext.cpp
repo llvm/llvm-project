@@ -3437,6 +3437,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << II->getLength() << II->getName();
     return;
   }
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("not yet implemented");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -4108,6 +4111,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
+  case Type::HLSLAttributedResource:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -5233,9 +5237,8 @@ QualType ASTContext::getHLSLAttributedResourceType(
   if (Ty)
     return QualType(Ty, 0);
 
-  QualType Canon = getCanonicalType(Wrapped);
   Ty = new (*this, alignof(HLSLAttributedResourceType))
-      HLSLAttributedResourceType(Canon, Wrapped, Contained, Attrs);
+      HLSLAttributedResourceType(Wrapped, Contained, Attrs);
 
   Types.push_back(Ty);
   HLSLAttributedResourceTypes.InsertNode(Ty, InsertPos);
@@ -9106,6 +9109,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("unexpected type");
+
   case Type::ArrayParameter:
   case Type::Pipe:
 #define ABSTRACT_TYPE(KIND, BASE)
@@ -11533,6 +11539,18 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+  case Type::HLSLAttributedResource: {
+    const HLSLAttributedResourceType *LHSTy =
+        LHS->castAs<HLSLAttributedResourceType>();
+    const HLSLAttributedResourceType *RHSTy =
+        RHS->castAs<HLSLAttributedResourceType>();
+
+    if (LHSTy->getWrappedType() == RHSTy->getWrappedType() &&
+        LHSTy->getContainedType() == RHSTy->getContainedType() &&
+        LHSTy->getAttrs() == RHSTy->getAttrs())
+      return LHS;
+    return {};
+  }
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -13671,6 +13689,9 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getTemplateTypeParmType(
         TX->getDepth(), TX->getIndex(), TX->isParameterPack(),
         getCommonDecl(TX->getDecl(), TY->getDecl()));
+  }
+  case Type::HLSLAttributedResource: {
+    llvm_unreachable("not yet implemented");
   }
   }
   llvm_unreachable("Unknown Type Class");

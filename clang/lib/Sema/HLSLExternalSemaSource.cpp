@@ -211,8 +211,6 @@ struct BuiltinTypeDeclBuilder {
   BuiltinTypeDeclBuilder &addArraySubscriptOperator(bool IsConst) {
     if (Record->isCompleteDefinition())
       return *this;
-    assert(Fields.count("h") > 0 &&
-           "Subscript operator must be added after the handle.");
 
     FieldDecl *Handle = Fields["h"];
     ASTContext &AST = Record->getASTContext();

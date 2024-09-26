@@ -296,6 +296,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ArrayParameter:
+    case Type::HLSLAttributedResource:
       return TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.

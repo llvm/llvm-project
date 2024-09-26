@@ -32,6 +32,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
@@ -3751,6 +3752,31 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
 void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
                                          Qualifiers, SourceRange Range) {
   Error(Range.getBegin(), "DependentBitInt type") << Range;
+}
+
+void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
+                                         Qualifiers, SourceRange Range) {
+  mangleType(T->getWrappedType(), SourceRange(), QMM_Escape);
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  switch (Attrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+    Out << 'U';
+    break;
+  case llvm::dxil::ResourceClass::SRV:
+    Out << 'T';
+    break;
+  case llvm::dxil::ResourceClass::CBuffer:
+    Out << 'C';
+    break;
+  case llvm::dxil::ResourceClass::Sampler:
+    Out << 'S';
+    break;
+  }
+  mangleNumber(Attrs.IsROV);
+  mangleNumber(Attrs.RawBuffer);
+
+  if (T->hasContainedType())
+    mangleType(T->getContainedType(), SourceRange(), QMM_Escape);
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |

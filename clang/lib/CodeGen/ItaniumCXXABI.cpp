@@ -3943,6 +3943,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     // abi::__pointer_to_member_type_info.
     VTableName = "_ZTVN10__cxxabiv129__pointer_to_member_type_infoE";
     break;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("not yet implemented");
   }
 
   llvm::Constant *VTable = nullptr;
@@ -4205,6 +4208,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   case Type::Atomic:
     // No fields, at least for the moment.
     break;
+
+  case Type::HLSLAttributedResource:
+    llvm_unreachable("not yet implemented");
   }
 
   llvm::Constant *Init = llvm::ConstantStruct::getAnon(Fields);

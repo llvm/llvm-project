@@ -32,7 +32,6 @@ RWBuffer<float> Buffer;
 // CHECK-NEXT: implicit h 'element_type *
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME:':'element_type *'
 // CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer
 
 // CHECK: CXXMethodDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> operator[] 'element_type &const (unsigned int) const'
@@ -69,5 +68,4 @@ RWBuffer<float> Buffer;
 // CHECK-NEXT: FieldDecl 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> <invalid sloc> implicit h 'float *
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]] 
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
-// CHECK-SAME: ':'float *'
 // CHECK-NEXT: HLSLResourceAttr 0x{{[0-9A-Fa-f]+}} <<invalid sloc>> Implicit TypedBuffer

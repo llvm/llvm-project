@@ -4488,6 +4488,30 @@ void CXXNameMangler::mangleType(const ArrayParameterType *T) {
   mangleType(cast<ConstantArrayType>(T));
 }
 
+void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
+  mangleType(T->getWrappedType());
+  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  switch (Attrs.ResourceClass) {
+  case llvm::dxil::ResourceClass::UAV:
+    Out << 'U';
+    break;
+  case llvm::dxil::ResourceClass::SRV:
+    Out << 'T';
+    break;
+  case llvm::dxil::ResourceClass::CBuffer:
+    Out << 'C';
+    break;
+  case llvm::dxil::ResourceClass::Sampler:
+    Out << 'S';
+    break;
+  }
+  mangleNumber(Attrs.IsROV);
+  mangleNumber(Attrs.RawBuffer);
+
+  if (!T->hasContainedType())
+    mangleType(T->getContainedType());
+}
+
 void CXXNameMangler::mangleIntegerLiteral(QualType T,
                                           const llvm::APSInt &Value) {
   //  <expr-primary> ::= L <type> <value number> E # integer literal
