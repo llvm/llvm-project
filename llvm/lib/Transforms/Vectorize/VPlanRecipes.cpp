@@ -1039,8 +1039,8 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
   else
-    Mask = Builder.CreateVectorSplat(
-        VTy->getElementCount(), ConstantInt::getTrue(Builder.getInt1Ty()));
+    Mask = Builder.CreateVectorSplat(VTy->getElementCount(),
+                                     ConstantInt::getTrue(Builder.getInt1Ty()));
 
   // If this is a subtract, we want to invert the increment amount. We may
   // add a separate intrinsic in future, but for now we'll try this.
@@ -1070,7 +1070,7 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   // Assume that a non-constant update value (or a constant != 1) requires
   // a multiply, and add that into the cost.
   InstructionCost MulCost =
-   Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
   if (IncAmt->isLiveIn()) {
     ConstantInt *CI = dyn_cast<ConstantInt>(IncAmt->getLiveInIRValue());
 
