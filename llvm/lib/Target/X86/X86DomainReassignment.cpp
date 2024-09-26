@@ -367,7 +367,7 @@ class X86DomainReassignment : public MachineFunctionPass {
   const X86InstrInfo *TII = nullptr;
 
   /// All edges that are included in some closure
-  BitVector EnclosedEdges{8, false};
+  DenseMap<Register, unsigned> EnclosedEdges;
 
   /// All instructions that are included in some closure.
   DenseMap<MachineInstr *, unsigned> EnclosedInstrs;
@@ -399,14 +399,16 @@ private:
   void buildClosure(Closure &, Register Reg);
 
   /// Enqueue \p Reg to be considered for addition to the closure.
-  void visitRegister(Closure &, Register Reg, RegDomain &Domain,
+  /// Return false if the closure becomes invalid.
+  bool visitRegister(Closure &, Register Reg, RegDomain &Domain,
                      SmallVectorImpl<unsigned> &Worklist);
 
   /// Reassign the closure to \p Domain.
   void reassign(const Closure &C, RegDomain Domain) const;
 
   /// Add \p MI to the closure.
-  void encloseInstr(Closure &C, MachineInstr *MI);
+  /// Return false if the closure becomes invalid.
+  bool encloseInstr(Closure &C, MachineInstr *MI);
 
   /// /returns true if it is profitable to reassign the closure to \p Domain.
   bool isReassignmentProfitable(const Closure &C, RegDomain Domain) const;
@@ -419,17 +421,23 @@ char X86DomainReassignment::ID = 0;
 
 } // End anonymous namespace.
 
-void X86DomainReassignment::visitRegister(Closure &C, Register Reg,
+bool X86DomainReassignment::visitRegister(Closure &C, Register Reg,
                                           RegDomain &Domain,
                                           SmallVectorImpl<unsigned> &Worklist) {
   if (!Reg.isVirtual())
-    return;
+    return true;
 
-  if (EnclosedEdges.test(Register::virtReg2Index(Reg)))
-    return;
+  auto I = EnclosedEdges.find(Reg);
+  if (I != EnclosedEdges.end()) {
+    if (I->second != C.getID()) {
+      C.setAllIllegal();
+      return false;
+    }
+    return true;
+  }
 
   if (!MRI->hasOneDef(Reg))
-    return;
+    return true;
 
   RegDomain RD = getDomain(MRI->getRegClass(Reg), MRI->getTargetRegisterInfo());
   // First edge in closure sets the domain.
@@ -437,19 +445,22 @@ void X86DomainReassignment::visitRegister(Closure &C, Register Reg,
     Domain = RD;
 
   if (Domain != RD)
-    return;
+    return true;
 
   Worklist.push_back(Reg);
+  return true;
 }
 
-void X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
+bool X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
   auto I = EnclosedInstrs.find(MI);
   if (I != EnclosedInstrs.end()) {
-    if (I->second != C.getID())
+    if (I->second != C.getID()) {
       // Instruction already belongs to another closure, avoid conflicts between
       // closure and mark this closure as illegal.
       C.setAllIllegal();
-    return;
+      return false;
+    }
+    return true;
   }
 
   EnclosedInstrs[MI] = C.getID();
@@ -465,6 +476,7 @@ void X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
         C.setIllegal((RegDomain)i);
     }
   }
+  return C.hasLegalDstDomain();
 }
 
 double X86DomainReassignment::calculateCost(const Closure &C,
@@ -543,10 +555,11 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
     // Register already in this closure.
     if (!C.insertEdge(CurReg))
       continue;
-    EnclosedEdges.set(Register::virtReg2Index(Reg));
+    EnclosedEdges[Reg] = C.getID();
 
     MachineInstr *DefMI = MRI->getVRegDef(CurReg);
-    encloseInstr(C, DefMI);
+    if (!encloseInstr(C, DefMI))
+      return;
 
     // Add register used by the defining MI to the worklist.
     // Do not add registers which are used in address calculation, they will be
@@ -565,7 +578,8 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
       auto &Op = DefMI->getOperand(OpIdx);
       if (!Op.isReg() || !Op.isUse())
         continue;
-      visitRegister(C, Op.getReg(), Domain, Worklist);
+      if (!visitRegister(C, Op.getReg(), Domain, Worklist))
+        return;
     }
 
     // Expand closure through register uses.
@@ -574,9 +588,10 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
       // as this should remain in GPRs.
       if (usedAsAddr(UseMI, CurReg, TII)) {
         C.setAllIllegal();
-        continue;
+        return;
       }
-      encloseInstr(C, &UseMI);
+      if (!encloseInstr(C, &UseMI))
+        return;
 
       for (auto &DefOp : UseMI.defs()) {
         if (!DefOp.isReg())
@@ -585,9 +600,10 @@ void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
         Register DefReg = DefOp.getReg();
         if (!DefReg.isVirtual()) {
           C.setAllIllegal();
-          continue;
+          return;
         }
-        visitRegister(C, DefReg, Domain, Worklist);
+        if (!visitRegister(C, DefReg, Domain, Worklist))
+          return;
       }
     }
   }
@@ -775,7 +791,6 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   EnclosedEdges.clear();
-  EnclosedEdges.resize(MRI->getNumVirtRegs());
   EnclosedInstrs.clear();
 
   std::vector<Closure> Closures;
@@ -795,7 +810,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // Register already in closure.
-    if (EnclosedEdges.test(Idx))
+    if (EnclosedEdges.contains(Reg))
       continue;
 
     // Calculate closure starting with Reg.

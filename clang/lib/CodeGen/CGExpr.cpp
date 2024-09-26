@@ -5932,7 +5932,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                                  const CGCallee &OrigCallee, const CallExpr *E,
                                  ReturnValueSlot ReturnValue,
                                  llvm::Value *Chain,
-                                 llvm::CallBase **CallOrInvoke) {
+                                 llvm::CallBase **CallOrInvoke,
+                                 CGFunctionInfo const **ResolvedFnInfo) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
@@ -6110,6 +6111,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
       Args, FnType, /*ChainCall=*/Chain);
+
+  if (ResolvedFnInfo)
+    *ResolvedFnInfo = &FnInfo;
 
   // C99 6.5.2.2p6:
   //   If the expression that denotes the called function has a type

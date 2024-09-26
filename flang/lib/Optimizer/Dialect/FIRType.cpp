@@ -533,9 +533,8 @@ int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
 
 std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
                             llvm::StringRef prefix) {
-  std::string buf;
+  std::string buf = prefix.str();
   llvm::raw_string_ostream name{buf};
-  name << prefix.str();
   if (!prefix.empty())
     name << "_";
   while (ty) {
@@ -606,7 +605,7 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
       llvm::report_fatal_error("unsupported type");
     }
   }
-  return name.str();
+  return buf;
 }
 
 mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,

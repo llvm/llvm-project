@@ -366,7 +366,11 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
       resultLengths = lengths;
     }
 
-    if (!extents.empty() || !lengths.empty()) {
+    if ((!extents.empty() || !lengths.empty()) && !isElemental) {
+      // Note: in the elemental context, the alloca ownership inside the
+      // elemental region is implicit, and later pass in lowering (stack
+      // reclaim) fir.do_loop will be in charge of emitting any stack
+      // save/restore if needed.
       auto *bldr = &converter.getFirOpBuilder();
       mlir::Value sp = bldr->genStackSave(loc);
       stmtCtx.attachCleanup(
@@ -627,13 +631,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     if (callNumResults != 0)
       callResult = dispatch.getResult(0);
   } else {
-    // TODO: gather other procedure attributes.
-    fir::FortranProcedureFlagsEnumAttr procAttrs;
-    if (caller.characterize().IsBindC())
-      procAttrs = fir::FortranProcedureFlagsEnumAttr::get(
-          builder.getContext(), fir::FortranProcedureFlagsEnum::bind_c);
-
     // Standard procedure call with fir.call.
+    fir::FortranProcedureFlagsEnumAttr procAttrs =
+        caller.getProcedureAttrs(builder.getContext());
     auto call = builder.create<fir::CallOp>(
         loc, funcType.getResults(), funcSymbolAttr, operands, procAttrs);
 

@@ -269,13 +269,11 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::mipsel:
     return "elf32ltsmip";
   case llvm::Triple::mips64:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
-        T.getEnvironment() == llvm::Triple::GNUABIN32)
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
       return "elf32btsmipn32";
     return "elf64btsmip";
   case llvm::Triple::mips64el:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") ||
-        T.getEnvironment() == llvm::Triple::GNUABIN32)
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
       return "elf32ltsmipn32";
     return "elf64ltsmip";
   case llvm::Triple::systemz:

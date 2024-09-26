@@ -344,6 +344,7 @@ def : ProcessorModel<"cortex-m4", CortexM4Model,        [ARMv7em,
 def : ProcessorModel<"cortex-m7", CortexM7Model,        [ARMv7em,
                                                          ProcM7,
                                                          FeatureFPARMv8_D16,
+                                                         FeaturePrefLoopAlign64,
                                                          FeatureUseMIPipeliner,
                                                          FeatureUseMISched]>;
 
@@ -385,6 +386,7 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,
+                                                         FeaturePrefLoopAlign64,
                                                          FeatureUseMISched,
                                                          HasMVEFloatOps]>;
 

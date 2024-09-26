@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Transforms/CufOpConversion.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
@@ -14,6 +15,8 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Runtime/CUDA/allocatable.h"
+#include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang/Runtime/allocatable.h"
@@ -34,13 +37,19 @@ using namespace Fortran::runtime::cuda;
 namespace {
 
 template <typename OpTy>
-static bool needDoubleDescriptor(OpTy op) {
+static bool isPinned(OpTy op) {
+  if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)
+    return true;
+  return false;
+}
+
+template <typename OpTy>
+static bool hasDoubleDescriptors(OpTy op) {
   if (auto declareOp =
           mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp())) {
     if (mlir::isa_and_nonnull<fir::AddrOfOp>(
             declareOp.getMemref().getDefiningOp())) {
-      if (declareOp.getDataAttr() &&
-          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+      if (isPinned(declareOp))
         return false;
       return true;
     }
@@ -48,8 +57,7 @@ static bool needDoubleDescriptor(OpTy op) {
                  op.getBox().getDefiningOp())) {
     if (mlir::isa_and_nonnull<fir::AddrOfOp>(
             declareOp.getMemref().getDefiningOp())) {
-      if (declareOp.getDataAttr() &&
-          *declareOp.getDataAttr() == cuf::DataAttribute::Pinned)
+      if (isPinned(declareOp))
         return false;
       return true;
     }
@@ -107,17 +115,22 @@ struct CufAllocateOpConversion
     if (op.getPinned())
       return mlir::failure();
 
-    // TODO: Allocation of module variable will need more work as the descriptor
-    // will be duplicated and needs to be synced after allocation.
-    if (needDoubleDescriptor(op))
-      return mlir::failure();
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    if (hasDoubleDescriptors(op)) {
+      // Allocation for module variable are done with custom runtime entry point
+      // so the descriptors can be synchronized.
+      mlir::func::FuncOp func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
+              loc, builder);
+      return convertOpToCall(op, rewriter, func);
+    }
 
     // Allocation for local descriptor falls back on the standard runtime
     // AllocatableAllocate as the dedicated allocator is set in the descriptor
     // before the call.
-    auto mod = op->template getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
     mlir::func::FuncOp func =
         fir::runtime::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(loc,
                                                                    builder);
@@ -132,17 +145,23 @@ struct CufDeallocateOpConversion
   mlir::LogicalResult
   matchAndRewrite(cuf::DeallocateOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    // TODO: Allocation of module variable will need more work as the descriptor
-    // will be duplicated and needs to be synced after allocation.
-    if (needDoubleDescriptor(op))
-      return mlir::failure();
+
+    auto mod = op->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    if (hasDoubleDescriptors(op)) {
+      // Deallocation for module variable are done with custom runtime entry
+      // point so the descriptors can be synchronized.
+      mlir::func::FuncOp func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableDeallocate)>(
+              loc, builder);
+      return convertOpToCall(op, rewriter, func);
+    }
 
     // Deallocation for local descriptor falls back on the standard runtime
     // AllocatableDeallocate as the dedicated deallocator is set in the
     // descriptor before the call.
-    auto mod = op->getParentOfType<mlir::ModuleOp>();
-    fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
     mlir::func::FuncOp func =
         fir::runtime::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(loc,
                                                                      builder);
@@ -447,10 +466,6 @@ public:
       }
       return true;
     });
-    target.addDynamicallyLegalOp<cuf::AllocateOp>(
-        [](::cuf::AllocateOp op) { return needDoubleDescriptor(op); });
-    target.addDynamicallyLegalOp<cuf::DeallocateOp>(
-        [](::cuf::DeallocateOp op) { return needDoubleDescriptor(op); });
     target.addDynamicallyLegalOp<cuf::DataTransferOp>(
         [](::cuf::DataTransferOp op) {
           mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
@@ -459,9 +474,7 @@ public:
                  !mlir::isa<fir::BaseBoxType>(dstTy);
         });
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect>();
-    patterns.insert<CufAllocOpConversion>(ctx, &*dl, &typeConverter);
-    patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
-                    CufFreeOpConversion, CufDataTransferOpConversion>(ctx);
+    cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),
@@ -471,3 +484,12 @@ public:
   }
 };
 } // namespace
+
+void cuf::populateCUFToFIRConversionPatterns(
+    fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
+    mlir::RewritePatternSet &patterns) {
+  patterns.insert<CufAllocOpConversion>(patterns.getContext(), &dl, &converter);
+  patterns.insert<CufAllocateOpConversion, CufDeallocateOpConversion,
+                  CufFreeOpConversion, CufDataTransferOpConversion>(
+      patterns.getContext());
+}

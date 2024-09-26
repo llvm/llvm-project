@@ -4214,6 +4214,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);
   }
 
+  if (Args.hasArg(options::OPT_fmodules_embed_all_files))
+    CmdArgs.push_back("-fmodules-embed-all-files");
+
   return HaveModules;
 }
 
@@ -9239,6 +9242,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
       }
+      auto HasCompilerRT = getToolChain().getVFS().exists(
+          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static));
+      if (HasCompilerRT)
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
+                               "-lclang_rt.builtins"));
     });
   }
 
