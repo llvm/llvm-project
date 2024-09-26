@@ -5302,6 +5302,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (Base.R->isAnonymousUnion())
+      continue;
+
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
     if (!this->emitRecordDestruction(Base.R))
@@ -6147,6 +6150,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 template <class Emitter>
 bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
   assert(R);
+  assert(!R->isAnonymousUnion());
   const CXXDestructorDecl *Dtor = R->getDestructor();
   if (!Dtor || Dtor->isTrivial())
     return true;
@@ -6202,6 +6206,9 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
   }
 
   assert(Desc->ElemRecord);
+  if (Desc->ElemRecord->isAnonymousUnion())
+    return true;
+
   return this->emitRecordDestruction(Desc->ElemRecord);
 }
 
