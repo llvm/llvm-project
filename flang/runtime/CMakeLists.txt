@@ -103,7 +103,13 @@ append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
-add_subdirectory(Float128Math)
+set(FLANG_RUNTIME_ENABLE_F128 On CACHE BOOL
+  "Specifies whether to build the IEEE-754 128-bit float math support in the\
+   Flang runtime. This is unsupported on certain platforms.")
+
+if (FLANG_RUNTIME_ENABLE_F128)
+  add_subdirectory(Float128Math)
+endif()
 
 set(sources
   ISO_Fortran_binding.cpp
@@ -232,7 +238,7 @@ set(supported_files
 enable_cuda_compilation(FortranRuntime "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
-if (NOT TARGET FortranFloat128Math)
+if (FLANG_RUNTIME_ENABLE_F128 AND NOT TARGET FortranFloat128Math)
   # If FortranFloat128Math is not defined, then we are not building
   # standalone FortranFloat128Math library. Instead, include
   # the relevant sources into FortranRuntime itself.
