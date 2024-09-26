@@ -12658,17 +12658,18 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas or varargs from
-   the caller. They also imply that the callee does not access the memory
-   pointed to by a byval argument to the caller, unless that pointer is passed
-   to the callee as a byval argument. For example:
+   Both markers imply that the callee does not access allocas, va_args, or
+   byval arguments from the caller. As an exception to that, an alloca or byval
+   argument may be passed to the callee as a byval argument, which can be
+   dereferenced inside the callee. For example:
 
 .. code-block:: llvm
 
       declare void @take_byval(ptr byval(i64))
       declare void @take_ptr(ptr)
 
-      ; Invalid, %local may be de-allocated before call to @take_ptr.
+      ; Invalid (assuming @take_ptr dereferences the pointer), because %local
+      ; may be de-allocated before the call to @take_ptr.
       define void @invalid_alloca() {
       entry:
         %local = alloca i64
@@ -12676,7 +12677,17 @@ This instruction requires several arguments:
         ret void
       }
 
-      ; Invalid, because @use_global_va_list uses the variadic arguments from @invalid_va_list.
+      ; Valid, the byval attribute causes the memory allocated by %local to be
+      ; copied into @take_byval's stack frame.
+      define void @byval_alloca() {
+      entry:
+        %local = alloca i64
+        tail call void @take_byval(ptr byval(i64) %local)
+        ret void
+      }
+
+      ; Invalid, because @use_global_va_list uses the variadic arguments from
+      ; @invalid_va_list.
       %struct.va_list = type { ptr }
       @va_list = external global %struct.va_list
       define void @use_global_va_list() {
@@ -12698,7 +12709,8 @@ This instruction requires several arguments:
         ret void
       }
 
-      ; Invalid, byval argument passed to tail callee as non-byval ptr.
+      ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
+      ; passed to tail callee as non-byval ptr.
       define void @invalid_byval(ptr byval(i64) %x) {
       entry:
         tail call void @take_ptr(ptr %x)
