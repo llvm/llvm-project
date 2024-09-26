@@ -86,16 +86,16 @@ enum class StringLiteralKind;
 /// Classing expressions as Stmt allows them to appear as statements without
 /// needing an extra "expression-statement" node.
 ///
-/// Statements can have children and so form trees. e.g. `while (i>0) i--;`
+/// Statements can have children and so form trees. e.g. `while (i>0) i--;`:
 ///
-///   WhileStmt
-///   |-BinaryOperator >
-///   | |-DeclRefExpr i
-///   | `-IntegerLiteral 0
-///   `-UnaryOperator --
-///       DeclRefExpr i
+///     WhileStmt
+///     |-BinaryOperator >
+///     | |-DeclRefExpr i
+///     | `-IntegerLiteral 0
+///     `-UnaryOperator --
+///       `-DeclRefExpr i
 ///
-/// These trees are usually rooted at function bodies, and attach to the rest
+/// These trees are often rooted at function bodies, and attach to the rest
 /// of the AST via FunctionDecls.
 class alignas(void *) Stmt {
 public:

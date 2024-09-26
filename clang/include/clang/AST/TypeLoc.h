@@ -58,19 +58,25 @@ class UnresolvedUsingTypenameDecl;
 /// which is parallel to the hierarchy of Types.
 ///
 /// The following code has three TypeLocs:
-///   int x;
-///   int* y;
+///   using Integer = int;
+///   Integer* x;
 /// - a BuiltinTypeLoc for `int` on line 1
-/// - a PointerTypeLoc for `int*` on line 2
-/// - a BuiltinTypeLoc for `int` on line 2. (== PointerTypeLoc.getPointeeLoc())
+/// - a PointerTypeLoc for `Integer*` on line 2
+/// - a TypedefTypeLoc for `Integer` on line 2.
 ///
-/// TypeLocs describe both the type and how it was written. A PointerTypeLoc
-/// contains the SourceLocation of the `*`, and a TypeLoc describing how the
-/// pointee type was written. It also contains the PointerType which fully
-/// describes the type's semantics.
+/// Through a TypeLoc (e.g. for `Integer*`), you can access:
+/// - the SourceLocation of relevant tokens (`*`)
+/// - the TypeLoc for any lexically-nested types (TypedefTypeLoc for `Integer`)
+/// - the corresponding type (PointerType `Integer*`)
 ///
-/// In general TypeLocs and Types are not 1:1 - expressions have Types but
-/// not TypeLocs, and multiple TypeLocs can name the same Type (`int`, above).
+/// The TypeLoc describes both where and how the type was written. The (sugared)
+/// Type describes how, but not where. And the canonical (desugared) Type `int*`
+/// describes neither.
+/// In this example, you cannot get a TypeLoc for `int*`, and in fact that type
+/// is never written in the code.
+///
+/// In general, TypeLocs and Types are not 1:1 - e.g. expressions have Types but
+/// not TypeLocs, and multiple TypeLocs can refer to the same Type.
 ///
 /// TypeLocs are passed by value, and are most easily understood as non-owning
 /// reference types (like llvm::StringRef).
@@ -90,14 +96,14 @@ class UnresolvedUsingTypenameDecl;
 /// ----------------------------------
 ///
 /// This data model is best motivated by an example:
-/// Naively, a PointerTypeLoc for `int* x` could look like:
+/// Naively, a PointerTypeLoc for `Integer* x` could look like:
 ///
 ///   PointerTypeLoc(
-///      type = PointerType(pointee = BuiltinType(kind = Int)),
+///      type = PointerType(pointee = TypedefType(decl = Integer)),
 ///      starLoc = <loc1>,
-///      pointeeLoc = BuiltinTypeLoc(
-///        type = BuiltinType(kind = Int),
-///        keywordLoc = <loc2>
+///      pointeeLoc = TypedefTypeLoc(
+///        type = TypedefType(decl = Integer),
+///        nameLoc = <loc2>
 ///      )
 ///  )
 ///
@@ -108,11 +114,11 @@ class UnresolvedUsingTypenameDecl;
 ///
 ///   PointerTypeLoc(
 ///     data = [<loc1><loc2>],  // not owned!
-///     type = PointerType(pointee = BuiltinType(kind = Int)),
+///     type = PointerType(pointee = TypedefType(decl = Integer)),
 ///   )
 ///
 /// The front of the data buffer has the starLoc "local" to PointerTypeLoc.
-/// The back of the data buffer has the data for the inner types.
+/// The back of the data buffer has the data for the lexically-nested types.
 ///
 /// PointerTypeLoc's implementation is:
 ///   getStarLoc() returns data[0].

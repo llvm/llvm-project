@@ -77,18 +77,18 @@ enum AvailabilityResult {
 };
 
 /// A Decl describes a declaration (or definition) of a variable, function, etc.
-/// This is the base class for a hierarchy of Decls: VarDecl, FunctionDecl...
+/// This is the base class for a hierarchy: VarDecl, FunctionDecl, ...
 ///
 /// The declarations form a tree rooted at the TranslationUnitDecl.
 /// The non-leaf nodes of this tree are DeclContexts (as well as being Decls).
 ///
-/// Decls are also the AST's representation of the things being declared.
-/// So a VarDecl* may refer either to a specific declaration of a variable, or
-/// to the variable itself - pointing at an arbitrary declaration of it.
+/// Decls are also the AST's representation of the entities being declared.
+/// So a `VarDecl*` may refer either to a specific declaration of a variable, or
+/// to the variable itself by pointing at an arbitrary declaration of it.
 /// (Declarations of the same variable are linked in a "redecl chain", and
 /// the first entry is the canonical representative when one is needed).
 ///
-/// Some entities have zero declarations in code, like implicit constructors.
+/// Some entities have no declarations in code, such as implicit constructors.
 /// For these, a Decl is synthesized and marked "implicit". Lexical information
 /// like SourceLocations may not be meaningful for such Decls.
 ///
@@ -1440,7 +1440,7 @@ enum class LinkageSpecLanguageIDs;
 ///
 /// DeclContext is a second base class for the relevant Decl subclasses,
 /// e.g. FunctionDecl inherits from both DeclaratorDecl and DeclContext.
-/// It is safe to cast<Decl>(&DC), as DeclContexts are always Decls.
+/// It is safe to `cast<Decl>(&DC)`, as DeclContexts are always Decls.
 class DeclContext {
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;

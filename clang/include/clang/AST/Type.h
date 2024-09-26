@@ -1803,7 +1803,7 @@ enum class ElaboratedTypeKeyword;
 enum class VectorKind;
 
 /// A type in the program, such as `int` or `vector<bool>`.
-/// This the base class for a hierarchy of types: PointerType, BuiltinType etc.
+/// This the base class for a hierarchy: PointerType, BuiltinType etc.
 ///
 /// Types appear throughout the AST: expressions and (some) declarations have
 /// types; casts, new-expressions, and template-arguments refer to types, etc.
@@ -1821,7 +1821,7 @@ enum class VectorKind;
 ///   Integer* x;          // PointerType(pointee = TypedefType(decl = Integer))
 ///
 /// The Type obtained from the VarDecl for x reflects how that declaration was
-/// written. This is useful for diagnostic messages and so on.
+/// written. This is useful for diagnostic messages, for example.
 /// Each Type has a pointer to its canonical type, and these should be used for
 /// semantic checks: are two types equal, is this a function type, etc.
 ///

@@ -669,15 +669,15 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// ====== SourceLocations, FileIDs, and SLocEntrys =======
 ///
 /// A SourceLocation can point at any byte of code. Rather than store
-/// (file, offset) pairs, it is a single offset into a buffer of all files
-/// concatenated together.
+/// (file, offset) pairs, it is a single offset into a virtual buffer of all
+/// files concatenated together.
 ///
 /// [--file1--][----file2----][file3]
 ///               ^
 /// This buffer does not exist in memory. Instead SourceManager keeps an array
 /// of SLocEntry objects, each describing one file and its offset in the buffer.
 /// Each entry is assigned a FileID, and SourceManager can encode/decode a
-/// SourceLocation into a (FileID, file offset) pair: see getDeomposedLoc().
+/// SourceLocation into a (FileID, file offset) pair: see getDecomposedLoc().
 ///
 /// The SLocEntry holds the cached source code, and preprocessing metadata:
 /// the SourceLocation where the file was #included.

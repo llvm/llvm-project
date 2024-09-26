@@ -10,7 +10,7 @@
 /// Provides abstract filesystem APIs to decouple from OS-level file access.
 ///
 /// This allows replacing access to physical files on disk by in-memory data,
-/// for testing or other purposes.
+/// for testing, caching, or other purposes.
 //
 //===----------------------------------------------------------------------===//
 
