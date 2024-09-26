@@ -124,15 +124,6 @@ convertOperandBundles(OperandRangeRange bundleOperands,
   return bundles;
 }
 
-static SmallVector<llvm::OperandBundleDef>
-convertOperandBundles(OperandRangeRange bundleOperands,
-                      std::optional<ArrayRef<std::string>> bundleTags,
-                      LLVM::ModuleTranslation &moduleTranslation) {
-  if (!bundleTags)
-    bundleTags.emplace();
-  return convertOperandBundles(bundleOperands, *bundleTags, moduleTranslation);
-}
-
 /// Builder for LLVM_CallIntrinsicOp
 static LogicalResult
 convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
