@@ -897,13 +897,14 @@ public:
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(Pass *p = nullptr, const char *Banner = nullptr,
-              bool AbortOnError = true) const;
+              raw_ostream *OS = nullptr, bool AbortOnError = true) const;
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
-              const char *Banner = nullptr, bool AbortOnError = true) const;
+              const char *Banner = nullptr, raw_ostream *OS = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   using iterator = BasicBlockListType::iterator;
