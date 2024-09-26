@@ -1,0 +1,4 @@
+in-call-stack:MallocViolation
+in-call-stack:std::*vector
+in-call-stack:free
+in-call-stack:BlockFunc
