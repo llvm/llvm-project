@@ -68,7 +68,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS ON)
 set(CPACK_DEB_COMPONENT_INSTALL ON)
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "perl (>= 5.0), hip-dev, rocm-core")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -78,17 +78,17 @@ endif()
 
 # AMD specific Debian packaging varibles.
 set(CPACK_DEBIAN_AMD_PACKAGE_NAME "hipcc")
-set(CPACK_DEBIAN_AMD_PACKAGE_DEPENDS "perl (>= 5.0), hip-dev, rocm-core, rocm-llvm")
+set(CPACK_DEBIAN_AMD_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core, rocm-llvm")
 
 # NVIDIA specific Debian packaging variables.
 set(CPACK_DEBIAN_NVIDIA_PACKAGE_NAME "hipcc-nvidia")
-set(CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS "perl (>= 5.0), hip-dev, rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
 
 
 # RPM specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, hip-devel, rocm-core")
+set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, rocm-core")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV 0)
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
@@ -101,11 +101,11 @@ endif()
 
 # AMD specific RPM packaging varibables.
 set(CPACK_RPM_AMD_PACKAGE_NAME "hipcc")
-set(CPACK_RPM_AMD_PACKAGE_REQUIRES "perl >= 5.0, hip-devel, rocm-core, rocm-llvm")
+set(CPACK_RPM_AMD_PACKAGE_REQUIRES "perl >= 5.0, rocm-core, rocm-llvm")
 
 # NVIDIA specific RPM packaging variables.
 set(CPACK_RPM_NVIDIA_PACKAGE_NAME "hipcc-nvidia")
-set(CPACK_RPM_NVIDIA_PACKAGE_REQUIRES "perl >= 5.0, hip-devel, rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_RPM_NVIDIA_PACKAGE_REQUIRES "perl >= 5.0, rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
 
 # ROCM versioning.
 set(ROCM_VERSION_FOR_PACKAGE "")
@@ -213,11 +213,6 @@ if(NOT BUILD_SHARED_LIBS)
   # For static builds change the pakage name
   set(CPACK_DEBIAN_AMD_PACKAGE_NAME "hipcc-static-dev")
   set(CPACK_RPM_AMD_PACKAGE_NAME "hipcc-static-devel")
-  # hip-dev/devel dependency not applicable fot static package
-  string(REPLACE "hip-dev," "" CPACK_DEBIAN_PACKAGE_DEPENDS ${CPACK_DEBIAN_PACKAGE_DEPENDS})
-  string(REPLACE "hip-dev," "" CPACK_DEBIAN_AMD_PACKAGE_DEPENDS ${CPACK_DEBIAN_AMD_PACKAGE_DEPENDS})
-  string(REPLACE "hip-devel," "" CPACK_RPM_PACKAGE_REQUIRES ${CPACK_RPM_PACKAGE_REQUIRES})
-  string(REPLACE "hip-devel," "" CPACK_RPM_AMD_PACKAGE_REQUIRES ${CPACK_RPM_AMD_PACKAGE_REQUIRES})
 endif()
 
 include(CPack)
