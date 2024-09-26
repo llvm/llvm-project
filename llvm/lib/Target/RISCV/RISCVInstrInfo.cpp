@@ -1536,7 +1536,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   switch (Opcode) {
   case RISCV::PseudoMV_FPR16INX:
-    // MV is always compressible.
+    // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtCOrZca() ? 2 : 4;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
