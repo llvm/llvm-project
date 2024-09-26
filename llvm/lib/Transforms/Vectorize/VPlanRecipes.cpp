@@ -1069,14 +1069,14 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
 
   // Assume that a non-constant update value (or a constant != 1) requires
   // a multiply, and add that into the cost.
-  Value *RHS = IncAmt->getUnderlyingValue();
-  // The underlying value may be null, check for a live-in if so.
-  if (!RHS && IncAmt->isLiveIn())
-    RHS = IncAmt->getLiveInIRValue();
-  InstructionCost MulCost = TTI::TCC_Free;
-  ConstantInt *CI = dyn_cast_if_present<ConstantInt>(RHS);
-  if (!CI || CI->getZExtValue() != 1)
-    MulCost = Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+  InstructionCost MulCost =
+   Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+  if (IncAmt->isLiveIn()) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmt->getLiveInIRValue());
+
+    if (CI && CI->getZExtValue() == 1)
+      MulCost = TTI::TCC_Free;
+  }
 
   // Find the cost of the histogram operation itself.
   Type *PtrTy = VectorType::get(AddressTy, VF);
