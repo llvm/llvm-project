@@ -22371,9 +22371,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateZExt(Builder.CreateTrunc(Ops[0], Int16Ty), Int32Ty,
                               "exthz");
   case RISCV::BI__builtin_riscv_cv_alu_slet:
-    return Builder.CreateICmpSLE(Ops[0], Ops[1], "sle");
+    return Builder.CreateZExt(Builder.CreateICmpSLE(Ops[0], Ops[1]), Int32Ty,
+                              "sle");
   case RISCV::BI__builtin_riscv_cv_alu_sletu:
-    return Builder.CreateICmpULE(Ops[0], Ops[1], "sleu");
+    return Builder.CreateZExt(Builder.CreateICmpULE(Ops[0], Ops[1]), Int32Ty,
+                              "sleu");
   case RISCV::BI__builtin_riscv_cv_alu_subN:
     ID = Intrinsic::riscv_cv_alu_subN;
     break;

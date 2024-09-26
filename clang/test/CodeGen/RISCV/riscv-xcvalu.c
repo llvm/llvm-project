@@ -18,17 +18,15 @@ int test_abs(int a) {
 
 // CHECK-LABEL: @test_alu_slet(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[SLE:%.*]] = icmp sle i32 [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    store i1 [[SLE]], ptr [[RETVAL]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp sle i32 [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[SLE:%.*]] = zext i1 [[TMP2]] to i32
+// CHECK-NEXT:    ret i32 [[SLE]]
 //
 int test_alu_slet(int32_t a, int32_t b) {
   return __builtin_riscv_cv_alu_slet(a, b);
@@ -36,17 +34,15 @@ int test_alu_slet(int32_t a, int32_t b) {
 
 // CHECK-LABEL: @test_alu_sletu(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[SLEU:%.*]] = icmp ule i32 [[TMP0]], [[TMP1]]
-// CHECK-NEXT:    store i1 [[SLEU]], ptr [[RETVAL]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[TMP0]], [[TMP1]]
+// CHECK-NEXT:    [[SLEU:%.*]] = zext i1 [[TMP2]] to i32
+// CHECK-NEXT:    ret i32 [[SLEU]]
 //
 int test_alu_sletu(uint32_t a, uint32_t b) {
   return __builtin_riscv_cv_alu_sletu(a, b);

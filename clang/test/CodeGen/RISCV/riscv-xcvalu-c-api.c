@@ -19,8 +19,8 @@
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
-// CHECK-NEXT:    [[SLE_I:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[SLE_I]] to i32
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
+// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[TMP4]] to i32
 // CHECK-NEXT:    ret i32 [[CONV_I]]
 //
 int test_alu_slet(int32_t a, int32_t b) {
@@ -41,8 +41,8 @@ int test_alu_slet(int32_t a, int32_t b) {
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
-// CHECK-NEXT:    [[SLEU_I:%.*]] = icmp ule i32 [[TMP2]], [[TMP3]]
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[SLEU_I]] to i32
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP2]], [[TMP3]]
+// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[TMP4]] to i32
 // CHECK-NEXT:    ret i32 [[CONV_I]]
 //
 int test_alu_sletu(uint32_t a, uint32_t b) {

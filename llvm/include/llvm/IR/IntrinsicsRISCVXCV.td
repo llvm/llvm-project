@@ -59,16 +59,6 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem, IntrWillReturn, IntrSpeculatable,
                             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
-  def int_riscv_cv_alu_slet  : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_sletu : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_min   : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_minu  : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_max   : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_maxu  : ScalarCoreVAluGprGprIntrinsic;
-  def int_riscv_cv_alu_exths : ScalarCoreVAluGprIntrinsic;
-  def int_riscv_cv_alu_exthz : ScalarCoreVAluGprIntrinsic;
-  def int_riscv_cv_alu_extbs : ScalarCoreVAluGprIntrinsic;
-  def int_riscv_cv_alu_extbz : ScalarCoreVAluGprIntrinsic;
   def int_riscv_cv_alu_clip   : ScalarCoreVAluGprGprIntrinsic;
   def int_riscv_cv_alu_clipu  : ScalarCoreVAluGprGprIntrinsic;
   def int_riscv_cv_alu_addN   : ScalarCoreVAluGprGprGprIntrinsic;
