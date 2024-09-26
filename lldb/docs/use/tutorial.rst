@@ -538,30 +538,40 @@ equivalent to GDB's ``until`` command.
 
 One other useful thing to note about the lldb stepping commands is that they
 are implemented as a stack of interruptible operations.  Until the operation -
-e.g. step to the next line - is completed, the operation will remain on the
-stack.  If it is interrupted, new stepping commands will result in their
-operations being pushed onto the stack, each of them retired as they are completed.
+e.g. step to the next line - is completed, it will remain on the
+stack.  If the step over is interrupted and control returned to you,
+any new stepping commands you issue won't replace the step-over, but instead
+their operations will be pushed onto the stack after the original step over.
+Then each of them will be retired as they are completed, finally returning to the
+original step over operation.
 
-Suppose, for instance, you ``step-over`` a source line, and hit a breakpoint
-in a function called by the code of the line you are stepping over.  Since the step-over
-operation remains on the stack, you can examine the state at
-the point of the breakpoint hit, step around in that frame, step in to other
-frames, hit other breakpoints, etc.  Then when you are done, a simple ``continue``
-will resume the original ``step-over`` operation, only ending when the desired line is reached.
-This saves you from having to manually issue some number of ``step-out`` commands
-to get back to the frame you were stepping over.
+Suppose, for instance, you ``step-over`` a source line with a function call.
+If there is a breakpoint in that function, hitting the breakpoint will interrupt
+the step over.  At that point, you will likely want to examine the state at
+the breakpoint, maybe stepping around in that frame, or stepping into other
+functions, running some expressions, etc.
+
+Because the original step-over has remained on the stack, when you've finished
+your examinations, a simple ``continue`` will resume the original ``step-over``
+operation, and you will arrive at the end of your starting source line in the
+original frame.
+
+This saves you from having to keep track of your original intention, and manually
+issuing the requisite number of ``step-out`` commands to get back to the frame
+you were stepping over.  The stack maintains that information for you.
 
 Hand-called functions using the ``expr`` command are also implemented by
 operations on this same stack.  So if you are calling some code with the ``expr`` command,
 and hit a breakpoint during the evaluation of that code, you can examine
-the state where you stopped, step around at your convenience, and then issue a
-``continue`` which will finish the expression evaluation operation and print the function
+the state where you stopped, and when you're satisfied,  issue a
+``continue`` to finish the expression evaluation operation and print the function
 result.
 
 You can examine the state of the operations stack using the ``thread plan list``
 command, and if, for instance, you decide you don't actually want that outermost
 next to continue running, you can remove it with the ``thread plan discard``
-command.
+command.  If you are interested in following this process in more detail, the
+``lldb step`` logging channel is useful source of information.
 
 A process, by default, will share the LLDB terminal with the inferior process.
 When in this mode, much like when debugging with GDB, when the process is
