@@ -31,7 +31,7 @@ void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
   Range range;
   while (llvm_dwarf_data.isValidOffset(offset)) {
     const lldb::offset_t set_offset = offset;
-    if (llvm::Error error = set.extract(llvm_dwarf_data, &offset, nullptr)) {
+    if (llvm::Error error = set.extract(llvm_dwarf_data, &offset)) {
       Log *log = GetLog(DWARFLog::DebugInfo);
       LLDB_LOG_ERROR(log, std::move(error),
                      "DWARFDebugAranges::extract failed to extract "
@@ -40,7 +40,7 @@ void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
       set.clear();
       return;
     }
-    uint64_t cu_offset = set.getCompileUnitDIEOffset();
+    const uint64_t cu_offset = set.getCompileUnitDIEOffset();
     for (const auto &desc : set.descriptors()) {
       if (desc.Length != 0)
         m_aranges.Append(

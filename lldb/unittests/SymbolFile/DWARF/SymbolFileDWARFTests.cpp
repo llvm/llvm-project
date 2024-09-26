@@ -97,7 +97,7 @@ TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
 
   DWARFDebugArangeSet debug_aranges;
   offset_t off = 0;
-  llvm::Error error = debug_aranges.extract(data, &off, nullptr);
+  llvm::Error error = debug_aranges.extract(data, &off);
   EXPECT_TRUE(bool(error));
   EXPECT_EQ("non-zero segment selector size in address range table at offset "
             "0x0 is not supported",
@@ -138,7 +138,7 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
                                 /*isLittleEndian=*/false, /*AddrSize=*/4);
   DWARFDebugArangeSet set;
   offset_t off = 0;
-  llvm::Error error = set.extract(data, &off, nullptr);
+  llvm::Error error = set.extract(data, &off);
   // Multiple terminators are not fatal as they do appear in binaries.
   EXPECT_FALSE(bool(error));
   // Parser should read all terminators to the end of the length specified.
