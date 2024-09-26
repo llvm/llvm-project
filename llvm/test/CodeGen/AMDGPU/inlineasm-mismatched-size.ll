@@ -3,85 +3,62 @@
 
 ; Allow single registers that are too wide for the IR type:
 
-define i16 @inline_asm_i16_in_vphys_def() {
-; CHECK-LABEL: inline_asm_i16_in_vphys_def:
+define i16 @inline_asm_i16_in_v_def() {
+; CHECK-LABEL: inline_asm_i16_in_v_def:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, v8
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i16 asm sideeffect "; def $0", "={v8}"()
-  ret i16 %asm
-}
-
-define i16 @inline_asm_i16_in_vvirt_def() {
-; CHECK-LABEL: inline_asm_i16_in_vvirt_def:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_and_b32_e32 v0, v8, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i16 asm sideeffect "; def $0", "=v"()
-  ret i16 %asm
+  %phys = call i16 asm sideeffect "; def $0", "={v8}"()
+  %virt = call i16 asm sideeffect "; def $0", "=v"()
+  %r = and i16 %phys, %virt
+  ret i16 %r
 }
 
-define void @inline_asm_i16_in_vphys_use(i16 %val) {
-; CHECK-LABEL: inline_asm_i16_in_vphys_use:
+define void @inline_asm_i16_in_v_use(i16 %val) {
+; CHECK-LABEL: inline_asm_i16_in_v_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v8, 0xffff, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  call void asm sideeffect "; use $0", "{v8}"(i16 %val)
-  ret void
-}
-
-define void @inline_asm_i16_in_vvirt_use(i16 %val) {
-; CHECK-LABEL: inline_asm_i16_in_vvirt_use:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ; use v8
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  call void asm sideeffect "; use $0", "{v8}"(i16 %val)
   call void asm sideeffect "; use $0", "v"(i16 %val)
   ret void
 }
 
-define i16 @inline_asm_i16_in_sphys_def() {
-; CHECK-LABEL: inline_asm_i16_in_sphys_def:
+define i16 @inline_asm_i16_in_s_def() {
+; CHECK-LABEL: inline_asm_i16_in_s_def:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, s8
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i16 asm sideeffect "; def $0", "={s8}"()
-  ret i16 %asm
-}
-
-define i16 @inline_asm_i16_in_svirt_def() {
-; CHECK-LABEL: inline_asm_i16_in_svirt_def:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s4
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_and_b32 s4, s8, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i16 asm sideeffect "; def $0", "=s"()
-  ret i16 %asm
+  %phys = call i16 asm sideeffect "; def $0", "={s8}"()
+  %virt = call i16 asm sideeffect "; def $0", "=s"()
+  %r = and i16 %phys, %virt
+  ret i16 %r
 }
 
-define i8 @inline_asm_i8_in_vphys_def() {
-; CHECK-LABEL: inline_asm_i8_in_vphys_def:
+define i8 @inline_asm_i8_in_v_def() {
+; CHECK-LABEL: inline_asm_i8_in_v_def:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -89,19 +66,16 @@ define i8 @inline_asm_i8_in_vphys_def() {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v8
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i8 asm sideeffect "; def $0", "={v8}"()
-  ret i8 %asm
+  %phys = call i8 asm sideeffect "; def $0", "={v8}"()
+  ; %virt = call i8 asm sideeffect "; def $0", "=v"()  ; currently fails
+  ; %r = and i8 %phys, %virt
+  ; ret i8 %r
+  ret i8 %phys
 }
 
-; currently fails
-; define i8 @inline_asm_i8_in_vvirt_def() {
-;   %asm = call i8 asm sideeffect "; def $0", "=v"()
-;   ret i8 %asm
-; }
-
 ; currently broken, v8 should be set to v0 & 0xFF
-define void @inline_asm_i8_in_vphys_use(i8 %val) {
-; CHECK-LABEL: inline_asm_i8_in_vphys_use:
+define void @inline_asm_i8_in_v_use(i8 %val) {
+; CHECK-LABEL: inline_asm_i8_in_v_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v0
@@ -110,14 +84,9 @@ define void @inline_asm_i8_in_vphys_use(i8 %val) {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; use $0", "{v8}"(i8 %val)
+  ; call void asm sideeffect "; use $0", "v"(i8 %val)  ; currently fails
   ret void
 }
-
-; currently fails
-; define void @inline_asm_i8_in_vvirt_use(i8 %val) {
-;   call void asm sideeffect "; use $0", "v"(i8 %val)
-;   ret void
-; }
 
 define i8 @inline_asm_i8_in_sphys_def() {
 ; CHECK-LABEL: inline_asm_i8_in_sphys_def:
@@ -128,91 +97,66 @@ define i8 @inline_asm_i8_in_sphys_def() {
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s8
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call i8 asm sideeffect "; def $0", "={s8}"()
-  ret i8 %asm
+  %phys = call i8 asm sideeffect "; def $0", "={s8}"()
+  ; %virt = call i8 asm sideeffect "; def $0", "=s"()  ; currently fails
+  ; %r = and i8 %phys, %virt
+  ; ret i8 %r
+  ret i8 %phys
 }
-
-; currently fails
-; define i8 @inline_asm_i8_in_svirt_def() {
-;   %asm = call i8 asm sideeffect "; def $0", "=s"()
-;   ret i8 %asm
-; }
 
 
 ; Single registers for vector types that fit are fine.
 
-define void @inline_asm_2xi16_in_vphys_use(<2 x i16> %val) {
-; CHECK-LABEL: inline_asm_2xi16_in_vphys_use:
+define void @inline_asm_2xi16_in_v_use(<2 x i16> %val) {
+; CHECK-LABEL: inline_asm_2xi16_in_v_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  call void asm sideeffect "; use $0", "{v8}"(<2 x i16> %val)
-  ret void
-}
-
-define void @inline_asm_2xi16_in_vvirt_use(<2 x i16> %val) {
-; CHECK-LABEL: inline_asm_2xi16_in_vvirt_use:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  call void asm sideeffect "; use $0", "{v8}"(<2 x i16> %val)
   call void asm sideeffect "; use $0", "v"(<2 x i16> %val)
   ret void
 }
 
-define <2 x i16> @inline_asm_2xi16_in_vphys_def() {
-; CHECK-LABEL: inline_asm_2xi16_in_vphys_def:
+define <2 x i16> @inline_asm_2xi16_in_v_def() {
+; CHECK-LABEL: inline_asm_2xi16_in_v_def:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, v8
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call <2 x i16> asm sideeffect "; def $0", "={v8}"()
-  ret <2 x i16> %asm
-}
-
-define <2 x i16> @inline_asm_2xi16_in_vvirt_def() {
-; CHECK-LABEL: inline_asm_2xi16_in_vvirt_def:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_and_b32_e32 v0, v8, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call <2 x i16> asm sideeffect "; def $0", "=v"()
-  ret <2 x i16> %asm
+  %phys = call <2 x i16> asm sideeffect "; def $0", "={v8}"()
+  %virt = call <2 x i16> asm sideeffect "; def $0", "=v"()
+  %r = and <2 x i16> %phys, %virt
+  ret <2 x i16> %r
 }
 
-define <2 x i16> @inline_asm_2xi16_in_sphys_def() {
-; CHECK-LABEL: inline_asm_2xi16_in_sphys_def:
+define <2 x i16> @inline_asm_2xi16_in_s_def() {
+; CHECK-LABEL: inline_asm_2xi16_in_s_def:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s8
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, s8
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call <2 x i16> asm sideeffect "; def $0", "={s8}"()
-  ret <2 x i16> %asm
-}
-
-define <2 x i16> @inline_asm_2xi16_in_svirt_def() {
-; CHECK-LABEL: inline_asm_2xi16_in_svirt_def:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s4
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_and_b32 s4, s8, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %asm = call <2 x i16> asm sideeffect "; def $0", "=s"()
-  ret <2 x i16> %asm
+  %phys = call <2 x i16> asm sideeffect "; def $0", "={s8}"()
+  %virt = call <2 x i16> asm sideeffect "; def $0", "=s"()
+  %r = and <2 x i16> %phys, %virt
+  ret <2 x i16> %r
 }

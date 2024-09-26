@@ -78,37 +78,27 @@ define <4 x i32> @inline_asm_4xi32_in_s_def() {
 }
 
 ; ERR: error: couldn't allocate input reg for constraint '{v8}'
+; ERR: error: couldn't allocate input reg for constraint 'v'
 define void @inline_asm_2xi8_in_v_use(<2 x i8> %val) {
   call void asm sideeffect "; use $0", "{v8}"(<2 x i8> %val)
-  ret void
-}
-
-; ERR: error: couldn't allocate input reg for constraint 'v'
-define void @inline_asm_2xi8_in_vvirt_use(<2 x i8> %val) {
   call void asm sideeffect "; use $0", "v"(<2 x i8> %val)
   ret void
 }
 
 ; ERR: error: couldn't allocate output register for constraint '{v8}'
-define <2 x i8> @inline_asm_2xi8_in_v_def() {
-  %asm = call <2 x i8> asm sideeffect "; def $0", "={v8}"()
-  ret <2 x i8> %asm
-}
-
 ; ERR: error: couldn't allocate output register for constraint 'v'
-define <2 x i8> @inline_asm_2xi8_in_vvirt_def() {
-  %asm = call <2 x i8> asm sideeffect "; def $0", "=v"()
-  ret <2 x i8> %asm
+define <2 x i8> @inline_asm_2xi8_in_v_def() {
+  %phys = call <2 x i8> asm sideeffect "; def $0", "={v8}"()
+  %virt = call <2 x i8> asm sideeffect "; def $0", "=v"()
+  %r = and <2 x i8> %phys, %virt
+  ret <2 x i8> %r
 }
 
 ; ERR: error: couldn't allocate output register for constraint '{s8}'
-define <2 x i8> @inline_asm_2xi8_in_s_def() {
-  %asm = call <2 x i8> asm sideeffect "; def $0", "={s8}"()
-  ret <2 x i8> %asm
-}
-
 ; ERR: error: couldn't allocate output register for constraint 's'
-define <2 x i8> @inline_asm_2xi8_in_svirt_def() {
-  %asm = call <2 x i8> asm sideeffect "; def $0", "=s"()
-  ret <2 x i8> %asm
+define <2 x i8> @inline_asm_2xi8_in_s_def() {
+  %phys = call <2 x i8> asm sideeffect "; def $0", "={s8}"()
+  %virt = call <2 x i8> asm sideeffect "; def $0", "=s"()
+  %r = and <2 x i8> %phys, %virt
+  ret <2 x i8> %r
 }
