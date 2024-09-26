@@ -136,8 +136,8 @@ private:
       assert(Predicated);
       return ElementSize;
     }
-    unsigned getDstReg() const { return Dst; }
-    unsigned getPgReg() const {
+    MCRegister getDstReg() const { return Dst; }
+    MCRegister getPgReg() const {
       assert(Predicated);
       return Pg;
     }
@@ -146,8 +146,8 @@ private:
     bool Active = false;
     bool Predicated = false;
     unsigned ElementSize;
-    unsigned Dst;
-    unsigned Pg;
+    MCRegister Dst;
+    MCRegister Pg;
   } NextPrefix;
 
   AArch64TargetStreamer &getTargetStreamer() {
@@ -5234,7 +5234,7 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-static inline bool isMatchingOrAlias(unsigned ZReg, unsigned Reg) {
+static inline bool isMatchingOrAlias(MCRegister ZReg, MCRegister Reg) {
   assert((ZReg >= AArch64::Z0) && (ZReg <= AArch64::Z31));
   return (ZReg == ((Reg - AArch64::B0) + AArch64::Z0)) ||
          (ZReg == ((Reg - AArch64::H0) + AArch64::Z0)) ||
@@ -5322,7 +5322,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   if (IsWindowsArm64EC) {
     for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
       if (Inst.getOperand(i).isReg()) {
-        unsigned Reg = Inst.getOperand(i).getReg();
+        MCRegister Reg = Inst.getOperand(i).getReg();
         // At this point, vector registers are matched to their
         // appropriately sized alias.
         if ((Reg == AArch64::W13 || Reg == AArch64::X13) ||
@@ -5351,9 +5351,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPWpre:
   case AArch64::LDPXpost:
   case AArch64::LDPXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
@@ -5376,8 +5376,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPSWi:
   case AArch64::LDPWi:
   case AArch64::LDPXi: {
-    unsigned Rt = Inst.getOperand(0).getReg();
-    unsigned Rt2 = Inst.getOperand(1).getReg();
+    MCRegister Rt = Inst.getOperand(0).getReg();
+    MCRegister Rt2 = Inst.getOperand(1).getReg();
     if (Rt == Rt2)
       return Error(Loc[1], "unpredictable LDP instruction, Rt2==Rt");
     break;
@@ -5389,8 +5389,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDPSpost:
   case AArch64::LDPSpre:
   case AArch64::LDPSWpost: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
     if (Rt == Rt2)
       return Error(Loc[1], "unpredictable LDP instruction, Rt2==Rt");
     break;
@@ -5405,9 +5405,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STPWpre:
   case AArch64::STPXpost:
   case AArch64::STPXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable STP instruction, writeback base "
                            "is also a source");
@@ -5438,8 +5438,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::LDRSWpost:
   case AArch64::LDRWpost:
   case AArch64::LDRXpost: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable LDR instruction, writeback base "
                            "is also a source");
@@ -5457,8 +5457,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STRHpre:
   case AArch64::STRWpre:
   case AArch64::STRXpre: {
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rn, Rt))
       return Error(Loc[0], "unpredictable STR instruction, writeback base "
                            "is also a source");
@@ -5472,9 +5472,9 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STLXRH:
   case AArch64::STLXRW:
   case AArch64::STLXRX: {
-    unsigned Rs = Inst.getOperand(0).getReg();
-    unsigned Rt = Inst.getOperand(1).getReg();
-    unsigned Rn = Inst.getOperand(2).getReg();
+    MCRegister Rs = Inst.getOperand(0).getReg();
+    MCRegister Rt = Inst.getOperand(1).getReg();
+    MCRegister Rn = Inst.getOperand(2).getReg();
     if (RI->isSubRegisterEq(Rt, Rs) ||
         (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
       return Error(Loc[0],
@@ -5485,10 +5485,10 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::STXPX:
   case AArch64::STLXPW:
   case AArch64::STLXPX: {
-    unsigned Rs = Inst.getOperand(0).getReg();
-    unsigned Rt1 = Inst.getOperand(1).getReg();
-    unsigned Rt2 = Inst.getOperand(2).getReg();
-    unsigned Rn = Inst.getOperand(3).getReg();
+    MCRegister Rs = Inst.getOperand(0).getReg();
+    MCRegister Rt1 = Inst.getOperand(1).getReg();
+    MCRegister Rt2 = Inst.getOperand(2).getReg();
+    MCRegister Rn = Inst.getOperand(3).getReg();
     if (RI->isSubRegisterEq(Rt1, Rs) || RI->isSubRegisterEq(Rt2, Rs) ||
         (RI->isSubRegisterEq(Rn, Rs) && Rn != AArch64::SP))
       return Error(Loc[0],
@@ -5497,8 +5497,8 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   }
   case AArch64::LDRABwriteback:
   case AArch64::LDRAAwriteback: {
-    unsigned Xt = Inst.getOperand(0).getReg();
-    unsigned Xn = Inst.getOperand(1).getReg();
+    MCRegister Xt = Inst.getOperand(0).getReg();
+    MCRegister Xn = Inst.getOperand(1).getReg();
     if (Xt == Xn)
       return Error(Loc[0],
           "unpredictable LDRA instruction, writeback base"
@@ -5605,12 +5605,12 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::CPYETWN:
   case AArch64::CPYETRN:
   case AArch64::CPYETN: {
-    unsigned Xd_wb = Inst.getOperand(0).getReg();
-    unsigned Xs_wb = Inst.getOperand(1).getReg();
-    unsigned Xn_wb = Inst.getOperand(2).getReg();
-    unsigned Xd = Inst.getOperand(3).getReg();
-    unsigned Xs = Inst.getOperand(4).getReg();
-    unsigned Xn = Inst.getOperand(5).getReg();
+    MCRegister Xd_wb = Inst.getOperand(0).getReg();
+    MCRegister Xs_wb = Inst.getOperand(1).getReg();
+    MCRegister Xn_wb = Inst.getOperand(2).getReg();
+    MCRegister Xd = Inst.getOperand(3).getReg();
+    MCRegister Xs = Inst.getOperand(4).getReg();
+    MCRegister Xn = Inst.getOperand(5).getReg();
     if (Xd_wb != Xd)
       return Error(Loc[0],
                    "invalid CPY instruction, Xd_wb and Xd do not match");
@@ -5655,11 +5655,11 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
   case AArch64::MOPSSETGET:
   case AArch64::MOPSSETGEN:
   case AArch64::MOPSSETGETN: {
-    unsigned Xd_wb = Inst.getOperand(0).getReg();
-    unsigned Xn_wb = Inst.getOperand(1).getReg();
-    unsigned Xd = Inst.getOperand(2).getReg();
-    unsigned Xn = Inst.getOperand(3).getReg();
-    unsigned Xm = Inst.getOperand(4).getReg();
+    MCRegister Xd_wb = Inst.getOperand(0).getReg();
+    MCRegister Xn_wb = Inst.getOperand(1).getReg();
+    MCRegister Xd = Inst.getOperand(2).getReg();
+    MCRegister Xn = Inst.getOperand(3).getReg();
+    MCRegister Xm = Inst.getOperand(4).getReg();
     if (Xd_wb != Xd)
       return Error(Loc[0],
                    "invalid SET instruction, Xd_wb and Xd do not match");
@@ -6451,7 +6451,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     // GPR64. Twiddle it here if necessary.
     AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
     if (Op.isScalarReg()) {
-      unsigned Reg = getXRegFromWReg(Op.getReg());
+      MCRegister Reg = getXRegFromWReg(Op.getReg());
       Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                               Op.getStartLoc(), Op.getEndLoc(),
                                               getContext());
@@ -6467,7 +6467,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       // GPR64. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[2]);
       if (Op.isScalarReg()) {
-        unsigned Reg = getXRegFromWReg(Op.getReg());
+        MCRegister Reg = getXRegFromWReg(Op.getReg());
         Operands[2] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                                 Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
@@ -6484,7 +6484,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       // GPR32. Twiddle it here if necessary.
       AArch64Operand &Op = static_cast<AArch64Operand &>(*Operands[1]);
       if (Op.isScalarReg()) {
-        unsigned Reg = getWRegFromXReg(Op.getReg());
+        MCRegister Reg = getWRegFromXReg(Op.getReg());
         Operands[1] = AArch64Operand::CreateReg(Reg, RegKind::Scalar,
                                                 Op.getStartLoc(),
                                                 Op.getEndLoc(), getContext());
@@ -7907,7 +7907,7 @@ ParseStatus AArch64AsmParser::tryParseGPRSeqPair(OperandVector &Operands) {
     return Error(E, "expected second odd register of a consecutive same-size "
                     "even/odd register pair");
 
-  unsigned Pair = 0;
+  MCRegister Pair;
   if (isXReg) {
     Pair = RI->getMatchingSuperReg(FirstReg, AArch64::sube64,
            &AArch64MCRegisterClasses[AArch64::XSeqPairsClassRegClassID]);
@@ -8047,7 +8047,7 @@ ParseStatus AArch64AsmParser::tryParseGPR64x8(OperandVector &Operands) {
 
   MCContext &ctx = getContext();
   const MCRegisterInfo *RI = ctx.getRegisterInfo();
-  int X8Reg = RI->getMatchingSuperReg(
+  MCRegister X8Reg = RI->getMatchingSuperReg(
       XReg, AArch64::x8sub_0,
       &AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID]);
   if (!X8Reg)

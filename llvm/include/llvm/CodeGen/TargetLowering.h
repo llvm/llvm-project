@@ -301,6 +301,7 @@ public:
     Type *Ty = nullptr;
     bool IsSExt : 1;
     bool IsZExt : 1;
+    bool IsNoExt : 1;
     bool IsInReg : 1;
     bool IsSRet : 1;
     bool IsNest : 1;
@@ -317,10 +318,11 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry()
-        : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
-          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
-          IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
-          IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
+        : IsSExt(false), IsZExt(false), IsNoExt(false), IsInReg(false),
+          IsSRet(false), IsNest(false), IsByVal(false), IsByRef(false),
+          IsInAlloca(false), IsPreallocated(false), IsReturned(false),
+          IsSwiftSelf(false), IsSwiftAsync(false), IsSwiftError(false),
+          IsCFGuardTarget(false) {}
 
     void setAttributes(const CallBase *Call, unsigned ArgIdx);
   };

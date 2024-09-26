@@ -318,13 +318,13 @@ RT_VAR_GROUP_BEGIN
 
 // Use at least double precision for accumulators.
 // Don't use __float128, it doesn't work with abs() or sqrt() yet.
-static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind {
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-  16
+static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind{
+#if HAS_LDBL128 || HAS_FLOAT128
+    16
 #elif HAS_FLOAT80
     10
 #else
-  8
+    8
 #endif
 };
 

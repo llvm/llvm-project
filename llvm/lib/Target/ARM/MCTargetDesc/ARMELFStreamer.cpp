@@ -80,8 +80,9 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitPersonality(const MCSymbol *Personality) override;
   void emitPersonalityIndex(unsigned Index) override;
   void emitHandlerData() override;
-  void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
-  void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
+  void emitSetFP(MCRegister FpReg, MCRegister SpReg,
+                 int64_t Offset = 0) override;
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
   void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
@@ -139,7 +140,7 @@ void ARMTargetAsmStreamer::emitPersonalityIndex(unsigned Index) {
 
 void ARMTargetAsmStreamer::emitHandlerData() { OS << "\t.handlerdata\n"; }
 
-void ARMTargetAsmStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetAsmStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                      int64_t Offset) {
   OS << "\t.setfp\t";
   InstPrinter.printRegName(OS, FpReg);
@@ -150,7 +151,7 @@ void ARMTargetAsmStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
   OS << '\n';
 }
 
-void ARMTargetAsmStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMTargetAsmStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   assert((Reg != ARM::SP && Reg != ARM::PC) &&
          "the operand of .movsp cannot be either sp or pc");
 
@@ -401,8 +402,9 @@ private:
   void emitPersonality(const MCSymbol *Personality) override;
   void emitPersonalityIndex(unsigned Index) override;
   void emitHandlerData() override;
-  void emitSetFP(unsigned FpReg, unsigned SpReg, int64_t Offset = 0) override;
-  void emitMovSP(unsigned Reg, int64_t Offset = 0) override;
+  void emitSetFP(MCRegister FpReg, MCRegister SpReg,
+                 int64_t Offset = 0) override;
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0) override;
   void emitPad(int64_t Offset) override;
   void emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                    bool isVector) override;
@@ -469,8 +471,8 @@ public:
   void emitPersonality(const MCSymbol *Per);
   void emitPersonalityIndex(unsigned index);
   void emitHandlerData();
-  void emitSetFP(unsigned NewFpReg, unsigned NewSpReg, int64_t Offset = 0);
-  void emitMovSP(unsigned Reg, int64_t Offset = 0);
+  void emitSetFP(MCRegister NewFpReg, MCRegister NewSpReg, int64_t Offset = 0);
+  void emitMovSP(MCRegister Reg, int64_t Offset = 0);
   void emitPad(int64_t Offset);
   void emitRegSave(const SmallVectorImpl<MCRegister> &RegList, bool isVector);
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
@@ -721,7 +723,7 @@ private:
   MCSymbol *FnStart;
   const MCSymbol *Personality;
   unsigned PersonalityIndex;
-  unsigned FPReg; // Frame pointer register
+  MCRegister FPReg; // Frame pointer register
   int64_t FPOffset; // Offset: (final frame pointer) - (initial $sp)
   int64_t SPOffset; // Offset: (final $sp) - (initial $sp)
   int64_t PendingOffset; // Offset: (final $sp) - (emitted $sp)
@@ -753,12 +755,12 @@ void ARMTargetELFStreamer::emitHandlerData() {
   getStreamer().emitHandlerData();
 }
 
-void ARMTargetELFStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetELFStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                      int64_t Offset) {
   getStreamer().emitSetFP(FpReg, SpReg, Offset);
 }
 
-void ARMTargetELFStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMTargetELFStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   getStreamer().emitMovSP(Reg, Offset);
 }
 
@@ -1373,7 +1375,7 @@ void ARMELFStreamer::emitPersonalityIndex(unsigned Index) {
   PersonalityIndex = Index;
 }
 
-void ARMELFStreamer::emitSetFP(unsigned NewFPReg, unsigned NewSPReg,
+void ARMELFStreamer::emitSetFP(MCRegister NewFPReg, MCRegister NewSPReg,
                                int64_t Offset) {
   assert((NewSPReg == ARM::SP || NewSPReg == FPReg) &&
          "the operand of .setfp directive should be either $sp or $fp");
@@ -1387,7 +1389,7 @@ void ARMELFStreamer::emitSetFP(unsigned NewFPReg, unsigned NewSPReg,
     FPOffset += Offset;
 }
 
-void ARMELFStreamer::emitMovSP(unsigned Reg, int64_t Offset) {
+void ARMELFStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {
   assert((Reg != ARM::SP && Reg != ARM::PC) &&
          "the operand of .movsp cannot be either sp or pc");
   assert(FPReg == ARM::SP && "current FP must be SP");

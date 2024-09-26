@@ -301,6 +301,8 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator,
                              StringRef FileName) override;
+  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
   bool emitCVFileDirective(unsigned FileNo, StringRef Filename,
@@ -429,7 +431,8 @@ public:
 
   void emitDwarfLineStartLabel(MCSymbol *StartSym) override;
 
-  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) override;
+  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel,
+                             MCSymbol *EndLabel = nullptr) override;
 
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
@@ -1767,6 +1770,12 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           Discriminator, FileName);
 }
 
+void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitDwarfLocLabelDirective(Loc, Name);
+  OS << ".loc_label\t" << Name;
+  EmitEOL();
+}
+
 MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   // Always use the zeroth line table, since asm syntax only supports one line
   // table for now.
@@ -2579,7 +2588,8 @@ void MCAsmStreamer::emitDwarfLineStartLabel(MCSymbol *StartSym) {
 }
 
 void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
-                                          MCSymbol *LastLabel) {
+                                          MCSymbol *LastLabel,
+                                          MCSymbol *EndLabel) {
   // If the targets write the raw debug line data for assembly output (We can
   // not switch to Section and add the end symbol there for assembly output)
   // we currently use the .text end label as any section end. This will not
@@ -2596,9 +2606,10 @@ void MCAsmStreamer::emitDwarfLineEndEntry(MCSection *Section,
   MCSection *TextSection = Ctx.getObjectFileInfo()->getTextSection();
   assert(TextSection->hasEnded() && ".text section is not end!");
 
-  MCSymbol *SectionEnd = TextSection->getEndSymbol(Ctx);
+  if (!EndLabel)
+    EndLabel = TextSection->getEndSymbol(Ctx);
   const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
-  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, SectionEnd,
+  emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
                            AsmInfo->getCodePointerSize());
 }
 

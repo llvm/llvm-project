@@ -351,6 +351,21 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   return values;
 }
 
+std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
+  if (value.getDefiningOp<vector::VectorScaleOp>())
+    return 1;
+  auto mul = value.getDefiningOp<arith::MulIOp>();
+  if (!mul)
+    return {};
+  auto lhs = mul.getLhs();
+  auto rhs = mul.getRhs();
+  if (lhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(rhs);
+  if (rhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(lhs);
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // CombiningKindAttr
 //===----------------------------------------------------------------------===//
@@ -5894,21 +5909,6 @@ LogicalResult CreateMaskOp::verify() {
   return success();
 }
 
-std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
-  if (value.getDefiningOp<vector::VectorScaleOp>())
-    return 1;
-  auto mul = value.getDefiningOp<arith::MulIOp>();
-  if (!mul)
-    return {};
-  auto lhs = mul.getLhs();
-  auto rhs = mul.getRhs();
-  if (lhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(rhs);
-  if (rhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(lhs);
-  return {};
-}
-
 namespace {
 
 /// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
@@ -6131,7 +6131,9 @@ LogicalResult MaskOp::verify() {
   Block &block = getMaskRegion().getBlocks().front();
   if (block.getOperations().empty())
     return emitOpError("expects a terminator within the mask region");
-  if (block.getOperations().size() > 2)
+
+  unsigned numMaskRegionOps = block.getOperations().size();
+  if (numMaskRegionOps > 2)
     return emitOpError("expects only one operation to mask");
 
   // Terminator checks.
@@ -6143,10 +6145,13 @@ LogicalResult MaskOp::verify() {
     return emitOpError(
         "expects number of results to match mask region yielded values");
 
-  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
   // Empty vector.mask. Nothing else to check.
-  if (!maskableOp)
+  if (numMaskRegionOps == 1)
     return success();
+
+  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
+  if (!maskableOp)
+    return emitOpError("expects a MaskableOpInterface within the mask region");
 
   // Result checks.
   if (maskableOp->getNumResults() != getNumResults())

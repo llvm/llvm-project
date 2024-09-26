@@ -58,7 +58,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Ceiling10_16)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Ceiling16_1)(
     CppTypeFor<TypeCategory::Real, 16>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Ceiling16_2)(
@@ -82,7 +82,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(ErfcScaled8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(ErfcScaled10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(ErfcScaled16)(
     CppTypeFor<TypeCategory::Real, 16>);
 #endif
@@ -102,7 +102,7 @@ CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent10_4)(
 CppTypeFor<TypeCategory::Integer, 8> RTDECL(Exponent10_8)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT
+#if HAS_LDBL128 || HAS_FLOAT
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent16_4)(
     CppTypeFor<TypeCategory::Real, 16>);
 CppTypeFor<TypeCategory::Integer, 8> RTDECL(Exponent16_8)(
@@ -148,7 +148,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Floor10_16)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Floor16_1)(
     CppTypeFor<TypeCategory::Real, 16>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Floor16_2)(
@@ -172,7 +172,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(Fraction8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Fraction10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(Fraction16)(
     CppTypeFor<TypeCategory::Real, 16>);
 #endif
@@ -183,7 +183,7 @@ bool RTDECL(IsNaN8)(CppTypeFor<TypeCategory::Real, 8>);
 #if HAS_FLOAT80
 bool RTDECL(IsNaN10)(CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 bool RTDECL(IsNaN16)(CppTypeFor<TypeCategory::Real, 16>);
 #endif
 
@@ -217,7 +217,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDECL(ModReal10)(
     CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
     const char *sourceFile = nullptr, int sourceLine = 0);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(ModReal16)(
     CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -252,7 +252,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDECL(ModuloReal10)(
     CppTypeFor<TypeCategory::Real, 10>, CppTypeFor<TypeCategory::Real, 10>,
     const char *sourceFile = nullptr, int sourceLine = 0);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(ModuloReal16)(
     CppTypeFor<TypeCategory::Real, 16>, CppTypeFor<TypeCategory::Real, 16>,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -297,7 +297,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Nint10_16)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Integer, 1> RTDECL(Nint16_1)(
     CppTypeFor<TypeCategory::Real, 16>);
 CppTypeFor<TypeCategory::Integer, 2> RTDECL(Nint16_2)(
@@ -323,7 +323,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(Nearest8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Nearest10)(
     CppTypeFor<TypeCategory::Real, 10>, bool positive);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(Nearest16)(
     CppTypeFor<TypeCategory::Real, 16>, bool positive);
 #endif
@@ -337,7 +337,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(RRSpacing8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(RRSpacing10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(RRSpacing16)(
     CppTypeFor<TypeCategory::Real, 16>);
 #endif
@@ -351,7 +351,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(SetExponent8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(SetExponent10)(
     CppTypeFor<TypeCategory::Real, 10>, std::int64_t);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(SetExponent16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
@@ -365,7 +365,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(Scale8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Scale10)(
     CppTypeFor<TypeCategory::Real, 10>, std::int64_t);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
@@ -414,7 +414,7 @@ CppTypeFor<TypeCategory::Real, 8> RTDECL(Spacing8)(
 CppTypeFor<TypeCategory::Real, 10> RTDECL(Spacing10)(
     CppTypeFor<TypeCategory::Real, 10>);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16>);
 #endif
@@ -430,7 +430,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDECL(FPow10i)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 4> e);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(FPow16i)(
     CppTypeFor<TypeCategory::Real, 16> b,
     CppTypeFor<TypeCategory::Integer, 4> e);
@@ -447,7 +447,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDECL(FPow10k)(
     CppTypeFor<TypeCategory::Real, 10> b,
     CppTypeFor<TypeCategory::Integer, 8> e);
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDECL(FPow16k)(
     CppTypeFor<TypeCategory::Real, 16> b,
     CppTypeFor<TypeCategory::Integer, 8> e);

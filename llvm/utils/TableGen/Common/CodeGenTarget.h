@@ -95,7 +95,7 @@ public:
 
   /// getInstructionSet - Return the InstructionSet object.
   ///
-  Record *getInstructionSet() const;
+  const Record *getInstructionSet() const;
 
   /// getAllowRegisterRenaming - Return the AllowRegisterRenaming flag value for
   /// this target.
@@ -104,12 +104,12 @@ public:
 
   /// getAsmParser - Return the AssemblyParser definition for this target.
   ///
-  Record *getAsmParser() const;
+  const Record *getAsmParser() const;
 
   /// getAsmParserVariant - Return the AssemblyParserVariant definition for
   /// this target.
   ///
-  Record *getAsmParserVariant(unsigned i) const;
+  const Record *getAsmParserVariant(unsigned i) const;
 
   /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
   /// available for this target.
@@ -118,7 +118,7 @@ public:
 
   /// getAsmWriter - Return the AssemblyWriter definition for this target.
   ///
-  Record *getAsmWriter() const;
+  const Record *getAsmWriter() const;
 
   /// getRegBank - Return the register bank description.
   CodeGenRegBank &getRegBank() const;

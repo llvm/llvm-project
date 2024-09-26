@@ -14,3 +14,6 @@
 COMPILER_RT_ABI dst_t __truncxfbf2(long double a) { return __truncXfYf2__(a); }
 
 #endif
+
+// Have at least one declaration to suppress warnings.
+enum Unused { ReallyUnused };

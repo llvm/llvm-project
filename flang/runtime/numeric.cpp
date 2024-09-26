@@ -299,7 +299,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Ceiling10_16)(
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Ceiling16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -338,7 +338,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
   return ErfcScaled(x);
 }
 #endif
-#if LDBL_MANT_DIG == 113
+#if HAS_LDBL128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfcScaled16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return ErfcScaled(x);
@@ -439,7 +439,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Floor10_16)(
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Floor16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -489,7 +489,7 @@ bool RTDEF(IsFinite8)(CppTypeFor<TypeCategory::Real, 8> x) {
 bool RTDEF(IsFinite10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isfinite(x);
 }
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 bool RTDEF(IsFinite16)(CppTypeFor<TypeCategory::Real, 16> x) {
   return std::isfinite(x);
 }
@@ -505,7 +505,7 @@ bool RTDEF(IsNaN8)(CppTypeFor<TypeCategory::Real, 8> x) {
 bool RTDEF(IsNaN10)(CppTypeFor<TypeCategory::Real, 10> x) {
   return std::isnan(x);
 }
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 bool RTDEF(IsNaN16)(CppTypeFor<TypeCategory::Real, 16> x) {
   return std::isnan(x);
 }
@@ -693,7 +693,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(Nint10_16)(
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
 #endif
-#elif LDBL_MANT_DIG == 113
+#elif HAS_LDBL128
 CppTypeFor<TypeCategory::Integer, 1> RTDEF(Nint16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -900,7 +900,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(FPow10i)(
   return FPowI(b, e);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(FPow16i)(
     CppTypeFor<TypeCategory::Real, 16> b,
     CppTypeFor<TypeCategory::Integer, 4> e) {
@@ -925,7 +925,7 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(FPow10k)(
   return FPowI(b, e);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(FPow16k)(
     CppTypeFor<TypeCategory::Real, 16> b,
     CppTypeFor<TypeCategory::Integer, 8> e) {

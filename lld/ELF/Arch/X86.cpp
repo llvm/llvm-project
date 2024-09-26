@@ -187,7 +187,7 @@ RelType X86::getDynRel(RelType type) const {
 }
 
 void X86::writePltHeader(uint8_t *buf) const {
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t v[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
@@ -211,7 +211,7 @@ void X86::writePltHeader(uint8_t *buf) const {
 void X86::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
   unsigned relOff = ctx.in.relaPlt->entsize * sym.getPltIdx();
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
         0x68, 0,    0, 0, 0,    // pushl $reloc_offset
@@ -538,7 +538,7 @@ void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
                         uint64_t /*pltEntryAddr*/) const {
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t inst[] = {
         0xf3, 0x0f, 0x1e, 0xfb,       // endbr32
         0xff, 0xa3, 0,    0,    0, 0, // jmp *name@GOT(%ebx)
@@ -711,8 +711,8 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 TargetInfo *elf::getX86TargetInfo() {
-  if (config->zRetpolineplt) {
-    if (config->isPic) {
+  if (ctx.arg.zRetpolineplt) {
+    if (ctx.arg.isPic) {
       static RetpolinePic t;
       return &t;
     }
@@ -720,7 +720,7 @@ TargetInfo *elf::getX86TargetInfo() {
     return &t;
   }
 
-  if (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
     static IntelIBT t;
     return &t;
   }
