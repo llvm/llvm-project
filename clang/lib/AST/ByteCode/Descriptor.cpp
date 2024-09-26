@@ -15,6 +15,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Source.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -420,6 +421,14 @@ SourceLocation Descriptor::getLocation() const {
     return D->getLocation();
   if (auto *E = Source.dyn_cast<const Expr *>())
     return E->getExprLoc();
+  llvm_unreachable("Invalid descriptor type");
+}
+
+SourceInfo Descriptor::getLoc() const {
+  if (const auto *D = Source.dyn_cast<const Decl *>())
+    return SourceInfo(D);
+  if (const auto *E = Source.dyn_cast<const Expr *>())
+    return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }
 
