@@ -2,10 +2,15 @@
 Function Effect Analysis
 ========================
 
+.. contents::
+  :depth: 3
+  :local:
+
+
 Introduction
 ============
 
-Clang Function Effect Analysis is a C++ language extension which can warn about "unsafe"
+Clang Function Effect Analysis is a language extension which can warn about "unsafe"
 constructs. The feature is currently tailored for the Performance Constraint attributes,
 ``nonblocking`` and ``nonallocating``; functions with these attributes are verified as not
 containing any language constructs or calls to other functions which violate the constraint.
@@ -73,9 +78,11 @@ series of performance constraints. From weakest to strongest:
 
 ``nonblocking`` includes the ``nonallocating`` guarantee. 
 
-``nonblocking`` and ``nonallocating`` include the ``noexcept`` guarantee, but the presence of either
-attribute does not implicitly specify ``noexcept``. (It would be inappropriate for a Clang 
-attribute, ignored by non-Clang compilers, to imply a standard language feature.)
+``nonblocking`` and ``nonallocating`` include the ``noexcept`` guarantee, but neither
+attribute implicitly specifies ``noexcept``. (It would be inappropriate for a Clang 
+attribute, ignored by non-Clang compilers, to imply a standard language feature.) Nonetheless,
+Clang emits a warning if, in C++, a function is declared ``nonblocking`` or ``nonallocating``
+without ``noexcept``. This diagnostic is controlled by ``-Wperf-constraint-implies-noexcept``.
 
 ``nonblocking(true)`` and ``nonallocating(true)`` apply to function *types*, and by extension, to
 function-like declarations. When applied to a declaration with a body, the compiler verifies the
@@ -83,24 +90,32 @@ function, as described in the section "Analysis and warnings", below. Functions 
 performance constraint are not verified.
 
 ``blocking`` and ``allocating`` are synonyms for ``nonblocking(false)`` and
-``nonallocating(false)``, respectively. They can be used on a function-like declaration to explicitly disable any potential
-inference of ``nonblocking`` or ``nonallocating`` during verification. (Inference is described later
-in this document). ``nonblocking(false)`` and ``nonallocating(false)`` are legal, but superfluous 
-when applied to a function *type*. ``float (int) [[nonblocking(false)]]`` and ``float (int)`` are
-identical types.
+``nonallocating(false)``, respectively. They can be used on a function-like declaration to
+explicitly disable any potential inference of ``nonblocking`` or ``nonallocating`` during
+verification. (Inference is described later in this document). ``nonblocking(false)`` and
+``nonallocating(false)`` are legal, but superfluous  when applied to a function *type*.
+``float (int) [[nonblocking(false)]]`` and ``float (int)`` are identical types.
 
-For all functions with no explicit performance constraint, the worst is assumed, that the function
-allocates memory and potentially blocks, unless it can be inferred otherwise, as described in the
+For functions with no explicit performance constraint, the worst is assumed: the function
+allocates memory and potentially blocks, unless it can be inferred otherwise. This is detailed in the
 discussion of verification.
 
-The following list describes the meanings of all permutations of the two attributes and arguments:
+The following example describes the meanings of all permutations of the two attributes and arguments:
 
-- ``nonblocking(true)`` + ``nonallocating(true)``: valid; ``nonallocating(true)`` is superfluous but
-  does not contradict the guarantee.
-- ``nonblocking(true)`` + ``nonallocating(false)``: error, contradictory.
-- ``nonblocking(false)`` + ``nonallocating(true)``: valid; the function does not allocate memory,
-  but may lock for other reasons.
-- ``nonblocking(false)`` + ``nonallocating(false)``: valid.
+.. code-block:: c++
+
+  void nb1_na1() [[clang::nonblocking(true)]] [[clang::nonallocating(true)]];
+  // Valid; nonallocating(true) is superfluous but doesn't contradict the guarantee.
+
+  void nb1_na0() [[clang::nonblocking(true)]] [[clang::nonallocating(false)]];
+  // error: 'allocating' and 'nonblocking' attributes are not compatible
+
+  void nb0_na1() [[clang::nonblocking(false)]] [[clang::nonallocating(true)]];
+  // Valid; the function does not allocate memory, but may lock for other reasons.
+
+  void nb0_na0() [[clang::nonblocking(false)]] [[clang::nonallocating(false)]];
+  // Valid.
+
 
 Type conversions
 ----------------
@@ -219,8 +234,7 @@ The attributes have no effect on the mangling of function and method names.
 ``nonblocking`` and ``nonallocating`` are conceptually similar to a stronger form of C++'s
 ``noexcept``, but with further diagnostics, as described later in this document. Therefore, in C++,
 a ``nonblocking`` or ``nonallocating`` function, method, block or lambda should also be declared
-``noexcept``.[^6] If ``noexcept`` is missing, a warning is issued. In Clang, this diagnostic is
-controlled by ``-Wperf-constraint-implies-noexcept``.
+``noexcept``.
 
 Objective-C
 -----------
@@ -245,7 +259,7 @@ following rules. Such functions:
    ``nonblocking``, since it merely casts the supplied pointer to the result type.)
 
 2. May not throw or catch exceptions. To throw, the compiler must allocate the exception on the
-   heap. (Also, many subclasses of ``std::exception`` allocate a ``std::string``). Exceptions are
+   heap. (Also, many subclasses of ``std::exception`` allocate a string). Exceptions are
    deallocated when caught.
 
 3. May not make any indirect function call, via a virtual method, function pointer, or
@@ -259,20 +273,24 @@ following rules. Such functions:
   b. The callee is defined in the same translation unit as the caller, does not have the ``false``
      form of the required attribute, and can be verified to be have the same attribute or stronger,
      according to these same rules.
-  c. The callee is a built-in function that is known not to block or allocated.
+  c. The callee is a built-in function that is known not to block or allocate.
   d. The callee is declared ``noreturn`` and, if compiling C++, the callee is also declared
-     ``noexcept``. This exception excludes functions such as ``abort()`` and ``std::terminate()``
-     from the analysis.
+     ``noexcept``. This special case excludes functions such as ``abort()`` and ``std::terminate()``
+     from the analysis. (The reason for requiring ``noexcept`` in C++ is that a function declared
+     ``noreturn`` could be a wrapper for ``throw``.)
 
 5. May not invoke or access an Objective-C method or property, since ``objc_msgSend()`` calls into 
    the Objective-C runtime, which may allocate memory or otherwise block.
 
+6. May not access thread-local variables. Typically, thread-local variables are allocated on the
+   heap when first accessed.
+
 Functions declared ``nonblocking`` have an additional constraint:
 
-6. May not declare static local variables (e.g. Meyers singletons). The compiler generates a lock
+7. May not declare static local variables (e.g. Meyers singletons). The compiler generates a lock
    protecting the initialization of the variable.
 
-Violations of any of these rules result in warnings:
+Violations of any of these rules result in warnings, in the ``-Wfunction-effects`` category:
 
 .. code-block:: c++
 
@@ -286,7 +304,7 @@ Violations of any of these rules result in warnings:
 
     if (x == nullptr) {
       static Logger* logger = createLogger();
-      // warning: function with 'nonblocking' attribute must not have static locals
+      // warning: function with 'nonblocking' attribute must not have static local variables
 
       throw std::runtime_warning{ "null" };
       // warning: 'nonblocking" function 'example' must not throw exceptions
@@ -330,7 +348,7 @@ Lambdas and blocks
 
 As mentioned earlier, the performance constraint attributes apply only to a single function and not
 to any code nested inside it, including blocks, lambdas, and local classes. It is possible for a
-lock-free function to schedule the execution of a blocking lambda on another thread. Similarly, a
+nonblocking function to schedule the execution of a blocking lambda on another thread. Similarly, a
 blocking function may create a ``nonblocking`` lambda for use in a realtime context.
 
 Operations which create, destroy, copy, and move lambdas and blocks are analyzed in terms of the
@@ -393,6 +411,25 @@ which throw exceptions include:
 | ``std::expected<T, E>::value()`` | Same as for ``std::optional<T>::value()``.                            |
 +----------------------------------+-----------------------------------------------------------------------+
 
+
+``std::function<R(Args...)>``
+-----------------------------
+
+``std::function<R(Args...)>`` is generally incompatible with ``nonblocking`` and ``nonallocating``
+code, because an implementation typically allocates heap memory in the constructor.
+
+Alternatives:
+
+- ``std::function_ref`` (available in C++26 or as ``llvm::function_ref``). This is appropriate and
+  optimal when a functor's lifetime does not need to extend past the function that created it.
+
+- ``inplace_function`` from WG14. This solves the allocation problem by giving the functor wrapper
+  a fixed size known at compile time and using an inline buffer.
+
+While these alternatives both address the heap allocation of ``std::function``, they are still
+obstacles to ``nonblocking/nonallocating`` verification, for reasons detailed in the next section.
+
+
 Interactions with type-erasure techniques
 -----------------------------------------
 
@@ -407,7 +444,7 @@ Code can work around this limitation in either of two ways:
 
 1. Avoid abstractions like ``std::function`` and instead work directly with the original lambda type.
 
-2. Create a specialized alternative, e.g. ``nonblocking_function<R(Args...)>`` where all function
+2. Create a specialized alternative, e.g. ``nonblocking_function_ref<R(Args...)>`` where all function
    pointers used in the implementation and its interface are ``nonblocking``.
 
 As an example of the first approach, when using a lambda as a *Callable* template parameter, the
@@ -496,8 +533,8 @@ At least for an operating system's C functions, it is possible to define an over
 redeclares safe common functions (e.g. ``pthread_self()``) with the addition of ``nonblocking``.
 This may help in adopting the feature incrementally.
 
-It also helps that for many of the functions in ``<math.h>``, Clang generates calls to built-in
-functions, which the diagnosis understands to be safe.
+It also helps that for many of the functions in the standard C libraries (notably ``<math.h>``),
+Clang generates calls to built-in functions, which the diagnosis understands to be safe.
 
 Much of the C++ standard library consists of inline templated functions which work well with
 inference. A small number of primitives may need explicit ``nonblocking/nonallocating`` attributes.
