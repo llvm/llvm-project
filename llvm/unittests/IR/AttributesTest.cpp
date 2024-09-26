@@ -524,6 +524,77 @@ TEST(Attributes, SetIntersect) {
   }
 }
 
+TEST(Attributes, SetIntersectByValAlign) {
+  LLVMContext C;
+  AttributeSet AS0, AS1;
+
+  Attribute ByVal = Attribute::get(C, Attribute::ByVal, Type::getInt32Ty(C));
+  Attribute Align0 = Attribute::get(C, Attribute::Alignment, 4);
+  Attribute Align1 = Attribute::get(C, Attribute::Alignment, 8);
+
+  {
+    AttrBuilder AB0(C), AB1(C);
+    AB0.addAttribute(Align0);
+    AB1.addAttribute(Align1);
+    AB0.addAttribute(Attribute::NoUndef);
+    AS0 = AttributeSet::get(C, AB0);
+    AS1 = AttributeSet::get(C, AB1);
+    auto Res = AS0.intersectWith(C, AS1);
+    ASSERT_TRUE(Res.has_value());
+    ASSERT_TRUE(Res->hasAttribute(Attribute::Alignment));
+  }
+  {
+    AttrBuilder AB0(C), AB1(C);
+    AB0.addAttribute(Align0);
+    AB0.addAttribute(ByVal);
+    AB1.addAttribute(Align1);
+    AB1.addAttribute(ByVal);
+    AB0.addAttribute(Attribute::NoUndef);
+    AS0 = AttributeSet::get(C, AB0);
+    AS1 = AttributeSet::get(C, AB1);
+    auto Res = AS0.intersectWith(C, AS1);
+    ASSERT_FALSE(Res.has_value());
+  }
+  {
+    AttrBuilder AB0(C), AB1(C);
+    AB0.addAttribute(Align0);
+    AB0.addAttribute(ByVal);
+    AB1.addAttribute(ByVal);
+    AB0.addAttribute(Attribute::NoUndef);
+    AS0 = AttributeSet::get(C, AB0);
+    AS1 = AttributeSet::get(C, AB1);
+    ASSERT_FALSE(AS0.intersectWith(C, AS1).has_value());
+    ASSERT_FALSE(AS1.intersectWith(C, AS0).has_value());
+  }
+  {
+    AttrBuilder AB0(C), AB1(C);
+    AB0.addAttribute(ByVal);
+    AB1.addAttribute(ByVal);
+    AB0.addAttribute(Attribute::NoUndef);
+    AS0 = AttributeSet::get(C, AB0);
+    AS1 = AttributeSet::get(C, AB1);
+
+    auto Res = AS0.intersectWith(C, AS1);
+    ASSERT_TRUE(Res.has_value());
+    ASSERT_TRUE(Res->hasAttribute(Attribute::ByVal));
+  }
+  {
+    AttrBuilder AB0(C), AB1(C);
+    AB0.addAttribute(ByVal);
+    AB0.addAttribute(Align0);
+    AB1.addAttribute(ByVal);
+    AB1.addAttribute(Align0);
+    AB0.addAttribute(Attribute::NoUndef);
+    AS0 = AttributeSet::get(C, AB0);
+    AS1 = AttributeSet::get(C, AB1);
+
+    auto Res = AS0.intersectWith(C, AS1);
+    ASSERT_TRUE(Res.has_value());
+    ASSERT_TRUE(Res->hasAttribute(Attribute::ByVal));
+    ASSERT_TRUE(Res->hasAttribute(Attribute::Alignment));
+  }
+}
+
 TEST(Attributes, ListIntersect) {
   LLVMContext C;
   AttributeList AL0;
@@ -532,26 +603,26 @@ TEST(Attributes, ListIntersect) {
   AL0 = AL0.addRetAttribute(C, Attribute::NoUndef);
   AL1 = AL1.addRetAttribute(C, Attribute::NoUndef);
 
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_EQ(AL0, *Res);
 
   AL0 = AL0.addParamAttribute(C, 1, Attribute::NoUndef);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_FALSE(Res.has_value());
 
   AL1 = AL1.addParamAttribute(C, 2, Attribute::NoUndef);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_FALSE(Res.has_value());
 
   AL0 = AL0.addParamAttribute(C, 2, Attribute::NoUndef);
   AL1 = AL1.addParamAttribute(C, 1, Attribute::NoUndef);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_EQ(AL0, *Res);
 
   AL0 = AL0.addParamAttribute(C, 2, Attribute::NonNull);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_NE(AL0, *Res);
   ASSERT_TRUE(Res->hasRetAttr(Attribute::NoUndef));
@@ -560,7 +631,7 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::NonNull));
 
   AL0 = AL0.addRetAttribute(C, Attribute::NonNull);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_NE(AL0, *Res);
   ASSERT_TRUE(Res->hasRetAttr(Attribute::NoUndef));
@@ -570,7 +641,7 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::NonNull));
 
   AL0 = AL0.addFnAttribute(C, Attribute::ReadOnly);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_NE(AL0, *Res);
   ASSERT_FALSE(Res->hasFnAttr(Attribute::ReadOnly));
@@ -581,7 +652,7 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::NonNull));
 
   AL1 = AL1.addFnAttribute(C, Attribute::ReadOnly);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_NE(AL0, *Res);
   ASSERT_TRUE(Res->hasFnAttr(Attribute::ReadOnly));
@@ -592,11 +663,11 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::NonNull));
 
   AL1 = AL1.addFnAttribute(C, Attribute::AlwaysInline);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_FALSE(Res.has_value());
 
   AL0 = AL0.addFnAttribute(C, Attribute::AlwaysInline);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_TRUE(Res->hasFnAttr(Attribute::AlwaysInline));
   ASSERT_TRUE(Res->hasFnAttr(Attribute::ReadOnly));
@@ -607,7 +678,7 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::NonNull));
 
   AL1 = AL1.addParamAttribute(C, 2, Attribute::ReadNone);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_TRUE(Res->hasFnAttr(Attribute::AlwaysInline));
   ASSERT_TRUE(Res->hasFnAttr(Attribute::ReadOnly));
@@ -619,11 +690,11 @@ TEST(Attributes, ListIntersect) {
   ASSERT_FALSE(Res->hasParamAttr(2, Attribute::ReadNone));
 
   AL1 = AL1.addParamAttribute(C, 3, Attribute::ReadNone);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_FALSE(Res.has_value());
 
   AL0 = AL0.addParamAttribute(C, 3, Attribute::ReadNone);
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_TRUE(Res->hasFnAttr(Attribute::AlwaysInline));
   ASSERT_TRUE(Res->hasFnAttr(Attribute::ReadOnly));
@@ -637,12 +708,12 @@ TEST(Attributes, ListIntersect) {
 
   AL0 = AL0.addParamAttribute(
       C, {3}, Attribute::get(C, Attribute::ByVal, Type::getInt32Ty(C)));
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_FALSE(Res.has_value());
 
   AL1 = AL1.addParamAttribute(
       C, {3}, Attribute::get(C, Attribute::ByVal, Type::getInt32Ty(C)));
-  Res = AL0.intersectAttributes(C, AL1);
+  Res = AL0.intersectWith(C, AL1);
   ASSERT_TRUE(Res.has_value());
   ASSERT_TRUE(Res->hasFnAttr(Attribute::AlwaysInline));
   ASSERT_TRUE(Res->hasFnAttr(Attribute::ReadOnly));

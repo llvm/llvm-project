@@ -27,19 +27,11 @@ def RetAttr : AttrProperty;
 /// Intersection rules. Used for example in sinking/hoisting two
 /// callbases to find a set of attributes that apply to both.
 /// Note, there are some attributes we can (probably) legally drop
-/// but are intentionally excluded as of now. Those include:
-///     - initializes
-///     - allockind
-///     - allocsize
-///     - minsize
-///     - optsize
-///     - optnone
-///     - optdebug
-///     - optforfuzzing
+/// but are intentionally excluded as of now.
 ///
-/// When intersecting the attributes must both present and equal.
-/// Use this for attributes you are not certain it is safe to drop
-/// at any time. I.e `byval(Ty)` on a parameter.
+/// When intersecting the attributes both must be present and equal.
+/// Use this for attributes it is not safe to drop at any time. E.g.
+/// `byval(Ty)` on a parameter.
 def IntersectPreserve : AttrProperty;
 
 /// When intersecting take the AND of the two attrs.
@@ -123,7 +115,7 @@ def NoUndef : EnumAttr<"noundef", IntersectAnd, [ParamAttr, RetAttr]>;
 def Cold : EnumAttr<"cold", IntersectAnd, [FnAttr]>;
 
 /// Can only be moved to control-equivalent blocks.
-def Convergent : EnumAttr<"convergent", IntersectAnd, [FnAttr]>;
+def Convergent : EnumAttr<"convergent", IntersectPreserve, [FnAttr]>;
 
 /// Marks function as being in a hot path and frequently called.
 def Hot: EnumAttr<"hot", IntersectAnd, [FnAttr]>;

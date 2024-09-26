@@ -797,7 +797,7 @@ public:
   /// the two lists are inherently incompatible (imply different behavior, not
   /// just analysis).
   [[nodiscard]] std::optional<AttributeList>
-  intersectAttributes(LLVMContext &C, AttributeList Other) const;
+  intersectWith(LLVMContext &C, AttributeList Other) const;
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors

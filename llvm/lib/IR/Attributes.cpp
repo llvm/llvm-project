@@ -969,7 +969,7 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
   auto ItEnd1 = Other.end();
 
   while (ItBegin0 != ItEnd0 || ItBegin1 != ItEnd1) {
-    std::optional<Attribute> Attr0, Attr1;
+    Attribute Attr0, Attr1;
     if (ItBegin1 == ItEnd1)
       Attr0 = *ItBegin0++;
     else if (ItBegin0 == ItEnd0)
@@ -984,30 +984,46 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
       else
         Attr1 = *ItBegin1++;
     }
-    Attribute Attr = Attr0 ? *Attr0 : *Attr1;
+    assert(Attr0.isValid() ||
+           Attr1.isValid() && "Iteration should never yield no valid attrs");
+
+    // If we don't have both attributes, then fail if the attribute is
+    // must-preserve or drop it otherwise.
+    if (!Attr0.isValid() || !Attr1.isValid()) {
+      Attribute Attr = Attr0.isValid() ? Attr0 : Attr1;
+      // Non-enum assume we must preserve.
+      if (!Attr.hasKindAsEnum())
+        return std::nullopt;
+      Attribute::AttrKind Kind = Attr.getKindAsEnum();
+      if (Attribute::intersectMustPreserve(Kind))
+        return std::nullopt;
+      continue;
+    }
+    // We have both attributes so apply the intersection rule.
+
     auto IntersectEq = [&]() {
-      if (!Attr0 || !Attr1)
+      if (Attr0 != Attr1)
         return false;
-      if (*Attr0 != *Attr1)
-        return false;
-      Intersected.addAttribute(Attr);
+      Intersected.addAttribute(Attr0);
       return true;
     };
 
-    if (!Attr.hasKindAsEnum()) {
+    // Non-enum assume we must preserve
+    if (!Attr0.hasKindAsEnum()) {
       if (!IntersectEq())
         return std::nullopt;
       continue;
     }
 
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    bool BothValid = Attr0 && Attr1 && Attr0->isValid() && Attr1->isValid();
+    Attribute::AttrKind Kind = Attr0.getKindAsEnum();
+    assert(Attr1.hasKindAsEnum() && Kind == Attr1.getKindAsEnum() &&
+           "Iterator picked up two different attributes in the same iteration");
+
     // Attribute we can intersect with "and"
     if (Attribute::intersectWithAnd(Kind)) {
       assert(Attribute::isEnumAttrKind(Kind) &&
              "Invalid attr type of intersectAnd");
-      if (BothValid)
-        Intersected.addAttribute(Kind);
+      Intersected.addAttribute(Kind);
       continue;
     }
 
@@ -1015,40 +1031,35 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     if (Attribute::intersectWithMin(Kind)) {
       assert(Attribute::isIntAttrKind(Kind) &&
              "Invalid attr type of intersectMin");
-      if (BothValid) {
-        uint64_t NewVal =
-            std::min(Attr0->getValueAsInt(), Attr1->getValueAsInt());
-        Intersected.addRawIntAttr(Kind, NewVal);
-      }
+      uint64_t NewVal = std::min(Attr0.getValueAsInt(), Attr1.getValueAsInt());
+      Intersected.addRawIntAttr(Kind, NewVal);
       continue;
     }
     // Attribute we can intersect but need a custom rule for.
     if (Attribute::intersectWithCustom(Kind)) {
-      if (BothValid) {
-        switch (Kind) {
-        case Attribute::Alignment:
-          Intersected.addAlignmentAttr(
-              std::min(Attr0->getAlignment().valueOrOne(),
-                       Attr1->getAlignment().valueOrOne()));
-          break;
-        case Attribute::Memory:
-          Intersected.addMemoryAttr(Attr0->getMemoryEffects() |
-                                    Attr1->getMemoryEffects());
-          break;
-        case Attribute::NoFPClass:
-          Intersected.addNoFPClassAttr(Attr0->getNoFPClass() &
-                                       Attr1->getNoFPClass());
-          break;
-        case Attribute::Range: {
-          ConstantRange Range0 = Attr0->getRange();
-          ConstantRange Range1 = Attr1->getRange();
-          ConstantRange NewRange = Range0.unionWith(Range1);
-          if (!NewRange.isFullSet())
-            Intersected.addRangeAttr(NewRange);
-        } break;
-        default:
-          llvm_unreachable("Unknown attribute with custom intersection rule");
-        }
+      switch (Kind) {
+      case Attribute::Alignment:
+        Intersected.addAlignmentAttr(
+            std::min(Attr0.getAlignment().valueOrOne(),
+                     Attr1.getAlignment().valueOrOne()));
+        break;
+      case Attribute::Memory:
+        Intersected.addMemoryAttr(Attr0.getMemoryEffects() |
+                                  Attr1.getMemoryEffects());
+        break;
+      case Attribute::NoFPClass:
+        Intersected.addNoFPClassAttr(Attr0.getNoFPClass() &
+                                     Attr1.getNoFPClass());
+        break;
+      case Attribute::Range: {
+        ConstantRange Range0 = Attr0.getRange();
+        ConstantRange Range1 = Attr1.getRange();
+        ConstantRange NewRange = Range0.unionWith(Range1);
+        if (!NewRange.isFullSet())
+          Intersected.addRangeAttr(NewRange);
+      } break;
+      default:
+        llvm_unreachable("Unknown attribute with custom intersection rule");
       }
       continue;
     }
@@ -1056,6 +1067,13 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     // Attributes with no intersection rule. Only intersect if they are equal.
     // Otherwise fail.
     if (!IntersectEq())
+      return std::nullopt;
+
+    // Special handling of `byval`. `byval` essentially turns align attr into
+    // must-preserve
+    if (Kind == Attribute::ByVal &&
+        getAttribute(Attribute::Alignment) !=
+            Other.getAttribute(Attribute::Alignment))
       return std::nullopt;
   }
 
@@ -1774,7 +1792,7 @@ AttributeList AttributeList::addAllocSizeParamAttr(
 }
 
 std::optional<AttributeList>
-AttributeList::intersectAttributes(LLVMContext &C, AttributeList Other) const {
+AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   // Trivial case, the two lists are equal.
   if (*this == Other)
     return *this;
