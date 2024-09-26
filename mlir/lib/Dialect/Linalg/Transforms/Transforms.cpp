@@ -1028,9 +1028,8 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 /// This method assumes that all outer dims for this pack Op are 1.
 ///
 /// At most _one_ inner tile size can be _dynamic_, all other inner tiles are
-/// required to have static sizes. The inner tile that's dynamic must be a
-/// multiple of vector.vscale (to support scalable tile sizes). This condition
-/// can be relaxed in the future.
+/// required to have static sizes. This restriction can be relaxed in the
+/// future.
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            tensor::PackOp packOp) {
   Value input = packOp.getSource();
@@ -1049,8 +1048,8 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
   DenseMap<int64_t, OpFoldResult> tileAndPosMapping =
       packOp.getDimAndTileMapping();
 
-  // The size of a scalable tile (if present).
-  Value scalableSize;
+  // The size of a dynamic tile (if present).
+  Value dynamicTileSize;
 
   // Collect dims for the padded shape.
   SmallVector<int64_t> paddedShape;
@@ -1080,16 +1079,15 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
     // 2.2 Dynamic tile sizes
     paddedShape.push_back(ShapedType::kDynamic);
 
-    // Get the value that holds the scalable size.
-    assert(!scalableSize && "Only one scalable size is supported ATM.");
-    scalableSize = llvm::dyn_cast_if_present<Value>(tileSizeForDim);
-    assert(vector::getConstantVscaleMultiplier(scalableSize) &&
-           "This dynamic shape is not a multiple of vscale, this !");
+    // Get the value that holds the dynamic size.
+    assert(!dynamicTileSize && "Only one dynamic tile is supported ATM.");
+    dynamicTileSize = llvm::dyn_cast_if_present<Value>(tileSizeForDim);
   }
   auto resultType =
       RankedTensorType::get(paddedShape, inputType.getElementType());
   return tensor::createPadHighOp(resultType, input, packOp.getPaddingValue(),
-                                 /*nofold=*/false, loc, builder, scalableSize);
+                                 /*nofold=*/false, loc, builder,
+                                 dynamicTileSize);
 }
 
 // Normalizes a permutation on a higher rank space to its actual size, e.g.
@@ -1152,14 +1150,6 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
-  if (llvm::any_of(packOp.getMixedTiles(), [](OpFoldResult tile) {
-        return tile.is<Value>() && !vector::getConstantVscaleMultiplier(
-                                       llvm::dyn_cast<Value>(tile));
-      })) {
-    return rewriter.notifyMatchFailure(
-        packOp, "require inner tile sizes to be either static or a constant "
-                "multiple of vector.vscale");
-  }
   if (llvm::count_if(packOp.getMixedTiles(),
                      [](OpFoldResult tile) { return tile.is<Value>(); }) > 1) {
     return rewriter.notifyMatchFailure(
@@ -1221,22 +1211,20 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
   SmallVector<int64_t> transpShape = readShape;
   applyPermutationToVector<int64_t>(transpShape, perm);
 
-  // If there's a tile with a scalable size, retrieve its size. ATM only 1
-  // scalable tile is allowed.
-  Value scalableSize;
+  // If there's a tile with a dynamic size, retrieve its size. ATM only 1
+  // dynamic tile is allowed.
+  Value dynDimSize;
   for (auto tile : packOp.getMixedTiles()) {
     if (tile.is<Value>()) {
-      assert(!scalableSize && "Only one scalable size is supported ATM.");
-      scalableSize = cast<Value>(tile);
-      assert(vector::getConstantVscaleMultiplier(scalableSize) &&
-             "This dynamic shape is not a multiple of vscale!");
+      assert(!dynDimSize && "Only one scalable size is supported ATM.");
+      dynDimSize = cast<Value>(tile);
     }
   }
 
   Value empty =
       ShapedType::isDynamicShape(cast<ShapedType>(input.getType()).getShape())
           ? rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType,
-                                             scalableSize)
+                                             dynDimSize)
           : rewriter.create<tensor::EmptyOp>(loc, transpShape, elemType);
   auto transposedOp =
       rewriter.create<linalg::TransposeOp>(loc, tile, empty, perm);

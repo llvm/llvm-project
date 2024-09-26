@@ -23,7 +23,7 @@ func.func @simple_pad_and_pack(%input: tensor<5x1xf32>, %output: tensor<1x1x8x2x
   %0 = tensor.pack %input padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %output : tensor<5x1xf32> -> tensor<1x1x8x2xf32>
   return %0 : tensor<1x1x8x2xf32>
 }
-// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0, s1] -> (s0 - s1)>
+// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0] -> (s0 - 5)>
 
 // CHECK-LABEL: func.func @simple_pad_and_pack
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
@@ -36,7 +36,29 @@ func.func @simple_pad_and_pack(%input: tensor<5x1xf32>, %output: tensor<1x1x8x2x
 // CHECK-SAME:      [0, 0, 0, 0] [1, 1, 8, 2] [1, 1, 1, 1]
 // CHECK:         return %[[INSERT]]
 
-/// Same as example above, but with scalable sizes.
+/// Same as example above, but with dynamic tile size.
+
+func.func @simple_pad_and_pack_dynamic(%input: tensor<5x1xf32>, %output: tensor<1x1x?x2xf32>, %pad: f32, %high: index) -> tensor<1x1x?x2xf32> {
+  %0 = tensor.pack %input padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [%high, 2] into %output : tensor<5x1xf32> -> tensor<1x1x?x2xf32>
+  return %0 : tensor<1x1x?x2xf32>
+}
+
+// CHECK-LABEL:   func.func @simple_pad_and_pack_dynamic(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:      %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:      %[[PAD_VAL:[a-zA-Z0-9]+]]
+// CHECK-SAME:      %[[HIGH_VAL:.*]]: index) -> tensor<1x1x?x2xf32> {
+// CHECK:           %[[C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[PAD_HIGH:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[HIGH_VAL]]]
+// CHECK:           %[[PAD:.*]] = tensor.pad %[[SRC]] low[0, 0] high{{\[}}%[[PAD_HIGH]], 1] {
+// CHECK:             tensor.yield %[[PAD_VAL]] : f32
+// CHECK-NOT:       linalg.transpose
+// CHECK:           %[[SLICE:.*]] = tensor.extract_slice %[[VAL_10:.*]][0, 0] {{\[}}%[[HIGH_VAL]], 2] [1, 1] : tensor<?x2xf32> to tensor<?x2xf32>
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[DEST]], %[[C2]] : tensor<1x1x?x2xf32>
+// CHECK:           %[[RES:.*]] = tensor.insert_slice %[[SLICE]] into %[[DEST]][0, 0, 0, 0] [1, 1, %[[DIM]], 2] [1, 1, 1, 1] : tensor<?x2xf32> into tensor<1x1x?x2xf32>
+// CHECK:           return %[[RES]] : tensor<1x1x?x2xf32>
+
+/// Same as example above, but with scalable tile size.
 
 /// NOTE: For this example to make sense in practice, the "?" in the output shape
 ///       should effectively be 8 * vector.vscale (and that's what tensor.dim
@@ -50,17 +72,15 @@ func.func @simple_pad_and_pack_scalable(%input: tensor<5x1xf32>, %output: tensor
   return %0 : tensor<1x1x?x2xf32>
 }
 
-
 // CHECK-LABEL:   func.func @simple_pad_and_pack_scalable(
 // CHECK-SAME:      %[[SRC:[a-zA-Z0-9]+]]: tensor<5x1xf32>,
 // CHECK-SAME:      %[[DEST:[a-zA-Z0-9]+]]: tensor<1x1x?x2xf32>,
 // CHECK-SAME:      %[[PAD_VAL:[a-zA-Z0-9]+]]: f32) -> tensor<1x1x?x2xf32> {
 // CHECK:           %[[C2:.+]] = arith.constant 2 : index
-// CHECK:           %[[C5:.+]] = arith.constant 5 : index
 // CHECK:           %[[C8:.+]] = arith.constant 8 : index
 // CHECK:           %[[VS:.+]] = vector.vscale
 // CHECK:           %[[C8_VS:.+]] = arith.muli %[[VS]], %[[C8]] : index
-// CHECK:           %[[PAD_HIGH:.+]] = affine.apply #[[$ATTR_0]](){{\[}}%[[C8_VS]], %[[C5]]]
+// CHECK:           %[[PAD_HIGH:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[C8_VS]]]
 // CHECK:           %[[PAD:.+]] = tensor.pad %[[SRC]] low[0, 0] high{{\[}}%[[PAD_HIGH]], 1] {
 // CHECK:             tensor.yield %[[PAD_VAL]] : f32
 // CHECK-NOT:       linalg.transpose
