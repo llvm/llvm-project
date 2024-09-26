@@ -52,6 +52,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -686,12 +687,14 @@ namespace {
   };
 
   // A shorthand time trace scope struct, prints source range, for example
-  // {"name":"EvaluateAsRValue","args":{"detail":"<test.cc:8:21, col:25>"}}}
+  // {"name":"EvaluateAsRValue","args":{"detail":"test.cc", "line":8, "col":21"}}}
   class ExprTimeTraceScope {
   public:
     ExprTimeTraceScope(const Expr *E, const ASTContext &Ctx, StringRef Name)
         : TimeScope(Name, [E, &Ctx] {
-            return E->getSourceRange().printToString(Ctx.getSourceManager());
+            llvm::TimeTraceMetadata M;
+            Ctx.getSourceManager().setLocationForTimeTrace(E->getBeginLoc(), M);
+            return M;
           }) {}
 
   private:

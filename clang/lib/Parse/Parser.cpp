@@ -16,6 +16,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1250,8 +1251,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   // Add an enclosing time trace scope for a bunch of small scopes with
   // "EvaluateAsConstExpr".
   llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
-    return Tok.getLocation().printToString(
-        Actions.getASTContext().getSourceManager());
+    llvm::TimeTraceMetadata M;
+    // Parsing events are not as common as instantiations. Add location for them
+    // without verbose mode check.
+    Actions.getASTContext().getSourceManager().setLocationForTimeTrace(
+        Tok.getLocation(), M);
+    return M;
   });
 
   if (DS) {

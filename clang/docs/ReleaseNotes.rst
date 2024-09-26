@@ -341,6 +341,9 @@ Improvements to Clang's diagnostics
 Improvements to Clang's time-trace
 ----------------------------------
 
+- Clang now adds file and line information for -ftime-trace profile as separate fields
+  (as ``event["args"]["file"]`` and ``event["args"]["line"]`` respectively).
+
 Improvements to Coverage Mapping
 --------------------------------
 

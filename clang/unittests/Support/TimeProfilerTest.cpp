@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -18,7 +17,6 @@
 #include <stack>
 
 #include "gtest/gtest.h"
-#include <tuple>
 
 using namespace clang;
 using namespace llvm;
@@ -86,6 +84,8 @@ std::string GetMetadata(json::Object *Event) {
       OS << (M.empty() ? "" : ", ") << llvm::sys::path::filename(*File);
     if (auto Line = Args->getInteger("line"))
       OS << ":" << *Line;
+    if (auto Col = Args->getInteger("col"))
+      OS << ":" << *Col;
   }
   return M;
 }
@@ -213,24 +213,24 @@ Frontend (test.cc)
 | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
 | ParseDeclarationOrFunctionDefinition (test.cc:6:1)
 | | ParseFunctionDefinition (slow_func)
-| | | EvaluateAsRValue (<test.cc:8:21>)
-| | | EvaluateForOverflow (<test.cc:8:21, col:25>)
-| | | EvaluateForOverflow (<test.cc:8:30, col:32>)
-| | | EvaluateAsRValue (<test.cc:9:14>)
-| | | EvaluateForOverflow (<test.cc:9:9, col:14>)
+| | | EvaluateAsRValue (test.cc:8:21)
+| | | EvaluateForOverflow (test.cc:8:21)
+| | | EvaluateForOverflow (test.cc:8:30)
+| | | EvaluateAsRValue (test.cc:9:14)
+| | | EvaluateForOverflow (test.cc:9:9)
 | | | isPotentialConstantExpr (slow_namespace::slow_func)
-| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | | EvaluateAsBooleanCondition (test.cc:8:21)
+| | | | EvaluateAsRValue (test.cc:8:21)
+| | | EvaluateAsBooleanCondition (test.cc:8:21)
+| | | | EvaluateAsRValue (test.cc:8:21)
 | ParseDeclarationOrFunctionDefinition (test.cc:16:1)
 | | ParseFunctionDefinition (slow_test)
 | | | EvaluateAsInitializer (slow_value)
-| | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
-| | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| | | EvaluateAsConstantExpr (test.cc:17:33)
+| | | EvaluateAsConstantExpr (test.cc:18:11)
 | ParseDeclarationOrFunctionDefinition (test.cc:22:1)
-| | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
-| | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
+| | EvaluateAsConstantExpr (test.cc:23:31)
+| | EvaluateAsRValue (test.cc:22:14)
 | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
 | | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations
@@ -273,9 +273,9 @@ Frontend (test.cc)
 | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | ParseFunctionDefinition (user)
 | PerformPendingInstantiations
-| | InstantiateFunction (fooA<int>, a.h:7)
-| | | InstantiateFunction (fooB<int>, b.h:3)
-| | | InstantiateFunction (fooMTA<int>, a.h:4)
+| | InstantiateFunction (fooA<int>, a.h:7:10)
+| | | InstantiateFunction (fooB<int>, b.h:3:7)
+| | | InstantiateFunction (fooMTA<int>, a.h:4:5)
 )",
             buildTraceGraph(Json));
 }
@@ -293,8 +293,8 @@ struct {
   ASSERT_EQ(R"(
 Frontend (test.c)
 | ParseDeclarationOrFunctionDefinition (test.c:2:1)
-| | isIntegerConstantExpr (<test.c:3:18>)
-| | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
+| | isIntegerConstantExpr (test.c:3:18)
+| | EvaluateKnownConstIntCheckOverflow (test.c:3:18)
 | PerformPendingInstantiations
 )",
             buildTraceGraph(Json));
