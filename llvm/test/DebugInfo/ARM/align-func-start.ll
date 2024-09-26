@@ -4,8 +4,9 @@
 ; Check that, when an aligned loop is the first thing in a function, we do not
 ; emit an invalid .loc directive, which is rejected by the assembly parser.
 
-; CHECK-NOT: .loc    0 0 0
+; CHECK-NOT: .loc    0
 ; CHECK: .loc    1 2 3 prologue_end
+; CHECK-NOT: .loc 0
 
 define dso_local void @foo() "target-cpu"="cortex-m3" !dbg !8 {
 entry:
