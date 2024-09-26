@@ -1035,7 +1035,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
   LLT OffsetLLTy = getLLTForType(
-      *DL.getIndexType(PointerType::get(RetTy->getContext(), AS)), DL);
+      *DL.getIndexType(RetTy->getContext(), AS), DL);
 
   MachinePointerInfo PtrInfo(AS);
 
