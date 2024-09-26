@@ -107,18 +107,13 @@ public:
 
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
-  // {"labels", "all", "list=<file>", "none"}.
+  // {"all", "list=<file>", "none"}.
   //
-  // "labels":      Only generate basic block symbols (labels) for all basic
-  //                blocks, do not generate unique sections for basic blocks.
-  //                Use the machine basic block id in the symbol name to
-  //                associate profile info from virtual address to machine
-  //                basic block.
   // "all" :        Generate basic block sections for all basic blocks.
   // "list=<file>": Generate basic block sections for a subset of basic blocks.
   //                The functions and the machine basic block ids are specified
   //                in the file.
-  // "none":        Disable sections/labels for basic blocks.
+  // "none":        Disable sections for basic blocks.
   std::string BBSections;
 
   // If set, override the default value of MCAsmInfo::BinutilsVersion. If
