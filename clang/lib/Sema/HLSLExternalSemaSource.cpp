@@ -256,17 +256,21 @@ struct BuiltinTypeDeclBuilder {
 
     // FIXME: Placeholder to make sure we return the correct type - create
     // field of element_type and return reference to it. This field will go
-    // away once indexing into resources is properly  implemented in 
+    // away once indexing into resources is properly implemented in
     // llvm/llvm-project#95956.
     if (Fields.count("e") == 0) {
       addMemberVariable("e", ElemTy, {});
     }
     FieldDecl *ElemFieldDecl = Fields["e"];
-        
-    auto *This = CXXThisExpr::Create(AST, SourceLocation(), MethodDecl->getFunctionObjectParameterType(),true);
-    Expr *ElemField = MemberExpr::CreateImplicit(AST, This, false, ElemFieldDecl,
-                                              ElemFieldDecl->getType(), VK_LValue,OK_Ordinary);
-    auto *Return =  ReturnStmt::Create(AST, SourceLocation(), ElemField, nullptr);
+
+    auto *This =
+        CXXThisExpr::Create(AST, SourceLocation(),
+                            MethodDecl->getFunctionObjectParameterType(), true);
+    Expr *ElemField = MemberExpr::CreateImplicit(
+        AST, This, false, ElemFieldDecl, ElemFieldDecl->getType(), VK_LValue,
+        OK_Ordinary);
+    auto *Return =
+        ReturnStmt::Create(AST, SourceLocation(), ElemField, nullptr);
 
     MethodDecl->setBody(CompoundStmt::Create(AST, {Return}, FPOptionsOverride(),
                                              SourceLocation(),
