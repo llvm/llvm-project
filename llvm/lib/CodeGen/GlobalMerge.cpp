@@ -651,10 +651,11 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
 //
 // See also ObjFile::parseSections and getRecordSize in lld/MachO/InputFiles.cpp
 static bool isSpecialMachOSection(StringRef Section) {
-  // Uses starts_with, since section attributes can appear at the end of the name.
+  // Uses starts_with, since section attributes can appear at the end of the
+  // name.
   return Section.starts_with("__DATA,__cfstring") ||
-      Section.starts_with("__DATA,__objc_classrefs") ||
-      Section.starts_with("__DATA,__objc_selrefs");
+         Section.starts_with("__DATA,__objc_classrefs") ||
+         Section.starts_with("__DATA,__objc_selrefs");
 }
 
 bool GlobalMergeImpl::run(Module &M) {
