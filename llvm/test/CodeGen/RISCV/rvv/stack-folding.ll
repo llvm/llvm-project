@@ -206,10 +206,7 @@ define double @f64(<vscale x 1 x double> %v, i1 %c) {
 ; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    beqz a0, .LBB4_2
 ; RV64-NEXT:  # %bb.1: # %truebb
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:    vfmv.f.s fa0, v8
+; RV64-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    j .LBB4_3
 ; RV64-NEXT:  .LBB4_2: # %falsebb
 ; RV64-NEXT:    fmv.d.x fa0, zero
@@ -244,10 +241,7 @@ define float @f32(<vscale x 2 x float> %v, i1 %c) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    flw fa0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB5_3
 ; CHECK-NEXT:  .LBB5_2: # %falsebb
 ; CHECK-NEXT:    fmv.w.x fa0, zero

@@ -784,6 +784,26 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
       }
       break;
     }
+    if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VFMV_F_S) {
+      unsigned Log2SEW =
+          MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+      if (STI.getXLen() < (1 << Log2SEW))
+        return nullptr;
+      switch (Log2SEW) {
+      case 4:
+        // TODO: Support f16/bf16
+        return nullptr;
+      case 5:
+        LoadOpc = RISCV::FLW;
+        break;
+      case 6:
+        LoadOpc = RISCV::FLD;
+        break;
+      default:
+        llvm_unreachable("Unexpected SEW");
+      }
+      break;
+    }
     return nullptr;
   case RISCV::SEXT_H:
     LoadOpc = RISCV::LH;
