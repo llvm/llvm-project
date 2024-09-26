@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/SandboxIR/Argument.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
 
@@ -104,16 +105,6 @@ int OperandUseIterator::operator-(const OperandUseIterator &Other) const {
   int OtherOpNo = Other.Use.getOperandNo();
   return ThisOpNo - OtherOpNo;
 }
-
-#ifndef NDEBUG
-void Argument::printAsOperand(raw_ostream &OS) const {
-  printAsOperandCommon(OS);
-}
-void Argument::dumpOS(raw_ostream &OS) const {
-  dumpCommonPrefix(OS);
-  dumpCommonSuffix(OS);
-}
-#endif // NDEBUG
 
 BBIterator &BBIterator::operator++() {
   auto ItE = BB->end();
