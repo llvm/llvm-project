@@ -2979,7 +2979,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // __riscv_feature_bits object at runtime has the same length as on the
     // compiler side.
     //
-    // Second, 
+    // Second,
     // When condition is met, return this version of the function.
     // Otherwise, try the next version.
     //
