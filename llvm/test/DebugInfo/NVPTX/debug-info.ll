@@ -25,10 +25,6 @@
 ; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0
 ; CHECK: ld.param.u32    %r{{.+}}, [{{.+}}];
-; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
-; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
-; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
-; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
 ; CHECK: .loc [[BUILTUIN_VARS_H:[0-9]+]] 78 180
 ; CHECK: mov.u32         %r{{.+}}, %ctaid.x;
 ; CHECK: .loc [[BUILTUIN_VARS_H]] 89 180
@@ -42,6 +38,10 @@
 ; CHECK: .loc [[DEBUG_INFO_CU]] 7 7
 ; CHECK: @%p{{.+}} bra   [[BB:\$L__.+]];
 ; CHECK: ld.param.f32    %f{{.+}}, [{{.+}}];
+; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
+; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
+; CHECK: ld.param.u64    %rd{{.+}}, [{{.+}}];
+; CHECK: cvta.to.global.u64      %rd{{.+}}, %rd{{.+}};
 ; CHECK: .loc [[DEBUG_INFO_CU]] 8 13
 ; CHECK: mul.wide.u32    %rd{{.+}}, %r{{.+}}, 4;
 ; CHECK: add.s64         %rd{{.+}}, %rd{{.+}}, %rd{{.+}};
@@ -2661,22 +2661,22 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b32 4579                               // DW_AT_type
 ; CHECK-NEXT:.b8 25                                  // Abbrev [25] 0x8aa:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 707                                // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 $L__tmp1                           // DW_AT_low_pc
-; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp0                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp1                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 11                                  // DW_AT_call_column
 ; CHECK-NEXT:.b8 25                                  // Abbrev [25] 0x8c2:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 1466                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_low_pc
-; CHECK-NEXT:.b64 $L__tmp3                           // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp1                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 24                                  // DW_AT_call_column
 ; CHECK-NEXT:.b8 25                                  // Abbrev [25] 0x8da:0x18 DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 2060                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b64 $L__tmp3                           // DW_AT_low_pc
-; CHECK-NEXT:.b64 $L__tmp4                           // DW_AT_high_pc
+; CHECK-NEXT:.b64 $L__tmp2                           // DW_AT_low_pc
+; CHECK-NEXT:.b64 $L__tmp3                           // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 37                                  // DW_AT_call_column
