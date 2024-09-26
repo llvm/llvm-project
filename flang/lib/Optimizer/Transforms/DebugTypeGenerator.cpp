@@ -114,10 +114,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   mlir::LLVM::DITypeAttr elemTy =
       convertType(seqTy.getEleTy(), fileAttr, scope, declOp);
   unsigned offset = dimsOffset;
+  unsigned index = 0;
+  mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   const unsigned indexSize = dimsSize / 3;
   for ([[maybe_unused]] auto _ : seqTy.getShape()) {
     // For each dimension, find the offset of count, lower bound and stride in
     // the descriptor and generate the dwarf expression to extract it.
+    mlir::Attribute lowerAttr = nullptr;
+    // If declaration has a lower bound, use it.
+    if (declOp && declOp.getShift().size() > index) {
+      if (std::optional<std::int64_t> optint =
+              getIntIfConstant(declOp.getShift()[index]))
+        lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
+    }
     // FIXME: If `indexSize` happens to be bigger than address size on the
     // system then we may have to change 'DW_OP_deref' here.
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -130,14 +139,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
-    addOp(llvm::dwarf::DW_OP_push_object_address, {});
-    addOp(llvm::dwarf::DW_OP_plus_uconst,
-          {offset + (indexSize * kDimLowerBoundPos)});
-    addOp(llvm::dwarf::DW_OP_deref, {});
-    // lower_bound[i] = *(base_addr + offset + (indexSize * kDimLowerBoundPos))
-    mlir::LLVM::DIExpressionAttr lowerAttr =
-        mlir::LLVM::DIExpressionAttr::get(context, ops);
-    ops.clear();
+    // If a lower bound was not found in the declOp, then we will get them from
+    // descriptor only for pointer and allocatable case. DWARF assumes lower
+    // bound of 1 when this attribute is missing.
+    if (!lowerAttr && (genAllocated || genAssociated)) {
+      addOp(llvm::dwarf::DW_OP_push_object_address, {});
+      addOp(llvm::dwarf::DW_OP_plus_uconst,
+            {offset + (indexSize * kDimLowerBoundPos)});
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      // lower_bound[i] = *(base_addr + offset + (indexSize *
+      // kDimLowerBoundPos))
+      lowerAttr = mlir::LLVM::DIExpressionAttr::get(context, ops);
+      ops.clear();
+    }
 
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
     addOp(llvm::dwarf::DW_OP_plus_uconst,
@@ -152,6 +166,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     mlir::LLVM::DISubrangeAttr subrangeTy = mlir::LLVM::DISubrangeAttr::get(
         context, countAttr, lowerAttr, /*upperBound=*/nullptr, strideAttr);
     elements.push_back(subrangeTy);
+    ++index;
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
