@@ -56,6 +56,12 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   auto CIRAnalysisOnly = CI.getFrontendOpts().ClangIRAnalysisOnly;
   auto EmitsCIR = Act == EmitCIR || Act == EmitCIRFlat || Act == EmitCIROnly;
 
+#if !CLANG_ENABLE_CIR
+  if (UseCIR)
+    llvm::report_fatal_error(
+        "CIR is not supported by this build of Clang");
+#endif
+
   if (!UseCIR && EmitsCIR)
     llvm::report_fatal_error(
         "-emit-cir and -emit-cir-only only valid when using -fclangir");
