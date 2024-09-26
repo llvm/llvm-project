@@ -315,5 +315,7 @@ inline const Type *unifyPtrType(const Type *Ty) {
   return toTypedPointer(const_cast<Type *>(Ty));
 }
 
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
