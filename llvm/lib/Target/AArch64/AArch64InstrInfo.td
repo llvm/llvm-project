@@ -10136,7 +10136,7 @@ let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
   defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
   defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
   defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
-  defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
+  defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 
 // fminimum(abs(a), abs(b)) -> famin(a, b)
