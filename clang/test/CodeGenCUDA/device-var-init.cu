@@ -26,8 +26,8 @@ __shared__ int s_v;
 // DEVICE: @s_v ={{.*}} addrspace(3) global i32 undef,
 // HOST:   @s_v = internal global i32 undef,
 __constant__ int c_v;
-// DEVICE: addrspace(4) externally_initialized global i32 0,
-// HOST:   @c_v = internal global i32 undef,
+// DEVICE: addrspace(4) externally_initialized constant i32 0,
+// HOST:   @c_v = internal constant i32 undef,
 
 __device__ int d_v_i = 1;
 // DEVICE: @d_v_i ={{.*}} addrspace(1) externally_initialized global i32 1,
@@ -51,15 +51,15 @@ __shared__ T s_t;
 // DEVICE: @s_t ={{.*}} addrspace(3) global %struct.T undef,
 // HOST:   @s_t = internal global %struct.T undef,
 __constant__ T c_t;
-// DEVICE: @c_t ={{.*}} addrspace(4) externally_initialized global %struct.T zeroinitializer,
-// HOST:   @c_t = internal global %struct.T undef,
+// DEVICE: @c_t ={{.*}} addrspace(4) externally_initialized constant %struct.T zeroinitializer,
+// HOST:   @c_t = internal constant %struct.T undef,
 
 __device__ T d_t_i = {2};
 // DEVICE: @d_t_i ={{.*}} addrspace(1) externally_initialized global %struct.T { i32 2 },
 // HOST:   @d_t_i = internal global %struct.T undef,
 __constant__ T c_t_i = {2};
-// DEVICE: @c_t_i ={{.*}} addrspace(4) externally_initialized global %struct.T { i32 2 },
-// HOST:   @c_t_i = internal global %struct.T undef,
+// DEVICE: @c_t_i ={{.*}} addrspace(4) externally_initialized constant %struct.T { i32 2 },
+// HOST:   @c_t_i = internal constant %struct.T undef,
 
 // empty constructor
 __device__ EC d_ec;
@@ -69,8 +69,8 @@ __shared__ EC s_ec;
 // DEVICE: @s_ec ={{.*}} addrspace(3) global %struct.EC undef,
 // HOST:   @s_ec = internal global %struct.EC undef,
 __constant__ EC c_ec;
-// DEVICE: @c_ec ={{.*}} addrspace(4) externally_initialized global %struct.EC zeroinitializer,
-// HOST:   @c_ec = internal global %struct.EC undef
+// DEVICE: @c_ec ={{.*}} addrspace(4) externally_initialized constant %struct.EC zeroinitializer,
+// HOST:   @c_ec = internal constant %struct.EC undef
 
 // empty destructor
 __device__ ED d_ed;
@@ -80,8 +80,8 @@ __shared__ ED s_ed;
 // DEVICE: @s_ed ={{.*}} addrspace(3) global %struct.ED undef,
 // HOST:   @s_ed = internal global %struct.ED undef,
 __constant__ ED c_ed;
-// DEVICE: @c_ed ={{.*}} addrspace(4) externally_initialized global %struct.ED zeroinitializer,
-// HOST:   @c_ed = internal global %struct.ED undef,
+// DEVICE: @c_ed ={{.*}} addrspace(4) externally_initialized constant %struct.ED zeroinitializer,
+// HOST:   @c_ed = internal constant %struct.ED undef,
 
 __device__ ECD d_ecd;
 // DEVICE: @d_ecd ={{.*}} addrspace(1) externally_initialized global %struct.ECD zeroinitializer,
@@ -90,8 +90,8 @@ __shared__ ECD s_ecd;
 // DEVICE: @s_ecd ={{.*}} addrspace(3) global %struct.ECD undef,
 // HOST:   @s_ecd = internal global %struct.ECD undef,
 __constant__ ECD c_ecd;
-// DEVICE: @c_ecd ={{.*}} addrspace(4) externally_initialized global %struct.ECD zeroinitializer,
-// HOST:   @c_ecd = internal global %struct.ECD undef,
+// DEVICE: @c_ecd ={{.*}} addrspace(4) externally_initialized constant %struct.ECD zeroinitializer,
+// HOST:   @c_ecd = internal constant %struct.ECD undef,
 
 // empty templated constructor -- allowed with no arguments
 __device__ ETC d_etc;
@@ -101,15 +101,15 @@ __shared__ ETC s_etc;
 // DEVICE: @s_etc ={{.*}} addrspace(3) global %struct.ETC undef,
 // HOST:   @s_etc = internal global %struct.ETC undef,
 __constant__ ETC c_etc;
-// DEVICE: @c_etc ={{.*}} addrspace(4) externally_initialized global %struct.ETC zeroinitializer,
-// HOST:   @c_etc = internal global %struct.ETC undef,
+// DEVICE: @c_etc ={{.*}} addrspace(4) externally_initialized constant %struct.ETC zeroinitializer,
+// HOST:   @c_etc = internal constant %struct.ETC undef,
 
 __device__ NCFS d_ncfs;
 // DEVICE: @d_ncfs ={{.*}} addrspace(1) externally_initialized global %struct.NCFS { i32 3 }
 // HOST:   @d_ncfs = internal global %struct.NCFS undef,
 __constant__ NCFS c_ncfs;
-// DEVICE: @c_ncfs ={{.*}} addrspace(4) externally_initialized global %struct.NCFS { i32 3 }
-// HOST:   @c_ncfs = internal global %struct.NCFS undef,
+// DEVICE: @c_ncfs ={{.*}} addrspace(4) externally_initialized constant %struct.NCFS { i32 3 }
+// HOST:   @c_ncfs = internal constant %struct.NCFS undef,
 
 // Regular base class -- allowed
 __device__ T_B_T d_t_b_t;
@@ -119,8 +119,8 @@ __shared__ T_B_T s_t_b_t;
 // DEVICE: @s_t_b_t ={{.*}} addrspace(3) global %struct.T_B_T undef,
 // HOST:   @s_t_b_t = internal global %struct.T_B_T undef,
 __constant__ T_B_T c_t_b_t;
-// DEVICE: @c_t_b_t ={{.*}} addrspace(4) externally_initialized global %struct.T_B_T zeroinitializer,
-// HOST:   @c_t_b_t = internal global %struct.T_B_T undef,
+// DEVICE: @c_t_b_t ={{.*}} addrspace(4) externally_initialized constant %struct.T_B_T zeroinitializer,
+// HOST:   @c_t_b_t = internal constant %struct.T_B_T undef,
 
 // Incapsulated object of allowed class -- allowed
 __device__ T_F_T d_t_f_t;
@@ -130,8 +130,8 @@ __shared__ T_F_T s_t_f_t;
 // DEVICE: @s_t_f_t ={{.*}} addrspace(3) global %struct.T_F_T undef,
 // HOST:   @s_t_f_t = internal global %struct.T_F_T undef,
 __constant__ T_F_T c_t_f_t;
-// DEVICE: @c_t_f_t ={{.*}} addrspace(4) externally_initialized global %struct.T_F_T zeroinitializer,
-// HOST:   @c_t_f_t = internal global %struct.T_F_T undef,
+// DEVICE: @c_t_f_t ={{.*}} addrspace(4) externally_initialized constant %struct.T_F_T zeroinitializer,
+// HOST:   @c_t_f_t = internal constant %struct.T_F_T undef,
 
 // array of allowed objects -- allowed
 __device__ T_FA_T d_t_fa_t;
@@ -141,8 +141,8 @@ __shared__ T_FA_T s_t_fa_t;
 // DEVICE: @s_t_fa_t ={{.*}} addrspace(3) global %struct.T_FA_T undef,
 // HOST:   @s_t_fa_t = internal global %struct.T_FA_T undef,
 __constant__ T_FA_T c_t_fa_t;
-// DEVICE: @c_t_fa_t ={{.*}} addrspace(4) externally_initialized global %struct.T_FA_T zeroinitializer,
-// HOST:   @c_t_fa_t = internal global %struct.T_FA_T undef,
+// DEVICE: @c_t_fa_t ={{.*}} addrspace(4) externally_initialized constant %struct.T_FA_T zeroinitializer,
+// HOST:   @c_t_fa_t = internal constant %struct.T_FA_T undef,
 
 
 // Calling empty base class initializer is OK
@@ -153,8 +153,8 @@ __shared__ EC_I_EC s_ec_i_ec;
 // DEVICE: @s_ec_i_ec ={{.*}} addrspace(3) global %struct.EC_I_EC undef,
 // HOST:   @s_ec_i_ec = internal global %struct.EC_I_EC undef,
 __constant__ EC_I_EC c_ec_i_ec;
-// DEVICE: @c_ec_i_ec ={{.*}} addrspace(4) externally_initialized global %struct.EC_I_EC zeroinitializer,
-// HOST:   @c_ec_i_ec = internal global %struct.EC_I_EC undef,
+// DEVICE: @c_ec_i_ec ={{.*}} addrspace(4) externally_initialized constant %struct.EC_I_EC zeroinitializer,
+// HOST:   @c_ec_i_ec = internal constant %struct.EC_I_EC undef,
 
 // DEVICE: @_ZZ2dfvE4s_ec = internal addrspace(3) global %struct.EC undef
 // DEVICE: @_ZZ2dfvE5s_etc = internal addrspace(3) global %struct.ETC undef

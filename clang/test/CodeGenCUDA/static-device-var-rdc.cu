@@ -57,7 +57,7 @@
 
 
 // HOST-DAG: @_ZL1x = internal global i32 undef
-// HOST-DAG: @_ZL1y = internal global i32 undef
+// HOST-DAG: @_ZL1y = internal constant i32 undef
 
 // Test normal static device variables
 // INT-DEV-DAG: @_ZL1x[[FILEID:.*]] = addrspace(1) externally_initialized global i32 0
@@ -81,11 +81,11 @@ static __device__ int x;
 static __device__ int x2;
 
 // Test normal static device variables
-// INT-DEV-DAG: @_ZL1y[[FILEID:.*]] = addrspace(4) externally_initialized global i32 0
+// INT-DEV-DAG: @_ZL1y[[FILEID:.*]] = addrspace(4) externally_initialized constant i32 0
 // INT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y[[FILEID:.*]]\00"
 
 // Test externalized static device variables
-// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized global i32 0
+// EXT-DEV-DAG: @_ZL1y.static.[[HASH]] = addrspace(4) externally_initialized constant i32 0
 // EXT-HOST-DAG: @[[DEVNAMEY:[0-9]+]] = {{.*}}c"_ZL1y.static.[[HASH]]\00"
 
 static __constant__ int y;
