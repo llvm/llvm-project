@@ -725,7 +725,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Other arithmetic and logic ops are unsupported.
   setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SRA, ISD::SRL, ISD::MULHS,
                       ISD::MULHU, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
-                      ISD::SINT_TO_FP, ISD::UINT_TO_FP},
+                      ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::SETCC},
                      MVT::v2i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
@@ -1658,6 +1658,15 @@ LowerUnalignedLoadRetParam(SelectionDAG &DAG, SDValue &Chain, uint64_t Offset,
   return RetVal;
 }
 
+static bool shouldConvertToIndirectCall(const CallBase *CB,
+                                        const GlobalAddressSDNode *Func) {
+  if (!Func)
+    return false;
+  if (auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal()))
+    return CB->getFunctionType() != CalleeFunc->getFunctionType();
+  return false;
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1972,10 +1981,14 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     VADeclareParam->getVTList(), DeclareParamOps);
   }
 
+  // If the type of the callsite does not match that of the function, convert
+  // the callsite to an indirect call.
+  bool ConvertToIndirectCall = shouldConvertToIndirectCall(CB, Func);
+
   // Both indirect calls and libcalls have nullptr Func. In order to distinguish
   // between them we must rely on the call site value which is valid for
   // indirect calls but is always null for libcalls.
-  bool isIndirectCall = !Func && CB;
+  bool isIndirectCall = (!Func && CB) || ConvertToIndirectCall;
 
   if (isa<ExternalSymbolSDNode>(Callee)) {
     Function* CalleeFunc = nullptr;
@@ -2026,6 +2039,18 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                               : NVPTXISD::PrintConvergentCall;
   Chain = DAG.getNode(Opcode, dl, PrintCallVTs, PrintCallOps);
   InGlue = Chain.getValue(1);
+
+  if (ConvertToIndirectCall) {
+    // Copy the function ptr to a ptx register and use the register to call the
+    // function.
+    EVT DestVT = Callee.getValueType();
+    MachineRegisterInfo &RegInfo = DAG.getMachineFunction().getRegInfo();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    unsigned DestReg =
+        RegInfo.createVirtualRegister(TLI.getRegClassFor(DestVT.getSimpleVT()));
+    auto RegCopy = DAG.getCopyToReg(DAG.getEntryNode(), dl, DestReg, Callee);
+    Callee = DAG.getCopyFromReg(RegCopy, dl, DestReg, DestVT);
+  }
 
   // Ops to print out the function name
   SDVTList CallVoidVTs = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -6154,6 +6179,7 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
   case MVT::v4i16:
   case MVT::v4i32:
   case MVT::v4f16:
+  case MVT::v4bf16:
   case MVT::v4f32:
   case MVT::v8f16:  // <4 x f16x2>
   case MVT::v8bf16: // <4 x bf16x2>

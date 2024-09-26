@@ -294,6 +294,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[7], tok::ampamp, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[10], tok::greater, TT_BinaryOperator);
 
+  Tokens = annotate("if (Foo *foo; bar)");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("if (Foo **foo(); bar)");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("if (Foo *&foo{a}; bar)");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
@@ -332,6 +346,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
                     "  void foo() { f(a * b); }");
   ASSERT_EQ(Tokens.size(), 17u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("for (int i; Foo *&foo : foos)");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[7], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_RangeBasedForLoopColon);
 
   Tokens = annotate("#define FOO auto Foo = [] { f(a * b); };");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
@@ -780,6 +800,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[10], tok::minus, TT_BinaryOperator);
+
+  Tokens = annotate("return (::Type)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("return (Namespace::Class)(1 + 2);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
@@ -3276,6 +3304,14 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[7], BK_Block);
   EXPECT_TOKEN(Tokens[8], tok::r_brace, TT_ClassRBrace);
   EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+
+  Tokens = annotate("a = class Foo extends goog.a {};",
+                    getGoogleStyle(FormatStyle::LK_JavaScript));
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_ClassLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_TOKEN(Tokens[9], tok::r_brace, TT_ClassRBrace);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
 
   Tokens = annotate("#define FOO(X) \\\n"
                     "  struct X##_tag_ {};");

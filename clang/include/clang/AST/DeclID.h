@@ -83,6 +83,9 @@ enum PredefinedDeclIDs {
   /// The internal '__type_pack_element' template.
   PREDEF_DECL_TYPE_PACK_ELEMENT_ID,
 
+  /// The internal '__builtin_common_type' template.
+  PREDEF_DECL_COMMON_TYPE_ID,
+
   /// The number of declaration IDs that are predefined.
   NUM_PREDEF_DECL_IDS
 };

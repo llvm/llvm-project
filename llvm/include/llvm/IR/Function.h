@@ -445,6 +445,9 @@ public:
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
 
+  /// Check if attribute of the given kind is set at the given index.
+  bool hasAttributeAtIndex(unsigned Idx, Attribute::AttrKind Kind) const;
+
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const;
 

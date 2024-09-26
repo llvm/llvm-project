@@ -450,9 +450,7 @@ define void @switch_all_to_default(ptr %start) {
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
-; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP1]]
 ; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
 ; IC2-NEXT:    store <2 x i64> <i64 42, i64 42>, ptr [[TMP4]], align 1

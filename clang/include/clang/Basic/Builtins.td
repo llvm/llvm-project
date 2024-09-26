@@ -1322,6 +1322,12 @@ def ElementwiseLog10 : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwisePopcount : Builtin {
+  let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwisePow : Builtin {
   let Spellings = ["__builtin_elementwise_pow"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

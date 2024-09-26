@@ -2334,9 +2334,8 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
       return std::string();
     ss << "_";
   }
-  std::string res = ss.str();
-  res.pop_back();
-  return res;
+  name.pop_back();
+  return name;
 }
 
 //===----------------------------------------------------------------------===//

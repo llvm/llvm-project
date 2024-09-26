@@ -325,8 +325,7 @@ static std::string getAttributeMaskString(const SmallVector<Record *> Recs) {
 }
 
 /// Emit a mapping of DXIL opcode to opname
-static void emitDXILOpCodes(std::vector<DXILOperationDesc> &Ops,
-                            raw_ostream &OS) {
+static void emitDXILOpCodes(ArrayRef<DXILOperationDesc> Ops, raw_ostream &OS) {
   OS << "#ifdef DXIL_OPCODE\n";
   for (const DXILOperationDesc &Op : Ops)
     OS << "DXIL_OPCODE(" << Op.OpCode << ", " << Op.OpName << ")\n";
@@ -336,23 +335,20 @@ static void emitDXILOpCodes(std::vector<DXILOperationDesc> &Ops,
 }
 
 /// Emit a list of DXIL op classes
-static void emitDXILOpClasses(RecordKeeper &Records, raw_ostream &OS) {
+static void emitDXILOpClasses(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_OPCLASS\n";
-  std::vector<Record *> OpClasses =
-      Records.getAllDerivedDefinitions("DXILOpClass");
-  for (Record *OpClass : OpClasses)
+  for (const Record *OpClass : Records.getAllDerivedDefinitions("DXILOpClass"))
     OS << "DXIL_OPCLASS(" << OpClass->getName() << ")\n";
   OS << "#undef DXIL_OPCLASS\n";
   OS << "#endif\n\n";
 }
 
 /// Emit a list of DXIL op parameter types
-static void emitDXILOpParamTypes(RecordKeeper &Records, raw_ostream &OS) {
+static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_OP_PARAM_TYPE\n";
-  std::vector<Record *> OpClasses =
-      Records.getAllDerivedDefinitions("DXILOpParamType");
-  for (Record *OpClass : OpClasses)
-    OS << "DXIL_OP_PARAM_TYPE(" << OpClass->getName() << ")\n";
+  for (const Record *OpParamType :
+       Records.getAllDerivedDefinitions("DXILOpParamType"))
+    OS << "DXIL_OP_PARAM_TYPE(" << OpParamType->getName() << ")\n";
   OS << "#undef DXIL_OP_PARAM_TYPE\n";
   OS << "#endif\n\n";
 }
@@ -378,7 +374,7 @@ static void emitDXILOpFunctionTypes(ArrayRef<DXILOperationDesc> Ops,
 /// Emit map of DXIL operation to LLVM or DirectX intrinsic
 /// \param A vector of DXIL Ops
 /// \param Output stream
-static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
+static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
                                  raw_ostream &OS) {
   OS << "#ifdef DXIL_OP_INTRINSIC\n";
   OS << "\n";
@@ -396,14 +392,14 @@ static void emitDXILIntrinsicMap(std::vector<DXILOperationDesc> &Ops,
 /// Emit DXIL operation table
 /// \param A vector of DXIL Ops
 /// \param Output stream
-static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
+static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
                                    raw_ostream &OS) {
   // Collect Names.
   SequenceToOffsetTable<std::string> OpClassStrings;
   SequenceToOffsetTable<std::string> OpStrings;
 
   StringSet<> ClassSet;
-  for (auto &Op : Ops) {
+  for (const auto &Op : Ops) {
     OpStrings.add(Op.OpName);
 
     if (ClassSet.insert(Op.OpClass).second)
@@ -421,7 +417,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
 
   OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
   std::string Prefix = "";
-  for (auto &Op : Ops) {
+  for (const auto &Op : Ops) {
     OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
        << OpClassStrings.get(Op.OpClass.data()) << ", "
@@ -469,14 +465,15 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   OS << "}\n\n";
 }
 
-static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
+static void emitDXILOperationTableDataStructs(const RecordKeeper &Records,
                                               raw_ostream &OS) {
   // Get Shader stage records
-  std::vector<Record *> ShaderKindRecs =
+  std::vector<const Record *> ShaderKindRecs =
       Records.getAllDerivedDefinitions("DXILShaderStage");
   // Sort records by name
-  llvm::sort(ShaderKindRecs,
-             [](Record *A, Record *B) { return A->getName() < B->getName(); });
+  llvm::sort(ShaderKindRecs, [](const Record *A, const Record *B) {
+    return A->getName() < B->getName();
+  });
 
   OS << "// Valid shader kinds\n\n";
   // Choose the type of enum ShaderKind based on the number of stages declared.
@@ -508,22 +505,21 @@ static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
 /// Entry function call that invokes the functionality of this TableGen backend
 /// \param Records TableGen records of DXIL Operations defined in DXIL.td
 /// \param OS output stream
-static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
+static void EmitDXILOperation(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
   // Get all DXIL Ops property records
-  std::vector<Record *> OpIntrProps =
-      Records.getAllDerivedDefinitions("DXILOp");
   std::vector<DXILOperationDesc> DXILOps;
-  for (auto *Record : OpIntrProps) {
-    DXILOps.emplace_back(DXILOperationDesc(Record));
+  for (const Record *R : Records.getAllDerivedDefinitions("DXILOp")) {
+    DXILOps.emplace_back(DXILOperationDesc(R));
   }
   // Sort by opcode.
-  llvm::sort(DXILOps, [](DXILOperationDesc &A, DXILOperationDesc &B) {
-    return A.OpCode < B.OpCode;
-  });
+  llvm::sort(DXILOps,
+             [](const DXILOperationDesc &A, const DXILOperationDesc &B) {
+               return A.OpCode < B.OpCode;
+             });
   int PrevOp = -1;
-  for (DXILOperationDesc &Desc : DXILOps) {
+  for (const DXILOperationDesc &Desc : DXILOps) {
     if (Desc.OpCode == PrevOp)
       PrintFatalError(Twine("Duplicate opcode: ") + Twine(Desc.OpCode));
     PrevOp = Desc.OpCode;

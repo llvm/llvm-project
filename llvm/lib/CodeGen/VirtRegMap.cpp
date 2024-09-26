@@ -84,7 +84,7 @@ void VirtRegMap::grow() {
 
 void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
   assert(virtReg.isVirtual() && Register::isPhysicalRegister(physReg));
-  assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
+  assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
   assert(!getRegInfo().isReserved(physReg) &&
@@ -146,7 +146,7 @@ void VirtRegMap::print(raw_ostream &OS, const Module*) const {
   OS << "********** REGISTER MAP **********\n";
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     Register Reg = Register::index2VirtReg(i);
-    if (Virt2PhysMap[Reg] != (unsigned)VirtRegMap::NO_PHYS_REG) {
+    if (Virt2PhysMap[Reg]) {
       OS << '[' << printReg(Reg, TRI) << " -> "
          << printReg(Virt2PhysMap[Reg], TRI) << "] "
          << TRI->getRegClassName(MRI->getRegClass(Reg)) << "\n";
@@ -347,8 +347,8 @@ void VirtRegRewriter::addMBBLiveIns() {
       continue;
     // This is a virtual register that is live across basic blocks. Its
     // assigned PhysReg must be marked as live-in to those blocks.
-    Register PhysReg = VRM->getPhys(VirtReg);
-    if (PhysReg == VirtRegMap::NO_PHYS_REG) {
+    MCRegister PhysReg = VRM->getPhys(VirtReg);
+    if (!PhysReg) {
       // There may be no physical register assigned if only some register
       // classes were already allocated.
       assert(!ClearVirtRegs && "Unmapped virtual register");
@@ -551,7 +551,7 @@ void VirtRegRewriter::rewrite() {
           continue;
         Register VirtReg = MO.getReg();
         MCRegister PhysReg = VRM->getPhys(VirtReg);
-        if (PhysReg == VirtRegMap::NO_PHYS_REG)
+        if (!PhysReg)
           continue;
 
         assert(Register(PhysReg).isPhysical());

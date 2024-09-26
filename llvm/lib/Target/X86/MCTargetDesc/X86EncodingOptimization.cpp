@@ -377,9 +377,9 @@ bool X86::optimizeMOV(MCInst &MI, bool In64BitMode) {
       if (SRE->getKind() == MCSymbolRefExpr::VK_TLVP)
         Absolute = false;
   }
-  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() != 0 ||
+  if (Absolute && (MI.getOperand(AddrBase + X86::AddrBaseReg).getReg() ||
                    MI.getOperand(AddrBase + X86::AddrScaleAmt).getImm() != 1 ||
-                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg() != 0))
+                   MI.getOperand(AddrBase + X86::AddrIndexReg).getReg()))
     return false;
   // If so, rewrite the instruction.
   MCOperand Saved = MI.getOperand(AddrOp);

@@ -171,7 +171,7 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
         "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
         "Perhaps you're using ulimit -v or ulimit -d\n",
         size);
-    Abort();
+    Die();
   }
   if (madvise_shadow && common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(beg, size);

@@ -107,10 +107,10 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -404,7 +404,6 @@ static std::string getBranchCondString(Instruction *TI) {
     else
       OS << "_Const";
   }
-  OS.flush();
   return result;
 }
 
@@ -2364,7 +2363,6 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
     raw_string_ostream OS(BranchProbStr);
     OS << BP;
     OS << " (total count : " << TotalCount << ")";
-    OS.flush();
     Function *F = TI->getParent()->getParent();
     OptimizationRemarkEmitter ORE(F);
     ORE.emit([&]() {

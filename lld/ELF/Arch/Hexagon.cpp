@@ -359,7 +359,7 @@ void Hexagon::writePltHeader(uint8_t *buf) const {
   memcpy(buf, pltData, sizeof(pltData));
 
   // Offset from PLT0 to the GOT.
-  uint64_t off = in.gotPlt->getVA() - in.plt->getVA();
+  uint64_t off = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
   relocateNoSym(buf, R_HEX_B32_PCREL_X, off);
   relocateNoSym(buf + 4, R_HEX_6_PCREL_X, off);
 }

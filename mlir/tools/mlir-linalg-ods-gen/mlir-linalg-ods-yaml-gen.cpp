@@ -378,7 +378,6 @@ static std::string generateCppExpression(SerializedAffineMap self,
   std::string printedStr;
   llvm::raw_string_ostream printedSs(printedStr);
   self.affineMapAttr.print(printedSs);
-  printedSs.flush();
 
   static const char exprFormat[] =
       R"FMT(llvm::cast<AffineMapAttr>(mlir::parseAttribute("{0}", {1})).getValue())FMT";
@@ -391,7 +390,6 @@ static std::string interleaveToString(Container &container,
   std::string result;
   llvm::raw_string_ostream ss(result);
   llvm::interleave(container, ss, separator);
-  ss.flush();
   return result;
 }
 
@@ -827,7 +825,6 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
                               break;
                             }
                           });
-    ss.flush();
     os << llvm::formatv(structuredOpIteratorTypesFormat, className,
                         iteratorsStr);
   } else {
@@ -892,7 +889,6 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         std::string symbolBindingsStr;
         llvm::raw_string_ostream symbolBindingsSs(symbolBindingsStr);
         llvm::interleave(symbolBindings, symbolBindingsSs, "\n");
-        symbolBindingsSs.flush();
 
         os << llvm::formatv(structuredOpSymbolBindingsFormat, className,
                             symbolBindingsStr);
@@ -913,7 +909,6 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
         llvm::raw_string_ostream dimIdentsSs(dimIdentsStr);
         llvm::interleaveComma(dimIndices, dimIdentsSs,
                               [&](unsigned i) { dimIdentsSs << "d" << i; });
-        dimIdentsSs.flush();
 
         // Statements to add and simplify each affine map.
         SmallVector<std::string> stmts;

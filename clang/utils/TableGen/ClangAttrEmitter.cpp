@@ -1474,7 +1474,7 @@ createArgument(const Record &Arg, StringRef Attr,
     Search = &Arg;
 
   std::unique_ptr<Argument> Ptr;
-  llvm::StringRef ArgName = Search->getName();
+  StringRef ArgName = Search->getName();
 
   if (ArgName == "AlignedArgument")
     Ptr = std::make_unique<AlignedArgument>(Arg, Attr);
@@ -1531,7 +1531,7 @@ createArgument(const Record &Arg, StringRef Attr,
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
     ArrayRef<std::pair<Record*, SMRange>> Bases = Search->getSuperClasses();
-    for (const auto &Base : llvm::reverse(Bases)) {
+    for (const auto &Base : reverse(Bases)) {
       if ((Ptr = createArgument(Arg, Attr, Base.first)))
         break;
     }
@@ -1610,11 +1610,11 @@ writePrettyPrintFunction(const Record &R,
      << "    break;\n";
 
   for (unsigned I = 0; I < Spellings.size(); ++ I) {
-    llvm::SmallString<16> Prefix;
-    llvm::SmallString<8> Suffix;
+    SmallString<16> Prefix;
+    SmallString<8> Suffix;
     // The actual spelling of the name and namespace (if applicable)
     // of an attribute without considering prefix and suffix.
-    llvm::SmallString<64> Spelling;
+    SmallString<64> Spelling;
     std::string Name = Spellings[I].name();
     std::string Variety = Spellings[I].variety();
 
@@ -1679,7 +1679,7 @@ writePrettyPrintFunction(const Record &R,
       // printing spurious commas at the end of an argument list, we need to
       // determine where the last provided non-fake argument is.
       bool FoundNonOptArg = false;
-      for (const auto &arg : llvm::reverse(Args)) {
+      for (const auto &arg : reverse(Args)) {
         if (arg->isFake())
           continue;
         if (FoundNonOptArg)
@@ -1775,7 +1775,7 @@ SpellingNamesAreCommon(const std::vector<FlattenedSpelling>& Spellings) {
   assert(!Spellings.empty() && "An empty list of spellings was provided");
   std::string FirstName =
       std::string(NormalizeNameForSpellingComparison(Spellings.front().name()));
-  for (const auto &Spelling : llvm::drop_begin(Spellings)) {
+  for (const auto &Spelling : drop_begin(Spellings)) {
     std::string Name =
         std::string(NormalizeNameForSpellingComparison(Spelling.name()));
     if (Name != FirstName)
@@ -1832,7 +1832,7 @@ CreateSemanticSpellings(const std::vector<FlattenedSpelling> &Spellings,
     // enumeration, but the spelling index and semantic spelling values are
     // meant to be equivalent, so we must specify a concrete value for each
     // enumerator.
-    Ret += "    " + EnumName + " = " + llvm::utostr(Idx);
+    Ret += "    " + EnumName + " = " + utostr(Idx);
   }
   Ret += ",\n  SpellingNotCalculated = 15\n";
   Ret += "\n  };\n\n";
@@ -1869,15 +1869,14 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   SmallVector<Record *, 1> SuperClasses;
   LAPK->getDirectSuperClasses(SuperClasses);
   if (SuperClasses.size() != 1)
-    PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
+    PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) +
                               "`should only have one super class");
 
   if (SuperClasses[0]->getName() != LateAttrParseKindStr)
-    PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
-                              "`should only have type `" +
-                              llvm::Twine(LateAttrParseKindStr) +
-                              "` but found type `" +
-                              SuperClasses[0]->getName() + "`");
+    PrintFatalError(
+        Attr, "Field `" + Twine(LateParsedStr) + "`should only have type `" +
+                  Twine(LateAttrParseKindStr) + "` but found type `" +
+                  SuperClasses[0]->getName() + "`");
 
   // Get Kind and verify the enum name matches the name in `Attr.td`.
   unsigned Kind = LAPK->getValueAsInt(KindFieldStr);
@@ -1885,11 +1884,11 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
 #define CASE(X)                                                                \
   case LateAttrParseKind::X:                                                   \
     if (LAPK->getName().compare("LateAttrParse" #X) != 0) {                    \
-      PrintFatalError(Attr,                                                    \
-                      "Field `" + llvm::Twine(LateParsedStr) + "` set to `" +  \
-                          LAPK->getName() +                                    \
-                          "` but this converts to `LateAttrParseKind::" +      \
-                          llvm::Twine(#X) + "`");                              \
+      PrintFatalError(                                                         \
+          Attr,                                                                \
+          "Field `" + Twine(LateParsedStr) + "` set to `" + LAPK->getName() +  \
+              "` but this converts to `LateAttrParseKind::" + Twine(#X) +      \
+              "`");                                                            \
     }                                                                          \
     return LateAttrParseKind::X;
 
@@ -1900,11 +1899,10 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   }
 
   // The Kind value is completely invalid
-  auto KindValueStr = llvm::utostr(Kind);
-  PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) + "` set to `" +
+  auto KindValueStr = utostr(Kind);
+  PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) + "` set to `" +
                             LAPK->getName() + "` has unexpected `" +
-                            llvm::Twine(KindFieldStr) + "` value of " +
-                            KindValueStr);
+                            Twine(KindFieldStr) + "` value of " + KindValueStr);
 }
 
 // Emits the LateParsed property for attributes.
@@ -2059,7 +2057,7 @@ struct PragmaClangAttributeSupport {
       return RuleOrAggregateRuleSet(Rules, /*IsRule=*/false);
     }
   };
-  llvm::DenseMap<const Record *, RuleOrAggregateRuleSet> SubjectsToRules;
+  DenseMap<const Record *, RuleOrAggregateRuleSet> SubjectsToRules;
 
   PragmaClangAttributeSupport(const RecordKeeper &Records);
 
@@ -2299,7 +2297,7 @@ void PragmaClangAttributeSupport::generateParsingHelpers(raw_ostream &OS) {
   OS << "  return std::nullopt;\n";
   OS << "}\n\n";
 
-  llvm::MapVector<const Record *, std::vector<AttributeSubjectMatchRule>>
+  MapVector<const Record *, std::vector<AttributeSubjectMatchRule>>
       SubMatchRules;
   for (const auto &Rule : Rules) {
     if (!Rule.isSubRule())
@@ -2402,7 +2400,7 @@ void generateNameToAttrsMap(const RecordKeeper &Records) {
     for (const auto &S : Spellings) {
       auto It = NameToAttrsMap.find(S.name());
       if (It != NameToAttrsMap.end()) {
-        if (llvm::none_of(It->second, [&](const Record *R) { return R == A; }))
+        if (none_of(It->second, [&](const Record *R) { return R == A; }))
           It->second.emplace_back(A);
       } else {
         std::vector<const Record *> V;
@@ -2540,17 +2538,16 @@ static void emitClangAttrArgContextList(const RecordKeeper &Records,
 
 static bool isIdentifierArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
-    llvm::StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
-    .Case("IdentifierArgument", true)
-    .Case("EnumArgument", true)
-    .Case("VariadicEnumArgument", true)
-    .Default(false);
+         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
+             .Case("IdentifierArgument", true)
+             .Case("EnumArgument", true)
+             .Case("VariadicEnumArgument", true)
+             .Default(false);
 }
 
 static bool isVariadicIdentifierArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
+         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
              .Case("VariadicIdentifierArgument", true)
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
@@ -2558,8 +2555,7 @@ static bool isVariadicIdentifierArgument(const Record *Arg) {
 
 static bool isVariadicExprArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
+         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
              .Case("VariadicExprArgument", true)
              .Default(false);
 }
@@ -2656,7 +2652,7 @@ static void emitClangAttrStrictIdentifierArgList(const RecordKeeper &Records,
       continue;
     // Check that there is really an identifier argument.
     std::vector<Record *> Args = Attr->getValueAsListOfDefs("Args");
-    if (llvm::none_of(Args, [&](Record *R) { return isIdentifierArgument(R); }))
+    if (none_of(Args, [&](Record *R) { return isIdentifierArgument(R); }))
       continue;
     generateFlattenedSpellingInfo(*Attr, FSIMap);
   }
@@ -2666,8 +2662,7 @@ static void emitClangAttrStrictIdentifierArgList(const RecordKeeper &Records,
 
 static bool keywordThisIsaIdentifierInArgument(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
+         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
              .Case("VariadicParamOrParamIdxArgument", true)
              .Default(false);
 }
@@ -2757,7 +2752,7 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    for (const auto &Super : llvm::reverse(Supers)) {
+    for (const auto &Super : reverse(Supers)) {
       const Record *R = Super.first;
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
@@ -2841,8 +2836,8 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     if (Header)
       OS << SpellingEnum;
 
-    const auto &ParsedAttrSpellingItr = llvm::find_if(
-        AttrMap, [R](const std::pair<std::string, const Record *> &P) {
+    const auto &ParsedAttrSpellingItr =
+        find_if(AttrMap, [R](const std::pair<std::string, const Record *> &P) {
           return &R == P.second;
         });
 
@@ -3131,7 +3126,7 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     // Emit constructors that takes no arguments if none already exists.
     // This is used for delaying arguments.
     bool HasRequiredArgs =
-        llvm::count_if(Args, [=](const std::unique_ptr<Argument> &arg) {
+        count_if(Args, [=](const std::unique_ptr<Argument> &arg) {
           return !arg->isFake() && !arg->isOptional();
         });
     if (DelayedArgs && HasRequiredArgs)
@@ -3278,7 +3273,7 @@ static void emitAttrList(raw_ostream &OS, StringRef Class,
 // Determines if an attribute has a Pragma spelling.
 static bool AttrHasPragmaSpelling(const Record *R) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*R);
-  return llvm::any_of(Spellings, [](const FlattenedSpelling &S) {
+  return any_of(Spellings, [](const FlattenedSpelling &S) {
     return S.variety() == "Pragma";
   });
 }
@@ -3644,7 +3639,7 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
                                              std::string *FnName) {
   bool AnyTargetChecks = false;
 
-  // It is assumed that there will be an llvm::Triple object
+  // It is assumed that there will be an Triple object
   // named "T" and a TargetInfo object named "Target" within
   // scope that can be used to determine whether the attribute exists in
   // a given target.
@@ -3754,8 +3749,8 @@ static void GenerateHasAttrSpellingStringSwitch(
     }
 
     std::string TestStr = !Test.empty()
-                              ? Test + " ? " + llvm::itostr(Version) + " : 0"
-                              : llvm::itostr(Version);
+                              ? Test + " ? " + itostr(Version) + " : 0"
+                              : itostr(Version);
     if (Scope.empty() || Scope == Spelling.nameSpace())
       OS << "    .Case(\"" << Spelling.name() << "\", " << TestStr << ")\n";
   }
@@ -3778,7 +3773,7 @@ void EmitClangRegularKeywordAttributeInfo(const RecordKeeper &Records,
       if (!isRegularKeywordAttribute(S))
         continue;
       std::vector<Record *> Args = R->getValueAsListOfDefs("Args");
-      bool HasArgs = llvm::any_of(
+      bool HasArgs = any_of(
           Args, [](const Record *Arg) { return !Arg->getValueAsBit("Fake"); });
 
       OS << "KEYWORD_ATTRIBUTE("
@@ -4134,7 +4129,7 @@ static std::string CalculateDiagnostic(const Record &S) {
       // The node may contain a list of elements itself, so split the elements
       // by a comma, and trim any whitespace.
       SmallVector<StringRef, 2> Frags;
-      llvm::SplitString(V, Frags, ",");
+      SplitString(V, Frags, ",");
       for (auto Str : Frags) {
         DiagList.push_back(std::string(Str.trim()));
       }
@@ -4162,7 +4157,7 @@ static std::string CalculateDiagnostic(const Record &S) {
   // elements with a comma. This leaves the string in the state: foo, bar,
   // baz (but misses quux). We can then add ", and " for the last element
   // manually.
-  std::string Diag = llvm::join(DiagList.begin(), DiagList.end() - 1, ", ");
+  std::string Diag = join(DiagList.begin(), DiagList.end() - 1, ", ");
   return '"' + Diag + ", and " + *(DiagList.end() - 1) + '"';
 }
 
@@ -4228,12 +4223,11 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // enough statement attributes with custom subject needs to warrant
   // the implementation effort.
   std::vector<Record *> DeclSubjects, StmtSubjects;
-  llvm::copy_if(
-      Subjects, std::back_inserter(DeclSubjects), [](const Record *R) {
-        return R->isSubClassOf("SubsetSubject") || !R->isSubClassOf("StmtNode");
-      });
-  llvm::copy_if(Subjects, std::back_inserter(StmtSubjects),
-                [](const Record *R) { return R->isSubClassOf("StmtNode"); });
+  copy_if(Subjects, std::back_inserter(DeclSubjects), [](const Record *R) {
+    return R->isSubClassOf("SubsetSubject") || !R->isSubClassOf("StmtNode");
+  });
+  copy_if(Subjects, std::back_inserter(StmtSubjects),
+          [](const Record *R) { return R->isSubClassOf("StmtNode"); });
 
   // We should have sorted all of the subjects into two lists.
   // FIXME: this assertion will be wrong if we ever add type attribute subjects.
@@ -4351,7 +4345,7 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
     auto IsCurAttr = [Attr](const Record *R) {
       return R->getName() == Attr.getName();
     };
-    if (llvm::any_of(MutuallyExclusiveAttrs, IsCurAttr)) {
+    if (any_of(MutuallyExclusiveAttrs, IsCurAttr)) {
       // This list of exclusions includes the attribute we're looking for, so
       // add the exclusive attributes to the proper list for checking.
       for (const Record *AttrToExclude : MutuallyExclusiveAttrs) {
@@ -4563,8 +4557,7 @@ GenerateSpellingTargetRequirements(const Record &Attr,
 
     Test += "((SpellingListIndex == ";
     for (unsigned Index = 0; Index < Spellings.size(); ++Index) {
-      Test +=
-          llvm::itostr(getSpellingListIndex(SpellingList, Spellings[Index]));
+      Test += itostr(getSpellingListIndex(SpellingList, Spellings[Index]));
       if (Index != Spellings.size() - 1)
         Test += " ||\n    SpellingListIndex == ";
       else
@@ -4630,8 +4623,7 @@ static void GenerateHandleDeclAttribute(const Record &Attr, raw_ostream &OS) {
 
 static bool isParamExpr(const Record *Arg) {
   return !Arg->getSuperClasses().empty() &&
-         llvm::StringSwitch<bool>(
-             Arg->getSuperClasses().back().first->getName())
+         StringSwitch<bool>(Arg->getSuperClasses().back().first->getName())
              .Case("ExprArgument", true)
              .Case("VariadicExprArgument", true)
              .Default(false);
@@ -4681,9 +4673,8 @@ void GenerateHandleAttrWithDelayedArgs(const RecordKeeper &Records,
 static bool IsKnownToGCC(const Record &Attr) {
   // Look at the spellings for this subject; if there are any spellings which
   // claim to be known to GCC, the attribute is known to GCC.
-  return llvm::any_of(
-      GetFlattenedSpellings(Attr),
-      [](const FlattenedSpelling &S) { return S.knownToGCC(); });
+  return any_of(GetFlattenedSpellings(Attr),
+                [](const FlattenedSpelling &S) { return S.knownToGCC(); });
 }
 
 /// Emits the parsed attribute helpers
@@ -4965,7 +4956,7 @@ void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
     // spelling used for the attribute.
 
     std::string FunctionContent;
-    llvm::raw_string_ostream SS(FunctionContent);
+    raw_string_ostream SS(FunctionContent);
 
     std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
     if (Spellings.size() > 1 && !SpellingNamesAreCommon(Spellings))
@@ -4999,7 +4990,7 @@ void EmitClangAttrNodeTraverse(const RecordKeeper &Records, raw_ostream &OS) {
       continue;
 
     std::string FunctionContent;
-    llvm::raw_string_ostream SS(FunctionContent);
+    raw_string_ostream SS(FunctionContent);
 
     std::vector<Record *> Args = R.getValueAsListOfDefs("Args");
     for (const auto *Arg : Args)
@@ -5171,7 +5162,7 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
       // concatenating all the spellings. Might not be great, but better than
       // nothing.
       else if (Cat == "Undocumented")
-        Heading = llvm::join(Uniques.begin(), Uniques.end(), ", ");
+        Heading = join(Uniques.begin(), Uniques.end(), ", ");
     }
   }
 
@@ -5289,10 +5280,10 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
   for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
 
-    llvm::sort(I.second,
-               [](const DocumentationData &D1, const DocumentationData &D2) {
-                 return D1.Heading < D2.Heading;
-               });
+    sort(I.second,
+         [](const DocumentationData &D1, const DocumentationData &D2) {
+           return D1.Heading < D2.Heading;
+         });
 
     // Walk over each of the attributes in the category and write out their
     // documentation.
@@ -5319,7 +5310,7 @@ void EmitTestPragmaAttributeSupportedAttributes(const RecordKeeper &Records,
         SubjectObj->getValueAsListOfDefs("Subjects");
     OS << " (";
     bool PrintComma = false;
-    for (const auto &Subject : llvm::enumerate(Subjects)) {
+    for (const auto &Subject : enumerate(Subjects)) {
       if (!isSupportedPragmaClangAttributeSubject(*Subject.value()))
         continue;
       if (PrintComma)
@@ -5332,7 +5323,7 @@ void EmitTestPragmaAttributeSupportedAttributes(const RecordKeeper &Records,
         continue;
       }
       OS << "(";
-      for (const auto &Rule : llvm::enumerate(RuleSet.getAggregateRuleSet())) {
+      for (const auto &Rule : enumerate(RuleSet.getAggregateRuleSet())) {
         if (Rule.index())
           OS << ", ";
         OS << Rule.value().getEnumValueName();

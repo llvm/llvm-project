@@ -17,8 +17,9 @@
 //   Returns: days{int(unsigned{x}) - int(unsigned{y}).
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

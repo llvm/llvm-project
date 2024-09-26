@@ -14,6 +14,7 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
@@ -271,24 +272,6 @@ public:
     return lldb::eSearchDepthModule;
   }
 
-  virtual StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data, Status &error) {
-    error =
-        Status::FromErrorString("Creating scripted stop-hooks with the current "
-                                "script interpreter is not supported.");
-    return StructuredData::GenericSP();
-  }
-
-  // This dispatches to the handle_stop method of the stop-hook class.  It
-  // returns a "should_stop" bool.
-  virtual bool
-  ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                             ExecutionContext &exc_ctx,
-                             lldb::StreamSP stream_sp) {
-    return true;
-  }
-
   virtual StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec, lldb_private::Status &error) {
     return StructuredData::ObjectSP();
@@ -437,6 +420,20 @@ public:
     return std::nullopt;
   }
 
+  virtual StructuredData::DictionarySP
+  HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) {
+    return {};
+  }
+
+  virtual StructuredData::DictionarySP
+  HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_name,
+      size_t char_in_arg) {
+    return {};
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -561,6 +558,10 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -586,6 +587,9 @@ public:
 
   std::optional<MemoryRegionInfo> GetOpaqueTypeFromSBMemoryRegionInfo(
       const lldb::SBMemoryRegionInfo &mem_region) const;
+
+  lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
+      const lldb::SBExecutionContext &exe_ctx) const;
 
 protected:
   Debugger &m_debugger;

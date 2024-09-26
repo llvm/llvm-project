@@ -314,3 +314,33 @@ define half @fma_neg_addend_multiplicand(half %x) nounwind {
   %a = call half @llvm.fma.f32(half %x, half -0.5, half -0.25)
   ret half %a
 }
+
+define half @select_loadfpimm(half %x) nounwind {
+; CHECK-LABEL: select_loadfpimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fle.h a0, fa5, fa0
+; CHECK-NEXT:    fli.h fa0, 0.5
+; CHECK-NEXT:    bnez a0, .LBB16_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fneg.h fa0, fa0
+; CHECK-NEXT:  .LBB16_2: # %entry
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: select_loadfpimm:
+; ZFHMIN:       # %bb.0: # %entry
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
+; ZFHMIN-NEXT:    xori a0, a0, 1
+; ZFHMIN-NEXT:    slli a0, a0, 1
+; ZFHMIN-NEXT:    lui a1, %hi(.LCPI16_0)
+; ZFHMIN-NEXT:    addi a1, a1, %lo(.LCPI16_0)
+; ZFHMIN-NEXT:    add a0, a1, a0
+; ZFHMIN-NEXT:    flh fa0, 0(a0)
+; ZFHMIN-NEXT:    ret
+entry:
+  %cmp = fcmp ult half %x, 0.000000e+00
+  %sel = select i1 %cmp, half -5.000000e-01, half 5.000000e-01
+  ret half %sel
+}
