@@ -34,10 +34,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_QUANT_FAKEQUANTSUPPORT_H_
-#define MLIR_DIALECT_QUANT_FAKEQUANTSUPPORT_H_
+#ifndef MLIR_DIALECT_QUANT_UTILS_FAKEQUANTSUPPORT_H_
+#define MLIR_DIALECT_QUANT_UTILS_FAKEQUANTSUPPORT_H_
 
-#include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 
 namespace mlir {
 namespace quant {
@@ -64,4 +64,4 @@ fakeQuantAttrsToType(Location loc, unsigned numBits, int32_t quantizedDimension,
 } // namespace quant
 } // namespace mlir
 
-#endif // MLIR_DIALECT_QUANT_FAKEQUANTSUPPORT_H_
+#endif // MLIR_DIALECT_QUANT_UTILS_FAKEQUANTSUPPORT_H_
