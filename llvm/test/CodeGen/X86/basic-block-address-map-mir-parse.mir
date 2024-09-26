@@ -1,5 +1,5 @@
 # Start after bbsections0-prepare and check that the BB address map is generated.
-# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
+# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-after=bbsections-prepare -basic-block-address-map %s -o - | FileCheck %s -check-prefix=CHECK
 
 # How to generate the input:
 # foo.cc
@@ -9,7 +9,7 @@
 # }
 #
 # clang -O0 -S -emit-llvm foo.cc
-# llc < foo.ll -stop-after=bbsections-prepare -basic-block-sections=labels
+# llc < foo.ll -stop-after=bbsections-prepare -basic-block-address-map
 
 # CHECK: .section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text
 --- |

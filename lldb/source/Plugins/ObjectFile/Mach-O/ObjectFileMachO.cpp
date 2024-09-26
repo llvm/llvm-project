@@ -1409,7 +1409,7 @@ void ObjectFileMachO::SanitizeSegmentCommand(
         seg_cmd.cmd == LC_SEGMENT_64 ? "LC_SEGMENT_64" : "LC_SEGMENT";
     GetModule()->ReportWarning(
         "load command {0} {1} has a fileoff + filesize ({2:x16}) that "
-        "extends beyond the end of the file ({4:x16}), the segment will be "
+        "extends beyond the end of the file ({3:x16}), the segment will be "
         "truncated to match",
         cmd_idx, lc_segment_name, seg_cmd.fileoff + seg_cmd.filesize, m_length);
 

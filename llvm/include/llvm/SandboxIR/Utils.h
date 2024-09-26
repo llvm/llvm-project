@@ -12,6 +12,9 @@
 #ifndef LLVM_SANDBOXIR_UTILS_H
 #define LLVM_SANDBOXIR_UTILS_H
 
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/SandboxIR/SandboxIR.h"
+
 namespace llvm::sandboxir {
 
 class Utils {
@@ -47,6 +50,12 @@ public:
   static unsigned getNumBits(Value *V, const DataLayout &DL) {
     Type *Ty = getExpectedType(V);
     return DL.getTypeSizeInBits(Ty->LLVMTy);
+  }
+
+  /// Equivalent to MemoryLocation::getOrNone(I).
+  static std::optional<llvm::MemoryLocation>
+  memoryLocationGetOrNone(const Instruction *I) {
+    return llvm::MemoryLocation::getOrNone(cast<llvm::Instruction>(I->Val));
   }
 };
 } // namespace llvm::sandboxir
