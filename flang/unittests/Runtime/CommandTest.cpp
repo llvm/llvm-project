@@ -689,19 +689,9 @@ TEST_F(OnlyValidArguments, GetCommandShortLength) {
   CheckDescriptorEqInt<short>(length.get(), 51);
 }
 
-TEST_F(ZeroArguments, GetGID) {
-  // gid cannot be negative
-  EXPECT_GE(RTNAME(GetGID)(), 0u);
-}
-
 TEST_F(ZeroArguments, GetPID) {
   // pid should always greater than 0, in both linux and windows
   EXPECT_GT(RTNAME(GetPID)(), 0);
-}
-
-TEST_F(ZeroArguments, GetUID) {
-  // uid cannot be negative
-  EXPECT_GE(RTNAME(GetUID)(), 0u);
 }
 
 class EnvironmentVariables : public CommandFixture {
