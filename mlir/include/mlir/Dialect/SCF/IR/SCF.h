@@ -111,7 +111,7 @@ LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
 /// `replacement` value with a different type. A callback is used to insert
 /// cast ops inside the block to account for type differences.
 using ValueTypeCastFnTy =
-    std::function<Value(OpBuilder &, Location loc, Type, Value)>;
+    llvm::function_ref<Value(OpBuilder &, Location loc, Type, Value)>;
 SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               scf::ForOp forOp,
                                               OpOperand &operand,

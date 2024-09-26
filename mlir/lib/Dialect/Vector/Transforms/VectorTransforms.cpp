@@ -1837,8 +1837,7 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
         continue;
 
       // Create a new ForOp with that iter operand replaced.
-      mlir::scf::ValueTypeCastFnTy castFn = [](OpBuilder &b, Location loc,
-                                               Type type, Value source) {
+      auto castFn = [](OpBuilder &b, Location loc, Type type, Value source) {
         return b.create<vector::ShapeCastOp>(loc, type, source);
       };
 
