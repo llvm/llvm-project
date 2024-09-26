@@ -1583,6 +1583,9 @@ define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
 ; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
@@ -1686,6 +1689,9 @@ define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
 ; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
 ; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0

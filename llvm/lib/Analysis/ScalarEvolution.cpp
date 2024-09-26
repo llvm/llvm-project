@@ -10153,8 +10153,10 @@ SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
     if (!Predicates)
       return SE.getCouldNotCompute();
     // Try to add a predicate ensuring B is a multiple of A.
-    const SCEV *URem = SE.getURemExpr(B, SE.getConstant(A));
+    const SCEV *URem =
+        SE.getURemExpr(B, SE.getConstant(B->getType(), 1 << Mult2));
     const SCEV *Zero = SE.getZero(B->getType());
+    assert(!SE.isKnownPredicate(CmpInst::ICMP_EQ, URem, Zero));
     // Avoid adding a predicate that is known to be false.
     if (SE.isKnownPredicate(CmpInst::ICMP_NE, URem, Zero))
       return SE.getCouldNotCompute();
