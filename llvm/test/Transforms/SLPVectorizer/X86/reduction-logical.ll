@@ -315,11 +315,12 @@ define i1 @logical_and_icmp_clamp_extra_use_select(<4 x i32> %x) {
 define i1 @logical_and_icmp_clamp_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: @logical_and_icmp_clamp_v8i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[X:%.*]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[Y:%.*]], <8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 poison, i32 poison, i32 poison, i32 poison>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <8 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP4]])
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[Y:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> <i32 42, i32 42, i32 42, i32 42, i32 poison, i32 poison, i32 poison, i32 poison>, <4 x i32> [[TMP2]], i64 4)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <8 x i32> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <8 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP5]])
+; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %x0 = extractelement <8 x i32> %x, i32 0
   %x1 = extractelement <8 x i32> %x, i32 1

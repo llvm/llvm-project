@@ -7,13 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFPRange.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/Support/KnownBits.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -363,14 +358,11 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomeNeg.classify(), fcNegFinite);
   EXPECT_EQ(PosInf.classify(), fcPosInf);
   EXPECT_EQ(NegInf.classify(), fcNegInf);
-  EXPECT_TRUE(SomePos.toKnownFPClass().cannotBeOrderedLessThanZero());
   EXPECT_EQ(Finite.getSignBit(), std::nullopt);
   EXPECT_EQ(PosZero.getSignBit(), false);
   EXPECT_EQ(NegZero.getSignBit(), true);
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
-  EXPECT_EQ(SomePos.toKnownFPClass().SignBit, false);
-  EXPECT_EQ(SomeNeg.toKnownFPClass().SignBit, true);
 
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {
