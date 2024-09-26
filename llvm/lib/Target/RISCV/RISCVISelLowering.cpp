@@ -21464,7 +21464,6 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
   const DataLayout &DL = LI->getDataLayout();
 
@@ -21472,18 +21471,15 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                     LI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VlsegNFunc;
-  Value *VL, *Return;
+  Value *Return;
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
-  SmallVector<Value *, 10> Ops;
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VlsegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
         LI->getModule(), FixedVlsegIntrIds[Factor - 2],
         {ResVTy, LI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Ops.append({LI->getPointerOperand(), VL});
-    Return = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Return = Builder.CreateCall(VlsegNFunc, {LI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
@@ -21499,13 +21495,13 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                 NumElts * SEW / 8),
         Factor);
 
-    VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
-    VL = Constant::getAllOnesValue(XLenTy);
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
-    Ops.append({PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
-                ConstantInt::get(XLenTy, Log2_64(SEW))});
-    Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *Vlseg = Builder.CreateCall(
+        VlsegNFunc, {PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
+                     ConstantInt::get(XLenTy, Log2_64(SEW))});
 
     SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
     Return = PoisonValue::get(StructType::get(LI->getContext(), AggrTypes));
@@ -21535,24 +21531,21 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(II->getType());
-  VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+  VectorType *InVTy = cast<VectorType>(II->getArgOperand(0)->getType());
   const DataLayout &DL = SI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VssegNFunc;
-  Value *VL;
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VssegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
+    Function *VssegNFunc = Intrinsic::getDeclaration(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Builder.CreateCall(VssegNFunc, {II->getArgOperand(0), II->getArgOperand(1),
                                     SI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
@@ -21569,17 +21562,18 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
                                 NumElts * SEW / 8),
         Factor);
 
-    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
+    Function *VssegNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
 
-    VL = Constant::getAllOnesValue(XLenTy);
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
     Function *VecInsertFunc = Intrinsic::getDeclaration(
         SI->getModule(), Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy});
     Value *StoredVal = PoisonValue::get(VecTupTy);
     for (unsigned i = 0; i < Factor; ++i)
-      StoredVal = Builder.CreateCall(
-          VecInsertFunc, {StoredVal, II->getOperand(i), Builder.getInt32(i)});
+      StoredVal =
+          Builder.CreateCall(VecInsertFunc, {StoredVal, II->getArgOperand(i),
+                                             Builder.getInt32(i)});
 
     Builder.CreateCall(VssegNFunc, {StoredVal, SI->getPointerOperand(), VL,
                                     ConstantInt::get(XLenTy, Log2_64(SEW))});
