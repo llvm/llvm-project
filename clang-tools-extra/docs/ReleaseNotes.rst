@@ -121,6 +121,13 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check.
+
+  Detects C++ [temp.inst#11]: "It is unspecified whether or not an implementation 
+  implicitly instantiates a virtual member function of a class template if the 
+  virtual member function would not otherwise be instantiated."
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

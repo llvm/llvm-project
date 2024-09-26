@@ -9,6 +9,7 @@ add_clang_library(clangTidyPortabilityModule
   RestrictSystemIncludesCheck.cpp
   SIMDIntrinsicsCheck.cpp
   StdAllocatorConstCheck.cpp
+  TemplateVirtualMemberFunctionCheck.cpp
 
   LINK_LIBS
   clangTidy
