@@ -267,8 +267,8 @@ func.func @remui_base(%arg0 : index, %arg1 : index ) -> i1 {
 }
 
 // CHECK-LABEL: func @remui_base_maybe_zero
-// CHECK: %[[ret:.*]] = arith.cmpi ult
-// CHECK: return %[[ret]]
+// CHECK: %[[true:.*]] = arith.constant true
+// CHECK: return %[[true]]
 func.func @remui_base_maybe_zero(%arg0 : index, %arg1 : index ) -> i1 {
     %c4 = arith.constant 4 : index
     %c5 = arith.constant 5 : index    
