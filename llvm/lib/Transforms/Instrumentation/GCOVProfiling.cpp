@@ -1126,7 +1126,7 @@ Function *GCOVProfiler::insertCounterWriteout(
     uint32_t CfgChecksum = FileChecksums.empty() ? 0 : FileChecksums[i];
     auto *StartFileCallArgs = ConstantStruct::get(
         StartFileCallArgsTy,
-        {Builder.CreateGlobalStringPtr(FilenameGcda),
+        {Builder.CreateGlobalString(FilenameGcda),
          Builder.getInt32(endian::read32be(Options.Version)),
          Builder.getInt32(CfgChecksum)});
 

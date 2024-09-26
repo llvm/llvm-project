@@ -599,14 +599,6 @@ TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
 TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
 TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
 
-// Bitcast
-
-BUILTIN(__nvvm_bitcast_f2i, "if", "")
-BUILTIN(__nvvm_bitcast_i2f, "fi", "")
-
-BUILTIN(__nvvm_bitcast_ll2d, "dLLi", "")
-BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
-
 // FNS
 TARGET_BUILTIN(__nvvm_fns, "UiUiUii", "n", PTX60)
 

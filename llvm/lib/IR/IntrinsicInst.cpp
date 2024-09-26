@@ -237,8 +237,10 @@ void DbgAssignIntrinsic::setValue(Value *V) {
 }
 
 int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                               StringRef Name) {
+                                               StringRef Name,
+                                               StringRef Target) {
   assert(Name.starts_with("llvm.") && "Unexpected intrinsic prefix");
+  assert(Name.drop_front(5).starts_with(Target) && "Unexpected target");
 
   // Do successive binary searches of the dotted name components. For
   // "llvm.gc.experimental.statepoint.p1i8.p1i32", we will find the range of
@@ -248,6 +250,9 @@ int llvm::Intrinsic::lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
   // identical. By using strncmp we consider names with differing suffixes to
   // be part of the equal range.
   size_t CmpEnd = 4; // Skip the "llvm" component.
+  if (!Target.empty())
+    CmpEnd += 1 + Target.size(); // skip the .target component.
+
   const char *const *Low = NameTable.begin();
   const char *const *High = NameTable.end();
   const char *const *LastLow = Low;

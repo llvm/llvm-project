@@ -93,6 +93,33 @@ inline bool isExtendedGlobalAddrSpace(unsigned AS) {
          AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
          AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
 }
+
+inline bool isConstantAddressSpace(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case CONSTANT_ADDRESS:
+  case CONSTANT_ADDRESS_32BIT:
+  case CONSTANT_BUFFER_0:
+  case CONSTANT_BUFFER_1:
+  case CONSTANT_BUFFER_2:
+  case CONSTANT_BUFFER_3:
+  case CONSTANT_BUFFER_4:
+  case CONSTANT_BUFFER_5:
+  case CONSTANT_BUFFER_6:
+  case CONSTANT_BUFFER_7:
+  case CONSTANT_BUFFER_8:
+  case CONSTANT_BUFFER_9:
+  case CONSTANT_BUFFER_10:
+  case CONSTANT_BUFFER_11:
+  case CONSTANT_BUFFER_12:
+  case CONSTANT_BUFFER_13:
+  case CONSTANT_BUFFER_14:
+  case CONSTANT_BUFFER_15:
+    return true;
+  default:
+    return false;
+  }
+}
 } // end namespace AMDGPU
 
 } // end namespace llvm

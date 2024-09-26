@@ -215,7 +215,7 @@ public:
   ///
   /// \param[in] store The initial store.
   /// \param[in] Values The values to invalidate.
-  /// \param[in] E The current statement being evaluated. Used to conjure
+  /// \param[in] S The current statement being evaluated. Used to conjure
   ///   symbols to mark the values of invalidated regions.
   /// \param[in] Count The current block count. Used to conjure
   ///   symbols to mark the values of invalidated regions.
@@ -233,7 +233,7 @@ public:
   ///   even if they do not currently have bindings. Pass \c NULL if this
   ///   information will not be used.
   virtual StoreRef invalidateRegions(
-      Store store, ArrayRef<SVal> Values, const Expr *Ex, unsigned Count,
+      Store store, ArrayRef<SVal> Values, const Stmt *S, unsigned Count,
       const LocationContext *LCtx, const CallEvent *Call,
       InvalidatedSymbols &IS, RegionAndSymbolInvalidationTraits &ITraits,
       InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) = 0;

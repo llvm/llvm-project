@@ -295,7 +295,7 @@ static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
         s.getType() == STT_TLS || s.st_value != ss.value)
       continue;
     StringRef name = check(s.getName(file.getStringTable()));
-    Symbol *sym = symtab.find(name);
+    Symbol *sym = ctx.symtab->find(name);
     if (auto *alias = dyn_cast_or_null<SharedSymbol>(sym))
       ret.insert(alias);
   }
@@ -545,7 +545,7 @@ static std::string maybeReportDiscarded(Undefined &sym) {
   // If the discarded section is a COMDAT.
   StringRef signature = file->getShtGroupSignature(objSections, elfSec);
   if (const InputFile *prevailing =
-          symtab.comdatGroups.lookup(CachedHashStringRef(signature))) {
+          ctx.symtab->comdatGroups.lookup(CachedHashStringRef(signature))) {
     msg += "\n>>> section group signature: " + signature.str() +
            "\n>>> prevailing definition is in " + toString(prevailing);
     if (sym.nonPrevailing) {
@@ -618,7 +618,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
       return s;
 
     // If in the symbol table and not undefined.
-    if (const Symbol *s = symtab.find(newName))
+    if (const Symbol *s = ctx.symtab->find(newName))
       if (!s->isUndefined())
         return s;
 
@@ -667,7 +667,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   for (auto &it : map)
     if (name.equals_insensitive(it.first))
       return it.second;
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     if (!sym->isUndefined() && name.equals_insensitive(sym->getName()))
       return sym;
 
@@ -693,7 +693,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
         break;
       }
     if (!s)
-      for (Symbol *sym : symtab.getSymbols())
+      for (Symbol *sym : ctx.symtab->getSymbols())
         if (canSuggestExternCForCXX(name, sym->getName())) {
           s = sym;
           break;
@@ -1870,7 +1870,7 @@ void elf::postScanRelocations() {
   }
 
   assert(ctx.symAux.size() == 1);
-  for (Symbol *sym : symtab.getSymbols())
+  for (Symbol *sym : ctx.symtab->getSymbols())
     fn(*sym);
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
@@ -2384,7 +2384,7 @@ bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
 }
 
 void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
-  Symbol *sym = symtab.find("__tls_get_addr");
+  Symbol *sym = ctx.symtab->find("__tls_get_addr");
   if (!sym)
     return;
   bool needEntry = true;

@@ -1509,10 +1509,10 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_FINI_ARRAYSZ, ctx.out.finiArray->size);
     }
 
-    if (Symbol *b = symtab.find(ctx.arg.init))
+    if (Symbol *b = ctx.symtab->find(ctx.arg.init))
       if (b->isDefined())
         addInt(DT_INIT, b->getVA());
-    if (Symbol *b = symtab.find(ctx.arg.fini))
+    if (Symbol *b = ctx.symtab->find(ctx.arg.fini))
       if (b->isDefined())
         addInt(DT_FINI, b->getVA());
   }
@@ -1692,9 +1692,9 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(SymbolTableBaseSection *symtab) {
+void DynamicReloc::computeRaw(SymbolTableBaseSection *symt) {
   r_offset = getOffset();
-  r_sym = getSymIndex(symtab);
+  r_sym = getSymIndex(symt);
   addend = computeAddend();
   kind = AddendOnly; // Catch errors
 }
@@ -2327,8 +2327,9 @@ SymtabShndxSection::SymtabShndxSection()
 
 void SymtabShndxSection::writeTo(uint8_t *buf) {
   // We write an array of 32 bit values, where each value has 1:1 association
-  // with an entry in .symtab. If the corresponding entry contains SHN_XINDEX,
-  // we need to write actual index, otherwise, we must write SHN_UNDEF(0).
+  // with an entry in ctx.in.symTab if the corresponding entry contains
+  // SHN_XINDEX, we need to write actual index, otherwise, we must write
+  // SHN_UNDEF(0).
   buf += 4; // Ignore .symtab[0] entry.
   for (const SymbolTableEntry &entry : ctx.in.symTab->getSymbols()) {
     if (!getCommonSec(entry.sym) && getSymSectionIndex(entry.sym) == SHN_XINDEX)
@@ -4640,7 +4641,7 @@ static OutputSection *findSection(StringRef name) {
 
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
                                    uint64_t val, uint8_t stOther = STV_HIDDEN) {
-  Symbol *s = symtab.find(name);
+  Symbol *s = ctx.symtab->find(name);
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
