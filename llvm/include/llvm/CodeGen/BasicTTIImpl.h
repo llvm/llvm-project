@@ -1222,10 +1222,12 @@ public:
     return BaseT::getCFInstrCost(Opcode, CostKind, I);
   }
 
-  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                     CmpInst::Predicate VecPred,
-                                     TTI::TargetCostKind CostKind,
-                                     const Instruction *I = nullptr) {
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) {
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Invalid opcode");
@@ -1233,7 +1235,7 @@ public:
     // TODO: Handle other cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
+                                       Op1Info, Op2Info, I);
 
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
@@ -1260,8 +1262,9 @@ public:
       unsigned Num = cast<FixedVectorType>(ValVTy)->getNumElements();
       if (CondTy)
         CondTy = CondTy->getScalarType();
-      InstructionCost Cost = thisT()->getCmpSelInstrCost(
-          Opcode, ValVTy->getScalarType(), CondTy, VecPred, CostKind, I);
+      InstructionCost Cost =
+          thisT()->getCmpSelInstrCost(Opcode, ValVTy->getScalarType(), CondTy,
+                                      VecPred, CostKind, Op1Info, Op2Info, I);
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
