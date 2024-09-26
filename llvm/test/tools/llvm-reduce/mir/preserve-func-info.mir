@@ -22,6 +22,7 @@
 # RESULT-NEXT: hasEHCatchret: true
 # RESULT-NEXT: hasEHScopes: true
 # RESULT-NEXT: hasEHFunclets: true
+# RESULT-NEXT: hasFakeUses: true
 # RESULT-NEXT: failsVerification: true
 # RESULT-NEXT: tracksDebugUserValues: true
 
@@ -54,6 +55,7 @@ callsUnwindInit: true
 hasEHCatchret: true
 hasEHScopes: true
 hasEHFunclets: true
+hasFakeUses: true
 
 body:             |
   bb.0:

@@ -31,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -200,12 +201,16 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
             }
           }
         }
-        // Look for calls to the @llvm.va_start intrinsic. We can omit some
-        // prologue boilerplate for variadic functions that don't examine their
-        // arguments.
         if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+          // Look for calls to the @llvm.va_start intrinsic. We can omit some
+          // prologue boilerplate for variadic functions that don't examine
+          // their arguments.
           if (II->getIntrinsicID() == Intrinsic::vastart)
             MF->getFrameInfo().setHasVAStart(true);
+          // Look for llvm.fake.uses, so that we can prevent certain
+          // optimizations if they are present.
+          else if (II->getIntrinsicID() == Intrinsic::fake_use)
+            MF->setHasFakeUses(true);
         }
 
         // If we have a musttail call in a variadic function, we need to ensure

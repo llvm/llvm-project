@@ -1,0 +1,55 @@
+# Prevent the post-RA machine scheduler from running on functions marked as having fake uses.
+# RUN: llc --post-RA-scheduler -run-pass post-RA-sched -mtriple=x86_64-unknown-linux --print-before=post-RA-sched --debug-only=post-RA-sched %s -o - 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK-POSTRA
+# RUN: llc --enable-post-misched=true -run-pass postmisched -mtriple=x86_64-unknown-linux --debug-only=machine-scheduler %s -o - 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK-POSTMACHINE
+# REQUIRES: asserts
+#
+# We make sure that functions that have hasFakeUses=true are not processed by
+# either of the post-regalloc scheduling passes.
+#
+# CHECK-POSTRA: Machine code for function withFakeUse
+# CHECK-POSTRA-NOT: PostRAScheduler
+# CHECK-POSTRA: Machine code for function withoutFakeUse
+# CHECK-POSTRA: PostRAScheduler
+#
+# CHECK-POSTMACHINE-NOT: Before post-MI-sched
+# CHECK-POSTMACHINE: Before post-MI-sched
+# CHECK-POSTMACHINE: Machine code for function withoutFakeUse
+#
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+
+  define void @withFakeUse() {
+  entry:
+    ret void
+  }
+
+  define void @withoutFakeUse() {
+  entry:
+    ret void
+  }
+
+...
+---
+name:            withFakeUse
+alignment:       16
+hasFakeUses: true
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0.entry:
+    RET 0
+
+...
+---
+name:            withoutFakeUse
+alignment:       16
+hasFakeUses: false
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0.entry:
+    RET 0
+
+...
