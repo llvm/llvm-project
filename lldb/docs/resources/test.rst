@@ -600,7 +600,7 @@ test suite, but there are two things to have in mind:
    architecture for the remote system.
 3. Remote Shell tests execution is currently supported only for Linux target
    platform. It's triggered when ``LLDB_TEST_SYSROOT`` is provided for building
-   test sources. It can be disabled by setting ``LLDB_SHELL_TESTS_DISABLE_REMOTE=On``.
+   test sources. It can be disabled by setting ``LLDB_TEST_SHELL_DISABLE_REMOTE=On``.
    Shell tests are not guaranteed to pass against remote target if the compiler
    being used is other than Clang.
 
