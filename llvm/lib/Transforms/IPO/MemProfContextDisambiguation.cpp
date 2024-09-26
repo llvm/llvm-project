@@ -1377,7 +1377,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // Compute the last node's context ids once, as it is shared by all calls in
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
-  assert(!LastNodeContextIds.empty());
 
 #ifndef NDEBUG
   bool PrevIterCreatedNode = false;
