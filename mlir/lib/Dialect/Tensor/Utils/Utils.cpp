@@ -25,6 +25,7 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
                                     Value pad, bool nofold, Location loc,
                                     OpBuilder &b) {
 
+  // TODO: Either relax or turn this into a failure
   assert(!ShapedType::isDynamicShape(type.getShape()) &&
          "The output type is dynamic - that's not supported ATM.");
 
