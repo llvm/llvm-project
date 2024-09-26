@@ -1082,10 +1082,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
-        setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT}, VT,
+                           Custom);
       else
-        setOperationAction(ISD::SPLAT_VECTOR, EltVT, Custom);
-      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
+                           EltVT, Custom);
+      setOperationAction({ISD::LOAD, ISD::STORE, ISD::MLOAD, ISD::MSTORE,
+                          ISD::MGATHER, ISD::MSCATTER, ISD::VP_LOAD,
+                          ISD::VP_STORE, ISD::EXPERIMENTAL_VP_STRIDED_LOAD,
+                          ISD::EXPERIMENTAL_VP_STRIDED_STORE, ISD::VP_GATHER,
+                          ISD::VP_SCATTER},
+                         VT, Custom);
 
       setOperationAction(ISD::FNEG, VT, Expand);
       setOperationAction(ISD::FABS, VT, Expand);
@@ -4449,10 +4456,26 @@ static SDValue lowerScalarSplat(SDValue Passthru, SDValue Scalar, SDValue VL,
   bool HasPassthru = Passthru && !Passthru.isUndef();
   if (!HasPassthru && !Passthru)
     Passthru = DAG.getUNDEF(VT);
-  if (VT.isFloatingPoint())
-    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Passthru, Scalar, VL);
 
+  MVT EltVT = VT.getVectorElementType();
   MVT XLenVT = Subtarget.getXLenVT();
+
+  if (VT.isFloatingPoint()) {
+    if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) ||
+        EltVT == MVT::bf16) {
+      if ((EltVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) ||
+          (EltVT == MVT::f16 && Subtarget.hasStdExtZfhmin()))
+        Scalar = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Scalar);
+      else
+        Scalar = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Scalar);
+      MVT IVT = VT.changeVectorElementType(MVT::i16);
+      Passthru = DAG.getNode(ISD::BITCAST, DL, IVT, Passthru);
+      SDValue Splat =
+          lowerScalarSplat(Passthru, Scalar, VL, IVT, DL, DAG, Subtarget);
+      return DAG.getNode(ISD::BITCAST, DL, VT, Splat);
+    }
+    return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Passthru, Scalar, VL);
+  }
 
   // Simplest case is that the operand needs to be promoted to XLenVT.
   if (Scalar.getValueType().bitsLE(XLenVT)) {
@@ -16984,6 +17007,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Op0.getOperand(0);
     }
 
+    if (ISD::isNormalLoad(Op0.getNode()) && Op0.hasOneUse() &&
+        cast<LoadSDNode>(Op0)->isSimple()) {
+      MVT IVT = MVT::getIntegerVT(Op0.getValueSizeInBits());
+      auto *LN0 = cast<LoadSDNode>(Op0);
+      SDValue Load =
+          DAG.getExtLoad(ISD::EXTLOAD, SDLoc(N), VT, LN0->getChain(),
+                         LN0->getBasePtr(), IVT, LN0->getMemOperand());
+      DAG.ReplaceAllUsesOfValueWith(Op0.getValue(1), Load.getValue(1));
+      return Load;
+    }
+
     // This is a target-specific version of a DAGCombine performed in
     // DAGCombiner::visitBITCAST. It performs the equivalent of:
     // fold (bitconvert (fneg x)) -> (xor (bitconvert x), signbit)
@@ -21428,7 +21462,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
@@ -21463,7 +21497,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
         LI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(LI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
     VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
                                            {VecTupTy, XLenTy});
@@ -21499,7 +21533,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
-  unsigned Factor = 2;
+  const unsigned Factor = 2;
 
   VectorType *VTy = cast<VectorType>(II->getType());
   VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
@@ -21533,7 +21567,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
         SI->getContext(), "riscv.vector.tuple",
         ScalableVectorType::get(Type::getInt8Ty(SI->getContext()),
                                 NumElts * SEW / 8),
-        2);
+        Factor);
 
     VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
                                            {VecTupTy, XLenTy});
