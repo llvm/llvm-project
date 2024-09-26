@@ -536,6 +536,33 @@ This command will run the thread in the current frame until it reaches line 100
 in this frame or stops if it leaves the current frame. This is a pretty close
 equivalent to GDB's ``until`` command.
 
+One other useful thing to note about the lldb stepping commands is that they
+are implemented as a stack of interruptible operations.  Until the operation -
+e.g. step to the next line - is completed, the operation will remain on the
+stack.  If it is interrupted, new stepping commands will result in their
+operations being pushed onto the stack, each of them retired as they are completed.
+
+Suppose, for instance, you ``step-over`` a source line, and hit a breakpoint
+in a function called by the code of the line you are stepping over.  Since the step-over
+operation remains on the stack, you can examine the state at
+the point of the breakpoint hit, step around in that frame, step in to other
+frames, hit other breakpoints, etc.  Then when you are done, a simple ``continue``
+will resume the original ``step-over`` operation, only ending when the desired line is reached.
+This saves you from having to manually issue some number of ``step-out`` commands
+to get back to the frame you were stepping over.
+
+Hand-called functions using the ``expr`` command are also implemented by
+operations on this same stack.  So if you are calling some code with the ``expr`` command,
+and hit a breakpoint during the evaluation of that code, you can examine
+the state where you stopped, step around at your convenience, and then issue a
+``continue`` which will finish the expression evaluation operation and print the function
+result.
+
+You can examine the state of the operations stack using the ``thread plan list``
+command, and if, for instance, you decide you don't actually want that outermost
+next to continue running, you can remove it with the ``thread plan discard``
+command.
+
 A process, by default, will share the LLDB terminal with the inferior process.
 When in this mode, much like when debugging with GDB, when the process is
 running anything you type will go to the ``STDIN`` of the inferior process. To
