@@ -1225,17 +1225,13 @@ parsePrivateList(OpAsmParser &parser,
 }
 
 static void printPrivateList(OpAsmPrinter &p, Operation *op,
-                             ValueRange privateVars, TypeRange privateTypes,
-                             ArrayAttr privateSyms) {
-  // TODO: Remove target-specific logic from this function.
-  auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(op);
-  assert(targetOp);
-
+                             Operation::operand_range privateVars,
+                             TypeRange privateTypes, ArrayAttr privateSyms) {
   auto &region = op->getRegion(0);
   auto *argsBegin = region.front().getArguments().begin();
-  MutableArrayRef argsSubrange(argsBegin + targetOp.getMapVars().size(),
-                               argsBegin + targetOp.getMapVars().size() +
-                                   privateTypes.size());
+  MutableArrayRef argsSubrange(argsBegin + privateVars.getBeginOperandIndex(),
+                               argsBegin + privateVars.getBeginOperandIndex() +
+                                   privateVars.size());
   mlir::SmallVector<bool> isByRefVec;
   isByRefVec.resize(privateTypes.size(), false);
   DenseBoolArrayAttr isByRef =
@@ -1859,11 +1855,11 @@ LogicalResult SimdOp::verify() {
 
 void DistributeOp::build(OpBuilder &builder, OperationState &state,
                          const DistributeOperands &clauses) {
-  // TODO Store clauses in op: privateVars, privateSyms.
-  DistributeOp::build(
-      builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.distScheduleStatic, clauses.distScheduleChunkSize, clauses.order,
-      clauses.orderMod, /*private_vars=*/{}, /*private_syms=*/nullptr);
+  DistributeOp::build(builder, state, clauses.allocateVars,
+                      clauses.allocatorVars, clauses.distScheduleStatic,
+                      clauses.distScheduleChunkSize, clauses.order,
+                      clauses.orderMod, clauses.privateVars,
+                      makeArrayAttr(builder.getContext(), clauses.privateSyms));
 }
 
 LogicalResult DistributeOp::verify() {

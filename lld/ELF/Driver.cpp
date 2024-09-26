@@ -231,7 +231,7 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef emul) {
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
-    MemoryBufferRef mb) {
+    Ctx &ctx, MemoryBufferRef mb) {
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
@@ -296,7 +296,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     readLinkerScript(ctx, mbref);
     return;
   case file_magic::archive: {
-    auto members = getArchiveMembers(mbref);
+    auto members = getArchiveMembers(ctx, mbref);
     if (inWholeArchive) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
@@ -632,7 +632,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
-    printHelp();
+    printHelp(ctx);
     return;
   }
 
@@ -994,7 +994,7 @@ static void readCallGraph(Ctx &ctx, MemoryBufferRef mb) {
 // true and populates cgProfile and symbolIndices.
 template <class ELFT>
 static bool
-processCallGraphRelocations(SmallVector<uint32_t, 32> &symbolIndices,
+processCallGraphRelocations(Ctx &ctx, SmallVector<uint32_t, 32> &symbolIndices,
                             ArrayRef<typename ELFT::CGProfile> &cgProfile,
                             ObjFile<ELFT> *inputObj) {
   if (inputObj->cgProfileSectionIndex == SHN_UNDEF)
@@ -1046,7 +1046,7 @@ template <class ELFT> static void readCallGraphsFromObjectFiles(Ctx &ctx) {
   ArrayRef<typename ELFT::CGProfile> cgProfile;
   for (auto file : ctx.objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
-    if (!processCallGraphRelocations(symbolIndices, cgProfile, obj))
+    if (!processCallGraphRelocations(ctx, symbolIndices, cgProfile, obj))
       continue;
 
     if (symbolIndices.size() != cgProfile.size() * 2)
@@ -2378,13 +2378,12 @@ static void replaceCommonSymbols(Ctx &ctx) {
 
 // The section referred to by `s` is considered address-significant. Set the
 // keepUnique flag on the section if appropriate.
-static void markAddrsig(Symbol *s) {
+static void markAddrsig(bool icfSafe, Symbol *s) {
+  // We don't need to keep text sections unique under --icf=all even if they
+  // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
-    if (d->section)
-      // We don't need to keep text sections unique under --icf=all even if they
-      // are address-significant.
-      if (ctx.arg.icf == ICFLevel::Safe || !(d->section->flags & SHF_EXECINSTR))
-        d->section->keepUnique = true;
+    if (d->section && (icfSafe || !(d->section->flags & SHF_EXECINSTR)))
+      d->section->keepUnique = true;
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2409,9 +2408,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
 
   // Symbols in the dynsym could be address-significant in other executables
   // or DSOs, so we conservatively mark them as address-significant.
+  bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->includeInDynsym())
-      markAddrsig(sym);
+      markAddrsig(icfSafe, sym);
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
@@ -2428,14 +2428,14 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(f) + ": could not decode addrsig section: " + err);
-        markAddrsig(syms[symIndex]);
+        markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }
     } else {
       // If an object file does not have an address-significance table,
       // conservatively mark all of its symbols as address-significant.
       for (Symbol *s : syms)
-        markAddrsig(s);
+        markAddrsig(icfSafe, s);
     }
   }
 }
@@ -2497,7 +2497,7 @@ static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
   sym->partition = newPart.getNumber();
 }
 
-static void markBuffersAsDontNeed(bool skipLinkedOutput) {
+static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
   // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
@@ -2535,7 +2535,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     lto->add(*file);
 
   if (!ctx.bitcodeFiles.empty())
-    markBuffersAsDontNeed(skipLinkedOutput);
+    markBuffersAsDontNeed(ctx, skipLinkedOutput);
 
   for (InputFile *file : lto->compile()) {
     auto *obj = cast<ObjFile<ELFT>>(file);
@@ -2569,7 +2569,8 @@ struct WrappedSymbol {
 // This function instantiates wrapper symbols. At this point, they seem
 // like they are not being used at all, so we explicitly set some flags so
 // that LTO won't eliminate them.
-static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
+static std::vector<WrappedSymbol> addWrappedSymbols(Ctx &ctx,
+                                                    opt::InputArgList &args) {
   std::vector<WrappedSymbol> v;
   DenseSet<StringRef> seen;
 
@@ -2620,7 +2621,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
   return v;
 }
 
-static void combineVersionedSymbol(Symbol &sym,
+static void combineVersionedSymbol(Ctx &ctx, Symbol &sym,
                                    DenseMap<Symbol *, Symbol *> &map) {
   const char *suffix1 = sym.getVersionSuffix();
   if (suffix1[0] != '@' || suffix1[1] == '@')
@@ -2687,7 +2688,7 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   if (ctx.arg.versionDefinitions.size() > 2)
     for (Symbol *sym : ctx.symtab->getSymbols())
       if (sym->hasVersionSuffix)
-        combineVersionedSymbol(*sym, map);
+        combineVersionedSymbol(ctx, *sym, map);
 
   if (map.empty())
     return;
@@ -2927,7 +2928,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   }
 
   // Archive members defining __wrap symbols may be extracted.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
+  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
