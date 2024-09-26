@@ -265,9 +265,6 @@ bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
   });
 }
 
-static bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
-                                   const SimplifyQuery &Q);
-
 bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                                   bool OrZero, unsigned Depth,
                                   AssumptionCache *AC, const Instruction *CxtI,
@@ -2210,12 +2207,15 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
 /// Return true if we can infer that \p V is known to be a power of 2 from
 /// dominating condition \p Cond (e.g., ctpop(V) == 1).
 static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
-                                             const Value *Cond) {
+                                             const Value *Cond,
+                                             bool CondIsTrue) {
   ICmpInst::Predicate Pred;
   const APInt *RHSC;
   if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
                           m_APInt(RHSC))))
     return false;
+  if (!CondIsTrue)
+    Pred = ICmpInst::getInversePredicate(Pred);
   // ctpop(V) u< 2
   if (OrZero && Pred == ICmpInst::ICMP_ULT && *RHSC == 2)
     return true;
@@ -2227,8 +2227,8 @@ static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
 /// bit set when defined. For vectors return true if every element is known to
 /// be a power of two when defined. Supports values with integer or pointer
 /// types and vectors of integers.
-bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
-                            const SimplifyQuery &Q) {
+bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
+                                  const SimplifyQuery &Q) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
   if (isa<Constant>(V))
@@ -2244,8 +2244,28 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       if (!AssumeVH)
         continue;
       CallInst *I = cast<CallInst>(AssumeVH);
-      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0)) &&
+      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0),
+                                           /*CondIsTrue=*/true) &&
           isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        return true;
+    }
+  }
+
+  // Handle dominating conditions.
+  if (Q.DC && Q.CxtI && Q.DT) {
+    for (BranchInst *BI : Q.DC->conditionsFor(V)) {
+      Value *Cond = BI->getCondition();
+
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, Cond,
+                                           /*CondIsTrue=*/true) &&
+          Q.DT->dominates(Edge0, Q.CxtI->getParent()))
+        return true;
+
+      BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+      if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, Cond,
+                                           /*CondIsTrue=*/false) &&
+          Q.DT->dominates(Edge1, Q.CxtI->getParent()))
         return true;
     }
   }
@@ -9980,8 +10000,7 @@ void llvm::findValuesAffectedByCondition(
         }
       }
 
-      if (IsAssume && HasRHSC &&
-          match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
         AddAffected(X);
     } else if (match(Cond, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);

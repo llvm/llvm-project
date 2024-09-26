@@ -9548,7 +9548,7 @@ static void DiagnoseNarrowingInInitList(Sema &S,
                       unsigned ConstRefDiagID, unsigned WarnDiagID) {
     unsigned DiagID;
     auto &L = S.getLangOpts();
-    if (L.CPlusPlus11 &&
+    if (L.CPlusPlus11 && !L.HLSL &&
         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015)))
       DiagID = IsConstRef ? ConstRefDiagID : DefaultDiagID;
     else

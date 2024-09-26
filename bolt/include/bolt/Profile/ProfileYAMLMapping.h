@@ -270,12 +270,12 @@ template <> struct MappingTraits<bolt::BinaryProfileHeader> {
 };
 
 namespace bolt {
-struct PseudoProbeDesc {
+struct ProfilePseudoProbeDesc {
   std::vector<Hex64> GUID;
   std::vector<Hex64> Hash;
   std::vector<uint32_t> GUIDHashIdx; // Index of hash for that GUID in Hash
 
-  bool operator==(const PseudoProbeDesc &Other) const {
+  bool operator==(const ProfilePseudoProbeDesc &Other) const {
     // Only treat empty Desc as equal
     return GUID.empty() && Other.GUID.empty() && Hash.empty() &&
            Other.Hash.empty() && GUIDHashIdx.empty() &&
@@ -284,8 +284,8 @@ struct PseudoProbeDesc {
 };
 } // end namespace bolt
 
-template <> struct MappingTraits<bolt::PseudoProbeDesc> {
-  static void mapping(IO &YamlIO, bolt::PseudoProbeDesc &PD) {
+template <> struct MappingTraits<bolt::ProfilePseudoProbeDesc> {
+  static void mapping(IO &YamlIO, bolt::ProfilePseudoProbeDesc &PD) {
     YamlIO.mapRequired("gs", PD.GUID);
     YamlIO.mapRequired("gh", PD.GUIDHashIdx);
     YamlIO.mapRequired("hs", PD.Hash);
@@ -295,7 +295,7 @@ template <> struct MappingTraits<bolt::PseudoProbeDesc> {
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::BinaryFunctionProfile)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::PseudoProbeDesc)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::bolt::ProfilePseudoProbeDesc)
 
 namespace llvm {
 namespace yaml {
@@ -304,7 +304,7 @@ namespace bolt {
 struct BinaryProfile {
   BinaryProfileHeader Header;
   std::vector<BinaryFunctionProfile> Functions;
-  PseudoProbeDesc PseudoProbeDesc;
+  ProfilePseudoProbeDesc PseudoProbeDesc;
 };
 } // namespace bolt
 
@@ -313,7 +313,7 @@ template <> struct MappingTraits<bolt::BinaryProfile> {
     YamlIO.mapRequired("header", BP.Header);
     YamlIO.mapRequired("functions", BP.Functions);
     YamlIO.mapOptional("pseudo_probe_desc", BP.PseudoProbeDesc,
-                       bolt::PseudoProbeDesc());
+                       bolt::ProfilePseudoProbeDesc());
   }
 };
 

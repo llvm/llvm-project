@@ -22,6 +22,7 @@ INTERFACE_FUNCTION(__sanitizer_verify_double_ended_contiguous_container)
 INTERFACE_WEAK_FUNCTION(__sanitizer_on_print)
 INTERFACE_WEAK_FUNCTION(__sanitizer_report_error_summary)
 INTERFACE_WEAK_FUNCTION(__sanitizer_sandbox_on_notify)
+INTERFACE_WEAK_FUNCTION(__sanitizer_get_dtls_size)
 // Sanitizer weak hooks
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_memcmp)
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strcmp)

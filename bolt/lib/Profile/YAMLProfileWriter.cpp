@@ -81,9 +81,10 @@ YAMLProfileWriter::collectInlineTree(
   return InlineTree;
 }
 
-std::tuple<yaml::bolt::PseudoProbeDesc, YAMLProfileWriter::InlineTreeDesc>
+std::tuple<yaml::bolt::ProfilePseudoProbeDesc,
+           YAMLProfileWriter::InlineTreeDesc>
 YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
-  yaml::bolt::PseudoProbeDesc Desc;
+  yaml::bolt::ProfilePseudoProbeDesc Desc;
   InlineTreeDesc InlineTree;
 
   for (const MCDecodedPseudoProbeInlineTree &TopLev :

@@ -34,8 +34,8 @@
 #
 ## Check that without --profile-write-pseudo-probes option, no pseudo probes are
 ## generated
-# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata
-# RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-NO-OPT
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml3 -o %t.fdata
+# RUN: FileCheck --input-file %t.yaml3 %s --check-prefix CHECK-NO-OPT
 # CHECK-NO-OPT-NOT: probes:
 # CHECK-NO-OPT-NOT: inline_tree:
 # CHECK-NO-OPT-NOT: pseudo_probe_desc:

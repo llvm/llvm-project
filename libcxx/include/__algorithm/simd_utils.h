@@ -110,19 +110,19 @@ using __simd_vector_underlying_type_t = decltype(std::__simd_vector_underlying_t
 
 // This isn't inlined without always_inline when loading chars.
 template <class _VecT, class _Iter>
-_LIBCPP_NODISCARD _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __load_vector(_Iter __iter) noexcept {
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __load_vector(_Iter __iter) noexcept {
   return [=]<size_t... _Indices>(index_sequence<_Indices...>) _LIBCPP_ALWAYS_INLINE noexcept {
     return _VecT{__iter[_Indices]...};
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
   // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
@@ -151,7 +151,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_T
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
 

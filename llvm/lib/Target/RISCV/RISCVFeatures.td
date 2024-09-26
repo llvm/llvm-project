@@ -348,6 +348,11 @@ def FeatureStdExtZfinx
 def HasStdExtZfinx : Predicate<"Subtarget->hasStdExtZfinx()">,
                      AssemblerPredicate<(all_of FeatureStdExtZfinx),
                                         "'Zfinx' (Float in Integer)">;
+def HasStdExtFOrZfinx : Predicate<"Subtarget->hasStdExtFOrZfinx()">,
+                        AssemblerPredicate<(any_of FeatureStdExtF,
+                                                   FeatureStdExtZfinx),
+                            "'F' (Single-Precision Floating-Point) or "
+                            "'Zfinx' (Float in Integer)">;
 
 def FeatureStdExtZdinx
     : RISCVExtension<"zdinx", 1, 0,

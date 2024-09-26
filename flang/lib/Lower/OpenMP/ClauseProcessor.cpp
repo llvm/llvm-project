@@ -1009,6 +1009,18 @@ bool ClauseProcessor::processMap(
   return clauseFound;
 }
 
+bool ClauseProcessor::processNontemporal(
+    mlir::omp::NontemporalClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Nontemporal>(
+      [&](const omp::clause::Nontemporal &clause, const parser::CharBlock &) {
+        for (const Object &object : clause.v) {
+          semantics::Symbol *sym = object.sym();
+          mlir::Value symVal = converter.getSymbolAddress(*sym);
+          result.nontemporalVars.push_back(symVal);
+        }
+      });
+}
+
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> *outReductionTypes,

@@ -1855,6 +1855,14 @@ def Zn4WriteVZeroIdiomLogicX : SchedWriteVariant<[
 // NOTE: PXORrr,PANDNrr are not zero-cycle!
 def : InstRW<[Zn4WriteVZeroIdiomLogicX], (instrs VPXORrr, VPANDNrr)>;
 
+// TODO: This should be extended to incorporate all of the AVX512 zeroing
+// idioms that can be executed by the renamer.
+def Zn4WriteVZeroIdiomLogicZ : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn4WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicZ]>
+]>;
+def : InstRW<[Zn4WriteVZeroIdiomLogicZ], (instrs VPXORDZrr)>;
+
 def Zn4WriteVZeroIdiomLogicY : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn4WriteZeroLatency]>,
     SchedVar<NoSchedPred,                          [WriteVecLogicY]>
@@ -1929,6 +1937,12 @@ def : IsZeroIdiomFunction<[
     VPSUBSBYrr, VPSUBSWYrr,
     VPSUBUSBYrr, VPSUBUSWYrr,
     VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX ZMM Zero-idioms.
+  // TODO: This should be expanded to incorporate all AVX512 zeroing idioms.
+  DepBreakingClass<[
+    VPXORDZrr
   ], ZeroIdiomPredicate>,
 ]>;
 

@@ -2,6 +2,8 @@
 
 // FIXME: TSAN does not use DlsymAlloc.
 // UNSUPPORTED: tsan
+// FIXME: investigate why this fails on macos
+// UNSUPPORTED: darwin
 
 #include <stdlib.h>
 

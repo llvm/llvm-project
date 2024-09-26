@@ -14,6 +14,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -50,6 +51,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
+  case Intrinsic::dx_step:
     return true;
   }
   return false;
@@ -322,6 +324,28 @@ static Value *expandPowIntrinsic(CallInst *Orig) {
   return Exp2Call;
 }
 
+static Value *expandStepIntrinsic(CallInst *Orig) {
+
+  Value *X = Orig->getOperand(0);
+  Value *Y = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+
+  Constant *One = ConstantFP::get(Ty->getScalarType(), 1.0);
+  Constant *Zero = ConstantFP::get(Ty->getScalarType(), 0.0);
+  Value *Cond = Builder.CreateFCmpOLT(Y, X);
+
+  if (Ty != Ty->getScalarType()) {
+    auto *XVec = dyn_cast<FixedVectorType>(Ty);
+    One = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), One);
+    Zero = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), Zero);
+  }
+
+  return Builder.CreateSelect(Cond, Zero, One);
+}
+
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
                                     Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
@@ -433,8 +457,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
     break;
+  case Intrinsic::dx_step:
+    Result = expandStepIntrinsic(Orig);
   }
-
   if (Result) {
     Orig->replaceAllUsesWith(Result);
     Orig->eraseFromParent();
@@ -469,6 +494,10 @@ PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
 
 bool DXILIntrinsicExpansionLegacy::runOnModule(Module &M) {
   return expansionIntrinsics(M);
+}
+
+void DXILIntrinsicExpansionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILIntrinsicExpansionLegacy::ID = 0;

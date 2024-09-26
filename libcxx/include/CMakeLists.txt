@@ -424,6 +424,7 @@ set(files
   __fwd/format.h
   __fwd/fstream.h
   __fwd/functional.h
+  __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
@@ -440,6 +441,7 @@ set(files
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/variant.h
   __fwd/vector.h
   __hash_table
   __ios/fpos.h

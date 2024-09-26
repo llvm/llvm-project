@@ -471,19 +471,23 @@ protected:
     setNumEntries(other.getNumEntries());
     setNumTombstones(other.getNumTombstones());
 
-    if (std::is_trivially_copyable<KeyT>::value &&
-        std::is_trivially_copyable<ValueT>::value)
-      memcpy(reinterpret_cast<void *>(getBuckets()), other.getBuckets(),
-             getNumBuckets() * sizeof(BucketT));
-    else
-      for (size_t i = 0; i < getNumBuckets(); ++i) {
-        ::new (&getBuckets()[i].getFirst())
-            KeyT(other.getBuckets()[i].getFirst());
-        if (!KeyInfoT::isEqual(getBuckets()[i].getFirst(), getEmptyKey()) &&
-            !KeyInfoT::isEqual(getBuckets()[i].getFirst(), getTombstoneKey()))
-          ::new (&getBuckets()[i].getSecond())
-              ValueT(other.getBuckets()[i].getSecond());
+    BucketT *Buckets = getBuckets();
+    const BucketT *OtherBuckets = other.getBuckets();
+    const size_t NumBuckets = getNumBuckets();
+    if constexpr (std::is_trivially_copyable_v<KeyT> &&
+                  std::is_trivially_copyable_v<ValueT>) {
+      memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
+             NumBuckets * sizeof(BucketT));
+    } else {
+      const KeyT EmptyKey = getEmptyKey();
+      const KeyT TombstoneKey = getTombstoneKey();
+      for (size_t I = 0; I < NumBuckets; ++I) {
+        ::new (&Buckets[I].getFirst()) KeyT(OtherBuckets[I].getFirst());
+        if (!KeyInfoT::isEqual(Buckets[I].getFirst(), EmptyKey) &&
+            !KeyInfoT::isEqual(Buckets[I].getFirst(), TombstoneKey))
+          ::new (&Buckets[I].getSecond()) ValueT(OtherBuckets[I].getSecond());
       }
+    }
   }
 
   static unsigned getHashValue(const KeyT &Val) {
@@ -496,7 +500,7 @@ protected:
   }
 
   static const KeyT getEmptyKey() {
-    static_assert(std::is_base_of<DenseMapBase, DerivedT>::value,
+    static_assert(std::is_base_of_v<DenseMapBase, DerivedT>,
                   "Must pass the derived type to this template!");
     return KeyInfoT::getEmptyKey();
   }
@@ -570,7 +574,7 @@ private:
   template <typename KeyArg, typename... ValueArgs>
   BucketT *InsertIntoBucket(BucketT *TheBucket, KeyArg &&Key,
                             ValueArgs &&...Values) {
-    TheBucket = InsertIntoBucketImpl(Key, Key, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Key, TheBucket);
 
     TheBucket->getFirst() = std::forward<KeyArg>(Key);
     ::new (&TheBucket->getSecond()) ValueT(std::forward<ValueArgs>(Values)...);
@@ -580,7 +584,7 @@ private:
   template <typename LookupKeyT>
   BucketT *InsertIntoBucketWithLookup(BucketT *TheBucket, KeyT &&Key,
                                       ValueT &&Value, LookupKeyT &Lookup) {
-    TheBucket = InsertIntoBucketImpl(Key, Lookup, TheBucket);
+    TheBucket = InsertIntoBucketImpl(Lookup, TheBucket);
 
     TheBucket->getFirst() = std::move(Key);
     ::new (&TheBucket->getSecond()) ValueT(std::move(Value));
@@ -588,8 +592,7 @@ private:
   }
 
   template <typename LookupKeyT>
-  BucketT *InsertIntoBucketImpl(const KeyT &Key, const LookupKeyT &Lookup,
-                                BucketT *TheBucket) {
+  BucketT *InsertIntoBucketImpl(const LookupKeyT &Lookup, BucketT *TheBucket) {
     incrementEpoch();
 
     // If the load of the hash table is more than 3/4, or if fewer than 1/8 of
