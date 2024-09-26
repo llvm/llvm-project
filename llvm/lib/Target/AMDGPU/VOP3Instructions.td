@@ -335,35 +335,33 @@ let FPDPRounding = 1 in {
     defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
   } // End Predicates = [Has16BitInsts, isGFX8Only]
 
-  let renamedInGFX9 = 1, SubtargetPredicate = isGFX9Plus in {
+  let SubtargetPredicate = isGFX9Plus in {
     defm V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
                                           VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUdiv_fixup>;
     defm V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fma>;
-  } // End renamedInGFX9 = 1, SubtargetPredicate = isGFX9Plus
+  } // End SubtargetPredicate = isGFX9Plus
 } // End FPDPRounding = 1
 
 let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
 
-let renamedInGFX9 = 1 in {
-  defm V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
-  defm V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
-  let FPDPRounding = 1 in {
-    defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fmad>;
-    let Uses = [MODE, M0, EXEC] in {
-    let OtherPredicates = [isNotGFX90APlus] in
-    // For some reason the intrinsic operands are in a different order
-    // from the instruction operands.
-    def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>,
-           [(set f16:$vdst,
-             (int_amdgcn_interp_p2_f16 (VOP3Mods f32:$src2, i32:$src2_modifiers),
-                                       (VOP3Mods f32:$src0, i32:$src0_modifiers),
-                                       (i32 timm:$attrchan),
-                                       (i32 timm:$attr),
-                                       (i1 timm:$high),
-                                       M0))]>;
-    } // End Uses = [M0, MODE, EXEC]
-  } // End FPDPRounding = 1
-} // End renamedInGFX9 = 1
+defm V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
+defm V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
+let FPDPRounding = 1 in {
+  defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fmad>;
+  let Uses = [MODE, M0, EXEC] in {
+  let OtherPredicates = [isNotGFX90APlus] in
+  // For some reason the intrinsic operands are in a different order
+  // from the instruction operands.
+  def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>,
+          [(set f16:$vdst,
+            (int_amdgcn_interp_p2_f16 (VOP3Mods f32:$src2, i32:$src2_modifiers),
+                                      (VOP3Mods f32:$src0, i32:$src0_modifiers),
+                                      (i32 timm:$attrchan),
+                                      (i32 timm:$attr),
+                                      (i1 timm:$high),
+                                      M0))]>;
+  } // End Uses = [M0, MODE, EXEC]
+} // End FPDPRounding = 1
 
 let SubtargetPredicate = isGFX9Only, FPDPRounding = 1 in {
   defm V_MAD_F16_gfx9   : VOP3Inst <"v_mad_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>> ;
