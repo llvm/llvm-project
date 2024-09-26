@@ -1008,6 +1008,241 @@ optin.portability.UnixAPI
 """""""""""""""""""""""""
 Finds implementation-defined behavior in UNIX/Posix functions.
 
+
+optin.taint
+^^^^^^^^^^^
+
+Checkers implementing
+`taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
+
+.. _optin-taint-GenericTaint:
+
+optin.taint.GenericTaint (C, C++)
+"""""""""""""""""""""""""""""""""
+
+Taint analysis identifies potential security vulnerabilities where the
+attacker can inject malicious data to the program to execute an attack
+(privilege escalation, command injection, SQL injection etc.).
+
+The malicious data is injected at the taint source (e.g. ``getenv()`` call)
+which is then propagated through function calls and being used as arguments of
+sensitive operations, also called as taint sinks (e.g. ``system()`` call).
+
+One can defend against this type of vulnerability by always checking and
+sanitizing the potentially malicious, untrusted user input.
+
+The goal of the checker is to discover and show to the user these potential
+taint source-sink pairs and the propagation call chain.
+
+The most notable examples of taint sources are:
+
+  - data from network
+  - files or standard input
+  - environment variables
+  - data from databases
+
+Let us examine a practical example of a Command Injection attack.
+
+.. code-block:: c
+
+  // Command Injection Vulnerability Example
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
+    strcat(cmd, filename);
+    system(cmd); // Warning: Untrusted data is passed to a system call
+  }
+
+The program prints the content of any user specified file.
+Unfortunately the attacker can execute arbitrary commands
+with shell escapes. For example with the following input the `ls` command is also
+executed after the contents of `/etc/shadow` is printed.
+`Input: /etc/shadow ; ls /`
+
+The analysis implemented in this checker points out this problem.
+
+One can protect against such attack by for example checking if the provided
+input refers to a valid file and removing any invalid user input.
+
+.. code-block:: c
+
+  // No vulnerability anymore, but we still get the warning
+  void sanitizeFileName(char* filename){
+    if (access(filename,F_OK)){// Verifying user input
+      printf("File does not exist\n");
+      filename[0]='\0';
+      }
+  }
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
+    sanitizeFileName(filename);// filename is safe after this point
+    if (!filename[0])
+      return -1;
+    strcat(cmd, filename);
+    system(cmd); // Superfluous Warning: Untrusted data is passed to a system call
+  }
+
+Unfortunately, the checker cannot discover automatically that the programmer
+have performed data sanitation, so it still emits the warning.
+
+One can get rid of this superfluous warning by telling by specifying the
+sanitation functions in the taint configuration file (see
+:doc:`user-docs/TaintAnalysisConfiguration`).
+
+.. code-block:: YAML
+
+  Filters:
+  - Name: sanitizeFileName
+    Args: [0]
+
+The clang invocation to pass the configuration file location:
+
+.. code-block:: bash
+
+  clang  --analyze -Xclang -analyzer-config  -Xclang optin.taint.TaintPropagation:Config=`pwd`/taint_config.yml ...
+
+If you are validating your inputs instead of sanitizing them, or don't want to
+mention each sanitizing function in our configuration,
+you can use a more generic approach.
+
+Introduce a generic no-op `csa_mark_sanitized(..)` function to
+tell the Clang Static Analyzer
+that the variable is safe to be used on that analysis path.
+
+.. code-block:: c
+
+  // Marking sanitized variables safe.
+  // No vulnerability anymore, no warning.
+
+  // User csa_mark_sanitize function is for the analyzer only
+  #ifdef __clang_analyzer__
+    void csa_mark_sanitized(const void *);
+  #endif
+
+  int main(int argc, char** argv) {
+    char cmd[2048] = "/bin/cat ";
+    char filename[1024];
+    printf("Filename:");
+    scanf (" %1023[^\n]", filename);
+    if (access(filename,F_OK)){// Verifying user input
+      printf("File does not exist\n");
+      return -1;
+    }
+    #ifdef __clang_analyzer__
+      csa_mark_sanitized(filename); // Indicating to CSA that filename variable is safe to be used after this point
+    #endif
+    strcat(cmd, filename);
+    system(cmd); // No warning
+  }
+
+Similarly to the previous example, you need to
+define a `Filter` function in a `YAML` configuration file
+and add the `csa_mark_sanitized` function.
+
+.. code-block:: YAML
+
+  Filters:
+  - Name: csa_mark_sanitized
+    Args: [0]
+
+Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
+be used after this point, because its contents are verified. It is the
+responsibility of the programmer to ensure that this verification was indeed
+correct. Please note that `csa_mark_sanitized` function is only declared and
+used during Clang Static Analysis and skipped in (production) builds.
+
+Further examples of injection vulnerabilities this checker can find.
+
+.. code-block:: c
+
+  void test() {
+    char x = getchar(); // 'x' marked as tainted
+    system(&x); // warn: untrusted data is passed to a system call
+  }
+
+  // note: compiler internally checks if the second param to
+  // sprintf is a string literal or not.
+  // Use -Wno-format-security to suppress compiler warning.
+  void test() {
+    char s[10], buf[10];
+    fscanf(stdin, "%s", s); // 's' marked as tainted
+
+    sprintf(buf, s); // warn: untrusted data used as a format string
+  }
+
+There are built-in sources, propagations and sinks even if no external taint
+configuration is provided.
+
+Default sources:
+ ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``,
+ ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``,
+ ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``,
+ ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``,
+ ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
+
+Default propagations rules:
+ ``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``,
+ ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``,
+ ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``,
+ ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``,
+ ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``,
+ ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``,
+ ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
+ ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
+ ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
+ ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
+ ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
+ ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
+ ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
+
+Default sinks:
+ ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
+ ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
+
+Please note that there are no built-in filter functions.
+
+One can configure their own taint sources, sinks, and propagation rules by
+providing a configuration file via checker option
+``optin.taint.TaintPropagation:Config``. The configuration file is in
+`YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The
+taint-related options defined in the config file extend but do not override the
+built-in sources, rules, sinks. The format of the external taint configuration
+file is not stable, and could change without any notice even in a non-backward
+compatible way.
+
+For a more detailed description of configuration options, please see the
+:doc:`user-docs/TaintAnalysisConfiguration`. For an example see
+:ref:`clangsa-taint-configuration-example`.
+
+**Configuration**
+
+* `Config`  Specifies the name of the YAML configuration file. The user can
+  define their own taint sources and sinks.
+
+**Related Guidelines**
+
+* `CWE Data Neutralization Issues
+  <https://cwe.mitre.org/data/definitions/137.html>`_
+* `SEI Cert STR02-C. Sanitize data passed to complex subsystems
+  <https://wiki.sei.cmu.edu/confluence/display/c/STR02-C.+Sanitize+data+passed+to+complex+subsystems>`_
+* `SEI Cert ENV33-C. Do not call system()
+  <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152177>`_
+* `ENV03-C. Sanitize the environment when invoking external programs
+  <https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs>`_
+
+**Limitations**
+
+* The taintedness property is not propagated through function calls which are
+  unknown (or too complex) to the analyzer, unless there is a specific
+  propagation rule built-in to the checker or given in the YAML configuration
+  file. This causes potential true positive findings to be lost.
+
+
 .. _optin-taint-TaintedAlloc:
 
 optin.taint.TaintedAlloc (C, C++)
@@ -1026,7 +1261,7 @@ covers the SEI Cert coding standard rule `INT04-C
 
 You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
-:ref:`alpha-security-taint-GenericTaint` checker for an example.
+:ref:`optin-taint-GenericTaint` checker for an example.
 
 .. code-block:: c
 
@@ -2976,7 +3211,7 @@ Warn about buffer overflows (newer checker).
    buf[0][-1] = 1; // warn
  }
 
- // note: requires alpha.security.taint check turned on.
+ // note: requires optin.taint check turned on.
  void test() {
    char s[] = "abc";
    int x = getchar();
@@ -3008,239 +3243,6 @@ alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
 SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-alpha.security.taint
-^^^^^^^^^^^^^^^^^^^^
-
-Checkers implementing
-`taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
-
-.. _alpha-security-taint-GenericTaint:
-
-alpha.security.taint.GenericTaint (C, C++)
-""""""""""""""""""""""""""""""""""""""""""
-
-Taint analysis identifies potential security vulnerabilities where the
-attacker can inject malicious data to the program to execute an attack
-(privilege escalation, command injection, SQL injection etc.).
-
-The malicious data is injected at the taint source (e.g. ``getenv()`` call)
-which is then propagated through function calls and being used as arguments of
-sensitive operations, also called as taint sinks (e.g. ``system()`` call).
-
-One can defend against this type of vulnerability by always checking and
-sanitizing the potentially malicious, untrusted user input.
-
-The goal of the checker is to discover and show to the user these potential
-taint source-sink pairs and the propagation call chain.
-
-The most notable examples of taint sources are:
-
-  - data from network
-  - files or standard input
-  - environment variables
-  - data from databases
-
-Let us examine a practical example of a Command Injection attack.
-
-.. code-block:: c
-
-  // Command Injection Vulnerability Example
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
-    strcat(cmd, filename);
-    system(cmd); // Warning: Untrusted data is passed to a system call
-  }
-
-The program prints the content of any user specified file.
-Unfortunately the attacker can execute arbitrary commands
-with shell escapes. For example with the following input the `ls` command is also
-executed after the contents of `/etc/shadow` is printed.
-`Input: /etc/shadow ; ls /`
-
-The analysis implemented in this checker points out this problem.
-
-One can protect against such attack by for example checking if the provided
-input refers to a valid file and removing any invalid user input.
-
-.. code-block:: c
-
-  // No vulnerability anymore, but we still get the warning
-  void sanitizeFileName(char* filename){
-    if (access(filename,F_OK)){// Verifying user input
-      printf("File does not exist\n");
-      filename[0]='\0';
-      }
-  }
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename); // The attacker can inject a shell escape here
-    sanitizeFileName(filename);// filename is safe after this point
-    if (!filename[0])
-      return -1;
-    strcat(cmd, filename);
-    system(cmd); // Superfluous Warning: Untrusted data is passed to a system call
-  }
-
-Unfortunately, the checker cannot discover automatically that the programmer
-have performed data sanitation, so it still emits the warning.
-
-One can get rid of this superfluous warning by telling by specifying the
-sanitation functions in the taint configuration file (see
-:doc:`user-docs/TaintAnalysisConfiguration`).
-
-.. code-block:: YAML
-
-  Filters:
-  - Name: sanitizeFileName
-    Args: [0]
-
-The clang invocation to pass the configuration file location:
-
-.. code-block:: bash
-
-  clang  --analyze -Xclang -analyzer-config  -Xclang alpha.security.taint.TaintPropagation:Config=`pwd`/taint_config.yml ...
-
-If you are validating your inputs instead of sanitizing them, or don't want to
-mention each sanitizing function in our configuration,
-you can use a more generic approach.
-
-Introduce a generic no-op `csa_mark_sanitized(..)` function to
-tell the Clang Static Analyzer
-that the variable is safe to be used on that analysis path.
-
-.. code-block:: c
-
-  // Marking sanitized variables safe.
-  // No vulnerability anymore, no warning.
-
-  // User csa_mark_sanitize function is for the analyzer only
-  #ifdef __clang_analyzer__
-    void csa_mark_sanitized(const void *);
-  #endif
-
-  int main(int argc, char** argv) {
-    char cmd[2048] = "/bin/cat ";
-    char filename[1024];
-    printf("Filename:");
-    scanf (" %1023[^\n]", filename);
-    if (access(filename,F_OK)){// Verifying user input
-      printf("File does not exist\n");
-      return -1;
-    }
-    #ifdef __clang_analyzer__
-      csa_mark_sanitized(filename); // Indicating to CSA that filename variable is safe to be used after this point
-    #endif
-    strcat(cmd, filename);
-    system(cmd); // No warning
-  }
-
-Similarly to the previous example, you need to
-define a `Filter` function in a `YAML` configuration file
-and add the `csa_mark_sanitized` function.
-
-.. code-block:: YAML
-
-  Filters:
-  - Name: csa_mark_sanitized
-    Args: [0]
-
-Then calling `csa_mark_sanitized(X)` will tell the analyzer that `X` is safe to
-be used after this point, because its contents are verified. It is the
-responsibility of the programmer to ensure that this verification was indeed
-correct. Please note that `csa_mark_sanitized` function is only declared and
-used during Clang Static Analysis and skipped in (production) builds.
-
-Further examples of injection vulnerabilities this checker can find.
-
-.. code-block:: c
-
-  void test() {
-    char x = getchar(); // 'x' marked as tainted
-    system(&x); // warn: untrusted data is passed to a system call
-  }
-
-  // note: compiler internally checks if the second param to
-  // sprintf is a string literal or not.
-  // Use -Wno-format-security to suppress compiler warning.
-  void test() {
-    char s[10], buf[10];
-    fscanf(stdin, "%s", s); // 's' marked as tainted
-
-    sprintf(buf, s); // warn: untrusted data used as a format string
-  }
-
-There are built-in sources, propagations and sinks even if no external taint
-configuration is provided.
-
-Default sources:
- ``_IO_getc``, ``fdopen``, ``fopen``, ``freopen``, ``get_current_dir_name``,
- ``getch``, ``getchar``, ``getchar_unlocked``, ``getwd``, ``getcwd``,
- ``getgroups``, ``gethostname``, ``getlogin``, ``getlogin_r``, ``getnameinfo``,
- ``gets``, ``gets_s``, ``getseuserbyname``, ``readlink``, ``readlinkat``,
- ``scanf``, ``scanf_s``, ``socket``, ``wgetch``
-
-Default propagations rules:
- ``atoi``, ``atol``, ``atoll``, ``basename``, ``dirname``, ``fgetc``,
- ``fgetln``, ``fgets``, ``fnmatch``, ``fread``, ``fscanf``, ``fscanf_s``,
- ``index``, ``inflate``, ``isalnum``, ``isalpha``, ``isascii``, ``isblank``,
- ``iscntrl``, ``isdigit``, ``isgraph``, ``islower``, ``isprint``, ``ispunct``,
- ``isspace``, ``isupper``, ``isxdigit``, ``memchr``, ``memrchr``, ``sscanf``,
- ``getc``, ``getc_unlocked``, ``getdelim``, ``getline``, ``getw``, ``memcmp``,
- ``memcpy``, ``memmem``, ``memmove``, ``mbtowc``, ``pread``, ``qsort``,
- ``qsort_r``, ``rawmemchr``, ``read``, ``recv``, ``recvfrom``, ``rindex``,
- ``strcasestr``, ``strchr``, ``strchrnul``, ``strcasecmp``, ``strcmp``,
- ``strcspn``, ``strncasecmp``, ``strncmp``, ``strndup``,
- ``strndupa``, ``strpbrk``, ``strrchr``, ``strsep``, ``strspn``,
- ``strstr``, ``strtol``, ``strtoll``, ``strtoul``, ``strtoull``, ``tolower``,
- ``toupper``, ``ttyname``, ``ttyname_r``, ``wctomb``, ``wcwidth``
-
-Default sinks:
- ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
- ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
-
-Please note that there are no built-in filter functions.
-
-One can configure their own taint sources, sinks, and propagation rules by
-providing a configuration file via checker option
-``alpha.security.taint.TaintPropagation:Config``. The configuration file is in
-`YAML <http://llvm.org/docs/YamlIO.html#introduction-to-yaml>`_ format. The
-taint-related options defined in the config file extend but do not override the
-built-in sources, rules, sinks. The format of the external taint configuration
-file is not stable, and could change without any notice even in a non-backward
-compatible way.
-
-For a more detailed description of configuration options, please see the
-:doc:`user-docs/TaintAnalysisConfiguration`. For an example see
-:ref:`clangsa-taint-configuration-example`.
-
-**Configuration**
-
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
-
-**Related Guidelines**
-
-* `CWE Data Neutralization Issues
-  <https://cwe.mitre.org/data/definitions/137.html>`_
-* `SEI Cert STR02-C. Sanitize data passed to complex subsystems
-  <https://wiki.sei.cmu.edu/confluence/display/c/STR02-C.+Sanitize+data+passed+to+complex+subsystems>`_
-* `SEI Cert ENV33-C. Do not call system()
-  <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152177>`_
-* `ENV03-C. Sanitize the environment when invoking external programs
-  <https://wiki.sei.cmu.edu/confluence/display/c/ENV03-C.+Sanitize+the+environment+when+invoking+external+programs>`_
-
-**Limitations**
-
-* The taintedness property is not propagated through function calls which are
-  unknown (or too complex) to the analyzer, unless there is a specific
-  propagation rule built-in to the checker or given in the YAML configuration
-  file. This causes potential true positive findings to be lost.
 
 alpha.unix
 ^^^^^^^^^^
