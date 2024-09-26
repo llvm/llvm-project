@@ -158,6 +158,8 @@ static FunctionEffectKindSet getBuiltinFunctionEffects(unsigned BuiltinID) {
     break;
 
   // These block in some other way than allocating memory.
+  // longjmp() and friends are presumed unsafe because they are the moral
+  // equivalent of throwing a C++ exception, which is unsafe.
   case Builtin::ID::BIlongjmp:
   case Builtin::ID::BI_longjmp:
   case Builtin::ID::BIsiglongjmp:
@@ -1016,17 +1018,22 @@ private:
       // Check for a call to a builtin function, whose effects are
       // handled specially.
       if (const auto *FD = dyn_cast<FunctionDecl>(CI.CDecl)) {
+        bool IgnoreIfNoexceptNoreturn = true;
         if (unsigned BuiltinID = FD->getBuiltinID()) {
           CI.Effects = getBuiltinFunctionEffects(BuiltinID);
           if (CI.Effects.empty()) {
             // A builtin with no known effects is assumed safe.
             return;
           }
+          // A builtin WITH effects doesn't get any special treatment for
+          // being noreturn/noexcept, e.g. longjmp().
+          IgnoreIfNoexceptNoreturn = false;
         }
+
         // If the callee is both `noreturn` and `noexcept`, it presumably
         // terminates. Ignore it for the purposes of effect analysis.
         // If not C++, `noreturn` alone is sufficient.
-        if (FD->isNoReturn() &&
+        if (IgnoreIfNoexceptNoreturn && FD->isNoReturn() &&
             (!Outer.S.getLangOpts().CPlusPlus || isNoexcept(FD)))
           return;
       }
