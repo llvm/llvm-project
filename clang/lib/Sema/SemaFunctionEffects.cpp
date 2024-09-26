@@ -79,7 +79,7 @@ public:
 struct Violation {
   FunctionEffect Effect;
   std::optional<FunctionEffect>
-      CalleeEffectPreventingInference; // Only for certain IDs; can be None.
+      CalleeEffectPreventingInference; // Only for certain IDs; can be nullopt.
   ViolationID ID = ViolationID::None;
   ViolationSite Site;
   SourceLocation Loc;
