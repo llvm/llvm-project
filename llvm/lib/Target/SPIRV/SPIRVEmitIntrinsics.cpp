@@ -188,6 +188,21 @@ bool isConvergenceIntrinsic(const Instruction *I) {
          II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
 }
+
+bool allowEmitFakeUse(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return false;
+  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
+      dyn_cast<UndefValue>(Arg))
+    return false;
+  if (const auto *LI = dyn_cast<LoadInst>(Arg))
+    if (LI->getType()->isAggregateType())
+      return false;
+  return true;
+}
+
 } // namespace
 
 char SPIRVEmitIntrinsics::ID = 0;
@@ -283,8 +298,20 @@ static inline Type *reconstructType(SPIRVGlobalRegistry *GR, Value *Op) {
 void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
                                           Value *Arg) {
   Value *OfType = PoisonValue::get(Ty);
-  CallInst *AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type,
-                                       {Arg->getType()}, OfType, Arg, {}, B);
+  CallInst *AssignCI = nullptr;
+  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
+      allowEmitFakeUse(Arg)) {
+    LLVMContext &Ctx = Arg->getContext();
+    SmallVector<Metadata *, 2> ArgMDs{
+        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
+        MDString::get(Ctx, Arg->getName())};
+    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+  } else {
+    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
+                               OfType, Arg, {}, B);
+  }
   GR->addAssignPtrTypeInstr(Arg, AssignCI);
 }
 
@@ -1268,6 +1295,8 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
+  if (I.getAggregateOperand()->getType()->isAggregateType())
+    return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args;
@@ -1534,7 +1563,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName()) {
+  if (I->hasName() && !I->getType()->isAggregateType()) {
     reportFatalOnTokenType(I);
     setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};
