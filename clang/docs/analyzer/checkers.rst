@@ -1308,7 +1308,7 @@ which warns only when it can prove that the denominator is 0.
     return n/size; // warn: Division by a tainted value, possibly zero
   }
 
-  int not_vulnerable(void) {
+  int not_vulnerable(int n) {
     size_t size = 0;
     scanf("%zu", &size);
     if (!size)

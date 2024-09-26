@@ -411,6 +411,24 @@ int testDivByZero(void) {
   return 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
+int testTaintedDivFP(void) {
+  int x;
+  scanf("%d", &x);
+  if (!x)
+    return 0;
+  return 5/x; // x cannot be 0, so no tainted warning either
+}
+
+
+//If we are sure that we divide by zero
+//we emit a divide by zero warning
+int testDivZero(void) {
+  int x = getchar(); // taint source
+  if (!x)
+    return 5 / x; // expected-warning{{Division by zero}}
+  return 8;
+}
+
 // Zero-sized VLAs.
 void testTaintedVLASize(void) {
   int x;
