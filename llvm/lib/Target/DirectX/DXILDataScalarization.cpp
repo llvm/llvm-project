@@ -1,15 +1,16 @@
-//===- DXILDataScalarization.cpp - Perform DXIL Data Legalization----===//
+//===- DXILDataScalarization.cpp - Perform DXIL Data Legalization ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------===//
+//===---------------------------------------------------------------------===//
 
 #include "DXILDataScalarization.h"
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -22,11 +23,21 @@
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "dxil-data-scalarization"
-#define Max_VEC_SIZE 4
+static const int MaxVecSize = 4;
 
 using namespace llvm;
 
-static void findAndReplaceVectors(Module &M);
+class DXILDataScalarizationLegacy : public ModulePass {
+
+public:
+  bool runOnModule(Module &M) override;
+  DXILDataScalarizationLegacy() : ModulePass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  static char ID; // Pass identification.
+};
+
+static bool findAndReplaceVectors(Module &M);
 
 class DataScalarizerVisitor : public InstVisitor<DataScalarizerVisitor, bool> {
 public:
@@ -51,10 +62,10 @@ public:
   bool visitStoreInst(StoreInst &SI);
   bool visitCallInst(CallInst &ICI) { return false; }
   bool visitFreezeInst(FreezeInst &FI) { return false; }
-  friend void findAndReplaceVectors(llvm::Module &M);
+  friend bool findAndReplaceVectors(llvm::Module &M);
 
 private:
-  GlobalVariable *getNewGlobalIfExists(Value *CurrOperand);
+  GlobalVariable *lookupReplacementGlobal(Value *CurrOperand);
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
   SmallVector<WeakTrackingVH, 32> PotentiallyDeadInstrs;
   bool finish();
@@ -81,7 +92,7 @@ bool DataScalarizerVisitor::finish() {
 }
 
 GlobalVariable *
-DataScalarizerVisitor::getNewGlobalIfExists(Value *CurrOperand) {
+DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   if (GlobalVariable *OldGlobal = dyn_cast<GlobalVariable>(CurrOperand)) {
     auto It = GlobalMap.find(OldGlobal);
     if (It != GlobalMap.end()) {
@@ -92,20 +103,20 @@ DataScalarizerVisitor::getNewGlobalIfExists(Value *CurrOperand) {
 }
 
 bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
-  for (unsigned I = 0; I < LI.getNumOperands(); ++I) {
+  unsigned NumOperands = LI.getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
     Value *CurrOpperand = LI.getOperand(I);
-    GlobalVariable *NewGlobal = getNewGlobalIfExists(CurrOpperand);
-    if (NewGlobal)
+    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand))
       LI.setOperand(I, NewGlobal);
   }
   return false;
 }
 
 bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
-  for (unsigned I = 0; I < SI.getNumOperands(); ++I) {
+  unsigned NumOperands = SI.getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
     Value *CurrOpperand = SI.getOperand(I);
-    GlobalVariable *NewGlobal = getNewGlobalIfExists(CurrOpperand);
-    if (NewGlobal) {
+    if (GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand)) {
       SI.setOperand(I, NewGlobal);
     }
   }
@@ -113,22 +124,23 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  for (unsigned I = 0; I < GEPI.getNumOperands(); ++I) {
+  unsigned NumOperands = GEPI.getNumOperands();
+  for (unsigned I = 0; I < NumOperands; ++I) {
     Value *CurrOpperand = GEPI.getOperand(I);
-    GlobalVariable *NewGlobal = getNewGlobalIfExists(CurrOpperand);
-    if (NewGlobal) {
-      IRBuilder<> Builder(&GEPI);
+    GlobalVariable *NewGlobal = lookupReplacementGlobal(CurrOpperand);
+    if (!NewGlobal)
+      continue;
+    IRBuilder<> Builder(&GEPI);
 
-      SmallVector<Value *, Max_VEC_SIZE> Indices;
-      for (auto &Index : GEPI.indices())
-        Indices.push_back(Index);
+    SmallVector<Value *, MaxVecSize> Indices;
+    for (auto &Index : GEPI.indices())
+      Indices.push_back(Index);
 
-      Value *NewGEP =
-          Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices);
+    Value *NewGEP =
+        Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices);
 
-      GEPI.replaceAllUsesWith(NewGEP);
-      PotentiallyDeadInstrs.emplace_back(&GEPI);
-    }
+    GEPI.replaceAllUsesWith(NewGEP);
+    PotentiallyDeadInstrs.emplace_back(&GEPI);
   }
   return true;
 }
@@ -137,7 +149,7 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
 static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
   if (auto *VecTy = dyn_cast<VectorType>(T))
     return ArrayType::get(VecTy->getElementType(),
-                          cast<FixedVectorType>(VecTy)->getNumElements());
+                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
   if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
     Type *NewElementType =
         replaceVectorWithArray(ArrayTy->getElementType(), Ctx);
@@ -162,7 +174,7 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
   // Handle vector to array transformation
   if (isa<VectorType>(OrigType) && isa<ArrayType>(NewType)) {
     // Convert vector initializer to array initializer
-    SmallVector<Constant *, Max_VEC_SIZE> ArrayElements;
+    SmallVector<Constant *, MaxVecSize> ArrayElements;
     if (ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
       for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I)
         ArrayElements.push_back(ConstVecInit->getOperand(I));
@@ -171,8 +183,8 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
       for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I)
         ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
     } else {
-      llvm_unreachable("Expected a ConstantVector or ConstantDataVector for "
-                       "vector initializer!");
+      assert(false && "Expected a ConstantVector or ConstantDataVector for "
+                      "vector initializer!");
     }
 
     return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);
@@ -180,13 +192,10 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
 
   // Handle array of vectors transformation
   if (auto *ArrayTy = dyn_cast<ArrayType>(OrigType)) {
-
     auto *ArrayInit = dyn_cast<ConstantArray>(Init);
-    if (!ArrayInit) {
-      llvm_unreachable("Expected a ConstantArray for array initializer!");
-    }
+    assert(ArrayInit && "Expected a ConstantArray for array initializer!");
 
-    SmallVector<Constant *, Max_VEC_SIZE> NewArrayElements;
+    SmallVector<Constant *, MaxVecSize> NewArrayElements;
     for (unsigned I = 0; I < ArrayTy->getNumElements(); ++I) {
       // Recursively transform array elements
       Constant *NewElemInit = transformInitializer(
@@ -202,7 +211,8 @@ Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
   return Init;
 }
 
-static void findAndReplaceVectors(Module &M) {
+static bool findAndReplaceVectors(Module &M) {
+  bool MadeChange = false;
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> Builder(Ctx);
   DataScalarizerVisitor Impl;
@@ -212,9 +222,9 @@ static void findAndReplaceVectors(Module &M) {
     Type *NewType = replaceVectorWithArray(OrigType, Ctx);
     if (OrigType != NewType) {
       // Create a new global variable with the updated type
+      // Note: Initializer is set via transformInitializer
       GlobalVariable *NewGlobal = new GlobalVariable(
           M, NewType, G.isConstant(), G.getLinkage(),
-          // Initializer is set via transformInitializer
           /*Initializer=*/nullptr, G.getName() + ".scalarized", &G,
           G.getThreadLocalMode(), G.getAddressSpace(),
           G.isExternallyInitialized());
@@ -222,7 +232,7 @@ static void findAndReplaceVectors(Module &M) {
       // Copy relevant attributes
       NewGlobal->setUnnamedAddr(G.getUnnamedAddr());
       if (G.getAlignment() > 0) {
-        NewGlobal->setAlignment(Align(G.getAlignment()));
+        NewGlobal->setAlignment(G.getAlign());
       }
 
       if (G.hasInitializer()) {
@@ -253,24 +263,30 @@ static void findAndReplaceVectors(Module &M) {
   }
 
   // Remove the old globals after the iteration
-  for (auto Pair : Impl.GlobalMap) {
-    GlobalVariable *OldG = Pair.getFirst();
-    OldG->eraseFromParent();
+  for (auto &[Old, New] : Impl.GlobalMap) {
+    Old->eraseFromParent();
+    MadeChange = true;
   }
+  return MadeChange;
 }
 
 PreservedAnalyses DXILDataScalarization::run(Module &M,
                                              ModuleAnalysisManager &) {
-  findAndReplaceVectors(M);
-  return PreservedAnalyses::none();
+  bool MadeChanges = findAndReplaceVectors(M);
+  if (!MadeChanges)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DXILResourceAnalysis>();
+  return PA;
 }
 
 bool DXILDataScalarizationLegacy::runOnModule(Module &M) {
-  findAndReplaceVectors(M);
-  return true;
+  return findAndReplaceVectors(M);
 }
 
-void DXILDataScalarizationLegacy::getAnalysisUsage(AnalysisUsage &AU) const {}
+void DXILDataScalarizationLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
+}
 
 char DXILDataScalarizationLegacy::ID = 0;
 

@@ -1,6 +1,8 @@
 ; RUN: opt -S -dxil-data-scalarization -scalarizer -scalarize-load-store -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 ; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
 
+; Make sure we can store groupshared, static vectors and arrays of vectors
+
 @"arrayofVecData" = local_unnamed_addr addrspace(3) global [2 x <3 x float>] zeroinitializer, align 16
 @"vecData" = external addrspace(3) global <4 x i32>, align 4
 
