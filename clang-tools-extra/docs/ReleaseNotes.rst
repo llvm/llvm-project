@@ -135,6 +135,10 @@ Changes in existing checks
   `bsl::optional` and `bdlb::NullableValue` from
   <https://github.com/bloomberg/bde>_.
 
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
+  additional functions to match.
+
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment
   expression.

@@ -12,15 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_FRONTEND_LANGOPTIONS_H
-#define FORTRAN_FRONTEND_LANGOPTIONS_H
+#ifndef FORTRAN_COMMON_LANGOPTIONS_H
+#define FORTRAN_COMMON_LANGOPTIONS_H
 
 #include <string>
 #include <vector>
 
 #include "llvm/TargetParser/Triple.h"
 
-namespace Fortran::frontend {
+namespace Fortran::common {
 
 /// Bitfields of LangOptions, split out from LangOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
@@ -37,12 +37,12 @@ public:
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
-#include "flang/Frontend/LangOptions.def"
+#include "flang/Common/LangOptions.def"
 
 protected:
 #define LANGOPT(Name, Bits, Default)
 #define ENUM_LANGOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "flang/Frontend/LangOptions.def"
+#include "flang/Common/LangOptions.def"
 };
 
 /// Tracks various options which control the dialect of Fortran that is
@@ -52,10 +52,10 @@ class LangOptions : public LangOptionsBase {
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define LANGOPT(Name, Bits, Default)
-#define ENUM_LANGOPT(Name, Type, Bits, Default)                                \
-  Type get##Name() const { return static_cast<Type>(Name); }                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default) \
+  Type get##Name() const { return static_cast<Type>(Name); } \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
-#include "flang/Frontend/LangOptions.def"
+#include "flang/Common/LangOptions.def"
 
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
@@ -67,6 +67,6 @@ public:
   LangOptions();
 };
 
-} // end namespace Fortran::frontend
+} // end namespace Fortran::common
 
-#endif // FORTRAN_FRONTEND_LANGOPTIONS_H
+#endif // FORTRAN_COMMON_LANGOPTIONS_H
