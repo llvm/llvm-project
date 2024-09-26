@@ -11,5 +11,4 @@ add_llvm_unittest(SandboxVectorizerTests
   DependencyGraphTest.cpp
   InstrIntervalTest.cpp
   LegalityTest.cpp
-  RegionTest.cpp
   )
