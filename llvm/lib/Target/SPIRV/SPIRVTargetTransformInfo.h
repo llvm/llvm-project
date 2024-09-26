@@ -44,7 +44,7 @@ public:
     // is reasonable to assume the Op is fast / preferable to the expanded loop.
     // Furthermore, this prevents information being lost if transforms are
     // applied to SPIR-V before lowering to a concrete target.
-    if (!isPowerOf2_32(TyWidth))
+    if (!isPowerOf2_32(TyWidth) || TyWidth > 64)
       return TTI::PSK_Software; // Arbitrary bit-width INT is not core SPIR-V.
     return TTI::PSK_FastHardware;
   }

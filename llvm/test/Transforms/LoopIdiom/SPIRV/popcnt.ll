@@ -60,29 +60,6 @@ while.end:                                        ; preds = %while.body, %entry
   ret i32 %c.0.lcssa
 }
 
-; CHECK-LABEL: @popcount_i128
-; CHECK: entry
-; CHECK: llvm.ctpop.i128
-; CHECK: ret
-define i32 @popcount_i128(i128 %a) nounwind uwtable readnone ssp {
-entry:
-  %tobool3 = icmp eq i128 %a, 0
-  br i1 %tobool3, label %while.end, label %while.body
-
-while.body:                                       ; preds = %entry, %while.body
-  %c.05 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
-  %a.addr.04 = phi i128 [ %and, %while.body ], [ %a, %entry ]
-  %inc = add nsw i32 %c.05, 1
-  %sub = add i128 %a.addr.04, -1
-  %and = and i128 %sub, %a.addr.04
-  %tobool = icmp eq i128 %and, 0
-  br i1 %tobool, label %while.end, label %while.body
-
-while.end:                                        ; preds = %while.body, %entry
-  %c.0.lcssa = phi i32 [ 0, %entry ], [ %inc, %while.body ]
-  ret i32 %c.0.lcssa
-}
-
 ; To recognize this pattern:
 ;int popcount(unsigned long long a, int mydata1, int mydata2) {
 ;    int c = 0;
