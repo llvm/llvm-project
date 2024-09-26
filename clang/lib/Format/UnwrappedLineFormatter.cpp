@@ -660,8 +660,7 @@ private:
         return 0;
       // Check that the line after the inner result starts with a closing brace
       // which we are permitted to merge into one line.
-      if (I[N]->First->is(tok::r_brace) &&
-          !I[N]->First->MustBreakBefore &&
+      if (I[N]->First->is(tok::r_brace) && !I[N]->First->MustBreakBefore &&
           !I[MergedLines + 1]->Last->is(tok::comment) &&
           nextNLinesFitInto(I, I + N + 1, Limit)) {
         return N;
