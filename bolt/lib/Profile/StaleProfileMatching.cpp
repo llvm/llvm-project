@@ -372,8 +372,6 @@ private:
     const FlowBlock *BestMatchBlock = nullptr;
     for (auto &[FlowBlock, Count] : FlowBlockMatchCount) {
       TotalMatchCount += Count;
-      if (!FlowBlock)
-        continue;
       if (Count > BestMatchCount ||
           (Count == BestMatchCount && !BestMatchBlock)) {
         BestMatchBlock = FlowBlock;
