@@ -1378,15 +1378,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-#ifndef NDEBUG
   bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
     CreatedNode = false;
-#else
-  for (unsigned I = 0; I < Calls.size(); I++) {
-#endif
     auto &[Call, Ids, Func, SavedContextIds] = Calls[I];
     // Skip any for which we didn't assign any ids, these don't get a node in
     // the graph.
@@ -1457,9 +1453,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     ContextNode *NewNode = NodeOwner.back().get();
     NodeToCallingFunc[NewNode] = Func;
     NonAllocationCallToContextNodeMap[Call] = NewNode;
-#ifndef NDEBUG
     CreatedNode = true;
-#endif
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
 
     ContextNode *FirstNode = getNodeForStackId(Ids[0]);

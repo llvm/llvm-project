@@ -44,22 +44,22 @@ declare ptr @_Znam(i64) #0
 define dso_local void @_Z2XZv() local_unnamed_addr #0 {
 entry:
   ;; Simulate duplication of the callsite (e.g. unrolling).
-  tail call void @_Z1Ab(), !callsite !6
-  tail call void @_Z1Ab(), !callsite !6
+  call void @_Z1Ab(), !callsite !6
+  call void @_Z1Ab(), !callsite !6
   ret void
 }
 
 ;; Inlining of stack id 2 into 3 into 4. Called by main below.
 define dso_local void @_Z3XZNv() local_unnamed_addr {
 entry:
-  tail call void @_Z1Ab(), !callsite !7
+  call void @_Z1Ab(), !callsite !7
   ret void
 }
 
 define dso_local noundef i32 @main() local_unnamed_addr {
 entry:
-  tail call void @_Z3XZNv(), !callsite !8 ;; Not cold context
-  tail call void @_Z3XZNv(), !callsite !9 ;; Cold context
+  call void @_Z3XZNv(), !callsite !8 ;; Not cold context
+  call void @_Z3XZNv(), !callsite !9 ;; Cold context
   ret i32 0
 }
 
