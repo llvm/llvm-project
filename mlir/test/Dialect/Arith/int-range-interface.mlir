@@ -266,6 +266,18 @@ func.func @remui_base(%arg0 : index, %arg1 : index ) -> i1 {
     func.return %3 : i1
 }
 
+// CHECK-LABEL: func @remui_base_maybe_zero
+// CHECK: %[[ret:.*]] = arith.cmpi ult
+// CHECK: return %[[ret]]
+func.func @remui_base_maybe_zero(%arg0 : index, %arg1 : index ) -> i1 {
+    %c4 = arith.constant 4 : index
+
+    %0 = arith.minui %arg1, %c4 : index
+    %1 = arith.remui %arg0, %0 : index
+    %2 = arith.cmpi ult, %1, %c4 : index
+    func.return %2 : i1
+}    
+
 // CHECK-LABEL: func @remsi_base
 // CHECK: %[[ret:.*]] = arith.cmpi sge
 // CHECK: return %[[ret]]
