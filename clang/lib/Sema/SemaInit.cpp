@@ -763,6 +763,8 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         SemaRef.currentEvaluationContext().DelayedDefaultInitializationContext =
             SemaRef.parentEvaluationContext()
                 .DelayedDefaultInitializationContext;
+        SemaRef.currentEvaluationContext().InLifetimeExtendingContext =
+            SemaRef.parentEvaluationContext().InLifetimeExtendingContext;
         DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       }
       if (DIE.isInvalid()) {

@@ -304,6 +304,26 @@ void check_dr1815() { // dr1815: yes
 }
 
 namespace P2718R0 {
+extern void block_scope_begin_function();
+extern void block_scope_end_function();
+
+template <typename E> using T2 = std::list<E>;
+template <typename E> const T2<E> &f1_temp(const T2<E> &t)  { return t; }
+template <typename E> const T2<E> &f2_temp(T2<E> t)         { return t; }
+template <typename E> T2<E> g_temp()                        { return T2<E>{}; }
+
+// -- Examples from https://wg21.link/p2718r0
+namespace std_examples {
+using T = std::list<int>;
+const T& f1(const T& t) { return t; }
+const T& f2(T t)        { return t; }
+T g();
+void foo() {
+  for (auto e : f1(g())) {}  // OK, lifetime of return value of g() extended
+  for (auto e : f2(g())) {}  // undefined behavior
+}
+} // namespace std_examples
+
 namespace basic {
 template <typename E> using T2 = std::list<E>;
 template <typename E> const T2<E> &f1_temp(const T2<E> &t)  { return t; }
@@ -463,6 +483,44 @@ template void default_arg_dependent_context2<int>();
 template void default_arg_dependent_context3<int>();
 } // namespace default_arg
 
+namespace default_init {
+template <class T>
+struct DepA {
+  T arr[1];
+  ~DepA() {}
+};
+
+template <class T>
+struct DepB {
+  int x;
+  const DepA<T> &a = DepA<T>{{0}};
+  ~DepB() {}
+  const int *begin() { return a.arr; }
+  const int *end() { return &a.arr[1]; }
+};
+
+template <typename T>
+void default_init1_dependent() {
+  // CHECK-CXX23: void @_ZN7P2718R012default_init23default_init1_dependentINS0_4DepBIiEEEEvv()
+  // CHECK-CXX23-LABEL: for.cond.cleanup:
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init4DepBIiED1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init4DepAIiED1Ev(
+  for (auto &&x : T{0}) {}
+}
+
+template <typename T>
+void default_init2_dependent() {
+  // CHECK-CXX23: void @_ZN7P2718R012default_init23default_init2_dependentINS0_4DepBIiEEEEvv()
+  // CHECK-CXX23-LABEL: for.cond.cleanup:
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init4DepBIiED1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init4DepAIiED1Ev(
+  for (auto &&x : T{0}.a.arr) {}
+}
+
+template void default_init1_dependent<DepB<int>>();
+template void default_init2_dependent<DepB<int>>();
+} // namespace default_init
+
 namespace basic {
 using T = std::list<int>;
 const T& f1(const T& t) { return t; }
@@ -579,5 +637,51 @@ void default_arg3() {
   for (auto e : C(0, C(0, C(0, C())))) {}
 }
 } // namespace default_arg
-} // namespace P2718R0
 
+namespace default_init {
+struct X {
+  int x;
+  ~X() {}
+};
+
+struct Y {
+  int y;
+  const X &x = X{1};
+  ~Y() {}
+};
+
+struct A {
+  int arr[1];
+  const Y &y = Y{1};
+  ~A() {}
+};
+
+struct B {
+  int x;
+  const A &a = A{{0}};
+  ~B() {}
+  const int *begin() { return a.arr; }
+  const int *end() { return &a.arr[1]; }
+};
+
+void default_init1() {
+  // CHECK-CXX23: void @_ZN7P2718R012default_init13default_init1Ev()
+  // CHECK-CXX23-LABEL: for.cond.cleanup:
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1BD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1AD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1YD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1XD1Ev(
+  for (auto &&x : B{0}) {}
+}
+
+void default_init2() {
+  // CHECK-CXX23: void @_ZN7P2718R012default_init13default_init2Ev()
+  // CHECK-CXX23-LABEL: for.cond.cleanup:
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1BD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1AD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1YD1Ev(
+  // CHECK-CXX23-NEXT: call void @_ZN7P2718R012default_init1XD1Ev(
+  for (auto &&x : B{0}.a.arr) {}
+}
+} // namespace default_init
+} // namespace P2718R0
