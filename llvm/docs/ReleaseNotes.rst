@@ -63,24 +63,6 @@ Changes to the LLVM IR
   * ``llvm.nvvm.bitcast.d2ll``
   * ``llvm.nvvm.bitcast.ll2d``
 
-* Remove the following intrinsics which can be replaced with a funnel-shift:
-
-  * ``llvm.nvvm.rotate.b32``
-  * ``llvm.nvvm.rotate.right.b64``
-  * ``llvm.nvvm.rotate.b64``
-
-* Remove the following intrinsics which can be replaced with an
-  ``addrspacecast``:
-
-  * ``llvm.nvvm.ptr.gen.to.global``
-  * ``llvm.nvvm.ptr.gen.to.shared``
-  * ``llvm.nvvm.ptr.gen.to.constant``
-  * ``llvm.nvvm.ptr.gen.to.local``
-  * ``llvm.nvvm.ptr.global.to.gen``
-  * ``llvm.nvvm.ptr.shared.to.gen``
-  * ``llvm.nvvm.ptr.constant.to.gen``
-  * ``llvm.nvvm.ptr.local.to.gen``
-
 Changes to LLVM infrastructure
 ------------------------------
 
