@@ -52,7 +52,7 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
+option, ``LLVM_ENABLE_RUNTIMES="openmp;offload"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
 <https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
 are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
