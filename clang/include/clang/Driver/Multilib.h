@@ -101,6 +101,25 @@ public:
 
 raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
 
+namespace custom_flag {
+struct Declaration;
+using DeclarationPtr = std::shared_ptr<Declaration>;
+
+struct ValueDetail {
+  std::string Name;
+  std::optional<SmallVector<std::string>> DriverArgs;
+  DeclarationPtr Decl;
+};
+
+struct Declaration {
+  std::string Name;
+  SmallVector<ValueDetail> ValueList;
+  std::optional<size_t> DefaultValueIdx;
+};
+
+static constexpr StringRef Prefix = "-fmultilib-flag=";
+} // namespace custom_flag
+
 /// See also MultilibSetBuilder for combining multilibs into a set.
 class MultilibSet {
 public:
@@ -120,15 +139,18 @@ public:
 
 private:
   multilib_list Multilibs;
-  std::vector<FlagMatcher> FlagMatchers;
+  SmallVector<FlagMatcher> FlagMatchers;
+  SmallVector<custom_flag::DeclarationPtr> CustomFlagDecls;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
 public:
   MultilibSet() = default;
   MultilibSet(multilib_list &&Multilibs,
-              std::vector<FlagMatcher> &&FlagMatchers = {})
-      : Multilibs(Multilibs), FlagMatchers(FlagMatchers) {}
+              SmallVector<FlagMatcher> &&FlagMatchers = {},
+              SmallVector<custom_flag::DeclarationPtr> &&CustomFlagDecls = {})
+      : Multilibs(std::move(Multilibs)), FlagMatchers(std::move(FlagMatchers)),
+        CustomFlagDecls(std::move(CustomFlagDecls)) {}
 
   const multilib_list &getMultilibs() { return Multilibs; }
 
