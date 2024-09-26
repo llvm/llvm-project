@@ -803,6 +803,7 @@ void InlineSpiller::reMaterializeAll() {
   for (Register Reg : RegsToSpill) {
     if (MRI.reg_nodbg_empty(Reg)) {
       Edit->eraseVirtReg(Reg);
+      RegsReplaced.push_back(Reg);
       continue;
     }
 
@@ -812,7 +813,6 @@ void InlineSpiller::reMaterializeAll() {
 
     RegsToSpill[ResultPos++] = Reg;
   }
-  RegsReplaced.assign(RegsToSpill.begin() + ResultPos, RegsToSpill.end());
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());
   LLVM_DEBUG(dbgs() << RegsToSpill.size()
                     << " registers to spill after remat.\n");
