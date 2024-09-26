@@ -23,7 +23,7 @@
 #define HWCAP2_AFP (1ULL << 20)
 #define HWCAP2_SME (1ULL << 23)
 #define HWCAP2_EBF16 (1ULL << 32)
-#define HWCAP2_FPMR (1UL << 48)
+#define HWCAP2_FPMR (1ULL << 48)
 
 using namespace lldb_private;
 
