@@ -11,6 +11,7 @@
 #include "clang/Driver/Driver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -92,11 +93,140 @@ MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
-                         llvm::SmallVectorImpl<Multilib> &Selected) const {
-  llvm::StringSet<> FlagSet(expandFlags(Flags));
+static void DiagnoseUnclaimedMultilibCustomFlags(
+    const Driver &D, const SmallVector<StringRef> &UnclaimedCustomFlagValues,
+    const SmallVector<custom_flag::DeclarationPtr> &CustomFlagDecls) {
+  struct EditDistanceInfo {
+    StringRef FlagValue;
+    unsigned EditDistance;
+  };
+  const unsigned MaxEditDistance = 5;
+
+  for (StringRef Unclaimed : UnclaimedCustomFlagValues) {
+    std::optional<EditDistanceInfo> BestCandidate;
+    for (const auto &Decl : CustomFlagDecls) {
+      for (const auto &Value : Decl->ValueList) {
+        const std::string &FlagValueName = Value.Name;
+        unsigned EditDistance =
+            Unclaimed.edit_distance(FlagValueName, /*AllowReplacements=*/true,
+                                    /*MaxEditDistance=*/MaxEditDistance);
+        if (!BestCandidate || (EditDistance <= MaxEditDistance &&
+                               EditDistance < BestCandidate->EditDistance)) {
+          BestCandidate = {FlagValueName, EditDistance};
+        }
+      }
+    }
+    if (!BestCandidate)
+      D.Diag(clang::diag::err_drv_unsupported_opt)
+          << (custom_flag::Prefix + Unclaimed).str();
+    else
+      D.Diag(clang::diag::err_drv_unsupported_opt_with_suggestion)
+          << (custom_flag::Prefix + Unclaimed).str()
+          << (custom_flag::Prefix + BestCandidate->FlagValue).str();
+  }
+}
+
+namespace clang::driver::custom_flag {
+// Map implemented using linear searches as the expected size is too small for
+// the overhead of a search tree or a hash table.
+class ValueNameToDetailMap {
+  SmallVector<std::pair<StringRef, const ValueDetail *>> Mapping;
+
+public:
+  template <typename It>
+  ValueNameToDetailMap(It FlagDeclsBegin, It FlagDeclsEnd) {
+    for (auto DeclIt = FlagDeclsBegin; DeclIt != FlagDeclsEnd; ++DeclIt) {
+      const DeclarationPtr &Decl = *DeclIt;
+      for (const auto &Value : Decl->ValueList)
+        Mapping.emplace_back(Value.Name, &Value);
+    }
+  }
+
+  const ValueDetail *get(StringRef Key) const {
+    auto Iter = llvm::find_if(
+        Mapping, [&](const auto &Pair) { return Pair.first == Key; });
+    return Iter != Mapping.end() ? Iter->second : nullptr;
+  }
+};
+} // namespace clang::driver::custom_flag
+
+std::pair<Multilib::flags_list, SmallVector<StringRef>>
+MultilibSet::processCustomFlags(const Driver &D,
+                                const Multilib::flags_list &Flags) const {
+  Multilib::flags_list Result;
+  SmallVector<StringRef> CompilationArgs;
+
+  // Custom flag values detected in the flags list
+  SmallVector<const custom_flag::ValueDetail *> ClaimedCustomFlagValues;
+
+  // Arguments to -fmultilib-flag=<arg> that don't correspond to any valid
+  // custom flag value. An error will be printed out for each of these.
+  SmallVector<StringRef> UnclaimedCustomFlagValueStrs;
+
+  const auto ValueNameToValueDetail = custom_flag::ValueNameToDetailMap(
+      CustomFlagDecls.begin(), CustomFlagDecls.end());
+
+  for (StringRef Flag : Flags) {
+    if (!Flag.starts_with(custom_flag::Prefix)) {
+      Result.push_back(Flag.str());
+      continue;
+    }
+
+    StringRef CustomFlagValueStr = Flag.substr(custom_flag::Prefix.size());
+    const custom_flag::ValueDetail *Detail =
+        ValueNameToValueDetail.get(CustomFlagValueStr);
+    if (Detail)
+      ClaimedCustomFlagValues.push_back(Detail);
+    else
+      UnclaimedCustomFlagValueStrs.push_back(CustomFlagValueStr);
+  }
+
+  // Set of custom flag declarations for which a value was passed in the flags
+  // list. This is used to, firstly, detect multiple values for the same flag
+  // declaration (in this case, the last one wins), and secondly, to detect
+  // which declarations had no value passed in (in this case, the default value
+  // is selected).
+  llvm::SmallSet<custom_flag::DeclarationPtr, 32> TriggeredCustomFlagDecls;
+
+  // Detect multiple values for the same flag declaration. Last one wins.
+  for (auto *CustomFlagValue : llvm::reverse(ClaimedCustomFlagValues)) {
+    if (!TriggeredCustomFlagDecls.insert(CustomFlagValue->Decl).second)
+      continue;
+    Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue->Name);
+    if (CustomFlagValue->DriverArgs)
+      CompilationArgs.append(CustomFlagValue->DriverArgs->begin(),
+                             CustomFlagValue->DriverArgs->end());
+  }
+
+  // Detect flag declarations with no value passed in. Select default value.
+  for (const auto &Decl : CustomFlagDecls) {
+    if (TriggeredCustomFlagDecls.contains(Decl))
+      continue;
+    custom_flag::ValueDetail &CustomFlagValue =
+        Decl->ValueList[*Decl->DefaultValueIdx];
+    Result.push_back(std::string(custom_flag::Prefix) + CustomFlagValue.Name);
+    if (CustomFlagValue.DriverArgs)
+      CompilationArgs.append(CustomFlagValue.DriverArgs->begin(),
+                             CustomFlagValue.DriverArgs->end());
+  }
+
+  DiagnoseUnclaimedMultilibCustomFlags(D, UnclaimedCustomFlagValueStrs,
+                                       CustomFlagDecls);
+
+  return {Result, CompilationArgs};
+}
+
+bool MultilibSet::select(
+    const Driver &D, const Multilib::flags_list &Flags,
+    llvm::SmallVectorImpl<Multilib> &Selected,
+    llvm::SmallVector<StringRef> *CustomFlagCompilationArgs) const {
+  auto [FlagsWithCustom, CFCompilationArgs] = processCustomFlags(D, Flags);
+  llvm::StringSet<> FlagSet(expandFlags(FlagsWithCustom));
   Selected.clear();
   bool AnyErrors = false;
+
+  if (CustomFlagCompilationArgs)
+    *CustomFlagCompilationArgs = std::move(CFCompilationArgs);
 
   // Decide which multilibs we're going to select at all.
   llvm::DenseSet<StringRef> ExclusiveGroupsSelected;
