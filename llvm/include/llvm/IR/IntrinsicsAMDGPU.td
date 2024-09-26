@@ -2109,7 +2109,7 @@ def int_amdgcn_s_quadmask :
 def int_amdgcn_s_wqm :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
-class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
+class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
     [data_ty],
     [
       LLVMMatchType<0>,   // llvm value to reduce (SGPR/VGPR)
@@ -2118,6 +2118,19 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
                           //                                          2. DPP)
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]>;
+
+//multiclass AMDGPUWaveReducee {
+//  foreach Opcode = ["umin", "umax", "add", "uadd", "sub", "usub", "and", "or", "xor"] in 
+//   def int_amdgcn_wave_reduce_#Opcode : AMDGPUWaveReduce;
+//}
+
+//multiclass AMDGPUMFp8MfmaIntrinsic<LLVMType DestTy> {
+//  foreach kind = ["bf8_bf8", "bf8_fp8", "fp8_bf8", "fp8_fp8"] in
+//    def NAME#"_"#kind : AMDGPUMFp8MfmaIntrinsic<DestTy>;
+//}
+
+//WaveReduceDefs<["umin", "umax", "add", "uadd", "sub", "usub", "and", "or", "xor"]>;
+//list<string> Operations
 
 def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;

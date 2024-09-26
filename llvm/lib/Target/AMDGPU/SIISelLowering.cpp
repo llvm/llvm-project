@@ -4875,7 +4875,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       case AMDGPU::S_XOR_B32:
       case AMDGPU::S_ADD_U32:
       case AMDGPU::S_ADD_I32:
-      // case AMDGPU::S_SUB_U32:
+      case AMDGPU::S_SUB_U32:
       case AMDGPU::S_SUB_I32:{
         MachineBasicBlock::iterator I = BB.end();
         Register SrcReg = MI.getOperand(1).getReg();
@@ -4963,115 +4963,115 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             // same value as that in the SGPR. This comes from 
             // the fact that A^A = 0 and A^0 = A.
 
-            // Create basic block to check the parity.
-            // MachineFunction &MF = *ComputeEnd->getParent();
-            // MachineBasicBlock *CheckParity = MF.CreateMachineBasicBlock();
-            // MachineFunction::iterator It = ComputeEnd->getIterator();
-            // MF.insert(It, CheckParity);
-            // ComputeLoop->addSuccessor(CheckParity);
-            // ComputeLoop->removeSuccessor(ComputeEnd);
-
             Register ParityRegister = MRI.createVirtualRegister(DstRegClass);
-            // Register Product = MRI.createVirtualRegister(DstRegClass);
-            // Register OddResult = MRI.createVirtualRegister(DstRegClass);
-            // MachineBasicBlock *Even = MF.CreateMachineBasicBlock();  
-            // MachineBasicBlock *Odd = MF.CreateMachineBasicBlock();  
-            // MF.push_back(Even);  
-            // MF.push_back(Odd); 
-            // CheckParity->addSuccessor(Even);  
-            // CheckParity->addSuccessor(Odd);  
-            // Even->addSuccessor(ComputeEnd);  
-            // Odd->addSuccessor(ComputeEnd);     
 
-            // If the LSB is set, the number is odd, else it is even.
-            // TODO --> is FF0 faster or left-shift by 31 faster or AND 0xfffffffe??
-            // I = CheckParity->begin();
             auto ParityReg = BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_AND_B32), ParityRegister)
                 .addReg(NewAccumulator->getOperand(0).getReg())
                 .addImm(1);
 
             BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)  
                 .addReg(ParityReg->getOperand(0).getReg())  
-                .addImm(SrcReg);
-            // BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))  
-            //     .addMBB(Even);  
-            // BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_BRANCH))  
-            //     .addMBB(Odd); 
-
-            // If there are an even number of active lanes, the result is 0.
-            // I = Even->begin();  
-            // BuildMI(*Even, I, DL, TII->get(AMDGPU::S_MOV_B32), EvenResult).addImm(0); 
-            // BuildMI(*Even, I, DL, TII->get(AMDGPU::S_BRANCH))  
-            //     .addMBB(ComputeEnd); 
-  
-            // If there are an odd number of active lanes, the result is the value itself.
-            // I = Odd->begin(); 
-            // BuildMI(*Odd, I, DL, TII->get(AMDGPU::S_MOV_B32), OddResult).addReg(SrcReg);  
-            // BuildMI(*Odd, I, DL, TII->get(AMDGPU::S_BRANCH))  
-            //     .addMBB(ComputeEnd);  
-
-            // Add PHI node to get the appropriate result.
-            // I = ComputeEnd->begin();
-            // auto PhiNode =
-            //     BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::PHI), DstReg)
-            //         .addReg(EvenResult)
-            //         .addMBB(Even);
-            // PhiNode.addReg(OddResult)
-            //     .addMBB(Odd);
+                .addReg(SrcReg);
             break;
           }
-          case AMDGPU::S_SUB_U32:{
-            // Doubt --> how can you have a negative unsigned value?? 
-            break;
-          }
+          // case AMDGPU::S_SUB_U32:{
+          // //   // Doubt --> how can you have a negative unsigned value?? 
+          //   Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
+          //   Register SrcVal = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          //   Register Product = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+          //   // Take the negation of the source operand.
+          //   auto InvertedValReg = BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal).addImm(-1).addReg(SrcReg);
+
+          //   auto V_SrcReg = 
+          //       BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), SrcVal)
+          //           .addReg(InvertedValReg->getOperand(0).getReg());
+            
+          //   auto ProductVal = 
+          //       BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Product)  
+          //           .addReg(V_SrcReg->getOperand(0).getReg())
+          //           .addReg(NewAccumulator->getOperand(0).getReg())  
+          //           .addReg(AMDGPU::EXEC, RegState::Implicit);
+
+          //   BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          //       .addReg(ProductVal->getOperand(0).getReg());
+
+          //   break;
+          // }
+          case AMDGPU::S_SUB_U32:
           case AMDGPU::S_SUB_I32:{
             // TODO --> use 2's compliment or subtract from 0 to find the negation of the number.
             Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
+            // Register SrcVal = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+            // Register Product = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
             // Take the negation of the source operand.
             auto InvertedValReg = BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), NegatedVal).addImm(-1).addReg(SrcReg);
-            // Multiply the negated value with the number of active lanes.
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), DstReg).addReg(InvertedValReg->getOperand(0).getReg()).addReg(NewAccumulator->getOperand(0).getReg());
-            break;
+            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+                .addReg(InvertedValReg->getOperand(0).getReg())
+                .addReg(NewAccumulator->getOperand(0).getReg());
+
+            // auto V_SrcReg = 
+            //     BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), SrcVal)
+            //         .addReg(InvertedValReg->getOperand(0).getReg());
+            
+            // auto ProductVal = 
+            //     BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Product)  
+            //         .addReg(V_SrcReg->getOperand(0).getReg())
+            //         .addReg(NewAccumulator->getOperand(0).getReg())  
+            //         .addReg(AMDGPU::EXEC, RegState::Implicit)  
+            //         .setMIFlag(MachineInstr::MIFlag::NoUWrap)  
+            //         .setMIFlag(MachineInstr::MIFlag::NoSWrap);
+
+            // BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+            //     .addReg(ProductVal->getOperand(0).getReg());
+
+            // break;
           }
           // Doubt --> is SSA form still have to be followed for MIR?
-          case AMDGPU::S_ADD_U32:{
-            // For unsigned multiplication, zero extend the inputs to 64bits,
-            // perform an unsigned multiplication on them and then store the 
-            // 32 lower order bits as the result. 
-            Register ExtendedInput = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);  
-            Register ZeroExtension = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);  
-            Register ExtendedCount = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);  
-            Register UnsignedProduct = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);  
+          case AMDGPU::S_ADD_U32:
+          case AMDGPU::S_ADD_I32:{
+            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), DstReg)
+                .addReg(SrcReg)
+                .addReg(NewAccumulator->getOperand(0).getReg());
+            // Register SrcVal = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+            // Register Product = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
-            auto ZeroExtented = 
-                BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MOV_B32), ZeroExtension)  
-                    .addImm(0);  
-
-            // Zero extend the input to 64bits.
-            auto Input_64 = 
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::REG_SEQUENCE), ExtendedInput)  
-                .addReg(SrcReg).addImm(AMDGPU::sub0)  
-                .addReg(ZeroExtented->getOperand(0).getReg()).addImm(AMDGPU::sub1); 
+            // auto V_SrcReg = 
+            //     BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), SrcVal)
+            //         .addReg(SrcReg);
             
-            // Zero extend the number of active lanes to 64bits.
-            auto Count_64 = 
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::REG_SEQUENCE), ExtendedCount)  
-                .addReg(NewAccumulator->getOperand(0).getReg()).addImm(AMDGPU::sub0)  
-                .addReg(ZeroExtented->getOperand(0).getReg()).addImm(AMDGPU::sub1); 
+            // auto ProductVal = 
+            //     BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Product)  
+            //         .addReg(V_SrcReg->getOperand(0).getReg())
+            //         .addReg(NewAccumulator->getOperand(0).getReg())  
+            //         .addReg(AMDGPU::EXEC, RegState::Implicit)  
+            //         .setMIFlag(MachineInstr::MIFlag::NoUWrap)  
+            //         .setMIFlag(MachineInstr::MIFlag::NoSWrap);
 
-            auto Product = 
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_U64), UnsignedProduct)  
-                .addReg(Input_64->getOperand(0).getReg())
-                .addReg(Count_64->getOperand(0).getReg()); 
-
-            // Store the lower 32bits of the product as the result.
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(Product->getOperand(0).getReg(), 0, AMDGPU::sub0);
+            // BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+            //     .addReg(ProductVal->getOperand(0).getReg());
             break;
           }
-          case AMDGPU::S_ADD_I32:
-            BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::S_MUL_I32), DstReg).addReg(SrcReg).addReg(NewAccumulator->getOperand(0).getReg());
-        }
+          // case AMDGPU::S_ADD_U32:{
+          //   Register SrcVal = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+          //   Register Product = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
+          //   auto V_SrcReg = 
+          //       BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), SrcVal)
+          //           .addReg(SrcReg);
+
+          //   auto ProductVal = 
+          //       BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_MUL_LO_U32_e64), Product)  
+          //           .addReg(V_SrcReg->getOperand(0).getReg())
+          //           .addReg(NewAccumulator->getOperand(0).getReg())  
+          //           .addReg(AMDGPU::EXEC, RegState::Implicit);
+
+          //   BuildMI(*ComputeEnd, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          //       .addReg(ProductVal->getOperand(0).getReg());
+          //   break;
+          // }
+        }
         RetBB = ComputeEnd;
       }
     }
