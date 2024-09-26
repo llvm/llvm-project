@@ -60,8 +60,8 @@ something like ``target.BreakpointCreateByName`` [#]_.
 A good rule of thumb is to prefer shell tests when what is being tested is
 relatively simple. Expressivity is limited compared to the API tests, which
 means that you have to have a well-defined test scenario that you can easily
-match with ``FileCheck``. Though Shell tests can be run remotely, remote
-debugging behavior must be tested with API tests.
+match with ``FileCheck``. Though Shell tests can be run remotely, behavior
+specific to remote debugging must be tested with API tests instead.
 
 Another thing to consider are the binaries being debugged, which we call
 inferiors. For shell tests, they have to be relatively simple. The
