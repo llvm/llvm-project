@@ -1094,6 +1094,7 @@ public:
         if (!OpTy.isVector() || !LI.isLegal({TargetOpcode::G_UNMERGE_VALUES,
                                              {DestTy, SrcUnmergeSrcTy}}))
           return false;
+        break;
       case LegalizeActions::Lower:
       case LegalizeActions::Unsupported:
         break;
