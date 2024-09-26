@@ -1028,32 +1028,30 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   IRBuilderBase &Builder = State.Builder;
 
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *Address = State.get(getOperand(0), Part);
-    Value *IncAmt = State.get(getOperand(1), Part, /*IsScalar=*/true);
-    VectorType *VTy = cast<VectorType>(Address->getType());
+  Value *Address = State.get(getOperand(0));
+  Value *IncAmt = State.get(getOperand(1), /*IsScalar=*/true);
+  VectorType *VTy = cast<VectorType>(Address->getType());
 
-    // The histogram intrinsic requires a mask even if the recipe doesn't;
-    // if the mask operand was omitted then all lanes should be executed and
-    // we just need to synthesize an all-true mask.
-    Value *Mask = nullptr;
-    if (VPValue *VPMask = getMask())
-      Mask = State.get(VPMask, Part);
-    else
-      Mask = Builder.CreateVectorSplat(
-          VTy->getElementCount(), ConstantInt::getTrue(Builder.getInt1Ty()));
+  // The histogram intrinsic requires a mask even if the recipe doesn't;
+  // if the mask operand was omitted then all lanes should be executed and
+  // we just need to synthesize an all-true mask.
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(
+        VTy->getElementCount(), ConstantInt::getTrue(Builder.getInt1Ty()));
 
-    // If this is a subtract, we want to invert the increment amount. We may
-    // add a separate intrinsic in future, but for now we'll try this.
-    if (Opcode == Instruction::Sub)
-      IncAmt = Builder.CreateNeg(IncAmt);
-    else
-      assert(Opcode == Instruction::Add && "only add or sub supported for now");
+  // If this is a subtract, we want to invert the increment amount. We may
+  // add a separate intrinsic in future, but for now we'll try this.
+  if (Opcode == Instruction::Sub)
+    IncAmt = Builder.CreateNeg(IncAmt);
+  else
+    assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
-    State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
-                                  {VTy, IncAmt->getType()},
-                                  {Address, IncAmt, Mask});
-  }
+  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
+                                {VTy, IncAmt->getType()},
+                                {Address, IncAmt, Mask});
 }
 
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,

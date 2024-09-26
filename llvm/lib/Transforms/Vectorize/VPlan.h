@@ -1683,7 +1683,7 @@ public:
   ~VPHistogramRecipe() override = default;
 
   VPHistogramRecipe *clone() override {
-    llvm_unreachable("cloning not supported");
+    return new VPHistogramRecipe(Opcode, operands(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPHistogramSC);
