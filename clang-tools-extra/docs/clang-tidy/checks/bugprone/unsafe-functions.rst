@@ -19,7 +19,7 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
-The following functions are reported if :ref:`ReportDefaultFunctions<option-ReportDefaultFunctions>` is enabled.
+The following functions are reported if :option:`ReportDefaultFunctions` is enabled.
 
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
@@ -47,7 +47,7 @@ The following functions are always checked, regardless of *Annex K* availability
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
 
-If :ref:`ReportMoreUnsafeFunctions<option-ReportMoreUnsafeFunctions>` is enabled,
+If :option:`ReportMoreUnsafeFunctions` is enabled,
 the following functions are also checked:
 
  - ``bcmp``, suggested replacement: ``memcmp``
@@ -80,7 +80,7 @@ including any system headers.
 Custom functions
 ----------------
 
-The option `CustomFunctions` allows the user to define custom functions to be
+The option :option:`CustomFunctions` allows the user to define custom functions to be
 checked. The format is the following, without newlines:
 
 .. code::
@@ -92,7 +92,7 @@ checked. The format is the following, without newlines:
    "
 
 The functions are matched using POSIX extended regular expressions.
-*(Note: The regular expressions do not support negative* ``(?!)`` *matches)*
+*(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
 
 The `reason` is optional and is used to provide additional information about the
 reasoning behind the replacement. The default reason is `is marked as unsafe`.
@@ -117,8 +117,6 @@ fully qualified name (``::std::original``).
 Options
 -------
 
-.. _option-ReportMoreUnsafeFunctions:
-
 .. option:: ReportMoreUnsafeFunctions
 
    When `true`, additional functions from widely used APIs (such as POSIX) are
@@ -127,12 +125,10 @@ Options
    this option enables.
    Default is `true`.
 
-.. _option-ReportDefaultFunctions:
-
 .. option:: ReportDefaultFunctions
 
     When `true`, the check reports the default set of functions.
-    Copnsider changing the setting to false if you only want to see custom
+    Consider changing the setting to false if you only want to see custom
     functions matched via :ref:`custom functions<CustomFunctions>`.
     Default is `true`.
 
