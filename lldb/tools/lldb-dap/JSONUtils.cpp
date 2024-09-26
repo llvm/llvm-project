@@ -630,9 +630,8 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
 //     }
 //   }
 // }
-llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
+llvm::json::Value CreateSource(const lldb::SBFileSpec &file) {
   llvm::json::Object object;
-  lldb::SBFileSpec file = line_entry.GetFileSpec();
   if (file.IsValid()) {
     const char *name = file.GetFilename();
     if (name)
@@ -644,6 +643,10 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
     }
   }
   return llvm::json::Value(std::move(object));
+}
+
+llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry) {
+  return CreateSource(line_entry.GetFileSpec());
 }
 
 llvm::json::Value CreateSource(llvm::StringRef source_path) {
@@ -1253,7 +1256,7 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 //       "description": "The number of indexed child variables. The client
 //                       can use this optional information to present the
 //                       children in a paged UI and fetch them in chunks."
-//     }
+//     },
 //     "memoryReference": {
 //        "type": "string",
 //        "description": "A memory reference associated with this variable.
@@ -1263,63 +1266,75 @@ std::string VariableDescription::GetResult(llvm::StringRef context) {
 //                        be used in a `disassemble` request. This attribute may
 //                        be returned by a debug adapter if corresponding
 //                        capability `supportsMemoryReferences` is true."
-//      },
+//     },
+//     "declarationLocationReference": {
+//       "type": "integer",
+//       "description": "A reference that allows the client to request the
+//                       location where the variable is declared. This should be
+//                       present only if the adapter is likely to be able to
+//                       resolve the location.\n\nThis reference shares the same
+//                       lifetime as the `variablesReference`. See 'Lifetime of
+//                       Object References' in the Overview section for
+//                       details."
+//     },
+//
 //     "$__lldb_extensions": {
 //       "description": "Unofficial extensions to the protocol",
 //       "properties": {
 //         "declaration": {
-//         "type": "object",
-//         "description": "The source location where the variable was declared.
-//                         This value won't be present if no declaration is
-//                         available.",
-//         "properties": {
-//           "path": {
-//             "type": "string",
-//             "description": "The source file path where the variable was
-//                            declared."
-//           },
-//           "line": {
-//             "type": "number",
-//             "description": "The 1-indexed source line where the variable was
-//                             declared."
-//           },
-//           "column": {
-//             "type": "number",
-//             "description": "The 1-indexed source column where the variable
-//                             was declared."
+//           "type": "object",
+//           "description": "The source location where the variable was
+//                           declared. This value won't be present if no
+//                           declaration is available.
+//                           Superseded by `declarationLocationReference`",
+//           "properties": {
+//             "path": {
+//               "type": "string",
+//               "description": "The source file path where the variable was
+//                              declared."
+//             },
+//             "line": {
+//               "type": "number",
+//               "description": "The 1-indexed source line where the variable
+//                               was declared."
+//             },
+//             "column": {
+//               "type": "number",
+//               "description": "The 1-indexed source column where the variable
+//                               was declared."
+//             }
 //           }
+//         },
+//         "value": {
+//           "type": "string",
+//           "description": "The internal value of the variable as returned by
+//                            This is effectively SBValue.GetValue(). The other
+//                            `value` entry in the top-level variable response
+//                            is, on the other hand, just a display string for
+//                            the variable."
+//         },
+//         "summary": {
+//           "type": "string",
+//           "description": "The summary string of the variable. This is
+//                           effectively SBValue.GetSummary()."
+//         },
+//         "autoSummary": {
+//           "type": "string",
+//           "description": "The auto generated summary if using
+//                           `enableAutoVariableSummaries`."
+//         },
+//         "error": {
+//           "type": "string",
+//           "description": "An error message generated if LLDB couldn't inspect
+//                           the variable."
 //         }
-//       },
-//       "value":
-//         "type": "string",
-//         "description": "The internal value of the variable as returned by
-//                         This is effectively SBValue.GetValue(). The other
-//                         `value` entry in the top-level variable response is,
-//                          on the other hand, just a display string for the
-//                          variable."
-//       },
-//       "summary":
-//         "type": "string",
-//         "description": "The summary string of the variable. This is
-//                         effectively SBValue.GetSummary()."
-//       },
-//       "autoSummary":
-//         "type": "string",
-//         "description": "The auto generated summary if using
-//                         `enableAutoVariableSummaries`."
-//       },
-//       "error":
-//         "type": "string",
-//         "description": "An error message generated if LLDB couldn't inspect
-//                         the variable."
 //       }
 //     }
 //   },
 //   "required": [ "name", "value", "variablesReference" ]
 // }
-llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex,
-                                 bool is_name_duplicated,
+llvm::json::Value CreateVariable(lldb::SBValue v, int64_t var_ref,
+                                 bool format_hex, bool is_name_duplicated,
                                  std::optional<std::string> custom_name) {
   VariableDescription desc(v, format_hex, is_name_duplicated, custom_name);
   llvm::json::Object object;
@@ -1364,12 +1379,18 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
     }
   }
   EmplaceSafeString(object, "type", desc.display_type_name);
-  if (varID != INT64_MAX)
-    object.try_emplace("id", varID);
+
+  // A unique variable identifier to help in properly identifying variables with
+  // the same name. This is an extension to the VS protocol.
+  object.try_emplace("id", var_ref);
+
   if (v.MightHaveChildren())
-    object.try_emplace("variablesReference", variablesReference);
+    object.try_emplace("variablesReference", var_ref);
   else
-    object.try_emplace("variablesReference", (int64_t)0);
+    object.try_emplace("variablesReference", 0);
+
+  if (v.GetDeclaration().IsValid())
+    object.try_emplace("declarationLocationReference", var_ref);
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     object.try_emplace("memoryReference", EncodeMemoryReference(addr));

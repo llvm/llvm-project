@@ -188,6 +188,21 @@ bool isConvergenceIntrinsic(const Instruction *I) {
          II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
 }
+
+bool allowEmitFakeUse(const Value *Arg) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
+    if (Function *F = II->getCalledFunction())
+      if (F->getName().starts_with("llvm.spv."))
+        return false;
+  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
+      dyn_cast<UndefValue>(Arg))
+    return false;
+  if (const auto *LI = dyn_cast<LoadInst>(Arg))
+    if (LI->getType()->isAggregateType())
+      return false;
+  return true;
+}
+
 } // namespace
 
 char SPIRVEmitIntrinsics::ID = 0;
@@ -283,8 +298,20 @@ static inline Type *reconstructType(SPIRVGlobalRegistry *GR, Value *Op) {
 void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
                                           Value *Arg) {
   Value *OfType = PoisonValue::get(Ty);
-  CallInst *AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type,
-                                       {Arg->getType()}, OfType, Arg, {}, B);
+  CallInst *AssignCI = nullptr;
+  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
+      allowEmitFakeUse(Arg)) {
+    LLVMContext &Ctx = Arg->getContext();
+    SmallVector<Metadata *, 2> ArgMDs{
+        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
+        MDString::get(Ctx, Arg->getName())};
+    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+  } else {
+    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
+                               OfType, Arg, {}, B);
+  }
   GR->addAssignPtrTypeInstr(Arg, AssignCI);
 }
 
@@ -412,9 +439,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     return KnownTy;
 
   // maybe a cycle
-  if (Visited.find(I) != Visited.end())
+  if (!Visited.insert(I).second)
     return nullptr;
-  Visited.insert(I);
 
   // fallback value in case when we fail to deduce a type
   Type *Ty = nullptr;
@@ -512,9 +538,8 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
     return KnownTy;
 
   // maybe a cycle
-  if (Visited.find(U) != Visited.end())
+  if (!Visited.insert(U).second)
     return OrigTy;
-  Visited.insert(U);
 
   if (dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
@@ -1270,6 +1295,8 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
+  if (I.getAggregateOperand()->getType()->isAggregateType())
+    return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args;
@@ -1353,7 +1380,8 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args;
   for (auto &Op : I.operands())
     Args.push_back(Op);
-  Args.push_back(B.getInt32(I.getSyncScopeID()));
+  Args.push_back(B.getInt32(
+      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
   Args.push_back(B.getInt32(
@@ -1535,7 +1563,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName()) {
+  if (I->hasName() && !I->getType()->isAggregateType()) {
     reportFatalOnTokenType(I);
     setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};
@@ -1553,9 +1581,8 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
     Function *F, unsigned OpIdx, std::unordered_set<Function *> &FVisited) {
   // maybe a cycle
-  if (FVisited.find(F) != FVisited.end())
+  if (!FVisited.insert(F).second)
     return nullptr;
-  FVisited.insert(F);
 
   std::unordered_set<Value *> Visited;
   SmallVector<std::pair<Function *, unsigned>> Lookup;

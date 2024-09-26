@@ -60,6 +60,37 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
   return true;
 }
 
+bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
+                                      const GFConstant &LHSCst,
+                                      const GFConstant &RHSCst,
+                                      BuildFnTy &MatchInfo) {
+  if (LHSCst.getKind() != GFConstant::GFConstantKind::Scalar)
+    return false;
+
+  Register Dst = FCmp.getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  CmpInst::Predicate Pred = FCmp.getCond();
+  APFloat LHS = LHSCst.getScalarValue();
+  APFloat RHS = RHSCst.getScalarValue();
+
+  bool Result = FCmpInst::compare(LHS, RHS, Pred);
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (Result)
+      B.buildConstant(Dst, getICmpTrueVal(getTargetLowering(),
+                                          /*IsVector=*/DstTy.isVector(),
+                                          /*IsFP=*/true));
+    else
+      B.buildConstant(Dst, 0);
+  };
+
+  return true;
+}
+
 bool CombinerHelper::matchCanonicalizeICmp(const MachineInstr &MI,
                                            BuildFnTy &MatchInfo) {
   const GICmp *Cmp = cast<GICmp>(&MI);
@@ -79,6 +110,34 @@ bool CombinerHelper::matchCanonicalizeICmp(const MachineInstr &MI,
     Pred = CmpInst::getSwappedPredicate(Pred);
 
     MatchInfo = [=](MachineIRBuilder &B) { B.buildICmp(Pred, Dst, LHS, RHS); };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchCanonicalizeFCmp(const MachineInstr &MI,
+                                           BuildFnTy &MatchInfo) {
+  const GFCmp *Cmp = cast<GFCmp>(&MI);
+
+  Register Dst = Cmp->getReg(0);
+  Register LHS = Cmp->getLHSReg();
+  Register RHS = Cmp->getRHSReg();
+
+  CmpInst::Predicate Pred = Cmp->getCond();
+  assert(CmpInst::isFPPredicate(Pred) && "Not an FP compare!");
+
+  if (auto CLHS = GFConstant::getConstant(LHS, MRI)) {
+    if (auto CRHS = GFConstant::getConstant(RHS, MRI))
+      return constantFoldFCmp(*Cmp, *CLHS, *CRHS, MatchInfo);
+
+    // If we have a constant, make sure it is on the RHS.
+    std::swap(LHS, RHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildFCmp(Pred, Dst, LHS, RHS, Cmp->getFlags());
+    };
     return true;
   }
 

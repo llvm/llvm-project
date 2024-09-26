@@ -309,7 +309,7 @@ subroutine test7(j, k)
 contains
 
 ! CHECK-LABEL: func private @_QFtest7Ptest7_inner(
-! CHECK-SAME: %[[i:.*]]: !fir.ref<i32>{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) -> i32 attributes {fir.func_elemental, fir.func_pure, fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-SAME: %[[i:.*]]: !fir.ref<i32>{{.*}}, %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) -> i32 attributes {fir.host_symbol = {{.*}}, fir.proc_attrs = #fir.proc_attrs<elemental, pure>, llvm.linkage = #llvm.linkage<internal>} {
 elemental integer function test7_inner(i)
   implicit none
   integer, intent(in) :: i

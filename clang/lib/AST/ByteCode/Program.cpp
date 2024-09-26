@@ -204,9 +204,18 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
     IsStatic = false;
     IsExtern = true;
   }
+
+  // Register all previous declarations as well. For extern blocks, just replace
+  // the index with the new variable.
   if (auto Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern, Init)) {
-    for (const Decl *P = VD; P; P = P->getPreviousDecl())
+    for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
+      if (P != VD) {
+        unsigned PIdx = GlobalIndices[P];
+        if (Globals[PIdx]->block()->isExtern())
+          Globals[PIdx] = Globals[*Idx];
+      }
       GlobalIndices[P] = *Idx;
+    }
     return *Idx;
   }
   return std::nullopt;

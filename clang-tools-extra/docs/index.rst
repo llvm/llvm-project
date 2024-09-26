@@ -19,7 +19,6 @@ Contents
    clang-include-fixer
    modularize
    pp-trace
-   clang-rename
    clangd <https://clangd.llvm.org/>
    clang-doc
 

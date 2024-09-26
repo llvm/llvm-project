@@ -98,7 +98,7 @@ INITIALIZE_PASS(InitUndef, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
 char &llvm::InitUndefID = InitUndef::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
-  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
+  return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {
     return DefMO.isReg() && DefMO.isEarlyClobber();
   });
 }

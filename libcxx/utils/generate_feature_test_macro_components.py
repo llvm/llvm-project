@@ -2102,7 +2102,8 @@ class FeatureTestMacros:
 
     def __init__(self, filename: str):
         """Initializes the class with the JSON data in the file 'filename'."""
-        self.__data = json.load(open(filename))
+        with open(filename) as f:
+            self.__data = json.load(f)
 
     @functools.cached_property
     def std_dialects(self) -> List[str]:
@@ -2187,8 +2188,8 @@ class FeatureTestMacros:
             result[get_std_number(std)] = list()
 
         for ftm, values in self.standard_ftms.items():
-            need_undef = False
             last_value = None
+            last_entry = None
             for std, value in values.items():
                 # When a newer Standard does not change the value of the macro
                 # there is no need to redefine it with the same value.
@@ -2198,12 +2199,11 @@ class FeatureTestMacros:
 
                 entry = dict()
                 entry["value"] = value
-                entry["implemented"] = self.implemented_ftms[ftm][std] != None
-                entry["need_undef"] = need_undef
+                entry["implemented"] = self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+                entry["need_undef"] = last_entry is not None and last_entry["implemented"] and entry["implemented"]
                 entry["condition"] = self.ftm_metadata[ftm]["libcxx_guard"]
 
-                need_undef = entry["implemented"]
-
+                last_entry = entry
                 result[get_std_number(std)].append(dict({ftm: entry}))
 
         return result

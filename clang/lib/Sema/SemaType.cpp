@@ -5166,6 +5166,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
 
+              // Reject, but continue to parse 'float(this void)' as
+              // 'float(void)'.
+              if (Param->isExplicitObjectParameter()) {
+                S.Diag(Param->getLocation(),
+                       diag::err_void_explicit_object_param);
+                Param->setExplicitObjectParameterLoc(SourceLocation());
+              }
+
               // Do not add 'void' to the list.
               break;
             }
@@ -8846,6 +8854,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLContainedType: {
       // Only collect HLSL resource type attributes that are in
       // decl-specifier-seq; do not collect attributes on declarations or those

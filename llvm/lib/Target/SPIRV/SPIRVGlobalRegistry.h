@@ -55,6 +55,8 @@ class SPIRVGlobalRegistry {
   // created during substitution of aggregate arguments
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
   DenseMap<Value *, Type *> MutatedAggRet;
+  // map an instruction to its value's attributes (type, name)
+  DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -63,6 +65,10 @@ class SPIRVGlobalRegistry {
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
+
+  // Stores for each function the last inserted SPIR-V Type.
+  // See: SPIRVGlobalRegistry::createOpType.
+  DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;
 
   // if a function returns a pointer, this is to map it into TypedPointerType
   DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
@@ -96,6 +102,13 @@ class SPIRVGlobalRegistry {
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool EmitIR);
+
+  // Internal function creating the an OpType at the correct position in the
+  // function by tweaking the passed "MIRBuilder" insertion point and restoring
+  // it to the correct position. "Op" should be the function creating the
+  // specific OpType you need, and should return the newly created instruction.
+  SPIRVType *createOpType(MachineIRBuilder &MIRBuilder,
+                          std::function<MachineInstr *(MachineIRBuilder &)> Op);
 
 public:
   SPIRVGlobalRegistry(unsigned PointerSize);
@@ -177,6 +190,21 @@ public:
     return It == MutatedAggRet.end() ? nullptr : It->second;
   }
 
+  // A registry of value's attributes (type, name)
+  // - Add a record.
+  void addValueAttrs(MachineInstr *Key, std::pair<Type *, std::string> Val) {
+    ValueAttrs[Key] = Val;
+  }
+  // - Find a record.
+  bool findValueAttrs(const MachineInstr *Key, Type *&Ty, StringRef &Name) {
+    auto It = ValueAttrs.find(Key);
+    if (It == ValueAttrs.end())
+      return false;
+    Ty = It->second.first;
+    Name = It->second.second;
+    return true;
+  }
+
   // Deduced element types of untyped pointers and composites:
   // - Add a record to the map of deduced element types.
   void addDeducedElementType(Value *Val, Type *Ty) { DeducedElTys[Val] = Ty; }
@@ -255,11 +283,7 @@ public:
 
   // Add a record about forward function call.
   void addForwardCall(const Function *F, MachineInstr *MI) {
-    auto It = ForwardCalls.find(F);
-    if (It == ForwardCalls.end())
-      ForwardCalls[F] = {MI};
-    else
-      It->second.insert(MI);
+    ForwardCalls[F].insert(MI);
   }
 
   // Map a Function to the vector of machine instructions that represents
