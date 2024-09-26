@@ -4631,8 +4631,7 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   if (OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch())
     return false;
 
-  // Loops containing histograms are not currently supported.
-  return !Legal->hasHistograms();
+  return true;
 }
 
 bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
