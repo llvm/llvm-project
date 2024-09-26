@@ -61,3 +61,10 @@ if (MINGW OR CYGWIN)
   # make sure we export all symbols despite potential dllexports.
   target_link_options(clang-cpp PRIVATE LINKER:--export-all-symbols)
 endif()
+
+# Solaris ld does not accept global: *; so there is no way to version *all* global symbols
+if (NOT LLVM_LINKER_IS_SOLARISLD AND NOT MINGW)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+	         ${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
+  target_link_options(clang-cpp PRIVATE -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
+endif()
