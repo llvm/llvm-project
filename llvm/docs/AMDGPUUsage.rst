@@ -611,9 +611,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1152``
 
                                                                                                 SALU floating point instructions
-                                                                                                and single-use VGPR hint
-                                                                                                instructions are not available
-                                                                                                on:
+                                                                                                are not available on:
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
