@@ -8860,7 +8860,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       // decl-specifier-seq; do not collect attributes on declarations or those
       // that get to slide after declaration name.
       if (TAL == TAL_DeclSpec &&
-          state.getSema().HLSL().handleResourceTypeAttr(attr))
+          state.getSema().HLSL().handleResourceTypeAttr(type, attr))
         attr.setUsedAsTypeAttr();
       break;
     }
