@@ -892,8 +892,9 @@ static bool isExcludedMember(const NamedDecl &D) {
 // within the callback.
 struct CompletionRecorder : public CodeCompleteConsumer {
   CompletionRecorder(const CodeCompleteOptions &Opts,
+                     bool ForceLoadExternal,
                      llvm::unique_function<void()> ResultsCallback)
-      : CodeCompleteConsumer(Opts.getClangCompleteOpts()),
+      : CodeCompleteConsumer(Opts.getClangCompleteOpts(ForceLoadExternal)),
         CCContext(CodeCompletionContext::CCC_Other), Opts(Opts),
         CCAllocator(std::make_shared<GlobalCodeCompletionAllocator>()),
         CCTUInfo(CCAllocator), ResultsCallback(std::move(ResultsCallback)) {
@@ -1409,6 +1410,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 
+  if (Input.Preamble.RequiredModules)
+    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(Clang->getHeaderSearchOpts());
+
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     log("BeginSourceFile() failed when running codeComplete for {0}",
@@ -1629,11 +1633,15 @@ public:
       SpecFuzzyFind->Result = startAsyncFuzzyFind(*Opts.Index, *SpecReq);
     }
 
+    // FIXME: If we're using C++20 modules, force the lookup process to load external decls,
+    // since currently the index doesn't support C++20 modules.
+    bool ForceLoadExternal = (bool)SemaCCInput.Preamble.RequiredModules;
+
     // We run Sema code completion first. It builds an AST and calculates:
     //   - completion results based on the AST.
     //   - partial identifier and context. We need these for the index query.
     CodeCompleteResult Output;
-    auto RecorderOwner = std::make_unique<CompletionRecorder>(Opts, [&]() {
+    auto RecorderOwner = std::make_unique<CompletionRecorder>(Opts, ForceLoadExternal, [&]() {
       assert(Recorder && "Recorder is not set");
       CCContextKind = Recorder->CCContext.getKind();
       IsUsingDeclaration = Recorder->CCContext.isUsingDeclaration();
@@ -1691,7 +1699,7 @@ public:
 
     Recorder = RecorderOwner.get();
 
-    semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(),
+    semaCodeComplete(std::move(RecorderOwner), Opts.getClangCompleteOpts(ForceLoadExternal),
                      SemaCCInput, &Includes);
     logResults(Output, Tracer);
     return Output;
@@ -2108,7 +2116,7 @@ private:
 
 } // namespace
 
-clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
+clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts(bool ForceLoadExternal) const {
   clang::CodeCompleteOptions Result;
   Result.IncludeCodePatterns = EnableSnippets;
   Result.IncludeMacros = true;
@@ -2122,7 +2130,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   // When an is used, Sema is responsible for completing the main file,
   // the index can provide results from the preamble.
   // Tell Sema not to deserialize the preamble to look for results.
-  Result.LoadExternal = !Index;
+  Result.LoadExternal = ForceLoadExternal || !Index;
   Result.IncludeFixIts = IncludeFixIts;
 
   return Result;

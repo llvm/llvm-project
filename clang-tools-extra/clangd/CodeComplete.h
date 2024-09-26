@@ -41,7 +41,7 @@ struct CodeCompletion;
 
 struct CodeCompleteOptions {
   /// Returns options that can be passed to clang's completion engine.
-  clang::CodeCompleteOptions getClangCompleteOpts() const;
+  clang::CodeCompleteOptions getClangCompleteOpts(bool ForceLoadExternal) const;
 
   /// When true, completion items will contain expandable code snippets in
   /// completion (e.g.  `return ${1:expression}` or `foo(${1:int a}, ${2:int
