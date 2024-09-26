@@ -490,7 +490,11 @@ public:
   getCalleeSavedRegs(const MachineFunction *MF) const = 0;
 
   /// Return a null-terminated list of all of the callee-saved registers on
-  /// this target when IPRA is on. Normally, this list should be null.
+  /// this target when IPRA is on. The list should include any non-allocatable
+  /// registers that the backend uses and assumes will be saved by all calling
+  /// conventions. This is typically the ISA-standard frame pointer, but could
+  /// include the thread pointer, TOC pointer, or base pointer for different
+  /// targets.
   virtual const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const {
     return nullptr;
   }
