@@ -19,17 +19,27 @@ using namespace __sanitizer;
 using namespace __rtsan;
 
 static atomic_uint32_t rtsan_total_error_count{0};
+static atomic_uint32_t rtsan_unique_error_count{0};
 
 void __rtsan::IncrementTotalErrorCount() {
   atomic_fetch_add(&rtsan_total_error_count, 1, memory_order_relaxed);
+}
+
+void __rtsan::IncrementUniqueErrorCount() {
+  atomic_fetch_add(&rtsan_unique_error_count, 1, memory_order_relaxed);
 }
 
 static u32 GetTotalErrorCount() {
   return atomic_load(&rtsan_total_error_count, memory_order_relaxed);
 }
 
+static u32 GetUniqueErrorCount() {
+  return atomic_load(&rtsan_unique_error_count, memory_order_relaxed);
+}
+
 void __rtsan::PrintStatisticsSummary() {
   ScopedErrorReportLock l;
   Printf("RealtimeSanitizer exit stats:\n");
   Printf("    Total error count: %u\n", GetTotalErrorCount());
+  Printf("    Unique error count: %u\n", GetUniqueErrorCount());
 }
