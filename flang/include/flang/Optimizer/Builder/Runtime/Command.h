@@ -58,8 +58,5 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
 mlir::Value genGetCwd(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value c);
 
-mlir::Value genGetUID(fir::FirOpBuilder &, mlir::Location);
-mlir::Value genGetGID(fir::FirOpBuilder &, mlir::Location);
-
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H
