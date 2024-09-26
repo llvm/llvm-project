@@ -1669,11 +1669,12 @@ static bool hoistConditionalLoadsStores(
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
-  IRBuilder<> Builder(Invert ? SpeculatedConditionalLoadsStores.back() : BI);
+  IRBuilder<> Builder(
+      Invert.has_value() ? SpeculatedConditionalLoadsStores.back() : BI);
   Value *Mask = nullptr;
   Value *MaskFalse = nullptr;
   Value *MaskTrue = nullptr;
-  if (Invert) {
+  if (Invert.has_value()) {
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
@@ -1688,8 +1689,8 @@ static bool hoistConditionalLoadsStores(
     return V;
   };
   for (auto *I : SpeculatedConditionalLoadsStores) {
-    IRBuilder<> Builder(Invert ? I : BI);
-    if (!Invert)
+    IRBuilder<> Builder(Invert.has_value() ? I : BI);
+    if (!Invert.has_value())
       Mask = I->getParent() == BI->getSuccessor(0) ? MaskTrue : MaskFalse;
     // We currently assume conditional faulting load/store is supported for
     // scalar types only when creating new instructions. This can be easily
@@ -1702,7 +1703,7 @@ static bool hoistConditionalLoadsStores(
       auto *Ty = I->getType();
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
-      if (Invert)
+      if (Invert.has_value())
         for (User *U : I->users())
           if ((PN = dyn_cast<PHINode>(U))) {
             PassThru = Builder.CreateBitCast(
