@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple=arm-none-eabi < %s | FileCheck %s
 ; RUN: llc -mtriple=arm-none-eabi < %s | llvm-mc --triple=arm-none-eabi -mcpu=cortex-m3
 
+; Check that, when an aligned loop is the first thing in a function, we do not
+; emit an invalid .loc directive, which is rejected by the assembly parser.
+
 ; CHECK-NOT: .loc    0 0 0
 ; CHECK: .loc    1 2 3 prologue_end
 
