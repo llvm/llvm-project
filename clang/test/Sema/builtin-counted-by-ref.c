@@ -9,6 +9,13 @@ struct fam_struct {
 void test1(struct fam_struct *ptr, int size, int idx) {
   *__builtin_counted_by_ref(ptr->array) = size;             // ok
   *__builtin_counted_by_ref(&ptr->array[idx]) = size;       // ok
+
+  {
+      size_t __ignored_assignment;
+      *_Generic(__builtin_counted_by_ref(p->array),
+               void *: &__ignored_assignment,
+               default: __builtin_counted_by_ref(p->array)) = 42; // ok
+  }
 }
 
 void test2(struct fam_struct *ptr, int idx) {

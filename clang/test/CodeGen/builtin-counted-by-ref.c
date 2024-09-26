@@ -117,9 +117,12 @@ struct c {
 //
 struct c *test3(int size) {
   struct c *p = __builtin_malloc(sizeof(struct c) + sizeof(int) * size);
+  unsigned long int __ignored;
 
-  if (__builtin_counted_by_ref(&p->array[0]))
-    *__builtin_counted_by_ref(&p->array[0]) = size;
+  *_Generic(
+    __builtin_counted_by_ref(&p->array[0]),
+      void *: &__ignored,
+      default: __builtin_counted_by_ref(&p->array[0])) = size;
 
   return p;
 }
@@ -155,9 +158,12 @@ struct d {
 //
 struct d *test4(int size, int idx) {
   struct d *p = __builtin_malloc(sizeof(struct d) + sizeof(int) * size);
+  unsigned long int __ignored;
 
-  if (__builtin_counted_by_ref(&p->array[0]))
-    *__builtin_counted_by_ref(&p->array[idx++]) = size;
+  *_Generic(
+    __builtin_counted_by_ref(&p->array[0]),
+      void *: &__ignored,
+      default: __builtin_counted_by_ref(&p->array[idx++])) = size;
 
   return p;
 }

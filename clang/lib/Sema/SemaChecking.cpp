@@ -31,6 +31,7 @@
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
@@ -5665,6 +5666,22 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
             isArrow = false;
           }
 
+          // Mark the DeclRefExpr as used.
+          auto DoMarkDeclRefUsed = [&](Expr *E) {
+            struct FindDeclRefVisitor
+                : public RecursiveASTVisitor<FindDeclRefVisitor> {
+              DeclRefExpr *DRE = nullptr;
+              bool VisitDeclRefExpr(DeclRefExpr *E) {
+                DRE = E;
+                return true;
+              }
+            } V;
+            V.TraverseStmt(E);
+            return V.DRE;
+          };
+          if (DeclRefExpr *DRE = DoMarkDeclRefUsed(New))
+            DRE->getDecl()->setIsUsed();
+
           return ExprResult(UnaryOperator::Create(
               Context, New, UO_AddrOf,
               Context.getPointerType(CountFD->getType()), VK_LValue,
@@ -5684,7 +5701,15 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
     }
   }
 
-  return false;
+  QualType SizeTypePtrTy = Context.VoidPtrTy;
+  QualType NullPtrTy =
+      Context.getIntTypeForBitwidth(Context.getIntWidth(SizeTypePtrTy), true);
+
+  return ExprResult(ImplicitCastExpr::Create(
+      Context, SizeTypePtrTy, CK_IntegralToPointer,
+      IntegerLiteral::Create(Context, Context.MakeIntValue(0, NullPtrTy),
+                             NullPtrTy, SourceLocation()),
+      nullptr, VK_LValue, FPOptionsOverride()));
 }
 
 namespace {

@@ -28,7 +28,6 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"

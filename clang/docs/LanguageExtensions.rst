@@ -3782,7 +3782,7 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 The argument must be a pointer to a flexible array member. If the argument
 isn't a flexible array member or doesn't have the ``counted_by`` attribute, the
-builtin returns ``(size_t *)0``.
+builtin returns ``(void *)0``.
 
 **Syntax**:
 
@@ -3794,12 +3794,16 @@ builtin returns ``(size_t *)0``.
 
 .. code-block:: c
 
-  #define alloc(P, FAM, COUNT) ({ \
+  #define alloc(P, FAM, COUNT) ({                                 \
+     sizeof_t __ignored_assignment;                               \
      typeof(P) __p = NULL;                                        \
      __p = malloc(MAX(sizeof(*__p),                               \
                       sizeof(*__p) + sizeof(*__p->FAM) * COUNT)); \
-     if (__builtin_counted_by_ref(__p->FAM))                      \
-       *__builtin_counted_by_ref(__p->FAM) = COUNT;               \
+                                                                  \
+     *_Generic(                                                   \
+       __builtin_counted_by_ref(__p->FAM),                        \
+         void *: &__ignored_assignment,                           \
+         default: __builtin_counted_by_ref(__p->FAM)) = COUNT;    \
      __p;                                                         \
   })
 
@@ -3817,7 +3821,7 @@ initialize the flexible array before setting the ``count`` field:
   struct s {
     int dummy;
     short count;
-    long array[];
+    long array[] __attribute__((counted_by(count)));
   };
 
   struct s *ptr = malloc(sizeof(struct s) + sizeof(long) * COUNT);
@@ -3828,14 +3832,14 @@ initialize the flexible array before setting the ``count`` field:
   ptr->count = COUNT;
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
-allocation of a struct with a flexible array member that has the ``counted_by``
+allocation of a struct with a flexible array member with the ``counted_by``
 attribute is prone to failure in large code bases. This builtin mitigates this
-for allocators (like in Linux) that are implemented via macros where the
-assignment happens automatically.
+for allocators (like in Linux) that are implemented in a way where the counter
+assignment can happen automatically.
 
 **Note: The value returned by ``__builtin_counted_by_ref`` cannot be assigned
-to a variable or passed into a function. Doing so violates bounds safety
-conventions.**
+to a variable or passed into a function, because doing so violates bounds
+safety conventions.**
 
 Multiprecision Arithmetic Builtins
 ----------------------------------

@@ -2697,8 +2697,35 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
               break;
             }
           }
-          // If we cannot map to a basic block, assume the statement is
-          // reachable.
+
+          // A Stmt in a _Generic statement may not be reachable and so we
+          // don't want to emit diagnostics.
+          auto FindGenericSelectionParent = [&](const Stmt *S) ->
+              std::pair<const GenericSelectionExpr *, const Stmt *> {
+            ParentMap &PM = AC.getParentMap();
+
+            while (PM.hasParent(S)) {
+              const Stmt *Parent = PM.getParent(S);
+              if (const auto *GSE = dyn_cast<GenericSelectionExpr>(Parent))
+                return std::make_pair(GSE, S);
+              S = Parent;
+            }
+
+            return std::make_pair(nullptr, nullptr);
+          };
+          if (auto GenericStmt = FindGenericSelectionParent(S);
+              GenericStmt.first) {
+            const GenericSelectionExpr *GSE =
+                cast<GenericSelectionExpr>(GenericStmt.first);
+            const Stmt *Entry = GenericStmt.second;
+
+            if (GSE->getControllingExpr() != Entry &&
+                GSE->getResultExpr() != Entry)
+              AllReachable = false;
+          }
+
+          // If we cannot map to a basic block or _Generic statement, assume
+          // the statement is reachable.
         }
 
         if (AllReachable)
