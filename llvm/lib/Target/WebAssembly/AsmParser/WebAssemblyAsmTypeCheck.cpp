@@ -139,8 +139,9 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
       break;
     }
   }
-  // If not all elements of Types has been matched, that means we don't have
-  // enough elements on the stack.
+  // Even if no match failure has happened in the loop above, if not all
+  // elements of Types has been matched, that means we don't have enough
+  // elements on the stack.
   //
   // Also, if not all elements of the Stack has been matched and when
   // 'ExactMatch' is true, that means we have superfluous elements remaining on
