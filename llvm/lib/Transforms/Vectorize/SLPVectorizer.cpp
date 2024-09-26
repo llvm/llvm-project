@@ -5373,8 +5373,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
             UndefCnt > Sz / 2)
           return std::nullopt;
         UsedVals.set(Val);
-        for (unsigned K = 0; K < NumParts; ++K)
-          ResOrder[Val + Sz * K] = I + K;
+        for (unsigned K = 0; K < NumParts; ++K) {
+          unsigned Idx = Val + Sz * K;
+          if (Idx < VF)
+            ResOrder[Idx] = I + K;
+        }
       }
       return std::move(ResOrder);
     }
