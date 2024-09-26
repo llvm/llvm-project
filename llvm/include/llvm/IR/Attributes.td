@@ -115,6 +115,7 @@ def NoUndef : EnumAttr<"noundef", IntersectAnd, [ParamAttr, RetAttr]>;
 def Cold : EnumAttr<"cold", IntersectAnd, [FnAttr]>;
 
 /// Can only be moved to control-equivalent blocks.
+/// NB: Could be IntersectCustom with "or" handling.
 def Convergent : EnumAttr<"convergent", IntersectPreserve, [FnAttr]>;
 
 /// Marks function as being in a hot path and frequently called.

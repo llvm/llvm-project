@@ -1039,6 +1039,8 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     if (Attribute::intersectWithCustom(Kind)) {
       switch (Kind) {
       case Attribute::Alignment:
+        // If `byval` is present, alignment become must-preserve. This is
+        // handled below if we have `byval`.
         Intersected.addAlignmentAttr(
             std::min(Attr0.getAlignment().valueOrOne(),
                      Attr1.getAlignment().valueOrOne()));
