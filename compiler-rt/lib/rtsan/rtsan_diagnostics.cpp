@@ -39,13 +39,6 @@ public:
 };
 } // namespace
 
-static void PrintStackTrace(uptr pc, uptr bp) {
-  BufferedStackTrace stack{};
-
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
-  stack.Print();
-}
-
 static void PrintError(const Decorator &decorator,
                        const DiagnosticsInfo &info) {
   const auto ErrorTypeStr = [&info]() -> const char * {
@@ -91,5 +84,4 @@ void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
   PrintError(d, info);
   PrintReason(d, info);
   Printf("%s", d.Default());
-  PrintStackTrace(info.pc, info.bp);
 }

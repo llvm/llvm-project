@@ -570,7 +570,7 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 /// debug expression to a register in the forwarded register worklist.
 struct FwdRegParamInfo {
   /// The described parameter register.
-  unsigned ParamReg;
+  uint64_t ParamReg;
 
   /// Debug expression that has been built up when walking through the
   /// instruction chain that produces the parameter's value.
@@ -578,7 +578,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of registers known to be clobbered on the path to a
 /// call site.
 using ClobberedRegSet = SmallSet<Register, 16>;

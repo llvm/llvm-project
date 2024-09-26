@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Frontend/LangOptions.h"
+#include "flang/Common/LangOptions.h"
 #include <string.h>
 
-namespace Fortran::frontend {
+namespace Fortran::common {
 
 LangOptions::LangOptions() {
 #define LANGOPT(Name, Bits, Default) Name = Default;
 #define ENUM_LANGOPT(Name, Type, Bits, Default) set##Name(Default);
-#include "flang/Frontend/LangOptions.def"
+#include "flang/Common/LangOptions.def"
 }
 
-} // end namespace Fortran::frontend
+} // end namespace Fortran::common

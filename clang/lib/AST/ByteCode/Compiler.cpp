@@ -5293,7 +5293,7 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
       if (!D->isPrimitive() && !D->isPrimitiveArray()) {
         if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
           return false;
-        if (!this->emitDestruction(D))
+        if (!this->emitDestruction(D, SourceInfo{}))
           return false;
         if (!this->emitPopPtr(SourceInfo{}))
           return false;
@@ -5307,7 +5307,7 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.R))
+    if (!this->emitRecordDestruction(Base.R, {}))
       return false;
     if (!this->emitPopPtr(SourceInfo{}))
       return false;
@@ -6148,7 +6148,7 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
+bool Compiler<Emitter>::emitRecordDestruction(const Record *R, SourceInfo Loc) {
   assert(R);
   assert(!R->isAnonymousUnion());
   const CXXDestructorDecl *Dtor = R->getDestructor();
@@ -6161,15 +6161,16 @@ bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
     return false;
   assert(DtorFunc->hasThisPointer());
   assert(DtorFunc->getNumParams() == 1);
-  if (!this->emitDupPtr(SourceInfo{}))
+  if (!this->emitDupPtr(Loc))
     return false;
-  return this->emitCall(DtorFunc, 0, SourceInfo{});
+  return this->emitCall(DtorFunc, 0, Loc);
 }
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
+bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
+                                        SourceInfo Loc) {
   assert(Desc);
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
@@ -6193,13 +6194,13 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
     }
 
     for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, SourceInfo{}))
+      if (!this->emitConstUint64(I, Loc))
         return false;
-      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+      if (!this->emitArrayElemPtrUint64(Loc))
         return false;
-      if (!this->emitDestruction(ElemDesc))
+      if (!this->emitDestruction(ElemDesc, Loc))
         return false;
-      if (!this->emitPopPtr(SourceInfo{}))
+      if (!this->emitPopPtr(Loc))
         return false;
     }
     return true;
@@ -6209,7 +6210,7 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
   if (Desc->ElemRecord->isAnonymousUnion())
     return true;
 
-  return this->emitRecordDestruction(Desc->ElemRecord);
+  return this->emitRecordDestruction(Desc->ElemRecord, Loc);
 }
 
 namespace clang {
