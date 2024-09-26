@@ -21,7 +21,7 @@ define i32 @fn(i32 %a0, i32 %a1) {
 ; X86-NEXT:    addb %dl, %dl
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %bb1
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    testl %ebx, %ebx
@@ -46,7 +46,7 @@ define i32 @fn(i32 %a0, i32 %a1) {
 ; X64-NEXT:    addb %dl, %dl
 ; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %bb1
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    testl %esi, %esi

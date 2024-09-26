@@ -4,7 +4,7 @@
 define void @pr32108() {
 ; CHECK-LABEL: pr32108:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %CF244
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

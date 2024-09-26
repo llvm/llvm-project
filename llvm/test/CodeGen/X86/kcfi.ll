@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
-; ASM:       .p2align 4, 0x90
+; ASM:       .p2align 4
 ; ASM:       .type __cfi_f1,@function
 ; ASM-LABEL: __cfi_f1:
 ; ASM-NEXT:    nop

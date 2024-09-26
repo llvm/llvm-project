@@ -11,7 +11,7 @@ define void @a(ptr %arg, i32 %arg1) {
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
 ; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE2-NEXT:    movl %esi, %eax
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB0_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
@@ -32,7 +32,7 @@ define void @a(ptr %arg, i32 %arg1) {
 ; AVX-NEXT:  ## %bb.1: ## %bb2
 ; AVX-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; AVX-NEXT:    movl %esi, %eax
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB0_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    ## InlineAsm Start
@@ -77,7 +77,7 @@ define void @b(ptr %arg, i64 %arg1) {
 ; SSE2-NEXT:    jle LBB1_3
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
 ; SSE2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB1_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
@@ -97,7 +97,7 @@ define void @b(ptr %arg, i64 %arg1) {
 ; AVX-NEXT:    jle LBB1_3
 ; AVX-NEXT:  ## %bb.1: ## %bb2
 ; AVX-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB1_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    ## InlineAsm Start
@@ -142,7 +142,7 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; SSE2-NEXT:  ## %bb.1: ## %bb4
 ; SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE2-NEXT:    movl %edx, %eax
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB2_2: ## %bb8
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
@@ -163,7 +163,7 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; AVX-NEXT:  ## %bb.1: ## %bb4
 ; AVX-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; AVX-NEXT:    movl %edx, %eax
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB2_2: ## %bb8
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    ## InlineAsm Start
@@ -210,7 +210,7 @@ define void @d(ptr %arg, ptr %arg1, i64 %arg2) {
 ; SSE2-NEXT:    jle LBB3_3
 ; SSE2-NEXT:  ## %bb.1: ## %bb3
 ; SSE2-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; SSE2-NEXT:    .p2align 4, 0x90
+; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB3_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    ## InlineAsm Start
@@ -230,7 +230,7 @@ define void @d(ptr %arg, ptr %arg1, i64 %arg2) {
 ; AVX-NEXT:    jle LBB3_3
 ; AVX-NEXT:  ## %bb.1: ## %bb3
 ; AVX-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; AVX-NEXT:    .p2align 4, 0x90
+; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB3_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    ## InlineAsm Start
