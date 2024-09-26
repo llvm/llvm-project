@@ -1743,7 +1743,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   Type *IndexTy = State.VF.isScalable() && (IsReverse || CurrentPart > 0)
-                      ? DL.getIndexType(IndexedTy->getPointerTo())
+                      ? DL.getIndexType(Builder.getPtrTy(0))
                       : Builder.getInt32Ty();
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();
