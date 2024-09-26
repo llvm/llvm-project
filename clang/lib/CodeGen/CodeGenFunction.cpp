@@ -2945,6 +2945,10 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
                getPriorityFromAttrString(RHS.Conditions.Features[0]);
       });
 
+  llvm::BasicBlock *LengthBlock = CurBlock;
+  llvm::BasicBlock *VersionBlock = createBasicBlock("version_begin", Resolver);
+  CurBlock = VersionBlock;
+
   // Check the each candidate function.
   for (unsigned Index = 0; Index < CurrOptions.size(); Index++) {
 
@@ -2970,22 +2974,28 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
     // (__riscv_feature_bits.features[i] & REQUIRED_BITMASK) ==
     // REQUIRED_BITMASK
     //
+    // First, check __riscv_feature_bits.length <=
+    // llvm::RISCVISAInfo::FeatureBitSize. This ensures that the
+    // __riscv_feature_bits object at runtime has the same length as on the
+    // compiler side.
+    //
+    // Second, 
     // When condition is met, return this version of the function.
     // Otherwise, try the next version.
     //
-    // if (FeaturesConditionVersion1)
+    //
+    // if (__riscv_feature_bits.features.length <=
+    // llvm::RISCVISAInfo::FeatureBitSize) {
+    //   if (FeaturesConditionVersion1)
     //     return Version1;
-    // else if (FeaturesConditionVersion2)
+    //   else if (FeaturesConditionVersion2)
     //     return Version2;
-    // else if (FeaturesConditionVersion3)
+    //   else if (FeaturesConditionVersion3)
     //     return Version3;
-    // ...
-    // else
-    //     return DefaultVersion;
+    //   ...
+    // }
+    // return DefaultVersion;
 
-    // TODO: Add a condition to check the length before accessing elements.
-    // Without checking the length first, we may access an incorrect memory
-    // address when using different versions.
     llvm::SmallVector<StringRef, 8> CurrTargetAttrFeats;
 
     for (auto &Feat : TargetAttrFeats) {
@@ -3008,6 +3018,10 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
     CurBlock = ElseBlock;
   }
+
+  Builder.SetInsertPoint(LengthBlock);
+  llvm::Value *FeatsLengthCond = EmitRISCVFeatureBitsLengthCond();
+  Builder.CreateCondBr(FeatsLengthCond, VersionBlock, CurBlock);
 
   // Finally, emit the default one.
   if (HasDefault) {

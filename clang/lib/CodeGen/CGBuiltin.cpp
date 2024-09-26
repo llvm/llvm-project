@@ -14534,8 +14534,9 @@ Value *CodeGenFunction::EmitRISCVCpuSupports(const CallExpr *E) {
   return EmitRISCVCpuSupports(ArrayRef<StringRef>(FeatureStr));
 }
 
-static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
-                                   CodeGenModule &CGM) {
+static Value *loadRISCVFeatureBitsCommon(ArrayRef<llvm::Value *> GEPIndices,
+                                         CGBuilderTy &Builder,
+                                         CodeGenModule &CGM) {
   llvm::Type *Int32Ty = Builder.getInt32Ty();
   llvm::Type *Int64Ty = Builder.getInt64Ty();
   llvm::ArrayType *ArrayOfInt64Ty =
@@ -14544,14 +14545,32 @@ static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
   llvm::Constant *RISCVFeaturesBits =
       CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
   cast<llvm::GlobalValue>(RISCVFeaturesBits)->setDSOLocal(true);
+  Value *Ptr =
+      Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
+  Value *FeaturesVal =
+      Builder.CreateAlignedLoad(Int64Ty, Ptr, CharUnits::fromQuantity(8));
+  return FeaturesVal;
+}
+
+static Value *loadRISCVFeatureBitsLength(CGBuilderTy &Builder,
+                                         CodeGenModule &CGM) {
+  llvm::Value *GEPIndices[] = {Builder.getInt32(0), Builder.getInt32(0)};
+  return loadRISCVFeatureBitsCommon(GEPIndices, Builder, CGM);
+}
+
+static Value *loadRISCVFeatureBits(unsigned Index, CGBuilderTy &Builder,
+                                   CodeGenModule &CGM) {
+  llvm::Type *Int32Ty = Builder.getInt32Ty();
   Value *IndexVal = llvm::ConstantInt::get(Int32Ty, Index);
   llvm::Value *GEPIndices[] = {Builder.getInt32(0), Builder.getInt32(1),
                                IndexVal};
-  Value *Ptr =
-      Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
-  Value *FeaturesBit =
-      Builder.CreateAlignedLoad(Int64Ty, Ptr, CharUnits::fromQuantity(8));
-  return FeaturesBit;
+  return loadRISCVFeatureBitsCommon(GEPIndices, Builder, CGM);
+}
+
+llvm::Value *CodeGenFunction::EmitRISCVFeatureBitsLengthCond() {
+  return Builder.CreateICmpULE(
+      loadRISCVFeatureBitsLength(Builder, CGM),
+      Builder.getInt64(llvm::RISCVISAInfo::FeatureBitSize));
 }
 
 Value *CodeGenFunction::EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs) {

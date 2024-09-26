@@ -4715,6 +4715,7 @@ public:
 
   llvm::Value *EmitRISCVCpuSupports(const CallExpr *E);
   llvm::Value *EmitRISCVCpuSupports(ArrayRef<StringRef> FeaturesStrs);
+  llvm::Value *EmitRISCVFeatureBitsLengthCond();
   llvm::Value *EmitRISCVCpuInit();
 
   void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
