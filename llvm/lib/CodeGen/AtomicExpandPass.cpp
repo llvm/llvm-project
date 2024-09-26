@@ -351,9 +351,8 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
 
   bool MadeChange = false;
 
-  for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE;) {
+  for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE; ++BBI) {
     BasicBlock *BB = &*BBI;
-    ++BBI;
 
     BasicBlock::reverse_iterator Next;
 
@@ -365,14 +364,8 @@ bool AtomicExpandImpl::run(Function &F, const TargetMachine *TM) {
       if (processAtomicInstr(&Inst)) {
         MadeChange = true;
 
-        // Detect control flow change and resume iteration from the original
-        // block to inspect any newly inserted blocks. This allows incremental
-        // legalization of atomicrmw and cmpxchg.
-        if (Next != E && BB != Next->getParent()) {
-          BBI = BB->getIterator();
-          BBE = F.end();
-          break;
-        }
+        // New blocks may have been inserted.
+        BBE = F.end();
       }
     }
   }

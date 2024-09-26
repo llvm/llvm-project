@@ -1004,7 +1004,7 @@ const ctype<char>::mask* ctype<char>::classic_table() noexcept {
 #    warning ctype<char>::classic_table() is not implemented
   printf("ctype<char>::classic_table() is not implemented\n");
   abort();
-  return NULL;
+  return nullptr;
 #  endif
 }
 #endif

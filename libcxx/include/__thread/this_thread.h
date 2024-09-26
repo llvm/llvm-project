@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___THREAD_THIS_THREAD_H
 #define _LIBCPP___THREAD_THIS_THREAD_H
 
+#include <__chrono/duration.h>
 #include <__chrono/steady_clock.h>
 #include <__chrono/time_point.h>
 #include <__condition_variable/condition_variable.h>

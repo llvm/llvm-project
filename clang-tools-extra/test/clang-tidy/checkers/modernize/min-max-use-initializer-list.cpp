@@ -323,5 +323,11 @@ struct GH91982 {
   }
 };
 
+struct GH107594 {
+    int foo(int a, int b, char c) {
+        return std::max<int>({a, b, c});
+    }
+};
+
 } // namespace
 

@@ -852,57 +852,50 @@ llvm::APFloat Scalar::CreateAPFloatFromAPFloat(lldb::BasicType basic_type) {
   }
 }
 
-bool lldb_private::operator==(Scalar lhs, Scalar rhs) {
+APFloat::cmpResult lldb_private::compare(Scalar lhs, Scalar rhs) {
   // If either entry is void then we can just compare the types
   if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return lhs.m_type == rhs.m_type;
+    return lhs.m_type == rhs.m_type ? APFloat::cmpEqual : APFloat::cmpUnordered;
 
-  llvm::APFloat::cmpResult result;
   switch (Scalar::PromoteToMaxType(lhs, rhs)) {
   case Scalar::e_void:
     break;
   case Scalar::e_int:
-    return lhs.m_integer == rhs.m_integer;
+    if (lhs.m_integer < rhs.m_integer)
+      return APFloat::cmpLessThan;
+    if (lhs.m_integer > rhs.m_integer)
+      return APFloat::cmpGreaterThan;
+    return APFloat::cmpEqual;
   case Scalar::e_float:
-    result = lhs.m_float.compare(rhs.m_float);
-    if (result == llvm::APFloat::cmpEqual)
-      return true;
+    return lhs.m_float.compare(rhs.m_float);
   }
-  return false;
+  return APFloat::cmpUnordered;
+}
+
+bool lldb_private::operator==(const Scalar &lhs, const Scalar &rhs) {
+  return compare(lhs, rhs) == APFloat::cmpEqual;
 }
 
 bool lldb_private::operator!=(const Scalar &lhs, const Scalar &rhs) {
-  return !(lhs == rhs);
+  return compare(lhs, rhs) != APFloat::cmpEqual;
 }
 
-bool lldb_private::operator<(Scalar lhs, Scalar rhs) {
-  if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
-    return false;
-
-  llvm::APFloat::cmpResult result;
-  switch (Scalar::PromoteToMaxType(lhs, rhs)) {
-  case Scalar::e_void:
-    break;
-  case Scalar::e_int:
-    return lhs.m_integer < rhs.m_integer;
-  case Scalar::e_float:
-    result = lhs.m_float.compare(rhs.m_float);
-    if (result == llvm::APFloat::cmpLessThan)
-      return true;
-  }
-  return false;
+bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {
+  return compare(lhs, rhs) == APFloat::cmpLessThan;
 }
 
 bool lldb_private::operator<=(const Scalar &lhs, const Scalar &rhs) {
-  return !(rhs < lhs);
+  APFloat::cmpResult Res = compare(lhs, rhs);
+  return Res == APFloat::cmpLessThan || Res == APFloat::cmpEqual;
 }
 
 bool lldb_private::operator>(const Scalar &lhs, const Scalar &rhs) {
-  return rhs < lhs;
+  return compare(lhs, rhs) == APFloat::cmpGreaterThan;
 }
 
 bool lldb_private::operator>=(const Scalar &lhs, const Scalar &rhs) {
-  return !(lhs < rhs);
+  APFloat::cmpResult Res = compare(lhs, rhs);
+  return Res == APFloat::cmpGreaterThan || Res == APFloat::cmpEqual;
 }
 
 bool Scalar::ClearBit(uint32_t bit) {

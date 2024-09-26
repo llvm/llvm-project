@@ -1110,7 +1110,6 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateArguments(
           Spelling.clear();
           raw_string_ostream OutStream(Spelling);
           CTA.print(Context.getPrintingPolicy(), OutStream, false);
-          OutStream.flush();
         }
       }
 

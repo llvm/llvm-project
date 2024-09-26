@@ -21,6 +21,7 @@
 #include <__system_error/system_error.h>
 #include <__thread/id.h>
 #include <__thread/support.h>
+#include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <tuple>
 

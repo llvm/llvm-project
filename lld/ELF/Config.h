@@ -44,10 +44,12 @@ class InputSectionBase;
 class EhInputSection;
 class Defined;
 class Symbol;
+class SymbolTable;
 class BitcodeCompiler;
 class OutputSection;
 class LinkerScript;
 class TargetInfo;
+struct Ctx;
 struct Partition;
 struct PhdrEntry;
 
@@ -149,11 +151,14 @@ struct VersionDefinition {
 
 class LinkerDriver {
 public:
+  LinkerDriver(Ctx &ctx);
+  LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
   void addLibrary(StringRef name);
 
 private:
+  Ctx &ctx;
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
@@ -480,12 +485,6 @@ struct Config {
   llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::StringRef>, 0>
       remapInputsWildcards;
 };
-struct ConfigWrapper {
-  Config c;
-  Config *operator->() { return &c; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ConfigWrapper config;
 
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
@@ -540,6 +539,7 @@ struct InStruct {
 };
 
 struct Ctx {
+  Config arg;
   LinkerDriver driver;
   LinkerScript *script;
   TargetInfo *target;
@@ -601,6 +601,7 @@ struct Ctx {
     Defined *tlsModuleBase;
   };
   ElfSym sym;
+  std::unique_ptr<SymbolTable> symtab;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -652,6 +653,7 @@ struct Ctx {
   // STT_SECTION symbol associated to the .toc input section.
   llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
 
+  Ctx();
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
@@ -664,7 +666,7 @@ LLVM_LIBRARY_VISIBILITY extern Ctx ctx;
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.
 static inline ArrayRef<VersionDefinition> namedVersionDefs() {
-  return llvm::ArrayRef(config->versionDefinitions).slice(2);
+  return llvm::ArrayRef(ctx.arg.versionDefinitions).slice(2);
 }
 
 void errorOrWarn(const Twine &msg);

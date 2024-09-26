@@ -14,12 +14,14 @@
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/is_same.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

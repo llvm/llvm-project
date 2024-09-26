@@ -107,18 +107,18 @@ public:
 
 class RegisterBankEmitter {
 private:
-  CodeGenTarget Target;
-  RecordKeeper &Records;
+  const CodeGenTarget Target;
+  const RecordKeeper &Records;
 
   void emitHeader(raw_ostream &OS, const StringRef TargetName,
-                  const std::vector<RegisterBank> &Banks);
+                  ArrayRef<RegisterBank> Banks);
   void emitBaseClassDefinition(raw_ostream &OS, const StringRef TargetName,
-                               const std::vector<RegisterBank> &Banks);
+                               ArrayRef<RegisterBank> Banks);
   void emitBaseClassImplementation(raw_ostream &OS, const StringRef TargetName,
-                                   std::vector<RegisterBank> &Banks);
+                                   ArrayRef<RegisterBank> Banks);
 
 public:
-  RegisterBankEmitter(RecordKeeper &R) : Target(R), Records(R) {}
+  RegisterBankEmitter(const RecordKeeper &R) : Target(R), Records(R) {}
 
   void run(raw_ostream &OS);
 };
@@ -129,7 +129,7 @@ public:
 /// variables.
 void RegisterBankEmitter::emitHeader(raw_ostream &OS,
                                      const StringRef TargetName,
-                                     const std::vector<RegisterBank> &Banks) {
+                                     ArrayRef<RegisterBank> Banks) {
   // <Target>RegisterBankInfo.h
   OS << "namespace llvm {\n"
      << "namespace " << TargetName << " {\n"
@@ -147,8 +147,7 @@ void RegisterBankEmitter::emitHeader(raw_ostream &OS,
 
 /// Emit declarations of the <Target>GenRegisterBankInfo class.
 void RegisterBankEmitter::emitBaseClassDefinition(
-    raw_ostream &OS, const StringRef TargetName,
-    const std::vector<RegisterBank> &Banks) {
+    raw_ostream &OS, const StringRef TargetName, ArrayRef<RegisterBank> Banks) {
   OS << "private:\n"
      << "  static const RegisterBank *RegBanks[];\n"
      << "  static const unsigned Sizes[];\n\n"
@@ -218,7 +217,7 @@ static void visitRegisterBankClasses(
 }
 
 void RegisterBankEmitter::emitBaseClassImplementation(
-    raw_ostream &OS, StringRef TargetName, std::vector<RegisterBank> &Banks) {
+    raw_ostream &OS, StringRef TargetName, ArrayRef<RegisterBank> Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
