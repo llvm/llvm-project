@@ -657,7 +657,23 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
 
   // Create a link for each file to a new file ending in `.cubin`. The 'nvlink'
   // linker requires all NVPTX inputs to have this extension for some reason.
+  // Windows cannot create symbolic links so we just copy the whole file.
   for (auto &Input : LinkerInput) {
+#ifdef _WIN32
+    auto TempFileOrErr = createTempFile(
+        Args, sys::path::stem(Input->getBufferIdentifier()), "cubin");
+    if (!TempFileOrErr)
+      return TempFileOrErr.takeError();
+    Expected<std::unique_ptr<FileOutputBuffer>> OutputOrErr =
+        FileOutputBuffer::create(*TempFileOrErr, Input->getBuffer().size());
+    if (!OutputOrErr)
+      return OutputOrErr.takeError();
+    std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
+    llvm::copy(Input->getBuffer(), Output->getBufferStart());
+    if (Error E = Output->commit())
+      return E;
+    Files.emplace_back(Args.MakeArgString(*TempFileOrErr));
+#else
     SmallString<128> TempFile;
     if (std::error_code EC = sys::fs::getPotentiallyUniqueTempFileName(
             sys::path::stem(Input->getBufferIdentifier()), "cubin", TempFile))
@@ -668,6 +684,7 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
     }
     Files.emplace_back(Args.MakeArgString(TempFile));
     TempFiles.emplace_back(std::move(TempFile));
+#endif
   }
 
   return Files;
