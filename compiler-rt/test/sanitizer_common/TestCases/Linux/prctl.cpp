@@ -4,8 +4,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <linux/filter.h>
-#include <linux/seccomp.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -79,14 +77,6 @@ int main() {
       assert(!strcmp(name, "tname"));
     }
   }
-
-  sock_filter f[] = {{.code = (BPF_LD | BPF_W | BPF_ABS),
-                      .k = (uint32_t)(SKF_AD_OFF | SKF_AD_CPU)},
-                     {.code = (BPF_RET | BPF_A), .k = 0}};
-  sock_fprog pr = {.len = 2, .filter = f};
-
-  res = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &pr);
-  assert(res == -1);
 
   return 0;
 }
