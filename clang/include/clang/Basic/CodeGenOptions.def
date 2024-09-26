@@ -96,6 +96,7 @@ CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 /// Inline asm dialect, -masm=(att|intel)
 ENUM_CODEGENOPT(InlineAsmDialect, InlineAsmDialectKind, 1, IAD_ATT)
+CODEGENOPT(OutputAsmVariant, 2, 3) ///< Set the asm variant for output (3: unspecified).
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
