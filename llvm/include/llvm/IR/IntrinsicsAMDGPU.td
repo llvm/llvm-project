@@ -2133,13 +2133,23 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
 //list<string> Operations
 
 def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_min : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_fmin : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_max : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_fmax : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_add : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_uadd : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_fadd : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_sub : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_usub : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_fsub : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_and : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_uand : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_fand : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_or : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_uor : AMDGPUWaveReduce;
+def int_amdgcn_wave_reduce_for : AMDGPUWaveReduce;
 def int_amdgcn_wave_reduce_xor : AMDGPUWaveReduce;
 
 def int_amdgcn_readfirstlane :
