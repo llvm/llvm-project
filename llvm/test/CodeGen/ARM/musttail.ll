@@ -129,40 +129,15 @@ declare void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4)
 ; actually passed in registers and the stack in the same way for the caller and
 ; callee. Within @large_caller the first 16 bytes of the argument are spilled
 ; to the local stack frame, but for the tail-call they are passed in r0-r3, so
-; it's safe to de-allocate that memory before the call. Most of the code
-; generated for this isn't needed, but that's a missed optimisation, not a
-; correctness issue.
+; it's safe to de-allocate that memory before the call.
+; TODO: The SUB and STM instructions are unnecessary and could be optimised
+; out, but the behaviour of this is still correct.
 define void @large_caller(%twenty_bytes* byval(%twenty_bytes) align 4 %a) {
 ; CHECK-LABEL: large_caller:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    .pad #20
-; CHECK-NEXT:    sub sp, sp, #20
-; CHECK-NEXT:    add r12, sp, #28
-; CHECK-NEXT:    add lr, sp, #44
-; CHECK-NEXT:    stm r12, {r0, r1, r2, r3}
-; CHECK-NEXT:    add r0, sp, #28
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    add r12, r1, #16
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldm sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    ldr r4, [r12], #4
-; CHECK-NEXT:    str r4, [lr], #4
-; CHECK-NEXT:    add sp, sp, #20
-; CHECK-NEXT:    pop {r4, lr}
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    stm sp!, {r0, r1, r2, r3}
 ; CHECK-NEXT:    b large_callee
 entry:
   musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %a)
@@ -176,34 +151,10 @@ define void @large_caller_check_regs(%twenty_bytes* byval(%twenty_bytes) align 4
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    .pad #20
-; CHECK-NEXT:    sub sp, sp, #20
-; CHECK-NEXT:    add r12, sp, #28
-; CHECK-NEXT:    add lr, sp, #44
-; CHECK-NEXT:    stm r12, {r0, r1, r2, r3}
+; CHECK-NEXT:    stm sp, {r0, r1, r2, r3}
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    add r0, sp, #28
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    add r12, r1, #16
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldm sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    ldr r4, [r12], #4
-; CHECK-NEXT:    str r4, [lr], #4
-; CHECK-NEXT:    add sp, sp, #20
-; CHECK-NEXT:    pop {r4, lr}
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    pop {r0, r1, r2, r3}
 ; CHECK-NEXT:    b large_callee
 entry:
   tail call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3}"()
@@ -218,44 +169,30 @@ entry:
 define void @large_caller_new_value(%twenty_bytes* byval(%twenty_bytes) align 4 %a) {
 ; CHECK-LABEL: large_caller_new_value:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    .pad #40
-; CHECK-NEXT:    sub sp, sp, #40
-; CHECK-NEXT:    add r12, sp, #48
-; CHECK-NEXT:    add lr, sp, #64
+; CHECK-NEXT:    .pad #36
+; CHECK-NEXT:    sub sp, sp, #36
+; CHECK-NEXT:    add r12, sp, #20
 ; CHECK-NEXT:    stm r12, {r0, r1, r2, r3}
 ; CHECK-NEXT:    mov r0, #4
-; CHECK-NEXT:    mov r1, sp
-; CHECK-NEXT:    str r0, [sp, #36]
+; CHECK-NEXT:    add r1, sp, #36
+; CHECK-NEXT:    str r0, [sp, #16]
 ; CHECK-NEXT:    mov r0, #3
-; CHECK-NEXT:    str r0, [sp, #32]
+; CHECK-NEXT:    str r0, [sp, #12]
 ; CHECK-NEXT:    mov r0, #2
-; CHECK-NEXT:    str r0, [sp, #28]
+; CHECK-NEXT:    str r0, [sp, #8]
 ; CHECK-NEXT:    mov r0, #1
-; CHECK-NEXT:    str r0, [sp, #24]
+; CHECK-NEXT:    str r0, [sp, #4]
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    str r0, [sp, #20]
-; CHECK-NEXT:    add r0, sp, #20
-; CHECK-NEXT:    add r12, r1, #16
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    add r0, r0, #16
+; CHECK-NEXT:    mov r3, #3
 ; CHECK-NEXT:    ldr r2, [r0], #4
 ; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldr r2, [r0], #4
-; CHECK-NEXT:    str r2, [r1], #4
-; CHECK-NEXT:    ldm sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    ldr r4, [r12], #4
-; CHECK-NEXT:    str r4, [lr], #4
-; CHECK-NEXT:    add sp, sp, #40
-; CHECK-NEXT:    pop {r4, lr}
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    mov r1, #1
+; CHECK-NEXT:    mov r2, #2
+; CHECK-NEXT:    add sp, sp, #36
 ; CHECK-NEXT:    b large_callee
 entry:
   %y = alloca %twenty_bytes, align 4
@@ -333,5 +270,73 @@ define void @swap_byvals(%twenty_bytes* byval(%twenty_bytes) align 4 %a, %twenty
 ; CHECK-NEXT:    b two_byvals_callee
 entry:
   musttail call void @two_byvals_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %b, %twenty_bytes* byval(%twenty_bytes) align 4 %a)
+  ret void
+}
+
+; A forwarded byval arg, but at a different offset on the stack, so it needs to
+; be copied to the local stack frame first. This can't be musttail because of
+; the different signatures, but is still tail-called as an optimisation.
+declare void @shift_byval_callee(%twenty_bytes* byval(%twenty_bytes) align 4)
+define void @shift_byval(i32 %a, %twenty_bytes* byval(%twenty_bytes) align 4 %b) {
+; CHECK-LABEL: shift_byval:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .pad #12
+; CHECK-NEXT:    sub sp, sp, #12
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .pad #20
+; CHECK-NEXT:    sub sp, sp, #20
+; CHECK-NEXT:    add r0, sp, #28
+; CHECK-NEXT:    add lr, sp, #40
+; CHECK-NEXT:    stm r0, {r1, r2, r3}
+; CHECK-NEXT:    add r0, sp, #28
+; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    add r12, r1, #16
+; CHECK-NEXT:    str r2, [r1], #4
+; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    str r2, [r1], #4
+; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    str r2, [r1], #4
+; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    str r2, [r1], #4
+; CHECK-NEXT:    ldr r2, [r0], #4
+; CHECK-NEXT:    str r2, [r1], #4
+; CHECK-NEXT:    ldm sp, {r0, r1, r2, r3}
+; CHECK-NEXT:    ldr r4, [r12], #4
+; CHECK-NEXT:    str r4, [lr], #4
+; CHECK-NEXT:    add sp, sp, #20
+; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    add sp, sp, #12
+; CHECK-NEXT:    b shift_byval_callee
+entry:
+  tail call void @shift_byval_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %b)
+  ret void
+}
+
+; A global object passed to a byval argument, so it must be copied, but doesn't
+; need a stack temporary.
+@large_global = external global %twenty_bytes
+define void @large_caller_from_global(%twenty_bytes* byval(%twenty_bytes) align 4 %a) {
+; CHECK-LABEL: large_caller_from_global:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    add r12, sp, #8
+; CHECK-NEXT:    add lr, sp, #24
+; CHECK-NEXT:    stm r12, {r0, r1, r2, r3}
+; CHECK-NEXT:    movw r3, :lower16:large_global
+; CHECK-NEXT:    movt r3, :upper16:large_global
+; CHECK-NEXT:    add r12, r3, #16
+; CHECK-NEXT:    ldm r3, {r0, r1, r2, r3}
+; CHECK-NEXT:    ldr r4, [r12], #4
+; CHECK-NEXT:    str r4, [lr], #4
+; CHECK-NEXT:    pop {r4, lr}
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    b large_callee
+entry:
+  musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 @large_global)
   ret void
 }
