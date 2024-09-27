@@ -138,6 +138,14 @@ int main(int, char**) {
     assert(m.at(Transparent<int>{8}) == 8.5);
     assert(m.size() == 7);
   }
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    m.at(Transparent<int>{3});
+    assert(transparent_used);
+  }
 
   return 0;
 }

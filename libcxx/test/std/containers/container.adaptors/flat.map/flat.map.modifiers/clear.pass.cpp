@@ -20,8 +20,20 @@
 #include <functional>
 #include <vector>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
+
+// test noexcept
+
+template <class T>
+concept NoExceptClear = requires(T t) {
+  { t.clear() } noexcept;
+};
+
+static_assert(NoExceptClear<std::flat_map<int, int>>);
+static_assert(
+    NoExceptClear<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
 
 int main(int, char**) {
   {

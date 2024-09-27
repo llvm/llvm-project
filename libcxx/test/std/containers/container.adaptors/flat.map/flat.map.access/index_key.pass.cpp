@@ -91,5 +91,14 @@ int main(int, char**) {
     assert(m.size() == 8);
   }
 
+  {
+    auto index_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap                             = std::decay_t<decltype(m)>;
+      const typename FlatMap::key_type key      = key_arg;
+      const typename FlatMap::mapped_type value = value_arg;
+      m[key]                                    = value;
+    };
+    test_emplace_exception_guarantee(index_func);
+  }
   return 0;
 }

@@ -73,6 +73,15 @@ int main(int, char**) {
     test_not_found(cm, "aaa", 0);
     test_not_found(cm, "zzz", 5);
   }
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    auto p = m.equal_range(Transparent<int>{3});
+    assert(p.first != p.second);
+    assert(transparent_used);
+  }
 #if 0
 // do we really want to support this weird comparator that gives different answer for Key and Kp?
   {

@@ -21,6 +21,7 @@
 #include <__algorithm/ranges_upper_bound.h>
 #include <__compare/synth_three_way.h>
 #include <__concepts/convertible_to.h>
+#include <__concepts/swappable.h>
 #include <__config>
 #include <__flat_map/container_traits.h>
 #include <__flat_map/sorted_unique.h>
@@ -539,8 +540,8 @@ public:
   }
 
   template <class _Kp>
-    requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type> &&
-             is_convertible_v<_Kp&&, const_iterator> && is_convertible_v<_Kp&&, iterator>
+    requires(__is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type> &&
+             !is_convertible_v<_Kp &&, const_iterator> && !is_convertible_v<_Kp &&, iterator>)
   _LIBCPP_HIDE_FROM_ABI mapped_type& operator[](_Kp&& __x) {
     return try_emplace(std::forward<_Kp>(__x)).first->second;
   }
@@ -597,7 +598,7 @@ public:
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
-    return __try_emplace_hint(__hint, std::move(__pair.first), std::move(__pair.second));
+    return __try_emplace_hint(__hint, std::move(__pair.first), std::move(__pair.second)).first;
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return emplace(__x); }
@@ -689,9 +690,9 @@ public:
   }
 
   template <class _Kp, class... _Args>
-    requires __is_compare_transparent && is_constructible_v<key_type, _Kp> &&
-             is_constructible_v<mapped_type, _Args...> && is_convertible_v<_Kp&&, const_iterator> &&
-             is_convertible_v<_Kp&&, iterator>
+    requires(__is_compare_transparent && is_constructible_v<key_type, _Kp> &&
+             is_constructible_v<mapped_type, _Args...> && !is_convertible_v<_Kp &&, const_iterator> &&
+             !is_convertible_v<_Kp &&, iterator>)
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> try_emplace(_Kp&& __key, _Args&&... __args) {
     return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
   }
@@ -699,57 +700,57 @@ public:
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, const key_type& __key, _Args&&... __args) {
-    return __try_emplace_hint(__hint, __key, std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, __key, std::forward<_Args>(__args)...).first;
   }
 
   template <class... _Args>
     requires is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, key_type&& __key, _Args&&... __args) {
-    return __try_emplace_hint(__hint, std::move(__key), std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, std::move(__key), std::forward<_Args>(__args)...).first;
   }
 
   template <class _Kp, class... _Args>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_constructible_v<mapped_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator try_emplace(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
-    return __try_emplace_hint(__hint, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
+    return __try_emplace_hint(__hint, std::forward<_Kp>(__key), std::forward<_Args>(__args)...).first;
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(const key_type& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(__key, std::forward<_Mapped>(__obj));
+    return __insert_or_assign(__key, std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(key_type&& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(std::move(__key), std::forward<_Mapped>(__obj));
+    return __insert_or_assign(std::move(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Kp, class _Mapped>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_assignable_v<mapped_type&, _Mapped> &&
              is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert_or_assign(_Kp&& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(std::forward<_Kp>(__key), std::forward<_Mapped>(__obj));
+    return __insert_or_assign(std::forward<_Kp>(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, const key_type& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(__key, std::forward<_Mapped>(__obj), __hint).first;
+    return __insert_or_assign(__hint, __key, std::forward<_Mapped>(__obj));
   }
 
   template <class _Mapped>
     requires is_assignable_v<mapped_type&, _Mapped> && is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, key_type&& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(std::move(__key), std::forward<_Mapped>(__obj), __hint).first;
+    return __insert_or_assign(__hint, std::move(__key), std::forward<_Mapped>(__obj));
   }
 
   template <class _Kp, class _Mapped>
     requires __is_compare_transparent && is_constructible_v<key_type, _Kp> && is_assignable_v<mapped_type&, _Mapped> &&
              is_constructible_v<mapped_type, _Mapped>
   _LIBCPP_HIDE_FROM_ABI iterator insert_or_assign(const_iterator __hint, _Kp&& __key, _Mapped&& __obj) {
-    return __insert_or_assign_impl(std::forward<_Kp>(__key), std::forward<_Mapped>(__obj), __hint).first;
+    return __insert_or_assign(__hint, std::forward<_Kp>(__key), std::forward<_Mapped>(__obj));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
@@ -788,15 +789,20 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __y) noexcept {
-    auto __guard = std::__make_exception_guard([&]() noexcept {
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    try {
+#  endif
+      ranges::swap(__compare_, __y.__compare_);
+      ranges::swap(__containers_.keys, __y.__containers_.keys);
+      ranges::swap(__containers_.values, __y.__containers_.values);
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+    } catch (...) {
+      // todo: how can we tell the user that the swap is unsuccessful?
+      // need to swallow the exception because the function is noexcept
       clear() /* noexcept */;
       __y.clear() /*noexcept*/;
-    });
-    using std::swap;
-    swap(__compare_, __y.__compare_);
-    swap(__containers_.keys, __y.__containers_.keys);
-    swap(__containers_.values, __y.__containers_.values);
-    __guard.__complete();
+    }
+#  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept {
@@ -807,6 +813,8 @@ public:
   // observers
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __compare_; }
   _LIBCPP_HIDE_FROM_ABI value_compare value_comp() const { return value_compare(__compare_); }
+
+  // todo: can flat_map | std::views::keys be specialised?
   _LIBCPP_HIDE_FROM_ABI const key_container_type& keys() const noexcept { return __containers_.keys; }
   _LIBCPP_HIDE_FROM_ABI const mapped_container_type& values() const noexcept { return __containers_.values; }
 
@@ -912,10 +920,10 @@ public:
 
 private:
   struct __ctor_uses_allocator_tag {
-    explicit __ctor_uses_allocator_tag() = default;
+    explicit _LIBCPP_HIDE_FROM_ABI __ctor_uses_allocator_tag() = default;
   };
   struct __ctor_uses_allocator_empty_tag {
-    explicit __ctor_uses_allocator_empty_tag() = default;
+    explicit _LIBCPP_HIDE_FROM_ABI __ctor_uses_allocator_empty_tag() = default;
   };
 
   template <class _Allocator, class _KeyCont, class _MappedCont, class... _CompArg>
@@ -1085,18 +1093,20 @@ private:
   }
 
   template <class _Kp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator __try_emplace_hint(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace_hint(const_iterator __hint, _Kp&& __key, _Args&&... __args) {
     if (__is_hint_correct(__hint, __key)) {
       if (__hint == cend() || __compare_(__key, __hint->first)) {
-        return __try_emplace_exact_hint(
-            __hint.__key_iter_, __hint.__mapped_iter_, std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
+        return {
+            __try_emplace_exact_hint(
+                __hint.__key_iter_, __hint.__mapped_iter_, std::forward<_Kp>(__key), std::forward<_Args>(__args)...),
+            true};
       } else {
         // key equals
         auto __dist = __hint - cbegin();
-        return iterator(__containers_.keys.begin() + __dist, __containers_.values.begin() + __dist);
+        return {iterator(__containers_.keys.begin() + __dist, __containers_.values.begin() + __dist), false};
       }
     } else {
-      return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...).first;
+      return __try_emplace(std::forward<_Kp>(__key), std::forward<_Args>(__args)...);
     }
   }
 
@@ -1139,13 +1149,22 @@ private:
     return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
-  template <class _Kp, class _Mapped, class... _Hint>
-  _LIBCPP_HIDE_FROM_ABI auto __insert_or_assign_impl(_Kp&& __key, _Mapped&& __mapped, _Hint&&... __hint) {
-    auto __r = try_emplace(__hint..., std::forward<_Kp>(__key), std::forward<_Mapped>(__mapped));
+  template <class _Kp, class _Mapped>
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_or_assign(_Kp&& __key, _Mapped&& __mapped) {
+    auto __r = try_emplace(std::forward<_Kp>(__key), std::forward<_Mapped>(__mapped));
     if (!__r.second) {
       __r.first->second = std::forward<_Mapped>(__mapped);
     }
     return __r;
+  }
+
+  template <class _Kp, class _Mapped>
+  _LIBCPP_HIDE_FROM_ABI iterator __insert_or_assign(const_iterator __hint, _Kp&& __key, _Mapped&& __mapped) {
+    auto __r = __try_emplace_hint(__hint, std::forward<_Kp>(__key), std::forward<_Mapped>(__mapped));
+    if (!__r.second) {
+      __r.first->second = std::forward<_Mapped>(__mapped);
+    }
+    return __r.first;
   }
 
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
@@ -1175,8 +1194,8 @@ private:
   [[no_unique_address]] key_compare __compare_;
 
   struct __key_equiv {
-    __key_equiv(key_compare __c) : __comp_(__c) {}
-    bool operator()(const_reference __x, const_reference __y) const {
+    _LIBCPP_HIDE_FROM_ABI __key_equiv(key_compare __c) : __comp_(__c) {}
+    _LIBCPP_HIDE_FROM_ABI bool operator()(const_reference __x, const_reference __y) const {
       // todo
       // LWG issue ? spec uses __x.first but zip_view no longer uses pair
       return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));

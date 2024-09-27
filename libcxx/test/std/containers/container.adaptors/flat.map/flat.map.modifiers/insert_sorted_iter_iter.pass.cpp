@@ -18,6 +18,7 @@
 #include <functional>
 #include <deque>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
@@ -85,6 +86,12 @@ int main(int, char**) {
     assert(m.size() == 5);
     M expected2{{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
     assert(m == expected2);
+  }
+  {
+    auto insert_func = [](auto& m, const auto& newValues) {
+      m.insert(std::sorted_unique, newValues.begin(), newValues.end());
+    };
+    test_insert_range_exception_guarantee(insert_func);
   }
 
   return 0;

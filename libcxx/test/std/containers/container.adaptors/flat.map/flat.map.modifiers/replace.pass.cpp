@@ -1,0 +1,68 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
+// <flat_map>
+
+// void replace(key_container_type&& key_cont, mapped_container_type&& mapped_cont);
+
+#include <algorithm>
+#include <concepts>
+#include <flat_map>
+#include <functional>
+
+#include "../helpers.h"
+#include "test_macros.h"
+
+template <class T, class... Args>
+concept CanReplace = requires(T t, Args&&... args) { t.replace(std::forward<Args>(args)...); };
+
+using Map = std::flat_map<int, int>;
+static_assert(CanReplace<Map, std::vector<int>, std::vector<int>>);
+static_assert(!CanReplace<Map, const std::vector<int>&, std::vector<int>>);
+static_assert(!CanReplace<Map, std::vector<int>, const std::vector<int>&>);
+static_assert(!CanReplace<Map, const std::vector<int>&, const std::vector<int>&>);
+
+int main(int, char**) {
+  {
+    using M                     = std::flat_map<int, int>;
+    M m                         = M({1, 2, 3}, {4, 5, 6});
+    std::vector<int> new_keys   = {7, 8};
+    std::vector<int> new_values = {9, 10};
+    auto expected_keys          = new_keys;
+    auto expected_values        = new_values;
+    m.replace(std::move(new_keys), std::move(new_values));
+    assert(m.size() == 2);
+    assert(std::ranges::equal(m.keys(), expected_keys));
+    assert(std::ranges::equal(m.values(), expected_values));
+  }
+  {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    using KeyContainer   = std::vector<int>;
+    using ValueContainer = ThrowOnMoveContainer<int>;
+    using M              = std::flat_map<int, int, std::ranges::less, KeyContainer, ValueContainer>;
+
+    M m;
+    m.emplace(1, 1);
+    m.emplace(2, 2);
+    try {
+      KeyContainer new_keys{3, 4};
+      ValueContainer new_values{5, 6};
+      m.replace(std::move(new_keys), std::move(new_values));
+      assert(false);
+    } catch (int) {
+      assert(m.keys().size() == m.values().size());
+      assert(is_sorted_and_unique(m.keys()));
+      // In libc++, we clear the map
+      LIBCPP_ASSERT(m.size() == 0);
+    }
+#endif
+  }
+  return 0;
+}

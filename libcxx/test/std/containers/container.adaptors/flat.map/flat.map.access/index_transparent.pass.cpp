@@ -109,6 +109,22 @@ int main(int, char**) {
     assert(m[six] == 6.5);
     assert(m.size() == 8);
   }
-
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    m[ConvertibleTransparent<int>{3}];
+    assert(transparent_used);
+  }
+  {
+    auto index_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap                             = std::decay_t<decltype(m)>;
+      using Key                                 = typename FlatMap::key_type;
+      const typename FlatMap::mapped_type value = value_arg;
+      m[ConvertibleTransparent<Key>{key_arg}]   = value;
+    };
+    test_emplace_exception_guarantee(index_func);
+  }
   return 0;
 }
