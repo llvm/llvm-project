@@ -8,6 +8,7 @@
 
 #include "Descriptor.h"
 #include "Boolean.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
