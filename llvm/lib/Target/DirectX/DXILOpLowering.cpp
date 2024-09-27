@@ -268,20 +268,15 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
     for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
+      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
+        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
 
-        assert(EVI->getNumIndices() == 1 &&
-               "splitdouble result should be indexed individually.");
-        if (EVI->getNumIndices() != 1)
-          return make_error<StringError>(
-              "splitdouble result should be indexed individually.",
-              inconvertibleErrorCode());
+          size_t IndexVal = IndexOp->getZExtValue();
 
-        unsigned int IndexVal = EVI->getIndices()[0];
-
-        auto *OpEVI = IRB.CreateExtractValue(Op, IndexVal);
-        EVI->replaceAllUsesWith(OpEVI);
-        EVI->eraseFromParent();
+          auto *OpEVI = IRB.CreateExtractValue(Op, IndexVal);
+          EEI->replaceAllUsesWith(OpEVI);
+          EEI->eraseFromParent();
+        }
       }
     }
     Intrin->eraseFromParent();
