@@ -61,24 +61,15 @@ public:
   memoryLocationGetOrNone(const Instruction *I) {
     return llvm::MemoryLocation::getOrNone(cast<llvm::Instruction>(I->Val));
   }
-  /// \Returns true if \p I1 accesses a memory location lower than \p I2.
-  template <typename LoadOrStoreT>
-  static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
-                             ScalarEvolution &SE, const DataLayout &DL) {
-    auto Diff = getPointerDiffInBytes(I0, I1, SE, DL);
-    if (!Diff)
-      return false;
-    return *Diff > 0;
-  }
 
-  /// \Returns the number gap between the memory locations accessed by \p I0 and
+  /// \Returns the gap between the memory locations accessed by \p I0 and
   /// \p I1 in bytes.
   template <typename LoadOrStoreT>
   static std::optional<int>
   getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
                         const DataLayout &DL) {
-    static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
-                      std::is_same<LoadOrStoreT, StoreInst>::value,
+    static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
+                      std::is_same_v<LoadOrStoreT, StoreInst>,
                   "Expected sandboxir::Load or sandboxir::Store!");
     llvm::Value *Opnd0 = I0->getPointerOperand()->Val;
     llvm::Value *Opnd1 = I1->getPointerOperand()->Val;
