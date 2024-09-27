@@ -2961,12 +2961,21 @@ unsigned findFreePredicateReg(BitVector &SavedRegs) {
 }
 
 // The multivector LD/ST are available only for SME or SVE2p1 targets
-bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget) {
+bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
+                                MachineFunction &MF) {
   if (DisableMultiVectorSpillFill)
     return false;
 
+  SMEAttrs FuncAttrs(MF.getFunction());
+  bool IsLocallyStreaming =
+      FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
+
+  // Only when in streaming mode SME2 instructions can be safely used.
+  // It is not safe to use SME2 instructions when in streaming compatible or
+  // locally streaming mode.
   return Subtarget.hasSVE2p1() ||
-         (Subtarget.hasSME2() && Subtarget.isStreaming());
+         (Subtarget.hasSME2() &&
+          (!IsLocallyStreaming && Subtarget.isStreaming()));
 }
 
 static void computeCalleeSaveRegisterPairs(
@@ -3340,7 +3349,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget)) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       auto IsPPR = [](const RegPairInfo &c) {
@@ -3518,7 +3527,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget)) &&
+      assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
       assert(!(PPRBegin < ZPRBegin) &&
@@ -3732,7 +3741,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                     SavedRegs.test(CSRegs[i ^ 1]));
   }
 
-  if (HasPairZReg && enableMultiVectorSpillFill(Subtarget)) {
+  if (HasPairZReg && enableMultiVectorSpillFill(Subtarget, MF)) {
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // Find a suitable predicate register for the multi-vector spill/fill
     // instructions.
