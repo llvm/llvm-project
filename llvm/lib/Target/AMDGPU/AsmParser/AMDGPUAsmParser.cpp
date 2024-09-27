@@ -1838,10 +1838,8 @@ public:
   ParseStatus parseSOPPBrTarget(OperandVector &Operands);
   ParseStatus parseBoolReg(OperandVector &Operands);
 
-  bool parseSwizzleOperand(int64_t &Op,
-                           const unsigned MinVal,
-                           const unsigned MaxVal,
-                           const StringRef ErrMsg,
+  bool parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
+                           const unsigned MaxVal, const Twine &ErrMsg,
                            SMLoc &Loc);
   bool parseSwizzleOperands(const unsigned OpNum, int64_t* Op,
                             const unsigned MinVal,
@@ -1855,6 +1853,8 @@ public:
   bool parseSwizzleBroadcast(int64_t &Imm);
   bool parseSwizzleSwap(int64_t &Imm);
   bool parseSwizzleReverse(int64_t &Imm);
+  bool parseSwizzleFFT(int64_t &Imm);
+  bool parseSwizzleRotate(int64_t &Imm);
 
   ParseStatus parseGPRIdxMode(OperandVector &Operands);
   int64_t parseGPRIdxMacro();
@@ -7996,12 +7996,9 @@ encodeBitmaskPerm(const unsigned AndMask,
          (XorMask << BITMASK_XOR_SHIFT);
 }
 
-bool
-AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op,
-                                     const unsigned MinVal,
-                                     const unsigned MaxVal,
-                                     const StringRef ErrMsg,
-                                     SMLoc &Loc) {
+bool AMDGPUAsmParser::parseSwizzleOperand(int64_t &Op, const unsigned MinVal,
+                                          const unsigned MaxVal,
+                                          const Twine &ErrMsg, SMLoc &Loc) {
   if (!skipToken(AsmToken::Comma, "expected a comma")) {
     return false;
   }
@@ -8166,6 +8163,54 @@ AMDGPUAsmParser::parseSwizzleBitmaskPerm(int64_t &Imm) {
   return true;
 }
 
+bool AMDGPUAsmParser::parseSwizzleFFT(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  if (!AMDGPU::isGFX9Plus(getSTI())) {
+    Error(getLoc(), "FFT mode swizzle not supported on this GPU");
+    return false;
+  }
+
+  int64_t Swizzle;
+  SMLoc Loc;
+  if (!parseSwizzleOperand(Swizzle, 0, FFT_SWIZZLE_MAX,
+                           "FFT swizzle must be in the interval [0," +
+                               Twine(FFT_SWIZZLE_MAX) + Twine(']'),
+                           Loc))
+    return false;
+
+  Imm = FFT_MODE_ENC | Swizzle;
+  return true;
+}
+
+bool AMDGPUAsmParser::parseSwizzleRotate(int64_t &Imm) {
+  using namespace llvm::AMDGPU::Swizzle;
+
+  if (!AMDGPU::isGFX9Plus(getSTI())) {
+    Error(getLoc(), "Rotate mode swizzle not supported on this GPU");
+    return false;
+  }
+
+  SMLoc Loc;
+  int64_t Direction;
+
+  if (!parseSwizzleOperand(Direction, 0, 1,
+                           "direction must be 0 (left) or 1 (right)", Loc))
+    return false;
+
+  int64_t RotateSize;
+  if (!parseSwizzleOperand(
+          RotateSize, 0, ROTATE_MAX_SIZE,
+          "number of threads to rotate must be in the interval [0," +
+              Twine(ROTATE_MAX_SIZE) + Twine(']'),
+          Loc))
+    return false;
+
+  Imm = ROTATE_MODE_ENC | (Direction << ROTATE_DIR_SHIFT) |
+        (RotateSize << ROTATE_SIZE_SHIFT);
+  return true;
+}
+
 bool
 AMDGPUAsmParser::parseSwizzleOffset(int64_t &Imm) {
 
@@ -8200,6 +8245,10 @@ AMDGPUAsmParser::parseSwizzleMacro(int64_t &Imm) {
       Ok = parseSwizzleSwap(Imm);
     } else if (trySkipId(IdSymbolic[ID_REVERSE])) {
       Ok = parseSwizzleReverse(Imm);
+    } else if (trySkipId(IdSymbolic[ID_FFT])) {
+      Ok = parseSwizzleFFT(Imm);
+    } else if (trySkipId(IdSymbolic[ID_ROTATE])) {
+      Ok = parseSwizzleRotate(Imm);
     } else {
       Error(ModeLoc, "expected a swizzle mode");
     }
