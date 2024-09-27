@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Context.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 
 namespace llvm::sandboxir {
 
@@ -669,6 +670,8 @@ Value *Context::getValue(llvm::Value *V) const {
 Context::Context(LLVMContext &LLVMCtx)
     : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
+
+Context::~Context() {}
 
 Module *Context::getModule(llvm::Module *LLVMM) const {
   auto It = LLVMModuleToModuleMap.find(LLVMM);
