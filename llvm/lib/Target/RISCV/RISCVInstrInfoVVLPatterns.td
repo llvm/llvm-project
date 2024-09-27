@@ -2952,7 +2952,7 @@ foreach vti = NoGroupFloatVectors in {
   }
 }
 
-foreach vti = AllFloatVectors in {
+foreach vti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
   defvar ivti = GetIntVTypeInfo<vti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(vti.Vector

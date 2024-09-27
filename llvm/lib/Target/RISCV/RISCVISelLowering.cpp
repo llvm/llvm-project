@@ -1077,8 +1077,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VP_UINT_TO_FP},
                          VT, Custom);
       setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_DEINTERLEAVE},
+                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_DEINTERLEAVE,
+                          ISD::VECTOR_INTERLEAVE, ISD::VECTOR_REVERSE},
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
