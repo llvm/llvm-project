@@ -3191,6 +3191,16 @@ def int_amdgcn_exclusive_scan_max_u32 :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
   ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u32">;
 
+// i32 @llvm.amdgcn.pdep.b32 <src0> <src1>
+def int_amdgcn_pdep_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_pdep_b32">;
+
+// i32 @llvm.amdgcn.pext.b32 <src0> <src1>
+def int_amdgcn_pext_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_pext_b32">;
+
 // void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
 // The %sem argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_sema_set_limit :
