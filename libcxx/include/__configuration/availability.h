@@ -138,9 +138,19 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_19_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 18
-// TODO: Fill this in
-#  define _LIBCPP_INTRODUCED_IN_LLVM_18 0
-#  define _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE __attribute__((unavailable))
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 150000) ||       \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 180000) ||     \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 180000) ||             \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 110000)
+#    define _LIBCPP_INTRODUCED_IN_LLVM_18 0
+#  else
+#    define _LIBCPP_INTRODUCED_IN_LLVM_18 1
+#  endif
+#  define _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE                                                                 \
+    __attribute__((availability(macos, strict, introduced = 15.0)))                                               \
+    __attribute__((availability(ios, strict, introduced = 18.0)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 18.0)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 11.0)))
 
 // LLVM 17
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 140400) ||       \
