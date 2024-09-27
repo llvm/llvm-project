@@ -137,7 +137,7 @@ public:
 
       bool TraverseDecl(Decl *D) {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
-        if (D && isa<FunctionDecl>(D))
+        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return Base::TraverseDecl(D);
       }
