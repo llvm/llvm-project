@@ -819,6 +819,8 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
             : PPMacrosFlag::Exclude;
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
+  opts.preprocessIncludeLines =
+      args.hasArg(clang::driver::options::OPT_fpreprocess_include_lines);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
   opts.showMacros = args.hasArg(clang::driver::options::OPT_dM);
 }
@@ -1478,6 +1480,10 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
+
+  // -E
+  fortranOptions.prescanAndReformat =
+      frontendOptions.programAction == PrintPreprocessedInput;
 
   fortranOptions.features = frontendOptions.features;
   fortranOptions.encoding = frontendOptions.encoding;
