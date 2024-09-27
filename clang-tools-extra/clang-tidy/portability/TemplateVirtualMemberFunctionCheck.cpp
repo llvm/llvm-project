@@ -12,36 +12,34 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::portability {
+namespace {
+AST_MATCHER(CXXMethodDecl, isUsed) { return Node.isUsed(); }
+} // namespace
 
 void TemplateVirtualMemberFunctionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(classTemplateSpecializationDecl(
-                         unless(isExplicitTemplateSpecialization()))
-                         .bind("specialization"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(
+          allOf(ofClass(classTemplateSpecializationDecl(
+                            unless(isExplicitTemplateSpecialization()))
+                            .bind("specialization")),
+                isVirtual(), unless(isUsed()),
+                unless(cxxDestructorDecl(isDefaulted()))))
+          .bind("method"),
+      this);
 }
 
 void TemplateVirtualMemberFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *MatchedDecl =
+  const auto *ImplicitSpecialization =
       Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>("specialization");
+  const auto *MethodDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("method");
 
-  for (const CXXMethodDecl *Method : MatchedDecl->methods()) {
-    if (!Method->isVirtual())
-      continue;
-
-    if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(Method);
-        Dtor && Dtor->isDefaulted())
-      continue;
-
-    if (!Method->isUsed()) {
-      diag(Method->getLocation(),
-           "unspecified virtual member function instantiation; the virtual "
-           "member function is not instantiated but it might be with a "
-           "different compiler");
-      diag(MatchedDecl->getPointOfInstantiation(), "template instantiated here",
-           DiagnosticIDs::Note);
-    }
-  }
+  diag(MethodDecl->getLocation(),
+       "unspecified virtual member function instantiation; the virtual "
+       "member function is not instantiated but it might be with a "
+       "different compiler");
+  diag(ImplicitSpecialization->getPointOfInstantiation(),
+       "template instantiated here", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::portability
