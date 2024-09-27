@@ -124,11 +124,8 @@ New checks
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
-  Upon instantiating a template class, non-virtual member functions don't have 
-  to be instantiated unless they are used. Virtual member function instantiation 
-  on the other hand is unspecified and depends on the implementation of the compiler.
-  This check intends to find cases when a virtual member function is not instantiated 
-  but it might be with a different compiler.
+  Finds cases when an uninstantiated virtual member function in a template class 
+  causes cross-compiler incompatibility.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
