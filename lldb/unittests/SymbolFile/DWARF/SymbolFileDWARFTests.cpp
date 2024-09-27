@@ -119,7 +119,7 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
   unsigned char binary_data[] = {
       0, 0, 0, 0, // unit_length that will be set correctly after this
       0, 2,       // DWARF version number (uint16_t)
-      0, 0, 0, 0, // CU offset (ignored for the purposes of this test)
+      0, 0, 0, 255, // CU offset (ignored for the purposes of this test)
       4,          // address size
       0,          // segment size
       0, 0, 0, 0, // alignment for the first tuple
@@ -134,20 +134,21 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
   // Set the big endian length correctly.
   const offset_t binary_data_size = sizeof(binary_data);
   binary_data[3] = (uint8_t)binary_data_size - 4;
-  llvm::DWARFDataExtractor data(llvm::ArrayRef(binary_data),
-                                /*isLittleEndian=*/false, /*AddrSize=*/4);
-  DWARFDebugArangeSet set;
-  offset_t off = 0;
-  llvm::Error error = set.extract(data, &off);
-  // Multiple terminators are not fatal as they do appear in binaries.
-  EXPECT_FALSE(bool(error));
+  DWARFDataExtractor data;
+  data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
+               lldb::ByteOrder::eByteOrderBig);
+  DWARFDebugAranges debug_aranges;
+  debug_aranges.extract(data);
   // Parser should read all terminators to the end of the length specified.
-  EXPECT_EQ(off, binary_data_size);
-  ASSERT_EQ(set.getDescriptorsSize(), 4U);
-  ASSERT_EQ(set.getDescriptiorRef(1).Address, (dw_addr_t)0x1000);
-  ASSERT_EQ(set.getDescriptiorRef(1).Length, (dw_addr_t)0x100);
-  ASSERT_EQ(set.getDescriptiorRef(3).Address, (dw_addr_t)0x2000);
-  ASSERT_EQ(set.getDescriptiorRef(3).Length, (dw_addr_t)0x10);
+  ASSERT_EQ(debug_aranges.GetNumRanges(), 2U);
+  EXPECT_EQ(debug_aranges.FindAddress(0x0fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2010), DW_INVALID_OFFSET);
 }
 
 TEST_F(SymbolFileDWARFTests, ParseArangesIgnoreEmpty) {
