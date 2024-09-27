@@ -337,7 +337,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
   // which implies math-errno.
   if (E->hasStoredFPFeatures()) {
-    llvm_unreachable("NYI");
+    FPOptionsOverride OP = E->getFPFeatures();
+    if (OP.hasMathErrnoOverride())
+      ErrnoOverriden = OP.getMathErrnoOverride();
   }
   // True if 'atttibute__((optnone)) is used. This attibute overrides
   // fast-math which implies math-errno.
