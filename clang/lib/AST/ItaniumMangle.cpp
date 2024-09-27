@@ -2276,7 +2276,7 @@ void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
       if (FD->getTemplatedDecl()->isMemberLikeConstrainedFriend() &&
           getASTContext().getLangOpts().getClangABICompat() >
               LangOptions::ClangABI::Ver17)
-      DC = GD.getDecl()->getLexicalDeclContext()->getRedeclContext();
+        DC = GD.getDecl()->getLexicalDeclContext()->getRedeclContext();
     }
     manglePrefix(DC, NoFunction);
     if (isa<BuiltinTemplateDecl>(ND) || isa<ConceptDecl>(ND))
