@@ -230,7 +230,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
                  visibility, value.type, symValue, 0, sec);
 
-  Symbol *sym = symtab.insert(cmd->name);
+  Symbol *sym = ctx.symtab->insert(cmd->name);
   sym->mergeProperties(newSym);
   newSym.overwrite(*sym);
   sym->isUsedInRegularObj = true;
@@ -249,7 +249,7 @@ static void declareSymbol(SymbolAssignment *cmd) {
 
   // If the symbol is already defined, its order is 0 (with absence indicating
   // 0); otherwise it's assigned the order of the SymbolAssignment.
-  Symbol *sym = symtab.insert(cmd->name);
+  Symbol *sym = ctx.symtab->insert(cmd->name);
   if (!sym->isDefined())
     ctx.scriptSymOrder.insert({sym, cmd->symOrder});
 
@@ -1682,7 +1682,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
     return 0;
   }
 
-  if (Symbol *sym = symtab.find(name)) {
+  if (Symbol *sym = ctx.symtab->find(name)) {
     if (auto *ds = dyn_cast<Defined>(sym)) {
       ExprValue v{ds->section, false, ds->value, loc};
       // Retain the original st_type, so that the alias will get the same
@@ -1781,8 +1781,8 @@ void LinkerScript::checkFinalScriptConditions() const {
 void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
-  auto reference = [](StringRef name) {
-    Symbol *sym = symtab.addUnusedUndefined(name);
+  auto reference = [&ctx = ctx](StringRef name) {
+    Symbol *sym = ctx.symtab->addUnusedUndefined(name);
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   };
@@ -1811,6 +1811,6 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
-  Symbol *sym = symtab.find(symName);
+  Symbol *sym = elf::ctx.symtab->find(symName);
   return sym && !sym->isDefined() && !sym->isCommon();
 }

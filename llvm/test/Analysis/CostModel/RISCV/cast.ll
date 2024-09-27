@@ -150,20 +150,20 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = sext <256 x i16> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = sext <256 x i16> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = sext <256 x i32> undef to <256 x i64>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = sext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = sext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = sext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -310,9 +310,9 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = sext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = sext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = sext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = sext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -320,9 +320,9 @@ define void @sext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -473,20 +473,20 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = sext <256 x i16> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = sext <256 x i16> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = sext <256 x i32> undef to <256 x i64>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i1_v256i8 = sext <256 x i1> undef to <256 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i1_v256i16 = sext <256 x i1> undef to <256 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i1_v256i32 = sext <256 x i1> undef to <256 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i1_v256i64 = sext <256 x i1> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.sext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.sext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.sext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.sext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = sext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = sext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = sext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -633,9 +633,9 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = sext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = sext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = sext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv128i1_nxv128i8 = sext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv128i1_nxv128i16 = sext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv128i1_nxv128i32 = sext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = sext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -643,9 +643,9 @@ define void @sext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.sext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.sext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.sext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.sext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1152,20 +1152,20 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = zext <256 x i16> undef to <256 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = zext <256 x i16> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = zext <256 x i32> undef to <256 x i64>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = zext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = zext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = zext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -1312,9 +1312,9 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = zext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = zext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = zext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = zext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -1322,9 +1322,9 @@ define void @zext() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1475,20 +1475,20 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v256i16_v256i32 = zext <256 x i16> undef to <256 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %v256i16_v256i64 = zext <256 x i16> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v256i32_v256i64 = zext <256 x i32> undef to <256 x i64>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i1_v256i8 = zext <256 x i1> undef to <256 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i1_v256i16 = zext <256 x i1> undef to <256 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i1_v256i32 = zext <256 x i1> undef to <256 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i1_v256i64 = zext <256 x i1> undef to <256 x i64>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_v256i8_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_v256i8_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 142 for instruction: %vp_v256i8_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_v256i16_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %vp_v256i16_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %vp_v256i32_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 270 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i1_v256i8 = call <256 x i8> @llvm.vp.zext.v256i8.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i1_v256i16 = call <256 x i16> @llvm.vp.zext.v256i16.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i1_v256i32 = call <256 x i32> @llvm.vp.zext.v256i32.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i1_v256i64 = call <256 x i64> @llvm.vp.zext.v256i64.v256i1(<256 x i1> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i16 = zext <vscale x 1 x i8> undef to <vscale x 1 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i32 = zext <vscale x 1 x i8> undef to <vscale x 1 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i8_nxv1i64 = zext <vscale x 1 x i8> undef to <vscale x 1 x i64>
@@ -1635,9 +1635,9 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %nxv128i16_nxv128i32 = zext <vscale x 128 x i16> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i16_nxv128i128 = zext <vscale x 128 x i16> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i32_nxv128i128 = zext <vscale x 128 x i32> undef to <vscale x 128 x i128>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %nxv128i1_nxv128i8 = zext <vscale x 128 x i1> undef to <vscale x 128 x i8>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %nxv128i1_nxv128i16 = zext <vscale x 128 x i1> undef to <vscale x 128 x i16>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %nxv128i1_nxv128i32 = zext <vscale x 128 x i1> undef to <vscale x 128 x i32>
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %nxv128i1_nxv128i128 = zext <vscale x 128 x i1> undef to <vscale x 128 x i128>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %vp_nxv128i8_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 70 for instruction: %vp_nxv128i8_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i8(<vscale x 128 x i8> undef, <vscale x 128 x i1> undef, i32 undef)
@@ -1645,9 +1645,9 @@ define void @zext() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %vp_nxv128i16_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i16_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i16(<vscale x 128 x i16> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i32_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i32(<vscale x 128 x i32> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_nxv128i1_nxv128i8 = call <vscale x 128 x i8> @llvm.vp.zext.nxv128i8.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_nxv128i1_nxv128i16 = call <vscale x 128 x i16> @llvm.vp.zext.nxv128i16.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_nxv128i1_nxv128i32 = call <vscale x 128 x i32> @llvm.vp.zext.nxv128i32.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Invalid cost for instruction: %vp_nxv128i1_nxv128i128 = call <vscale x 128 x i128> @llvm.vp.zext.nxv128i128.nxv128i1(<vscale x 128 x i1> undef, <vscale x 128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -2117,7 +2117,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i16_v64i8 = trunc <64 x i16> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v64i32_v64i8 = trunc <64 x i32> undef to <64 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v64i64_v64i8 = trunc <64 x i64> undef to <64 x i8>
@@ -2127,7 +2127,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i1 = trunc <64 x i8> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i16_v64i1 = trunc <64 x i16> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
@@ -2137,7 +2137,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v128i16_v128i8 = trunc <128 x i16> undef to <128 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v128i32_v128i8 = trunc <128 x i32> undef to <128 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v128i64_v128i8 = trunc <128 x i64> undef to <128 x i8>
@@ -2147,7 +2147,7 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i8_v128i1 = trunc <128 x i8> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i16_v128i1 = trunc <128 x i16> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
@@ -2157,27 +2157,27 @@ define void @trunc() {
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v256i16_v256i8 = trunc <256 x i16> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v256i32_v256i8 = trunc <256 x i32> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v256i64_v256i8 = trunc <256 x i64> undef to <256 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v256i32_v256i16 = trunc <256 x i32> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v256i64_v256i16 = trunc <256 x i64> undef to <256 x i16>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v256i64_v256i32 = trunc <256 x i64> undef to <256 x i32>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
-; RV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i32.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV32-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+; RV32-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i16_nxv1i8 = trunc <vscale x 1 x i16> undef to <vscale x 1 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv1i32_nxv1i8 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i8>
 ; RV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv1i64_nxv1i8 = trunc <vscale x 1 x i64> undef to <vscale x 1 x i8>
@@ -2430,7 +2430,7 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v32i8_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i8(<32 x i8> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v32i16_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i16(<32 x i16> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v32i32_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i32(<32 x i32> undef, <32 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v32i64_v32i1 = call <32 x i1> @llvm.vp.trunc.v32i1.v32i64(<32 x i64> undef, <32 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v64i16_v64i8 = trunc <64 x i16> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v64i32_v64i8 = trunc <64 x i32> undef to <64 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %v64i64_v64i8 = trunc <64 x i64> undef to <64 x i8>
@@ -2439,8 +2439,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v64i64_v64i32 = trunc <64 x i64> undef to <64 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8_v64i1 = trunc <64 x i8> undef to <64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i16_v64i1 = trunc <64 x i16> undef to <64 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v64i32_v64i1 = trunc <64 x i32> undef to <64 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v64i64_v64i1 = trunc <64 x i64> undef to <64 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %vp_v64i16_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %vp_v64i32_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %vp_v64i64_v64i8 = call <64 x i8> @llvm.vp.trunc.v64i8.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
@@ -2449,8 +2449,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v64i64_v64i32 = call <64 x i32> @llvm.vp.trunc.v64i32.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %vp_v64i8_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i8(<64 x i8> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v64i16_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i16(<64 x i16> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v64i32_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i32(<64 x i32> undef, <64 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v64i64_v64i1 = call <64 x i1> @llvm.vp.trunc.v64i1.v64i64(<64 x i64> undef, <64 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v128i16_v128i8 = trunc <128 x i16> undef to <128 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v128i32_v128i8 = trunc <128 x i32> undef to <128 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v128i64_v128i8 = trunc <128 x i64> undef to <128 x i8>
@@ -2459,8 +2459,8 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v128i64_v128i32 = trunc <128 x i64> undef to <128 x i32>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v128i8_v128i1 = trunc <128 x i8> undef to <128 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v128i16_v128i1 = trunc <128 x i16> undef to <128 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v128i32_v128i1 = trunc <128 x i32> undef to <128 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v128i64_v128i1 = trunc <128 x i64> undef to <128 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %vp_v128i16_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %vp_v128i32_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %vp_v128i64_v128i8 = call <128 x i8> @llvm.vp.trunc.v128i8.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
@@ -2469,28 +2469,28 @@ define void @trunc() {
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v128i64_v128i32 = call <128 x i32> @llvm.vp.trunc.v128i32.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %vp_v128i8_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i8(<128 x i8> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v128i16_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i16(<128 x i16> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v128i32_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i32(<128 x i32> undef, <128 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v128i64_v128i1 = call <128 x i1> @llvm.vp.trunc.v128i1.v128i64(<128 x i64> undef, <128 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v256i16_v256i8 = trunc <256 x i16> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v256i32_v256i8 = trunc <256 x i32> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v256i64_v256i8 = trunc <256 x i64> undef to <256 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v256i32_v256i16 = trunc <256 x i32> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v256i64_v256i16 = trunc <256 x i64> undef to <256 x i16>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v256i64_v256i32 = trunc <256 x i64> undef to <256 x i32>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %v256i8_v256i1 = trunc <256 x i8> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v256i16_v256i1 = trunc <256 x i16> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %v256i32_v256i1 = trunc <256 x i32> undef to <256 x i1>
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %v256i64_v256i1 = trunc <256 x i64> undef to <256 x i1>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %vp_v256i16_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %vp_v256i32_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %vp_v256i64_v256i8 = call <256 x i8> @llvm.vp.trunc.v256i8.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %vp_v256i32_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %vp_v256i64_v256i16 = call <256 x i16> @llvm.vp.trunc.v256i16.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %vp_v256i64_v256i32 = call <256 x i32> @llvm.vp.trunc.v256i32.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
-; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %vp_v256i8_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i8(<256 x i8> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %vp_v256i16_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i16(<256 x i16> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: %vp_v256i32_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i32(<256 x i32> undef, <256 x i1> undef, i32 undef)
+; RV64-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: %vp_v256i64_v256i1 = call <256 x i1> @llvm.vp.trunc.v256i1.v256i64(<256 x i64> undef, <256 x i1> undef, i32 undef)
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nxv1i16_nxv1i8 = trunc <vscale x 1 x i16> undef to <vscale x 1 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %nxv1i32_nxv1i8 = trunc <vscale x 1 x i32> undef to <vscale x 1 x i8>
 ; RV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %nxv1i64_nxv1i8 = trunc <vscale x 1 x i64> undef to <vscale x 1 x i8>
@@ -6957,5 +6957,31 @@ define void @oddvec_sizes() {
   fptoui <7 x float> undef to <7 x i32>
   fptoui <15 x float> undef to <15 x i32>
 
+  ret void
+}
+
+; This test exercises cases which involve both vector widening and
+; vector splitting.  We previously crashed on this case due to an
+; infinite recursion between cast costing and scalarization costing.
+define void @legalization_crash() {
+; CHECK-LABEL: 'legalization_crash'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 19772 for instruction: %1 = bitcast <24 x i8> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %2 = trunc <192 x i8> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %3 = zext <192 x i1> undef to <192 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %4 = sext <192 x i1> undef to <192 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 948 for instruction: %5 = sitofp <192 x i1> undef to <192 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 948 for instruction: %6 = uitofp <192 x i1> undef to <192 x float>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 19964 for instruction: %7 = fptosi <192 x float> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 19964 for instruction: %8 = fptoui <192 x float> undef to <192 x i1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  bitcast <24 x i8> undef to <192 x i1>
+  trunc <192 x i8> undef to <192 x i1>
+  zext <192 x i1> undef to <192 x i8>
+  sext <192 x i1> undef to <192 x i8>
+  sitofp <192 x i1> undef to <192 x float>
+  uitofp <192 x i1> undef to <192 x float>
+  fptosi <192 x float> undef to <192 x i1>
+  fptoui <192 x float> undef to <192 x i1>
   ret void
 }

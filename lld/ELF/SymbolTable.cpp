@@ -29,8 +29,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-SymbolTable elf::symtab;
-
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
   int &idx1 = symMap[CachedHashStringRef(sym->getName())];

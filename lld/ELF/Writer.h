@@ -16,7 +16,7 @@
 namespace lld::elf {
 class InputFile;
 class OutputSection;
-void copySectionsIntoPartitions();
+void copySectionsIntoPartitions(Ctx &ctx);
 template <class ELFT> void writeResult(Ctx &ctx);
 
 // This describes a program header entry.
@@ -44,7 +44,7 @@ struct PhdrEntry {
   uint64_t lmaOffset = 0;
 };
 
-void addReservedSymbols();
+void addReservedSymbols(Ctx &ctx);
 bool includeInSymtab(const Symbol &b);
 unsigned getSectionRank(OutputSection &osec);
 

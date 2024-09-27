@@ -150,3 +150,34 @@ sections:
       - UInt32: 4       # HybridImageInfoBitfield
 symbols:         []
 ...
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: not llvm-readobj --coff-load-config %t3 2>&1 | FileCheck --check-prefix=ERR-EOF %s
+# ERR-EOF: The end of the file was unexpectedly encountered
+
+--- !COFF
+OptionalHeader:
+  ImageBase:       0x180000000
+  SectionAlignment: 4096
+  FileAlignment:   512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x4000
+    Size:            320
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     0x2050
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x4000
+    VirtualSize:     512
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x1800041AC
+symbols:         []
+...

@@ -252,7 +252,6 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
                                        [], 1> {
   let isConvergent = 1;
-  let IsInvalidSingleUseConsumer = 1;
 }
 
 foreach vt = Reg32Types.types in {
@@ -375,7 +374,6 @@ defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
-  let IsInvalidSingleUseConsumer = 1;
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -419,12 +417,8 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let EmitDst = 1; // force vdst emission
 }
 
-let IsInvalidSingleUseProducer = 1 in {
-  def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
-  def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32> {
-    let IsInvalidSingleUseConsumer = 1;
-  }
-}
+def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
+def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // v_movreld_b32 is a special case because the destination output
@@ -541,7 +535,6 @@ let SubtargetPredicate = isGFX9Plus in {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let DisableEncoding = "$vdst1,$src1";
     let SchedRW = [Write64Bit, Write64Bit];
-    let IsInvalidSingleUseConsumer = 1;
   }
 
   let isReMaterializable = 1 in
@@ -708,8 +701,6 @@ let SubtargetPredicate = isGFX10Plus in {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
       let DisableEncoding = "$vdst1,$src1";
       let SchedRW = [Write64Bit, Write64Bit];
-      let IsInvalidSingleUseConsumer = 1;
-      let IsInvalidSingleUseProducer = 1;
     }
   } // End Uses = [M0]
 } // End SubtargetPredicate = isGFX10Plus
@@ -743,10 +734,7 @@ let SubtargetPredicate = isGFX11Plus in {
   }
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      [], /*VOP1Only=*/ 1> {
-    let IsInvalidSingleUseConsumer = 1;
-    let IsInvalidSingleUseProducer = 1;
-  }
+                                      [], /*VOP1Only=*/ 1>;
   defm V_MOV_B16        : VOP1Inst_t16<"v_mov_b16", VOP_I16_I16>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;

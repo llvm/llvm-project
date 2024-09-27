@@ -54,9 +54,9 @@ for.end:                                 ; preds = %for.body, %entry
 
 define void @vec_ptr(i64 %N, ptr noalias %a, ptr readnone %b) {
 ; CHECK-LABEL: @vec_ptr
-; CHECK: vector.body:
-; CHECK: %[[LOAD:.*]] = load <vscale x 2 x ptr>, ptr
-; CHECK: call <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr> %[[LOAD]])
+; CHECK: for.body:
+; CHECK: %[[LOAD:.*]] = load ptr, ptr
+; CHECK: call i64 @bar(ptr %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
