@@ -55,6 +55,12 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
                                           TTI::TargetCostKind CostKind);
+
+  /// Return the cost if a shufflevector can be consist of multiple vslideup.
+  /// Otherwise, return InstructionCost::getInvalid().
+  InstructionCost isMultipleInsertSubvector(VectorType *Tp, ArrayRef<int> Mask,
+                                            TTI::TargetCostKind CostKind);
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),

@@ -3,9 +3,9 @@
 
 define void @test() {
 ; CHECK-LABEL: 'test'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %0 = shufflevector <8 x float> poison, <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %0 = shufflevector <8 x float> poison, <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = shufflevector <4 x i16> poison, <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %2 = shufflevector <4 x float> poison, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = shufflevector <4 x float> poison, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = shufflevector <2 x i1> poison, <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
