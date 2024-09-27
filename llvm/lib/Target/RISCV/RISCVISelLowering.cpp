@@ -4540,7 +4540,7 @@ static SDValue lowerScalarInsert(SDValue Scalar, SDValue VL, MVT VT,
 // t33: v8i8 = extract_subvector t11, Constant:i64<8>
 // a) t35: v8i8 = vector_shuffle<0,2,4,6,8,10,12,14> t34, t33
 // b) t35: v8i8 = vector_shuffle<1,3,5,7,9,11,13,15> t34, t33
-// Returns {Src Vector, Even Elements} om success
+// Returns {Src Vector, Even Elements} on success
 static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
                                   SDValue V2, ArrayRef<int> Mask,
                                   const RISCVSubtarget &Subtarget) {
