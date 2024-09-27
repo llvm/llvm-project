@@ -1824,26 +1824,17 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedDSAccessEnabled();
   }
 
-  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    bool AlignedBy4 = Alignment >= Align(4);
-    if (IsFast)
-      *IsFast = AlignedBy4;
-
-    return AlignedBy4 ||
-           Subtarget->enableFlatScratch() ||
-           Subtarget->hasUnalignedScratchAccess();
-  }
-
   // FIXME: We have to be conservative here and assume that flat operations
   // will access scratch.  If we had access to the IR function, then we
   // could determine if any private memory was used in the function.
-  if (AddrSpace == AMDGPUAS::FLAT_ADDRESS &&
-      !Subtarget->hasUnalignedScratchAccess()) {
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
+      AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
     bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
-    return AlignedBy4;
+    return AlignedBy4 || Subtarget->enableFlatScratch() ||
+           Subtarget->hasUnalignedScratchAccessEnabled();
   }
 
   // So long as they are correct, wide global memory operations perform better
