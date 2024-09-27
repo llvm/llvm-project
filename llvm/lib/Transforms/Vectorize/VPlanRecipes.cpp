@@ -1039,8 +1039,8 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
   else
-    Mask = Builder.CreateVectorSplat(VTy->getElementCount(),
-                                     ConstantInt::getTrue(Builder.getInt1Ty()));
+    Mask =
+        Builder.CreateVectorSplat(VTy->getElementCount(), Builder.getInt1(1));
 
   // If this is a subtract, we want to invert the increment amount. We may
   // add a separate intrinsic in future, but for now we'll try this.
