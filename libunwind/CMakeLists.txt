@@ -31,11 +31,6 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
-option(LIBUNWIND_BUILD_32_BITS "Build 32 bit multilib libunwind. This option is not supported anymore when building the runtimes. Please specify a full triple instead." ${LLVM_BUILD_32_BITS})
-if (LIBUNWIND_BUILD_32_BITS)
-  message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS is not supported anymore when building the runtimes, please specify a full triple instead.")
-endif()
-
 option(LIBUNWIND_ENABLE_CET "Build libunwind with CET enabled." OFF)
 option(LIBUNWIND_ENABLE_GCS "Build libunwind with GCS enabled." OFF)
 option(LIBUNWIND_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
@@ -65,6 +60,12 @@ cmake_dependent_option(LIBUNWIND_INSTALL_STATIC_LIBRARY
 cmake_dependent_option(LIBUNWIND_INSTALL_SHARED_LIBRARY
   "Install the shared libunwind library." ON
   "LIBUNWIND_ENABLE_SHARED;LIBUNWIND_INSTALL_LIBRARY" OFF)
+
+set(LIBUNWIND_LIBRARY_VERSION "1.0" CACHE STRING
+  "Version of libunwind. This will be reflected in the name of the shared library produced.
+   For example, -DLIBUNWIND_LIBRARY_VERSION=x.y will result in the library being named
+   libunwind.x.y.dylib, along with the usual symlinks pointing to that. On Apple platforms,
+   this also controls the linker's 'current_version' property.")
 
 if(MINGW)
   set(LIBUNWIND_DEFAULT_TEST_CONFIG "llvm-libunwind-mingw.cfg.in")
