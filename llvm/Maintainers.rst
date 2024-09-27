@@ -206,7 +206,7 @@ Lanai backend
 | Jacques Pienaar
 | jpienaar\@google.com (email), jpienaar
 
-Loongarch backend
+LoongArch backend
 ~~~~~~~~~~~~~~~~~
 | Weining Lu
 | luweining\@loongson.cn (email), SixWeining (GitHub)
