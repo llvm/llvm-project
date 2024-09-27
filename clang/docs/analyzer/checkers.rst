@@ -3443,7 +3443,7 @@ alpha.WebKit
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.NoUncheckedPtrMemberChecker
-"""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""""""
 Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
 
 .. code-block:: cpp

@@ -19,8 +19,7 @@ using namespace clang;
 
 namespace {
 
-bool hasPublicMethodInBaseClass(const CXXRecordDecl *R,
-                                StringRef NameToMatch) {
+bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
   assert(R);
   assert(R->hasDefinition());
 
