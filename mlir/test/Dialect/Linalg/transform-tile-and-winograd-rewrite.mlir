@@ -109,7 +109,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK:            linalg.yield %[[IN]] : f32
 // CHECK:          } -> tensor<4x4xf32>
 // CHECK:          %[[S24:.*]] = linalg.mul ins(%[[S23]], %[[S21]] : tensor<4x4xf32>, tensor<4x4xf32>) outs(%[[S22]] : tensor<4x4xf32>) -> tensor<4x4xf32>
-// CHECK:          %[[INSERTED_SLICE_9:.*]] = tensor.insert_slice %[[S24]] into %[[ARG10]][%[[ARG7]], 0, 0, %[[ARG9]]] [1, 4, 4, 1] [1, 1, 1, 1]
+// CHECK:          %[[S25:.*]] = tensor.extract_slice %[[ARG10]][%[[ARG7]], 0, 0, %[[ARG9]]] [1, 4, 4, 1] [1, 1, 1, 1]
+// CHECK:          %[[S26:.*]] = tensor.empty() : tensor<4x4xf32>
+// CHECK:          %[[S27:.*]] = linalg.add ins(%[[S24]], %[[S25]] : tensor<4x4xf32>, tensor<4x4xf32>) outs(%[[S26]] : tensor<4x4xf32>) -> tensor<4x4xf32>
+// CHECK:          %[[INSERTED_SLICE_9:.*]] = tensor.insert_slice %[[S27]] into %[[ARG10]][%[[ARG7]], 0, 0, %[[ARG9]]] [1, 4, 4, 1] [1, 1, 1, 1]
 // CHECK:          scf.yield %[[INSERTED_SLICE_9]]
 // CHECK:        scf.yield %[[S15]]
 // CHECK:      %[[S13:.*]] = affine.apply #[[$MAP0]](%[[ARG3]])
@@ -243,7 +246,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK:            linalg.yield %[[IN]] : f32
 // CHECK:          } -> tensor<4x4xf32>
 // CHECK:          %[[S25:.*]] = linalg.mul ins(%[[S24]], %[[S22]] : tensor<4x4xf32>, tensor<4x4xf32>) outs(%[[S23]] : tensor<4x4xf32>) -> tensor<4x4xf32>
-// CHECK:          %[[INSERTED_SLICE_12:.*]] = tensor.insert_slice %[[S25]] into %[[ARG11]][%[[ARG8]], 0, 0, %[[ARG10]]] [1, 4, 4, 1] [1, 1, 1, 1]
+// CHECK:          %[[S26:.*]] = tensor.extract_slice %[[ARG11]][%[[ARG8]], 0, 0, %[[ARG10]]] [1, 4, 4, 1] [1, 1, 1, 1]
+// CHECK:          %[[S27:.*]] = tensor.empty() : tensor<4x4xf32>
+// CHECK:          %[[S28:.*]] = linalg.add ins(%[[S25]], %[[S26]] : tensor<4x4xf32>, tensor<4x4xf32>) outs(%[[S27]] : tensor<4x4xf32>) -> tensor<4x4xf32>
+// CHECK:          %[[INSERTED_SLICE_12:.*]] = tensor.insert_slice %[[S28]] into %[[ARG11]][%[[ARG8]], 0, 0, %[[ARG10]]] [1, 4, 4, 1] [1, 1, 1, 1]
 // CHECK:          scf.yield %[[INSERTED_SLICE_12]]
 // CHECK:        scf.yield %[[S15]] : tensor<2x4x4x2xf32>
 // CHECK:      %[[S13:.*]] = affine.apply #[[$MAP0]](%[[ARG4]])
@@ -339,7 +345,10 @@ module attributes {transform.with_named_sequence} {
 // CHECK:         linalg.yield %[[IN]] : f32
 // CHECK:       } -> tensor<4x1xf32>
 // CHECK:       %[[S14:.*]] = linalg.mul ins(%[[S13]], %[[S11]] : tensor<4x1xf32>, tensor<4x1xf32>) outs(%[[S12]] : tensor<4x1xf32>) -> tensor<4x1xf32>
-// CHECK:       %[[INSERTED_SLICE:.*]] = tensor.insert_slice %[[S14]] into %[[ARG6]][%[[ARG3]], 0, 0, %[[ARG5]]] [1, 4, 1, 1] [1, 1, 1, 1]
+// CHECK:       %[[S15:.*]] = tensor.extract_slice %[[ARG6]][%[[ARG3]], 0, 0, %[[ARG5]]] [1, 4, 1, 1] [1, 1, 1, 1]
+// CHECK:       %[[S16:.*]] = tensor.empty() : tensor<4x1xf32>
+// CHECK:       %[[S17:.*]] = linalg.add ins(%[[S14]], %[[S15]] : tensor<4x1xf32>, tensor<4x1xf32>) outs(%[[S16]] : tensor<4x1xf32>) -> tensor<4x1xf32>
+// CHECK:       %[[INSERTED_SLICE:.*]] = tensor.insert_slice %[[S17]] into %[[ARG6]][%[[ARG3]], 0, 0, %[[ARG5]]] [1, 4, 1, 1] [1, 1, 1, 1]
 // CHECK:       scf.yield %[[INSERTED_SLICE]]
 // CHECK:     scf.yield %[[S7]]
 // CHECK:   return %[[S6]]
