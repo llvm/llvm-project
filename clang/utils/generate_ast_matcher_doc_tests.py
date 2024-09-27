@@ -91,7 +91,7 @@ from sys import exit
 from tempfile import TemporaryDirectory
 from typing import Optional
 
-statistics = defaultdict[str, int](int)
+statistics = defaultdict(int)
 
 expected_failure_statistics = {
     "missing_tests": 10,
@@ -268,12 +268,12 @@ class Tags:
     """
 
     def __init__(self, tag_string: str) -> None:
-        self.map = defaultdict[str, str](
+        self.map = defaultdict(
             lambda: "",
             [split_first(tag, "=") for tag in tag_string.split(";")],
         )
 
-        self.opt_test_language: Optional[TestLanguage] = None
+        self.opt_test_language = None
         if "std" in self.map:
             self.opt_test_language = TestLanguage(self.map["std"])
             self.map.pop("std")
@@ -318,7 +318,7 @@ class Match:
         return f'R"cpp({self.match_str})cpp"'
 
 
-def get_lang_spec_and_remove_from_list(args: list[str]) -> str:
+def get_lang_spec_and_remove_from_list(args: list) -> str:
     for arg in args:
         if arg == "-ObjC":
             args.remove(arg)
@@ -337,7 +337,7 @@ class CompileArgs:
         args: All other arguments
     """
 
-    def __init__(self, args: list[str]) -> None:
+    def __init__(self, args: list) -> None:
         self.lang_spec = TestLanguage(get_lang_spec_and_remove_from_list(args))
         self.args = args
 
@@ -385,7 +385,7 @@ def get_any_valid_std_specified(lang_spec: str) -> str:
     return lang_spec
 
 
-def get_with_lang_spec(args: CompileArgs) -> list[str]:
+def get_with_lang_spec(args: CompileArgs) -> list:
     """Construct compiler arguments from a CompileArgs instance
 
     Args:
@@ -427,8 +427,8 @@ cuda_header: str = """
 
 def can_code_compile(
     code: str,
-    headers: list[tuple[str, str]],
-    compile_commands: Optional[CompileArgs],
+    headers: list,
+    compile_commands,
 ) -> bool:
     """Check if the code can compile using the provided arguments.
     This is used to determine if a code snippet could actually compile in
@@ -552,9 +552,9 @@ class TestCase:
         self.cases: list[tuple[list[Matcher], list[Match]]] = []
         self.code: str = ""
         self.headers: list[tuple[str, str]] = []
-        self.compile_args: Optional[CompileArgs] = None
+        self.compile_args = None
 
-    def get_last_case(self) -> tuple[list[Matcher], list[Match]]:
+    def get_last_case(self) -> tuple:
         return self.cases[-1]
 
     def add_case(self):
@@ -720,7 +720,7 @@ class ParsingContext(Enum):
     NoMatch = 6
 
 
-def split_first(data: str, delim: str) -> tuple[str, str]:
+def split_first(data: str, delim: str) -> tuple:
     pos = data.find(delim)
     if pos == -1:
         return (data, "")
@@ -770,8 +770,8 @@ class CommentedMatcher:
 
     def __init__(
         self,
-        comment: list[tuple[int, str]],
-        matcher: list[tuple[int, str]],
+        comment: list,
+        matcher: list,
     ):
         self.comment = comment
         self.matcher = matcher
@@ -789,10 +789,10 @@ class BlockParser:
 
     def __init__(self, data: CommentedMatcher, input_file: Path):
         self.input_file = input_file
-        self.cases = list[TestCase]()
+        self.cases = list()
         self.current_line = data.comment[0][0]
         self.data = "\n".join([line[1] for line in data.comment])
-        self.diagnostics = list[str]()
+        self.diagnostics = list()
 
     def advance(self) -> ParsingContext:
         """Find the next doxygen command to be parsed and return the
@@ -810,7 +810,7 @@ class BlockParser:
             "\\nomatch{": ParsingContext.NoMatch,
         }
 
-        matches = list[tuple[int, ParsingContext, str]]()
+        matches = list()
 
         for tag, ctx in begin_tags.items():
             match = self.data.find(tag)
@@ -887,7 +887,7 @@ class BlockParser:
             [split_arg for arg in args.split(";") for split_arg in arg.split(" ")],
         )
 
-    def build_matcher(self) -> Optional[Matcher]:
+    def build_matcher(self):
         end = find_matching_closing_rbrace(self.data, 0, 0)
         tag_separator = self.data.find("$")
         tags = Tags("")
@@ -1018,10 +1018,8 @@ def parse_block(data: CommentedMatcher, input_file: Path) -> BlockParser:
     return parser
 
 
-def parse(
-    data: list[CommentedMatcher], input_file: Path
-) -> tuple[list[TestCase], list[str]]:
-    result: tuple[list[TestCase], list[str]] = ([], [])
+def parse(data: list, input_file: Path) -> tuple:
+    result: tuple = ([], [])
 
     for parsed_block in [parse_block(block, input_file) for block in data]:
         result[0].extend(parsed_block.cases)
@@ -1031,9 +1029,9 @@ def parse(
 
 
 def group_doc_comment_and_followed_code(
-    enumerated_lines: list[str],
-) -> list[CommentedMatcher]:
-    result: list[CommentedMatcher] = []
+    enumerated_lines: list,
+) -> list:
+    result: list = []
 
     start_new_group_on_comment = True
     for line_nr, line in enumerate(enumerated_lines, start=1):
