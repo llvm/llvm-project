@@ -3033,6 +3033,8 @@ void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record) {
   if (mangleSubstitution(Record))
     return;
   mangleName(Record);
+  if (isCompatibleWith(LangOptions::ClangABI::Ver19))
+    return;
   addSubstitution(Record);
 }
 
