@@ -273,10 +273,7 @@ define half @f16(<vscale x 1 x half> %v, i1 %c) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    beqz a0, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %truebb
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    flh fa0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB6_3
 ; CHECK-NEXT:  .LBB6_2: # %falsebb
 ; CHECK-NEXT:    fmv.h.x fa0, zero
