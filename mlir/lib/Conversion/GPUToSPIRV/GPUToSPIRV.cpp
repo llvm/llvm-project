@@ -610,7 +610,7 @@ public:
 // searching in the module for existing variable/constant names.
 // This is to avoid name collision with existing variables.
 // Example: printfMsg0, printfMsg1, printfMsg2, ...
-std::string constructVarName(spirv::ModuleOp moduleOp, llvm::StringRef prefix) {
+static std::string makeVarName(spirv::ModuleOp moduleOp, llvm::Twine prefix) {
   std::string name;
   unsigned number = 0;
 
@@ -637,7 +637,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
   // SPIR-V global variable is used to initialize printf
   // format string value, if there are multiple printf messages,
   // each global var needs to be created with a unique name.
-  std::string globalVarName = constructVarName(moduleOp, "printfMsg");
+  std::string globalVarName = makeVarName(moduleOp, llvm::Twine("printfMsg"));
   spirv::GlobalVariableOp globalVar;
 
   IntegerType i8Type = rewriter.getI8Type();
@@ -651,7 +651,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
   auto createSpecConstant = [&](unsigned value) {
     auto attr = rewriter.getI8IntegerAttr(value);
     std::string specCstName =
-        constructVarName(moduleOp, (llvm::Twine(globalVarName) + "_sc").str());
+        makeVarName(moduleOp, (llvm::Twine(globalVarName) + "_sc"));
 
     return rewriter.create<spirv::SpecConstantOp>(
         loc, rewriter.getStringAttr(specCstName), attr);
@@ -674,7 +674,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     formatString.push_back('\0'); // Null terminate for C.
     SmallVector<Attribute, 4> constituents;
     for (char c : formatString) {
-      auto cSpecConstantOp = createSpecConstant(c);
+      spirv::SpecConstantOp cSpecConstantOp = createSpecConstant(c);
       constituents.push_back(SymbolRefAttr::get(cSpecConstantOp));
     }
 
@@ -712,7 +712,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
       globalPtr);
 
   // Get printf arguments
-  SmallVector<Value, 4> printfArgs = llvm::to_vector<4>(adaptor.getArgs());
+  auto printfArgs = llvm::to_vector_of<Value, 4>(adaptor.getArgs());
 
   rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
 
