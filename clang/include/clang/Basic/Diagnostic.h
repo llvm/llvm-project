@@ -894,18 +894,6 @@ public:
                                   StringRef(FormatString, N - 1));
   }
 
-  unsigned getCustomDiagID(DiagnosticIDs::CustomDiagDesc Desc) {
-    return Diags->getCustomDiagID(std::move(Desc));
-  }
-
-  std::optional<unsigned> getMaxCustomDiagID() const {
-    return Diags->getMaxCustomDiagID();
-  }
-  const DiagnosticIDs::CustomDiagDesc &
-  getCustomDiagDesc(unsigned DiagID) const {
-    return Diags->getCustomDiagDesc(DiagID);
-  }
-
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.
   void ConvertArgToString(ArgumentKind Kind, intptr_t Val,
