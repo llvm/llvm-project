@@ -315,10 +315,6 @@ public:
       return Diags->second;
     return {};
   }
-
-  unsigned getMaxCustomDiagID() const {
-    return DIAG_UPPER_LIMIT + DiagInfo.size();
-  }
 };
 
 } // namespace diag
@@ -431,18 +427,6 @@ unsigned DiagnosticIDs::getCustomDiagID(CustomDiagDesc Diag) {
   if (!CustomDiagInfo)
     CustomDiagInfo.reset(new diag::CustomDiagInfo());
   return CustomDiagInfo->getOrCreateDiagID(Diag);
-}
-
-std::optional<unsigned> DiagnosticIDs::getMaxCustomDiagID() const {
-  if (CustomDiagInfo)
-    return CustomDiagInfo->getMaxCustomDiagID();
-  return std::nullopt;
-}
-
-const DiagnosticIDs::CustomDiagDesc &
-DiagnosticIDs::getCustomDiagDesc(unsigned DiagID) const {
-  assert(IsCustomDiag(DiagID));
-  return CustomDiagInfo->getDescription(DiagID);
 }
 
 bool DiagnosticIDs::isWarningOrExtension(unsigned DiagID) const {

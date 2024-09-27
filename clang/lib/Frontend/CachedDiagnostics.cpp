@@ -108,38 +108,15 @@ struct Diagnostic {
   std::vector<FixItHint> FixIts;
 };
 
-struct CustomDiagDesc {
-  diag::Severity DefaultSeverity;
-  DiagnosticIDs::Class DiagClass;
-  bool ShowInSystemHeader;
-  bool ShowInSystemMacro;
-  std::string Description;
-  std::optional<diag::Group> Group;
-  CustomDiagDesc() = default;
-  CustomDiagDesc(const DiagnosticIDs::CustomDiagDesc &Desc)
-      : DefaultSeverity(Desc.GetDefaultSeverity()), DiagClass(Desc.GetClass()),
-        ShowInSystemHeader(Desc.ShouldShowInSystemHeader()),
-        ShowInSystemMacro(Desc.ShouldShowInSystemMacro()),
-        Description(Desc.GetDescription()), Group(Desc.GetGroup()) {}
-
-  DiagnosticIDs::CustomDiagDesc getDesc() const {
-    return DiagnosticIDs::CustomDiagDesc(DefaultSeverity, Description,
-                                         DiagClass, ShowInSystemHeader,
-                                         ShowInSystemMacro, Group);
-  }
-};
-
 struct Diagnostics {
   std::vector<SLocEntry> SLocEntries;
   std::vector<Diagnostic> Diags;
-  std::vector<CustomDiagDesc> CustomDiags;
 
   size_t getNumDiags() const { return Diags.size(); }
 
   void clear() {
     SLocEntries.clear();
     Diags.clear();
-    CustomDiags.clear();
   }
 };
 
@@ -221,10 +198,6 @@ struct CachedDiagnosticSerializer {
   /// produced it.
   std::optional<std::string> serializeEmittedDiagnostics();
   Error deserializeCachedDiagnostics(StringRef Buffer);
-
-  /// Capture any custom diagnostics registerd by \p Diags so that they can be
-  /// later serialized.
-  void captureCustomDiags(const DiagnosticsEngine &Diags);
 };
 
 } // anonymous namespace
@@ -483,46 +456,6 @@ template <> struct MappingTraits<cached_diagnostics::SLocEntry> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<diag::Severity> {
-  static void enumeration(IO &io, diag::Severity &value) {
-    io.enumCase(value, "ignored", diag::Severity::Ignored);
-    io.enumCase(value, "remark", diag::Severity::Remark);
-    io.enumCase(value, "warning", diag::Severity::Warning);
-    io.enumCase(value, "error", diag::Severity::Error);
-    io.enumCase(value, "fatal", diag::Severity::Fatal);
-  }
-};
-template <> struct ScalarEnumerationTraits<DiagnosticIDs::Class> {
-  static void enumeration(IO &io, DiagnosticIDs::Class &value) {
-    io.enumCase(value, "invalid", DiagnosticIDs::CLASS_INVALID);
-    io.enumCase(value, "note", DiagnosticIDs::CLASS_NOTE);
-    io.enumCase(value, "remark", DiagnosticIDs::CLASS_REMARK);
-    io.enumCase(value, "warning", DiagnosticIDs::CLASS_WARNING);
-    io.enumCase(value, "extension", DiagnosticIDs::CLASS_EXTENSION);
-    io.enumCase(value, "error", DiagnosticIDs::CLASS_ERROR);
-  }
-};
-template <> struct ScalarEnumerationTraits<diag::Group> {
-  static void enumeration(IO &io, diag::Group &value) {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
-  io.enumCase(value, #GroupName, diag::Group::GroupName);
-#include "clang/Basic/DiagnosticGroups.inc"
-#undef CATEGORY
-#undef DIAG_ENTRY
-  }
-};
-
-template <> struct MappingTraits<cached_diagnostics::CustomDiagDesc> {
-  static void mapping(IO &io, cached_diagnostics::CustomDiagDesc &DiagDesc) {
-    io.mapRequired("severity", DiagDesc.DefaultSeverity);
-    io.mapRequired("class", DiagDesc.DiagClass);
-    io.mapRequired("show_in_system_header", DiagDesc.ShowInSystemHeader);
-    io.mapRequired("show_in_system_macro", DiagDesc.ShowInSystemMacro);
-    io.mapRequired("description", DiagDesc.Description);
-    io.mapOptional("group", DiagDesc.Group);
-  }
-};
-
 template <> struct MappingTraits<cached_diagnostics::SLocEntry::FileInfo> {
   static void mapping(IO &io, cached_diagnostics::SLocEntry::FileInfo &s) {
     io.mapRequired("filename", s.Filename);
@@ -604,7 +537,6 @@ template <> struct MappingTraits<cached_diagnostics::Diagnostics> {
   static void mapping(IO &io, cached_diagnostics::Diagnostics &s) {
     io.mapRequired("sloc_entries", s.SLocEntries);
     io.mapRequired("diagnostics", s.Diags);
-    io.mapRequired("custom_diagnostics", s.CustomDiags);
   }
 };
 } // namespace llvm::yaml
@@ -613,28 +545,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(cached_diagnostics::SLocEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(cached_diagnostics::Diagnostic)
 LLVM_YAML_IS_SEQUENCE_VECTOR(cached_diagnostics::Range)
 LLVM_YAML_IS_SEQUENCE_VECTOR(cached_diagnostics::FixItHint)
-LLVM_YAML_IS_SEQUENCE_VECTOR(cached_diagnostics::CustomDiagDesc)
-
-void CachedDiagnosticSerializer::captureCustomDiags(
-    const DiagnosticsEngine &Diags) {
-  auto MaxCustomDiagID = Diags.getMaxCustomDiagID();
-  if (!MaxCustomDiagID)
-    return;
-
-  // Capture any custom diagnostics we have not already seen.
-  unsigned FirstUnknownDiag =
-      diag::DIAG_UPPER_LIMIT + CachedDiags.CustomDiags.size();
-  for (unsigned DiagID = FirstUnknownDiag; DiagID < *MaxCustomDiagID;
-       ++DiagID) {
-    auto Desc = Diags.getCustomDiagDesc(DiagID);
-    CachedDiags.CustomDiags.push_back(Desc);
-
-    // Forward the custom diagnostic to the Serializer's diagnostic engine.
-    auto SerializerDiagID = DiagEngine.getCustomDiagID(Desc);
-    assert(SerializerDiagID == DiagID && "mismatched custom diags");
-    (void)SerializerDiagID;
-  }
-}
 
 std::optional<std::string>
 CachedDiagnosticSerializer::serializeEmittedDiagnostics() {
@@ -703,13 +613,6 @@ Error CachedDiagnosticSerializer::deserializeCachedDiagnostics(
   if (YIn.error())
     return createStringError(YIn.error(),
                              "failed deserializing cached diagnostics");
-
-  assert(DiagEngine.getMaxCustomDiagID() == std::nullopt &&
-         "existing custom diagnostics will conflict");
-  for (const auto &CustomDiag : CachedDiags.CustomDiags) {
-    (void)DiagEngine.getCustomDiagID(CustomDiag.getDesc());
-  }
-
   return Error::success();
 }
 
@@ -758,10 +661,6 @@ struct CachingDiagnosticsProcessor::DiagnosticsConsumer
     if (shouldCacheDiagnostic(Level, Info)) {
       unsigned DiagIdx = Serializer.addDiag(StoredDiagnostic(Level, Info));
       StoredDiagnostic NewDiag = Serializer.getDiag(DiagIdx);
-
-      if (DiagnosticIDs::IsCustomDiag(NewDiag.getID()))
-        Serializer.captureCustomDiags(*Info.getDiags());
-
       // Pass the converted diagnostic to the original consumer. We do this
       // because:
       // 1. It ensures that the rendered diagnostics will use the same
