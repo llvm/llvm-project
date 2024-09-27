@@ -649,26 +649,24 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     }
   }
 
-  if (auto *SampleColdArg =
-          Args.getLastArg(options::OPT_fprofile_sample_cold_function,
-                          options::OPT_fprofile_sample_cold_function_EQ)) {
-    SmallString<128> Path(SampleColdArg->getOption().matches(
-                              options::OPT_fprofile_sample_cold_function_EQ)
-                              ? SampleColdArg->getValue()
-                              : "");
-    llvm::sys::path::append(Path, "default_%m.profraw");
+  auto *SampleColdArg =
+      Args.getLastArg(options::OPT_fprofile_sample_cold_function);
+
+  Arg *PGOGenArg = nullptr;
+  if (SampleColdArg) {
+    SmallString<128> Path(
+        PGOGenerateArg->getOption().matches(options::OPT_fprofile_generate_EQ)
+            ? PGOGenerateArg->getValue()
+            : "");
+    Path.append("default_%m.profraw");
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString(
         Twine("--instrument-sample-cold-function-path=") + Path));
-  }
-
-  Arg *PGOGenArg = nullptr;
-  if (PGOGenerateArg) {
+  } else if (PGOGenerateArg) {
     assert(!CSPGOGenerateArg);
     PGOGenArg = PGOGenerateArg;
     CmdArgs.push_back("-fprofile-instrument=llvm");
-  }
-  if (CSPGOGenerateArg) {
+  } else if (CSPGOGenerateArg) {
     assert(!PGOGenerateArg);
     PGOGenArg = CSPGOGenerateArg;
     CmdArgs.push_back("-fprofile-instrument=csllvm");
@@ -7037,7 +7035,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           options::OPT_fcs_profile_generate,
           options::OPT_fcs_profile_generate_EQ, options::OPT_fprofile_use,
           options::OPT_fprofile_use_EQ);
-      if (PGOArg)
+      auto *SampleColdArg =
+          Args.getLastArg(options::OPT_fprofile_sample_cold_function);
+      if (PGOArg && !SampleColdArg)
         D.Diag(diag::err_drv_argument_not_allowed_with)
             << "SampleUse with PGO options";
 
