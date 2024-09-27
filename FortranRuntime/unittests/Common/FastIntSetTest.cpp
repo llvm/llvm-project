@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "flang/Common/fast-int-set.h"
+#include "gtest/gtest.h"
 #include <optional>
 
 TEST(FastIntSetTests, Sanity) {

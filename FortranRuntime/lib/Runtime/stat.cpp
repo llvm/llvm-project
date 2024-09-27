@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "stat.h"
+#include "flang/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
-#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 RT_OFFLOAD_API_GROUP_BEGIN

@@ -11,8 +11,8 @@
 // and the related names become available, though, they may correspond
 // to alternative definitions (e.g. from cuda::std namespace).
 
-#ifndef FORTRAN_COMMON_VARIANT_H
-#define FORTRAN_COMMON_VARIANT_H
+#ifndef FORTRAN_COMMON_VARIANT_H_
+#define FORTRAN_COMMON_VARIANT_H_
 
 #if RT_USE_LIBCUDACXX
 #include <cuda/std/variant>
@@ -27,4 +27,4 @@ using cuda::std::visit;
 #include <variant>
 #endif // !RT_USE_LIBCUDACXX
 
-#endif // FORTRAN_COMMON_VARIANT_H
+#endif /* FORTRAN_COMMON_VARIANT_H_ */

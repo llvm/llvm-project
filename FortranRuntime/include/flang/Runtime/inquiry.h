@@ -40,4 +40,4 @@ void RTDECL(Ubound)(void *result, const Descriptor &array, int kind,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_INQUIRY_H_
+#endif /* FORTRAN_RUNTIME_INQUIRY_H_ */

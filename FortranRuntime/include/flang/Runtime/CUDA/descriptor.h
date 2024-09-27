@@ -27,4 +27,4 @@ void RTDECL(CUFFreeDesciptor)(
 
 } // extern "C"
 } // namespace Fortran::runtime::cuda
-#endif // FORTRAN_RUNTIME_CUDA_DESCRIPTOR_H_
+#endif /* FORTRAN_RUNTIME_CUDA_DESCRIPTOR_H_ */

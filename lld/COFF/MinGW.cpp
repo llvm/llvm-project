@@ -51,7 +51,6 @@ AutoExporter::AutoExporter(
       "libc++",
       "libc++abi",
       "libFortranRuntime",
-      "libFortranFloat128Math",
       "libFortranRuntime.static",
       "libFortranRuntime.dynamic",
       "libFortranRuntime.static_dbg",

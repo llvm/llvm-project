@@ -21,9 +21,9 @@
 #include "static-data.h"
 #include "type.h"
 #include "flang/Common/idioms.h"
+#include "flang/Parser/char-block.h"
 #include "flang/Support/reference.h"
 #include "flang/Support/template.h"
-#include "flang/Parser/char-block.h"
 #include <optional>
 #include <variant>
 #include <vector>

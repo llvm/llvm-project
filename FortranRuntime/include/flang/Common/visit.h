@@ -21,8 +21,8 @@
 #ifndef FORTRAN_COMMON_VISIT_H_
 #define FORTRAN_COMMON_VISIT_H_
 
-#include "variant.h"
 #include "flang/Common/api-attrs.h"
+#include "variant.h"
 #include <type_traits>
 
 namespace Fortran::common {
@@ -100,4 +100,4 @@ using Fortran::common::log2visit::visit;
 #endif
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_VISIT_H_
+#endif /* FORTRAN_COMMON_VISIT_H_ */

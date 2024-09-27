@@ -129,4 +129,4 @@ void RTDECL(Verify)(Descriptor &result, const Descriptor &string,
     const char *sourceFile = nullptr, int sourceLine = 0);
 }
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_CHARACTER_H_
+#endif /* FORTRAN_RUNTIME_CHARACTER_H_ */

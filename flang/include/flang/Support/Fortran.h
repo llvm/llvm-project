@@ -1,4 +1,4 @@
-//===-- include/flang/Support/Fortran.h -------------------------*- C++ -*-===//
+//===-- include/flang/Common/Fortran.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,8 @@
 #ifndef FORTRAN_COMMON_FORTRAN_H_
 #define FORTRAN_COMMON_FORTRAN_H_
 
-
+// Fortran language concepts that are used in many phases are defined
+// once here to avoid redundancy and needless translation.
 
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/enum-set.h"
@@ -18,11 +19,8 @@
 #include <optional>
 #include <string>
 
-
 namespace Fortran::common {
-	class LanguageFeatureControl;
-
-
+class LanguageFeatureControl;
 
 constexpr bool IsNumericTypeCategory(TypeCategory category) {
   return category == TypeCategory::Integer || category == TypeCategory::Real ||
@@ -46,7 +44,6 @@ const char *AsFortran(RelationalOperator);
 
 ENUM_CLASS(Intent, Default, In, Out, InOut)
 
-
 // Union of specifiers for all I/O statements.
 ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Delim, Direct, Encoding, End, Eor, Err, Exist, File, Fmt, Form, Formatted,
@@ -58,14 +55,10 @@ ENUM_CLASS(IoSpecKind, Access, Action, Advance, Asynchronous, Blank, Decimal,
     Dispose, // nonstandard
 )
 
-
 const char *AsFortran(DefinedIo);
-
 
 // Fortran label. Must be in [1..99999].
 using Label = std::uint64_t;
-
-
 
 // CUDA subprogram attribute combinations
 ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
@@ -112,5 +105,6 @@ inline std::string GetExternalAssemblyName(
     std::string symbolName, bool underscoring) {
   return underscoring ? std::move(symbolName) + "_" : std::move(symbolName);
 }
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_FORTRAN_H_

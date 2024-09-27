@@ -10,11 +10,11 @@
 // It is a list based stack with dynamic allocation/deallocation
 // of the list nodes.
 
-#ifndef FORTRAN_RUNTIME_STACK_H
-#define FORTRAN_RUNTIME_STACK_H
+#ifndef FORTRAN_RUNTIME_STACK_H_
+#define FORTRAN_RUNTIME_STACK_H_
 
-#include "terminator.h"
 #include "flang/Runtime/memory.h"
+#include "terminator.h"
 
 namespace Fortran::runtime {
 // Storage for the Stack elements of type T.
@@ -133,4 +133,4 @@ private:
   Terminator &terminator_;
 };
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_STACK_H
+#endif /* FORTRAN_RUNTIME_STACK_H_ */

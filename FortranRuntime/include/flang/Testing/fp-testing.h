@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_TEST_EVALUATE_FP_TESTING_H_
-#define FORTRAN_TEST_EVALUATE_FP_TESTING_H_
+#ifndef FORTRAN_TESTING_FP_TESTING_H_
+#define FORTRAN_TESTING_FP_TESTING_H_
 
 #include "flang/Common/target-rounding.h"
 #include <fenv.h>
 
-using Fortran::common::RoundingMode;
 using Fortran::common::RealFlags;
 using Fortran::common::Rounding;
+using Fortran::common::RoundingMode;
 
 class ScopedHostFloatingPointEnvironment {
 public:
@@ -32,4 +32,4 @@ private:
 #endif
 };
 
-#endif // FORTRAN_TEST_EVALUATE_FP_TESTING_H_
+#endif /* FORTRAN_TESTING_FP_TESTING_H_ */

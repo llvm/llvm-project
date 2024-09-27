@@ -63,4 +63,4 @@ bool RTDECL(ExtendsTypeOf)(const Descriptor &, const Descriptor &);
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_DERIVED_API_H_
+#endif /* FORTRAN_RUNTIME_DERIVED_API_H_ */

@@ -93,4 +93,4 @@ template <typename INT> inline constexpr int TrailingZeroBitCount(INT x) {
   }
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_BIT_POPULATION_COUNT_H_
+#endif /* FORTRAN_COMMON_BIT_POPULATION_COUNT_H_ */

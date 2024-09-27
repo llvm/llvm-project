@@ -9,9 +9,6 @@
 #ifndef FORTRAN_COMMON_FORTRAN_CONSTS_H_
 #define FORTRAN_COMMON_FORTRAN_CONSTS_H_
 
-// Fortran language concepts that are used in many phases are defined
-// once here to avoid redundancy and needless translation.
-
 #include "flang/Common/enum-class.h"
 #include <cstdint>
 
@@ -20,7 +17,6 @@ namespace Fortran::common {
 // Fortran has five kinds of intrinsic data types, plus the derived types.
 ENUM_CLASS(TypeCategory, Integer, Real, Complex, Character, Logical, Derived)
 ENUM_CLASS(VectorElementCategory, Integer, Unsigned, Real)
-
 
 ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,
     Print, Read, Rewind, Wait, Write)
@@ -31,7 +27,6 @@ ENUM_CLASS(
 
 // Fortran arrays may have up to 15 dimensions (See Fortran 2018 section 5.4.6).
 static constexpr int maxRank{15};
-
 
 // Floating-point rounding modes; these are packed into a byte to save
 // room in the runtime's format processing context structure.  These
@@ -45,6 +40,5 @@ enum class RoundingMode : std::uint8_t {
   TiesAwayFromZero, // ROUND=COMPATIBLE, RC - ties round away from zero
 };
 
-
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORTRAN_CONSTS_H_
+#endif /* FORTRAN_COMMON_FORTRAN_CONSTS_H_ */

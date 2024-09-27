@@ -23,8 +23,8 @@
 //   * cuda:: namespace need to be forced for all std:: references.
 //
 //===----------------------------------------------------------------------===//
-#ifndef FORTRAN_COMMON_OPTIONAL_H
-#define FORTRAN_COMMON_OPTIONAL_H
+#ifndef FORTRAN_COMMON_OPTIONAL_H_
+#define FORTRAN_COMMON_OPTIONAL_H_
 
 #include "flang/Common/api-attrs.h"
 #include <optional>
@@ -240,4 +240,4 @@ using std::optional;
 
 } // namespace Fortran::common
 
-#endif // FORTRAN_COMMON_OPTIONAL_H
+#endif /* FORTRAN_COMMON_OPTIONAL_H_ */

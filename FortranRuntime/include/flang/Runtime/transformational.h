@@ -154,4 +154,4 @@ void RTDECL(Unpack)(Descriptor &result, const Descriptor &vector,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_TRANSFORMATIONAL_H_
+#endif /* FORTRAN_RUNTIME_TRANSFORMATIONAL_H_ */

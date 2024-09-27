@@ -9,17 +9,16 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
+#include "flang/Common/enum-set.h"
+#include "flang/Common/idioms.h"
+#include "flang/Common/restorer.h"
+#include "flang/Common/target-rounding.h"
+#include "flang/Parser/char-block.h"
+#include "flang/Parser/message.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
-#include "flang/Common/enum-set.h"
-#include "flang/Common/idioms.h"
 #include "flang/Support/indirection.h"
-#include "flang/Common/Fortran-consts.h"
-#include "flang/Common/restorer.h"
-#include "flang/Parser/char-block.h"
-#include "flang/Parser/message.h"
-#include "flang/Common/target-rounding.h"
 #include <cinttypes>
 #include <map>
 #include <set>
@@ -34,10 +33,9 @@ class IntrinsicProcTable;
 class TargetCharacteristics;
 
 using common::ConstantSubscript;
-using common::RelationalOperator;
-using common::RoundingMode;
-using common::RealFlags;
 using common::RealFlag;
+using common::RealFlags;
+using common::RelationalOperator;
 
 // Integers are always ordered; reals may not be.
 ENUM_CLASS(Ordering, Less, Equal, Greater)

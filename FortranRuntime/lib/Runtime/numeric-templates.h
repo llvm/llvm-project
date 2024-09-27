@@ -18,10 +18,10 @@
 #ifndef FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_
 #define FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_
 
-#include "terminator.h"
-#include "tools.h"
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/float128.h"
+#include "terminator.h"
+#include "tools.h"
 #include <cstdint>
 #include <limits>
 
@@ -465,4 +465,4 @@ template <typename T> inline RT_API_ATTRS T ErfcScaled(T arg) {
 
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_
+#endif /* FORTRAN_RUNTIME_NUMERIC_TEMPLATES_H_ */

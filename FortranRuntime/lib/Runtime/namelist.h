@@ -11,8 +11,8 @@
 #ifndef FORTRAN_RUNTIME_NAMELIST_H_
 #define FORTRAN_RUNTIME_NAMELIST_H_
 
-#include "non-tbp-dio.h"
 #include "flang/Common/api-attrs.h"
+#include "non-tbp-dio.h"
 
 #include <cstddef>
 
@@ -51,4 +51,4 @@ public:
 RT_API_ATTRS bool IsNamelistNameOrSlash(IoStatementState &);
 
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_NAMELIST_H_
+#endif /* FORTRAN_RUNTIME_NAMELIST_H_ */

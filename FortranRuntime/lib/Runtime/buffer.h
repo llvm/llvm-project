@@ -11,9 +11,9 @@
 #ifndef FORTRAN_RUNTIME_BUFFER_H_
 #define FORTRAN_RUNTIME_BUFFER_H_
 
-#include "io-error.h"
 #include "flang/Runtime/freestanding-tools.h"
 #include "flang/Runtime/memory.h"
+#include "io-error.h"
 #include <algorithm>
 #include <cinttypes>
 #include <cstring>
@@ -221,4 +221,4 @@ private:
   bool dirty_{false};
 };
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_BUFFER_H_
+#endif /* FORTRAN_RUNTIME_BUFFER_H_ */

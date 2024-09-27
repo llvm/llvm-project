@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/command.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/execute.h"
 #include "flang/Runtime/extensions.h"
 #include "flang/Runtime/main.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include <cstddef>
 #include <cstdlib>
 

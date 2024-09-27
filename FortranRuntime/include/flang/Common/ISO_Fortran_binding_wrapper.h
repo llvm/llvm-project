@@ -6,8 +6,8 @@
  *
  *===----------------------------------------------------------------------===*/
 
-#ifndef FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
-#define FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
+#ifndef FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_
+#define FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_
 
 /* A thin wrapper around flang/include/ISO_Fortran_binding.h
  * This header file must be included when ISO_Fortran_binding.h
@@ -22,7 +22,7 @@
 
 /* clang-format off */
 #include <stddef.h>
-#include "flang/Common/api-attrs.h"
+#include "flang/Common/api-attrs.h" 
 #ifdef __cplusplus
 namespace Fortran {
 namespace ISO {
@@ -35,4 +35,4 @@ namespace ISO {
 #endif /* __cplusplus */
 /* clang-format on */
 
-#endif /* FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_ */
+#endif /* FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_ */

@@ -47,4 +47,4 @@ void RTDECL(CopyAndUpdateDescriptor)(Descriptor &to, const Descriptor &from,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_SUPPORT_H_
+#endif /* FORTRAN_RUNTIME_SUPPORT_H_ */

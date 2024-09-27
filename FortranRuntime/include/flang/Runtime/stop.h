@@ -37,4 +37,4 @@ NORETURN void RTNAME(ReportFatalUserError)(
 
 FORTRAN_EXTERN_C_END
 
-#endif // FORTRAN_RUNTIME_STOP_H_
+#endif /* FORTRAN_RUNTIME_STOP_H_ */

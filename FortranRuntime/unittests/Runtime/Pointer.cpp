@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
-#include "gtest/gtest.h"
-#include "tools.h"
 #include "flang/Runtime/descriptor.h"
+#include "tools.h"
+#include "gtest/gtest.h"
 
 using namespace Fortran::runtime;
 

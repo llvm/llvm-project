@@ -18,8 +18,8 @@
 
 #ifndef FORTRAN_COMMON_RESTORER_H_
 #define FORTRAN_COMMON_RESTORER_H_
-#include "idioms.h"
 #include "flang/Common/api-attrs.h"
+#include "idioms.h"
 namespace Fortran::common {
 template <typename A> class Restorer {
 public:
@@ -53,4 +53,4 @@ RT_API_ATTRS common::IfNoLvalue<Restorer<A>, B> ScopedSet(
   return Restorer<A>{to, std::move(original)};
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_RESTORER_H_
+#endif /* FORTRAN_COMMON_RESTORER_H_ */

@@ -9,10 +9,10 @@
 #ifndef FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_
 #define FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_
 
-#include "lock.h"
-#include "numeric-templates.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
+#include "lock.h"
+#include "numeric-templates.h"
 #include <algorithm>
 #include <random>
 
@@ -85,4 +85,4 @@ inline void Generate(const Descriptor &harvest) {
 
 } // namespace Fortran::runtime::random
 
-#endif // FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_
+#endif /* FORTRAN_RUNTIME_RANDOM_TEMPLATES_H_ */

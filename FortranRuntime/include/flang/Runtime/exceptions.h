@@ -26,4 +26,4 @@ std::uint32_t RTNAME(MapException)(std::uint32_t excepts);
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_EXCEPTIONS_H_
+#endif /* FORTRAN_RUNTIME_EXCEPTIONS_H_ */

@@ -9,8 +9,8 @@
 #include "namelist.h"
 #include "descriptor-io.h"
 #include "emit-encoded.h"
-#include "io-stmt.h"
 #include "flang/Runtime/io-api.h"
+#include "io-stmt.h"
 #include <algorithm>
 #include <cstring>
 #include <limits>

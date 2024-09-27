@@ -215,4 +215,4 @@ using std::toupper;
 #endif // !STD_TOUPPER_UNSUPPORTED
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_
+#endif /* FORTRAN_RUNTIME_FREESTANDING_TOOLS_H_ */

@@ -15,9 +15,9 @@
 #ifndef FORTRAN_RUNTIME_IO_ERROR_H_
 #define FORTRAN_RUNTIME_IO_ERROR_H_
 
-#include "terminator.h"
 #include "flang/Runtime/iostat.h"
 #include "flang/Runtime/memory.h"
+#include "terminator.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
@@ -78,4 +78,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_IO_ERROR_H_
+#endif /* FORTRAN_RUNTIME_IO_ERROR_H_ */

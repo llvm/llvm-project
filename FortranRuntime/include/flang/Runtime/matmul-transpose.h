@@ -46,4 +46,4 @@ void RTDECL(MatmulTransposeDirect)(const Descriptor &, const Descriptor &,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_MATMUL_TRANSPOSE_H_
+#endif /* FORTRAN_RUNTIME_MATMUL_TRANSPOSE_H_ */

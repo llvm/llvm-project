@@ -16,15 +16,15 @@
 
 #include "edit-input.h"
 #include "edit-output.h"
+#include "flang/Common/optional.h"
+#include "flang/Common/uint128.h"
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 #include "io-stmt.h"
 #include "namelist.h"
 #include "terminator.h"
 #include "type-info.h"
 #include "unit.h"
-#include "flang/Common/optional.h"
-#include "flang/Common/uint128.h"
-#include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime::io::descr {
 template <typename A>
@@ -608,4 +608,4 @@ static RT_API_ATTRS bool DescriptorIO(IoStatementState &io,
   return false;
 }
 } // namespace Fortran::runtime::io::descr
-#endif // FORTRAN_RUNTIME_DESCRIPTOR_IO_H_
+#endif /* FORTRAN_RUNTIME_DESCRIPTOR_IO_H_ */

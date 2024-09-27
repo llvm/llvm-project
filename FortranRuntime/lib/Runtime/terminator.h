@@ -121,4 +121,4 @@ namespace Fortran::runtime::io {
 RT_API_ATTRS void FlushOutputOnCrash(const Terminator &);
 }
 
-#endif // FORTRAN_RUNTIME_TERMINATOR_H_
+#endif /* FORTRAN_RUNTIME_TERMINATOR_H_ */

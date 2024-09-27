@@ -103,4 +103,4 @@ private:
   bool isFullyInitialized_{false}; // memory was cleared
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FAST_INT_SET_H_
+#endif /* FORTRAN_COMMON_FAST_INT_SET_H_ */

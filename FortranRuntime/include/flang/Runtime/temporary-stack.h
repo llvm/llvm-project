@@ -64,4 +64,4 @@ void RTNAME(DestroyDescriptorStack)(void *opaquePtr);
 } // extern "C"
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_TEMPORARY_STACK_H_
+#endif /* FORTRAN_RUNTIME_TEMPORARY_STACK_H_ */

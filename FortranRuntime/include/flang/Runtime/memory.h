@@ -170,4 +170,4 @@ template <typename A> struct Allocator {
 };
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_MEMORY_H_
+#endif /* FORTRAN_RUNTIME_MEMORY_H_ */

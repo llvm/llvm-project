@@ -901,4 +901,4 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
 }
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORMAT_H_
+#endif /* FORTRAN_COMMON_FORMAT_H_ */

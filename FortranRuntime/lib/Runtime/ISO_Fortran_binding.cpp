@@ -10,11 +10,11 @@
 // as specified in section 18.5.5 of Fortran 2018.
 
 #include "ISO_Fortran_util.h"
-#include "terminator.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/type-code.h"
+#include "terminator.h"
 #include <cstdlib>
 
 namespace Fortran::ISO {

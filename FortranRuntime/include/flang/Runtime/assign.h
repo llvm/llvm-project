@@ -58,4 +58,4 @@ void RTDECL(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
     const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_ASSIGN_H_
+#endif /* FORTRAN_RUNTIME_ASSIGN_H_ */

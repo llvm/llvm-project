@@ -12,8 +12,8 @@
  * declared/defined/used in Flang runtime library.
  */
 
-#ifndef FORTRAN_RUNTIME_API_ATTRS_H_
-#define FORTRAN_RUNTIME_API_ATTRS_H_
+#ifndef FORTRAN_COMMON_API_ATTRS_H_
+#define FORTRAN_COMMON_API_ATTRS_H_
 
 /*
  * RT_EXT_API_GROUP_BEGIN/END pair is placed around definitions
@@ -177,4 +177,4 @@
 #define RT_DEVICE_NOINLINE_HOST_INLINE inline
 #endif
 
-#endif /* !FORTRAN_RUNTIME_API_ATTRS_H_ */
+#endif /* FORTRAN_COMMON_API_ATTRS_H_ */

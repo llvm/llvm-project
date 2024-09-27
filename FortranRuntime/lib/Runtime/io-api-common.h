@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANG_RUNTIME_IO_API_COMMON_H_
-#define FLANG_RUNTIME_IO_API_COMMON_H_
+#ifndef FORTRAN_RUNTIME_IO_API_COMMON_H_
+#define FORTRAN_RUNTIME_IO_API_COMMON_H_
 
-#include "io-stmt.h"
-#include "terminator.h"
-#include "unit.h"
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/io-api.h"
+#include "io-stmt.h"
+#include "terminator.h"
+#include "unit.h"
 
 namespace Fortran::runtime::io {
 
@@ -94,4 +94,4 @@ RT_API_ATTRS Cookie BeginExternalListIO(
 }
 
 } // namespace Fortran::runtime::io
-#endif // FLANG_RUNTIME_IO_API_COMMON_H_
+#endif /* FORTRAN_RUNTIME_IO_API_COMMON_H_ */

@@ -228,4 +228,4 @@ struct std::hash<Fortran::common::EnumSet<ENUM, values>> {
     return std::hash(x.bitset());
   }
 };
-#endif // FORTRAN_COMMON_ENUM_SET_H_
+#endif /* FORTRAN_COMMON_ENUM_SET_H_ */

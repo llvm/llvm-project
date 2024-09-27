@@ -129,4 +129,4 @@ void RTDECL(AllocatableDeallocateNoFinal)(
     Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_ALLOCATABLE_H_
+#endif /* FORTRAN_RUNTIME_ALLOCATABLE_H_ */

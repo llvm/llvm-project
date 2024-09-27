@@ -9,10 +9,8 @@
 #ifndef FORTRAN_COMMON_TARGET_ROUNDING_H_
 #define FORTRAN_COMMON_TARGET_ROUNDING_H_
 
-
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/enum-set.h"
-
 
 namespace Fortran::common {
 
@@ -30,11 +28,10 @@ struct Rounding {
 #endif
 };
 
-
 // These are ordered like the bits in a common fenv.h header file.
 ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
     Inexact)
 using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
-}
-#endif // FORTRAN_COMMON_TARGET_ROUNDING_H_
+} // namespace Fortran::common
+#endif /* FORTRAN_COMMON_TARGET_ROUNDING_H_ */

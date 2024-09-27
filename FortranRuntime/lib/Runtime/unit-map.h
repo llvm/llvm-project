@@ -12,10 +12,10 @@
 #ifndef FORTRAN_RUNTIME_UNIT_MAP_H_
 #define FORTRAN_RUNTIME_UNIT_MAP_H_
 
-#include "lock.h"
-#include "unit.h"
 #include "flang/Common/fast-int-set.h"
 #include "flang/Runtime/memory.h"
+#include "lock.h"
+#include "unit.h"
 #include <cstdint>
 #include <cstdlib>
 
@@ -100,4 +100,4 @@ private:
   int emergencyNewUnit_{maxNewUnits_}; // not recycled
 };
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_UNIT_MAP_H_
+#endif /* FORTRAN_RUNTIME_UNIT_MAP_H_ */

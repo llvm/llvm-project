@@ -38,7 +38,6 @@ if(${LLVM_BUILD_RUNTIME})
   if(NOT LLVM_BUILD_EXTERNAL_COMPILER_RT)
     add_llvm_external_project(compiler-rt)
   endif()
-
   add_llvm_external_project(FortranRuntime)
 endif()
 

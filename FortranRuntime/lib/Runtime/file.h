@@ -11,9 +11,9 @@
 #ifndef FORTRAN_RUNTIME_FILE_H_
 #define FORTRAN_RUNTIME_FILE_H_
 
-#include "io-error.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/memory.h"
+#include "io-error.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
@@ -113,4 +113,4 @@ RT_API_ATTRS bool MayWrite(const char *path);
 RT_API_ATTRS bool MayReadAndWrite(const char *path);
 RT_API_ATTRS std::int64_t SizeInBytes(const char *path);
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_FILE_H_
+#endif /* FORTRAN_RUNTIME_FILE_H_ */

@@ -9,8 +9,8 @@
 #ifndef FORTRAN_COMMON_TEMPLATE_H_
 #define FORTRAN_COMMON_TEMPLATE_H_
 
-#include "flang/Common/variant.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/variant.h"
 #include <functional>
 #include <optional>
 #include <tuple>

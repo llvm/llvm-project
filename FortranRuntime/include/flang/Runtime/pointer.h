@@ -122,4 +122,4 @@ RT_API_ATTRS bool ValidatePointerPayload(const ISO::CFI_cdesc_t &);
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_POINTER_H_
+#endif /* FORTRAN_RUNTIME_POINTER_H_ */

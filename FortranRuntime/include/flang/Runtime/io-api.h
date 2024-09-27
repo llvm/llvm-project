@@ -369,4 +369,4 @@ enum Iostat IODECL(EndIoStatement)(Cookie);
 
 } // extern "C"
 } // namespace Fortran::runtime::io
-#endif
+#endif /* FORTRAN_RUNTIME_IO_API_H_ */

@@ -144,4 +144,4 @@ private:
   Word bits_{0};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_CONSTEXPR_BITSET_H_
+#endif /* FORTRAN_COMMON_CONSTEXPR_BITSET_H_ */

@@ -45,4 +45,4 @@ void RTDECL(MatmulDirect)(const Descriptor &, const Descriptor &,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_MATMUL_H_
+#endif /* FORTRAN_RUNTIME_MATMUL_H_ */

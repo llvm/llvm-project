@@ -48,4 +48,4 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_TIME_INTRINSIC_H_
+#endif /* FORTRAN_RUNTIME_TIME_INTRINSIC_H_ */

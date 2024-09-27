@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_DECIMAL_BINARY_FLOATING_POINT_H_
-#define FORTRAN_DECIMAL_BINARY_FLOATING_POINT_H_
+#ifndef FORTRAN_COMMON_BINARY_FLOATING_POINT_H_
+#define FORTRAN_COMMON_BINARY_FLOATING_POINT_H_
 
 // Access and manipulate the fields of an IEEE-754 binary
 // floating-point value via a generalized template.
@@ -208,4 +208,4 @@ private:
   RawType raw_{0};
 };
 } // namespace Fortran::decimal
-#endif
+#endif /* FORTRAN_COMMON_BINARY_FLOATING_POINT_H_ */

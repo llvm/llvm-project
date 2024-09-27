@@ -444,4 +444,4 @@ bool RTDECL(DotProductLogical)(const Descriptor &, const Descriptor &,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_REDUCTION_H_
+#endif /* FORTRAN_RUNTIME_REDUCTION_H_ */

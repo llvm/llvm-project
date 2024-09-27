@@ -113,4 +113,4 @@ private:
 };
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_LOCK_H_
+#endif /* FORTRAN_RUNTIME_LOCK_H_ */

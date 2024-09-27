@@ -9,8 +9,8 @@
 // External APIs to create temporary storage for array constructors when their
 // final extents or length parameters cannot be pre-computed.
 
-#ifndef FORTRAN_RUNTIME_ARRAYCONSTRUCTOR_H_
-#define FORTRAN_RUNTIME_ARRAYCONSTRUCTOR_H_
+#ifndef FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_H_
+#define FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_H_
 
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/entry-names.h"
@@ -115,4 +115,4 @@ void RTDECL(PushArrayConstructorSimpleScalar)(
     ArrayConstructorVector &vector, void *from);
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_ARRAYCONSTRUCTOR_H_
+#endif /* FORTRAN_RUNTIME_ARRAY_CONSTRUCTOR_H_ */

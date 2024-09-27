@@ -26,4 +26,4 @@ void RTNAME(ExecuteCommandLine)(const Descriptor &command, bool wait = true,
 }
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_EXECUTE_H_
+#endif /* FORTRAN_RUNTIME_EXECUTE_H_ */

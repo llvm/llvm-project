@@ -20,4 +20,4 @@ void RTNAME(ProgramStart)(
 void RTNAME(ByteswapOption)(void); // -byteswapio
 FORTRAN_EXTERN_C_END
 
-#endif // FORTRAN_RUNTIME_MAIN_H_
+#endif /* FORTRAN_RUNTIME_MAIN_H_ */

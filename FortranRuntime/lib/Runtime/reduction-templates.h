@@ -21,11 +21,11 @@
 #ifndef FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 #define FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
 
+#include "flang/Runtime/cpp-type.h"
+#include "flang/Runtime/descriptor.h"
 #include "numeric-templates.h"
 #include "terminator.h"
 #include "tools.h"
-#include "flang/Runtime/cpp-type.h"
-#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 
 namespace Fortran::runtime {
@@ -412,4 +412,4 @@ template <int KIND> struct Norm2Helper {
 };
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_
+#endif /* FORTRAN_RUNTIME_REDUCTION_TEMPLATES_H_ */

@@ -62,4 +62,4 @@ std::int32_t RTNAME(GetCwd)(
 }
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_COMMAND_H_
+#endif /* FORTRAN_RUNTIME_COMMAND_H_ */

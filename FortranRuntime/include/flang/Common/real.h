@@ -141,4 +141,4 @@ private:
 };
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_REAL_H_
+#endif /* FORTRAN_COMMON_REAL_H_ */

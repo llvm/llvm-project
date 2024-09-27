@@ -22,8 +22,8 @@
 //
 // clang-format on
 
-#ifndef FORTRAN_COMMON_REFERENCE_WRAPPER_H
-#define FORTRAN_COMMON_REFERENCE_WRAPPER_H
+#ifndef FORTRAN_COMMON_REFERENCE_WRAPPER_H_
+#define FORTRAN_COMMON_REFERENCE_WRAPPER_H_
 
 #include "flang/Common/api-attrs.h"
 #include <functional>
@@ -111,4 +111,4 @@ using std::reference_wrapper;
 
 } // namespace Fortran::common
 
-#endif // FORTRAN_COMMON_REFERENCE_WRAPPER_H
+#endif /* FORTRAN_COMMON_REFERENCE_WRAPPER_H_ */

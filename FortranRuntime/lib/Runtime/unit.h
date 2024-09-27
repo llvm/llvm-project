@@ -8,21 +8,21 @@
 
 // Fortran external I/O units
 
-#ifndef FORTRAN_RUNTIME_IO_UNIT_H_
-#define FORTRAN_RUNTIME_IO_UNIT_H_
+#ifndef FORTRAN_RUNTIME_UNIT_H_
+#define FORTRAN_RUNTIME_UNIT_H_
 
 #include "buffer.h"
 #include "connection.h"
 #include "environment.h"
 #include "file.h"
+#include "flang/Common/constexpr-bitset.h"
+#include "flang/Common/optional.h"
+#include "flang/Runtime/memory.h"
 #include "format.h"
 #include "io-error.h"
 #include "io-stmt.h"
 #include "lock.h"
 #include "terminator.h"
-#include "flang/Common/constexpr-bitset.h"
-#include "flang/Common/optional.h"
-#include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
 #include <flang/Common/variant.h>
@@ -291,4 +291,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_IO_UNIT_H_
+#endif /* FORTRAN_RUNTIME_UNIT_H_ */

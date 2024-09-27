@@ -53,4 +53,4 @@ struct NonTbpDefinedIoTable {
 };
 
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_NON_TBP_DIO_H_
+#endif /* FORTRAN_RUNTIME_NON_TBP_DIO_H_ */

@@ -12,11 +12,11 @@
 // A C++ perspective of the derived type description schemata in
 // flang/module/__fortran_type_info.f90.
 
-#include "terminator.h"
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
+#include "terminator.h"
 #include <cinttypes>
 #include <memory>
 
@@ -321,4 +321,4 @@ private:
 };
 
 } // namespace Fortran::runtime::typeInfo
-#endif // FORTRAN_RUNTIME_TYPE_INFO_H_
+#endif /* FORTRAN_RUNTIME_TYPE_INFO_H_ */

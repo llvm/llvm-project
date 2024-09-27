@@ -455,4 +455,4 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(FPow16k)(
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_NUMERIC_H_
+#endif /* FORTRAN_RUNTIME_NUMERIC_H_ */

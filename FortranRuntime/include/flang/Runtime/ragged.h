@@ -57,4 +57,4 @@ void RTDECL(RaggedArrayDeallocate)(void *raggedArrayHeader);
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_RAGGED_H_
+#endif /* FORTRAN_RUNTIME_RAGGED_H_ */

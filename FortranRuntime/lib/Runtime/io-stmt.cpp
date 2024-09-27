@@ -9,11 +9,11 @@
 #include "io-stmt.h"
 #include "connection.h"
 #include "emit-encoded.h"
+#include "flang/Runtime/memory.h"
 #include "format.h"
 #include "tools.h"
 #include "unit.h"
 #include "utf.h"
-#include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>

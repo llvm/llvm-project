@@ -21,4 +21,4 @@ RT_API_ATTRS void DoFromSourceAssign(
     Descriptor &, const Descriptor &, Terminator &);
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_ASSIGN_IMPL_H_
+#endif /* FORTRAN_RUNTIME_ASSIGN_IMPL_H_ */

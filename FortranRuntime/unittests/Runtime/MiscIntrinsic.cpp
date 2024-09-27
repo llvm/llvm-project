@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-#include "tools.h"
 #include "flang/Runtime//misc-intrinsic.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
+#include "tools.h"
+#include "gtest/gtest.h"
 
 using namespace Fortran::runtime;
 

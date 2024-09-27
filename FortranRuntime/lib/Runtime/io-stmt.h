@@ -13,14 +13,14 @@
 
 #include "connection.h"
 #include "file.h"
-#include "format.h"
-#include "internal-unit.h"
-#include "io-error.h"
 #include "flang/Common/optional.h"
 #include "flang/Common/reference-wrapper.h"
 #include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
+#include "format.h"
+#include "internal-unit.h"
+#include "io-error.h"
 #include <flang/Common/variant.h>
 #include <functional>
 #include <type_traits>
@@ -789,4 +789,4 @@ private:
 };
 
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_IO_STMT_H_
+#endif /* FORTRAN_RUNTIME_IO_STMT_H_ */

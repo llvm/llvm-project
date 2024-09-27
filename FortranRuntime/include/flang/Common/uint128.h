@@ -19,8 +19,8 @@
 #define AVOID_NATIVE_UINT128_T 0
 #endif
 
-#include "leading-zero-bit-count.h"
 #include "flang/Common/api-attrs.h"
+#include "leading-zero-bit-count.h"
 #include <cstdint>
 #include <type_traits>
 
@@ -303,4 +303,4 @@ template <int BITS>
 using HostSignedIntType = typename HostSignedIntTypeHelper<BITS>::type;
 
 } // namespace Fortran::common
-#endif
+#endif /* FORTRAN_COMMON_UINT128_H_ */

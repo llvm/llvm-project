@@ -93,4 +93,4 @@ template <typename A> inline constexpr int BitsNeededFor(A x) {
   return 8 * sizeof x - LeadingZeroBitCount(x);
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_LEADING_ZERO_BIT_COUNT_H_
+#endif /* FORTRAN_COMMON_LEADING_ZERO_BIT_COUNT_H_ */

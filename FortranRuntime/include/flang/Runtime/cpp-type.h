@@ -110,4 +110,4 @@ template <> struct CppTypeForHelper<TypeCategory::Logical, 1> {
 };
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_CPP_TYPE_H_
+#endif /* FORTRAN_RUNTIME_CPP_TYPE_H_ */

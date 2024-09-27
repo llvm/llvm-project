@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
-#include "flang/Support/static-multimap-view.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -42,6 +41,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat.h"
+#include "flang/Support/static-multimap-view.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -507,7 +507,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
-        {"numeric_storage_size", &I::genNumericStorageSize},
+    {"numeric_storage_size", &I::genNumericStorageSize},
     {"pack",
      &I::genPack,
      {{{"array", asBox},
@@ -7224,8 +7224,7 @@ IntrinsicLibrary::genVerify(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "VERIFY");
 }
 
-
-    fir::ExtendedValue IntrinsicLibrary:: genNumericStorageSize(mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+fir::ExtendedValue IntrinsicLibrary:: genNumericStorageSize(mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
       assert(args.empty() );
      
       if (!ignoreModuleOnlyBuiltins) {
@@ -7235,7 +7234,6 @@ IntrinsicLibrary::genVerify(mlir::Type resultType,
 
       return builder.createIntegerConstant(loc, resultType  , 32 );
     }
-
 
 /// Process calls to Minloc, Maxloc intrinsic functions
 template <typename FN, typename FD>

@@ -12,12 +12,12 @@
 #define FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 
 #include "emit-encoded.h"
+#include "flang/Common/decimal.h"
+#include "flang/Common/format.h"
+#include "flang/Runtime/main.h"
 #include "format.h"
 #include "io-stmt.h"
 #include "memory.h"
-#include "flang/Common/format.h"
-#include "flang/Common/decimal.h"
-#include "flang/Runtime/main.h"
 #include <algorithm>
 #include <cstring>
 #include <limits>
@@ -601,4 +601,4 @@ RT_API_ATTRS void FormatControl<CONTEXT>::Finish(Context &context) {
   }
 }
 } // namespace Fortran::runtime::io
-#endif // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
+#endif /* FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_ */

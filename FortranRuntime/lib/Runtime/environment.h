@@ -9,8 +9,8 @@
 #ifndef FORTRAN_RUNTIME_ENVIRONMENT_H_
 #define FORTRAN_RUNTIME_ENVIRONMENT_H_
 
-#include "flang/Common/optional.h"
 #include "flang/Common/decimal.h"
+#include "flang/Common/optional.h"
 
 struct EnvironmentDefaultList;
 
@@ -64,4 +64,4 @@ RT_OFFLOAD_VAR_GROUP_END
 
 } // namespace Fortran::runtime
 
-#endif // FORTRAN_RUNTIME_ENVIRONMENT_H_
+#endif /* FORTRAN_RUNTIME_ENVIRONMENT_H_ */

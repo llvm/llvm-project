@@ -8,8 +8,8 @@
 
 /* C and C++ API for binary-to/from-decimal conversion package. */
 
-#ifndef FORTRAN_DECIMAL_DECIMAL_H_
-#define FORTRAN_DECIMAL_DECIMAL_H_
+#ifndef FORTRAN_COMMON_DECIMAL_H_
+#define FORTRAN_COMMON_DECIMAL_H_
 
 #include "flang/Common/api-attrs.h"
 #include <stddef.h>
@@ -136,4 +136,4 @@ RT_API_ATTRS enum NS(ConversionResultFlags) ConvertDecimalToLongDouble(
 #ifdef __cplusplus
 } // extern "C"
 #endif
-#endif
+#endif /* FORTRAN_COMMON_DECIMAL_H_ */

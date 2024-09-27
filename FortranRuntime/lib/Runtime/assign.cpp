@@ -9,11 +9,11 @@
 #include "flang/Runtime/assign.h"
 #include "assign-impl.h"
 #include "derived.h"
+#include "flang/Runtime/descriptor.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
 #include "type-info.h"
-#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

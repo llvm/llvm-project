@@ -435,4 +435,4 @@ void RTDECL(ReduceDerivedTypeDim)(Descriptor &result, const Descriptor &array,
 
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_REDUCE_H_
+#endif /* FORTRAN_RUNTIME_REDUCE_H_ */

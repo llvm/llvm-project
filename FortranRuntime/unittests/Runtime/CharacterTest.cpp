@@ -10,8 +10,8 @@
 // in Fortran.
 
 #include "flang/Runtime/character.h"
-#include "gtest/gtest.h"
 #include "flang/Runtime/descriptor.h"
+#include "gtest/gtest.h"
 #include <cstring>
 #include <functional>
 #include <tuple>

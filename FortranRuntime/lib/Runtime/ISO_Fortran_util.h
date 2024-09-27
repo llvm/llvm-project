@@ -11,10 +11,10 @@
 
 // Internal utils for establishing CFI_cdesc_t descriptors.
 
-#include "terminator.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/type-code.h"
+#include "terminator.h"
 #include <cstdlib>
 
 namespace Fortran::ISO {
@@ -99,4 +99,4 @@ static inline RT_API_ATTRS void EstablishDescriptor(CFI_cdesc_t *descriptor,
   }
 }
 } // namespace Fortran::ISO
-#endif // FORTRAN_RUNTIME_ISO_FORTRAN_UTIL_H_
+#endif /* FORTRAN_RUNTIME_ISO_FORTRAN_UTIL_H_ */

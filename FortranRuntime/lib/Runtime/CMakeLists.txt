@@ -139,20 +139,11 @@ set(supported_files
     "${FLANGRUNTIME_SOURCE_DIR}/include/flang/Common/*.h" 
     )
 
-
   set(private_headers "")
   file(GLOB_RECURSE private_headers 
     "${FLANGRUNTIME_SOURCE_DIR}/lib/Runtime/*.h" 
     "${FLANGRUNTIME_SOURCE_DIR}/lib/Common/*.h" 
     )
-
-
-
-
-
-
-
-
 
 get_target_property(f128_sources
   FortranFloat128MathILib INTERFACE_SOURCES
@@ -169,17 +160,6 @@ if (f128_sources)
     )
   list(APPEND sources ${f128_sources})
 endif()
-
-
-
-
-
-
-
-
-
-
-
 
 if (NOT DEFINED WIN32)
   add_fortranruntime_library(FortranRuntime STATIC

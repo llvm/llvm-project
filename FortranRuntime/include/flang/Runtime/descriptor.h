@@ -492,4 +492,4 @@ private:
 };
 
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_DESCRIPTOR_H_
+#endif /* FORTRAN_RUNTIME_DESCRIPTOR_H_ */

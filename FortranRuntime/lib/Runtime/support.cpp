@@ -8,8 +8,8 @@
 
 #include "flang/Runtime/support.h"
 #include "ISO_Fortran_util.h"
-#include "type-info.h"
 #include "flang/Runtime/descriptor.h"
+#include "type-info.h"
 
 namespace Fortran::runtime {
 extern "C" {

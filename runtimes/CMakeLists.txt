@@ -49,7 +49,6 @@ function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
 
-message("LLVM_BINARY_DIR: ${LLVM_BINARY_DIR}")
 find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 

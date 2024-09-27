@@ -9,10 +9,10 @@
 // REDUCE() implementation
 
 #include "flang/Runtime/reduce.h"
+#include "flang/Runtime/descriptor.h"
 #include "reduction-templates.h"
 #include "terminator.h"
 #include "tools.h"
-#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

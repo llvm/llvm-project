@@ -18,15 +18,15 @@
 #include "edit-input.h"
 #include "edit-output.h"
 #include "environment.h"
+#include "flang/Common/optional.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/memory.h"
 #include "format.h"
 #include "io-api-common.h"
 #include "io-stmt.h"
 #include "terminator.h"
 #include "tools.h"
 #include "unit.h"
-#include "flang/Common/optional.h"
-#include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <memory>
 

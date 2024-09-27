@@ -8,10 +8,10 @@
 
 #include "flang/Runtime/derived-api.h"
 #include "derived.h"
+#include "flang/Runtime/descriptor.h"
 #include "terminator.h"
 #include "tools.h"
 #include "type-info.h"
-#include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {
 

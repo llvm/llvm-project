@@ -15,8 +15,8 @@
  * The value of REVISION should not be changed until/unless the API to the
  * runtime library must change in some way that breaks backward compatibility.
  */
-#ifndef FORTRAN_RUNTIME_ENTRY_NAMES_H
-#define FORTRAN_RUNTIME_ENTRY_NAMES_H
+#ifndef FORTRAN_RUNTIME_ENTRY_NAMES_H_
+#define FORTRAN_RUNTIME_ENTRY_NAMES_H_
 
 #include "flang/Common/api-attrs.h"
 
@@ -40,4 +40,4 @@
 #define RTNAME_STRING(name) RTNAME_STRINGIFY(RTNAME(name))
 #endif
 
-#endif /* !FORTRAN_RUNTIME_ENTRY_NAMES_H */
+#endif /* FORTRAN_RUNTIME_ENTRY_NAMES_H_ */

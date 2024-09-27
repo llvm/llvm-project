@@ -69,4 +69,4 @@ constexpr std::array<std::string_view, ITEMS> EnumNames(const char *p) {
   }
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_ENUM_CLASS_H_
+#endif /* FORTRAN_COMMON_ENUM_CLASS_H_ */

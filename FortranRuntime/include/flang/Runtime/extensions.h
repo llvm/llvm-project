@@ -52,4 +52,4 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
 #endif
 
 } // extern "C"
-#endif // FORTRAN_RUNTIME_EXTENSIONS_H_
+#endif /* FORTRAN_RUNTIME_EXTENSIONS_H_ */

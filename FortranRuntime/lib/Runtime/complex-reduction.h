@@ -155,4 +155,4 @@ void RTNAME(ReduceComplex16DimValue)(
     REDUCE_DIM_ARGS(CFloat128ComplexType, CFloat128ComplexType_value_op));
 #endif
 
-#endif // FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_
+#endif /* FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_ */

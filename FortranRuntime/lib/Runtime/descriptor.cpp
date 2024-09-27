@@ -9,12 +9,12 @@
 #include "flang/Runtime/descriptor.h"
 #include "ISO_Fortran_util.h"
 #include "derived.h"
+#include "flang/Runtime/allocator-registry.h"
 #include "memory.h"
 #include "stat.h"
 #include "terminator.h"
 #include "tools.h"
 #include "type-info.h"
-#include "flang/Runtime/allocator-registry.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>

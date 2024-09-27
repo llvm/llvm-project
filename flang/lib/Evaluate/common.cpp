@@ -9,7 +9,6 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Common/idioms.h"
 
-
 using namespace Fortran::parser::literals;
 
 

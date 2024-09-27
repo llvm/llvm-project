@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Support/Fortran-features.h"
-#include "flang/Support/Fortran.h"
 #include "flang/Common/idioms.h"
+#include "flang/Support/Fortran.h"
 
 namespace Fortran::common {
 

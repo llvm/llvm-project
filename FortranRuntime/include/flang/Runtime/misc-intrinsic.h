@@ -28,4 +28,4 @@ void RTDECL(TransferSize)(Descriptor &result, const Descriptor &source,
     std::int64_t size);
 } // extern "C"
 } // namespace Fortran::runtime
-#endif // FORTRAN_RUNTIME_MISC_INTRINSIC_H_
+#endif /* FORTRAN_RUNTIME_MISC_INTRINSIC_H_ */
