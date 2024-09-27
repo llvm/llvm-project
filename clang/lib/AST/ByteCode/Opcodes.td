@@ -106,7 +106,7 @@ def PtrTypeClass : TypeClass {
 }
 
 def NonPtrTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float]);
+  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float], [FixedPoint]);
 }
 
 def AllTypeClass : TypeClass {
