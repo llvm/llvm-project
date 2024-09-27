@@ -381,4 +381,26 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V9.isManuallyAlloc());
 }
 
+TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  Sema &sema = Interp->getCompilerInstance()->getSema();
+
+  llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
+
+  TranslationUnitDecl *TU =
+      sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl();
+
+  llvm::cantFail(Interp->ParseAndExecute("long y = 84;"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+
+  llvm::cantFail(Interp->ParseAndExecute("char z = 'z';"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+}
+
 } // end anonymous namespace

@@ -130,6 +130,10 @@ public:
   /// scope names are ordered by increasing synchronization scope IDs.
   void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
 
+  /// getSyncScopeName - Returns the name of a SyncScope::ID
+  /// registered with LLVMContext, if any.
+  std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
+
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);
 

@@ -3366,16 +3366,18 @@ def DiagnoseIf : InheritableAttr {
   let Spellings = [GNU<"diagnose_if">];
   let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">,
-              EnumArgument<"DefaultSeverity",
-                           "DefaultSeverity",
+              EnumArgument<"DiagnosticType", "DiagnosticType",
                            /*is_string=*/true,
-                           ["error",    "warning"],
-                           ["DS_error", "DS_warning"]>,
-              StringArgument<"WarningGroup", /*optional*/ 1>,
+                           ["error", "warning"],
+                           ["DT_Error", "DT_Warning"]>,
               BoolArgument<"ArgDependent", 0, /*fake*/ 1>,
               DeclArgument<Named, "Parent", 0, /*fake*/ 1>];
   let InheritEvenIfAlreadyPresent = 1;
   let LateParsed = LateAttrParseStandard;
+  let AdditionalMembers = [{
+    bool isError() const { return diagnosticType == DT_Error; }
+    bool isWarning() const { return diagnosticType == DT_Warning; }
+  }];
   let TemplateDependent = 1;
   let Documentation = [DiagnoseIfDocs];
 }

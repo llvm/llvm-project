@@ -1255,7 +1255,7 @@ public:
 
   void onEndOfFunction(SMLoc ErrorLoc) {
     if (!SkipTypeCheck)
-      TC.endOfFunction(ErrorLoc);
+      TC.endOfFunction(ErrorLoc, true);
     // Reset the type checker state.
     TC.clear();
   }
