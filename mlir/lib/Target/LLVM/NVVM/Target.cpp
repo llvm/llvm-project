@@ -93,7 +93,6 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
   // If `targetOptions` have an empty toolkitPath use `getCUDAToolkitPath`
   if (toolkitPath.empty())
     toolkitPath = getCUDAToolkitPath();
-  llvm::errs() << toolkitPath;
 
   // Append the files in the target attribute.
   if (ArrayAttr files = target.getLink())
