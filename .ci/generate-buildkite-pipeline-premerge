@@ -192,40 +192,49 @@ function keep-modified-projects() {
 
 function check-targets() {
   projects=${@}
+  targets=""
   for project in ${projects}; do
     case ${project} in
     clang-tools-extra)
-      echo "check-clang-tools"
+      targets="${targets} check-clang-tools"
     ;;
     compiler-rt)
-      echo "check-all"
+      targets="${targets} check-all"
     ;;
     cross-project-tests)
-      echo "check-cross-project"
+      targets="${targets} check-cross-project"
     ;;
     libcxx)
-      echo "check-cxx"
+      targets="${targets} check-cxx"
     ;;
     libcxxabi)
-      echo "check-cxxabi"
+      targets="${targets} check-cxxabi"
     ;;
     libunwind)
-      echo "check-unwind"
+      targets="${targets} check-unwind"
     ;;
     lldb)
-      echo "check-lldb"
+      targets="${targets} check-lldb"
     ;;
     pstl)
-      echo "check-all"
+      targets="${targets} check-all"
     ;;
     libclc)
-      echo "check-all"
+      targets="${targets} check-all"
     ;;
     *)
-      echo "check-${project}"
+      targets="${targets} check-${project}"
     ;;
     esac
   done
+
+  # check-all includes every project and runtime. Adding more targets would
+  # make tests run multiple times.
+  if [[ $targets == *"check-all"* ]]; then
+    echo "check-all"
+  else
+    echo ${targets}
+  fi
 }
 
 # Project specific pipelines.
