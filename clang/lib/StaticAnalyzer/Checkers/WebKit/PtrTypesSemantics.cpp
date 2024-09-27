@@ -155,7 +155,7 @@ std::optional<bool> isUncounted(const QualType T) {
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
-  if (isRefCounted(Class))
+  if (!Class || isRefCounted(Class))
     return false;
 
   std::optional<bool> IsRefCountable = isRefCountable(Class);
