@@ -41,4 +41,4 @@ enum class RoundingMode : std::uint8_t {
 };
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORTRAN_CONSTS_H_
+#endif /* FORTRAN_COMMON_FORTRAN_CONSTS_H_ */

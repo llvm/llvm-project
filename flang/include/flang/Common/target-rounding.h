@@ -34,4 +34,4 @@ ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
 using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_TARGET_ROUNDING_H_
+#endif /* FORTRAN_COMMON_TARGET_ROUNDING_H_ */
