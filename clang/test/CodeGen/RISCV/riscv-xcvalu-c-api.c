@@ -20,8 +20,8 @@
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp sle i32 [[TMP2]], [[TMP3]]
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[TMP4]] to i32
-// CHECK-NEXT:    ret i32 [[CONV_I]]
+// CHECK-NEXT:    [[SLE_I:%.*]] = zext i1 [[TMP4]] to i32
+// CHECK-NEXT:    ret i32 [[SLE_I]]
 //
 int test_alu_slet(int32_t a, int32_t b) {
   return __riscv_cv_alu_slet(a, b);
@@ -42,8 +42,8 @@ int test_alu_slet(int32_t a, int32_t b) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[B_ADDR_I]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i32 [[TMP2]], [[TMP3]]
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i1 [[TMP4]] to i32
-// CHECK-NEXT:    ret i32 [[CONV_I]]
+// CHECK-NEXT:    [[SLEU_I:%.*]] = zext i1 [[TMP4]] to i32
+// CHECK-NEXT:    ret i32 [[SLEU_I]]
 //
 int test_alu_sletu(uint32_t a, uint32_t b) {
   return __riscv_cv_alu_sletu(a, b);
