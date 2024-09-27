@@ -5713,8 +5713,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
     // efficent becuase it allows lazy deserialization.
     RecordData FunctionToLambdasMapRecord;
     for (const auto &Pair : FunctionToLambdasMap) {
-      FunctionToLambdasMapRecord.push_back(
-          GetDeclRef(Pair.first).getRawValue());
+      FunctionToLambdasMapRecord.push_back(Pair.first.getRawValue());
       FunctionToLambdasMapRecord.push_back(Pair.second.size());
       for (const auto &Lambda : Pair.second)
         FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
