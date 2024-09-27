@@ -94,10 +94,11 @@ RealtimeSanitizer supports a number of run-time flags, which can be specified in
    % RTSAN_OPTIONS=option_1=true:path_option_2="/some/file.txt" ./a.out
    ...
 
-Or at compile-time by overloading the symbol ``__rtsan_default_options``:
+Or at compile-time by providing the symbol ``__rtsan_default_options``:
 
 .. code-block:: c
 
+  __attribute__((__visibility__("default")))
   extern "C" const char *__rtsan_default_options() {
     return "symbolize=false:abort_on_error=0:log_to_syslog=0";
   }
