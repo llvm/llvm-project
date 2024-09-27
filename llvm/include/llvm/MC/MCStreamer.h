@@ -251,6 +251,15 @@ class MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
+  // Flag specifying weather functions will have an offset into the line table
+  // where the line data for that function starts
+  bool GenerateFuncLineTableOffsets = false;
+
+  // Symbol that tracks the stream symbol for first line of the current function
+  // being generated. This symbol can be used to reference where the line
+  // entries for the function start in the generated line table.
+  MCSymbol *CurrentFuncFirstLineStreamSym;
+
 protected:
   MCFragment *CurFrag = nullptr;
 
@@ -312,6 +321,24 @@ public:
 
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
+
+  void setGenerateFuncLineTableOffsets(bool v) {
+    GenerateFuncLineTableOffsets = v;
+  }
+  bool getGenerateFuncLineTableOffsets() const {
+    return GenerateFuncLineTableOffsets;
+  }
+
+  // Use the below functions to track the symbol that points to the current
+  // function's line info in the output stream.
+  void beginFunction() { CurrentFuncFirstLineStreamSym = nullptr; }
+  void emittedLineStreamSym(MCSymbol *StreamSym) {
+    if (!CurrentFuncFirstLineStreamSym)
+      CurrentFuncFirstLineStreamSym = StreamSym;
+  }
+  MCSymbol *getCurrentFuncFirstLineStreamSym() {
+    return CurrentFuncFirstLineStreamSym;
+  }
 
   /// When emitting an object file, create and emit a real label. When emitting
   /// textual assembly, this should do nothing to avoid polluting our output.
