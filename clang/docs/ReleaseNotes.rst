@@ -568,6 +568,9 @@ AST Matchers
 
 - Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
 
+- The examples in the AST matcher reference are now tested and additional
+  examples and descriptions were added.
+
 clang-format
 ------------
 
