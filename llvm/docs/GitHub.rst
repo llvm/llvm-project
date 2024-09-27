@@ -23,6 +23,23 @@ intended to be able to support "stacked" pull-request. Do not create any branche
 llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
 aren't associated with a pull-request **will be deleted**.
 
+Using Graphite for stacked Pull Requests
+========================================
+
+`Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
+by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
+
+Graphite will want to create branches under ``llvm/llvm-project`` rather than your
+private fork, so the guidance above, about branch naming, is critical, otherwise
+``gt submit`` (i.e. publish your PRs for review) will fail.
+
+Use ``gt config`` then ``Branch naming settings`` and ``Set a prefix for branch names``.
+Include the last ``/``.
+
+If you didn't do the above and Graphite created non-prefixed branches, a simple way to
+unblock is to rename (``git -m <old name> <new name>``), and then checkout the branch
+and ``gt track``.
+
 Pull Requests
 =============
 The LLVM project is using GitHub Pull Requests for Code Reviews. This document

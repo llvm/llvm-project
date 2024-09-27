@@ -2412,13 +2412,14 @@ ParseResult OperationParser::parseOptionalBlockArgList(Block *owner) {
 //===----------------------------------------------------------------------===//
 
 ParseResult OperationParser::codeCompleteSSAUse() {
-  std::string detailData;
-  llvm::raw_string_ostream detailOS(detailData);
   for (IsolatedSSANameScope &scope : isolatedNameScopes) {
     for (auto &it : scope.values) {
       if (it.second.empty())
         continue;
       Value frontValue = it.second.front().value;
+
+      std::string detailData;
+      llvm::raw_string_ostream detailOS(detailData);
 
       // If the value isn't a forward reference, we also add the name of the op
       // to the detail.
@@ -2440,7 +2441,7 @@ ParseResult OperationParser::codeCompleteSSAUse() {
         detailOS << ", ...";
 
       state.codeCompleteContext->appendSSAValueCompletion(
-          it.getKey(), std::move(detailOS.str()));
+          it.getKey(), std::move(detailData));
     }
   }
 

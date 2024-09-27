@@ -104,6 +104,10 @@ static cl::opt<bool>
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::cat(MCCategory));
 
+static cl::opt<unsigned> CommentColumn("comment-column",
+                                       cl::desc("Asm comments indentation"),
+                                       cl::init(40));
+
 enum OutputFileType {
   OFT_Null,
   OFT_AssemblyFile,
@@ -405,6 +409,7 @@ int main(int argc, char **argv) {
     }
   }
   MAI->setPreserveAsmComments(PreserveComments);
+  MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
   std::string FeaturesStr;
@@ -559,6 +564,8 @@ int main(int argc, char **argv) {
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
       Str->initSections(true, *STI);
+    Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
+                              VersionTuple());
   }
 
   int Res = 1;

@@ -27,13 +27,6 @@ dxil::Resources DXILResourceMDAnalysis::run(Module &M,
 
 AnalysisKey DXILResourceMDAnalysis::Key;
 
-PreservedAnalyses DXILResourceMDPrinterPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  dxil::Resources Res = AM.getResult<DXILResourceMDAnalysis>(M);
-  Res.print(OS);
-  return PreservedAnalyses::all();
-}
-
 char DXILResourceMDWrapper::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILResourceMDWrapper, DEBUG_TYPE,
                       "DXIL resource Information", true, true)
@@ -46,7 +39,3 @@ bool DXILResourceMDWrapper::runOnModule(Module &M) {
 }
 
 DXILResourceMDWrapper::DXILResourceMDWrapper() : ModulePass(ID) {}
-
-void DXILResourceMDWrapper::print(raw_ostream &OS, const Module *) const {
-  Resources.print(OS);
-}

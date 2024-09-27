@@ -1970,7 +1970,6 @@ static bool __kmp_affinity_create_hwloc_map(kmp_i18n_id_t *const msg_id) {
             hw_thread.ids[index + 1] = sub_id;
             index--;
           }
-          prev = memory;
         }
         prev = obj;
       }
@@ -2634,8 +2633,9 @@ static int __kmp_topology_type_2_intel_type(kmp_hw_t type) {
     return INTEL_LEVEL_TYPE_MODULE;
   case KMP_HW_DIE:
     return INTEL_LEVEL_TYPE_DIE;
+  default:
+    return INTEL_LEVEL_TYPE_INVALID;
   }
-  return INTEL_LEVEL_TYPE_INVALID;
 }
 
 struct cpuid_level_info_t {
@@ -4988,7 +4988,7 @@ static void __kmp_aux_affinity_initialize(kmp_affinity_t &affinity) {
   int depth = __kmp_topology->get_depth();
 
   // Create the table of masks, indexed by thread Id.
-  unsigned numUnique;
+  unsigned numUnique = 0;
   int numAddrs = __kmp_topology->get_num_hw_threads();
   // If OMP_PLACES=cores:<attribute> specified, then attempt
   // to make OS Id mask table using those attributes

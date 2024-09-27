@@ -188,6 +188,18 @@ declaration kind), all of which are optional:
     - Name: tzdb
       SwiftCopyable: false
 
+:SwiftConformsTo:
+
+  Allows annotating a C++ class as conforming to a Swift protocol. Equivalent
+  to ``SWIFT_CONFORMS_TO_PROTOCOL``. The value is a module-qualified name of a
+  Swift protocol.
+
+  ::
+
+    Tags:
+    - Name: vector
+      SwiftConformsTo: Cxx.CxxSequence
+
 :Availability, AvailabilityMsg:
 
   A value of "nonswift" is equivalent to ``NS_SWIFT_UNAVAILABLE``. A value of

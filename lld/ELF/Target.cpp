@@ -38,17 +38,15 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-const TargetInfo *elf::target;
-
 std::string lld::toString(RelType type) {
-  StringRef s = getELFRelocationTypeName(elf::config->emachine, type);
+  StringRef s = getELFRelocationTypeName(elf::ctx.arg.emachine, type);
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
 }
 
 TargetInfo *elf::getTarget() {
-  switch (config->emachine) {
+  switch (ctx.arg.emachine) {
   case EM_386:
   case EM_IAMCU:
     return getX86TargetInfo();
@@ -65,7 +63,7 @@ TargetInfo *elf::getTarget() {
   case EM_LOONGARCH:
     return getLoongArchTargetInfo();
   case EM_MIPS:
-    switch (config->ekind) {
+    switch (ctx.arg.ekind) {
     case ELF32LEKind:
       return getMipsTargetInfo<ELF32LE>();
     case ELF32BEKind:
@@ -92,7 +90,7 @@ TargetInfo *elf::getTarget() {
   case EM_X86_64:
     return getX86_64TargetInfo();
   default:
-    fatal("unsupported e_machine value: " + Twine(config->emachine));
+    fatal("unsupported e_machine value: " + Twine(ctx.arg.emachine));
   }
 }
 
@@ -158,7 +156,7 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
 }
 
 void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  const unsigned bits = config->is64 ? 64 : 32;
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
@@ -177,7 +175,7 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 
 uint64_t TargetInfo::getImageBase() const {
   // Use --image-base if set. Fall back to the target default if not.
-  if (config->imageBase)
-    return *config->imageBase;
-  return config->isPic ? 0 : defaultImageBase;
+  if (ctx.arg.imageBase)
+    return *ctx.arg.imageBase;
+  return ctx.arg.isPic ? 0 : defaultImageBase;
 }

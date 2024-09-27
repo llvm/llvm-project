@@ -57,7 +57,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
-  bool HasHalfPrecision = false;
+  bool HasFP16 = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -90,9 +90,7 @@ public:
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool useFP16ConversionIntrinsics() const override {
-    return !HasHalfPrecision;
-  }
+  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,

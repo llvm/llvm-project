@@ -20,8 +20,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
 
-#include <climits>
-
 namespace clang {
 
 /// Predefined declaration IDs.
@@ -32,65 +30,65 @@ namespace clang {
 /// it is created.
 enum PredefinedDeclIDs {
   /// The NULL declaration.
-  PREDEF_DECL_NULL_ID = 0,
+  PREDEF_DECL_NULL_ID,
 
   /// The translation unit.
-  PREDEF_DECL_TRANSLATION_UNIT_ID = 1,
+  PREDEF_DECL_TRANSLATION_UNIT_ID,
 
   /// The Objective-C 'id' type.
-  PREDEF_DECL_OBJC_ID_ID = 2,
+  PREDEF_DECL_OBJC_ID_ID,
 
   /// The Objective-C 'SEL' type.
-  PREDEF_DECL_OBJC_SEL_ID = 3,
+  PREDEF_DECL_OBJC_SEL_ID,
 
   /// The Objective-C 'Class' type.
-  PREDEF_DECL_OBJC_CLASS_ID = 4,
+  PREDEF_DECL_OBJC_CLASS_ID,
 
   /// The Objective-C 'Protocol' type.
-  PREDEF_DECL_OBJC_PROTOCOL_ID = 5,
+  PREDEF_DECL_OBJC_PROTOCOL_ID,
 
   /// The signed 128-bit integer type.
-  PREDEF_DECL_INT_128_ID = 6,
+  PREDEF_DECL_INT_128_ID,
 
   /// The unsigned 128-bit integer type.
-  PREDEF_DECL_UNSIGNED_INT_128_ID = 7,
+  PREDEF_DECL_UNSIGNED_INT_128_ID,
 
   /// The internal 'instancetype' typedef.
-  PREDEF_DECL_OBJC_INSTANCETYPE_ID = 8,
+  PREDEF_DECL_OBJC_INSTANCETYPE_ID,
 
   /// The internal '__builtin_va_list' typedef.
-  PREDEF_DECL_BUILTIN_VA_LIST_ID = 9,
+  PREDEF_DECL_BUILTIN_VA_LIST_ID,
 
   /// The internal '__va_list_tag' struct, if any.
-  PREDEF_DECL_VA_LIST_TAG = 10,
+  PREDEF_DECL_VA_LIST_TAG,
 
   /// The internal '__builtin_ms_va_list' typedef.
-  PREDEF_DECL_BUILTIN_MS_VA_LIST_ID = 11,
+  PREDEF_DECL_BUILTIN_MS_VA_LIST_ID,
 
   /// The predeclared '_GUID' struct.
-  PREDEF_DECL_BUILTIN_MS_GUID_ID = 12,
+  PREDEF_DECL_BUILTIN_MS_GUID_ID,
 
   /// The extern "C" context.
-  PREDEF_DECL_EXTERN_C_CONTEXT_ID = 13,
+  PREDEF_DECL_EXTERN_C_CONTEXT_ID,
 
   /// The internal '__make_integer_seq' template.
-  PREDEF_DECL_MAKE_INTEGER_SEQ_ID = 14,
+  PREDEF_DECL_MAKE_INTEGER_SEQ_ID,
 
   /// The internal '__NSConstantString' typedef.
-  PREDEF_DECL_CF_CONSTANT_STRING_ID = 15,
+  PREDEF_DECL_CF_CONSTANT_STRING_ID,
 
   /// The internal '__NSConstantString' tag type.
-  PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID = 16,
+  PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
   /// The internal '__type_pack_element' template.
-  PREDEF_DECL_TYPE_PACK_ELEMENT_ID = 17,
-};
+  PREDEF_DECL_TYPE_PACK_ELEMENT_ID,
 
-/// The number of declaration IDs that are predefined.
-///
-/// For more information about predefined declarations, see the
-/// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
-const unsigned int NUM_PREDEF_DECL_IDS = 18;
+  /// The internal '__builtin_common_type' template.
+  PREDEF_DECL_COMMON_TYPE_ID,
+
+  /// The number of declaration IDs that are predefined.
+  NUM_PREDEF_DECL_IDS
+};
 
 /// GlobalDeclID means DeclID in the current ASTContext and LocalDeclID means
 /// DeclID specific to a certain ModuleFile. Specially, in ASTWriter, the
@@ -191,6 +189,7 @@ class LocalDeclID : public DeclIDBase {
   // Every Decl ID is a local decl ID to the module being writing in ASTWriter.
   friend class ASTWriter;
   friend class GlobalDeclID;
+  friend struct llvm::DenseMapInfo<clang::LocalDeclID>;
 
 public:
   LocalDeclID() : Base() {}
@@ -265,6 +264,27 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
+    return L == R;
+  }
+};
+
+template <> struct DenseMapInfo<clang::LocalDeclID> {
+  using LocalDeclID = clang::LocalDeclID;
+  using DeclID = LocalDeclID::DeclID;
+
+  static LocalDeclID getEmptyKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static LocalDeclID getTombstoneKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const LocalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
+  }
+
+  static bool isEqual(const LocalDeclID &L, const LocalDeclID &R) {
     return L == R;
   }
 };

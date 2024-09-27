@@ -16,7 +16,13 @@ entry:
   ret i32 %tmp
 }
 
-declare ptr @ctime(ptr)
+define ptr @ctime(ptr %p) {
+; CHECK-LABEL: define ptr @ctime(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
 
 define internal { i8 } @foo(ptr) {
 ; CHECK-LABEL: define internal { i8 } @foo(
@@ -39,7 +45,13 @@ entry:
   ret void
 }
 
-declare i32 @fn1(i32)
+define i32 @fn1(i32 %x) {
+; CHECK-LABEL: define i32 @fn1(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  ret i32 %x
+}
 
 define i32 @test1(ptr %a) {
 ; CHECK-LABEL: define i32 @test1(
@@ -116,7 +128,13 @@ define i1 @test5() {
   ret i1 %6
 }
 
-declare void @bundles_callee(i32)
+define void @bundles_callee(i32) {
+; CHECK-LABEL: define void @bundles_callee(
+; CHECK-SAME: i32 [[TMP0:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
 
 define void @bundles() {
 ; CHECK-LABEL: define void @bundles() {

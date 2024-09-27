@@ -192,6 +192,12 @@ TargetStats::ToJSON(Target &target,
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
+  target_metrics_json.try_emplace("sourceRealpathAttemptCount",
+                                  m_source_realpath_attempt_count);
+  target_metrics_json.try_emplace("sourceRealpathCompatibleCount",
+                                  m_source_realpath_compatible_count);
+  target_metrics_json.try_emplace("summaryProviderStatistics",
+                                  target.GetSummaryStatisticsCache().ToJSON());
   return target_metrics_json;
 }
 
@@ -218,6 +224,14 @@ void TargetStats::SetFirstPublicStopTime() {
 
 void TargetStats::IncreaseSourceMapDeduceCount() {
   ++m_source_map_deduce_count;
+}
+
+void TargetStats::IncreaseSourceRealpathAttemptCount(uint32_t count) {
+  m_source_realpath_attempt_count += count;
+}
+
+void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
+  m_source_realpath_compatible_count += count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;
@@ -400,11 +414,29 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       llvm::raw_string_ostream ss(buffer);
       json::OStream json_os(ss);
       transcript.Serialize(json_os);
-      if (auto json_transcript = llvm::json::parse(ss.str()))
+      if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
   }
 
   return std::move(global_stats);
+}
+
+llvm::json::Value SummaryStatistics::ToJSON() const {
+  return json::Object{{
+      {"name", GetName()},
+      {"type", GetSummaryKindName()},
+      {"count", GetSummaryCount()},
+      {"totalTime", GetTotalTime()},
+  }};
+}
+
+json::Value SummaryStatisticsCache::ToJSON() {
+  std::lock_guard<std::mutex> guard(m_map_mutex);
+  json::Array json_summary_stats;
+  for (const auto &summary_stat : m_summary_stats_map)
+    json_summary_stats.emplace_back(summary_stat.second->ToJSON());
+
+  return json_summary_stats;
 }

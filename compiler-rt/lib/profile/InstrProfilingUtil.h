@@ -84,4 +84,9 @@ static inline size_t lprofRoundDownTo(size_t x, size_t boundary) {
 
 int lprofReleaseMemoryPagesToOS(uintptr_t Begin, uintptr_t End);
 
+typedef void (*AtExit_Fn_ptr)(void);
+
+/* Call atexit and perform other platform-specific bookkeeping. */
+int lprofAtExit(AtExit_Fn_ptr);
+
 #endif /* PROFILE_INSTRPROFILINGUTIL_H */

@@ -77,7 +77,7 @@ define i8 @shl_and_and_fail2(i8 %x, i8 %y) {
 define <2 x i8> @lshr_and_or(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_and_or(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 -64, i8 96>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i8> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 4, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
@@ -106,7 +106,7 @@ define <2 x i8> @lshr_and_or_fail(<2 x i8> %x, <2 x i8> %y) {
 define i8 @shl_and_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_and_xor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 10
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
@@ -120,7 +120,7 @@ define i8 @shl_and_xor(i8 %x, i8 %y) {
 define i8 @shl_and_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_and_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], 59
-; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
@@ -149,7 +149,7 @@ define i8 @shl_xor_add_fail(i8 %x, i8 %y) {
 define i8 @lshr_or_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_or_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], -64
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = lshr i8 [[TMP2]], 5
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
@@ -177,7 +177,7 @@ define i8 @lshr_or_or_fail(i8 %x, i8 %y) {
 define <2 x i8> @shl_xor_and(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @shl_xor_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 11, i8 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = shl <2 x i8> [[TMP2]], <i8 2, i8 poison>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
@@ -307,7 +307,7 @@ define i8 @lshr_add_add_no_const_fail(i8 %x, i8 %y, i8 %sh, i8 %mask) {
 define <2 x i8> @lshr_add_and(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_add_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -8, i8 16>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 3, i8 4>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
@@ -393,7 +393,7 @@ define i8 @lshr_xor_or_fail_bad_mask(i8 %x, i8 %y) {
 define <2 x i8> @lshr_or_xor_good_mask(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_or_xor_good_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], <i8 -64, i8 64>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = lshr <2 x i8> [[TMP2]], <i8 6, i8 6>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
@@ -450,7 +450,7 @@ define i8 @shl_xor_xor_bad_mask_distribute(i8 %x, i8 %y) {
 define i8 @shl_add_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl_add_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 61
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = shl i8 [[TMP2]], 1
 ; CHECK-NEXT:    ret i8 [[BW1]]
 ;
@@ -509,7 +509,7 @@ define i8 @lshr_add_xor_fail(i8 %x, i8 %y) {
 define <2 x i8> @lshr_and_add(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @lshr_and_add(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 11, i8 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[BW1:%.*]] = shl <2 x i8> [[TMP2]], <i8 4, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[BW1]]
 ;
@@ -555,7 +555,7 @@ define i8 @shl_add_and_fail_mismatch_shift(i8 %x, i8 %y) {
 define i8 @and_ashr_not(i8 %x, i8 %y, i8 %shamt) {
 ; CHECK-LABEL: @and_ashr_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[AND:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
@@ -569,7 +569,7 @@ define i8 @and_ashr_not(i8 %x, i8 %y, i8 %shamt) {
 define i8 @and_ashr_not_commuted(i8 %x, i8 %y, i8 %shamt) {
 ; CHECK-LABEL: @and_ashr_not_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[AND:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
@@ -634,7 +634,7 @@ define i8 @and_ashr_not_fail_invalid_xor_constant(i8 %x, i8 %y, i8 %shamt) {
 define <4 x i8> @and_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @and_ashr_not_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[AND]]
 ;
@@ -648,7 +648,7 @@ define <4 x i8> @and_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 define <4 x i8> @and_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @and_ashr_not_vec_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[AND]]
 ;
@@ -662,7 +662,7 @@ define <4 x i8> @and_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %s
 define <4 x i8> @and_ashr_not_vec_poison_1(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @and_ashr_not_vec_poison_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[AND]]
 ;
@@ -689,7 +689,7 @@ define <4 x i8> @and_ashr_not_vec_poison_2(<4 x i8> %x, <4 x i8> %y, <4 x i8> %s
 define i8 @or_ashr_not(i8 %x, i8 %y, i8 %shamt) {
 ; CHECK-LABEL: @or_ashr_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
@@ -703,7 +703,7 @@ define i8 @or_ashr_not(i8 %x, i8 %y, i8 %shamt) {
 define i8 @or_ashr_not_commuted(i8 %x, i8 %y, i8 %shamt) {
 ; CHECK-LABEL: @or_ashr_not_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
@@ -768,7 +768,7 @@ define i8 @or_ashr_not_fail_invalid_xor_constant(i8 %x, i8 %y, i8 %shamt) {
 define <4 x i8> @or_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @or_ashr_not_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[OR]]
 ;
@@ -782,7 +782,7 @@ define <4 x i8> @or_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 define <4 x i8> @or_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @or_ashr_not_vec_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[OR]]
 ;
@@ -796,7 +796,7 @@ define <4 x i8> @or_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %sh
 define <4 x i8> @or_ashr_not_vec_poison_1(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
 ; CHECK-LABEL: @or_ashr_not_vec_poison_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[OR]]
 ;

@@ -289,7 +289,7 @@ protected:
   using Pattern::Pattern;
 
 private:
-  /// Trait to check if T provides a `getOperationName` method.
+  /// Trait to check if T provides a `initialize` method.
   template <typename T, typename... Args>
   using has_initialize = decltype(std::declval<T>().initialize());
   template <typename T>

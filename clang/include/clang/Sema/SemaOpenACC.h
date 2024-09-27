@@ -16,13 +16,19 @@
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/StmtOpenACC.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <optional>
+#include <utility>
 #include <variant>
 
 namespace clang {
+class IdentifierInfo;
 class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {

@@ -33,6 +33,8 @@ findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     // after indirect call promotion and inlining, where we may have uses
     // of the vtable pointer guarded by a function pointer check, and a fallback
     // indirect call.
+    if (CI->getFunction() != User->getFunction())
+      continue;
     if (!DT.dominates(CI, User))
       continue;
     if (isa<BitCastInst>(User)) {

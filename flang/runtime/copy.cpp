@@ -183,8 +183,9 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
             const typeInfo::Value *bounds{component->bounds()};
             std::size_t elements{1};
             for (int dim{0}; dim < component->rank(); ++dim) {
-              SubscriptValue lb{bounds[2 * dim].GetValue(&curTo).value_or(0)};
-              SubscriptValue ub{
+              typeInfo::TypeParameterValue lb{
+                  bounds[2 * dim].GetValue(&curTo).value_or(0)};
+              typeInfo::TypeParameterValue ub{
                   bounds[2 * dim + 1].GetValue(&curTo).value_or(0)};
               extents[dim] = ub >= lb ? ub - lb + 1 : 0;
               elements *= extents[dim];

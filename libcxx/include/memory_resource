@@ -72,7 +72,6 @@ namespace std::pmr {
 #  include <limits>
 #  include <mutex>
 #  include <new>
-#  include <stdexcept>
 #  include <tuple>
 #endif
 

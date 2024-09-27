@@ -592,8 +592,8 @@ def batch_reduce_matmul(
     """
     domain(D.b, D.m, D.n, D.k)
     implements(ContractionOpInterface)
-    C[D.m, D.n] += TypeFn.cast_signed(
-        U, A[D.b, D.m, D.k] * TypeFn.cast_signed(U, B[D.b, D.k, D.n])
+    C[D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n]
     )
 
 

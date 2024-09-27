@@ -170,8 +170,8 @@ class __save_flags {
   _CharT __fill_;
 
 public:
-    __save_flags(const __save_flags&) = delete;
-    __save_flags& operator=(const __save_flags&) = delete;
+  __save_flags(const __save_flags&)            = delete;
+  __save_flags& operator=(const __save_flags&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI explicit __save_flags(__stream_type& __stream)
       : __stream_(__stream), __fmtflags_(__stream.flags()), __fill_(__stream.fill()) {}

@@ -25,6 +25,11 @@ enum class OpCodeClass : unsigned {
 #include "DXILOperation.inc"
 };
 
+enum class OpParamType : unsigned {
+#define DXIL_OP_PARAM_TYPE(Name) Name,
+#include "DXILOperation.inc"
+};
+
 } // namespace dxil
 } // namespace llvm
 

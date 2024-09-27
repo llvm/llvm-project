@@ -27,7 +27,7 @@ define i1 @p0(i8 %x) {
 define i1 @pv(i8 %x, i8 %y) {
 ; CHECK-LABEL: @pv(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt i8 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y

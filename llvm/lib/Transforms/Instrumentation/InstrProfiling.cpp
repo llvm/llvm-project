@@ -50,9 +50,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -130,6 +130,11 @@ cl::opt<bool> AtomicFirstCounter(
     "atomic-first-counter",
     cl::desc("Use atomic fetch add for first counter in a function (usually "
              "the entry counter)"),
+    cl::init(false));
+
+cl::opt<bool> ConditionalCounterUpdate(
+    "conditional-counter-update",
+    cl::desc("Do conditional counter updates in single byte counters mode)"),
     cl::init(false));
 
 // If the option is not specified, the default behavior about whether
@@ -1054,8 +1059,8 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
-  auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-      DataVar, PointerType::getUnqual(M.getContext()));
+  auto *NormalizedDataVarPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      DataVar, PointerType::get(M.getContext(), 0));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -1064,12 +1069,12 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(), NormalizedPtr,
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(), NormalizedPtr,
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedDataVarPtr,
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(M, *TLI, ValueProfilingCallType::MemOp),
@@ -1126,7 +1131,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
     BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
     // Bias doesn't change after startup.
     BiasLI->setMetadata(LLVMContext::MD_invariant_load,
-                        MDNode::get(M.getContext(), std::nullopt));
+                        MDNode::get(M.getContext(), {}));
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
@@ -1207,7 +1212,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
   // Assume BiasLI invariant (in the function at least)
   BiasLI->setMetadata(LLVMContext::MD_invariant_load,
-                      MDNode::get(M.getContext(), std::nullopt));
+                      MDNode::get(M.getContext(), {}));
 
   // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);
@@ -1217,6 +1222,17 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   auto *Addr = getCounterAddress(CoverInstruction);
   IRBuilder<> Builder(CoverInstruction);
+  if (ConditionalCounterUpdate) {
+    Instruction *SplitBefore = CoverInstruction->getNextNode();
+    auto &Ctx = CoverInstruction->getParent()->getContext();
+    auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
+    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
+    Instruction *ThenBranch =
+        SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
+    Builder.SetInsertPoint(ThenBranch);
+  }
+
   // We store zero to represent that this block is covered.
   Builder.CreateStore(Builder.getInt8(0), Addr);
   CoverInstruction->eraseFromParent();
@@ -1803,7 +1819,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
     ValuesPtrExpr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-        ValuesVar, PointerType::getUnqual(Fn->getContext()));
+        ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();

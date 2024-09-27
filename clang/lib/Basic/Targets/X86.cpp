@@ -186,14 +186,14 @@ bool X86TargetInfo::initFeatureMap(
   llvm::append_range(UpdatedFeaturesVec, UpdatedAVX10FeaturesVec);
   // HasEVEX512 is a three-states flag. We need to turn it into [+-]evex512
   // according to other features.
-  if (HasAVX512F) {
+  if (!HasAVX10_512 && HasAVX512F) {
     UpdatedFeaturesVec.push_back(HasEVEX512 == FE_FALSE ? "-evex512"
                                                         : "+evex512");
-    if (HasAVX10 && !HasAVX10_512 && HasEVEX512 != FE_FALSE)
+    if (HasAVX10 && HasEVEX512 != FE_FALSE)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX512 + " " + LastAVX10 + "; will be promoted to avx10.1-512";
   } else if (HasAVX10) {
-    if (HasEVEX512 != FE_NOSET)
+    if (!HasAVX512F && HasEVEX512 != FE_NOSET)
       Diags.Report(diag::warn_invalid_feature_combination)
           << LastAVX10 + (HasEVEX512 == FE_TRUE ? " +evex512" : " -evex512");
     UpdatedFeaturesVec.push_back(HasAVX10_512 ? "+evex512" : "-evex512");
@@ -306,6 +306,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX10_1_512 = true;
     } else if (Feature == "+avx10.2-256") {
       HasAVX10_2 = true;
+      HasFullBFloat16 = true;
     } else if (Feature == "+avx10.2-512") {
       HasAVX10_2_512 = true;
     } else if (Feature == "+avx512cd") {
@@ -726,6 +727,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_ZNVER4:
     defineCPUMacros(Builder, "znver4");
+    break;
+  case CK_ZNVER5:
+    defineCPUMacros(Builder, "znver5");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
@@ -1625,6 +1629,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER2:
     case CK_ZNVER3:
     case CK_ZNVER4:
+    case CK_ZNVER5:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

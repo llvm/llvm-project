@@ -760,8 +760,11 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
 
   llrhs = lrBinOpExpr.getLHS();
   rlrhs = lrBinOpExpr.getRHS();
+  auto rlrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rlrhs);
+  // We don't support modulo with a negative RHS.
+  bool isPositiveRhs = rlrhsConstOpExpr && rlrhsConstOpExpr.getValue() > 0;
 
-  if (lhs == llrhs && rlrhs == -rrhs) {
+  if (isPositiveRhs && lhs == llrhs && rlrhs == -rrhs) {
     return lhs % rlrhs;
   }
   return nullptr;

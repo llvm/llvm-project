@@ -96,6 +96,7 @@ void perror(const char* s);
 */
 
 #include <__config>
+#include <__cstddef/size_t.h>
 
 #include <stdio.h>
 
@@ -115,7 +116,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 using ::FILE _LIBCPP_USING_IF_EXISTS;
 using ::fpos_t _LIBCPP_USING_IF_EXISTS;
-using ::size_t _LIBCPP_USING_IF_EXISTS;
 
 using ::fclose _LIBCPP_USING_IF_EXISTS;
 using ::fflush _LIBCPP_USING_IF_EXISTS;

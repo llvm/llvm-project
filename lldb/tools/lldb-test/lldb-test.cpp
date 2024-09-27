@@ -414,7 +414,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
       break;
     }
   }
-  return std::move(OS.str());
+  return Result;
 }
 
 int opts::breakpoint::evaluateBreakpoints(Debugger &Dbg) {

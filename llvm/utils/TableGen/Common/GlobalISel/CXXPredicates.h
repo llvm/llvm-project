@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
-#define LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
@@ -83,4 +83,4 @@ public:
 } // namespace gi
 } // end namespace llvm
 
-#endif // ifndef LLVM_UTILS_MIRPATTERNS_CXXPREDICATES_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H

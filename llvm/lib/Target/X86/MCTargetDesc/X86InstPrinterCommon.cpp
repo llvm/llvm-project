@@ -30,7 +30,6 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
   unsigned Opc = MI->getOpcode();
-  bool IsCMPCCXADD = X86::isCMPCCXADD(Opc);
   bool IsCCMPOrCTEST = X86::isCCMPCC(Opc) || X86::isCTESTCC(Opc);
 
   // clang-format off
@@ -39,19 +38,19 @@ void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
   case    0: O << "o";  break;
   case    1: O << "no"; break;
   case    2: O << "b";  break;
-  case    3: O << (IsCMPCCXADD ? "nb" : "ae"); break;
-  case    4: O << (IsCMPCCXADD ?  "z" :  "e"); break;
-  case    5: O << (IsCMPCCXADD ? "nz" : "ne"); break;
+  case    3: O << "ae"; break;
+  case    4: O << "e";  break;
+  case    5: O << "ne"; break;
   case    6: O << "be"; break;
-  case    7: O << (IsCMPCCXADD ? "nbe" : "a"); break;
+  case    7: O << "a";  break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
   case  0xa: O << (IsCCMPOrCTEST ? "t" : "p");  break;
   case  0xb: O << (IsCCMPOrCTEST ? "f" : "np"); break;
   case  0xc: O << "l";  break;
-  case  0xd: O << (IsCMPCCXADD ? "nl" : "ge"); break;
+  case  0xd: O << "ge"; break;
   case  0xe: O << "le"; break;
-  case  0xf: O << (IsCMPCCXADD ? "nle" : "g"); break;
+  case  0xf: O << "g";  break;
   }
   // clang-format on
 }
@@ -309,6 +308,17 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
   case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
     OS << "sh\t";
+    break;
+  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
+  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
+  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
+  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
+  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
+  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
+  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
+  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
+  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+    OS << "pbf16\t";
     break;
   }
 }

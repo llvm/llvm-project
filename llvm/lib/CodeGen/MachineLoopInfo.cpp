@@ -212,7 +212,7 @@ MDNode *MachineLoop::getLoopID() const {
           }
         }
         if (!MD)
-          return nullptr;
+          continue;
         if (!LoopID)
           LoopID = MD;
         else if (MD != LoopID)

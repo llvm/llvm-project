@@ -379,18 +379,17 @@ struct VOPTrue16Info {
   bool IsTrue16;
 };
 
-struct SingleUseExceptionInfo {
+struct FP8DstByteSelInfo {
   uint16_t Opcode;
-  bool IsInvalidSingleUseConsumer;
-  bool IsInvalidSingleUseProducer;
+  bool HasFP8DstByteSel;
 };
 
+#define GET_FP8DstByteSelTable_DECL
+#define GET_FP8DstByteSelTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
-#define GET_SingleUseExceptionTable_DECL
-#define GET_SingleUseExceptionTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
 #define GET_VOP1InfoTable_DECL
@@ -619,14 +618,9 @@ bool isTrue16Inst(unsigned Opc) {
   return Info ? Info->IsTrue16 : false;
 }
 
-bool isInvalidSingleUseConsumerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseConsumer;
-}
-
-bool isInvalidSingleUseProducerInst(unsigned Opc) {
-  const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info && Info->IsInvalidSingleUseProducer;
+bool isFP8DstSelInst(unsigned Opc) {
+  const FP8DstByteSelInfo *Info = getFP8DstByteSelHelper(Opc);
+  return Info ? Info->HasFP8DstByteSel : false;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -892,7 +886,6 @@ std::string AMDGPUTargetID::toString() const {
 
   StreamRep << Processor << Features;
 
-  StreamRep.flush();
   return StringRep;
 }
 
@@ -906,11 +899,7 @@ unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
-  unsigned BytesPerCU = 0;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
-    BytesPerCU = 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
-    BytesPerCU = 65536;
+  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
 
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". So the effective local memory size is doubled in
@@ -2237,8 +2226,8 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
-bool isHi(unsigned Reg, const MCRegisterInfo &MRI) {
-  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI;
+bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
 
 #define MAP_REG2REG \

@@ -1,10 +1,12 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: %[[#intv2:]] = OpTypeVector %[[#int]] 2
+; CHECK-SPIRV-DAG: %[[#intv3:]] = OpTypeVector %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-SPIRV-DAG: %[[#ScopeCrossWorkgroup:]] = OpConstant %[[#int]] 0
 ; CHECK-SPIRV-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#int]] 2
@@ -252,6 +254,10 @@ declare spir_func i32 @_Z21work_group_reduce_minj(i32 noundef) local_unnamed_add
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue:]] %[[#BroadcastLocalId:]]
+; CHECK-SPIRV: %[[#BroadcastVec2:]] = OpCompositeConstruct %[[#intv2]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]]
+; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastVec2]]
+; CHECK-SPIRV: %[[#BroadcastVec3:]] = OpCompositeConstruct %[[#intv3]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]]
+; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastVec3]]
 ; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeCrossWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastLocalId]]
 ; CHECK-SPIRV: OpFunctionEnd
 
@@ -263,12 +269,16 @@ define dso_local spir_kernel void @testWorkGroupBroadcast(i32 noundef %a, i32 ad
 entry:
   %0 = load i32, i32 addrspace(1)* %id, align 4
   %call = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0)
+  %call_v2 = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0, i32 noundef %0)
+  %call_v3 = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0, i32 noundef %0, i32 noundef %0)
   store i32 %call, i32 addrspace(1)* %res, align 4
   %call1 = call spir_func i32 @__spirv_GroupBroadcast(i32 0, i32 noundef %a, i32 noundef %0)
   ret void
 }
 
 declare spir_func i32 @_Z20work_group_broadcastjj(i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z20work_group_broadcastjjj(i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z20work_group_broadcastjjjj(i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 declare spir_func i32 @__spirv_GroupBroadcast(i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction

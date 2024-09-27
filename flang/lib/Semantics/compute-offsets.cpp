@@ -114,6 +114,13 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
       DoSymbol(*symbol);
+      if (auto *generic{symbol->detailsIf<GenericDetails>()}) {
+        if (Symbol * specific{generic->specific()};
+            specific && !FindCommonBlockContaining(*specific)) {
+          // might be a shadowed procedure pointer
+          DoSymbol(*specific);
+        }
+      }
     }
   }
   // Ensure that the size is a multiple of the alignment

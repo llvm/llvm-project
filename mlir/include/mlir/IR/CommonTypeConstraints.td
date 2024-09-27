@@ -198,7 +198,10 @@ class AllOfType<list<Type> allowedTypeList, string summary = "",
 class ConfinedType<Type type, list<Pred> predicates, string summary = "",
                    string cppType = type.cppType> : Type<
     And<!listconcat([type.predicate], !foreach(pred, predicates, pred))>,
-    summary, cppType>;
+    summary, cppType> {
+    Type baseType = type;
+    list<Pred> predicateList = predicates;
+}
 
 // Integer types.
 
@@ -344,20 +347,26 @@ def F8E5M2FNUZ : Type<CPred<"$_self.isFloat8E5M2FNUZ()">, "f8E5M2FNUZ type">,
                  BuildableType<"$_builder.getFloat8E5M2FNUZType()">;
 def F8E3M4 : Type<CPred<"$_self.isFloat8E3M4()">, "f8E3M4 type">,
              BuildableType<"$_builder.getFloat8E3M4Type()">;
+def F4E2M1FN : Type<CPred<"$_self.isFloat4E2M1FN()">, "f4E2M1FN type">,
+               BuildableType<"$_builder.getFloat4E2M1FNType()">;
+def F6E2M3FN : Type<CPred<"$_self.isFloat6E2M3FN()">, "f6E2M3FN type">,
+               BuildableType<"$_builder.getFloat6E2M3FNType()">;
+def F6E3M2FN : Type<CPred<"$_self.isFloat6E3M2FN()">, "f6E3M2FN type">,
+               BuildableType<"$_builder.getFloat6E3M2FNType()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
 
-class Complex<Type type>
+class Complex<Type elType>
     : ConfinedType<AnyComplex, [
           SubstLeaves<"$_self",
                       "::llvm::cast<::mlir::ComplexType>($_self).getElementType()",
-           type.predicate>],
-           "complex type with " # type.summary # " elements",
+           elType.predicate>],
+           "complex type with " # elType.summary # " elements",
            "::mlir::ComplexType">,
-      SameBuildabilityAs<type, "::mlir::ComplexType::get($_builder.get" # type #
+      SameBuildabilityAs<elType, "::mlir::ComplexType::get($_builder.get" # elType #
                                "Type())"> {
-  Type elementType = type;
+  Type elementType = elType;
 }
 
 class OpaqueType<string dialect, string name, string summary>

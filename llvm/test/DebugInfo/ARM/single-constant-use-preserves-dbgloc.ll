@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -filetype=asm -asm-verbose=0 -arm-atomic-cfg-tidy=0 < %s | FileCheck %s
 
 ; int main()
 ; {

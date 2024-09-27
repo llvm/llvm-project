@@ -50,7 +50,7 @@ define i1 @icmp_trunc_x_trunc_y_illegal_trunc_to_legal_anyways(i123 %x, i32 %y) 
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i123 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i123 %x, 65536
@@ -70,7 +70,7 @@ define i1 @icmp_trunc_x_trunc_y_2_illegal_anyways(i33 %x, i63 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i33 [[X]] to i63
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i63 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i63 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 512
@@ -90,7 +90,7 @@ define i1 @icmp_trunc_x_trunc_y_3(i64 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i64 %x, 123
@@ -152,7 +152,7 @@ define i1 @icmp_trunc_x_trunc_y_swap0(i33 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 65536
@@ -172,7 +172,7 @@ define i1 @icmp_trunc_x_trunc_y_swap1(i33 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i33 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i33 %x, 65536
@@ -190,7 +190,7 @@ define i1 @icmp_trunc_x_zext_y(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[X_LB_ONLY:%.*]] = icmp ult i32 [[X:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i32 %x, 65536
@@ -206,7 +206,7 @@ define i1 @icmp_trunc_x_zext_y_2(i32 %x, i8 %y) {
 ; CHECK-NEXT:    [[X_LB_ONLY:%.*]] = icmp ult i32 [[X:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x_lb_only = icmp ult i32 %x, 65536
@@ -222,7 +222,7 @@ define i1 @icmp_trunc_x_zext_y_3(i6 %x, i32 %y) {
 ; CHECK-NEXT:    [[Y_LB_ONLY:%.*]] = icmp ult i32 [[Y:%.*]], 65536
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LB_ONLY]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i6 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y_lb_only = icmp ult i32 %y, 65536
@@ -412,7 +412,7 @@ define i1 @trunc_equality_either(i16 %x, i16 %y) {
 define i1 @trunc_unsigned_nuw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_unsigned_nuw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nuw i32 %x to i16
@@ -437,7 +437,7 @@ define i1 @trunc_unsigned_nuw_sext(i32 %x, i8 %y) {
 define i1 @trunc_unsigned_nsw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_unsigned_nsw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -449,7 +449,7 @@ define i1 @trunc_unsigned_nsw_zext(i32 %x, i8 %y) {
 define i1 @trunc_unsigned_nsw_sext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_unsigned_nsw_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -461,7 +461,7 @@ define i1 @trunc_unsigned_nsw_sext(i32 %x, i8 %y) {
 define i1 @trunc_signed_nsw_sext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_signed_nsw_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -473,7 +473,7 @@ define i1 @trunc_signed_nsw_sext(i32 %x, i8 %y) {
 define i1 @trunc_signed_nsw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_signed_nsw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -511,7 +511,7 @@ define i1 @trunc_signed_nuw_zext(i32 %x, i8 %y) {
 define i1 @trunc_equality_nuw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_equality_nuw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nuw i32 %x to i16
@@ -536,7 +536,7 @@ define i1 @trunc_equality_nuw_sext(i32 %x, i8 %y) {
 define i1 @trunc_equality_nsw_zext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_equality_nsw_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -548,7 +548,7 @@ define i1 @trunc_equality_nsw_zext(i32 %x, i8 %y) {
 define i1 @trunc_equality_nsw_sext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_equality_nsw_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nsw i32 %x to i16
@@ -560,7 +560,7 @@ define i1 @trunc_equality_nsw_sext(i32 %x, i8 %y) {
 define i1 @trunc_equality_both_sext(i32 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_equality_both_sext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %xt = trunc nuw nsw i32 %x to i16
@@ -572,7 +572,7 @@ define i1 @trunc_equality_both_sext(i32 %x, i8 %y) {
 define i1 @test_eq1(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_eq1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nsw i32 %x to i8
@@ -586,7 +586,7 @@ define i1 @test_eq1(i32 %x, i16 %y) {
 define i1 @test_eq2(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_eq2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i16 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i16 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nsw i32 %x to i8
@@ -598,7 +598,7 @@ define i1 @test_eq2(i32 %x, i16 %y) {
 define i1 @test_ult(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_ult(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nsw i32 %x to i8
@@ -610,7 +610,7 @@ define i1 @test_ult(i32 %x, i16 %y) {
 define i1 @test_slt(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_slt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nsw i32 %x to i8
@@ -622,7 +622,7 @@ define i1 @test_slt(i32 %x, i16 %y) {
 define i1 @test_ult_nuw(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_ult_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nuw nsw i32 %x to i8
@@ -634,7 +634,7 @@ define i1 @test_ult_nuw(i32 %x, i16 %y) {
 define i1 @test_slt_nuw(i32 %x, i16 %y) {
 ; CHECK-LABEL: @test_slt_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
   %conv1 = trunc nuw nsw i32 %x to i8

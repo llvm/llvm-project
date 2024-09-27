@@ -36,7 +36,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_addr");
   if (!DebugAbbrev.empty())
     SecNames.insert("debug_abbrev");
-  if (!CompileUnits.empty())
+  if (!Units.empty())
     SecNames.insert("debug_info");
   if (PubNames)
     SecNames.insert("debug_pubnames");
@@ -101,7 +101,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   DWARFCtx.IsGNUPubSec = true;
   IO.mapOptional("debug_gnu_pubnames", DWARF.GNUPubNames);
   IO.mapOptional("debug_gnu_pubtypes", DWARF.GNUPubTypes);
-  IO.mapOptional("debug_info", DWARF.CompileUnits);
+  IO.mapOptional("debug_info", DWARF.Units);
   IO.mapOptional("debug_line", DWARF.DebugLines);
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
   IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
@@ -216,6 +216,22 @@ void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
   IO.mapOptional("AbbrevTableID", Unit.AbbrevTableID);
   IO.mapOptional("AbbrOffset", Unit.AbbrOffset);
   IO.mapOptional("AddrSize", Unit.AddrSize);
+  if (Unit.Version >= 5) {
+    switch (Unit.Type) {
+    case dwarf::DW_UT_compile:
+    case dwarf::DW_UT_partial:
+    default:
+      break;
+    case dwarf::DW_UT_type:
+    case dwarf::DW_UT_split_type:
+      IO.mapRequired("TypeSignature", Unit.TypeSignatureOrDwoID);
+      IO.mapRequired("TypeOffset", Unit.TypeOffset);
+      break;
+    case dwarf::DW_UT_skeleton:
+    case dwarf::DW_UT_split_compile:
+      IO.mapRequired("DwoID", Unit.TypeSignatureOrDwoID);
+    }
+  }
   IO.mapOptional("Entries", Unit.Entries);
 }
 

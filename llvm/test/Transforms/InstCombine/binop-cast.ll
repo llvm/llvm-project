@@ -129,7 +129,7 @@ define i32 @and_not_zext_to_sel(i32 %x, i1 %y) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT]])
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[ZEXT]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[NOT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], [[NOT]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zext = zext i1 %y to i32
@@ -175,7 +175,7 @@ define i32 @or_sext_to_sel_multi_use(i32 %x, i1 %y) {
 ; CHECK-LABEL: @or_sext_to_sel_multi_use(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[SEXT]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
@@ -200,7 +200,7 @@ define i32 @or_sext_to_sel_multi_use_constant_mask(i1 %y) {
 define i32 @xor_sext_to_sel(i32 %x, i1 %y) {
 ; CHECK-LABEL: @xor_sext_to_sel(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[SEXT]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32
@@ -236,7 +236,7 @@ define i32 @xor_sext_to_sel_multi_use(i32 %x, i1 %y) {
 ; CHECK-LABEL: @xor_sext_to_sel_multi_use(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SEXT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[SEXT]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sext = sext i1 %y to i32

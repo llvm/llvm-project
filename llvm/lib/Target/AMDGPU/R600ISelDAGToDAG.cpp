@@ -18,6 +18,8 @@
 #include "R600Subtarget.h"
 #include "llvm/Analysis/ValueTracking.h"
 
+using namespace llvm;
+
 namespace {
 class R600DAGToDAGISel : public AMDGPUDAGToDAGISel {
   const R600Subtarget *Subtarget = nullptr;

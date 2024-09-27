@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Shared functionality between the new constant expression
-// interpreter (AST/Interp/) and the current one (ExprConstant.cpp).
+// interpreter (AST/ByteCode/) and the current one (ExprConstant.cpp).
 //
 //===----------------------------------------------------------------------===//
 

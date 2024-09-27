@@ -36,7 +36,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_to_bindcEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.rebox_assumed_rank %[[VAL_2]]#0 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-! CHECK:           fir.call @bindc_func(%[[VAL_3]]) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<*:f32>>) -> ()
+! CHECK:           fir.call @bindc_func(%[[VAL_3]]) proc_attrs<bind_c> fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 

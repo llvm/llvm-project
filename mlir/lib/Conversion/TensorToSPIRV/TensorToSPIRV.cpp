@@ -45,6 +45,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto tensorType = cast<RankedTensorType>(extractOp.getTensor().getType());
 
+    if (!isa<spirv::ScalarType>(tensorType.getElementType()))
+      return rewriter.notifyMatchFailure(extractOp, "unsupported type");
     if (!tensorType.hasStaticShape())
       return rewriter.notifyMatchFailure(extractOp, "non-static tensor");
 

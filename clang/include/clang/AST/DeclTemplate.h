@@ -3146,19 +3146,24 @@ protected:
       : TemplateDecl(Concept, DC, L, Name, Params),
         ConstraintExpr(ConstraintExpr) {};
 public:
-  static ConceptDecl *Create(ASTContext &C, DeclContext *DC,
-                             SourceLocation L, DeclarationName Name,
+  static ConceptDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L,
+                             DeclarationName Name,
                              TemplateParameterList *Params,
-                             Expr *ConstraintExpr);
+                             Expr *ConstraintExpr = nullptr);
   static ConceptDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   Expr *getConstraintExpr() const {
     return ConstraintExpr;
   }
 
+  bool hasDefinition() const { return ConstraintExpr != nullptr; }
+
+  void setDefinition(Expr *E) { ConstraintExpr = E; }
+
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(getTemplateParameters()->getTemplateLoc(),
-                       ConstraintExpr->getEndLoc());
+                       ConstraintExpr ? ConstraintExpr->getEndLoc()
+                                      : SourceLocation());
   }
 
   bool isTypeConcept() const {

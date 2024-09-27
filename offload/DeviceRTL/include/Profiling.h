@@ -15,6 +15,7 @@
 extern "C" {
 void __llvm_profile_register_function(void *Ptr);
 void __llvm_profile_register_names_function(void *Ptr, long int I);
+void __llvm_profile_instrument_memop(long int I, void *Ptr, int I2);
 }
 
 #endif

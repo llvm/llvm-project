@@ -4,19 +4,21 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr addrspace(1)> [[TMP0]], i32 0
 ; CHECK-NEXT:    br label %[[BB43:.*]]
 ; CHECK:       [[BB20:.*]]:
 ; CHECK-NEXT:    br label %[[BB105:.*]]
 ; CHECK:       [[BB43]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP1:%.*]], %[[BB51:.*]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x ptr addrspace(1)> [ [[TMP3:%.*]], %[[BB51:.*]] ], [ zeroinitializer, %[[BB]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB105]], label %[[BB51]]
 ; CHECK:       [[BB51]]:
-; CHECK-NEXT:    [[TMP1]] = phi <2 x ptr addrspace(1)> [ poison, %[[BB54:.*]] ], [ zeroinitializer, %[[BB43]] ]
+; CHECK-NEXT:    [[TMP3]] = phi <2 x ptr addrspace(1)> [ poison, %[[BB54:.*]] ], [ zeroinitializer, %[[BB43]] ]
 ; CHECK-NEXT:    br label %[[BB43]]
 ; CHECK:       [[BB54]]:
 ; CHECK-NEXT:    br label %[[BB51]]
 ; CHECK:       [[BB105]]:
-; CHECK-NEXT:    [[PHI106:%.*]] = phi ptr addrspace(1) [ null, %[[BB20]] ], [ null, %[[BB43]] ]
+; CHECK-NEXT:    [[PHI106:%.*]] = phi ptr addrspace(1) [ [[TMP1]], %[[BB20]] ], [ null, %[[BB43]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -438,8 +438,8 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 }
 
 bool isGPUProfTarget(const Module &M) {
-  const auto &Triple = llvm::Triple(M.getTargetTriple());
-  return Triple.isAMDGPU() || Triple.isNVPTX();
+  const auto &T = Triple(M.getTargetTriple());
+  return T.isAMDGPU() || T.isNVPTX();
 }
 
 void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {

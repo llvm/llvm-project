@@ -24,7 +24,7 @@
 !CHECK:          fir.if %[[CMP]] {
 !CHECK:            fir.store %[[V]] to %[[I]]#1 : !fir.ref<i32>
 !CHECK:            %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-!CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 : i32, !fir.ref<i32>
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
@@ -62,7 +62,7 @@ end subroutine
 !CHECK:          fir.if %[[CMP]] {
 !CHECK:            fir.store %[[V]] to %[[I]]#1 : !fir.ref<i32>
 !CHECK:            %[[I_VAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
-!CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:            hlfir.assign %[[I_VAL]] to %[[I2]]#0 : i32, !fir.ref<i32>
 !CHECK:          }
 !CHECK:          omp.yield
 !CHECK:        }
@@ -88,7 +88,7 @@ subroutine lastprivate_iv_i1
 !CHECK:          %[[I8_VAL:.*]] = fir.convert %{{.*}} : (i32) -> i8
 !CHECK:          fir.store %[[I8_VAL]] to %[[IV:.*]]#1 : !fir.ref<i8>
 !CHECK:          %[[IV_VAL:.*]] = fir.load %[[IV]]#0 : !fir.ref<i8>
-!CHECK:          hlfir.assign %[[IV_VAL]] to %{{.*}}#0 temporary_lhs : i8, !fir.ref<i8>
+!CHECK:          hlfir.assign %[[IV_VAL]] to %{{.*}}#0 : i8, !fir.ref<i8>
 !CHECK:        }
   !$omp do lastprivate(i1)
   do i1=1,8

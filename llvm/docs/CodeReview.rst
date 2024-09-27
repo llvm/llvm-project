@@ -125,6 +125,11 @@ commit message).
 If you suggest changes in a code review, but don't wish the suggestion to be
 interpreted this strongly, please state so explicitly.
 
+.. note::
+   After responding to reviewer comments,
+   press `Re-request review <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/requesting-a-pull-request-review#:~:text=After%20your%20pull%20request%20is%20reviewed>`_
+   to bring the Pull Request to the reviewers' attention.
+
 Aim to Make Efficient Use of Everyone's Time
 --------------------------------------------
 
@@ -227,9 +232,9 @@ Experts Should Review Code
 --------------------------
 
 If you are an expert in an area of the compiler affected by a proposed patch,
-then you are highly encouraged to review the code. If you are a relevant code
-owner, and no other experts are reviewing a patch, you must either help arrange
-for an expert to review the patch or review it yourself.
+then you are highly encouraged to review the code. If you are a relevant
+maintainer, and no other experts are reviewing a patch, you must either help
+arrange for an expert to review the patch or review it yourself.
 
 Code Reviews, Speed, and Reciprocity
 ------------------------------------
