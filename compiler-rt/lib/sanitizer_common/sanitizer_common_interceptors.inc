@@ -9076,107 +9076,6 @@ INTERCEPTOR(char *, MD2Data, const unsigned char *data, unsigned int len,
 #define INIT_MD2
 #endif
 
-#if SANITIZER_INTERCEPT_SHA2
-#define SHA2_INTERCEPTORS(LEN, SHA2_STATE_T) \
-  INTERCEPTOR(void, SHA##LEN##_Init, void *context) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Init, context); \
-    REAL(SHA##LEN##_Init)(context); \
-    if (context) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
-  } \
-  INTERCEPTOR(void, SHA##LEN##_Update, void *context, \
-              const u8 *data, SIZE_T len) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Update, context, data, len); \
-    if (data && len > 0) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len); \
-    if (context) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
-    REAL(SHA##LEN##_Update)(context, data, len); \
-    if (context) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
-  } \
-  INTERCEPTOR(void, SHA##LEN##_Final, u8 digest[LEN/8], \
-  void *context) { \
-    void *ctx; \
-    CHECK_EQ(SHA##LEN##_digest_length, LEN/8); \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Final, digest, context); \
-    if (context) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
-    REAL(SHA##LEN##_Final)(digest, context); \
-    if (digest) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, digest, \
-                                     sizeof(digest[0]) * \
-  SHA##LEN##_digest_length); \
-  } \
-  INTERCEPTOR(char *, SHA##LEN##_End, void *context, char *buf) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_End, context, buf); \
-    if (context) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
-    char *ret = REAL(SHA##LEN##_End)(context, buf); \
-    if (ret) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
-    return ret; \
-  } \
-  INTERCEPTOR(char *, SHA##LEN##_File, const char *filename, char *buf) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_File, filename, buf); \
-    if (filename) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, internal_strlen(filename) + 1);\
-    char *ret = REAL(SHA##LEN##_File)(filename, buf); \
-    if (ret) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
-    return ret; \
-  } \
-  INTERCEPTOR(char *, SHA##LEN##_FileChunk, const char *filename, char *buf, \
-              OFF_T offset, OFF_T length) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_FileChunk, filename, buf, offset, \
-  length); \
-    if (filename) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, internal_strlen(filename) + 1);\
-    char *ret = REAL(SHA##LEN##_FileChunk)(filename, buf, offset, length); \
-    if (ret) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
-    return ret; \
-  } \
-  INTERCEPTOR(char *, SHA##LEN##_Data, u8 *data, SIZE_T len, char *buf) { \
-    void *ctx; \
-    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Data, data, len, buf); \
-    if (data && len > 0) \
-      COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len); \
-    char *ret = REAL(SHA##LEN##_Data)(data, len, buf); \
-    if (ret) \
-      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
-    return ret; \
-  }
-
-SHA2_INTERCEPTORS(224, u32)
-SHA2_INTERCEPTORS(256, u32)
-SHA2_INTERCEPTORS(384, u64)
-SHA2_INTERCEPTORS(512, u64)
-
-#define INIT_SHA2_INTECEPTORS(LEN) \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Init); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Update); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Final); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_End); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_File); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_FileChunk); \
-  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Data)
-
-#define INIT_SHA2 \
-  INIT_SHA2_INTECEPTORS(224); \
-  INIT_SHA2_INTECEPTORS(256); \
-  INIT_SHA2_INTECEPTORS(384); \
-  INIT_SHA2_INTECEPTORS(512)
-#undef SHA2_INTERCEPTORS
-#else
-#define INIT_SHA2
-#endif
-
 #if SANITIZER_INTERCEPT_VIS
 INTERCEPTOR(char *, vis, char *dst, int c, int flag, int nextc) {
   void *ctx;
@@ -10655,7 +10554,6 @@ static void InitializeCommonInterceptors() {
   INIT_MD5;
   INIT_FSEEK;
   INIT_MD2;
-  INIT_SHA2;
   INIT_VIS;
   INIT_CDB;
   INIT_GETFSENT;
