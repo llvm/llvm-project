@@ -243,3 +243,38 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @fuse_unrelated_slice
+func.func @fuse_unrelated_slices(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> (tensor<?x?xf32>, tensor<10x10xf32>) {
+
+  //     CHECK: %[[SLICE1:.+]] = tensor.extract_slice
+  //     CHECK: %[[SLICE2:.+]] = tensor.extract_slice %[[SLICE1]]
+  //     CHECK: %[[RES:.*]] = scf.for
+  //     CHECK:     scf.for
+  //     CHECK:       linalg.elemwise_unary
+  //     CHECK:       linalg.elemwise_binary
+  //     CHECK: return %[[RES]], %[[SLICE2]]
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %arg1, %c0 : tensor<?x?xf32>
+  %dim1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
+  %slice1 = tensor.extract_slice %arg0 [1, 1] [%dim0, %dim1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+  %slice2 = tensor.extract_slice %slice1 [1, 1] [10, 10] [1, 1] : tensor<?x?xf32> to tensor<10x10xf32>
+  %0 = linalg.elemwise_unary ins(%arg0 : tensor<?x?xf32>)
+                             outs(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = tensor.extract_slice %0 [1, 1] [%dim0, %dim1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+  %2 = linalg.elemwise_binary ins(%1, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
+                             outs(%arg1: tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %2, %slice2 : tensor<?x?xf32>, tensor<10x10xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1], apply_cleanup = true}
+      : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.any_op)
+    transform.yield
+  }
+}

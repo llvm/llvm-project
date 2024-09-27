@@ -1320,95 +1320,6 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
 namespace {
 
 //===----------------------------------------------------------------------===//
-// SliceWorklist
-//===----------------------------------------------------------------------===//
-
-/// Struct for tracking the number of stale entries on the worklist and whether
-/// there is a remaining valid entry.
-struct EntryCount {
-  bool isValid = true;
-  unsigned count = 0;
-};
-
-/// A FIFO worklist of operations with efficient removal and set semantics.
-///
-/// This class maintains a queue of operations and a mapping of operations to
-/// positions in the vector, so that operations can be removed efficiently at
-/// random. When an operation is removed, it is replaced with nullptr. Such
-/// nullptr are skipped when pop'ing elements.
-///
-/// This is similar to the worklist used by the GreedyPatternRewriteDriver,
-/// except instead FIFO so that slices for fusion can be processed breadth
-/// first.
-class SliceWorklist {
-public:
-  SliceWorklist() = default;
-
-  /// Push an operation to the end of the worklist. This assumes that
-  /// the given operation is not already on the worklist.
-  void push(Operation *op);
-
-  /// Pop the an operation from the end of the worklist. Returns nullptr if
-  /// there are no remaining valid operations.
-  Operation *pop();
-
-  /// Remove an operation from the worklist.
-  void remove(Operation *op);
-
-protected:
-  /// The queue of operations.
-  std::deque<Operation *> list;
-
-  /// A mapping of operations to the number of stale copies in the queue.
-  DenseMap<Operation *, EntryCount> map;
-};
-
-void SliceWorklist::push(Operation *op) {
-  assert(op && "cannot push nullptr to worklist");
-  list.push_back(op);
-  EntryCount newCount = map.lookup(op);
-  // Because operations are only pushed on creation, valid duplicates are
-  // never added.
-  assert((!map.contains(op) || !newCount.isValid) &&
-         "cannot push a duplicate operation");
-  map[op] = {/*isValid=*/true, newCount.count + 1};
-}
-
-Operation *SliceWorklist::pop() {
-  // Pop the front of the queue until we hit a valid entry.
-  while (!list.empty()) {
-    Operation *op = list.front();
-    list.pop_front();
-
-    EntryCount e = map.lookup(op);
-    // If the entry count is greater than 1 or there is no valid entry,
-    // this must be a stale entry. Decrement the map entry by one and continue.
-    if (e.count > 1 || !e.isValid) {
-      int64_t newCount = e.count - 1;
-      if (newCount <= 0)
-        map.erase(op);
-      else
-        map[op] = {e.isValid, static_cast<unsigned int>(newCount)};
-      continue;
-    }
-
-    map.erase(op);
-    return op;
-  }
-  return nullptr;
-}
-
-// Mark the operation as invalid if present. Removal from the map will
-// happen later when popping from the worklist.
-void SliceWorklist::remove(Operation *op) {
-  if (!map.contains(op))
-    return;
-
-  EntryCount e = map.lookup(op);
-  map[op] = {/*isValid=*/false, e.count};
-}
-
-//===----------------------------------------------------------------------===//
 // SliceTrackingListener
 //===----------------------------------------------------------------------===//
 
@@ -1430,15 +1341,18 @@ public:
   void notifyOperationInserted(Operation *op,
                                OpBuilder::InsertPoint previous) override;
 
+  /// Shared helper for operation removal from the worklist.
+  void removeOp(Operation *op);
+
   /// Remove the operation from the worklist.
   void notifyOperationErased(Operation *op) override;
 
   /// Remove the operation from the worklist.
   void notifyOperationReplaced(Operation *op, ValueRange replacement) override;
 
-  /// The worklist for this transformation keeps track of the operations that
-  /// need to be (re)visited.
-  SliceWorklist worklist;
+  /// The worklist for this transformation keeps track of the slices to visit
+  /// next for fusion.
+  std::deque<tensor::ExtractSliceOp> worklist;
 
 private:
   /// Optional pattern set to apply when adding new operations to the worklist.
@@ -1453,8 +1367,8 @@ SliceTrackingListener::SliceTrackingListener(
 LogicalResult
 SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
   for (Operation *op : ops) {
-    if (isa<tensor::ExtractSliceOp>(op))
-      worklist.push(op);
+    if (auto slice = dyn_cast<tensor::ExtractSliceOp>(op))
+      worklist.push_back(slice);
   }
 
   if (!patterns)
@@ -1468,18 +1382,36 @@ SliceTrackingListener::insertAndApplyPatterns(ArrayRef<Operation *> ops) {
 
 void SliceTrackingListener::notifyOperationInserted(
     Operation *op, OpBuilder::InsertPoint previous) {
+  auto slice = dyn_cast<tensor::ExtractSliceOp>(op);
+  if (!slice)
+    return;
+  worklist.push_back(slice);
+}
+
+// Scan the worklist for the given op and remove it if present. The expectation
+// is for the worklist to be small and for removal to be relatively rare.
+void SliceTrackingListener::removeOp(Operation *op) {
   if (!isa<tensor::ExtractSliceOp>(op))
     return;
-  worklist.push(op);
+  auto iter = worklist.begin();
+  while (iter != worklist.end()) {
+    if (*iter == op)
+      break;
+    iter++;
+  }
+  if (iter == worklist.end())
+    return;
+
+  worklist.erase(iter);
 }
 
 void SliceTrackingListener::notifyOperationErased(Operation *op) {
-  worklist.remove(op);
+  removeOp(op);
 }
 
 void SliceTrackingListener::notifyOperationReplaced(Operation *op,
                                                     ValueRange replacement) {
-  worklist.remove(op);
+  removeOp(op);
 }
 } // namespace
 
@@ -1547,10 +1479,9 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     return rewriter.notifyMatchFailure(consumer, "cleanup patterns failed");
   }
   OpBuilder::InsertionGuard g(rewriter);
-  while (Operation *next = sliceTracker.worklist.pop()) {
-    auto candidateSlice = dyn_cast<tensor::ExtractSliceOp>(next);
-    if (!candidateSlice)
-      continue;
+  while (!sliceTracker.worklist.empty()) {
+    auto candidateSlice = sliceTracker.worklist.front();
+    sliceTracker.worklist.pop_front();
 
     auto [fusableProducer, destinationInitArg] =
         getUntiledProducerFromSliceSource(&candidateSlice.getSourceMutable(),
