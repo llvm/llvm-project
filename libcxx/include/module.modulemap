@@ -714,7 +714,6 @@ module std_private_algorithm_find_first_of                               [system
 module std_private_algorithm_find_if                                     [system] { header "__algorithm/find_if.h" }
 module std_private_algorithm_find_if_not                                 [system] { header "__algorithm/find_if_not.h" }
 module std_private_algorithm_find_segment_if                             [system] { header "__algorithm/find_segment_if.h" }
-module std_private_algorithm_fold                                        [system] { header "__algorithm/fold.h" }
 module std_private_algorithm_for_each                                    [system] { header "__algorithm/for_each.h" }
 module std_private_algorithm_for_each_n                                  [system] { header "__algorithm/for_each_n.h" }
 module std_private_algorithm_for_each_segment                            [system] { header "__algorithm/for_each_segment.h" }
@@ -823,6 +822,7 @@ module std_private_algorithm_ranges_find_first_of                        [system
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
 module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
+module std_private_algorithm_ranges_fold                                 [system] { header "__algorithm/ranges_fold.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result
