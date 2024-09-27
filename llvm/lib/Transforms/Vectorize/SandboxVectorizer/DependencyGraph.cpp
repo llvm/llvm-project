@@ -31,11 +31,11 @@ void DGNode::dump() const {
 }
 #endif // NDEBUG
 
-InstrInterval DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
+Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   if (Instrs.empty())
     return {};
   // TODO: For now create a chain of dependencies.
-  InstrInterval Interval(Instrs);
+  Interval<Instruction> Interval(Instrs);
   auto *TopI = Interval.top();
   auto *BotI = Interval.bottom();
   DGNode *LastN = getOrCreateNode(TopI);
