@@ -81,6 +81,24 @@ C++ Specific Potentially Breaking Changes
     template <typename T>
     void f();
 
+- During constant evaluation, comparisons between different evaluations of the
+  same string literal are now correctly treated as non-constant, and comparisons
+  between string literals that cannot possibly overlap in memory are now treated
+  as constant. This updates Clang to match the anticipated direction of open core
+  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
+  issue is resolved.
+
+  .. code-block:: c++
+
+    constexpr const char *f() { return "hello"; }
+    constexpr const char *g() { return "world"; }
+    // Used to evaluate to false, now error: non-constant comparison.
+    constexpr bool a = f() == f();
+    // Might evaluate to true or false, as before.
+    bool at_runtime() { return f() == f(); }
+    // Was error, now evaluates to false.
+    constexpr bool b = f() == g();
+
 ABI Changes in This Version
 ---------------------------
 
@@ -335,6 +353,8 @@ Improvements to Clang's diagnostics
 - The ``-Wreturn-stack-address`` warning now also warns about addresses of
   local variables passed to function calls using the ``[[clang::musttail]]``
   attribute.
+
+- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
 
 Improvements to Clang's time-trace
 ----------------------------------

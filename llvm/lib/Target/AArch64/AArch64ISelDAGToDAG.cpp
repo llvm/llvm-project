@@ -401,7 +401,7 @@ public:
   }
 
   void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
-                             uint32_t MaxImm, bool IsMultiVector = false);
+                             uint32_t MaxImm);
 
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
@@ -1977,23 +1977,15 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
 
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
-                                                unsigned Opc, uint32_t MaxImm,
-                                                bool IsMultiVector) {
+                                                unsigned Opc, uint32_t MaxImm) {
   if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(4)))
     if (Imm->getZExtValue() > MaxImm)
       return;
 
   SDValue ZtValue;
-  SmallVector<SDValue, 4> Ops;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
-  Ops.push_back(ZtValue);
-  if (IsMultiVector) {
-    Ops.push_back(createZMulTuple({Node->getOperand(3), Node->getOperand(4)}));
-  } else {
-    Ops.push_back(Node->getOperand(3));
-    Ops.push_back(Node->getOperand(4));
-  }
+  SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
 
@@ -5515,11 +5507,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         SelectMultiVectorLuti(Node, 2, Opc, 3);
       return;
     }
-    case Intrinsic::aarch64_sme_luti4_zt_x4: {
-      // Does not have immediate but it has 2ZPR input
-      SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z, 0, true);
-      return;
-    }
     }
   } break;
   case ISD::INTRINSIC_WO_CHAIN: {
@@ -5651,6 +5638,34 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               Node->getValueType(0),
               {AArch64::SQDMULH_VG4_4Z4Z_B, AArch64::SQDMULH_VG4_4Z4Z_H,
                AArch64::SQDMULH_VG4_4Z4Z_S, AArch64::SQDMULH_VG4_4Z4Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_single_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_2ZZ_H, AArch64::FSCALE_2ZZ_S,
+               AArch64::FSCALE_2ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, false, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_single_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_4ZZ_H, AArch64::FSCALE_4ZZ_S,
+               AArch64::FSCALE_4ZZ_D}))
+        SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_x2:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_2Z2Z_H, AArch64::FSCALE_2Z2Z_S,
+               AArch64::FSCALE_2Z2Z_D}))
+        SelectDestructiveMultiIntrinsic(Node, 2, true, Op);
+      return;
+    case Intrinsic::aarch64_sme_fp8_scale_x4:
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::FP>(
+              Node->getValueType(0),
+              {0, AArch64::FSCALE_4Z4Z_H, AArch64::FSCALE_4Z4Z_S,
+               AArch64::FSCALE_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
     case Intrinsic::aarch64_sve_whilege_x2:
