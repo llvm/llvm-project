@@ -2381,7 +2381,8 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   /// Handles the checks for format strings, non-POD arguments to vararg
@@ -2573,7 +2574,8 @@ private:
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
 
-  bool BuiltinElementwiseMath(CallExpr *TheCall);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);

@@ -76,6 +76,22 @@ void test_builtin_elementwise_min_fp() {
   static_assert(!is_const<decltype(__builtin_elementwise_min(a, a))>::value);
 }
 
+void test_builtin_elementwise_maximum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_maximum(a, a))>::value);
+}
+
+void test_builtin_elementwise_minimum() {
+  const float a = 2.0f;
+  float b = 1.0f;
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_minimum(a, a))>::value);
+}
+
 void test_builtin_elementwise_ceil() {
   const float a = 42.0;
   float b = 42.3;
