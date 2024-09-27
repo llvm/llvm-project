@@ -131,9 +131,9 @@ void CallingConvEmitter::EmitAction(const Record *Action, unsigned Indent,
     O << IndentStr << "if (";
 
     if (Action->isSubClassOf("CCIfType")) {
-      ListInit *VTs = Action->getValueAsListInit("VTs");
+      const ListInit *VTs = Action->getValueAsListInit("VTs");
       for (unsigned i = 0, e = VTs->size(); i != e; ++i) {
-        Record *VT = VTs->getElementAsRecord(i);
+        const Record *VT = VTs->getElementAsRecord(i);
         if (i != 0)
           O << " ||\n    " << IndentStr;
         O << "LocVT == " << getEnumName(getValueType(VT));

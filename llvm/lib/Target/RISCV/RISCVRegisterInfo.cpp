@@ -115,11 +115,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
-  markSuperRegs(Reserved, RISCV::X2); // sp
-  markSuperRegs(Reserved, RISCV::X3); // gp
-  markSuperRegs(Reserved, RISCV::X4); // tp
+  markSuperRegs(Reserved, RISCV::X2_H); // sp
+  markSuperRegs(Reserved, RISCV::X3_H); // gp
+  markSuperRegs(Reserved, RISCV::X4_H); // tp
   if (TFI->hasFP(MF))
-    markSuperRegs(Reserved, RISCV::X8); // fp
+    markSuperRegs(Reserved, RISCV::X8_H); // fp
   // Reserve the base register if we need to realign the stack and allocate
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
@@ -131,7 +131,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // There are only 16 GPRs for RVE.
   if (Subtarget.hasStdExtE())
-    for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
+    for (MCPhysReg Reg = RISCV::X16_H; Reg <= RISCV::X31_H; Reg++)
       markSuperRegs(Reserved, Reg);
 
   // V registers for code generation. We handle them manually.
@@ -150,8 +150,8 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     if (Subtarget.hasStdExtE())
       report_fatal_error("Graal reserved registers do not exist in RVE");
-    markSuperRegs(Reserved, RISCV::X23);
-    markSuperRegs(Reserved, RISCV::X27);
+    markSuperRegs(Reserved, RISCV::X23_H);
+    markSuperRegs(Reserved, RISCV::X27_H);
   }
 
   // Shadow stack pointer.

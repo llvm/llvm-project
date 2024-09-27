@@ -10340,13 +10340,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         InstructionCost VecCost = VectorCost(CommonCost);
         // Check if the current node must be resized, if the parent node is not
         // resized.
-        if (!UnaryInstruction::isCast(E->getOpcode()) && E->Idx != 0 &&
+        if (It != MinBWs.end() && !UnaryInstruction::isCast(E->getOpcode()) &&
+            E->Idx != 0 &&
             (E->getOpcode() != Instruction::Load ||
              !E->UserTreeIndices.empty())) {
-          const EdgeInfo &EI = E->UserTreeIndices.front();
-          if ((EI.UserTE->getOpcode() != Instruction::Select ||
-               EI.EdgeIdx != 0) &&
-              It != MinBWs.end()) {
+          const EdgeInfo &EI =
+              *find_if(E->UserTreeIndices, [](const EdgeInfo &EI) {
+                return !EI.UserTE->isGather() || EI.EdgeIdx != UINT_MAX;
+              });
+          if (EI.UserTE->getOpcode() != Instruction::Select ||
+              EI.EdgeIdx != 0) {
             auto UserBWIt = MinBWs.find(EI.UserTE);
             Type *UserScalarTy =
                 EI.UserTE->getOperand(EI.EdgeIdx).front()->getType();
@@ -10357,8 +10360,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
               unsigned SrcBWSz = DL->getTypeSizeInBits(UserScalarTy);
               unsigned VecOpcode;
-              auto *UserVecTy =
-                  getWidenedType(UserScalarTy, E->getVectorFactor());
+              auto *UserVecTy = getWidenedType(UserScalarTy, E->Scalars.size());
               if (BWSz > SrcBWSz)
                 VecOpcode = Instruction::Trunc;
               else

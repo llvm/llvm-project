@@ -1796,6 +1796,62 @@ struct DropUnitDimsFromTransposeOp final
   }
 };
 
+/// A pattern to drop unit dims from the iter_args of an scf.for.
+///
+/// Example:
+///
+///  BEFORE:
+///  ```mlir
+///  %res = scf.for ... iter_args(%iter = %init) -> vector<[4]x1x1x4xf32> {
+///    ...
+///    scf.yield %
+///  }
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %drop = vector.shape_cast %init
+///    : vector<4x1x1x[4]xf32> to vector<4x[4]xf32>
+///  %new_loop = scf.for ... iter_args(%iter = %drop) -> vector<[4]x4xf32> {
+///    %new_iter = vector.shape_cast %iter
+///      : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
+///    ...
+///  }
+///  %res = vector.shape_cast %new_loop
+///    : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
+///  ```
+struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::ForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    /// Find the first iter_arg with droppable unit dims. Further applications
+    /// of this pattern will apply to later arguments.
+    for (OpOperand &operand : forOp.getInitArgsMutable()) {
+      auto vectorType = dyn_cast<VectorType>(operand.get().getType());
+      if (!vectorType)
+        continue;
+
+      VectorType newVectorType = dropNonScalableUnitDimFromType(vectorType);
+      if (vectorType == newVectorType)
+        continue;
+
+      // Create a new ForOp with that iter operand replaced.
+      auto castFn = [](OpBuilder &b, Location loc, Type type, Value source) {
+        return b.create<vector::ShapeCastOp>(loc, type, source);
+      };
+
+      Value replacement =
+          castFn(rewriter, forOp.getLoc(), newVectorType, operand.get());
+      rewriter.replaceOp(forOp,
+                         replaceAndCastForOpIterArg(rewriter, forOp, operand,
+                                                    replacement, castFn));
+      return success();
+    }
+    return failure();
+  }
+};
+
 /// Pattern to eliminate redundant zero-constants added to reduction operands.
 /// It's enough for there to be one initial zero value, so we can eliminate the
 /// extra ones that feed into `vector.reduction <add>`. These get created by the
@@ -2001,7 +2057,8 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromTransposeOp,
-               ShapeCastOpFolder>(patterns.getContext(), benefit);
+               ShapeCastOpFolder, DropUnitDimsFromScfForOp>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(

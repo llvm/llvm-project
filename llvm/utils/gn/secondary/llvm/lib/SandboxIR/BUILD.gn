@@ -6,12 +6,18 @@ static_library("SandboxIR") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "Argument.cpp",
+    "BasicBlock.cpp",
+    "Constant.cpp",
     "Context.cpp",
     "Module.cpp",
     "Pass.cpp",
     "PassManager.cpp",
+    "Region.cpp",
     "SandboxIR.cpp",
     "Tracker.cpp",
     "Type.cpp",
+    "User.cpp",
+    "Value.cpp",
   ]
 }

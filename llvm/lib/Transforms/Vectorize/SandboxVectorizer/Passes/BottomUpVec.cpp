@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/SandboxIR/Instruction.h"
 
 using namespace llvm::sandboxir;
 
