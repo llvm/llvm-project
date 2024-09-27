@@ -1,4 +1,4 @@
-//=======- NoUncountedMembersChecker.cpp -------------------------*- C++ -*-==//
+//=======- RawPtrRefMemberChecker.cpp ----------------------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,18 +25,21 @@ using namespace ento;
 
 namespace {
 
-class NoUncountedMemberChecker
+class RawPtrRefMemberChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
   BugType Bug;
   mutable BugReporter *BR;
 
 public:
-  NoUncountedMemberChecker()
-      : Bug(this,
-            "Member variable is a raw-pointer/reference to reference-countable "
-            "type",
-            "WebKit coding guidelines") {}
+  RawPtrRefMemberChecker(const char *description)
+      : Bug(this, description, "WebKit coding guidelines") {}
+
+  virtual std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *) const = 0;
+  virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
+  virtual const char *typeName() const = 0;
+  virtual const char *invariant() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
                     BugReporter &BRArg) const {
@@ -46,8 +49,8 @@ public:
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
-      const NoUncountedMemberChecker *Checker;
-      explicit LocalVisitor(const NoUncountedMemberChecker *Checker)
+      const RawPtrRefMemberChecker *Checker;
+      explicit LocalVisitor(const RawPtrRefMemberChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
       }
@@ -77,9 +80,9 @@ public:
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
         // If we don't see the definition we just don't know.
         if (MemberCXXRD->hasDefinition()) {
-            std::optional<bool> isRCAble = isRefCountable(MemberCXXRD);
-            if (isRCAble && *isRCAble)
-                reportBug(Member, MemberType, MemberCXXRD, RD);
+          std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
+          if (isRCAble && *isRCAble)
+            reportBug(Member, MemberType, MemberCXXRD, RD);
         }
       }
     }
@@ -114,7 +117,7 @@ public:
     // a member but we trust them to handle it correctly.
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
     if (CXXRD)
-      return isRefCounted(CXXRD);
+      return isPtrCls(CXXRD);
 
     return false;
   }
@@ -134,10 +137,10 @@ public:
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);
     Os << " is a "
-       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference")
-       << " to ref-countable type ";
+       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference") << " to "
+       << typeName() << " ";
     printQuotedQualifiedName(Os, MemberCXXRD);
-    Os << "; member variables must be ref-counted.";
+    Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
                                  BR->getSourceManager());
@@ -146,13 +149,67 @@ public:
     BR->emitReport(std::move(Report));
   }
 };
+
+class NoUncountedMemberChecker final : public RawPtrRefMemberChecker {
+public:
+  NoUncountedMemberChecker()
+      : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
+                               "reference-countable type") {}
+
+  std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+    return isRefCountable(R);
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isRefCounted(R);
+  }
+
+  const char *typeName() const final { return "ref-countable type"; }
+
+  const char *invariant() const final {
+    return "member variables must be Ref, RefPtr, WeakRef, or WeakPtr";
+  }
+};
+
+class NoUncheckedPtrMemberChecker final : public RawPtrRefMemberChecker {
+public:
+  NoUncheckedPtrMemberChecker()
+      : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
+                               "checked-pointer capable type") {}
+
+  std::optional<bool>
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+    return isCheckedPtrCapable(R);
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isCheckedPtr(R);
+  }
+
+  const char *typeName() const final { return "CheckedPtr capable type"; }
+
+  const char *invariant() const final {
+    return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
+           "WeakPtr";
+  }
+};
+
 } // namespace
 
 void ento::registerNoUncountedMemberChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<NoUncountedMemberChecker>();
 }
 
-bool ento::shouldRegisterNoUncountedMemberChecker(
+bool ento::shouldRegisterNoUncountedMemberChecker(const CheckerManager &Mgr) {
+  return true;
+}
+
+void ento::registerNoUncheckedPtrMemberChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<NoUncheckedPtrMemberChecker>();
+}
+
+bool ento::shouldRegisterNoUncheckedPtrMemberChecker(
     const CheckerManager &Mgr) {
   return true;
 }
