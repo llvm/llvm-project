@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.NoUncheckedPtrMemberChecker -verify %s
 
 #include "mock-types.h"
-#include "mock-system-header.h"
 
 namespace members {
 
