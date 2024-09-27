@@ -25,7 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/SandboxIR.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrInterval.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
 
@@ -85,7 +85,7 @@ public:
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
   /// the interval spanning \p Instrs.
-  InstrInterval extend(ArrayRef<Instruction *> Instrs);
+  Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

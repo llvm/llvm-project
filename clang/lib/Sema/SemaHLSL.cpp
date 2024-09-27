@@ -693,13 +693,19 @@ bool clang::CreateHLSLAttributedResourceType(
 // HLSL resource. The attributes are collected in HLSLResourcesTypeAttrs and at
 // the end of the declaration they are applied to the declaration type by
 // wrapping it in HLSLAttributedResourceType.
-bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
-  Attr *A = nullptr;
+bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
+  // only allow resource type attributes on intangible types
+  if (!T->isHLSLResourceType()) {
+    Diag(AL.getLoc(), diag::err_hlsl_attribute_needs_intangible_type)
+        << AL << getASTContext().HLSLResourceTy;
+    return false;
+  }
 
   // validate number of arguments
   if (!AL.checkExactlyNumArgs(SemaRef, AL.getMinArgs()))
     return false;
 
+  Attr *A = nullptr;
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
