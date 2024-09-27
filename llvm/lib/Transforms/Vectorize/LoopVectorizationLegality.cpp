@@ -1145,7 +1145,6 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
     return false;
 
   // Find a single IndirectUnsafe dependency.
-  LAI = &LAIs.getInfo(*TheLoop);
   const MemoryDepChecker::Dependence *IUDep = nullptr;
   const MemoryDepChecker &DepChecker = LAI->getDepChecker();
   const auto *Deps = DepChecker.getDependences();
