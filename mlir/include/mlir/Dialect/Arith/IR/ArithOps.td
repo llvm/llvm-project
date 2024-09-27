@@ -429,8 +429,8 @@ def Arith_MulSIExtendedOp : Arith_Op<"mulsi_extended", [Pure, Commutative,
     ```
   }];
 
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$low, SignlessIntegerLike:$high);
+  let arguments = (ins SignlessFixedWidthIntegerLike:$lhs, SignlessFixedWidthIntegerLike:$rhs);
+  let results = (outs SignlessFixedWidthIntegerLike:$low, SignlessFixedWidthIntegerLike:$high);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs)";
 
