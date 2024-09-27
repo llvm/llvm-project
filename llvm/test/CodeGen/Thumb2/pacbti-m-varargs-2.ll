@@ -28,17 +28,14 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .pad #12
 ; CHECK-NEXT:    sub sp, #12
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 28
-; CHECK-NEXT:    .cfi_offset lr, -16
-; CHECK-NEXT:    .cfi_offset r7, -20
-; CHECK-NEXT:    .cfi_offset r5, -24
-; CHECK-NEXT:    .cfi_offset r4, -28
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r4, r5, r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r4, r5, r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -32
+; CHECK-NEXT:    .cfi_offset lr, -16
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .cfi_offset r7, -24
+; CHECK-NEXT:    .cfi_offset r5, -28
+; CHECK-NEXT:    .cfi_offset r4, -32
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
@@ -63,8 +60,7 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    add sp, #8
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r7, lr}
+; CHECK-NEXT:    pop.w {r4, r5, r7, r12, lr}
 ; CHECK-NEXT:    add sp, #12
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
@@ -111,7 +107,9 @@ attributes #1 = { nounwind "sign-return-address"="non-leaf"}
 !2 = !{i32 8, !"sign-return-address-all", i32 0}
 
 ; UNWIND-LABEL: FunctionAddress
-; UNWIND:       0x01      ; vsp = vsp + 8
-; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x0B ; pop {r4, r5, r7, lr}
-; UNWIND-NEXT:  0x02      ; vsp = vsp + 12
+; UNWIND:      0x01      ; vsp = vsp + 8
+; UNWIND-NEXT: 0x80 0x0B ; pop {r4, r5, r7}
+; UNWIND-NEXT: 0xB4      ; pop ra_auth_code
+; UNWIND-NEXT: 0x84 0x00 ; pop {lr}
+; UNWIND-NEXT: 0x02      ; vsp = vsp + 12
+

@@ -33,25 +33,18 @@ define hidden i32 @_Z1hii(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -12
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
 ; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push.w {r6, r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r7, -12
 ; CHECK-NEXT:    cmp.w r0, #-1
 ; CHECK-NEXT:    ble .LBB0_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
 ; CHECK-NEXT:    add r0, r1
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r3, r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_2: @ %if.then
@@ -90,20 +83,15 @@ define hidden i32 @_Z1fiiii(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r6, -8
-; CHECK-NEXT:    .cfi_offset r5, -12
-; CHECK-NEXT:    .cfi_offset r4, -16
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .save {r4, r5, r6, ra_auth_code, lr}
 ; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r6, -12
+; CHECK-NEXT:    .cfi_offset r5, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bmi .LBB1_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
@@ -117,9 +105,7 @@ define hidden i32 @_Z1fiiii(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:  .LBB1_3: @ %return
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, lr}
+; CHECK-NEXT:    pop.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -145,20 +131,15 @@ define hidden i32 @_Z1giiii(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r6, -8
-; CHECK-NEXT:    .cfi_offset r5, -12
-; CHECK-NEXT:    .cfi_offset r4, -16
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .save {r4, r5, r6, ra_auth_code, lr}
 ; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r6, -12
+; CHECK-NEXT:    .cfi_offset r5, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bmi .LBB2_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
@@ -172,9 +153,7 @@ define hidden i32 @_Z1giiii(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:  .LBB2_3: @ %return
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, lr}
+; CHECK-NEXT:    pop.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -213,32 +192,31 @@ attributes #2 = { noreturn "sign-return-address"="non-leaf" }
 
 
 ; UNWIND-LABEL: FunctionAddress: 0x0
-; UNWIND:       Opcodes
+; UNWIND: Opcodes [
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0x80 0x08 ; pop {r7}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x08 ; pop {r7, lr}
-; UNWIND-NEXT:  0xB0      ; finish
-; UNWIND-NEXT:  0xB0      ; finish
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x3C
-; UNWIND:       Opcodes
+; UNWIND-LABEL: FunctionAddress: 0x30
+; UNWIND: Opcodes [
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0xA2      ; pop {r4, r5, r6}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x72
-; UNWIND:       Opcodes
+; UNWIND-LABEL: FunctionAddress: 0x5C
+; UNWIND: Opcodes [
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0xA2      ; pop {r4, r5, r6}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0xA8
-; UNWIND:       Opcodes
-; UNWIND-NEXT:  0xB0      ; finish
-; UNWIND-NEXT:  0xB0      ; finish
+; UNWIND-LABEL: FunctionAddress: 0x88
+; UNWIND: Opcodes [
 ; UNWIND-NEXT:  0xB0      ; finish
 
-; UNWIND: 000000a9 {{.*}} OUTLINED_FUNCTION_0
+; UNWIND: 00000089 {{.*}} OUTLINED_FUNCTION_0
 ; UWNIND: 00000001 {{.*}} _Z1hii
-; UWNIND: 0000003d {{.*}} _Z1fiiii
-; UWNIND: 00000073 {{.*}} _Z1giiii
+; UWNIND: 00000031 {{.*}} _Z1fiiii
+; UWNIND: 0000005d {{.*}} _Z1giiii

@@ -11,15 +11,12 @@ define hidden i32 @_Z1fi(i32 %x) "sign-return-address"="non-leaf" "sign-return-a
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pacbti r12, lr, sp
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -12
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r7, -12
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -27,8 +24,7 @@ define hidden i32 @_Z1fi(i32 %x) "sign-return-address"="non-leaf" "sign-return-a
 ; CHECK-NEXT:    bl _Z1gi
 ; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -42,6 +38,8 @@ declare dso_local i32 @_Z1gi(i32)
 
 ; UNWIND-LABEL: Opcodes [
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0x80 0x08 ; pop {r7}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x08 ; pop {r7, lr}
-; UNWIND-NEXT:  0xB0      ; finish
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
+
+

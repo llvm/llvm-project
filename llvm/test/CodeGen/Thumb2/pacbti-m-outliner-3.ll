@@ -38,20 +38,15 @@ define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r6, -8
-; CHECK-NEXT:    .cfi_offset r5, -12
-; CHECK-NEXT:    .cfi_offset r4, -16
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .save {r4, r5, r6, ra_auth_code, lr}
 ; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r6, -12
+; CHECK-NEXT:    .cfi_offset r5, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bmi .LBB1_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
@@ -61,9 +56,7 @@ define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:  .LBB1_3: @ %return
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, lr}
+; CHECK-NEXT:    pop.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -92,20 +85,15 @@ define hidden i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r6, -8
-; CHECK-NEXT:    .cfi_offset r5, -12
-; CHECK-NEXT:    .cfi_offset r4, -16
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .save {r4, r5, r6, ra_auth_code, lr}
 ; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    push.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r6, -12
+; CHECK-NEXT:    .cfi_offset r5, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    bmi .LBB2_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.end
@@ -115,9 +103,7 @@ define hidden i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:  .LBB2_3: @ %return
-; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, lr}
+; CHECK-NEXT:    pop.w {r3, r4, r5, r6, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -167,18 +153,20 @@ attributes #0 = { minsize noinline norecurse nounwind optsize readnone uwtable "
 
 ; UNWIND-LABEL: FunctionAddress: 0x4
 ; UNWIND:       0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0xA2      ; pop {r4, r5, r6}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x30
+; UNWIND-LABEL: FunctionAddress: 0x26
 ; UNWIND:       0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0xA2      ; pop {r4, r5, r6}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x5C
+; UNWIND-LABEL: FunctionAddress: 0x48
 ; UNWIND:       0xB4      ; pop ra_auth_code
-; UNWIND:       0x84 0x00 ; pop {lr}
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: 0000005d {{.*}} OUTLINED_FUNCTION_0
+; UNWIND-LABEL: 00000049 {{.*}} OUTLINED_FUNCTION_0
 ; UNWIND-LABEL: 00000005 {{.*}} f
-; UNWIND-LABEL: 00000031 {{.*}} g
+; UNWIND-LABEL: 00000027 {{.*}} g

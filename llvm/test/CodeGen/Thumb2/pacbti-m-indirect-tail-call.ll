@@ -9,10 +9,8 @@ define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: f:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r4, r5, r6, r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r12, lr}
 ; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    mov r6, r1
@@ -24,8 +22,7 @@ define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ldr r4, [r1]
 ; CHECK-NEXT:    mov r1, r6
 ; CHECK-NEXT:    blx r4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:

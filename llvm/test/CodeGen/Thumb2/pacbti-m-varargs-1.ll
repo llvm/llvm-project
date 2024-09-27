@@ -14,15 +14,12 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .pad #12
 ; CHECK-NEXT:    sub sp, #12
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    .cfi_offset lr, -16
-; CHECK-NEXT:    .cfi_offset r7, -20
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -24
+; CHECK-NEXT:    .cfi_offset lr, -16
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .cfi_offset r7, -24
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 28
@@ -49,8 +46,7 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_4: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    add sp, #12
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr

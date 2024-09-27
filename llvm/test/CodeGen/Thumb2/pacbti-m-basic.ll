@@ -22,15 +22,12 @@ define hidden i32 @f0(i32 %x) local_unnamed_addr "sign-return-address"="non-leaf
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -12
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r7, -12
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -38,8 +35,7 @@ define hidden i32 @f0(i32 %x) local_unnamed_addr "sign-return-address"="non-leaf
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -56,20 +52,16 @@ define hidden i32 @f1(i32 %x) local_unnamed_addr #0 {
 ; CHECK-NEXT:    pac r12, lr, sp
 ; CHECK-NEXT:    vstr fpcxtns, [sp, #-4]!
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset lr, -8
-; CHECK-NEXT:    .cfi_offset r7, -12
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -16
+; CHECK-NEXT:    .cfi_offset lr, -8
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -12
+; CHECK-NEXT:    .cfi_offset r7, -16
 ; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    adds r0, #1
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    vscclrm {s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, vpr}
 ; CHECK-NEXT:    vldr fpcxtns, [sp], #4
 ; CHECK-NEXT:    aut r12, lr, sp
@@ -87,15 +79,12 @@ define hidden i32 @f2(i32 %x) local_unnamed_addr #1 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
+; CHECK-NEXT:    .save {r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r7, r12, lr}
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -12
+; CHECK-NEXT:    .cfi_offset lr, -4
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r7, -12
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -103,8 +92,7 @@ define hidden i32 @f2(i32 %x) local_unnamed_addr #1 {
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r7, lr}
+; CHECK-NEXT:    pop.w {r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    mrs r12, control
 ; CHECK-NEXT:    tst.w r12, #8
@@ -149,22 +137,22 @@ attributes #1 = { "sign-return-address"="non-leaf" "cmse_nonsecure_entry" "targe
 
 ; UNWIND-LABEL: FunctionAddress: 0x0
 ; UNWIND:       0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0x80 0x08 ; pop {r7}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x08 ; pop {r7, lr}
-; UNWIND-NEXT:  0xB0      ; finish
-; UNWIND-NEXT:  0xB0      ; finish
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x24
-; UNWIND:       0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x08 ; pop {r7, lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x54
+; UNWIND-LABEL: FunctionAddress: 0x1E
+; UNWIND:       0x80 0x08 ; pop {r7}
+; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
+
+; UNWIND-LABEL: FunctionAddress: 0x48
 ; UNWIND:       0x00      ; vsp = vsp + 4
+; UNWIND-NEXT:  0x80 0x08 ; pop {r7}
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
-; UNWIND-NEXT:  0x84 0x08 ; pop {r7, lr}
-; UNWIND-NEXT:  0xB0      ; finish
-; UNWIND-NEXT:  0xB0      ; finish
+; UNWIND-NEXT:  0x84 0x00 ; pop {lr}
 
 ; UNWIND-LABEL: 00000001 {{.*}} f0
-; UNWIND-LABEL: 00000025 {{.*}} f1
-; UNWIND-LABEL: 00000055 {{.*}} f2
+; UNWIND-LABEL: 0000001f {{.*}} f1
+; UNWIND-LABEL: 00000049 {{.*}} f2

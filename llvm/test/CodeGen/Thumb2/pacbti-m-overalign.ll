@@ -21,19 +21,17 @@ define hidden i32 @_Z1fv() local_unnamed_addr "sign-return-address"="non-leaf" {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .save {r4, r6, r7, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r4, r6, r7, r12, lr}
+; CHECK-NEXT:    .cfi_def_cfa_offset 20
 ; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .cfi_offset r6, -12
-; CHECK-NEXT:    .cfi_offset r4, -16
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r7, -12
+; CHECK-NEXT:    .cfi_offset r6, -16
+; CHECK-NEXT:    .cfi_offset r4, -20
 ; CHECK-NEXT:    .setfp r7, sp, #8
 ; CHECK-NEXT:    add r7, sp, #8
-; CHECK-NEXT:    .cfi_def_cfa r7, 8
-; CHECK-NEXT:    .save {ra_auth_code}
-; CHECK-NEXT:    str r12, [sp, #-4]!
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -20
+; CHECK-NEXT:    .cfi_def_cfa r7, 12
 ; CHECK-NEXT:    .pad #44
 ; CHECK-NEXT:    sub sp, #44
 ; CHECK-NEXT:    mov r4, sp
@@ -43,13 +41,12 @@ define hidden i32 @_Z1fv() local_unnamed_addr "sign-return-address"="non-leaf" {
 ; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    bl _Z1giPi
 ; CHECK-NEXT:    ldm.w sp, {r0, r1, r2, r3}
-; CHECK-NEXT:    sub.w r4, r7, #12
+; CHECK-NEXT:    sub.w r4, r7, #8
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    ldr r12, [sp], #4
-; CHECK-NEXT:    pop.w {r4, r6, r7, lr}
+; CHECK-NEXT:    pop.w {r4, r6, r7, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
@@ -78,6 +75,7 @@ declare dso_local i32 @_Z1giPi(i32, ptr) local_unnamed_addr
 
 ; UNWIND-LABEL:        FunctionAddress: 0x0
 ; UNWIND:          0x97      ; vsp = r7
-; UNWIND:          0x42      ; vsp = vsp - 12
-; UNWIND:          0xB4      ; pop ra_auth_code
-; UNWIND:          0x84 0x0D ; pop {r4, r6, r7, lr}
+; UNWIND-NEXT:     0x41      ; vsp = vsp - 8
+; UNWIND-NEXT:     0x80 0x0D ; pop {r4, r6, r7}
+; UNWIND-NEXT:     0xB4      ; pop ra_auth_code
+; UNWIND-NEXT:     0x84 0x00 ; pop {lr}

@@ -20,22 +20,20 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  @ %bb.0: @ %entry
 ; CHECK-NEXT:    pac r12, lr, sp
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, ra_auth_code, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r12, lr}
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, -4
-; CHECK-NEXT:    .cfi_offset r7, -8
-; CHECK-NEXT:    .cfi_offset r6, -12
-; CHECK-NEXT:    .cfi_offset r5, -16
-; CHECK-NEXT:    .cfi_offset r4, -20
+; CHECK-NEXT:    .cfi_offset ra_auth_code, -8
+; CHECK-NEXT:    .cfi_offset r9, -12
+; CHECK-NEXT:    .cfi_offset r8, -16
+; CHECK-NEXT:    .cfi_offset r7, -20
+; CHECK-NEXT:    .cfi_offset r6, -24
+; CHECK-NEXT:    .cfi_offset r5, -28
+; CHECK-NEXT:    .cfi_offset r4, -32
 ; CHECK-NEXT:    .setfp r7, sp, #12
 ; CHECK-NEXT:    add r7, sp, #12
-; CHECK-NEXT:    .cfi_def_cfa r7, 8
-; CHECK-NEXT:    .save {r8, r9, ra_auth_code}
-; CHECK-NEXT:    push.w {r8, r9, r12}
-; CHECK-NEXT:    .cfi_offset ra_auth_code, -24
-; CHECK-NEXT:    .cfi_offset r9, -28
-; CHECK-NEXT:    .cfi_offset r8, -32
+; CHECK-NEXT:    .cfi_def_cfa r7, 20
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    movs r0, #7
 ; CHECK-NEXT:    add.w r0, r0, r5, lsl #2
@@ -95,10 +93,9 @@ define hidden i32 @f(i32 %n) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ldrne r1, [r2, #8]
 ; CHECK-NEXT:    addne r0, r1
 ; CHECK-NEXT:  .LBB0_9: @ %for.cond.cleanup
-; CHECK-NEXT:    sub.w r4, r7, #24
+; CHECK-NEXT:    sub.w r4, r7, #12
 ; CHECK-NEXT:    mov sp, r4
-; CHECK-NEXT:    pop.w {r8, r9, r12}
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r12, lr}
 ; CHECK-NEXT:    aut r12, lr, sp
 ; CHECK-NEXT:    bx lr
 entry:
