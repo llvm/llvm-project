@@ -31,6 +31,7 @@ def Float : Type;
 def Ptr : Type;
 def FnPtr : Type;
 def MemberPtr : Type;
+def FixedPoint : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -49,6 +50,7 @@ def ArgIntAP : ArgType { let Name = "IntegralAP<false>"; let AsRef = true; }
 def ArgIntAPS : ArgType { let Name = "IntegralAP<true>"; let AsRef = true; }
 def ArgFloat : ArgType { let Name = "Floating"; let AsRef = true; }
 def ArgBool : ArgType { let Name = "bool"; }
+def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
@@ -108,7 +110,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [FixedPoint]);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -255,6 +257,7 @@ def ConstFloat : ConstOpcode<Float, ArgFloat>;
 def constIntAP : ConstOpcode<IntAP, ArgIntAP>;
 def constIntAPS : ConstOpcode<IntAPS, ArgIntAPS>;
 def ConstBool : ConstOpcode<Bool, ArgBool>;
+def ConstFixedPoint : ConstOpcode<FixedPoint, ArgFixedPoint>;
 
 // [] -> [Integer]
 def Zero : Opcode {
@@ -607,7 +610,7 @@ def IsNonNull : Opcode {
 //===----------------------------------------------------------------------===//
 
 def FromCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool, IntAP, IntAPS, FixedPoint];
 }
 
 def ToCastTypeClass : TypeClass {
