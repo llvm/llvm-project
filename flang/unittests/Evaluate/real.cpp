@@ -1,5 +1,5 @@
-#include "fp-testing.h"
-#include "testing.h"
+#include "flang/Testing/fp-testing.h"
+#include "flang/Testing/testing.h"
 #include "flang/Evaluate/type.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>

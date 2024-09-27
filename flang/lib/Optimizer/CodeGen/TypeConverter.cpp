@@ -13,7 +13,7 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"

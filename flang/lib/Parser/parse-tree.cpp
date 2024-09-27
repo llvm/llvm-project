@@ -8,7 +8,7 @@
 
 #include "flang/Parser/parse-tree.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 #include "llvm/Support/raw_ostream.h"

@@ -8,7 +8,7 @@
 
 #include "check-select-type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
+#include "flang/Support/reference.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"

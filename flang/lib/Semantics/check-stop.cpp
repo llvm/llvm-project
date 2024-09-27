@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-stop.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"

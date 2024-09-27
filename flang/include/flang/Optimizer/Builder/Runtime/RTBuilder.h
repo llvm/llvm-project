@@ -17,7 +17,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RTBUILDER_H
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"

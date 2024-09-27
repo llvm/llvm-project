@@ -12,7 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 #include "DirectivesCommon.h"
-#include "flang/Common/Version.h"
+#include "flang/Support/Version.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"

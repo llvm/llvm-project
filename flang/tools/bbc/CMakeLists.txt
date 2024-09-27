@@ -6,6 +6,7 @@ AllTargetsInfos
 TargetParser
 )
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../FortranRuntime/include")
 add_flang_tool(bbc bbc.cpp
 DEPENDS
 FIROptCodeGenPassIncGen

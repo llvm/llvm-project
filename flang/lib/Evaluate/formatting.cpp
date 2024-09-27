@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/formatting.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"

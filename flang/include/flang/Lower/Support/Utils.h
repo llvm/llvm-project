@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_SUPPORT_UTILS_H
 #define FORTRAN_LOWER_SUPPORT_UTILS_H
 
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"

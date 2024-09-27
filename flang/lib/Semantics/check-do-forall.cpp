@@ -8,7 +8,7 @@
 
 #include "check-do-forall.h"
 #include "definable.h"
-#include "flang/Common/template.h"
+#include "flang/Support/template.h"
 #include "flang/Evaluate/call.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"

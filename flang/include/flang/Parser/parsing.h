@@ -14,7 +14,7 @@
 #include "message.h"
 #include "parse-tree.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Parser/preprocessor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>

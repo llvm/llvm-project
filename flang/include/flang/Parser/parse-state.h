@@ -16,7 +16,7 @@
 // and recovery during parsing!
 
 #include "user-state.h"
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"

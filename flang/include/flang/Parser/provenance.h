@@ -14,7 +14,7 @@
 #include "characters.h"
 #include "source.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/interval.h"
+#include "flang/Support/interval.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <list>

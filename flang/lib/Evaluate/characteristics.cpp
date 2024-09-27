@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/characteristics.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"

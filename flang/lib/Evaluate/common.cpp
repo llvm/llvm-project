@@ -9,9 +9,13 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Common/idioms.h"
 
+
 using namespace Fortran::parser::literals;
 
+
+
 namespace Fortran::evaluate {
+
 
 void RealFlagWarnings(
     FoldingContext &context, const RealFlags &flags, const char *operation) {

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTypeGenerator.h"
-#include "flang/Common/Version.h"
+#include "flang/Support/Version.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/CGOps.h"

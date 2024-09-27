@@ -11,8 +11,8 @@
 
 #include "traverse.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/template.h"
-#include "flang/Common/unwrap.h"
+#include "flang/Support/template.h"
+#include "flang/Support/unwrap.h"
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"

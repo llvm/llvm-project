@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-return.h"
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"

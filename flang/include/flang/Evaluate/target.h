@@ -12,27 +12,16 @@
 #ifndef FORTRAN_EVALUATE_TARGET_H_
 #define FORTRAN_EVALUATE_TARGET_H_
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Common/target-rounding.h"
 #include "flang/Evaluate/common.h"
 #include <cstdint>
 
 namespace Fortran::evaluate {
 
-// Floating-point rounding control
-struct Rounding {
-  common::RoundingMode mode{common::RoundingMode::TiesToEven};
-  // When set, emulate status flag behavior peculiar to x86
-  // (viz., fail to set the Underflow flag when an inexact product of a
-  // multiplication is rounded up to a normal number from a subnormal
-  // in some rounding modes)
-#if __x86_64__ || __riscv || __loongarch__
-  bool x86CompatibleBehavior{true};
-#else
-  bool x86CompatibleBehavior{false};
-#endif
-};
+using common::Rounding;
 
 ENUM_CLASS(IeeeFeature, Denormal, Divide, Flags, Halting, Inf, Io, NaN,
     Rounding, Sqrt, Standard, Subnormal, UnderflowControl)

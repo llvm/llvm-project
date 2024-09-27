@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-cuda.h"
-#include "flang/Common/template.h"
+#include "flang/Support/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"

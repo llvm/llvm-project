@@ -13,7 +13,7 @@
 #ifndef FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 #define FORTRAN_FRONTEND_FRONTENDOPTIONS_H
 
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/unparse.h"

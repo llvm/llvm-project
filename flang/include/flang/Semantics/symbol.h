@@ -10,9 +10,9 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/reference.h"
+#include "flang/Support/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
 #include "llvm/ADT/DenseMapInfo.h"

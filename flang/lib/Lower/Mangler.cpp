@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Mangler.h"
-#include "flang/Common/reference.h"
+#include "flang/Support/reference.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"

@@ -8,7 +8,7 @@
 
 #include "rewrite-parse-tree.h"
 #include "rewrite-directives.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"

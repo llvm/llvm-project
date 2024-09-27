@@ -15,7 +15,7 @@
 #include "expression.h"
 #include "traverse.h"
 #include "variable.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
 #include <variant>

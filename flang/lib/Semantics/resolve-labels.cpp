@@ -8,7 +8,7 @@
 
 #include "resolve-labels.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/template.h"
+#include "flang/Support/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"
 #include <cstdarg>

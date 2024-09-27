@@ -37,7 +37,7 @@
 #include "resolve-labels.h"
 #include "resolve-names.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/default-kinds.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"

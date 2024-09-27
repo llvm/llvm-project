@@ -16,7 +16,7 @@
 #include "char-set.h"
 #include "provenance.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference-counted.h"
+#include "flang/Support/reference-counted.h"
 #include "flang/Common/restorer.h"
 #include <cstddef>
 #include <cstring>

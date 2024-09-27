@@ -12,7 +12,7 @@
 // Simple predicates and look-up functions that are best defined
 // canonically for use in semantic checking.
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"

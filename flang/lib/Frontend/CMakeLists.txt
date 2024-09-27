@@ -28,7 +28,7 @@ add_flang_library(flangFrontend
   FortranParser
   FortranSemantics
   FortranEvaluate
-  FortranCommon
+  FortranSupport
   FortranLower
   FIRDialect
   FIRDialectSupport

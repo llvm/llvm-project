@@ -9,15 +9,17 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/default-kinds.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/indirection.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/restorer.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "flang/Common/target-rounding.h"
 #include <cinttypes>
 #include <map>
 #include <set>
@@ -33,6 +35,9 @@ class TargetCharacteristics;
 
 using common::ConstantSubscript;
 using common::RelationalOperator;
+using common::RoundingMode;
+using common::RealFlags;
+using common::RealFlag;
 
 // Integers are always ordered; reals may not be.
 ENUM_CLASS(Ordering, Less, Equal, Greater)
@@ -127,11 +132,6 @@ static constexpr bool Satisfies(RelationalOperator op, Relation relation) {
   }
   return false; // silence g++ warning
 }
-
-// These are ordered like the bits in a common fenv.h header file.
-ENUM_CLASS(RealFlag, InvalidArgument, Denorm, DivideByZero, Overflow, Underflow,
-    Inexact)
-using RealFlags = common::EnumSet<RealFlag, RealFlag_enumSize>;
 
 template <typename A> struct ValueWithRealFlags {
   A AccumulateFlags(RealFlags &f) {

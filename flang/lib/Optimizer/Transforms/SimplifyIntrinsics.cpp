@@ -22,7 +22,7 @@
 /// and small in size.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"

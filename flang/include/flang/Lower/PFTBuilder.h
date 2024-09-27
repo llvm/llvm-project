@@ -17,8 +17,8 @@
 #ifndef FORTRAN_LOWER_PFTBUILDER_H
 #define FORTRAN_LOWER_PFTBUILDER_H
 
-#include "flang/Common/reference.h"
-#include "flang/Common/template.h"
+#include "flang/Support/reference.h"
+#include "flang/Support/template.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Parser/parse-tree.h"

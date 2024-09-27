@@ -23,6 +23,7 @@ if (LLVM_ENABLE_EH)
 endif()
 
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(FORTRANRUNTIME_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../FortranRuntime")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
   message(FATAL_ERROR "In-source builds are not allowed. \
@@ -33,17 +34,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
 endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
-
-# The out of tree builds of the compiler and the Fortran runtime
-# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
-# to be composable. Failure to synchronize this setting may result
-# in linking errors or fatal failures in F128 runtime functions.
-set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
-  "Specifies the target library used for implementing IEEE-754 128-bit float \
-  math in F18 runtime, e.g. it might be libquadmath for targets where \
-  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
-  is mapped to long double, etc."
-  )
 
 # Check for a standalone build and configure as appropriate from
 # there.
@@ -170,7 +160,6 @@ if (FLANG_STANDALONE_BUILD)
 
   link_directories("${LLVM_LIBRARY_DIR}")
 
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
     ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
@@ -249,7 +238,6 @@ include_directories(SYSTEM ${CLANG_INCLUDE_DIR})
 
 # tco tool and FIR lib output directories
 if(FLANG_STANDALONE_BUILD)
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
 endif()
 # Always build tco tool
@@ -257,7 +245,8 @@ set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
-  ${FLANG_SOURCE_DIR}/include)
+  ${FLANG_SOURCE_DIR}/include
+  ${FORTRANRUNTIME_SOURCE_DIR}/include)
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
@@ -333,12 +322,6 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
   "Vendor-specific text for showing the repository the source is taken from.")
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
-endif()
-
-if (FLANG_RUNTIME_F128_MATH_LIB)
-  add_compile_definitions(
-    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
-    )
 endif()
 
 include(TestBigEndian)
@@ -462,14 +445,6 @@ if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 
-option(FLANG_CUF_RUNTIME
-  "Compile CUDA Fortran runtime sources" OFF)
-if (FLANG_CUF_RUNTIME)
-  find_package(CUDAToolkit REQUIRED)
-endif()
-
-add_subdirectory(runtime)
-
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)
 endif()
@@ -531,18 +506,4 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.inc"
     )
 endif()
-
-# Put ISO_Fortran_binding.h into the include files of the build area now
-# so that we can run tests before installing
-include(GetClangResourceDir)
-get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
-configure_file(
-  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
-  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
-
-# And also install it into the install area
-get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)
-install(
-  FILES include/flang/ISO_Fortran_binding.h
-  DESTINATION ${HEADER_INSTALL_DIR} )
 

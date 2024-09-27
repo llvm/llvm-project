@@ -13,7 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
-#include "flang/Common/default-kinds.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"

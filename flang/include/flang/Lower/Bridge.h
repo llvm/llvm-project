@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_BRIDGE_H
 #define FORTRAN_LOWER_BRIDGE_H
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Lower/LoweringOptions.h"

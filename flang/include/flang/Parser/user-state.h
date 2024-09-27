@@ -14,7 +14,7 @@
 // parse tree construction so as to avoid any need for representing
 // state in static data.
 
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"

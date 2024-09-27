@@ -60,9 +60,8 @@ add_flang_library(FortranEvaluate
   variable.cpp
 
   LINK_LIBS
-  FortranCommon
-  FortranDecimal
   FortranParser
+  FortranSupport
   ${LIBPGMATH}
   ${QUADMATHLIB}
 

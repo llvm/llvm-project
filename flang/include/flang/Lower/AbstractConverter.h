@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_ABSTRACTCONVERTER_H
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"

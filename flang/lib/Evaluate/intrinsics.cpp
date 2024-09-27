@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/intrinsics.h"
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"

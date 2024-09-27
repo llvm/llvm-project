@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/tools.h"
-#include "flang/Common/Fortran.h"
-#include "flang/Common/indirection.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/indirection.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"

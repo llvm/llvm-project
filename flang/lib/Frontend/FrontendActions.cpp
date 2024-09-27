@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/FrontendActions.h"
-#include "flang/Common/default-kinds.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
