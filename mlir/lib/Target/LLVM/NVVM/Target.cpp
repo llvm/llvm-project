@@ -553,8 +553,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
 #if !LLVM_HAS_NVPTX_TARGET
-  getOperation()->emitError("The `NVPTX` target was not built. Please enable "
-                            "it when building LLVM.");
+  getOperation()->emitError(
+      "The `NVPTX` target was not built. Please enable it when building LLVM.");
   return std::nullopt;
 #endif // LLVM_HAS_NVPTX_TARGET
 
