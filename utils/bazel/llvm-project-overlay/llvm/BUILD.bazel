@@ -1457,6 +1457,7 @@ cc_library(
     copts = llvm_copts,
     textual_hdrs = ["include/llvm/SandboxIR/SandboxIRValues.def"],
     deps = [
+        ":Analysis",
         ":Core",
         ":Support",
     ],
