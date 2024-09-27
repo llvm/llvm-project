@@ -20,7 +20,7 @@ using namespace clang;
 namespace {
 
 bool hasPublicMethodInBaseClass(const CXXRecordDecl *R,
-                                const char *NameToMatch) {
+                                StringRef NameToMatch) {
   assert(R);
   assert(R->hasDefinition());
 
@@ -37,7 +37,7 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R,
 namespace clang {
 
 std::optional<const clang::CXXRecordDecl *>
-hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
+hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
   assert(Base);
 
   const Type *T = Base->getType().getTypePtrOrNull();
@@ -54,8 +54,8 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch) {
 }
 
 std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
-                                         const char *IncMethodName,
-                                         const char *DecMethodName) {
+                                         StringRef IncMethodName,
+                                         StringRef DecMethodName) {
   assert(R);
 
   R = R->getDefinition();

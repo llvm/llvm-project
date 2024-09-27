@@ -34,7 +34,8 @@ class Type;
 /// \returns CXXRecordDecl of the base if the type has ref as a public method,
 /// nullptr if not, std::nullopt if inconclusive.
 std::optional<const clang::CXXRecordDecl *>
-hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch);
+hasPublicMethodInBase(const CXXBaseSpecifier *Base,
+                      llvm::StringRef NameToMatch);
 
 /// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
