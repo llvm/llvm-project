@@ -1975,10 +1975,15 @@ def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fcolor_diagnostics>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fcolor_diagnostics>;
 def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fno_color_diagnostics>;
-def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fno_color_diagnostics>;
+def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Values<"auto,always,never">,
+  HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
   HelpText<"Use ANSI escape codes for diagnostics">,
@@ -2841,6 +2846,10 @@ def fcf_protection : Flag<["-"], "fcf-protection">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option]>,
   Alias<fcf_protection_EQ>, AliasArgs<["full"]>,
   HelpText<"Enable cf-protection in 'full' mode">;
+def mcf_branch_label_scheme_EQ : Joined<["-"], "mcf-branch-label-scheme=">,
+  Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
+  HelpText<"Select label scheme for branch control-flow architecture protection">,
+  Values<"unlabeled,func-sig">;
 def mfunction_return_EQ : Joined<["-"], "mfunction-return=">,
   Group<m_Group>, Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Replace returns with jumps to ``__x86_return_thunk`` (x86 only, error otherwise)">,

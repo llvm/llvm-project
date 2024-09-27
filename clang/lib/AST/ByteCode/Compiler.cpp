@@ -9,6 +9,7 @@
 #include "Compiler.h"
 #include "ByteCodeEmitter.h"
 #include "Context.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "InterpShared.h"
@@ -470,6 +471,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_FixedPointToBoolean:
   case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
@@ -715,6 +717,16 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
   return this->visitArrayElemInit(1, SubExpr);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointLiteral(const FixedPointLiteral *E) {
+  assert(E->getType()->isFixedPointType());
+  assert(classifyPrim(E) == PT_FixedPoint);
+
+  // FIXME: Semantics.
+  APInt Value = E->getValue();
+  return this->emitConstFixedPoint(Value, E);
 }
 
 template <class Emitter>
@@ -3685,9 +3697,10 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitNullFnPtr(nullptr, E);
   case PT_MemberPtr:
     return this->emitNullMemberPtr(nullptr, E);
-  case PT_Float: {
+  case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
-  }
+  case PT_FixedPoint:
+    llvm_unreachable("Implement");
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -3798,6 +3811,7 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
   case PT_Float:
   case PT_IntAP:
   case PT_IntAPS:
+  case PT_FixedPoint:
     llvm_unreachable("Invalid integral type");
     break;
   }
@@ -5293,7 +5307,7 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
       if (!D->isPrimitive() && !D->isPrimitiveArray()) {
         if (!this->emitGetPtrField(Field.Offset, SourceInfo{}))
           return false;
-        if (!this->emitDestruction(D))
+        if (!this->emitDestruction(D, SourceInfo{}))
           return false;
         if (!this->emitPopPtr(SourceInfo{}))
           return false;
@@ -5302,9 +5316,12 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
   }
 
   for (const Record::Base &Base : llvm::reverse(R->bases())) {
+    if (Base.R->isAnonymousUnion())
+      continue;
+
     if (!this->emitGetPtrBase(Base.Offset, SourceInfo{}))
       return false;
-    if (!this->emitRecordDestruction(Base.R))
+    if (!this->emitRecordDestruction(Base.R, {}))
       return false;
     if (!this->emitPopPtr(SourceInfo{}))
       return false;
@@ -6145,8 +6162,9 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
+bool Compiler<Emitter>::emitRecordDestruction(const Record *R, SourceInfo Loc) {
   assert(R);
+  assert(!R->isAnonymousUnion());
   const CXXDestructorDecl *Dtor = R->getDestructor();
   if (!Dtor || Dtor->isTrivial())
     return true;
@@ -6157,15 +6175,16 @@ bool Compiler<Emitter>::emitRecordDestruction(const Record *R) {
     return false;
   assert(DtorFunc->hasThisPointer());
   assert(DtorFunc->getNumParams() == 1);
-  if (!this->emitDupPtr(SourceInfo{}))
+  if (!this->emitDupPtr(Loc))
     return false;
-  return this->emitCall(DtorFunc, 0, SourceInfo{});
+  return this->emitCall(DtorFunc, 0, Loc);
 }
 /// When calling this, we have a pointer of the local-to-destroy
 /// on the stack.
 /// Emit destruction of record types (or arrays of record types).
 template <class Emitter>
-bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
+bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
+                                        SourceInfo Loc) {
   assert(Desc);
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
@@ -6189,20 +6208,23 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc) {
     }
 
     for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, SourceInfo{}))
+      if (!this->emitConstUint64(I, Loc))
         return false;
-      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+      if (!this->emitArrayElemPtrUint64(Loc))
         return false;
-      if (!this->emitDestruction(ElemDesc))
+      if (!this->emitDestruction(ElemDesc, Loc))
         return false;
-      if (!this->emitPopPtr(SourceInfo{}))
+      if (!this->emitPopPtr(Loc))
         return false;
     }
     return true;
   }
 
   assert(Desc->ElemRecord);
-  return this->emitRecordDestruction(Desc->ElemRecord);
+  if (Desc->ElemRecord->isAnonymousUnion())
+    return true;
+
+  return this->emitRecordDestruction(Desc->ElemRecord, Loc);
 }
 
 namespace clang {

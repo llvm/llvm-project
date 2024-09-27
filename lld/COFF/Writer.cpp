@@ -473,8 +473,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   // elements into it.
   for (size_t i = 0; i != os->chunks.size(); ++i) {
     SectionChunk *sc = dyn_cast<SectionChunk>(os->chunks[i]);
-    if (!sc)
+    if (!sc) {
+      auto chunk = cast<NonSectionChunk>(os->chunks[i]);
+      if (uint32_t size = chunk->extendRanges()) {
+        thunksSize += size;
+        addressesChanged = true;
+      }
       continue;
+    }
     MachineTypes machine = sc->getMachine();
     size_t thunkInsertionSpot = i + 1;
 
@@ -607,8 +613,11 @@ void Writer::createECCodeMap() {
 bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
   for (Chunk *c : chunks) {
     SectionChunk *sc = dyn_cast<SectionChunk>(c);
-    if (!sc)
+    if (!sc) {
+      if (!cast<NonSectionChunk>(c)->verifyRanges())
+        return false;
       continue;
+    }
     MachineTypes machine = sc->getMachine();
 
     ArrayRef<coff_relocation> relocs = sc->getRelocs();

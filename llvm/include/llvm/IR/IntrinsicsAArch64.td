@@ -563,6 +563,13 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_vcmla_rot90  : AdvSIMD_3VectorArg_Intrinsic;
   def int_aarch64_neon_vcmla_rot180 : AdvSIMD_3VectorArg_Intrinsic;
   def int_aarch64_neon_vcmla_rot270 : AdvSIMD_3VectorArg_Intrinsic;
+  
+  // FP8 fscale
+  def int_aarch64_neon_fp8_fscale : DefaultAttrsIntrinsic<
+                                    [llvm_anyvector_ty],
+                                    [LLVMMatchType<0>,
+                                    LLVMVectorOfBitcastsToInt<0>],
+                                    [IntrNoMem]>;
 }
 
 let TargetPrefix = "aarch64" in {
