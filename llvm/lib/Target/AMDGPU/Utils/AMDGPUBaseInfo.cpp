@@ -911,9 +911,9 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI) {
 }
 
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize32768))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
-  if (STI->getFeatureBits().test(FeatureLocalMemorySize65536))
+  if (STI->getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   return 0;
 }
