@@ -3649,7 +3649,7 @@ ObjCMethodDecl *SemaObjC::LookupImplementedMethodInGlobalPool(Selector Sel) {
   if (Pos == MethodPool.end())
     return nullptr;
 
-  GlobalMethodPool::Lists &Methods = Pos->second;
+  auto &Methods = Pos->second;
   for (const ObjCMethodList *Method = &Methods.first; Method;
        Method = Method->getNext())
     if (Method->getMethod() &&

@@ -693,13 +693,19 @@ bool clang::CreateHLSLAttributedResourceType(
 // HLSL resource. The attributes are collected in HLSLResourcesTypeAttrs and at
 // the end of the declaration they are applied to the declaration type by
 // wrapping it in HLSLAttributedResourceType.
-bool SemaHLSL::handleResourceTypeAttr(const ParsedAttr &AL) {
-  Attr *A = nullptr;
+bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
+  // only allow resource type attributes on intangible types
+  if (!T->isHLSLResourceType()) {
+    Diag(AL.getLoc(), diag::err_hlsl_attribute_needs_intangible_type)
+        << AL << getASTContext().HLSLResourceTy;
+    return false;
+  }
 
   // validate number of arguments
   if (!AL.checkExactlyNumArgs(SemaRef, AL.getMinArgs()))
     return false;
 
+  Attr *A = nullptr;
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
@@ -805,7 +811,7 @@ static CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   return TheRecordDecl;
 }
 
-const HLSLAttributedResourceType *
+static const HLSLAttributedResourceType *
 findAttributedResourceTypeOnField(VarDecl *VD) {
   assert(VD != nullptr && "expected VarDecl");
   if (RecordDecl *RD = getRecordDeclFromVarDecl(VD)) {
@@ -1417,7 +1423,7 @@ void SemaHLSL::DiagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
 }
 
 // Helper function for CheckHLSLBuiltinFunctionCall
-bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
 
@@ -1467,7 +1473,7 @@ bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return true;
 }
 
-bool CheckArgsTypesAreCorrect(
+static bool CheckArgsTypesAreCorrect(
     Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
   for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
@@ -1485,7 +1491,7 @@ bool CheckArgsTypesAreCorrect(
   return false;
 }
 
-bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllFloatTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasFloatingRepresentation();
   };
@@ -1493,7 +1499,7 @@ bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllFloatTypes);
 }
 
-bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
+static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
   auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
     clang::QualType BaseType =
         PassedType->isVectorType()
@@ -1505,7 +1511,7 @@ bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
                                   checkFloatorHalf);
 }
 
-bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
+static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
     if (const auto *VecTy = PassedType->getAs<VectorType>())
       return VecTy->getElementType()->isDoubleType();
@@ -1514,7 +1520,7 @@ bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   return CheckArgsTypesAreCorrect(S, TheCall, S->Context.FloatTy,
                                   checkDoubleVector);
 }
-bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasSignedIntegerRepresentation() &&
            !PassedType->hasFloatingRepresentation();
@@ -1523,7 +1529,7 @@ bool CheckFloatingOrSignedIntRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllSignedTypes);
 }
 
-bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
+static bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllUnsignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasUnsignedIntegerRepresentation();
   };
@@ -1531,8 +1537,8 @@ bool CheckUnsignedIntRepresentation(Sema *S, CallExpr *TheCall) {
                                   checkAllUnsignedTypes);
 }
 
-void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
-                                QualType ReturnType) {
+static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
+                                       QualType ReturnType) {
   auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
   if (VecTyA)
     ReturnType = S->Context.getVectorType(ReturnType, VecTyA->getNumElements(),

@@ -78,8 +78,8 @@ HelperDeclRefGraph::getReachableNodes(const Decl *Root) const {
       [&](const CallGraphNode *Node) {
         if (!ConnectedNodes.insert(Node).second)
           return;
-        for (auto It = Node->begin(), End = Node->end(); It != End; ++It)
-          VisitNode(*It);
+        for (const CallGraphNode::CallRecord &Callee : *Node)
+          VisitNode(Callee);
       };
 
   VisitNode(RootNode);

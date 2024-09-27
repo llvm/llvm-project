@@ -26,7 +26,7 @@
 #   define _LIBCXXABI_USE_CRASHREPORTER_CLIENT
 #endif
 
-void __abort_message(const char* format, ...)
+void abort_message(const char* format, ...)
 {
     // Write message to stderr. We do this before formatting into a
     // variable-size buffer so that we still get some information if
@@ -61,7 +61,7 @@ void __abort_message(const char* format, ...)
 
 #   if __ANDROID_API__ >= 21
     // Show error in tombstone.
-    android_set___abort_message(buffer);
+    android_set_abort_message(buffer);
 
     // Show error in logcat.
     openlog("libc++abi", 0, 0);

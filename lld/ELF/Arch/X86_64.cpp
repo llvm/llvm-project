@@ -317,7 +317,7 @@ bool X86_64::relaxOnce(int pass) const {
   // If the max VA is under 2^31, GOTPCRELX relocations cannot overfow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.
-  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && config->isPic))
+  if (isUInt<31>(maxVA) || (isUInt<31>(maxVA - minVA) && ctx.arg.isPic))
     return false;
 
   SmallVector<InputSection *, 0> storage;
@@ -421,7 +421,7 @@ void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An x86 entry is the address of the ifunc resolver function (for -z rel).
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64le(buf, s.getVA());
 }
 
@@ -863,7 +863,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
   // with addend != -4. Such an instruction does not load the full GOT entry, so
   // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
   // (addend=0) loads the high 32 bits of the GOT entry.
-  if (!config->relax || addend != -4 ||
+  if (!ctx.arg.relax || addend != -4 ||
       (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
@@ -886,7 +886,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 
   // Relaxation of test, adc, add, and, cmp, or, sbb, sub, xor.
   // If PIC then no relaxation is available.
-  return config->isPic ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
+  return ctx.arg.isPic ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
 }
 
 // A subset of relaxations can only be applied for no-PIC. This method
@@ -973,7 +973,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
   if (op != 0xff) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
-    assert(!config->isPic);
+    assert(!ctx.arg.isPic);
     relaxGotNoPic(loc, val + 4, op, modRm);
     return;
   }
@@ -1003,7 +1003,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
 // B) Or a load of a stack pointer offset with an lea to r10 or r11.
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
-  if (!config->is64) {
+  if (!ctx.arg.is64) {
     error("target doesn't support split stacks");
     return false;
   }
@@ -1225,8 +1225,8 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 static TargetInfo *getTargetInfo() {
-  if (config->zRetpolineplt) {
-    if (config->zNow) {
+  if (ctx.arg.zRetpolineplt) {
+    if (ctx.arg.zNow) {
       static RetpolineZNow t;
       return &t;
     }
@@ -1234,7 +1234,7 @@ static TargetInfo *getTargetInfo() {
     return &t;
   }
 
-  if (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
     static IntelIBT t;
     return &t;
   }

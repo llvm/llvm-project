@@ -97,7 +97,8 @@ static const char *const CoroIntrinsics[] = {
 
 #ifndef NDEBUG
 static bool isCoroutineIntrinsicName(StringRef Name) {
-  return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
+  return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name, "coro") !=
+         -1;
 }
 #endif
 
