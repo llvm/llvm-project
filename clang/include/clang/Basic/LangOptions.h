@@ -242,7 +242,6 @@ public:
     ///   - Incorrect Mangling of CXXCtorVTable
     Ver19,
 
-
     /// Conform to the underlying platform's C and C++ ABIs as closely
     /// as we can.
     Latest
