@@ -35,6 +35,8 @@ public:
 
   virtual void computeInfo(CIRGenFunctionInfo &FI) const = 0;
 
+  virtual bool allowBFloatArgsAndRet() const { return false; }
+
   // Implement the Type::IsPromotableIntegerType for ABI specific needs. The
   // only difference is that this consideres bit-precise integer types as well.
   bool isPromotableIntegerTypeForABI(clang::QualType Ty) const;

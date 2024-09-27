@@ -5,6 +5,7 @@
 #include "CIRGenTypes.h"
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Target/x86.h"
 
 using namespace cir;
@@ -103,6 +104,11 @@ private:
 
 public:
   AArch64ABIInfo(CIRGenTypes &CGT, ABIKind Kind) : ABIInfo(CGT), Kind(Kind) {}
+  virtual bool allowBFloatArgsAndRet() const override {
+    // TODO: Should query target info instead of hardcoding.
+    assert(!cir::MissingFeatures::useTargetLoweringABIInfo());
+    return true;
+  }
 
 private:
   ABIKind getABIKind() const { return Kind; }
