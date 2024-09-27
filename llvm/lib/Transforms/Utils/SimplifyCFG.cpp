@@ -1660,7 +1660,7 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 /// \endcode
 ///
 /// So we need to turn hoisted load/store into cload/cstore.
-static bool hoistConditionalLoadsStores(
+static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
     std::optional<bool> Invert) {
@@ -1744,7 +1744,6 @@ static bool hoistConditionalLoadsStores(
     MaskedLoadStore->copyMetadata(*I);
     I->eraseFromParent();
   }
-  return true;
 }
 
 static bool isSafeCheapLoadStore(const Instruction *I,
@@ -3133,7 +3132,8 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
-static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
+static bool isProfitableToSpeculate(const BranchInst *BI,
+                                    std::optional<bool> Invert,
                                     const TargetTransformInfo &TTI) {
   // If the branch is non-unpredictable, and is predicted to *not* branch to
   // the `then` block, then avoid speculating it.
@@ -3144,7 +3144,10 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
   if (!extractBranchWeights(*BI, TWeight, FWeight) || (TWeight + FWeight) == 0)
     return true;
 
-  uint64_t EndWeight = Invert ? TWeight : FWeight;
+  if (!Invert.has_value())
+    return false;
+
+  uint64_t EndWeight = *Invert ? TWeight : FWeight;
   BranchProbability BIEndProb =
       BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
   BranchProbability Likely = TTI.getPredictableBranchThreshold();
@@ -7837,7 +7840,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
 
       if (BI && HoistLoadsStoresWithCondFaulting &&
-          Options.HoistLoadsStoresWithCondFaulting) {
+          Options.HoistLoadsStoresWithCondFaulting &&
+          isProfitableToSpeculate(BI, std::nullopt, TTI)) {
         SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
         auto CanSpeculateConditionalLoadsStores = [&]() {
           for (auto *Succ : successors(BB)) {
@@ -7857,10 +7861,11 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
           return !SpeculatedConditionalLoadsStores.empty();
         };
 
-        if (CanSpeculateConditionalLoadsStores() &&
-            hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                        std::nullopt))
+        if (CanSpeculateConditionalLoadsStores()) {
+          hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
+                                      std::nullopt);
           return requestResimplify();
+        }
       }
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally

@@ -726,6 +726,43 @@ if.true:
   ret i32 %res
 }
 
+define i32 @multi_successors(i1 %c1, i32 %c2, ptr %p) {
+; CHECK-LABEL: @multi_successors(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_IF:%.*]], label [[COMMON_RET:%.*]]
+; CHECK:       entry.if:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    switch i32 [[C2:%.*]], label [[COMMON_RET]] [
+; CHECK-NEXT:      i32 0, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 1, label [[SW_BB]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL]], [[ENTRY_IF]] ], [ 0, [[SW_BB]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
+; CHECK:       sw.bb:
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  br i1 %c1, label %entry.if, label %entry.else
+
+entry.if:                                         ; preds = %entry
+  %val = load i32, ptr %p, align 4
+  switch i32 %c2, label %return [
+  i32 0, label %sw.bb
+  i32 1, label %sw.bb
+  ]
+
+entry.else:                                       ; preds = %entry
+  ret i32 0
+
+sw.bb:                                            ; preds = %entry.if, %entry.if
+  br label %return
+
+return:                                           ; preds = %sw.bb, %entry.if
+  %ret = phi i32 [ %val, %entry.if ], [ 0, %sw.bb ]
+  ret i32 %ret
+}
+
 declare i32 @read_memory_only() readonly nounwind willreturn speculatable
 
 !llvm.dbg.cu = !{!0}
