@@ -9,6 +9,7 @@
 #include "Compiler.h"
 #include "ByteCodeEmitter.h"
 #include "Context.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "InterpShared.h"
@@ -470,6 +471,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_FixedPointToBoolean:
   case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
@@ -715,6 +717,16 @@ bool Compiler<Emitter>::VisitImaginaryLiteral(const ImaginaryLiteral *E) {
   if (!this->emitInitElem(SubExprT, 0, SubExpr))
     return false;
   return this->visitArrayElemInit(1, SubExpr);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointLiteral(const FixedPointLiteral *E) {
+  assert(E->getType()->isFixedPointType());
+  assert(classifyPrim(E) == PT_FixedPoint);
+
+  // FIXME: Semantics.
+  APInt Value = E->getValue();
+  return this->emitConstFixedPoint(Value, E);
 }
 
 template <class Emitter>
@@ -3685,9 +3697,10 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitNullFnPtr(nullptr, E);
   case PT_MemberPtr:
     return this->emitNullMemberPtr(nullptr, E);
-  case PT_Float: {
+  case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
-  }
+  case PT_FixedPoint:
+    llvm_unreachable("Implement");
   }
   llvm_unreachable("unknown primitive type");
 }
@@ -3798,6 +3811,7 @@ bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
   case PT_Float:
   case PT_IntAP:
   case PT_IntAPS:
+  case PT_FixedPoint:
     llvm_unreachable("Invalid integral type");
     break;
   }
