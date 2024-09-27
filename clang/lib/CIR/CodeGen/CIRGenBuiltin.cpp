@@ -313,8 +313,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(builder.getConstInt(getLoc(E->getSourceRange()),
                                              Result.Val.getInt()));
     }
-    if (Result.Val.isFloat())
-      llvm_unreachable("NYI");
+    if (Result.Val.isFloat()) {
+      // Note: we are using result type of CallExpr to determine the type of
+      // the constant. Clang Codegen uses the result value to make judgement
+      // of the type. We feel it should be Ok to use expression type because
+      // it is hard to imagine a builtin function evaluates to
+      // a value that over/underflows its own defined type.
+      mlir::Type resTy = getCIRType(E->getType());
+      return RValue::get(builder.getConstFP(getLoc(E->getExprLoc()), resTy,
+                                            Result.Val.getFloat()));
+    }
   }
 
   // If current long-double semantics is IEEE 128-bit, replace math builtins
