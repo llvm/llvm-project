@@ -167,14 +167,14 @@ struct Instruction {
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
   // The set of all aliased not memory use registers.
-  const BitVector &NotMemoryRegs;
+  const BitVector &NonMemoryRegs;
 
 private:
   Instruction(const MCInstrDesc *Description, StringRef Name,
               SmallVector<Operand, 8> Operands,
               SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
               const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
-              const BitVector *AllUseRegs, const BitVector *NotMemoryRegs);
+              const BitVector *AllUseRegs, const BitVector *NonMemoryRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of

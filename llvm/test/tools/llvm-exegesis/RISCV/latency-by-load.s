@@ -42,7 +42,6 @@ LBU-NEXT:     - 'LBU X10 X10 i_0x0'
 
 LUI: LUI: No strategy found to make the execution serial
 
-
 # RUN: llvm-exegesis -mode=latency -mtriple=riscv64-unknown-linux-gnu --mcpu=generic --benchmark-phase=assemble-measured-code -opcode-name=LB | FileCheck --check-prefix=LB %s
 
 LB:      ---

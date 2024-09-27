@@ -119,7 +119,7 @@ public:
   virtual void start();
 
   /// Stops the measurement of the event.
-  virtual void stop();
+  void stop();
 
   /// Returns the current value of the counter or error if it cannot be read.
   /// FunctionBytes: The benchmark function being executed.

@@ -96,11 +96,11 @@ Instruction::Instruction(const MCInstrDesc *Description, StringRef Name,
                          const BitVector *ImplUseRegs,
                          const BitVector *AllDefRegs,
                          const BitVector *AllUseRegs,
-                         const BitVector *NotMemoryRegs)
+                         const BitVector *NonMemoryRegs)
     : Description(*Description), Name(Name), Operands(std::move(Operands)),
       Variables(std::move(Variables)), ImplDefRegs(*ImplDefRegs),
       ImplUseRegs(*ImplUseRegs), AllDefRegs(*AllDefRegs),
-      AllUseRegs(*AllUseRegs), NotMemoryRegs(*NotMemoryRegs) {}
+      AllUseRegs(*AllUseRegs), NonMemoryRegs(*NonMemoryRegs) {}
 
 std::unique_ptr<Instruction>
 Instruction::create(const MCInstrInfo &InstrInfo,
@@ -167,7 +167,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
   BitVector ImplUseRegs = RATC.emptyRegisters();
   BitVector AllDefRegs = RATC.emptyRegisters();
   BitVector AllUseRegs = RATC.emptyRegisters();
-  BitVector NotMemoryRegs = RATC.emptyRegisters();
+  BitVector NonMemoryRegs = RATC.emptyRegisters();
 
   for (const auto &Op : Operands) {
     if (Op.isReg()) {
@@ -181,7 +181,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
       if (Op.isUse() && Op.isImplicit())
         ImplUseRegs |= AliasingBits;
       if (Op.isUse() && !Op.isMemory())
-        NotMemoryRegs |= AliasingBits;
+        NonMemoryRegs |= AliasingBits;
     }
   }
   // Can't use make_unique because constructor is private.
@@ -191,7 +191,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
       BVC.getUnique(std::move(ImplUseRegs)),
       BVC.getUnique(std::move(AllDefRegs)),
       BVC.getUnique(std::move(AllUseRegs)),
-      BVC.getUnique(std::move(NotMemoryRegs))));
+      BVC.getUnique(std::move(NonMemoryRegs))));
 }
 
 const Operand &Instruction::getPrimaryOperand(const Variable &Var) const {
@@ -248,7 +248,7 @@ bool Instruction::hasAliasingRegisters(
 
 bool Instruction::hasAliasingNotMemoryRegisters(
     const BitVector &ForbiddenRegisters) const {
-  return anyCommonExcludingForbidden(AllDefRegs, NotMemoryRegs,
+  return anyCommonExcludingForbidden(AllDefRegs, NonMemoryRegs,
                                      ForbiddenRegisters);
 }
 
