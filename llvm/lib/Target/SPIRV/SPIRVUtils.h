@@ -145,6 +145,8 @@ getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
 
 SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord);
 
+SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id);
+
 // Find def instruction for the given ConstReg, walking through
 // spv_track_constant and ASSIGN_TYPE instructions. Updates ConstReg by def
 // of OpConstant instruction.
@@ -312,6 +314,8 @@ inline const Type *unifyPtrType(const Type *Ty) {
     return toTypedFunPointer(const_cast<FunctionType *>(FTy));
   return toTypedPointer(const_cast<Type *>(Ty));
 }
+
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

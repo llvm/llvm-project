@@ -12,9 +12,22 @@
 
 #pragma once
 
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
 namespace __rtsan {
-void PrintDiagnostics(const char *intercepted_function_name,
-                      __sanitizer::uptr pc, __sanitizer::uptr bp);
+
+enum class DiagnosticsInfoType {
+  InterceptedCall,
+  BlockingCall,
+};
+
+struct DiagnosticsInfo {
+  DiagnosticsInfoType type;
+  const char *func_name;
+  __sanitizer::uptr pc;
+  __sanitizer::uptr bp;
+};
+
+void PrintDiagnostics(const DiagnosticsInfo &info);
 } // namespace __rtsan

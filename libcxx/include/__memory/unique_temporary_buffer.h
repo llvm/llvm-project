@@ -47,7 +47,7 @@ template <class _Tp>
 using __unique_temporary_buffer = unique_ptr<_Tp, __temporary_buffer_deleter<_Tp> >;
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __unique_temporary_buffer<_Tp>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _LIBCPP_CONSTEXPR_SINCE_CXX23 __unique_temporary_buffer<_Tp>
 __allocate_unique_temporary_buffer(ptrdiff_t __count) {
   using __deleter_type       = __temporary_buffer_deleter<_Tp>;
   using __unique_buffer_type = __unique_temporary_buffer<_Tp>;

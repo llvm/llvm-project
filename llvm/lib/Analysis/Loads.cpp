@@ -104,6 +104,17 @@ static bool isDereferenceableAndAlignedPointer(
     if (CheckForNonNull &&
         !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
       return false;
+    // When using something like !dereferenceable on a load, the
+    // dereferenceability may only be valid on a specific control-flow path.
+    // If the instruction doesn't dominate the context instruction, we're
+    // asking about dereferenceability under the assumption that the
+    // instruction has been speculated to the point of the context instruction,
+    // in which case we don't know if the dereferenceability info still holds.
+    // We don't bother handling allocas here, as they aren't speculatable
+    // anyway.
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && !isa<AllocaInst>(I))
+      return CtxI && isValidAssumeForContext(I, CtxI, DT);
     return true;
   };
   if (IsKnownDeref()) {
@@ -265,10 +276,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
   return false;
 }
 
-bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
-                                             ScalarEvolution &SE,
-                                             DominatorTree &DT,
-                                             AssumptionCache *AC) {
+bool llvm::isDereferenceableAndAlignedInLoop(
+    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
 
@@ -293,7 +303,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   if (!Step)
     return false;
 
-  auto TC = SE.getSmallConstantMaxTripCount(L);
+  auto TC = SE.getSmallConstantMaxTripCount(L, Predicates);
   if (!TC)
     return false;
 
@@ -799,13 +809,13 @@ bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
   return isPointerAlwaysReplaceable(From, To, DL);
 }
 
-bool llvm::isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
-                                         DominatorTree *DT,
-                                         AssumptionCache *AC) {
+bool llvm::isDereferenceableReadOnlyLoop(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC))
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           return false;
       } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
         return false;

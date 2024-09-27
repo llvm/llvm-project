@@ -25,7 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/SandboxIR.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrInterval.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
 
@@ -35,9 +35,16 @@ class DGNode {
   Instruction *I;
   /// Memory predecessors.
   DenseSet<DGNode *> MemPreds;
+  /// This is true if this may read/write memory, or if it has some ordering
+  /// constraints, like with stacksave/stackrestore and alloca/inalloca.
+  bool IsMem;
 
 public:
-  DGNode(Instruction *I) : I(I) {}
+  DGNode(Instruction *I) : I(I) {
+    IsMem = I->isMemDepCandidate() ||
+            (isa<AllocaInst>(I) && cast<AllocaInst>(I)->isUsedWithInAlloca()) ||
+            I->isStackSaveOrRestoreIntrinsic();
+  }
   Instruction *getInstruction() const { return I; }
   void addMemPred(DGNode *PredN) { MemPreds.insert(PredN); }
   /// \Returns all memory dependency predecessors.
@@ -46,6 +53,9 @@ public:
   }
   /// \Returns true if there is a memory dependency N->this.
   bool hasMemPred(DGNode *N) const { return MemPreds.count(N); }
+  /// \Returns true if this may read/write memory, or if it has some ordering
+  /// constraints, like with stacksave/stackrestore and alloca/inalloca.
+  bool isMem() const { return IsMem; }
 #ifndef NDEBUG
   void print(raw_ostream &OS, bool PrintDeps = true) const;
   friend raw_ostream &operator<<(DGNode &N, raw_ostream &OS) {
@@ -75,7 +85,7 @@ public:
   }
   /// Build/extend the dependency graph such that it includes \p Instrs. Returns
   /// the interval spanning \p Instrs.
-  InstrInterval extend(ArrayRef<Instruction *> Instrs);
+  Interval<Instruction> extend(ArrayRef<Instruction *> Instrs);
 #ifndef NDEBUG
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

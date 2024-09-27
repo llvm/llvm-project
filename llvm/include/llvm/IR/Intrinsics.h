@@ -95,7 +95,7 @@ namespace Intrinsic {
   /// match for Name or a prefix of Name followed by a dot, its index in
   /// NameTable is returned. Otherwise, -1 is returned.
   int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name);
+                                StringRef Name, StringRef Target = "");
 
   /// Map a Clang builtin name to an intrinsic ID.
   ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);

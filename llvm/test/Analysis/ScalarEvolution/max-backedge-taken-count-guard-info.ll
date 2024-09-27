@@ -1595,6 +1595,59 @@ exit:
   ret i32 0
 }
 
+define i32 @ptr_induction_ult_3_step_6(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_ult_3_step_6'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_3_step_6
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,6}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 6
+; CHECK-NEXT:    --> {(6 + %a),+,6}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_3_step_6
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp.6 = icmp ult ptr %a, %b
+  br i1 %cmp.6, label %loop, label %exit
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+  %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 6
+  %exitcond = icmp eq ptr %ptr.iv, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
+define i32 @ptr_induction_ult_3_step_7(ptr %a, ptr %b) {
+; CHECK-LABEL: 'ptr_induction_ult_3_step_7'
+; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_3_step_7
+; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+; CHECK-NEXT:    --> {%a,+,7}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 7
+; CHECK-NEXT:    --> {(7 + %a),+,7}<%loop> U: full-set S: full-set Exits: (7 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_3_step_7
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((7905747460161236407 * (ptrtoint ptr %b to i64)) + (-7905747460161236407 * (ptrtoint ptr %a to i64)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((7905747460161236407 * (ptrtoint ptr %b to i64)) + (-7905747460161236407 * (ptrtoint ptr %a to i64)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %cmp.6 = icmp ult ptr %a, %b
+  br i1 %cmp.6, label %loop, label %exit
+
+loop:
+  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
+  %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 7
+  %exitcond = icmp eq ptr %ptr.iv, %b
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
 define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
