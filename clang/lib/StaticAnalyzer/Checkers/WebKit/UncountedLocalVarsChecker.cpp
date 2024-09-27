@@ -231,6 +231,7 @@ public:
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
                             (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
