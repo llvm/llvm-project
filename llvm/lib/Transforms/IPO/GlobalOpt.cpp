@@ -2037,32 +2037,22 @@ static bool IsCharArray(Type *T) {
          T->getArrayElementType()->getIntegerBitWidth() == CHAR_BIT_SIZE;
 }
 
-static bool
-tryWidenGlobalString(CallInst *CI, GlobalVariable *SourceVar,
-                     function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                     function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-
+static bool tryWidenGlobalString(CallInst *CI, GlobalVariable *SourceVar,
+                                 unsigned NumBytesToPad,
+                                 unsigned NumBytesToCopy,
+                                 ConstantInt *BytesToCopyOp) {
   auto *F = CI->getCalledFunction();
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-  auto *BytesToCopy = dyn_cast<ConstantInt>(CI->getArgOperand(2));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
 
-  if (!BytesToCopy)
-    return false;
-
-  uint64_t NumBytesToCopy = BytesToCopy->getZExtValue();
-
-  if (!Alloca)
-    return false;
-
-  if (!IsVolatile || IsVolatile->isOne())
-    return false;
-
-  if (NumBytesToCopy % 4 == 0)
+  if (!Alloca || !IsVolatile || IsVolatile->isOne())
     return false;
 
   if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
       !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr())
+    return false;
+
+  if (!Alloca->isStaticAlloca() || !IsCharArray(Alloca->getAllocatedType()))
     return false;
 
   ConstantDataArray *SourceDataArray =
@@ -2070,37 +2060,21 @@ tryWidenGlobalString(CallInst *CI, GlobalVariable *SourceVar,
   if (!SourceDataArray || !IsCharArray(SourceDataArray->getType()))
     return false;
 
-  if (!Alloca->isStaticAlloca())
-    return false;
-
-  // Make sure destination is definitley a char array.
-  if (!IsCharArray(Alloca->getAllocatedType()))
-    return false;
-
   uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
   uint64_t SZSize = SourceDataArray->getType()->getNumElements();
 
-  // For safety purposes lets add a constraint and only padd when
+  // For safety purposes lets add a constraint and only pad when
   // num bytes to copy == destination array size == source string
   // which is a constant
   if (NumBytesToCopy != DZSize || DZSize != SZSize)
     return false;
 
-  unsigned int NumBytesToPad = 4 - (NumBytesToCopy % 4);
   unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
-
-  // Max number of bytes that memcpy allows for lowering to load/stores before
-  // it uses library function (__aeabi_memcpy).
-  TargetTransformInfo &TTI = GetTTI(*F);
-  unsigned MaxMemIntrinsicSize = TTI.getMaxMemIntrinsicInlineSizeThreshold();
-  if (TotalBytes > MaxMemIntrinsicSize)
-    return false;
 
   // Update destination char array to be word aligned (memcpy(X,...,...))
   IRBuilder<> BuildAlloca(Alloca);
-  AllocaInst *NewAlloca = cast<AllocaInst>(BuildAlloca.CreateAlloca(
-      ArrayType::get(Alloca->getAllocatedType()->getArrayElementType(),
-                     NumBytesToCopy + NumBytesToPad)));
+  AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
+      Alloca->getAllocatedType()->getArrayElementType(), TotalBytes));
   NewAlloca->takeName(Alloca);
   NewAlloca->setAlignment(Alloca->getAlign());
   Alloca->replaceAllUsesWith(NewAlloca);
@@ -2128,13 +2102,13 @@ tryWidenGlobalString(CallInst *CI, GlobalVariable *SourceVar,
   CI->setArgOperand(1, NewGV);
 
   // Update number of bytes to copy (memcpy(...,...,X))
-  CI->setArgOperand(2, ConstantInt::get(BytesToCopy->getType(), TotalBytes));
+  CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(), TotalBytes));
   NumGlobalStringsPadded++;
   return true;
 }
 
 static bool tryWidenGlobalStringsUsedByMemcpy(
-    GlobalVariable *GV, function_ref<TargetLibraryInfo &(Function &)> GetTLI,
+    GlobalVariable *GV,
     function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   for (auto *User : GV->users()) {
     CallInst *CI = dyn_cast<CallInst>(User);
@@ -2146,10 +2120,16 @@ static bool tryWidenGlobalStringsUsedByMemcpy(
       continue;
 
     TargetTransformInfo &TTI = GetTTI(*F);
-    if (!TTI.useWidenGlobalStrings())
-      return false;
+    auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
+    if (!BytesToCopyOp)
+      continue;
 
-    return tryWidenGlobalString(CI, GV, GetTTI, GetTLI);
+    unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
+    unsigned NumBytesToPad = TTI.getNumBytesToPad(NumBytesToCopy);
+
+    if (NumBytesToPad)
+      return tryWidenGlobalString(CI, GV, NumBytesToPad, NumBytesToCopy,
+                                  BytesToCopyOp);
   }
   return false;
 }
@@ -2185,7 +2165,7 @@ OptimizeGlobalVars(Module &M,
 
     // For global variable strings called in a memcpy
     // we try to pad to nearest valid alignment boundary
-    Changed |= tryWidenGlobalStringsUsedByMemcpy(&GV, GetTLI, GetTTI);
+    Changed |= tryWidenGlobalStringsUsedByMemcpy(&GV, GetTTI);
 
     Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
   }

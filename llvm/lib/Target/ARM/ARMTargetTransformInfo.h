@@ -340,6 +340,8 @@ public:
 
   bool useWidenGlobalStrings() const;
 
+  unsigned getNumBytesToPad(unsigned Size) const;
+
   /// @}
 };
 

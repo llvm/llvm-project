@@ -2811,3 +2811,21 @@ bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
 }
 
 bool ARMTTIImpl::useWidenGlobalStrings() const { return UseWidenGlobalStrings; }
+
+unsigned ARMTTIImpl::getNumBytesToPad(unsigned Size) const {
+  // We pad to 4 byte boundaries;
+  if (Size % 4 == 0)
+    return 0;
+
+  unsigned NumBytesToPad = 4 - (Size % 4);
+  unsigned NewSize = Size + NumBytesToPad;
+
+  // Max number of bytes that memcpy allows for lowering to load/stores before
+  // it uses library function (__aeabi_memcpy).
+  unsigned MaxMemIntrinsicSize = getMaxMemIntrinsicInlineSizeThreshold();
+
+  if (NewSize > MaxMemIntrinsicSize)
+    return 0;
+
+  return NumBytesToPad;
+}
