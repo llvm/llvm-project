@@ -486,10 +486,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   results at the cost of performance. Allowed values are `DISABLED` (default),
   `COVERAGE`, and `COVERAGE_AND_ORIGIN`. `COVERAGE` tracks whether and why a
   line number was intentionally dropped or not generated for an instruction,
-  allowing Debugify to avoid reporting these as errors. `COVERAGE_AND_ORIGIN`
-  additionally stores a stack trace of the point where each DebugLoc is
-  unintentionally dropped, allowing for much easier bug triaging at the cost of
-  a ~10x performance slowdown. ABI-breaking.
+  allowing Debugify to avoid reporting these as errors; this comes with a small
+  performance cost of ~0.1%. `COVERAGE_AND_ORIGIN` additionally stores a stack
+  trace of the point where each DebugLoc is unintentionally dropped, allowing
+  for much easier bug triaging at the cost of a ~10x performance slowdown.
+  `COVERAGE` and `COVERAGE_AND_ORIGIN` are both ABI-breaking options.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
