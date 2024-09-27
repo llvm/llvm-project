@@ -193,36 +193,8 @@ struct BuiltinTypeDeclBuilder {
         ExplicitSpecifier(), false, true, false,
         ConstexprSpecKind::Unspecified);
 
-    DeclRefExpr *Fn =
-        lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
-    Expr *RCExpr = emitResourceClassExpr(AST, RC);
-    Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
-                                  SourceLocation(), FPOptionsOverride());
-
-    CXXThisExpr *This = CXXThisExpr::Create(
-        AST, SourceLocation(), Constructor->getFunctionObjectParameterType(),
-        true);
-    Expr *Handle = MemberExpr::CreateImplicit(AST, This, false, Fields["h"],
-                                              Fields["h"]->getType(), VK_LValue,
-                                              OK_Ordinary);
-
-    // If the handle isn't a void pointer, cast the builtin result to the
-    // correct type.
-    if (Handle->getType().getCanonicalType() != AST.VoidPtrTy) {
-      Call = CXXStaticCastExpr::Create(
-          AST, Handle->getType(), VK_PRValue, CK_Dependent, Call, nullptr,
-          AST.getTrivialTypeSourceInfo(Handle->getType(), SourceLocation()),
-          FPOptionsOverride(), SourceLocation(), SourceLocation(),
-          SourceRange());
-    }
-
-    BinaryOperator *Assign = BinaryOperator::Create(
-        AST, Handle, Call, BO_Assign, Handle->getType(), VK_LValue, OK_Ordinary,
-        SourceLocation(), FPOptionsOverride());
-
-    Constructor->setBody(
-        CompoundStmt::Create(AST, {Assign}, FPOptionsOverride(),
-                             SourceLocation(), SourceLocation()));
+    Constructor->setBody(CompoundStmt::Create(
+        AST, {}, FPOptionsOverride(), SourceLocation(), SourceLocation()));
     Constructor->setAccess(AccessSpecifier::AS_public);
     Record->addDecl(Constructor);
     return *this;

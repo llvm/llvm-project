@@ -59,6 +59,7 @@ NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<NVPTXSubtarget>();
+  Scopes = NVPTXScopes(MF.getFunction().getContext());
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
@@ -104,6 +105,10 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case ISD::STORE:
   case ISD::ATOMIC_STORE:
     if (tryStore(N))
+      return;
+    break;
+  case ISD::ATOMIC_FENCE:
+    if (tryFence(N))
       return;
     break;
   case ISD::EXTRACT_VECTOR_ELT:
@@ -699,20 +704,26 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   const Value *Src = N->getMemOperand()->getValue();
 
   if (!Src)
-    return NVPTX::PTXLdStInstCode::GENERIC;
+    return NVPTX::AddressSpace::Generic;
 
   if (auto *PT = dyn_cast<PointerType>(Src->getType())) {
     switch (PT->getAddressSpace()) {
-    case llvm::ADDRESS_SPACE_LOCAL: return NVPTX::PTXLdStInstCode::LOCAL;
-    case llvm::ADDRESS_SPACE_GLOBAL: return NVPTX::PTXLdStInstCode::GLOBAL;
-    case llvm::ADDRESS_SPACE_SHARED: return NVPTX::PTXLdStInstCode::SHARED;
-    case llvm::ADDRESS_SPACE_GENERIC: return NVPTX::PTXLdStInstCode::GENERIC;
-    case llvm::ADDRESS_SPACE_PARAM: return NVPTX::PTXLdStInstCode::PARAM;
-    case llvm::ADDRESS_SPACE_CONST: return NVPTX::PTXLdStInstCode::CONSTANT;
+    case llvm::ADDRESS_SPACE_LOCAL:
+      return NVPTX::AddressSpace::Local;
+    case llvm::ADDRESS_SPACE_GLOBAL:
+      return NVPTX::AddressSpace::Global;
+    case llvm::ADDRESS_SPACE_SHARED:
+      return NVPTX::AddressSpace::Shared;
+    case llvm::ADDRESS_SPACE_GENERIC:
+      return NVPTX::AddressSpace::Generic;
+    case llvm::ADDRESS_SPACE_PARAM:
+      return NVPTX::AddressSpace::Param;
+    case llvm::ADDRESS_SPACE_CONST:
+      return NVPTX::AddressSpace::Const;
     default: break;
     }
   }
-  return NVPTX::PTXLdStInstCode::GENERIC;
+  return NVPTX::AddressSpace::Generic;
 }
 
 namespace {
@@ -815,9 +826,9 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //        - the "weak" memory instruction we are currently lowering to, and
   //        - some other instruction that preserves the side-effect, e.g.,
   //          a dead dummy volatile load.
-  if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
-      CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
-      CodeAddrSpace == NVPTX::PTXLdStInstCode::PARAM) {
+  if (CodeAddrSpace == NVPTX::AddressSpace::Local ||
+      CodeAddrSpace == NVPTX::AddressSpace::Const ||
+      CodeAddrSpace == NVPTX::AddressSpace::Param) {
     return NVPTX::Ordering::NotAtomic;
   }
 
@@ -842,14 +853,14 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // atomics is undefined if the generic address does not refer to a .global or
   // .shared memory location.
   bool AddrGenericOrGlobalOrShared =
-      (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
-       CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
-       CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
+      (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
+       CodeAddrSpace == NVPTX::AddressSpace::Global ||
+       CodeAddrSpace == NVPTX::AddressSpace::Shared);
   if (!AddrGenericOrGlobalOrShared)
     return NVPTX::Ordering::NotAtomic;
 
   bool UseRelaxedMMIO =
-      HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
+      HasRelaxedMMIO && CodeAddrSpace == NVPTX::AddressSpace::Global;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
@@ -915,6 +926,40 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
 
 } // namespace
 
+NVPTX::Scope NVPTXDAGToDAGISel::getOperationScope(MemSDNode *N,
+                                                  NVPTX::Ordering O) const {
+  switch (O) {
+  case NVPTX::Ordering::NotAtomic:
+  case NVPTX::Ordering::Volatile: // Non-atomic volatile operations
+    // NVPTX uses Thread scope as the scope of non-atomic operations.
+    return NVPTX::Scope::Thread;
+  case NVPTX::Ordering::RelaxedMMIO:
+    // RelaxedMMIO operations are always system scope.
+    // If a RelaxedMMIO order was generated from an atomic volatile operation
+    // with a smaller thread scope, we bump it here to system scope.
+    return NVPTX::Scope::System;
+  case NVPTX::Ordering::Relaxed:
+  case NVPTX::Ordering::Acquire:
+  case NVPTX::Ordering::Release:
+  case NVPTX::Ordering::AcquireRelease:
+  case NVPTX::Ordering::SequentiallyConsistent:
+    auto S = Scopes[N->getSyncScopeID()];
+
+    // Atomic operations must have a scope greater than thread.
+    if (S == NVPTX::Scope::Thread)
+      report_fatal_error(
+          formatv("Atomics need scope > \"{}\".", ScopeToString(S)));
+
+    // If scope is cluster, clusters must be supported.
+    if (S == NVPTX::Scope::Cluster)
+      Subtarget->failIfClustersUnsupported("cluster scope");
+
+    // If operation is volatile, then its scope is system.
+    return N->isVolatile() ? NVPTX::Scope::System : S;
+  }
+  llvm_unreachable("unhandled ordering");
+}
+
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
                           unsigned CodeAddrSpace, MachineFunction *F) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
@@ -934,7 +979,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   // TODO: Infer invariance only at -O2.  We still want to use ldg at -O0 for
   // explicitly invariant loads because these are how clang tells us to use ldg
   // when the user uses a builtin.
-  if (!Subtarget.hasLDG() || CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL)
+  if (!Subtarget.hasLDG() || CodeAddrSpace != NVPTX::AddressSpace::Global)
     return false;
 
   if (N->isInvariant())
@@ -957,33 +1002,87 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
   });
 }
 
-NVPTX::Ordering NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL,
-                                                                SDValue &Chain,
-                                                                MemSDNode *N) {
-  // Some memory instructions - loads, stores, atomics - need an extra fence
-  // instruction. Get the memory order of the instruction, and that of its
-  // fence, if any.
+static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
+                               NVPTXSubtarget const *T) {
+  if (S == NVPTX::Scope::Cluster)
+    T->failIfClustersUnsupported(".cluster scope fence");
+
+  switch (O) {
+  case NVPTX::Ordering::Acquire:
+  case NVPTX::Ordering::Release:
+  case NVPTX::Ordering::AcquireRelease: {
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_acq_rel_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_acq_rel_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(
+          formatv("Unsupported scope \"{}\" for acquire/release/acq_rel fence.",
+                  ScopeToString(S)));
+    }
+  }
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    switch (S) {
+    case NVPTX::Scope::System:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_sys
+                                    : NVPTX::INT_MEMBAR_SYS;
+    case NVPTX::Scope::Block:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_cta
+                                    : NVPTX::INT_MEMBAR_CTA;
+    case NVPTX::Scope::Cluster:
+      return NVPTX::atomic_thread_fence_seq_cst_cluster;
+    case NVPTX::Scope::Device:
+      return T->hasMemoryOrdering() ? NVPTX::atomic_thread_fence_seq_cst_gpu
+                                    : NVPTX::INT_MEMBAR_GL;
+    case NVPTX::Scope::Thread:
+      report_fatal_error(formatv("Unsupported scope \"{}\" for seq_cst fence.",
+                                 ScopeToString(S)));
+    }
+  }
+  case NVPTX::Ordering::NotAtomic:
+  case NVPTX::Ordering::Relaxed:
+  case NVPTX::Ordering::Volatile:
+  case NVPTX::Ordering::RelaxedMMIO:
+    report_fatal_error(
+        formatv("Unsupported \"{}\" ordering and \"{}\" scope for fence.",
+                OrderingToString(O), ScopeToString(S)));
+  }
+  llvm_unreachable("unhandled ordering");
+}
+
+// Returns Memory Order and Scope of a memory instruction, and
+// inserts any fence before the instruction that's required to
+// implement its memory ordering.
+std::pair<NVPTX::Ordering, NVPTX::Scope>
+NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
+                                                MemSDNode *N) {
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(N, Subtarget);
+  auto Scope = getOperationScope(N, InstructionOrdering);
 
   // If a fence is required before the operation, insert it:
   switch (NVPTX::Ordering(FenceOrdering)) {
   case NVPTX::Ordering::NotAtomic:
     break;
   case NVPTX::Ordering::SequentiallyConsistent: {
-    unsigned Op = Subtarget->hasMemoryOrdering()
-                      ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::INT_MEMBAR_SYS;
+    auto Op = getFenceOp(FenceOrdering, Scope, Subtarget);
     Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
     break;
   }
   default:
     report_fatal_error(
         formatv("Unexpected fence ordering: \"{}\".",
-                OrderingToCString(NVPTX::Ordering(FenceOrdering))));
+                OrderingToString(NVPTX::Ordering(FenceOrdering))));
   }
-
-  return InstructionOrdering;
+  return {InstructionOrdering, Scope};
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
@@ -1154,7 +1253,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
-  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, LD);
+  auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -1189,7 +1288,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   std::optional<unsigned> Opcode;
   MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
 
-  SmallVector<SDValue, 12> Ops({getI32Imm(InstructionOrdering, DL),
+  SmallVector<SDValue, 12> Ops({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
                                 getI32Imm(CodeAddrSpace, DL),
                                 getI32Imm(VecType, DL), getI32Imm(FromType, DL),
                                 getI32Imm(FromTypeWidth, DL)});
@@ -1266,7 +1365,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
 
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
-  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
+  auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1319,7 +1418,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   std::optional<unsigned> Opcode;
   SDNode *LD;
 
-  SmallVector<SDValue, 12> Ops({getI32Imm(InstructionOrdering, DL),
+  SmallVector<SDValue, 12> Ops({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
                                 getI32Imm(CodeAddrSpace, DL),
                                 getI32Imm(VecType, DL), getI32Imm(FromType, DL),
                                 getI32Imm(FromTypeWidth, DL)});
@@ -1895,7 +1994,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
   SDLoc DL(N);
   SDValue Chain = ST->getChain();
-  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, ST);
+  auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
 
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
@@ -1923,10 +2022,10 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT::SimpleValueType SourceVT =
       Value.getNode()->getSimpleValueType(0).SimpleTy;
 
-  SmallVector<SDValue, 12> Ops({Value, getI32Imm(InstructionOrdering, DL),
-                                getI32Imm(CodeAddrSpace, DL),
-                                getI32Imm(VecType, DL), getI32Imm(ToType, DL),
-                                getI32Imm(ToTypeWidth, DL)});
+  SmallVector<SDValue, 12> Ops(
+      {Value, getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
+       getI32Imm(CodeAddrSpace, DL), getI32Imm(VecType, DL),
+       getI32Imm(ToType, DL), getI32Imm(ToTypeWidth, DL)});
 
   if (SelectDirectAddr(BasePtr, Addr)) {
     Opcode = pickOpcodeForVT(SourceVT, NVPTX::ST_i8_avar, NVPTX::ST_i16_avar,
@@ -1996,7 +2095,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   // Address Space Setting
   unsigned CodeAddrSpace = getCodeAddrSpace(MemSD);
-  if (CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT) {
+  if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
   }
@@ -2005,7 +2104,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
-  auto InstructionOrdering = insertMemoryInstructionFence(DL, Chain, MemSD);
+  auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, MemSD);
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
@@ -2044,9 +2143,9 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  Ops.append({getI32Imm(InstructionOrdering, DL), getI32Imm(CodeAddrSpace, DL),
-              getI32Imm(VecType, DL), getI32Imm(ToType, DL),
-              getI32Imm(ToTypeWidth, DL)});
+  Ops.append({getI32Imm(Ordering, DL), getI32Imm(Scope, DL),
+              getI32Imm(CodeAddrSpace, DL), getI32Imm(VecType, DL),
+              getI32Imm(ToType, DL), getI32Imm(ToTypeWidth, DL)});
 
   if (SelectDirectAddr(N2, Addr)) {
     switch (N->getOpcode()) {
@@ -4064,3 +4163,41 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
     }
   }
 }
+
+bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
+  SDLoc DL(N);
+  assert(N->getOpcode() == ISD::ATOMIC_FENCE);
+  unsigned int FenceOp =
+      getFenceOp(NVPTX::Ordering(N->getConstantOperandVal(1)),
+                 Scopes[N->getConstantOperandVal(2)], Subtarget);
+  SDValue Chain = N->getOperand(0);
+  SDNode *FenceNode = CurDAG->getMachineNode(FenceOp, DL, MVT::Other, Chain);
+  ReplaceNode(N, FenceNode);
+  return true;
+}
+
+NVPTXScopes::NVPTXScopes(LLVMContext &C) {
+  Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
+  Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
+  Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
+  Scopes[C.getOrInsertSyncScopeID("cluster")] = NVPTX::Scope::Cluster;
+  Scopes[C.getOrInsertSyncScopeID("device")] = NVPTX::Scope::Device;
+}
+
+NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
+  if (Scopes.empty())
+    llvm_unreachable("NVPTX Scopes must be initialized before calling "
+                     "NVPTXScopes::operator[]");
+
+  auto S = Scopes.find(ID);
+  if (S == Scopes.end()) {
+    // TODO:
+    // - Add API to LLVMContext to get the name of a single scope.
+    // - Use that API here to print an error containing the name
+    //   of this Unknown ID.
+    report_fatal_error(formatv("Could not find scope ID={}.", int(ID)));
+  }
+  return S->second;
+}
+
+bool NVPTXScopes::empty() const { return Scopes.size() == 0; }

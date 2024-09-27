@@ -125,6 +125,7 @@ public:
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitFloatingLiteral(const FloatingLiteral *E);
   bool VisitImaginaryLiteral(const ImaginaryLiteral *E);
+  bool VisitFixedPointLiteral(const FixedPointLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitLogicalBinOp(const BinaryOperator *E);
@@ -364,8 +365,8 @@ private:
   bool emitComplexBoolCast(const Expr *E);
   bool emitComplexComparison(const Expr *LHS, const Expr *RHS,
                              const BinaryOperator *E);
-  bool emitRecordDestruction(const Record *R);
-  bool emitDestruction(const Descriptor *Desc);
+  bool emitRecordDestruction(const Record *R, SourceInfo Loc);
+  bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
@@ -540,7 +541,7 @@ public:
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
           return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc))
+        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
           return false;
 
         if (!this->Ctx->emitPopPtr(E))

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_LANGOPTIONS_H
 #define LLVM_CLANG_BASIC_LANGOPTIONS_H
 
+#include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangStandard.h"
@@ -73,6 +74,7 @@ class LangOptionsBase {
 public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
+  using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
 
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };

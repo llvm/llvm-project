@@ -45,6 +45,7 @@
 #include "ToolChains/SPIRV.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
+#include "ToolChains/UEFI.h"
 #include "ToolChains/VEToolchain.h"
 #include "ToolChains/WebAssembly.h"
 #include "ToolChains/XCore.h"
@@ -1004,6 +1005,17 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
   Copy->setOwnsValues(Opt->getOwnsValues());
   Opt->setOwnsValues(false);
   Args.append(Copy);
+  if (Opt->getAlias()) {
+    const Arg *Alias = Opt->getAlias();
+    unsigned Index = Args.MakeIndex(Alias->getSpelling());
+    auto AliasCopy = std::make_unique<Arg>(Alias->getOption(),
+                                           Args.getArgString(Index), Index);
+    AliasCopy->getValues() = Alias->getValues();
+    AliasCopy->setOwnsValues(false);
+    if (Alias->isClaimed())
+      AliasCopy->claim();
+    Copy->setAlias(std::move(AliasCopy));
+  }
 }
 
 bool Driver::readConfigFile(StringRef FileName,
@@ -6421,6 +6433,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::AMDPAL:
     case llvm::Triple::Mesa3D:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
+      break;
+    case llvm::Triple::UEFI:
+      TC = std::make_unique<toolchains::UEFI>(*this, Target, Args);
       break;
     case llvm::Triple::Win32:
       switch (Target.getEnvironment()) {

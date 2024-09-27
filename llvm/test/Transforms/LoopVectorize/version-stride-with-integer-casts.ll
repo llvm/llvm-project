@@ -179,9 +179,9 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
 ; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP11]], align 8
-; CHECK-NEXT:    store ptr [[TMP81]], ptr [[TMP13]], align 8
-; CHECK-NEXT:    store ptr [[TMP82]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    store ptr [[TMP83]], ptr [[TMP17]], align 8
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP13]], align 8
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP15]], align 8
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]

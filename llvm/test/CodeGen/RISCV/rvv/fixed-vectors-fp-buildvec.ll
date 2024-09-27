@@ -220,8 +220,7 @@ define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; RV32-ZFHMIN-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
 ; RV32-ZFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV32-ZFHMIN-NEXT:    vse16.v v8, (a1)
-; RV32-ZFHMIN-NEXT:    flh fa5, 0(a0)
-; RV32-ZFHMIN-NEXT:    fmv.x.h a0, fa5
+; RV32-ZFHMIN-NEXT:    lh a0, 0(a0)
 ; RV32-ZFHMIN-NEXT:    vmv.v.x v8, a0
 ; RV32-ZFHMIN-NEXT:    csrr a0, vlenb
 ; RV32-ZFHMIN-NEXT:    slli a0, a0, 1
@@ -251,8 +250,7 @@ define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; RV64-ZFHMIN-NEXT:    vl1r.v v8, (a2) # Unknown-size Folded Reload
 ; RV64-ZFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV64-ZFHMIN-NEXT:    vse16.v v8, (a1)
-; RV64-ZFHMIN-NEXT:    flh fa5, 0(a0)
-; RV64-ZFHMIN-NEXT:    fmv.x.h a0, fa5
+; RV64-ZFHMIN-NEXT:    lh a0, 0(a0)
 ; RV64-ZFHMIN-NEXT:    vmv.v.x v8, a0
 ; RV64-ZFHMIN-NEXT:    csrr a0, vlenb
 ; RV64-ZFHMIN-NEXT:    slli a0, a0, 1

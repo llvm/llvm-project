@@ -202,7 +202,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   assert(N.isLeaf() && "Not a leaf?");
 
   // Direct match against an integer constant.
-  if (IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
+  if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
     // If this is the root of the dag we're matching, we emit a redundant opcode
     // check to ensure that this gets folded into the normal top-level
     // OpcodeSwitch.
@@ -336,7 +336,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
        N.getOperator()->getName() == "or") &&
       N.getChild(1).isLeaf() && N.getChild(1).getPredicateCalls().empty() &&
       N.getPredicateCalls().empty()) {
-    if (IntInit *II = dyn_cast<IntInit>(N.getChild(1).getLeafValue())) {
+    if (const IntInit *II = dyn_cast<IntInit>(N.getChild(1).getLeafValue())) {
       if (!llvm::has_single_bit<uint32_t>(
               II->getValue())) { // Don't bother with single bits.
         // If this is at the root of the pattern, we emit a redundant
@@ -665,14 +665,14 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
                                          SmallVectorImpl<unsigned> &ResultOps) {
   assert(N.isLeaf() && "Must be a leaf");
 
-  if (IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
+  if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
     AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0)));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
   }
 
   // If this is an explicit register reference, handle it.
-  if (DefInit *DI = dyn_cast<DefInit>(N.getLeafValue())) {
+  if (const DefInit *DI = dyn_cast<DefInit>(N.getLeafValue())) {
     const Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);

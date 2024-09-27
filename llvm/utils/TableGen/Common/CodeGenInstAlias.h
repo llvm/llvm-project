@@ -57,7 +57,7 @@ public:
     ResultOperand(std::string N, const Record *R)
         : Name(std::move(N)), R(R), Kind(K_Record) {}
     ResultOperand(int64_t I) : Imm(I), Kind(K_Imm) {}
-    ResultOperand(Record *R) : R(R), Kind(K_Reg) {}
+    ResultOperand(const Record *R) : R(R), Kind(K_Reg) {}
 
     bool isRecord() const { return Kind == K_Record; }
     bool isImm() const { return Kind == K_Imm; }
