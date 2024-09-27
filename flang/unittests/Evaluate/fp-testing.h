@@ -4,9 +4,9 @@
 #include "flang/Common/target-rounding.h"
 #include <fenv.h>
 
-using Fortran::common::RoundingMode;
 using Fortran::common::RealFlags;
 using Fortran::common::Rounding;
+using Fortran::common::RoundingMode;
 
 class ScopedHostFloatingPointEnvironment {
 public:

@@ -7,8 +7,8 @@
 #include <xmmintrin.h>
 #endif
 
-using Fortran::common::RoundingMode;
 using Fortran::common::RealFlag;
+using Fortran::common::RoundingMode;
 
 ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 #if __x86_64__

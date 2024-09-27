@@ -12,9 +12,9 @@
 // Fortran language concepts that are used in many phases are defined
 // once here to avoid redundancy and needless translation.
 
-#include "flang/Common/Fortran-consts.h"
 #include "enum-set.h"
 #include "idioms.h"
+#include "flang/Common/Fortran-consts.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
