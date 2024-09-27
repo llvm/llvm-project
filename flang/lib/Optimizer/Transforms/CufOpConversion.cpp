@@ -339,6 +339,8 @@ struct CufDataTransferOpConversion
 
       if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
         // TODO: scalar to array data transfer.
+        mlir::emitError(loc,
+                        "not yet implemented: scalar to array data transfer\n");
         return mlir::failure();
       }
 
