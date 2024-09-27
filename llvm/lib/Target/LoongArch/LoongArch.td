@@ -128,30 +128,41 @@ include "LoongArchInstrInfo.td"
 // LoongArch processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
-def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit, FeatureUAL]>;
+def ProcessorFeatures {
+  list<SubtargetFeature> LA32G    = [Feature32Bit];
+  list<SubtargetFeature> LA64G    = [Feature64Bit,
+                                     FeatureUAL];
+  list<SubtargetFeature> LA64GD   = [Feature64Bit,
+                                     FeatureUAL,
+                                     FeatureBasicD];
+  list<SubtargetFeature> LA64V1_0 = [Feature64Bit,
+                                     FeatureUAL,
+                                     FeatureExtLASX,
+                                     FeatureExtLVZ,
+                                     FeatureExtLBT];
+  list<SubtargetFeature> LA64V1_1 = [Feature64Bit,
+                                     FeatureUAL,
+                                     FeatureExtLASX,
+                                     FeatureExtLVZ,
+                                     FeatureExtLBT,
+                                     FeatureFrecipe];
+}
+
+def : ProcessorModel<"generic-la32", NoSchedModel, ProcessorFeatures.LA32G>;
+def : ProcessorModel<"generic-la64", NoSchedModel, ProcessorFeatures.LA64G>;
 
 // Generic 64-bit processor with double-precision floating-point support.
-def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
-                                                   FeatureUAL,
-                                                   FeatureBasicD]>;
+def : ProcessorModel<"loongarch64", NoSchedModel, ProcessorFeatures.LA64GD>;
 
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate la32/la64 version.
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
-def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
-                                             FeatureUAL,
-                                             FeatureExtLASX,
-                                             FeatureExtLVZ,
-                                             FeatureExtLBT]>;
+def : ProcessorModel<"la464", NoSchedModel, ProcessorFeatures.LA64V1_0>;
+def : ProcessorModel<"la64v1.0", NoSchedModel, ProcessorFeatures.LA64V1_0>;
 
-def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
-                                             FeatureUAL,
-                                             FeatureExtLASX,
-                                             FeatureExtLVZ,
-                                             FeatureExtLBT,
-                                             FeatureFrecipe]>;
+def : ProcessorModel<"la664", NoSchedModel, ProcessorFeatures.LA64V1_1>;
+def : ProcessorModel<"la64v1.1", NoSchedModel, ProcessorFeatures.LA64V1_1>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
