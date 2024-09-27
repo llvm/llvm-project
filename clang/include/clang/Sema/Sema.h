@@ -6753,9 +6753,7 @@ public:
   ///
   /// Return \c true if the error is unrecoverable, or \c false if the caller
   /// should attempt to recover using these lookup results.
-  bool DiagnoseDependentMemberLookup(
-      const LookupResult &R,
-      TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr);
+  bool DiagnoseDependentMemberLookup(const LookupResult &R);
 
   /// Diagnose an empty lookup.
   ///

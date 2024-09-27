@@ -3,13 +3,13 @@
 namespace GH49093 {
   class B {
   public:
-    static int a() { return 0; }
-    decltype(a< 0 >(0)) test; // expected-error {{'a' does not name a template but is followed by template arguments}}
+    static int a() { return 0; } // expected-note {{declared as a non-template here}}
+    decltype(a< 0 >(0)) test;    // expected-error {{'a' does not refer to a template}}
   };
 
   struct C {
-      static int a() { return 0; }
-      decltype(a < 0 > (0)) test; // expected-error {{'a' does not name a template but is followed by template arguments}}
+      static int a() { return 0; } // expected-note {{declared as a non-template here}}
+      decltype(a < 0 > (0)) test;  // expected-error {{'a' does not refer to a template}}
   };
 
   void test_is_bool(bool t) {}
@@ -26,7 +26,7 @@ namespace GH49093 {
 
 namespace GH107047 {
   struct A {
-    static constexpr auto test() { return 1; }
-    static constexpr int s = test< 1 >(); // expected-error {{'test' does not name a template but is followed by template arguments}}
+    static constexpr auto test() { return 1; } // expected-note {{declared as a non-template here}}
+    static constexpr int s = test< 1 >();      // expected-error {{'test' does not refer to a template}}
   };
 }
