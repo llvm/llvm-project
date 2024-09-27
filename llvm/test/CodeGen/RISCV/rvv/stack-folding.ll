@@ -160,3 +160,100 @@ truebb:
 falsebb:
   ret i8 0
 }
+
+define double @f64(<vscale x 1 x double> %v, i1 %c) {
+; RV32-LABEL: f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 1
+; RV32-NEXT:    sub sp, sp, a1
+; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
+; RV32-NEXT:    addi a1, sp, 16
+; RV32-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    #APP
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    beqz a0, .LBB4_2
+; RV32-NEXT:  # %bb.1: # %truebb
+; RV32-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
+; RV32-NEXT:    j .LBB4_3
+; RV32-NEXT:  .LBB4_2: # %falsebb
+; RV32-NEXT:    fcvt.d.w fa0, zero
+; RV32-NEXT:  .LBB4_3: # %falsebb
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 1
+; RV64-NEXT:    sub sp, sp, a1
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
+; RV64-NEXT:    addi a1, sp, 16
+; RV64-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    #APP
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    beqz a0, .LBB4_2
+; RV64-NEXT:  # %bb.1: # %truebb
+; RV64-NEXT:    fld fa0, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    j .LBB4_3
+; RV64-NEXT:  .LBB4_2: # %falsebb
+; RV64-NEXT:    fmv.d.x fa0, zero
+; RV64-NEXT:  .LBB4_3: # %falsebb
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 1
+; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    ret
+  tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  %x = extractelement <vscale x 1 x double> %v, i32 0
+  ret double %x
+falsebb:
+  ret double 0.0
+}
+
+define float @f32(<vscale x 2 x float> %v, i1 %c) {
+; CHECK-LABEL: f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs1r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    beqz a0, .LBB5_2
+; CHECK-NEXT:  # %bb.1: # %truebb
+; CHECK-NEXT:    flw fa0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    j .LBB5_3
+; CHECK-NEXT:  .LBB5_2: # %falsebb
+; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:  .LBB5_3: # %falsebb
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  tail call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9},~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  %x = extractelement <vscale x 2 x float> %v, i32 0
+  ret float %x
+falsebb:
+  ret float 0.0
+}
+
