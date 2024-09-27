@@ -257,7 +257,8 @@ set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
   ${FLANG_BINARY_DIR}/include
-  ${FLANG_SOURCE_DIR}/include)
+  ${FLANG_SOURCE_DIR}/include
+  ${FLANG_SOURCE_DIR}/../FortranRuntime/include)
 
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
@@ -468,7 +469,7 @@ if (FLANG_CUF_RUNTIME)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
-add_subdirectory(runtime)
+add_subdirectory(../FortranRuntime/lib/Runtime runtime)
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)
@@ -537,7 +538,7 @@ endif()
 include(GetClangResourceDir)
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
-  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
+  ../FortranRuntime/include/flang/Common/ISO_Fortran_binding.h
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
 
 # And also install it into the install area

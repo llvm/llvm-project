@@ -13,12 +13,12 @@
 #ifndef FORTRAN_LOWER_ABSTRACTCONVERTER_H
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
-#include "flang/Common/Fortran.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"

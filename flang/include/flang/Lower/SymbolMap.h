@@ -13,12 +13,12 @@
 #ifndef FORTRAN_LOWER_SYMBOLMAP_H
 #define FORTRAN_LOWER_SYMBOLMAP_H
 
-#include "flang/Common/reference.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Support/Matcher.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/reference.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
