@@ -2039,16 +2039,14 @@ static void emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
     StoreToWholeVariable = FragStartBit <= VarStartBit && FragEndBit >= *Size;
   }
 
-  DIExpression *Expr =
-      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
+  DIExpression *Expr = DIExpression::get(StoreLikeInst.getContext(), {});
   if (!StoreToWholeVariable) {
     auto R = DIExpression::createFragmentExpression(Expr, FragStartBit,
                                                     FragEndBit - FragStartBit);
     assert(R.has_value() && "failed to create fragment expression");
     Expr = *R;
   }
-  DIExpression *AddrExpr =
-      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
+  DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), {});
   if (StoreLikeInst.getParent()->IsNewDbgInfoFormat) {
     auto *Assign = DbgVariableRecord::createLinkedDVRAssign(
         &StoreLikeInst, Val, VarRec.Var, Expr, Dest, AddrExpr, VarRec.DL);

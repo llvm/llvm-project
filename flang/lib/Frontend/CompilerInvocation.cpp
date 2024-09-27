@@ -438,8 +438,19 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
-}
 
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_10))
+    opts.disabledRealKinds.push_back(10);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_real_3))
+    opts.disabledRealKinds.push_back(3);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_2))
+    opts.disabledIntegerKinds.push_back(2);
+
+  if (args.hasArg(clang::driver::options::OPT_fdisable_integer_16))
+    opts.disabledIntegerKinds.push_back(16);
+}
 // Tweak the frontend configuration based on the frontend action
 static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
   if (opts.programAction == DebugDumpParsingLog)
@@ -968,7 +979,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// generated.
 static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
-  if (!args.hasArg(clang::driver::options::OPT_fopenmp))
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
+                                        clang::driver::options::OPT_fno_openmp);
+  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
     return true;
 
   unsigned numErrorsBefore = diags.getNumErrors();
@@ -1097,17 +1110,17 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 static bool parseFloatingPointArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_ffp_contract)) {
     const llvm::StringRef val = a->getValue();
-    enum LangOptions::FPModeKind fpContractMode;
+    enum Fortran::common::LangOptions::FPModeKind fpContractMode;
 
     if (val == "off")
-      fpContractMode = LangOptions::FPM_Off;
+      fpContractMode = Fortran::common::LangOptions::FPM_Off;
     else if (val == "fast")
-      fpContractMode = LangOptions::FPM_Fast;
+      fpContractMode = Fortran::common::LangOptions::FPM_Fast;
     else {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
           << a->getSpelling() << val;
@@ -1148,7 +1161,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ReciprocalMath = true;
     opts.ApproxFunc = true;
     opts.NoSignedZeros = true;
-    opts.setFPContractMode(LangOptions::FPM_Fast);
+    opts.setFPContractMode(Fortran::common::LangOptions::FPM_Fast);
   }
 
   return true;
@@ -1181,7 +1194,7 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
     return false;
   }
 
-  LangOptions &opts = invoc.getLangOpts();
+  Fortran::common::LangOptions &opts = invoc.getLangOpts();
   if (vscaleMin) {
     llvm::StringRef argValue = llvm::StringRef(vscaleMin->getValue());
     unsigned vscaleMinVal;
@@ -1518,7 +1531,8 @@ CompilerInvocation::getSemanticsCtx(
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
-      getDefaultKinds(), fortranOptions.features, allCookedSources);
+      getDefaultKinds(), fortranOptions.features, getLangOpts(),
+      allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
@@ -1529,8 +1543,8 @@ CompilerInvocation::getSemanticsCtx(
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
-      allCompilerInvocOpts);
+      semanticsContext->targetCharacteristics(), targetMachine, getTargetOpts(),
+      compilerVersion, allCompilerInvocOpts);
   return semanticsContext;
 }
 
@@ -1543,14 +1557,14 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
 
-  const LangOptions &langOptions = getLangOpts();
+  const Fortran::common::LangOptions &langOptions = getLangOpts();
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,
   //       so that we can just copy it into LoweringOptions.
   mathOpts
       .setFPContractEnabled(langOptions.getFPContractMode() ==
-                            LangOptions::FPM_Fast)
+                            Fortran::common::LangOptions::FPM_Fast)
       .setNoHonorInfs(langOptions.NoHonorInfs)
       .setNoHonorNaNs(langOptions.NoHonorNaNs)
       .setApproxFunc(langOptions.ApproxFunc)

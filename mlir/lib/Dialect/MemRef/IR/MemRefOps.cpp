@@ -1833,6 +1833,24 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 }
 
 void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
+                              Value source, OpFoldResult offset,
+                              ArrayRef<OpFoldResult> sizes,
+                              ArrayRef<OpFoldResult> strides,
+                              ArrayRef<NamedAttribute> attrs) {
+  auto sourceType = cast<BaseMemRefType>(source.getType());
+  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
+  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
+  dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
+  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+  auto stridedLayout = StridedLayoutAttr::get(
+      b.getContext(), staticOffsets.front(), staticStrides);
+  auto resultType = MemRefType::get(staticSizes, sourceType.getElementType(),
+                                    stridedLayout, sourceType.getMemorySpace());
+  build(b, result, resultType, source, offset, sizes, strides, attrs);
+}
+
+void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
                               MemRefType resultType, Value source,
                               int64_t offset, ArrayRef<int64_t> sizes,
                               ArrayRef<int64_t> strides,
@@ -3279,11 +3297,14 @@ void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
-  auto resultShapedType = llvm::cast<ShapedType>(getResult().getType());
-  auto sourceShapedType = llvm::cast<ShapedType>(getSource().getType());
+  MemRefType sourceMemrefType = getSource().getType();
+  MemRefType resultMemrefType = getResult().getType();
+  auto resultLayout =
+      dyn_cast_if_present<StridedLayoutAttr>(resultMemrefType.getLayout());
 
-  if (resultShapedType.hasStaticShape() &&
-      resultShapedType == sourceShapedType) {
+  if (resultMemrefType == sourceMemrefType &&
+      resultMemrefType.hasStaticShape() &&
+      (!resultLayout || resultLayout.hasStaticLayout())) {
     return getViewSource();
   }
 
@@ -3301,7 +3322,7 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
         strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
-        resultShapedType == sourceShapedType)
+        resultMemrefType == sourceMemrefType)
       return getViewSource();
   }
 

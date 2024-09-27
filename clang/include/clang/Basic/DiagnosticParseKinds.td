@@ -113,9 +113,12 @@ def ext_cxx11_enum_fixed_underlying_type : Extension<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
-def ext_clang_c_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a Clang extension">,
-  InGroup<DiagGroup<"fixed-enum-extension">>;
+def ext_c23_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a C23 extension">,
+  InGroup<C23>;
+def warn_c17_compat_enum_fixed_underlying_type : Warning<
+  "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
+  DefaultIgnore, InGroup<CPre23Compat>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -470,6 +473,12 @@ def warn_c17_compat_static_assert_no_message : Warning<
   "'_Static_assert' with no message is incompatible with C standards before "
   "C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
+def ext_cxx_static_assert_user_generated_message : ExtWarn<
+  "'static_assert' with a user-generated message is a C++26 extension">,
+  InGroup<CXX26>;
+def warn_cxx20_compat_static_assert_user_generated_message : Warning<
+  "'static_assert' with a user-generated message is incompatible with "
+  "C++ standards before C++26">, DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -974,6 +983,9 @@ def warn_cxx23_variadic_friends : Warning<
   "variadic 'friend' declarations are incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
 
+def err_friend_concept : Error<
+  "friend declaration cannot be a concept">;
+
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
   "default member initializer for non-static data member is a C++11 "
@@ -1064,7 +1076,10 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
+def ext_lambda : ExtWarn<"lambdas are a %select{C++11|clang HLSL}0 extension">,
+  InGroup<CXX11>;
+def ext_hlsl_lambda : ExtWarn<ext_lambda.Summary>,
+  InGroup<HLSLExtension>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1385,8 +1400,6 @@ def err_modifier_expected_colon : Error<"missing ':' after %0 modifier">;
 // OpenCL errors.
 def err_opencl_taking_function_address_parser : Error<
   "taking address of function is not allowed">;
-def err_opencl_logical_exclusive_or : Error<
-  "^^ is a reserved operator in OpenCL">;
 
 // C++ for OpenCL.
 def err_openclcxx_virtual_function : Error<

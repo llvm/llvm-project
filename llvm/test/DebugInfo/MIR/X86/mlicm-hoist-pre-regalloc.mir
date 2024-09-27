@@ -1,5 +1,6 @@
 --- | 
   ; RUN: llc -run-pass=machinelicm -o - %s | FileCheck %s
+  ; RUN: llc -passes=machinelicm -o - %s | FileCheck %s
   ; Line numbers should not be retained when loop invariant instructions are hoisted.
   ; Doing so causes poor stepping bevavior.
   ;

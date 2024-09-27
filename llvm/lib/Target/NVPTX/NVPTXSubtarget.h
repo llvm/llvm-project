@@ -77,6 +77,8 @@ public:
   bool hasAtomScope() const { return SmVersion >= 60; }
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
+  bool hasAtomCas16() const { return SmVersion >= 70 && PTXVersion >= 63; }
+  bool hasClusters() const { return SmVersion >= 90 && PTXVersion >= 78; }
   bool hasLDG() const { return SmVersion >= 32; }
   bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;
@@ -93,6 +95,7 @@ public:
   bool hasDotInstructions() const {
     return SmVersion >= 61 && PTXVersion >= 50;
   }
+  bool hasCvtaParam() const { return SmVersion >= 70 && PTXVersion >= 77; }
   unsigned int getFullSmVersion() const { return FullSmVersion; }
   unsigned int getSmVersion() const { return getFullSmVersion() / 10; }
   // GPUs with "a" suffix have include architecture-accelerated features that
@@ -117,6 +120,8 @@ public:
 
   NVPTXSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
+
+  void failIfClustersUnsupported(std::string const &FailureMessage) const;
 };
 
 } // End llvm namespace

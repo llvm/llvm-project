@@ -462,7 +462,7 @@ define float @v_fmaximum3_f32_const1_const2(float %a) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s0, 0x41000000
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_maximum3_f32 v0, v0, s0, 0x41800000
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1409,7 +1409,7 @@ define half @v_fmaximum3_f16_const1_const2(half %a) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_movk_i32 s0, 0x4800
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_maximum3_f16 v0, v0, s0, 0x4c00
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;

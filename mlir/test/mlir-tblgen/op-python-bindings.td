@@ -480,18 +480,18 @@ def SameVariadicOperandSizeOp : TestOp<"same_variadic_operand",
                                        [SameVariadicOperandSize]> {
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 0, 0)
-  // CHECK:   return self.operation.operands[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 0)
+  // CHECK:   return self.operation.operands[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 0, 1)
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 0, 1)
   // CHECK:   return self.operation.operands[start]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.operands, 2, 1, 1)
-  // CHECK:   return self.operation.operands[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.operands, 1, 2, 1, 1)
+  // CHECK:   return self.operation.operands[start:start + elements_per_group]
   let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
                    Variadic<AnyType>:$variadic2);
 }
@@ -506,18 +506,18 @@ def SameVariadicResultSizeOp : TestOp<"same_variadic_result",
                                       [SameVariadicResultSize]> {
   // CHECK: @builtins.property
   // CHECK: def variadic1(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 0, 0)
-  // CHECK:   return self.operation.results[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 0)
+  // CHECK:   return self.operation.results[start:start + elements_per_group]
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 0, 1)
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 0, 1)
   // CHECK:   return self.operation.results[start]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
-  // CHECK:   start, pg = _ods_equally_sized_accessor(operation.results, 2, 1, 1)
-  // CHECK:   return self.operation.results[start:start + pg]
+  // CHECK:   start, elements_per_group = _ods_equally_sized_accessor(self.operation.results, 1, 2, 1, 1)
+  // CHECK:   return self.operation.results[start:start + elements_per_group]
   let results = (outs Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
                  Variadic<AnyType>:$variadic2);
 }

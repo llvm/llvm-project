@@ -274,6 +274,8 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
     addStringImm(Str.first(), Inst);
     outputMCInst(Inst);
   }
+  // Output OpString.
+  outputModuleSection(SPIRV::MB_DebugStrings);
   // Output OpSource.
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpSource);
@@ -589,9 +591,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // the first section to allow use of: OpLine and OpNoLine debug information;
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
-  // 10. All function declarations (functions without a body).
+  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions.
+  outputModuleSection(SPIRV::MB_NonSemanticGlobalDI);
+  // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
-  // 11. All function definitions (functions with a body).
+  // 12. All function definitions (functions with a body).
   // This is done in regular function output.
 }
 

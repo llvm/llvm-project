@@ -57,7 +57,7 @@ Status DebuggerThread::DebugLaunch(const ProcessLaunchInfo &launch_info) {
       "lldb.plugin.process-windows.secondary[?]",
       [this, launch_info] { return DebuggerThreadLaunchRoutine(launch_info); });
   if (!secondary_thread) {
-    result = Status(secondary_thread.takeError());
+    result = Status::FromError(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't launch debugger thread. {0}", result);
   }
 
@@ -75,7 +75,7 @@ Status DebuggerThread::DebugAttach(lldb::pid_t pid,
         return DebuggerThreadAttachRoutine(pid, attach_info);
       });
   if (!secondary_thread) {
-    result = Status(secondary_thread.takeError());
+    result = Status::FromError(secondary_thread.takeError());
     LLDB_LOG(log, "couldn't attach to process '{0}'. {1}", pid, result);
   }
 
@@ -187,7 +187,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
     // thread.
     if (!::DebugBreakProcess(
             GetProcess().GetNativeProcess().GetSystemHandle())) {
-      error.SetError(::GetLastError(), eErrorTypeWin32);
+      error = Status(::GetLastError(), eErrorTypeWin32);
     }
   }
 
@@ -195,7 +195,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
 
   DWORD wait_result = WaitForSingleObject(m_debugging_ended_event, 5000);
   if (wait_result != WAIT_OBJECT_0) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "error: WaitForSingleObject({0}, 5000) returned {1}",
              m_debugging_ended_event, wait_result);
   } else
@@ -374,7 +374,6 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   std::string thread_name;
   llvm::raw_string_ostream name_stream(thread_name);
   name_stream << "lldb.plugin.process-windows.secondary[" << process_id << "]";
-  name_stream.flush();
   llvm::set_thread_name(thread_name);
 
   // info.hProcess and info.hThread are closed automatically by Windows when

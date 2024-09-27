@@ -377,7 +377,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ddddddddddddd> {\n"
                "}");
 
-  Style.BinPackParameters = false;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   verifyFormat("@interface eeeeeeeeeeeee () <\n"
                "    eeeeeeeeeeeee,\n"
@@ -411,7 +411,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
   Style.ColumnLimit = 40;
-  // BinPackParameters should be true by default.
+  // BinPackParameters should be BPPS_BinPack by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
                "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.

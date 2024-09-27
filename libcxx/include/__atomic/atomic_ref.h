@@ -20,6 +20,7 @@
 #include <__assert>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
+#include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>

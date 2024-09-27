@@ -37,16 +37,14 @@ struct ELFRelocationEntry {
   const MCSymbolELF *Symbol; // The symbol to relocate with.
   unsigned Type;   // The type of the relocation.
   uint64_t Addend; // The addend to use.
-  const MCSymbolELF *OriginalSymbol; // The original value of Symbol if we changed it.
 
   ELFRelocationEntry(uint64_t Offset, const MCSymbolELF *Symbol, unsigned Type,
-                     uint64_t Addend, const MCSymbolELF *OriginalSymbol)
-      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend),
-        OriginalSymbol(OriginalSymbol) {}
+                     uint64_t Addend)
+      : Offset(Offset), Symbol(Symbol), Type(Type), Addend(Addend) {}
 
   void print(raw_ostream &Out) const {
     Out << "Off=" << Offset << ", Sym=" << Symbol << ", Type=" << Type
-        << ", Addend=" << Addend << ", OriginalSymbol=" << OriginalSymbol;
+        << ", Addend=" << Addend;
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs()); }

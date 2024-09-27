@@ -35,7 +35,7 @@ ScriptedThreadPlan::ScriptedThreadPlan(Thread &thread, const char *class_name,
   if (!interpreter) {
     SetPlanComplete(false);
     // FIXME: error handling
-    // error.SetErrorStringWithFormat(
+    // error = Status::FromErrorStringWithFormat(
     //     "ScriptedThreadPlan::%s () - ERROR: %s", __FUNCTION__,
     //     "Couldn't get script interpreter");
     return;
@@ -45,7 +45,7 @@ ScriptedThreadPlan::ScriptedThreadPlan(Thread &thread, const char *class_name,
   if (!m_interface) {
     SetPlanComplete(false);
     // FIXME: error handling
-    // error.SetErrorStringWithFormat(
+    // error = Status::FromErrorStringWithFormat(
     //     "ScriptedThreadPlan::%s () - ERROR: %s", __FUNCTION__,
     //     "Script interpreter couldn't create Scripted Thread Plan Interface");
     return;

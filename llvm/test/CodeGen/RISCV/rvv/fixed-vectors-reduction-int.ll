@@ -40,8 +40,6 @@ define i8 @vreduce_add_v3i8(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    vredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -1768,10 +1766,9 @@ define i8 @vreduce_and_v3i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, -1
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredand.vs v8, v8, v8
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredand.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
@@ -2373,9 +2370,7 @@ define i8 @vreduce_or_v3i8(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredor.vs v8, v8, v8
+; CHECK-NEXT:    vredor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
@@ -2977,8 +2972,6 @@ define i8 @vreduce_xor_v3i8(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -3613,9 +3606,7 @@ define i8 @vreduce_smin_v3i8(ptr %x) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredmin.vs v8, v8, v8
+; CHECK-NEXT:    vredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
@@ -4217,9 +4208,7 @@ define i8 @vreduce_smax_v3i8(ptr %x) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    li a0, -128
 ; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredmax.vs v8, v8, v8
+; CHECK-NEXT:    vredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
@@ -4819,10 +4808,9 @@ define i8 @vreduce_umin_v3i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, -1
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredminu.vs v8, v8, v8
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredminu.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x
@@ -5423,9 +5411,7 @@ define i8 @vreduce_umax_v3i8(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 3
-; CHECK-NEXT:    vredmaxu.vs v8, v8, v8
+; CHECK-NEXT:    vredmaxu.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %v = load <3 x i8>, ptr %x

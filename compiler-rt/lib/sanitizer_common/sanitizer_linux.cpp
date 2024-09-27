@@ -107,7 +107,9 @@ extern struct ps_strings *__ps_strings;
 #  endif  // SANITIZER_NETBSD
 
 #  if SANITIZER_SOLARIS
+#    include <stddef.h>
 #    include <stdlib.h>
+#    include <sys/frame.h>
 #    include <thread.h>
 #    define environ _environ
 #  endif
@@ -725,6 +727,11 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
 #    if !SANITIZER_GO
   if (&__libc_stack_end) {
     uptr *stack_end = (uptr *)__libc_stack_end;
+    // Linux/sparc64 needs an adjustment, cf. glibc
+    // sysdeps/sparc/sparc{32,64}/dl-machine.h (DL_STACK_END).
+#      if SANITIZER_LINUX && defined(__sparc__)
+    stack_end = &stack_end[16];
+#      endif
     // Normally argc can be obtained from *stack_end, however, on ARM glibc's
     // _start clobbers it:
     // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/arm/start.S;hb=refs/heads/release/2.31/master#l75
@@ -2018,6 +2025,18 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
     return Unknown;
   return esr & ESR_ELx_WNR ? Write : Read;
 #  elif defined(__loongarch__)
+  // In the musl environment, the Linux kernel uapi sigcontext.h is not
+  // included in signal.h. To avoid missing the SC_ADDRERR_{RD,WR} macros,
+  // copy them here. The LoongArch Linux kernel uapi is already stable,
+  // so there's no need to worry about the value changing.
+#    ifndef SC_ADDRERR_RD
+  // Address error was due to memory load
+#      define SC_ADDRERR_RD (1 << 30)
+#    endif
+#    ifndef SC_ADDRERR_WR
+  // Address error was due to memory store
+#      define SC_ADDRERR_WR (1 << 31)
+#    endif
   u32 flags = ucontext->uc_mcontext.__flags;
   if (flags & SC_ADDRERR_RD)
     return SignalContext::Read;
@@ -2312,11 +2331,11 @@ static const char *RegNumToRegName(int reg) {
   return NULL;
 }
 
-#  if SANITIZER_LINUX && SANITIZER_GLIBC && \
+#  if ((SANITIZER_LINUX && SANITIZER_GLIBC) || SANITIZER_NETBSD) && \
       (defined(__arm__) || defined(__aarch64__))
 static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
   switch (RegNum) {
-#    if defined(__arm__)
+#    if defined(__arm__) && !SANITIZER_NETBSD
 #      ifdef MAKE_CASE
 #        undef MAKE_CASE
 #      endif
@@ -2345,10 +2364,15 @@ static uptr GetArmRegister(ucontext_t *ctx, int RegNum) {
     case REG_R15:
       return ctx->uc_mcontext.arm_pc;
 #    elif defined(__aarch64__)
+#      if SANITIZER_LINUX
     case 0 ... 30:
       return ctx->uc_mcontext.regs[RegNum];
     case 31:
       return ctx->uc_mcontext.sp;
+#      elif SANITIZER_NETBSD
+    case 0 ... 31:
+      return ctx->uc_mcontext.__gregs[RegNum];
+#      endif
 #    endif
     default:
       return 0;
@@ -2456,7 +2480,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DumpSingleReg(ucontext, REG_R14);
   DumpSingleReg(ucontext, REG_R15);
   Printf("\n");
-#    elif defined(__aarch64__) && !SANITIZER_NETBSD
+#    elif defined(__aarch64__)
   Report("Register values:\n");
   for (int i = 0; i <= 31; ++i) {
     DumpSingleReg(ucontext, i);
@@ -2600,7 +2624,19 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #    if SANITIZER_SOLARIS
   ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.gregs[REG_PC];
-  *sp = ucontext->uc_mcontext.gregs[REG_O6] + STACK_BIAS;
+  *sp = ucontext->uc_mcontext.gregs[REG_SP] + STACK_BIAS;
+  // Avoid SEGV when dereferencing sp on stack overflow with non-faulting load.
+  // This requires a SPARC V9 CPU.  Cannot use #ASI_PNF here: only supported
+  // since clang-19.
+#      if defined(__sparcv9)
+  asm("ldxa [%[fp]] 0x82, %[bp]"
+#      else
+  asm("lduwa [%[fp]] 0x82, %[bp]"
+#      endif
+      : [bp] "=r"(*bp)
+      : [fp] "r"(&((struct frame *)*sp)->fr_savfp));
+  if (*bp)
+    *bp += STACK_BIAS;
 #    else
   // Historical BSDism here.
   struct sigcontext *scontext = (struct sigcontext *)context;
@@ -2611,8 +2647,8 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   *pc = scontext->si_regs.pc;
   *sp = scontext->si_regs.u_regs[14];
 #      endif
-#    endif
   *bp = (uptr)((uhwptr *)*sp)[14] + STACK_BIAS;
+#    endif
 #  elif defined(__mips__)
   ucontext_t *ucontext = (ucontext_t *)context;
   *pc = ucontext->uc_mcontext.pc;
@@ -2655,9 +2691,7 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
 
-void InitializePlatformEarly() {
-  // Do nothing.
-}
+void InitializePlatformEarly() { InitTlsSize(); }
 
 void CheckASLR() {
 #  if SANITIZER_NETBSD

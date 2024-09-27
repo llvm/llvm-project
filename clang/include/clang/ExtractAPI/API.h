@@ -23,7 +23,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1420,9 +1420,8 @@ public:
   typename std::enable_if_t<std::is_base_of_v<APIRecord, RecordTy>, RecordTy> *
   createRecord(StringRef USR, StringRef Name, CtorArgsContTy &&...CtorArgs);
 
-  auto getTopLevelRecords() const {
-    return llvm::iterator_range<decltype(TopLevelRecords)::iterator>(
-        TopLevelRecords);
+  ArrayRef<const APIRecord *> getTopLevelRecords() const {
+    return TopLevelRecords;
   }
 
   void removeRecord(StringRef USR);
@@ -1455,7 +1454,7 @@ private:
   // lives in the BumpPtrAllocator.
   using APIRecordStoredPtr = std::unique_ptr<APIRecord, APIRecordDeleter>;
   llvm::DenseMap<StringRef, APIRecordStoredPtr> USRBasedLookupTable;
-  llvm::SmallPtrSet<const APIRecord *, 32> TopLevelRecords;
+  llvm::SmallVector<const APIRecord *, 32> TopLevelRecords;
 
 public:
   const std::string ProductName;
@@ -1481,7 +1480,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
             dyn_cast_if_present<RecordContext>(Record->Parent.Record))
       ParentContext->addToRecordChain(Record);
     else
-      TopLevelRecords.insert(Record);
+      TopLevelRecords.push_back(Record);
   } else {
     Record = dyn_cast<RecordTy>(Result.first->second.get());
   }

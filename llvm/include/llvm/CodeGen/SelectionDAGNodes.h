@@ -1484,6 +1484,8 @@ public:
     case ISD::ATOMIC_LOAD_FMIN:
     case ISD::ATOMIC_LOAD_UINC_WRAP:
     case ISD::ATOMIC_LOAD_UDEC_WRAP:
+    case ISD::ATOMIC_LOAD_USUB_COND:
+    case ISD::ATOMIC_LOAD_USUB_SAT:
     case ISD::ATOMIC_LOAD:
     case ISD::ATOMIC_STORE:
     case ISD::MLOAD:
@@ -1550,27 +1552,29 @@ public:
 
   // Methods to support isa and dyn_cast
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::ATOMIC_CMP_SWAP     ||
+    return N->getOpcode() == ISD::ATOMIC_CMP_SWAP ||
            N->getOpcode() == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS ||
-           N->getOpcode() == ISD::ATOMIC_SWAP         ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_ADD     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_SUB     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_AND     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_CLR     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_OR      ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_XOR     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_NAND    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_MIN     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_MAX     ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_UMIN    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_UMAX    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FADD    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FMAX    ||
-           N->getOpcode() == ISD::ATOMIC_LOAD_FMIN    ||
+           N->getOpcode() == ISD::ATOMIC_SWAP ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_ADD ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_SUB ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_AND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_CLR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_OR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_XOR ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_NAND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_MIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_MAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UMIN ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_UMAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FADD ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FSUB ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMAX ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_FMIN ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UINC_WRAP ||
            N->getOpcode() == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-           N->getOpcode() == ISD::ATOMIC_LOAD         ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_COND ||
+           N->getOpcode() == ISD::ATOMIC_LOAD_USUB_SAT ||
+           N->getOpcode() == ISD::ATOMIC_LOAD ||
            N->getOpcode() == ISD::ATOMIC_STORE;
   }
 };

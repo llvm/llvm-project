@@ -53,7 +53,12 @@ void emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
 void emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
                                 const Triple &T, Mangler &M);
 
+/// Returns the ARM64EC mangled function name unless the input is already
+/// mangled.
 std::optional<std::string> getArm64ECMangledFunctionName(StringRef Name);
+
+/// Returns the ARM64EC demangled function name, unless the input is not
+/// mangled.
 std::optional<std::string> getArm64ECDemangledFunctionName(StringRef Name);
 
 } // End llvm namespace

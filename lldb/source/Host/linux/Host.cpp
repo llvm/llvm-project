@@ -414,7 +414,7 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
 Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 std::optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {

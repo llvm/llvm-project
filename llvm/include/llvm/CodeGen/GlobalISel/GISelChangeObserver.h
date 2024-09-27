@@ -138,5 +138,19 @@ public:
   ~RAIIMFObsDelInstaller() = default;
 };
 
+/// A simple RAII based Observer installer.
+/// Use this in a scope to install the Observer to the MachineFunction and reset
+/// it at the end of the scope.
+class RAIITemporaryObserverInstaller {
+public:
+  RAIITemporaryObserverInstaller(GISelObserverWrapper &Observers,
+                                 GISelChangeObserver &TemporaryObserver);
+  ~RAIITemporaryObserverInstaller();
+
+private:
+  GISelObserverWrapper &Observers;
+  GISelChangeObserver &TemporaryObserver;
+};
+
 } // namespace llvm
 #endif

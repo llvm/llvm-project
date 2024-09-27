@@ -51,7 +51,7 @@ endfunction()
 # This calls cache_compiler_rt_library that caches the path to speed up
 # repeated invocations with the same `name` and `target`.
 function(find_compiler_rt_library name variable)
-  cmake_parse_arguments(ARG "" "TARGET;FLAGS" "" ${ARGN})
+  cmake_parse_arguments(ARG "SHARED" "TARGET;FLAGS" "" ${ARGN})
   # While we can use compiler-rt runtimes with other compilers, we need to
   # query the compiler for runtime location and thus we require Clang.
   if(NOT CMAKE_CXX_COMPILER_ID MATCHES Clang)
@@ -112,12 +112,16 @@ function(find_compiler_rt_library name variable)
     # path and then checking if the resultant path exists. The result of
     # this check is also cached by cache_compiler_rt_library.
     set(library_file "${COMPILER_RT_LIBRARY_builtins_${target}}")
-    if(library_file MATCHES ".*clang_rt\.([a-z0-9_\-]+)\.(a|lib)")
-      set(from_name ${CMAKE_MATCH_0})
-      get_component_name(${name} to_name)
-      string(REPLACE "${from_name}" "${to_name}" library_file "${library_file}")
-      cache_compiler_rt_library(FALSE "${name}" "${target}" "${library_file}")
+    get_component_name("builtins" from_name)
+    get_component_name(${name} to_name)
+    get_filename_component(basename ${library_file} NAME)
+    string(REPLACE "${from_name}" "${to_name}" basename "${basename}")
+    if (ARG_SHARED)
+      string(REGEX REPLACE "\.(a|lib)$" ".so" basename "${basename}")
     endif()
+    get_filename_component(dirname ${library_file} DIRECTORY)
+    set(library_file "${dirname}/${basename}")
+    cache_compiler_rt_library(FALSE "${name}" "${target}" "${library_file}")
   endif()
   set(${variable} "${COMPILER_RT_LIBRARY_${name}_${target}}" PARENT_SCOPE)
 endfunction()

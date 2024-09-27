@@ -959,7 +959,7 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
       ++CurTemplateDepthTracker;
       EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      DefaultArg = Actions.CorrectDelayedTyposInExpr(ParseInitializer());
+      DefaultArg = Actions.ActOnConstantExpression(ParseInitializer());
       if (DefaultArg.isInvalid())
         SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
     }

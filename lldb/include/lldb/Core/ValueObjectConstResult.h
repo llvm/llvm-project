@@ -61,7 +61,7 @@ public:
 
   // When an expression fails to evaluate, we return an error
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
-                                    const Status &error);
+                                    Status &&error);
 
   std::optional<uint64_t> GetByteSize() override;
 
@@ -146,7 +146,7 @@ private:
                          ConstString name, Module *module = nullptr);
 
   ValueObjectConstResult(ExecutionContextScope *exe_scope,
-                         ValueObjectManager &manager, const Status &error);
+                         ValueObjectManager &manager, Status &&error);
 
   ValueObject *CreateChildAtIndex(size_t idx) override {
     return m_impl.CreateChildAtIndex(idx);

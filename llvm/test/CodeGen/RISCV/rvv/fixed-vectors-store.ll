@@ -294,13 +294,13 @@ define void @exact_vlen_i64_m8(ptr %p) vscale_range(2,2) {
   ret void
 }
 
-define void @store_v8bf16(ptr %p, <8 x bfloat> %v) {
-; CHECK-LABEL: store_v8bf16:
+define void @store_v6bf16(ptr %p, <6 x bfloat> %v) {
+; CHECK-LABEL: store_v6bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  store <8 x bfloat> %v, ptr %p
+  store <6 x bfloat> %v, ptr %p
   ret void
 }
 

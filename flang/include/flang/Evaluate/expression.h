@@ -342,6 +342,7 @@ template <typename A> struct Extremum : public Operation<Extremum<A>, A, A, A> {
       : Base{x, y}, ordering{ord} {}
   Extremum(Ordering ord, Expr<Operand> &&x, Expr<Operand> &&y)
       : Base{std::move(x), std::move(y)}, ordering{ord} {}
+  bool operator==(const Extremum &) const;
   Ordering ordering{Ordering::Greater};
 };
 
@@ -381,6 +382,7 @@ struct LogicalOperation
       : Base{x, y}, logicalOperator{opr} {}
   LogicalOperation(LogicalOperator opr, Expr<Operand> &&x, Expr<Operand> &&y)
       : Base{std::move(x), std::move(y)}, logicalOperator{opr} {}
+  bool operator==(const LogicalOperation &) const;
   LogicalOperator logicalOperator;
 };
 
@@ -634,6 +636,7 @@ public:
       : Base{a, b}, opr{r} {}
   Relational(RelationalOperator r, Expr<Operand> &&a, Expr<Operand> &&b)
       : Base{std::move(a), std::move(b)}, opr{r} {}
+  bool operator==(const Relational &) const;
   RelationalOperator opr;
 };
 

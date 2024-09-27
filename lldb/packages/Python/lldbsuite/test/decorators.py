@@ -426,18 +426,6 @@ def add_test_categories(cat):
     return impl
 
 
-def benchmarks_test(func):
-    """Decorate the item as a benchmarks test."""
-
-    def should_skip_benchmarks_test():
-        return "benchmarks test"
-
-    # Mark this function as such to separate them from the regular tests.
-    result = skipTestIfFn(should_skip_benchmarks_test)(func)
-    result.__benchmarks_test__ = True
-    return result
-
-
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
@@ -467,9 +455,8 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
         try:
-            DEVNULL = open(os.devnull, "w")
             output = subprocess.check_output(
-                ["xcodebuild", "-showsdks"], stderr=DEVNULL
+                ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
             if re.search("%ssimulator" % platform, output):
                 return None
@@ -1094,9 +1081,8 @@ def skipUnlessFeature(feature):
     def is_feature_enabled():
         if platform.system() == "Darwin":
             try:
-                DEVNULL = open(os.devnull, "w")
                 output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=DEVNULL
+                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.

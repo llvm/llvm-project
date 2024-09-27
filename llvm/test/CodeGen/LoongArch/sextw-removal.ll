@@ -323,21 +323,17 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    sra.w $a0, $a0, $a1
 ; CHECK-NEXT:    lu12i.w $a1, 349525
-; CHECK-NEXT:    ori $a1, $a1, 1365
-; CHECK-NEXT:    lu32i.d $a1, 349525
-; CHECK-NEXT:    lu52i.d $fp, $a1, 1365
+; CHECK-NEXT:    ori $fp, $a1, 1365
+; CHECK-NEXT:    bstrins.d $fp, $fp, 62, 32
 ; CHECK-NEXT:    lu12i.w $a1, 209715
-; CHECK-NEXT:    ori $a1, $a1, 819
-; CHECK-NEXT:    lu32i.d $a1, 209715
-; CHECK-NEXT:    lu52i.d $s0, $a1, 819
+; CHECK-NEXT:    ori $s0, $a1, 819
+; CHECK-NEXT:    bstrins.d $s0, $s0, 61, 32
 ; CHECK-NEXT:    lu12i.w $a1, 61680
-; CHECK-NEXT:    ori $a1, $a1, 3855
-; CHECK-NEXT:    lu32i.d $a1, -61681
-; CHECK-NEXT:    lu52i.d $s1, $a1, 240
+; CHECK-NEXT:    ori $s1, $a1, 3855
+; CHECK-NEXT:    bstrins.d $s1, $s1, 59, 32
 ; CHECK-NEXT:    lu12i.w $a1, 4112
-; CHECK-NEXT:    ori $a1, $a1, 257
-; CHECK-NEXT:    lu32i.d $a1, 65793
-; CHECK-NEXT:    lu52i.d $s2, $a1, 16
+; CHECK-NEXT:    ori $s2, $a1, 257
+; CHECK-NEXT:    bstrins.d $s2, $s2, 56, 32
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB6_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -374,21 +370,17 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    sra.w $a0, $a0, $a1
 ; NORMV-NEXT:    lu12i.w $a1, 349525
-; NORMV-NEXT:    ori $a1, $a1, 1365
-; NORMV-NEXT:    lu32i.d $a1, 349525
-; NORMV-NEXT:    lu52i.d $fp, $a1, 1365
+; NORMV-NEXT:    ori $fp, $a1, 1365
+; NORMV-NEXT:    bstrins.d $fp, $fp, 62, 32
 ; NORMV-NEXT:    lu12i.w $a1, 209715
-; NORMV-NEXT:    ori $a1, $a1, 819
-; NORMV-NEXT:    lu32i.d $a1, 209715
-; NORMV-NEXT:    lu52i.d $s0, $a1, 819
+; NORMV-NEXT:    ori $s0, $a1, 819
+; NORMV-NEXT:    bstrins.d $s0, $s0, 61, 32
 ; NORMV-NEXT:    lu12i.w $a1, 61680
-; NORMV-NEXT:    ori $a1, $a1, 3855
-; NORMV-NEXT:    lu32i.d $a1, -61681
-; NORMV-NEXT:    lu52i.d $s1, $a1, 240
+; NORMV-NEXT:    ori $s1, $a1, 3855
+; NORMV-NEXT:    bstrins.d $s1, $s1, 59, 32
 ; NORMV-NEXT:    lu12i.w $a1, 4112
-; NORMV-NEXT:    ori $a1, $a1, 257
-; NORMV-NEXT:    lu32i.d $a1, 65793
-; NORMV-NEXT:    lu52i.d $s2, $a1, 16
+; NORMV-NEXT:    ori $s2, $a1, 257
+; NORMV-NEXT:    bstrins.d $s2, $s2, 56, 32
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB6_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1

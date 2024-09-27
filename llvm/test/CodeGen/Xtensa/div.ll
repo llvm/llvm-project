@@ -363,8 +363,7 @@ define i8 @sdiv8_constant(i8 %a) nounwind {
 define i8 @sdiv8_pow2(i8 %a) nounwind {
 ; XTENSA-LABEL: sdiv8_pow2:
 ; XTENSA:         slli a8, a2, 24
-; XTENSA-NEXT:    srai a8, a8, 24
-; XTENSA-NEXT:    srli a8, a8, 12
+; XTENSA-NEXT:    srai a8, a8, 31
 ; XTENSA-NEXT:    movi a9, 7
 ; XTENSA-NEXT:    and a8, a8, a9
 ; XTENSA-NEXT:    add a8, a2, a8
@@ -473,8 +472,7 @@ define i32 @sdiv_pow2_2(i32 %a) nounwind {
 define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; XTENSA-LABEL: sdiv16_pow2:
 ; XTENSA:         slli a8, a2, 16
-; XTENSA-NEXT:    srai a8, a8, 16
-; XTENSA-NEXT:    extui a8, a8, 28, 4
+; XTENSA-NEXT:    srai a8, a8, 31
 ; XTENSA-NEXT:    movi a9, 7
 ; XTENSA-NEXT:    and a8, a8, a9
 ; XTENSA-NEXT:    add a8, a2, a8

@@ -4,8 +4,8 @@
 define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
 ; GCN-LABEL: if_then:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
@@ -15,11 +15,8 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  ; %bb.3: ; %.then
-; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, v3, s1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_mov_b32_dpp v2, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
@@ -63,8 +60,8 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
 ; GCN-LABEL: if_else_vgpr_opt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
@@ -82,12 +79,7 @@ define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrs
 ; GCN-NEXT:  .LBB1_5: ; %.else
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_mov_b32 exec_lo, s1
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
-; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
-; GCN-NEXT:    s_or_saveexec_b32 s1, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v3, s1
 ; GCN-NEXT:    v_mov_b32_dpp v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1

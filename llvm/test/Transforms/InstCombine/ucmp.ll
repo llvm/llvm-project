@@ -222,6 +222,20 @@ define i8 @ucmp_from_select_lt(i32 %x, i32 %y) {
   ret i8 %r
 }
 
+; Fold (x u< y) ? -1 : zext(x u> y) into ucmp(x, y)
+define i8 @ucmp_from_select_lt_and_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_from_select_lt_and_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %gt_bool = icmp ugt i32 %x, %y
+  %gt = zext i1 %gt_bool to i8
+  %lt = icmp ult i32 %x, %y
+  %r = select i1 %lt, i8 -1, i8 %gt
+  ret i8 %r
+}
+
 ; Vector version
 define <4 x i8> @ucmp_from_select_vec_lt(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i8> @ucmp_from_select_vec_lt(
@@ -349,13 +363,13 @@ define i8 @ucmp_from_select_le_neg1(i32 %x, i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NE_BOOL:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[NE:%.*]] = sext i1 [[NE_BOOL]] to i8
-; CHECK-NEXT:    [[LE_NOT:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[LE_NOT:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[LE_NOT]], i8 1, i8 [[NE]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ne_bool = icmp ult i32 %x, %y
   %ne = sext i1 %ne_bool to i8
-  %le = icmp ule i32 %x, %y
+  %le = icmp uge i32 %x, %y
   %r = select i1 %le, i8 %ne, i8 1
   ret i8 %r
 }
@@ -511,5 +525,33 @@ define i8 @ucmp_from_select_ge_neg4(i32 %x, i32 %y) {
   %ne = zext i1 %ne_bool to i8
   %ge = icmp uge i32 %x, %y
   %r = select i1 %ge, i8 %ne, i8 3
+  ret i8 %r
+}
+
+; Fold (x > y) ? 1 : sext(x < y)
+define i8 @ucmp_from_select_gt_and_lt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @ucmp_from_select_gt_and_lt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %lt_bool = icmp ult i32 %x, %y
+  %lt = sext i1 %lt_bool to i8
+  %gt = icmp ugt i32 %x, %y
+  %r = select i1 %gt, i8 1, i8 %lt
+  ret i8 %r
+}
+
+; (x == y) ? 0 : (x u> y ? 1 : -1) into ucmp(x, y)
+define i8 @scmp_from_select_eq_and_gt(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @scmp_from_select_eq_and_gt(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %eq = icmp eq i32 %x, %y
+  %gt = icmp ugt i32 %x, %y
+  %sel1 = select i1 %gt, i8 1, i8 -1
+  %r = select i1 %eq, i8 0, i8 %sel1
   ret i8 %r
 }

@@ -148,3 +148,8 @@ function defdByAssociate()
     s = 1.
   end associate
 end
+
+function defdByElementArgToImplicit() result(r)
+  real r(1)
+  call define(r(1))
+end

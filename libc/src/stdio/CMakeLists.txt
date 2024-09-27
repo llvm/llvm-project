@@ -144,11 +144,31 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    vfscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
   scanf
   SRCS
     scanf.cpp
   HDRS
     scanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    vscanf.h
   DEPENDS
     ${scanf_deps}
 )

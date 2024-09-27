@@ -817,7 +817,6 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
       llvm::sys::printArg(OS, Arg, /*Quote=*/true);
       OS << ' ';
     }
-    OS.flush();
     return Buffer;
   };
 
@@ -1186,7 +1185,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
       os << " ";
     os << Args.getArgString(i);
   }
-  os.flush();
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -1690,6 +1688,18 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   else if (Opts.CFProtectionBranch)
     GenerateArg(Consumer, OPT_fcf_protection_EQ, "branch");
 
+  if (Opts.CFProtectionBranch) {
+    switch (Opts.getCFBranchLabelScheme()) {
+    case CFBranchLabelSchemeKind::Default:
+      break;
+#define CF_BRANCH_LABEL_SCHEME(Kind, FlagVal)                                  \
+  case CFBranchLabelSchemeKind::Kind:                                          \
+    GenerateArg(Consumer, OPT_mcf_branch_label_scheme_EQ, #FlagVal);           \
+    break;
+#include "clang/Basic/CFProtectionOptions.def"
+    }
+  }
+
   if (Opts.FunctionReturnThunks)
     GenerateArg(Consumer, OPT_mfunction_return_EQ, "thunk-extern");
 
@@ -2022,6 +2032,22 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Opts.CFProtectionBranch = 1;
     else if (Name != "none")
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
+  }
+
+  if (Opts.CFProtectionBranch && T.isRISCV()) {
+    if (const Arg *A = Args.getLastArg(OPT_mcf_branch_label_scheme_EQ)) {
+      const auto Scheme =
+          llvm::StringSwitch<CFBranchLabelSchemeKind>(A->getValue())
+#define CF_BRANCH_LABEL_SCHEME(Kind, FlagVal)                                  \
+  .Case(#FlagVal, CFBranchLabelSchemeKind::Kind)
+#include "clang/Basic/CFProtectionOptions.def"
+              .Default(CFBranchLabelSchemeKind::Default);
+      if (Scheme != CFBranchLabelSchemeKind::Default)
+        Opts.setCFBranchLabelScheme(Scheme);
+      else
+        Diags.Report(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+    }
   }
 
   if (const Arg *A = Args.getLastArg(OPT_mfunction_return_EQ)) {
@@ -3130,7 +3156,7 @@ std::string CompilerInvocation::GetResourcesPath(const char *Argv0,
                                                  void *MainAddr) {
   std::string ClangExecutable =
       llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
-  return Driver::GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
+  return Driver::GetResourcesPath(ClangExecutable);
 }
 
 static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
@@ -3735,7 +3761,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
-    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, OS.str());
+    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, Targets);
   }
 
   if (!Opts.OMPHostIRFile.empty())
@@ -3951,6 +3977,18 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     StringRef Name = A->getValue();
     if (Name == "full" || Name == "branch") {
       Opts.CFProtectionBranch = 1;
+    }
+  }
+
+  if (Opts.CFProtectionBranch) {
+    if (const Arg *A = Args.getLastArg(OPT_mcf_branch_label_scheme_EQ)) {
+      const auto Scheme =
+          llvm::StringSwitch<CFBranchLabelSchemeKind>(A->getValue())
+#define CF_BRANCH_LABEL_SCHEME(Kind, FlagVal)                                  \
+  .Case(#FlagVal, CFBranchLabelSchemeKind::Kind)
+#include "clang/Basic/CFProtectionOptions.def"
+              .Default(CFBranchLabelSchemeKind::Default);
+      Opts.setCFBranchLabelScheme(Scheme);
     }
   }
 
@@ -4274,9 +4312,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           llvm::StringSwitch<unsigned>(A->getValue(i))
               .Case("none", LangOptionsBase::None)
               .Case("all", LangOptionsBase::All)
-              .Case("add-overflow-test", LangOptionsBase::AddOverflowTest)
+              .Case("add-unsigned-overflow-test",
+                    LangOptionsBase::AddUnsignedOverflowTest)
+              .Case("add-signed-overflow-test",
+                    LangOptionsBase::AddSignedOverflowTest)
               .Case("negated-unsigned-const", LangOptionsBase::NegUnsignedConst)
-              .Case("post-decr-while", LangOptionsBase::PostDecrInWhile)
+              .Case("unsigned-post-decr-while",
+                    LangOptionsBase::PostDecrInWhile)
               .Default(0);
     }
   }
@@ -4482,6 +4524,15 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       }
     } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
+
+    if (Opts.LangStd < LangStandard::lang_hlsl202x) {
+      const LangStandard &Requested =
+          LangStandard::getLangStandardForKind(Opts.LangStd);
+      const LangStandard &Recommended =
+          LangStandard::getLangStandardForKind(LangStandard::lang_hlsl202x);
+      Diags.Report(diag::warn_hlsl_langstd_minimal)
+          << Requested.getName() << Recommended.getName();
+    }
   }
 
   return Diags.getNumErrors() == NumErrorsBefore;

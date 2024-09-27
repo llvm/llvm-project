@@ -34,9 +34,7 @@ using namespace llvm;
 /// A utility function for allocating memory, checking for allocation failures,
 /// and ensuring the contents are zeroed.
 inline static uint64_t* getClearedMemory(unsigned numWords) {
-  uint64_t *result = new uint64_t[numWords];
-  memset(result, 0, numWords * sizeof(uint64_t));
-  return result;
+  return new uint64_t[numWords]();
 }
 
 /// A utility function for allocating memory and checking for allocation
@@ -74,12 +72,15 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 
 
 void APInt::initSlowCase(uint64_t val, bool isSigned) {
-  U.pVal = getClearedMemory(getNumWords());
-  U.pVal[0] = val;
-  if (isSigned && int64_t(val) < 0)
-    for (unsigned i = 1; i < getNumWords(); ++i)
-      U.pVal[i] = WORDTYPE_MAX;
-  clearUnusedBits();
+  if (isSigned && int64_t(val) < 0) {
+    U.pVal = getMemory(getNumWords());
+    U.pVal[0] = val;
+    memset(&U.pVal[1], 0xFF, APINT_WORD_SIZE * (getNumWords() - 1));
+    clearUnusedBits();
+  } else {
+    U.pVal = getClearedMemory(getNumWords());
+    U.pVal[0] = val;
+  }
 }
 
 void APInt::initSlowCase(const APInt& that) {
@@ -234,7 +235,8 @@ APInt& APInt::operator-=(uint64_t RHS) {
 APInt APInt::operator*(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
   if (isSingleWord())
-    return APInt(BitWidth, U.VAL * RHS.U.VAL);
+    return APInt(BitWidth, U.VAL * RHS.U.VAL, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   APInt Result(getMemory(getNumWords()), getBitWidth());
   tcMultiply(Result.U.pVal, U.pVal, RHS.U.pVal, getNumWords());
@@ -455,7 +457,8 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
          "Illegal bit extraction");
 
   if (isSingleWord())
-    return APInt(numBits, U.VAL >> bitPosition);
+    return APInt(numBits, U.VAL >> bitPosition, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   unsigned loBit = whichBit(bitPosition);
   unsigned loWord = whichWord(bitPosition);
@@ -463,7 +466,8 @@ APInt APInt::extractBits(unsigned numBits, unsigned bitPosition) const {
 
   // Single word result extracting bits from a single word source.
   if (loWord == hiWord)
-    return APInt(numBits, U.pVal[loWord] >> loBit);
+    return APInt(numBits, U.pVal[loWord] >> loBit, /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   // Extracting bits that start on a source word boundary can be done
   // as a fast memory copy.
@@ -907,7 +911,8 @@ APInt APInt::trunc(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
   if (width <= APINT_BITS_PER_WORD)
-    return APInt(width, getRawData()[0]);
+    return APInt(width, getRawData()[0], /*isSigned=*/false,
+                 /*implicitTrunc=*/true);
 
   if (width == BitWidth)
     return *this;
@@ -955,7 +960,7 @@ APInt APInt::sext(unsigned Width) const {
   assert(Width >= BitWidth && "Invalid APInt SignExtend request");
 
   if (Width <= APINT_BITS_PER_WORD)
-    return APInt(Width, SignExtend64(U.VAL, BitWidth));
+    return APInt(Width, SignExtend64(U.VAL, BitWidth), /*isSigned=*/true);
 
   if (Width == BitWidth)
     return *this;

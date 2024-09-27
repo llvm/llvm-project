@@ -63,10 +63,11 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v2, s32 ; 4-byte Folded Spill
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v2, s30, 0
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ;;#ASMEND
@@ -74,16 +75,19 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX12-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v2, off, s32 ; 4-byte Folded Reload
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i64 @llvm.amdgcn.s.getpc()

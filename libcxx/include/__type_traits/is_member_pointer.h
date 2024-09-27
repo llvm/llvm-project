@@ -27,7 +27,7 @@ struct _LIBCPP_TEMPLATE_VIS is_member_object_pointer : _BoolConstant<__is_member
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_member_function_pointer : _BoolConstant<__is_member_function_pointer(_Tp)> {};
 
-#  if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_pointer_v = __is_member_pointer(_Tp);
 
@@ -36,7 +36,7 @@ inline constexpr bool is_member_object_pointer_v = __is_member_object_pointer(_T
 
 template <class _Tp>
 inline constexpr bool is_member_function_pointer_v = __is_member_function_pointer(_Tp);
-#  endif
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

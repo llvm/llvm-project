@@ -128,9 +128,10 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
       continue;
     if (MRI.getRegClass(VirtReg)->getID() != X86::TILERegClassID)
       continue;
-    if (VRM.getPhys(VirtReg) == VirtRegMap::NO_PHYS_REG)
+    MCRegister PhysReg = VRM.getPhys(VirtReg);
+    if (!PhysReg)
       continue;
-    unsigned Index = VRM.getPhys(VirtReg) - X86::TMM0;
+    unsigned Index = PhysReg - X86::TMM0;
     if (!Phys2Virt[Index])
       Phys2Virt[Index] = VirtReg;
   }

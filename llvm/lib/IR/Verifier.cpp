@@ -114,6 +114,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -2222,6 +2223,12 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForDebugging),
           "Attributes 'optdebug and optnone' are incompatible!", V);
   }
+
+  Check(!(Attrs.hasFnAttr(Attribute::SanitizeRealtime) &&
+          Attrs.hasFnAttr(Attribute::SanitizeRealtimeUnsafe)),
+        "Attributes "
+        "'sanitize_realtime and sanitize_realtime_unsafe' are incompatible!",
+        V);
 
   if (Attrs.hasFnAttr(Attribute::OptimizeForDebugging)) {
     Check(!Attrs.hasFnAttr(Attribute::OptimizeForSize),
@@ -5122,6 +5129,7 @@ void Verifier::visitInstruction(Instruction &I) {
                 F->getIntrinsicID() ==
                     Intrinsic::experimental_patchpoint_void ||
                 F->getIntrinsicID() == Intrinsic::experimental_patchpoint ||
+                F->getIntrinsicID() == Intrinsic::fake_use ||
                 F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint ||
                 F->getIntrinsicID() == Intrinsic::wasm_rethrow ||
                 IsAttachedCallOperand(F, CBI, i),
@@ -5952,44 +5960,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
-    Type *ValTy = Call.getArgOperand(0)->getType();
-    Type *ResultTy = Call.getType();
-    Check(
-        ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
-        "llvm.lrint, llvm.llrint: argument must be floating-point or vector "
-        "of floating-points, and result must be integer or vector of integers",
-        &Call);
-    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
-          "llvm.lrint, llvm.llrint: argument and result disagree on vector use",
-          &Call);
-    if (ValTy->isVectorTy()) {
-      Check(cast<VectorType>(ValTy)->getElementCount() ==
-                cast<VectorType>(ResultTy)->getElementCount(),
-            "llvm.lrint, llvm.llrint: argument must be same length as result",
-            &Call);
-    }
-    break;
-  }
+  case Intrinsic::llrint:
   case Intrinsic::lround:
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
     auto *VTy = dyn_cast<VectorType>(ValTy);
     auto *RTy = dyn_cast<VectorType>(ResultTy);
-    Check(
-        ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
-        "llvm.lround, llvm.llround: argument must be floating-point or vector "
-        "of floating-points, and result must be integer or vector of integers",
-        &Call);
-    Check(
-        ValTy->isVectorTy() == ResultTy->isVectorTy(),
-        "llvm.lround, llvm.llround: argument and result disagree on vector use",
-        &Call);
+    Check(ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
+          ExpectedName + ": argument must be floating-point or vector "
+                         "of floating-points, and result must be integer or "
+                         "vector of integers",
+          &Call);
+    Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
+          ExpectedName + ": argument and result disagree on vector use", &Call);
     if (VTy) {
       Check(VTy->getElementCount() == RTy->getElementCount(),
-            "llvm.lround, llvm.llround: argument must be same length as result",
-            &Call);
+            ExpectedName + ": argument must be same length as result", &Call);
     }
     break;
   }
@@ -6112,11 +6099,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
-  case Intrinsic::experimental_stepvector: {
+  case Intrinsic::stepvector: {
     VectorType *VecTy = dyn_cast<VectorType>(Call.getType());
     Check(VecTy && VecTy->getScalarType()->isIntegerTy() &&
               VecTy->getScalarSizeInBits() >= 8,
-          "experimental_stepvector only supported for vectors of integers "
+          "stepvector only supported for vectors of integers "
           "with a bitwidth of at least 8.",
           &Call);
     break;
@@ -6299,6 +6286,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a function argument", &Call);
     Check(!cast<Argument>(Call.getArgOperand(InactiveIdx))->hasInRegAttr(),
           "Value for inactive lanes must be a VGPR function argument", &Call);
+    break;
+  }
+  case Intrinsic::amdgcn_s_prefetch_data: {
+    Check(
+        AMDGPU::isFlatGlobalAddrSpace(
+            Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
+        "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:

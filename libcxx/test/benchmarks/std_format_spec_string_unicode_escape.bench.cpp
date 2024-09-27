@@ -279,25 +279,20 @@ void BM_emoji_escaped(benchmark::State& state) {
   BM_escaped(state, emoji_text<CharT>());
 }
 
-BENCHMARK_TEMPLATE(BM_ascii_escaped, char);
-BENCHMARK_TEMPLATE(BM_unicode_escaped, char);
-BENCHMARK_TEMPLATE(BM_cyrillic_escaped, char);
-BENCHMARK_TEMPLATE(BM_japanese_escaped, char);
-BENCHMARK_TEMPLATE(BM_emoji_escaped, char);
+BENCHMARK(BM_ascii_escaped<char>);
+BENCHMARK(BM_unicode_escaped<char>);
+BENCHMARK(BM_cyrillic_escaped<char>);
+BENCHMARK(BM_japanese_escaped<char>);
+BENCHMARK(BM_emoji_escaped<char>);
 
-BENCHMARK_TEMPLATE(BM_ascii_escaped, wchar_t);
-BENCHMARK_TEMPLATE(BM_unicode_escaped, wchar_t);
-BENCHMARK_TEMPLATE(BM_cyrillic_escaped, wchar_t);
-BENCHMARK_TEMPLATE(BM_japanese_escaped, wchar_t);
-BENCHMARK_TEMPLATE(BM_emoji_escaped, wchar_t);
+BENCHMARK(BM_ascii_escaped<wchar_t>);
+BENCHMARK(BM_unicode_escaped<wchar_t>);
+BENCHMARK(BM_cyrillic_escaped<wchar_t>);
+BENCHMARK(BM_japanese_escaped<wchar_t>);
+BENCHMARK(BM_emoji_escaped<wchar_t>);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
+BENCHMARK_MAIN();
 
-  benchmark::RunSpecifiedBenchmarks();
-}
 #else
 int main(int, char**) { return 0; }
 #endif
