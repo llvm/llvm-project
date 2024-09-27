@@ -99,10 +99,10 @@ __attribute__((target_version("jscvt"))) void Decl();
 
 class Out {
   int __attribute__((target_version("bti"))) func(void);
-  int __attribute__((target_version("ssbs2"))) func(void);
+  int __attribute__((target_version("ssbs"))) func(void);
 };
 int __attribute__((target_version("bti"))) Out::func(void) { return 1; }
-int __attribute__((target_version("ssbs2"))) Out::func(void) { return 2; }
+int __attribute__((target_version("ssbs"))) Out::func(void) { return 2; }
 // expected-error@+3 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
 // expected-note@-3 {{member declaration nearly matches}}
 // expected-note@-3 {{member declaration nearly matches}}

@@ -31,10 +31,6 @@ static bool isKnownAndSupported(const char *name) {
 }
 
 static uint64_t deriveImplicitFeatures(uint64_t features) {
-  // FEAT_SSBS2 implies FEAT_SSBS
-  if ((1ULL << FEAT_SSBS2) & features)
-    features |= (1ULL << FEAT_SSBS);
-
   // FEAT_FP is always enabled
   features |= (1ULL << FEAT_FP);
 
