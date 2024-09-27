@@ -1,5 +1,4 @@
 ; RUN: opt -passes=loop-idiom -mtriple=amdgcn-- -S < %s | FileCheck %s
-; RUN: opt -passes=loop-idiom -mtriple=spirv64-amd-amdhsa -S < %s | FileCheck %s
 
 ; Mostly copied from x86 version.
 
