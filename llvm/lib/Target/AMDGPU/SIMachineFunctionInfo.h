@@ -696,8 +696,8 @@ public:
 
   void setFlag(Register Reg, uint8_t Flag) {
     assert(Reg.isVirtual());
-    if (VRegFlags.inBounds(Reg))
-      VRegFlags[Reg] |= Flag;
+    VRegFlags.grow(Reg);
+    VRegFlags[Reg] |= Flag;
   }
 
   bool checkFlag(Register Reg, uint8_t Flag) const {

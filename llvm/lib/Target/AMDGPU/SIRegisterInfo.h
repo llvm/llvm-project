@@ -457,6 +457,16 @@ public:
   // No check if the subreg is supported by the current RC is made.
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
+
+  std::pair<bool, uint8_t> getVRegFlagValue(StringRef Name) const override {
+    if (Name == "WWM_REG") {
+      return {true, AMDGPU::VirtRegFlag::WWM_REG};
+    }
+    return {false, 0};
+  }
+
+  SmallVector<std::string>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
 };
 
 namespace AMDGPU {
