@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Constant.h"
+#include "llvm/SandboxIR/Argument.h"
+#include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
-#include "llvm/SandboxIR/SandboxIR.h" // TODO: Try to remove this
 
 namespace llvm::sandboxir {
 
