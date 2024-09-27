@@ -1723,7 +1723,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
       auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != Lane0->getOpcode())
         return;
-      if (any_of(R->operands(), [Lane0, Idx=I](VPValue *V) {
+      if (any_of(R->operands(), [Lane0, Idx = I](VPValue *V) {
             return !supportedLoad(Lane0, V, Idx);
           }))
         return;
