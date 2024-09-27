@@ -918,6 +918,13 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
   const DbgValueLoc *DVal = &Single.getValueLoc();
   const DIExpression *Expr = Single.getExpr();
 
+  if (Asm->TM.getTargetTriple().isNVPTX() && DD->tuneForGDB() &&
+      !Single.getExpr()) {
+    // Lack of expression means it is a register.  Registers for PTX need to
+    // be marked with DW_AT_address_class = 2.  See
+    // https://docs.nvidia.com/cuda/archive/10.0/ptx-writers-guide-to-interoperability/index.html#cuda-specific-dwarf
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1, 2);
+  }
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
@@ -1398,7 +1405,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
-  return DD->getDwarfVersion() == 4 && !DD->tuneForLLDB();
+  return DD->getDwarfVersion() <= 4 && !DD->tuneForLLDB();
 }
 
 dwarf::Tag DwarfCompileUnit::getDwarf5OrGNUTag(dwarf::Tag Tag) const {

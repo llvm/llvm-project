@@ -4051,12 +4051,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto [Res, SubByReg] = MI.getFirst2Regs();
     LLT Ty = MRI.getType(Res);
 
-    // TODO: Handle vector types once we are able to
-    // represent them.
-    if (Ty.isVector())
-      return UnableToLegalize;
-    auto SignMask =
-        MIRBuilder.buildConstant(Ty, APInt::getSignMask(Ty.getSizeInBits()));
+    auto SignMask = MIRBuilder.buildConstant(
+        Ty, APInt::getSignMask(Ty.getScalarSizeInBits()));
     MIRBuilder.buildXor(Res, SubByReg, SignMask);
     MI.eraseFromParent();
     return Legalized;
