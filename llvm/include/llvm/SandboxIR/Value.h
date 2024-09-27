@@ -22,6 +22,10 @@ namespace llvm::sandboxir {
 class Context;
 class FuncletPadInst;
 class Type;
+class GlobalValue;
+class GlobalObject;
+class Module;
+class UnaryInstruction;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
