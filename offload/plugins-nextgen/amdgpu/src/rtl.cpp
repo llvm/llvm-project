@@ -1283,96 +1283,12 @@ private:
   }
 
   /// Compute the max kernel occupancy for AMD GPU
-  unsigned computeMaxOccupancy(GenericDeviceTy &Device) const override {
-    uint32_t GroupSegmentSize = (*KernelInfo).GroupSegmentList;
-    uint32_t SGPRCount = (*KernelInfo).SGPRCount;
-    uint32_t VGPRCount = (*KernelInfo).VGPRCount;
-    uint32_t MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
-
-    // Default number of waves per EU
-    unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
-
-    // Get GPU info
-    bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
-    if (IsEquippedWithGFX90A) {
-      MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
-    }
-
-    unsigned Occupancy = INT_MAX;
-
-    // Contraint on SGPR
-    if (SGPRCount) {
-      Occupancy = getOccupancyWithNumSGPRs(SGPRCount);
-    }
-
-    Occupancy = std::min(Occupancy, MaxWavesPerEU);
-
-    // Constraint on VGPR
-    // Follow the logic on the backend
-    // Ref:
-    // llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getNumWavesPerEUWithNumVGPRs
-    if (VGPRCount) {
-      unsigned WaveNumByVGPR =
-          llvm::omp::amdgpu_arch::VGPRNumPerThread / VGPRCount;
-      Occupancy = std::min(Occupancy, WaveNumByVGPR);
-    }
-
-    // Constraint on LDS
-    if (GroupSegmentSize) {
-      unsigned WaveNumByLDS = getOccupancyWithLDS(
-          GroupSegmentSize, MaxWavesPerEU, MaxFlatWorkgroupSize);
-      Occupancy = std::min(Occupancy, WaveNumByLDS);
-    } else {
-      // If 0 LDS required by the kernel
-      Occupancy = std::min(Occupancy, MaxWavesPerEU);
-    }
-
-    // Cache the value before return
-    MaxOccupancy = Occupancy;
-
-    return Occupancy;
-  }
+  unsigned computeMaxOccupancy(GenericDeviceTy &Device) const override;
 
   /// Compute the achieved kernel occupancy for AMD GPU.
   unsigned computeAchievedOccupancy(GenericDeviceTy &Device,
                                     uint32_t numThreads,
-                                    uint64_t numTeams) const override {
-    // Check if max occupancy is available
-    if (MaxOccupancy <= 0) {
-      return 0;
-    }
-
-    // Default number of waves per EU.
-    unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
-
-    // Get GPU info.
-    bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
-    if (IsEquippedWithGFX90A) {
-      MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
-    }
-
-    // Get the max number of waves per CU.
-    unsigned MaxNumWaves = MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
-    // Get the number of waves from the kernel launch parameters.
-    unsigned AchievedNumWaves =
-        divideCeil(numThreads, llvm::omp::amdgpu_arch::WaveFrontSize64) *
-        numTeams;
-    // Get the number of waves per CU.
-    AchievedNumWaves =
-        divideCeil(AchievedNumWaves, Device.getNumComputeUnits());
-    // Get the min waves.
-    AchievedNumWaves = std::min(MaxNumWaves, AchievedNumWaves);
-    // Total number of wave slots each CU supports.
-    unsigned TotalWaveSlotsPerCU =
-        MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
-    // Compute occupancy ratio representing in percentage.
-    unsigned Occupancy = (AchievedNumWaves * 100) / TotalWaveSlotsPerCU;
-
-    // Cache the result.
-    AchievedOccupancy = Occupancy;
-
-    return Occupancy;
-  }
+                                    uint64_t numTeams) const override;
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -4512,6 +4428,16 @@ private:
 
   /// True if in multi-device mode.
   bool IsMultiDeviceEnabled = false;
+
+public:
+  /// Return if it is an MI300 series device.
+  bool checkIfMI300Device() {
+    // Include MI300, MI300X, MI308.
+    llvm::StringRef StrGfxName(ComputeUnitKind);
+    return llvm::StringSwitch<bool>(StrGfxName)
+        .Case("gfx942", true)
+        .Default(false);
+  }
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -5302,6 +5228,103 @@ void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
 
   auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
   FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
+}
+
+/// Compute the max kernel occupancy for AMD GPU
+unsigned AMDGPUKernelTy::computeMaxOccupancy(GenericDeviceTy &Device) const {
+  uint32_t GroupSegmentSize = (*KernelInfo).GroupSegmentList;
+  uint32_t SGPRCount = (*KernelInfo).SGPRCount;
+  uint32_t VGPRCount = (*KernelInfo).VGPRCount;
+  uint32_t MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+
+  // Default number of waves per EU
+  unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
+
+  // Get GPU info
+  AMDGPUDeviceTy &AMDDevice = static_cast<AMDGPUDeviceTy &>(Device);
+  bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
+  bool IsEquippedWithMI300 = AMDDevice.checkIfMI300Device();
+
+  if (IsEquippedWithGFX90A || IsEquippedWithMI300) {
+    MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
+  }
+
+  unsigned Occupancy = INT_MAX;
+
+  // Contraint on SGPR
+  if (SGPRCount) {
+    Occupancy = getOccupancyWithNumSGPRs(SGPRCount);
+  }
+
+  Occupancy = std::min(Occupancy, MaxWavesPerEU);
+
+  // Constraint on VGPR
+  // Follow the logic on the backend
+  // Ref:
+  // llvm-project/llvm/lib/Target/AMDGPU/Utils/AMDGPUBaseInfo.cpp:getNumWavesPerEUWithNumVGPRs
+  if (VGPRCount) {
+    unsigned WaveNumByVGPR =
+        llvm::omp::amdgpu_arch::VGPRNumPerThread / VGPRCount;
+    Occupancy = std::min(Occupancy, WaveNumByVGPR);
+  }
+
+  // Constraint on LDS
+  if (GroupSegmentSize) {
+    unsigned WaveNumByLDS = getOccupancyWithLDS(GroupSegmentSize, MaxWavesPerEU,
+                                                MaxFlatWorkgroupSize);
+    Occupancy = std::min(Occupancy, WaveNumByLDS);
+  } else {
+    // If 0 LDS required by the kernel
+    Occupancy = std::min(Occupancy, MaxWavesPerEU);
+  }
+
+  // Cache the value before return
+  MaxOccupancy = Occupancy;
+
+  return Occupancy;
+}
+
+/// Compute the achieved kernel occupancy for AMD GPU.
+unsigned AMDGPUKernelTy::computeAchievedOccupancy(GenericDeviceTy &Device,
+                                                  uint32_t numThreads,
+                                                  uint64_t numTeams) const {
+  // Check if max occupancy is available
+  if (MaxOccupancy <= 0) {
+    return 0;
+  }
+
+  // Default number of waves per EU.
+  unsigned MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU10;
+
+  // Get GPU info.
+  AMDGPUDeviceTy &AMDDevice = static_cast<AMDGPUDeviceTy &>(Device);
+  bool IsEquippedWithGFX90A = Device.hasGfx90aDevice();
+  bool IsEquippedWithMI300 = AMDDevice.checkIfMI300Device();
+
+  if (IsEquippedWithGFX90A || IsEquippedWithMI300) {
+    MaxWavesPerEU = llvm::omp::amdgpu_arch::MaxWavesPerEU8;
+  }
+
+  // Get the max number of waves per CU.
+  unsigned MaxNumWaves = MaxOccupancy * llvm::omp::amdgpu_arch::SIMDPerCU;
+  // Get the number of waves from the kernel launch parameters.
+  unsigned AchievedNumWaves =
+      divideCeil(numThreads, llvm::omp::amdgpu_arch::WaveFrontSize64) *
+      numTeams;
+  // Get the number of waves per CU.
+  AchievedNumWaves = divideCeil(AchievedNumWaves, Device.getNumComputeUnits());
+  // Get the min waves.
+  AchievedNumWaves = std::min(MaxNumWaves, AchievedNumWaves);
+  // Total number of wave slots each CU supports.
+  unsigned TotalWaveSlotsPerCU =
+      MaxWavesPerEU * llvm::omp::amdgpu_arch::SIMDPerCU;
+  // Compute occupancy ratio representing in percentage.
+  unsigned Occupancy = (AchievedNumWaves * 100) / TotalWaveSlotsPerCU;
+
+  // Cache the result.
+  AchievedOccupancy = Occupancy;
+
+  return Occupancy;
 }
 
 } // namespace plugin
