@@ -18,25 +18,26 @@
 #include <concepts>
 #include <flat_map>
 #include <functional>
+#include <tuple>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
 
 // Constraints: is_constructible_v<pair<key_type, mapped_type>, P> is true.
-template <class M, class...Args>
-concept CanInsert = requires (M m, Args&&... args) {
-  m.insert(std::forward<Args>(args)...);
-};
+template <class M, class... Args>
+concept CanInsert = requires(M m, Args&&... args) { m.insert(std::forward<Args>(args)...); };
 
-using Map = std::flat_map<int, double>;
+using Map  = std::flat_map<int, double>;
 using Iter = Map::const_iterator;
 
 static_assert(CanInsert<Map, std::pair<short, double>&&>);
 static_assert(CanInsert<Map, Iter, std::pair<short, double>&&>);
+static_assert(CanInsert<Map, std::tuple<short, double>&&>);
+static_assert(CanInsert<Map, Iter, std::tuple<short, double>&&>);
 static_assert(!CanInsert<Map, int>);
 static_assert(!CanInsert<Map, Iter, int>);
-
 
 static int expensive_comparisons = 0;
 static int cheap_comparisons     = 0;
@@ -130,6 +131,24 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(decltype(m.insert(Evil())), std::pair<M::iterator, bool>);
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), Evil())), M::iterator);
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
+  }
+  {
+    auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap    = std::decay_t<decltype(m)>;
+      using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
+      tuple_type t(key_arg, value_arg);
+      m.insert(t);
+    };
+    test_emplace_exception_guarantee(insert_func);
+  }
+  {
+    auto insert_func_iter = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap    = std::decay_t<decltype(m)>;
+      using tuple_type = std::tuple<typename FlatMap::key_type, typename FlatMap::mapped_type>;
+      tuple_type t(key_arg, value_arg);
+      m.insert(m.begin(), t);
+    };
+    test_emplace_exception_guarantee(insert_func_iter);
   }
   return 0;
 }

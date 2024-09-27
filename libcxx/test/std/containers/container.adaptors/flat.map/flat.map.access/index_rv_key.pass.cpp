@@ -65,5 +65,14 @@ int main(int, char**) {
     assert(m.size() == 2);
   }
 
+  {
+    auto index_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap                             = std::decay_t<decltype(m)>;
+      typename FlatMap::key_type key            = key_arg;
+      const typename FlatMap::mapped_type value = value_arg;
+      m[std::move(key)]                         = value;
+    };
+    test_emplace_exception_guarantee(index_func);
+  }
   return 0;
 }

@@ -17,6 +17,7 @@
 #include <functional>
 #include <deque>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
@@ -73,5 +74,14 @@ int main(int, char**) {
     assert(*std::next(m.begin(), 3) == V(4, 1));
   }
 
+  {
+    auto insert_func = [](auto& m, const auto& newValues) {
+      using FlatMap                        = std::decay_t<decltype(m)>;
+      using value_type                     = typename FlatMap::value_type;
+      std::initializer_list<value_type> il = {{newValues[0].first, newValues[0].second}};
+      m.insert(il);
+    };
+    test_insert_range_exception_guarantee(insert_func);
+  }
   return 0;
 }

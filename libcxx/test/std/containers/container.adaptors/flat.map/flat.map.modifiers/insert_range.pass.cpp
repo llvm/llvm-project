@@ -20,6 +20,7 @@
 #include <ranges>
 #include <vector>
 
+#include "../helpers.h"
 #include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -99,6 +100,10 @@ int main(int, char**) {
     m.insert_range(a);
     std::pair<int, int> expected[] = {{1, 1}, {3, 3}, {4, 4}, {5, 5}};
     assert(std::ranges::equal(m, expected));
+  }
+  {
+    auto insert_func = [](auto& m, const auto& newValues) { m.insert_range(newValues); };
+    test_insert_range_exception_guarantee(insert_func);
   }
   return 0;
 }

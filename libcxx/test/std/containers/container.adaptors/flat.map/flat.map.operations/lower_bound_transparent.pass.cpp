@@ -68,6 +68,15 @@ int main(int, char**) {
     test_lower_bound(cm, "golf", 5);
     test_lower_bound(cm, "zzz", 5);
   }
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    auto it = m.lower_bound(Transparent<int>{3});
+    assert(it != m.end());
+    assert(transparent_used);
+  }
 #if 0
 // do we really want to support this weird comparator that gives different answer for Key and Kp?
   {

@@ -19,6 +19,7 @@
 #include <functional>
 #include <utility>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
@@ -109,5 +110,15 @@ int main(int, char**) {
     assert(n == 1);
     assert(m.empty());
   }
+  {
+    auto erase_function = [](auto& m, auto key_arg) {
+      using Map = std::decay_t<decltype(m)>;
+      using Key = typename Map::key_type;
+      const Key key{key_arg};
+      m.erase(key);
+    };
+    test_erase_exception_guarantee(erase_function);
+  }
+
   return 0;
 }

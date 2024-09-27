@@ -45,6 +45,15 @@ int main(int, char**) {
     assert(m.count(Transparent<std::string>{""}) == 0);
     assert(m.count(Transparent<std::string>{"g"}) == 0);
   }
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    auto n = m.count(Transparent<int>{3});
+    assert(n == 1);
+    assert(transparent_used);
+  }
 #if 0
 // do we really want to support this weird comparator that gives different answer for Key and Kp?
   {

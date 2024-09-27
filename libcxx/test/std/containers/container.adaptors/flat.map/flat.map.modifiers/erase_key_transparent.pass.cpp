@@ -132,5 +132,23 @@ int main(int, char**) {
     assert(it == m.begin());
     assert((m == M{{2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}}));
   }
+  {
+    bool transparent_used = false;
+    TransparentComparator c(transparent_used);
+    std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
+    assert(!transparent_used);
+    auto n = m.erase(Transparent<int>{3});
+    assert(n == 1);
+    assert(transparent_used);
+  }
+  {
+    auto erase_transparent = [](auto& m, auto key_arg) {
+      using Map = std::decay_t<decltype(m)>;
+      using Key = typename Map::key_type;
+      m.erase(Transparent<Key>{key_arg});
+    };
+    test_erase_exception_guarantee(erase_transparent);
+  }
+
   return 0;
 }

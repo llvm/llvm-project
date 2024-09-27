@@ -21,6 +21,7 @@
 #include "../../../Emplaceable.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"
+#include "../helpers.h"
 
 #if defined(_LIBCPP_VERSION)
 // spec only specifies `emplace(Args&&...)` is_constructible_v<pair<key_type, mapped_type>, Args...> is true.
@@ -111,6 +112,13 @@ int main(int, char**) {
     assert(m.size() == 1);
     assert(m.begin()->first == 2);
     assert(m.begin()->second == 3.5);
+  }
+
+  {
+    auto emplace_func = [](auto& m, auto key_arg, auto value_arg) {
+      m.emplace_hint(m.begin(), std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
+    };
+    test_emplace_exception_guarantee(emplace_func);
   }
 
   return 0;

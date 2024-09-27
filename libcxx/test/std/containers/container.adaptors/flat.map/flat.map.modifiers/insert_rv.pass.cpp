@@ -21,6 +21,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "test_macros.h"
+#include "../helpers.h"
 
 template <class Container, class Pair>
 void do_insert_rv_test() {
@@ -104,6 +105,15 @@ int main(int, char**) {
     assert(m.size() == 3);
     assert(r.first->first == 3);
     assert(r.first->second == 3);
+  }
+  {
+    auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap    = std::decay_t<decltype(m)>;
+      using value_type = typename FlatMap::value_type;
+      value_type p(std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
+      m.insert(std::move(p));
+    };
+    test_emplace_exception_guarantee(insert_func);
   }
 
   return 0;

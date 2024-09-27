@@ -18,6 +18,7 @@
 #include <deque>
 
 #include "test_macros.h"
+#include "../helpers.h"
 #include "min_allocator.h"
 
 template <class Container>
@@ -70,6 +71,15 @@ int main(int, char**) {
                       std::deque<int, min_allocator<int>>,
                       std::deque<double, min_allocator<double>>>;
     do_insert_cv_test<M>();
+  }
+  {
+    auto insert_func = [](auto& m, auto key_arg, auto value_arg) {
+      using FlatMap    = std::decay_t<decltype(m)>;
+      using value_type = typename FlatMap::value_type;
+      const value_type p(std::piecewise_construct, std::tuple(key_arg), std::tuple(value_arg));
+      m.insert(p);
+    };
+    test_emplace_exception_guarantee(insert_func);
   }
   return 0;
 }

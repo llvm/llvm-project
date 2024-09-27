@@ -18,6 +18,7 @@
 #include <functional>
 #include <deque>
 
+#include "../helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "min_allocator.h"
@@ -89,5 +90,9 @@ int main(int, char**) {
     assert(m == expected2);
   }
 
+  {
+    auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
+    test_insert_range_exception_guarantee(insert_func);
+  }
   return 0;
 }

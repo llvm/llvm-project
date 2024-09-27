@@ -53,5 +53,26 @@ int main(int, char**) {
     LIBCPP_ASSERT(m.values().size() == 0);
   }
 
+  {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    using KeyContainer   = std::vector<int>;
+    using ValueContainer = ThrowOnMoveContainer<int>;
+    using M              = std::flat_map<int, int, std::ranges::less, KeyContainer, ValueContainer>;
+
+    M m;
+    m.emplace(1, 1);
+    m.emplace(2, 2);
+    try {
+      auto c = std::move(m).extract();
+      assert(false);
+    } catch (int) {
+      assert(m.keys().size() == m.values().size());
+      assert(is_sorted_and_unique(m.keys()));
+      // In libc++, we try to erase the key after value emplacement failure.
+      // and after erasure failure, we clear the flat_map
+      LIBCPP_ASSERT(m.size() == 0);
+    }
+#endif
+  }
   return 0;
 }
