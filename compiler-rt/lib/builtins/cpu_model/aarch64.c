@@ -30,9 +30,7 @@ typedef struct __ifunc_arg_t {
 
 // LSE support detection for out-of-line atomics
 // using HWCAP and Auxiliary vector
-#if defined(_MSC_VER)
-__declspec(allocate(".data"))
-#else
+#if !defined(_MSC_VER)
 __attribute__((__visibility__("hidden"), __nocommon__))
 #endif
 _Bool __aarch64_have_lse_atomics = false;
