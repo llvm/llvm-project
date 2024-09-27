@@ -32,6 +32,7 @@ struct FunctionsYAML;
 
 namespace gsym {
 class FileWriter;
+class GsymCreator;
 struct FunctionInfo;
 struct CallSiteInfo {
   enum Flags : uint8_t {
@@ -45,7 +46,7 @@ struct CallSiteInfo {
   };
 
   /// The return address of the call site.
-  uint64_t ReturnAddress;
+  uint64_t ReturnAddress = 0;
 
   /// Offsets into the string table for function names regex patterns.
   std::vector<uint32_t> MatchRegex;
@@ -57,12 +58,9 @@ struct CallSiteInfo {
   ///
   /// \param Data The binary stream to read the data from.
   /// \param Offset The current offset within the data stream.
-  /// \param BaseAddr The base address for decoding (unused here but included
-  /// for consistency).
-  ///
   /// \returns A CallSiteInfo or an error describing the issue.
-  static llvm::Expected<CallSiteInfo>
-  decode(DataExtractor &Data, uint64_t &Offset, uint64_t BaseAddr);
+  static llvm::Expected<CallSiteInfo> decode(DataExtractor &Data,
+                                             uint64_t &Offset);
 
   /// Encode this CallSiteInfo object into a FileWriter stream.
   ///
@@ -77,12 +75,8 @@ struct CallSiteInfoCollection {
   /// Decode a CallSiteInfoCollection object from a binary data stream.
   ///
   /// \param Data The binary stream to read the data from.
-  /// \param BaseAddr The base address for decoding (unused here but included
-  /// for consistency).
-  ///
   /// \returns A CallSiteInfoCollection or an error describing the issue.
-  static llvm::Expected<CallSiteInfoCollection> decode(DataExtractor &Data,
-                                                       uint64_t BaseAddr);
+  static llvm::Expected<CallSiteInfoCollection> decode(DataExtractor &Data);
 
   /// Encode this CallSiteInfoCollection object into a FileWriter stream.
   ///
@@ -91,29 +85,18 @@ struct CallSiteInfoCollection {
   llvm::Error encode(FileWriter &O) const;
 };
 
-bool operator==(const CallSiteInfoCollection &LHS,
-                const CallSiteInfoCollection &RHS);
-
-bool operator==(const CallSiteInfo &LHS, const CallSiteInfo &RHS);
-
 class CallSiteInfoLoader {
 public:
   /// Constructor that initializes the CallSiteInfoLoader with necessary data
   /// structures.
   ///
   /// \param StringOffsetMap A reference to a DenseMap that maps existing string
-  /// offsets to CachedHashStringRef. \param StrTab A reference to a
-  /// StringTableBuilder used for managing looking up and creating new strings.
-  /// \param StringStorage A reference to a StringSet for storing the data for
-  /// generated strings.
-  CallSiteInfoLoader(DenseMap<uint64_t, CachedHashStringRef> &StringOffsetMap,
-                     StringTableBuilder &StrTab, StringSet<> &StringStorage)
-      : StringOffsetMap(StringOffsetMap), StrTab(StrTab),
-        StringStorage(StringStorage) {}
+  /// offsets to CachedHashStringRef.
+  /// \param StrTab A reference to a StringTableBuilder used for managing
+  /// looking up and creating new strings. \param StringStorage A reference to a
+  /// StringSet for storing the data for generated strings.
+  CallSiteInfoLoader(GsymCreator &GCreator) : GCreator(GCreator) {}
 
-  /// Loads call site information from a YAML file and populates the provided
-  /// FunctionInfo vector.
-  ///
   /// This method reads the specified YAML file, parses its content, and updates
   /// the `Funcs` vector with call site information based on the YAML data.
   ///
@@ -121,37 +104,15 @@ public:
   /// populated.
   /// \param YAMLFile A StringRef representing the path to the YAML
   /// file to be loaded.
-  ///
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during the loading process.
   llvm::Error loadYAML(std::vector<FunctionInfo> &Funcs, StringRef YAMLFile);
 
 private:
-  /// Retrieves an existing string from the StringOffsetMap using the provided
-  /// offset.
-  ///
-  /// \param offset A 32-bit unsigned integer representing the offset of the
-  /// string.
-  ///
-  /// \returns A StringRef corresponding to the string for the given offset.
-  ///
-  /// \note This method asserts that the offset exists in the StringOffsetMap.
-  StringRef stringFromOffset(uint32_t offset) const;
-
-  /// Obtains the offset corresponding to a given string in the StrTab. If the
-  /// string does not already exist, it is created.
-  ///
-  /// \param str A StringRef representing the string for which the offset is
-  /// requested.
-  ///
-  /// \returns A 32-bit unsigned integer representing the offset of the string.
-  uint32_t offsetFromString(StringRef str);
-
   /// Builds a map from function names to FunctionInfo pointers based on the
   /// provided `Funcs` vector.
   ///
   /// \param Funcs A reference to a vector of FunctionInfo objects.
-  ///
   /// \returns A StringMap mapping function names (StringRef) to their
   /// corresponding FunctionInfo pointers.
   StringMap<FunctionInfo *> buildFunctionMap(std::vector<FunctionInfo> &Funcs);
@@ -162,21 +123,14 @@ private:
   /// object containing parsed YAML data.
   /// \param FuncMap A reference to a StringMap mapping function names to
   /// FunctionInfo pointers.
-  ///
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during processing.
   llvm::Error
   processYAMLFunctions(const llvm::yaml::FunctionsYAML &functionsYAML,
                        StringMap<FunctionInfo *> &FuncMap);
 
-  /// Map of existing string offsets to CachedHashStringRef.
-  DenseMap<uint64_t, CachedHashStringRef> &StringOffsetMap;
-
-  /// The gSYM string table builder.
-  StringTableBuilder &StrTab;
-
-  /// The gSYM string storage - we store generated strings here.
-  StringSet<> &StringStorage;
+  /// Reference to the parent Gsym Creator object.
+  GsymCreator &GCreator;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const CallSiteInfo &CSI);

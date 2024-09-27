@@ -329,6 +329,15 @@ public:
   /// \returns The unique 32 bit offset into the string table.
   uint32_t insertString(StringRef S, bool Copy = true);
 
+  /// Retrieve a string fromt he GSYM string table given its offset.
+  ///
+  /// The offset is assumed to be a valid offset into the string table.
+  /// otherwise an assert will be triggered.
+  ///
+  /// \param offset The offset of the string to retrieve, previously returned by
+  /// insertString. \returns The string at the given offset in the string table.
+  StringRef getString(uint32_t offset);
+
   /// Insert a file into this GSYM creator.
   ///
   /// Inserts a file by adding a FileEntry into the "Files" member variable if

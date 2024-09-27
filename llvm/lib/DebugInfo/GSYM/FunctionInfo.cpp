@@ -100,7 +100,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
 
       case InfoType::CallSiteInfo:
         if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
-                llvm::gsym::CallSiteInfoCollection::decode(InfoData, BaseAddr))
+                llvm::gsym::CallSiteInfoCollection::decode(InfoData))
           FI.CallSites = std::move(CI.get());
         else
           return CI.takeError();

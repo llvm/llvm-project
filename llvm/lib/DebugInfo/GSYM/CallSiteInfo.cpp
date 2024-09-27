@@ -10,6 +10,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/YAMLParser.h"
@@ -23,17 +24,17 @@
 using namespace llvm;
 using namespace gsym;
 
-llvm::Error CallSiteInfo::encode(FileWriter &O) const {
+Error CallSiteInfo::encode(FileWriter &O) const {
   O.writeU64(ReturnAddress);
   O.writeU8(Flags);
   O.writeU32(MatchRegex.size());
   for (uint32_t Entry : MatchRegex)
     O.writeU32(Entry);
-  return llvm::Error::success();
+  return Error::success();
 }
 
-llvm::Expected<CallSiteInfo>
-CallSiteInfo::decode(DataExtractor &Data, uint64_t &Offset, uint64_t BaseAddr) {
+Expected<CallSiteInfo> CallSiteInfo::decode(DataExtractor &Data,
+                                            uint64_t &Offset) {
   CallSiteInfo CSI;
 
   // Read ReturnAddress
@@ -68,17 +69,17 @@ CallSiteInfo::decode(DataExtractor &Data, uint64_t &Offset, uint64_t BaseAddr) {
   return CSI;
 }
 
-llvm::Error CallSiteInfoCollection::encode(FileWriter &O) const {
+Error CallSiteInfoCollection::encode(FileWriter &O) const {
   O.writeU32(CallSites.size());
   for (const CallSiteInfo &CSI : CallSites) {
-    if (llvm::Error Err = CSI.encode(O))
+    if (Error Err = CSI.encode(O))
       return Err;
   }
-  return llvm::Error::success();
+  return Error::success();
 }
 
-llvm::Expected<CallSiteInfoCollection>
-CallSiteInfoCollection::decode(DataExtractor &Data, uint64_t BaseAddr) {
+Expected<CallSiteInfoCollection>
+CallSiteInfoCollection::decode(DataExtractor &Data) {
   CallSiteInfoCollection CSC;
   uint64_t Offset = 0;
 
@@ -91,8 +92,7 @@ CallSiteInfoCollection::decode(DataExtractor &Data, uint64_t BaseAddr) {
 
   CSC.CallSites.reserve(NumCallSites);
   for (uint32_t i = 0; i < NumCallSites; ++i) {
-    llvm::Expected<CallSiteInfo> ECSI =
-        CallSiteInfo::decode(Data, Offset, BaseAddr);
+    Expected<CallSiteInfo> ECSI = CallSiteInfo::decode(Data, Offset);
     if (!ECSI)
       return ECSI.takeError();
     CSC.CallSites.emplace_back(*ECSI);
@@ -108,7 +108,7 @@ namespace yaml {
 struct CallSiteYAML {
   // The offset of the return address of the call site - relative to the start
   // of the function.
-  llvm::yaml::Hex64 return_offset;
+  Hex64 return_offset;
   std::vector<std::string> match_regex;
   std::vector<std::string> flags;
 };
@@ -149,34 +149,22 @@ template <> struct MappingTraits<FunctionsYAML> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(CallSiteYAML)
 LLVM_YAML_IS_SEQUENCE_VECTOR(FunctionYAML)
 
-// Implementation of CallSiteInfoLoader
-StringRef CallSiteInfoLoader::stringFromOffset(uint32_t offset) const {
-  assert(StringOffsetMap.count(offset) &&
-         "expected function name offset to already be in StringOffsetMap");
-  return StringOffsetMap.find(offset)->second.val();
-}
-
-uint32_t CallSiteInfoLoader::offsetFromString(StringRef str) {
-  return StrTab.add(StringStorage.insert(str).first->getKey());
-}
-
-llvm::Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
-                                         StringRef YAMLFile) {
+Error CallSiteInfoLoader::loadYAML(std::vector<FunctionInfo> &Funcs,
+                                   StringRef YAMLFile) {
   // Step 1: Read YAML file
-  auto BufferOrError = llvm::MemoryBuffer::getFile(YAMLFile);
+  auto BufferOrError = MemoryBuffer::getFile(YAMLFile);
   if (!BufferOrError)
     return errorCodeToError(BufferOrError.getError());
 
-  std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(*BufferOrError);
+  std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrError);
 
   // Step 2: Parse YAML content
-  llvm::yaml::FunctionsYAML functionsYAML;
-  llvm::yaml::Input yin(Buffer->getMemBufferRef());
+  yaml::FunctionsYAML functionsYAML;
+  yaml::Input yin(Buffer->getMemBufferRef());
   yin >> functionsYAML;
-  if (yin.error()) {
-    return llvm::createStringError(yin.error(), "Error parsing YAML file: %s\n",
-                                   Buffer->getBufferIdentifier().str().c_str());
-  }
+  if (yin.error())
+    return createStringError(yin.error(), "Error parsing YAML file: %s\n",
+                             Buffer->getBufferIdentifier().str().c_str());
 
   // Step 3: Build function map from Funcs
   auto FuncMap = buildFunctionMap(Funcs);
@@ -189,7 +177,7 @@ StringMap<FunctionInfo *>
 CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
   StringMap<FunctionInfo *> FuncMap;
   auto insertFunc = [&](auto &Function) {
-    std::string FuncName = stringFromOffset(Function.Name).str();
+    StringRef FuncName = GCreator.getString(Function.Name);
     // If the function name is already in the map, don't update it. This way we
     // preferentially use the first encountered function. Since symbols are
     // loaded from dSYM first, we end up preferring keeping track of symbols
@@ -208,19 +196,19 @@ CallSiteInfoLoader::buildFunctionMap(std::vector<FunctionInfo> &Funcs) {
   return FuncMap;
 }
 
-llvm::Error CallSiteInfoLoader::processYAMLFunctions(
-    const llvm::yaml::FunctionsYAML &functionsYAML,
+Error CallSiteInfoLoader::processYAMLFunctions(
+    const yaml::FunctionsYAML &functionsYAML,
     StringMap<FunctionInfo *> &FuncMap) {
   // For each function in the YAML file
   for (const auto &FuncYAML : functionsYAML.functions) {
-    auto it = FuncMap.find(FuncYAML.name);
-    if (it == FuncMap.end()) {
-      return llvm::createStringError(
+    auto It = FuncMap.find(FuncYAML.name);
+    if (It == FuncMap.end())
+      return createStringError(
           std::errc::invalid_argument,
           "Can't find function '%s' specified in callsite YAML\n",
           FuncYAML.name.c_str());
-    }
-    FunctionInfo *FuncInfo = it->second;
+
+    FunctionInfo *FuncInfo = It->second;
     // Create a CallSiteInfoCollection if not already present
     if (!FuncInfo->CallSites)
       FuncInfo->CallSites = CallSiteInfoCollection();
@@ -229,11 +217,11 @@ llvm::Error CallSiteInfoLoader::processYAMLFunctions(
       // Since YAML has specifies relative return offsets, add the function
       // start address to make the offset absolute.
       CSI.ReturnAddress = FuncInfo->Range.start() + CallSiteYAML.return_offset;
-      for (const auto &Regex : CallSiteYAML.match_regex)
-        CSI.MatchRegex.push_back(offsetFromString(Regex));
+      for (const auto &Regex : CallSiteYAML.match_regex) {
+        uint32_t StrOffset = GCreator.insertString(Regex);
+        CSI.MatchRegex.push_back(StrOffset);
+      }
 
-      // Initialize flags to None
-      CSI.Flags = CallSiteInfo::None;
       // Parse flags and combine them
       for (const auto &FlagStr : CallSiteYAML.flags) {
         if (FlagStr == "InternalCall") {
@@ -241,18 +229,18 @@ llvm::Error CallSiteInfoLoader::processYAMLFunctions(
         } else if (FlagStr == "ExternalCall") {
           CSI.Flags |= static_cast<uint8_t>(CallSiteInfo::ExternalCall);
         } else {
-          return llvm::createStringError(std::errc::invalid_argument,
-                                         "Unknown flag in callsite YAML: %s\n",
-                                         FlagStr.c_str());
+          return createStringError(std::errc::invalid_argument,
+                                   "Unknown flag in callsite YAML: %s\n",
+                                   FlagStr.c_str());
         }
       }
       FuncInfo->CallSites->CallSites.push_back(CSI);
     }
   }
-  return llvm::Error::success();
+  return Error::success();
 }
 
-raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const CallSiteInfo &CSI) {
+raw_ostream &gsym::operator<<(raw_ostream &OS, const CallSiteInfo &CSI) {
   OS << "  Return=" << HEX64(CSI.ReturnAddress);
   OS << "  Flags=" << HEX8(CSI.Flags);
 
@@ -265,8 +253,8 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const CallSiteInfo &CSI) {
   return OS;
 }
 
-raw_ostream &llvm::gsym::operator<<(raw_ostream &OS,
-                                    const CallSiteInfoCollection &CSIC) {
+raw_ostream &gsym::operator<<(raw_ostream &OS,
+                              const CallSiteInfoCollection &CSIC) {
   for (const auto &CS : CSIC.CallSites) {
     OS << CS;
     OS << "\n";

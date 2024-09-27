@@ -97,7 +97,7 @@ static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
 static bool StoreMergedFunctionInfo = false;
-static std::vector<std::string> CallSiteYamlPaths;
+static std::string CallSiteYamlPath;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -180,10 +180,9 @@ static void parseArgs(int argc, char **argv) {
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
   StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_callsites_from_yaml_EQ)) {
-    if (A->getValue() && A->getValue()[0] != '\0')
-      CallSiteYamlPaths.emplace_back(A->getValue());
-    else {
+  if (Args.hasArg(OPT_callsites_from_yaml_EQ)) {
+    CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_from_yaml_EQ);
+    if (CallSiteYamlPath.empty()) {
       llvm::errs()
           << ToolName
           << ": --callsites-from-yaml option requires a non-empty argument.\n";
@@ -384,11 +383,9 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
     return Err;
 
   // If any call site YAML files were specified, load them now.
-  for (const auto &yamlPath : CallSiteYamlPaths) {
-    if (auto Err = Gsym.loadCallSitesFromYAML(yamlPath)) {
+  if (!CallSiteYamlPath.empty())
+    if (auto Err = Gsym.loadCallSitesFromYAML(CallSiteYamlPath))
       return Err;
-    }
-  }
 
   // Finalize the GSYM to make it ready to save to disk. This will remove
   // duplicate FunctionInfo entries where we might have found an entry from
