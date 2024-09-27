@@ -257,11 +257,6 @@ def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   Documentation<NotDocumented>,
   Hidden;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
-
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
@@ -1002,6 +997,11 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls with both writable and executable access">,
+  Documentation<HasDocumentation>;
+
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
   Documentation<HasDocumentation>;
 
 def PutenvStackArray : Checker<"PutenvStackArray">,
