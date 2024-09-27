@@ -606,10 +606,10 @@ public:
   }
 };
 
-/// Formulate unique variable/constant name after
-/// searching in the module for existing variable/constant names.
-/// This is to avoid name collision with existing variables.
-/// Example: printfMsg0, printfMsg1, printfMsg2, ...
+// Formulate a unique variable/constant name after
+// searching in the module for existing variable/constant names.
+// This is to avoid name collision with existing variables.
+// Example: printfMsg0, printfMsg1, printfMsg2, ...
 std::string constructVarName(spirv::ModuleOp moduleOp, llvm::StringRef prefix) {
   std::string name;
   unsigned number = 0;
@@ -669,11 +669,11 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     // Create Constituents with SpecConstant by scanning format string
     // Each character of format string is stored as a spec constant
     // and then these spec constants are used to create a
-    // SpecConstantCompositeOp
+    // SpecConstantCompositeOp.
     llvm::SmallString<20> formatString(adaptor.getFormat());
-    formatString.push_back('\0'); // Null terminate for C
+    formatString.push_back('\0'); // Null terminate for C.
     SmallVector<Attribute, 4> constituents;
-    for (auto c : formatString) {
+    for (char c : formatString) {
       auto cSpecConstantOp = createSpecConstant(c);
       constituents.push_back(SymbolRefAttr::get(cSpecConstantOp));
     }
