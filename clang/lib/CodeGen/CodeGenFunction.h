@@ -4296,6 +4296,7 @@ public:
   LValue EmitCastLValue(const CastExpr *E);
   LValue EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
   LValue EmitOpaqueValueLValue(const OpaqueValueExpr *e);
+  LValue EmitHLSLArrayAssignLValue(const BinaryOperator *E);
   void EmitHLSLOutArgExpr(const HLSLOutArgExpr *E, CallArgList &Args,
                           QualType Ty);
 

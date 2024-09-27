@@ -5797,9 +5797,24 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     return EmitComplexAssignmentLValue(E);
 
   case TEK_Aggregate:
+    // If the lang opt is HLSL and the LHS is a constant array
+    // then we are performing a copy assignment and call a special
+    // function because EmitAggExprToLValue emits to a temporary LValue
+    if (getLangOpts().HLSL && E->getLHS()->getType()->isConstantArrayType())
+      return EmitHLSLArrayAssignLValue(E);
+
     return EmitAggExprToLValue(E);
   }
   llvm_unreachable("bad evaluation kind");
+}
+
+// This function implements trivial copy assignment for HLSL's
+// assignable constant arrays.
+LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
+  LValue TrivialAssignmentRHS = EmitLValue(E->getRHS());
+  LValue LHS = EmitLValue(E->getLHS());
+  EmitAggregateAssign(LHS, TrivialAssignmentRHS, E->getLHS()->getType());
+  return LHS;
 }
 
 LValue CodeGenFunction::EmitCallExprLValue(const CallExpr *E,
