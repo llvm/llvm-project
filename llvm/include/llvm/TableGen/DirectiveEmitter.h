@@ -135,24 +135,24 @@ class Directive : public BaseRecord {
 public:
   Directive(const Record *Def) : BaseRecord(Def) {}
 
-  std::vector<Record *> getAllowedClauses() const {
-    return Def->getValueAsListOfDefs("allowedClauses");
+  std::vector<const Record *> getAllowedClauses() const {
+    return Def->getValueAsListOfConstDefs("allowedClauses");
   }
 
-  std::vector<Record *> getAllowedOnceClauses() const {
-    return Def->getValueAsListOfDefs("allowedOnceClauses");
+  std::vector<const Record *> getAllowedOnceClauses() const {
+    return Def->getValueAsListOfConstDefs("allowedOnceClauses");
   }
 
-  std::vector<Record *> getAllowedExclusiveClauses() const {
-    return Def->getValueAsListOfDefs("allowedExclusiveClauses");
+  std::vector<const Record *> getAllowedExclusiveClauses() const {
+    return Def->getValueAsListOfConstDefs("allowedExclusiveClauses");
   }
 
-  std::vector<Record *> getRequiredClauses() const {
-    return Def->getValueAsListOfDefs("requiredClauses");
+  std::vector<const Record *> getRequiredClauses() const {
+    return Def->getValueAsListOfConstDefs("requiredClauses");
   }
 
-  std::vector<Record *> getLeafConstructs() const {
-    return Def->getValueAsListOfDefs("leafConstructs");
+  std::vector<const Record *> getLeafConstructs() const {
+    return Def->getValueAsListOfConstDefs("leafConstructs");
   }
 
   Record *getAssociation() const { return Def->getValueAsDef("association"); }
@@ -203,8 +203,8 @@ public:
     return Def->getValueAsString("enumClauseValue");
   }
 
-  std::vector<Record *> getClauseVals() const {
-    return Def->getValueAsListOfDefs("allowedClauseValues");
+  std::vector<const Record *> getClauseVals() const {
+    return Def->getValueAsListOfConstDefs("allowedClauseValues");
   }
 
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }

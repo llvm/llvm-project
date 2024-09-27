@@ -553,6 +553,7 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+  OFFSET_ME_ID = 8,
 };
 
 enum ModeRegisterMasks : uint32_t {
