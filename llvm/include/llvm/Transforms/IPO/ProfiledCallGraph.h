@@ -150,9 +150,7 @@ private:
     // Implicit conversion for hash_value(PrehashedFunctionId) to work.
     // You are not supposed to use it directly, since it converts into
     // hash-represeting FunctionId and thus drops the Name, use `GetId` instead.
-    operator FunctionId() const {
-      return FunctionId{Hash};
-    }
+    operator FunctionId() const { return FunctionId{Hash}; }
 
   private:
     FunctionId Id;
