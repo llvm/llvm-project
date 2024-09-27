@@ -255,6 +255,9 @@ static void equivalenceAnalysis(FunctionOpInterface funcOp,
                                 OneShotAnalysisState &state,
                                 FuncAnalysisState &funcState) {
   funcOp->walk([&](CallOpInterface callOp) {
+    if (isa<func::CallIndirectOp>(callOp))
+      return WalkResult::skip();
+
     FunctionOpInterface calledFunction = getCalledFunction(callOp);
     assert(calledFunction && "could not retrieved called FunctionOpInterface");
 
@@ -308,6 +311,9 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     return funcOp.walk([&](CallOpInterface callOp) -> WalkResult {
+      if (isa<func::CallIndirectOp>(callOp))
+        return WalkResult::skip();
+
       FunctionOpInterface calledFunction = getCalledFunction(callOp);
       assert(calledFunction &&
              "could not retrieved called FunctionOpInterface");
