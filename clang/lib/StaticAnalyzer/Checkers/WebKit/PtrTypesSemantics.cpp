@@ -165,14 +165,11 @@ std::optional<bool> isUncounted(const CXXRecordDecl* Class)
   return (*IsRefCountable);
 }
 
-std::optional<bool> isUncountedPtr(const Type* T)
+std::optional<bool> isUncountedPtr(const QualType T)
 {
-  assert(T);
-
   if (T->isPointerType() || T->isReferenceType()) {
-    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
+    if (auto *CXXRD = T->getPointeeCXXRecordDecl())
       return isUncounted(CXXRD);
-    }
   }
   return false;
 }
@@ -196,12 +193,8 @@ std::optional<bool> isGetterOfRefCounted(const CXXMethodDecl* M)
     // Ref<T> -> T conversion
     // FIXME: Currently allowing any Ref<T> -> whatever cast.
     if (isRefType(className)) {
-      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
-        if (auto *targetConversionType =
-                maybeRefToRawOperator->getConversionType().getTypePtrOrNull()) {
-          return isUncountedPtr(targetConversionType);
-        }
-      }
+      if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M))
+          return isUncountedPtr(maybeRefToRawOperator->getConversionType());
     }
   }
   return false;
