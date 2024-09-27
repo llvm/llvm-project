@@ -1294,7 +1294,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("bitcast sizes must match", MI);
 
     if (SrcTy == DstTy)
-      report("bitcast must change the type", MI);
+      if (!SrcTy.isPointer() ||
+          !MF->getSubtarget().getTargetLowering()->hasTypedPointer())
+        report("bitcast must change the type", MI);
 
     break;
   }
