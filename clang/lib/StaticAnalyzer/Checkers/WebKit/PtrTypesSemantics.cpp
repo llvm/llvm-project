@@ -211,8 +211,7 @@ std::optional<bool> isUnsafePtr(const Type *T) {
   return false;
 }
 
-std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl* M)
-{
+std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl* M) {
   assert(M);
 
   if (isa<CXXMethodDecl>(M)) {

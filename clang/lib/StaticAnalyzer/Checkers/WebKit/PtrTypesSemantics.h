@@ -85,7 +85,7 @@ bool isCheckedPtr(const std::string &Name);
 bool isRefType(const clang::QualType T);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
-std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl* Method);
+std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
