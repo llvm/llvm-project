@@ -666,11 +666,10 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
           [&](const auto &c) {},
       },
       c.u);
-  if (!eligibleTarget &&
-      context_.ShouldWarn(common::UsageWarning::Portability)) {
-    context_.Say(parser::FindSourceLocation(c),
-        "If %s directive is nested inside TARGET region, the behaviour "
-        "is unspecified"_port_en_US,
+  if (!eligibleTarget) {
+    context_.Warn(common::UsageWarning::Portability,
+        parser::FindSourceLocation(c),
+        "If %s directive is nested inside TARGET region, the behaviour is unspecified"_port_en_US,
         parser::ToUpperCaseLetters(
             getDirectiveName(ineligibleTargetDir).str()));
   }
@@ -1077,12 +1076,10 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                         ContextDirectiveAsFortran());
                   else if (GetContext().directive ==
                       llvm::omp::Directive::OMPD_declare_target)
-                    if (context_.ShouldWarn(
-                            common::UsageWarning::OpenMPUsage)) {
-                      context_.Say(name->source,
-                          "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
-                          ContextDirectiveAsFortran());
-                    }
+                    context_.Warn(common::UsageWarning::OpenMPUsage,
+                        name->source,
+                        "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
+                        ContextDirectiveAsFortran());
                 } else if (FindCommonBlockContaining(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot be an element of a "
@@ -1249,8 +1246,8 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
     }
-    if (toClause && context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-      context_.Say(toClause->source,
+    if (toClause) {
+      context_.Warn(common::UsageWarning::OpenMPUsage, toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
     }
   }
@@ -3143,9 +3140,8 @@ void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
       const auto *symbol{it->first};
       const auto source{it->second};
       if (IsPolymorphicAllocatable(*symbol)) {
-        context_.Say(source,
-            "If a polymorphic variable with allocatable attribute '%s' is in "
-            "%s clause, the behavior is unspecified"_port_en_US,
+        context_.Warn(common::UsageWarning::Portability, source,
+            "If a polymorphic variable with allocatable attribute '%s' is in %s clause, the behavior is unspecified"_port_en_US,
             symbol->name(),
             parser::ToUpperCaseLetters(getClauseName(clause).str()));
       }
@@ -3246,11 +3242,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
       if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-              context_.Say(itr->second->source,
-                  "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
-                  name->ToString());
-            }
+            context_.Warn(common::UsageWarning::OpenMPUsage,
+                itr->second->source,
+                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
+                name->ToString());
           } else {
             useDevicePtrNameList.push_back(*name);
           }
@@ -3307,20 +3302,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
             "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
             source.ToString());
       } else if (!(IsDummy(*symbol))) {
-        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-          context_.Say(itr->second->source,
-              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
-              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-              source.ToString());
-        }
+        context_.Warn(common::UsageWarning::OpenMPUsage, itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+            source.ToString());
       } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
-        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-          context_.Say(itr->second->source,
-              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
-              "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
-              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-              source.ToString());
-        }
+        context_.Warn(common::UsageWarning::OpenMPUsage, itr->second->source,
+            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
+            "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
+            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+            source.ToString());
       }
     }
   }

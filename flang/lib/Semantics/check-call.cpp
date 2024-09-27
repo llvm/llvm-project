@@ -169,37 +169,40 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                                     actualOffset->offset()) /
                       actualType.type().kind();
                 }
-                if (actualChars < dummyChars &&
-                    (extentErrors ||
-                        context.ShouldWarn(
-                            common::UsageWarning::ShortCharacterActual))) {
-                  auto msg{
-                      "Actual argument has fewer characters remaining in storage sequence (%jd) than %s (%jd)"_warn_en_US};
+                if (actualChars < dummyChars) {
                   if (extentErrors) {
-                    msg.set_severity(parser::Severity::Error);
+                    messages.Say(
+                        "Actual argument has fewer characters remaining in storage sequence (%jd) than %s (%jd)"_err_en_US,
+                        static_cast<std::intmax_t>(actualChars), dummyName,
+                        static_cast<std::intmax_t>(dummyChars));
+                  } else if (context.ShouldWarn(
+                                 common::UsageWarning::ShortCharacterActual)) {
+                    messages.Say(common::UsageWarning::ShortCharacterActual,
+                        "Actual argument has fewer characters remaining in storage sequence (%jd) than %s (%jd)"_warn_en_US,
+                        static_cast<std::intmax_t>(actualChars), dummyName,
+                        static_cast<std::intmax_t>(dummyChars));
                   }
-                  messages.Say(std::move(msg),
-                      static_cast<std::intmax_t>(actualChars), dummyName,
-                      static_cast<std::intmax_t>(dummyChars));
                 }
               }
             } else { // actual.type.Rank() > 0
               if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
                       foldingContext, evaluate::GetSize(actualType.shape())))};
                   actualSize &&
-                  *actualSize * *actualLength < *dummySize * *dummyLength &&
-                  (extentErrors ||
-                      context.ShouldWarn(
-                          common::UsageWarning::ShortCharacterActual))) {
-                auto msg{
-                    "Actual argument array has fewer characters (%jd) than %s array (%jd)"_warn_en_US};
+                  *actualSize * *actualLength < *dummySize * *dummyLength) {
                 if (extentErrors) {
-                  msg.set_severity(parser::Severity::Error);
+                  messages.Say(
+                      "Actual argument array has fewer characters (%jd) than %s array (%jd)"_err_en_US,
+                      static_cast<std::intmax_t>(*actualSize * *actualLength),
+                      dummyName,
+                      static_cast<std::intmax_t>(*dummySize * *dummyLength));
+                } else if (context.ShouldWarn(
+                               common::UsageWarning::ShortCharacterActual)) {
+                  messages.Say(common::UsageWarning::ShortCharacterActual,
+                      "Actual argument array has fewer characters (%jd) than %s array (%jd)"_warn_en_US,
+                      static_cast<std::intmax_t>(*actualSize * *actualLength),
+                      dummyName,
+                      static_cast<std::intmax_t>(*dummySize * *dummyLength));
                 }
-                messages.Say(std::move(msg),
-                    static_cast<std::intmax_t>(*actualSize * *actualLength),
-                    dummyName,
-                    static_cast<std::intmax_t>(*dummySize * *dummyLength));
               }
             }
           }
@@ -217,11 +220,11 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
             if (context.ShouldWarn(
                     common::UsageWarning::ShortCharacterActual)) {
               if (isVariable) {
-                messages.Say(
+                messages.Say(common::UsageWarning::ShortCharacterActual,
                     "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
                     *actualLength, *dummyLength);
               } else {
-                messages.Say(
+                messages.Say(common::UsageWarning::ShortCharacterActual,
                     "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
                     *actualLength, *dummyLength);
               }
@@ -260,23 +263,16 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
     actual = std::move(*converted);
     if (dummyType.type().kind() < actualType.type().kind()) {
       if (!semanticsContext.IsEnabled(
-              common::LanguageFeature::ActualIntegerConvertedToSmallerKind) ||
-          semanticsContext.ShouldWarn(
               common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
-        std::optional<parser::MessageFixedText> msg;
-        if (!semanticsContext.IsEnabled(
-                common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
-          msg =
-              "Actual argument scalar expression of type INTEGER(%d) cannot beimplicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US;
-        } else if (semanticsContext.ShouldWarn(
-                       common::LanguageFeature::ConvertedArgument)) {
-          msg =
-              "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_port_en_US;
-        }
-        if (msg) {
-          messages.Say(std::move(msg.value()), actualType.type().kind(),
-              dummyType.type().kind());
-        }
+        messages.Say(
+            "Actual argument scalar expression of type INTEGER(%d) cannot beimplicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
+            actualType.type().kind(), dummyType.type().kind());
+      } else if (semanticsContext.ShouldWarn(common::LanguageFeature::
+                         ActualIntegerConvertedToSmallerKind)) {
+        messages.Say(
+            common::LanguageFeature::ActualIntegerConvertedToSmallerKind,
+            "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_port_en_US,
+            actualType.type().kind(), dummyType.type().kind());
       }
     }
     actualType = dummyType;
@@ -355,7 +351,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         constantChar && constantChar->wasHollerith() &&
         dummy.type.type().IsUnlimitedPolymorphic() &&
         context.ShouldWarn(common::LanguageFeature::HollerithPolymorphic)) {
-      messages.Say(
+      messages.Say(common::LanguageFeature::HollerithPolymorphic,
           "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
     }
   } else if (dummyRank == 0 && allowActualArgumentConversions) {
@@ -364,7 +360,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             foldingContext, actual, dummy.type.type())}) {
       if (context.ShouldWarn(
               common::LanguageFeature::HollerithOrCharacterAsBOZ)) {
-        messages.Say(
+        messages.Say(common::LanguageFeature::HollerithOrCharacterAsBOZ,
             "passing Hollerith or character literal as if it were BOZ"_port_en_US);
       }
       actual = *converted;
@@ -607,35 +603,38 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                       *actualSymTypeBytes;
                 }
               }
-              if (actualElements && *actualElements < *dummySize &&
-                  (extentErrors ||
-                      context.ShouldWarn(
-                          common::UsageWarning::ShortArrayActual))) {
-                auto msg{
-                    "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US};
+              if (actualElements && *actualElements < *dummySize) {
                 if (extentErrors) {
-                  msg.set_severity(parser::Severity::Error);
+                  messages.Say(
+                      "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_err_en_US,
+                      static_cast<std::intmax_t>(*actualElements), dummyName,
+                      static_cast<std::intmax_t>(*dummySize));
+                } else if (context.ShouldWarn(
+                               common::UsageWarning::ShortArrayActual)) {
+                  messages.Say(common::UsageWarning::ShortArrayActual,
+                      "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US,
+                      static_cast<std::intmax_t>(*actualElements), dummyName,
+                      static_cast<std::intmax_t>(*dummySize));
                 }
-                messages.Say(std::move(msg),
-                    static_cast<std::intmax_t>(*actualElements), dummyName,
-                    static_cast<std::intmax_t>(*dummySize));
               }
             }
           }
         } else { // actualRank > 0 || actualIsAssumedRank
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(actualType.shape())))};
-              actualSize && *actualSize < *dummySize &&
-              (extentErrors ||
-                  context.ShouldWarn(common::UsageWarning::ShortArrayActual))) {
-            auto msg{
-                "Actual argument array has fewer elements (%jd) than %s array (%jd)"_warn_en_US};
+              actualSize && *actualSize < *dummySize) {
             if (extentErrors) {
-              msg.set_severity(parser::Severity::Error);
+              messages.Say(
+                  "Actual argument array has fewer elements (%jd) than %s array (%jd)"_err_en_US,
+                  static_cast<std::intmax_t>(*actualSize), dummyName,
+                  static_cast<std::intmax_t>(*dummySize));
+            } else if (context.ShouldWarn(
+                           common::UsageWarning::ShortArrayActual)) {
+              messages.Say(common::UsageWarning::ShortArrayActual,
+                  "Actual argument array has fewer elements (%jd) than %s array (%jd)"_warn_en_US,
+                  static_cast<std::intmax_t>(*actualSize), dummyName,
+                  static_cast<std::intmax_t>(*dummySize));
             }
-            messages.Say(std::move(msg),
-                static_cast<std::intmax_t>(*actualSize), dummyName,
-                static_cast<std::intmax_t>(*dummySize));
           }
         }
       }
@@ -683,8 +682,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
       if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
         if (whyNot->IsFatal()) {
-          if (auto *msg{
-                  messages.Say(std::move(*undefinableMessage), dummyName)}) {
+          if (auto *msg{messages.Say(*undefinableMessage, dummyName)}) {
+            if (!msg->IsFatal()) {
+              msg->set_languageFeature(common::LanguageFeature::
+                      UndefinableAsynchronousOrVolatileActual);
+            }
             msg->Attach(
                 std::move(whyNot->set_severity(parser::Severity::Because)));
           }
@@ -747,7 +749,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         // is treated as an unassociated allocatable.
         if (context.ShouldWarn(
                 common::LanguageFeature::NullActualForAllocatable)) {
-          messages.Say(
+          messages.Say(common::LanguageFeature::NullActualForAllocatable,
               "Allocatable %s is associated with a null pointer"_port_en_US,
               dummyName);
         }
@@ -802,7 +804,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
         if (context.ShouldWarn(
                 common::LanguageFeature::RelaxedIntentInChecking)) {
-          messages.Say(
+          messages.Say(common::LanguageFeature::RelaxedIntentInChecking,
               "If a POINTER or ALLOCATABLE dummy or actual argument is unlimited polymorphic, both should be so"_port_en_US);
         }
       } else {
@@ -814,7 +816,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           context.IsEnabled(common::LanguageFeature::RelaxedIntentInChecking)) {
         if (context.ShouldWarn(
                 common::LanguageFeature::RelaxedIntentInChecking)) {
-          messages.Say(
+          messages.Say(common::LanguageFeature::RelaxedIntentInChecking,
               "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both should be so"_port_en_US);
         }
       } else if (actualIsPolymorphic &&
@@ -823,6 +825,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         if (context.ShouldWarn(common::LanguageFeature::
                     PolymorphicActualAllocatableOrPointerToMonomorphicDummy)) {
           messages.Say(
+              common::LanguageFeature::
+                  PolymorphicActualAllocatableOrPointerToMonomorphicDummy,
               "If a POINTER or ALLOCATABLE actual argument is polymorphic, the corresponding dummy argument should also be so"_port_en_US);
         }
       } else {
@@ -838,7 +842,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                 common::LanguageFeature::RelaxedIntentInChecking)) {
           if (context.ShouldWarn(
                   common::LanguageFeature::RelaxedIntentInChecking)) {
-            messages.Say(
+            messages.Say(common::LanguageFeature::RelaxedIntentInChecking,
                 "POINTER or ALLOCATABLE dummy and actual arguments should have the same declared type and kind"_port_en_US);
           }
         } else {
@@ -908,13 +912,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool actualIsTemp{!actualIsVariable || HasVectorSubscript(actual) ||
         evaluate::ExtractCoarrayRef(actual)};
     if (actualIsTemp) {
-      messages.Say(
+      messages.Say(common::UsageWarning::NonTargetPassedToTarget,
           "Any pointer associated with TARGET %s during this call will not be associated with the value of '%s' afterwards"_warn_en_US,
           dummyName, actual.AsFortran());
     } else {
       auto actualSymbolVector{GetSymbolVector(actual)};
       if (!evaluate::GetLastTarget(actualSymbolVector)) {
-        messages.Say(
+        messages.Say(common::UsageWarning::NonTargetPassedToTarget,
             "Any pointer associated with TARGET %s during this call must not be used afterwards, as '%s' is not a target"_warn_en_US,
             dummyName, actual.AsFortran());
       }
@@ -1012,15 +1016,16 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
           return;
         }
       } else if (argProcSymbol->has<ProcBindingDetails>()) {
-        if (!context.IsEnabled(common::LanguageFeature::BindingAsProcedure) ||
-            context.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
-          parser::MessageFixedText msg{
-              "Procedure binding '%s' passed as an actual argument"_port_en_US};
-          if (!context.IsEnabled(common::LanguageFeature::BindingAsProcedure)) {
-            msg.set_severity(parser::Severity::Error);
-          }
-          evaluate::SayWithDeclaration(
-              messages, *argProcSymbol, std::move(msg), argProcSymbol->name());
+        if (!context.IsEnabled(common::LanguageFeature::BindingAsProcedure)) {
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              "Procedure binding '%s' passed as an actual argument"_err_en_US,
+              argProcSymbol->name());
+        } else if (context.ShouldWarn(
+                       common::LanguageFeature::BindingAsProcedure)) {
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              common::LanguageFeature::BindingAsProcedure,
+              "Procedure binding '%s' passed as an actual argument"_port_en_US,
+              argProcSymbol->name());
         }
       }
     }
@@ -1067,13 +1072,13 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                     dummyName);
               } else if (context.ShouldWarn(
                              common::UsageWarning::ImplicitInterfaceActual)) {
-                messages.Say(
+                messages.Say(common::UsageWarning::ImplicitInterfaceActual,
                     "Actual procedure argument has an implicit interface which is not known to be compatible with %s which has an explicit interface"_warn_en_US,
                     dummyName);
               }
             } else if (warning &&
                 context.ShouldWarn(common::UsageWarning::ProcDummyArgShapes)) {
-              messages.Say(
+              messages.Say(common::UsageWarning::ProcDummyArgShapes,
                   "Actual procedure argument has possible interface incompatibility with %s: %s"_warn_en_US,
                   dummyName, std::move(*warning));
             }
@@ -1239,6 +1244,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     if (context.ShouldWarn(common::LanguageFeature::
                                 NullActualForAllocatable)) {
                       messages.Say(
+                          common::LanguageFeature::NullActualForAllocatable,
                           "Allocatable %s is associated with NULL()"_port_en_US,
                           dummyName);
                     }
@@ -1430,7 +1436,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
         if (semanticsContext.ShouldWarn(common::UsageWarning::Portability)) {
           if (!evaluate::ExtractDataRef(*pointerExpr) &&
               !evaluate::IsProcedurePointer(*pointerExpr)) {
-            messages.Say(pointerArg->sourceLocation(),
+            messages.Say(common::UsageWarning::Portability,
+                pointerArg->sourceLocation(),
                 "POINTER= argument of ASSOCIATED() is required by some other compilers to be a pointer"_port_en_US);
           } else if (scope && !evaluate::UnwrapProcedureRef(*pointerExpr)) {
             if (auto whyNot{WhyNotDefinable(
@@ -1440,7 +1447,8 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                         DefinabilityFlag::DoNotNoteDefinition},
                     *pointerExpr)}) {
               if (whyNot->IsFatal()) {
-                if (auto *msg{messages.Say(pointerArg->sourceLocation(),
+                if (auto *msg{messages.Say(common::UsageWarning::Portability,
+                        pointerArg->sourceLocation(),
                         "POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
                   msg->Attach(std::move(
                       whyNot->set_severity(parser::Severity::Because)));
@@ -1474,23 +1482,27 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                       CheckProcCompatibility(isCall, pointerProc, &*targetProc,
                           specificIntrinsic, whyNot, warning,
                           /*ignoreImplicitVsExplicit=*/false)};
+                  std::optional<common::UsageWarning> whichWarning;
                   if (!msg && warning &&
                       semanticsContext.ShouldWarn(
                           common::UsageWarning::ProcDummyArgShapes)) {
+                    whichWarning = common::UsageWarning::ProcDummyArgShapes;
                     msg =
                         "Procedures '%s' and '%s' may not be completely compatible: %s"_warn_en_US;
                     whyNot = std::move(*warning);
-                  } else if (msg &&
-                      msg->severity() != parser::Severity::Error &&
-                      !semanticsContext.ShouldWarn(
+                  } else if (msg && !msg->IsFatal() &&
+                      semanticsContext.ShouldWarn(
                           common::UsageWarning::ProcPointerCompatibility)) {
-                    msg.reset();
+                    whichWarning =
+                        common::UsageWarning::ProcPointerCompatibility;
                   }
-                  if (msg) {
-                    msg->set_severity(parser::Severity::Warning);
-                    messages.Say(std::move(*msg),
-                        "pointer '" + pointerExpr->AsFortran() + "'",
-                        targetExpr->AsFortran(), whyNot);
+                  if (msg && (msg->IsFatal() || whichWarning)) {
+                    if (auto *said{messages.Say(std::move(*msg),
+                            "pointer '" + pointerExpr->AsFortran() + "'",
+                            targetExpr->AsFortran(), whyNot)};
+                        said && whichWarning) {
+                      said->set_usageWarning(*whichWarning);
+                    }
                   }
                 }
               } else if (!IsNullProcedurePointer(*targetExpr)) {
@@ -1819,6 +1831,7 @@ static void CheckTransferOperandType(SemanticsContext &context,
   if (type.IsPolymorphic() &&
       context.ShouldWarn(common::UsageWarning::PolymorphicTransferArg)) {
     context.foldingContext().messages().Say(
+        common::UsageWarning::PolymorphicTransferArg,
         "%s of TRANSFER is polymorphic"_warn_en_US, which);
   } else if (!type.IsUnlimitedPolymorphic() &&
       type.category() == TypeCategory::Derived &&
@@ -1827,6 +1840,7 @@ static void CheckTransferOperandType(SemanticsContext &context,
     if (auto bad{std::find_if(directs.begin(), directs.end(), IsDescriptor)};
         bad != directs.end()) {
       evaluate::SayWithDeclaration(context.foldingContext().messages(), *bad,
+          common::UsageWarning::PointerComponentTransferArg,
           "%s of TRANSFER contains allocatable or pointer component %s"_warn_en_US,
           which, bad.BuildResultDesignatorName());
     }
@@ -1856,7 +1870,7 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
                   "Element size of MOLD= array may not be zero when SOURCE= is not empty"_err_en_US);
             }
           } else if (context.ShouldWarn(common::UsageWarning::VoidMold)) {
-            messages.Say(
+            messages.Say(common::UsageWarning::VoidMold,
                 "Element size of MOLD= array may not be zero unless SOURCE= is empty"_warn_en_US);
           }
         }
@@ -1872,7 +1886,7 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
         } else if (context.ShouldWarn(
                        common::UsageWarning::TransferSizePresence) &&
             IsAllocatableOrObjectPointer(whole)) {
-          messages.Say(
+          messages.Say(common::UsageWarning::TransferSizePresence,
               "SIZE= argument that is allocatable or pointer must be present at execution; parenthesize to silence this warning"_warn_en_US);
         }
       }
@@ -2078,6 +2092,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
         if (context.ShouldWarn(
                 common::UsageWarning::KnownBadImplicitInterface)) {
           if (auto *msg{messages.Say(
+                  common::UsageWarning::KnownBadImplicitInterface,
                   "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
             buffer.AttachTo(*msg, parser::Severity::Because);
           }
