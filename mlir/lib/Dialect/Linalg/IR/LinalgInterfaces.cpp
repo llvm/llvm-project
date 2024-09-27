@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
+#include <numeric>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -49,18 +50,41 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
 
+// Returns true if all loops of the linalgOp are parallel
+static bool isAllParallel(LinalgOp op) {
+  return op.getNumParallelLoops() == op.getNumLoops();
+}
+
+// Returns true if and only if linalgOp takes one input and one init.
+static bool isSingleInputOutput(LinalgOp op) {
+  return op.getNumDpsInputs() == 1 && op.getNumDpsInits() == 1;
+}
+// Returns true if genericOp body is just a yieldOp that yields
+// input operand as result.
+static bool isSingleYieldOp(GenericOp op) {
+  if (op.getNumDpsInputs() != 1 || op.getNumDpsInits() != 1)
+    return false;
+
+  Block *body = op.getBody();
+  if (body->getOperations().size() != 1)
+    return false;
+
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
+      yieldOp->getOperand(0) != body->getArgument(0))
+    return false;
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // CopyOpInterface implementation
 //===----------------------------------------------------------------------===//
 
 bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
-  // Structural.
-  if (linalgOp.getNumParallelLoops() != linalgOp.getNumLoops())
+  // Structural and operands
+  if (!isAllParallel(linalgOp) || !isSingleInputOutput(linalgOp))
     return false;
 
-  // Operands and maps.
-  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
-    return false;
   auto mapRange = linalgOp.getIndexingMapsArray();
   if (mapRange.size() != 2 || !mapRange.front().isIdentity() ||
       !mapRange.back().isIdentity()) {
@@ -75,8 +99,8 @@ bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
 //===----------------------------------------------------------------------===//
 std::optional<Value> linalg::isaFillOpInterface(GenericOp genericOp) {
   // Structural.
-  if (genericOp.getNumParallelLoops() != genericOp.getNumLoops() ||
-      genericOp.getNumDpsInputs() != 1 || genericOp.getNumDpsInits() != 1)
+  if (!isAllParallel(genericOp) || !isSingleInputOutput(genericOp) ||
+      !isSingleYieldOp(genericOp))
     return std::nullopt;
 
   // Input should be referenced and init should not.
@@ -87,16 +111,78 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp genericOp) {
   OpOperand *value = genericOp.getDpsInputOperand(0);
   if (!genericOp.isScalar(value))
     return std::nullopt;
-
-  Block *body = genericOp.getBody();
-  if (body->getOperations().size() != 1)
-    return std::nullopt;
-
-  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
-  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
-      yieldOp->getOperand(0) != body->getArgument(0))
-    return std::nullopt;
   return value->get();
+}
+
+//===----------------------------------------------------------------------===//
+// BroadcastOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t>>
+linalg::isaBroadcastOpInterface(GenericOp genericOp) {
+  // Structural.
+  if (!isAllParallel(genericOp) || !isSingleInputOutput(genericOp) ||
+      !isSingleYieldOp(genericOp))
+    return std::nullopt;
+
+  auto t0 = genericOp.getDpsInputOperand(0)->get().getType();
+  auto t1 = genericOp.getDpsInitOperand(0)->get().getType();
+  if (!isa<MemRefType, RankedTensorType>(t0) ||
+      !isa<MemRefType, RankedTensorType>(t1))
+    return std::nullopt;
+
+  // Check output is identity map. Injective function could also be
+  // a permutation of indices and expressible in linalg.generic but
+  // is not expressible for named broadcast op.
+  auto dstMap = genericOp.getIndexingMapsArray()[1];
+  if (!dstMap.isIdentity())
+    return std::nullopt;
+
+  SmallVector<int64_t> position;
+  auto srcMap = genericOp.getIndexingMapsArray()[0];
+
+  // Check input map is monotonically increasing DimIds.
+  for (unsigned i = 0; i < srcMap.getNumResults(); ++i) {
+    auto expr = llvm::dyn_cast<AffineDimExpr>(srcMap.getResults()[i]);
+    if (!expr)
+      return std::nullopt;
+    int64_t pos = expr.getPosition();
+    if (i > 0 && pos <= position[i - 1])
+      return std::nullopt;
+    position.push_back(expr.getPosition());
+  }
+
+  SmallVector<int64_t> broadcastedDims;
+  auto numDims = srcMap.getNumDims();
+  for (auto dim : llvm::seq<int64_t>(0, numDims)) {
+    if (!llvm::is_contained(position, dim))
+      broadcastedDims.push_back(dim);
+  }
+  return broadcastedDims;
+}
+
+//===----------------------------------------------------------------------===//
+// TranposeOpInterface implementation
+//===----------------------------------------------------------------------===//
+std::optional<SmallVector<int64_t>>
+linalg::isaTransposeOpInterface(GenericOp genericOp) {
+  // Structural.
+  if (!isAllParallel(genericOp) || !isSingleInputOutput(genericOp) ||
+      !isSingleYieldOp(genericOp))
+    return std::nullopt;
+
+  // mapping checks.
+  auto mapRange = genericOp.getIndexingMapsArray();
+  if (mapRange.size() != 2 || !mapRange.back().isIdentity() ||
+      !mapRange.front().isPermutation())
+    return std::nullopt;
+
+  SmallVector<int64_t> permutation;
+  auto map = mapRange.front();
+  for (unsigned i = 0; i < map.getNumResults(); ++i) {
+    auto expr = llvm::cast<AffineDimExpr>(map.getResults()[i]);
+    permutation.push_back(expr.getPosition());
+  }
+  return permutation;
 }
 
 //===----------------------------------------------------------------------===//
@@ -106,8 +192,7 @@ static bool
 isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp genericOp,
                                           unsigned arity) {
   // Check all loops are parallel.
-  if (genericOp.getNumParallelLoops() != genericOp.getNumLoops() ||
-      genericOp.getNumLoops() < 1)
+  if (!isAllParallel(genericOp) || genericOp.getNumLoops() < 1)
     return false;
 
   // Check there are arity-inputs, 1-output and all are identity-maps.
