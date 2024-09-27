@@ -86,7 +86,7 @@ public:
             return;
         }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
-        QualType ArgType = MemberCallExpr->getObjectType();
+        QualType ArgType = MemberCallExpr->getObjectType().getCanonicalType();
         std::optional<bool> IsUncounted = isUncounted(ArgType);
         if (IsUncounted && *IsUncounted && !isPtrOriginSafe(E))
           reportBugOnThis(E);
@@ -102,12 +102,13 @@ public:
         // if ((*P)->hasAttr<SafeRefCntblRawPtrAttr>())
         //  continue;
 
-        const auto *ArgType = (*P)->getType().getTypePtrOrNull();
-        if (!ArgType)
+        QualType ArgType = (*P)->getType().getCanonicalType();
+        const auto *TypePtr = ArgType.getTypePtrOrNull();
+        if (!TypePtr)
           continue; // FIXME? Should we bail?
 
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
+        std::optional<bool> IsUncounted = isUncountedPtr(TypePtr);
         if (!IsUncounted || !(*IsUncounted))
           continue;
 
