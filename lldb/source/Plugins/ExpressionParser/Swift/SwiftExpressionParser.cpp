@@ -1389,9 +1389,13 @@ SwiftExpressionParser::ParseAndImport(
   // GetImplicitImports.
   swift::performImportResolution(*source_file);
 
-  if (expr_diagnostics.HasErrors())
-    return make_error<ModuleImportError>(
-        llvm::toString(expr_diagnostics.GetAllErrors()));
+  if (expr_diagnostics.HasErrors()) {
+    // FIXME: This could be done more elegantly.
+    std::string msg = llvm::toString(expr_diagnostics.GetAllErrors());
+    if (StringRef(msg).contains(": could not build module "))
+      return make_error<ModuleImportError>(msg);
+    return llvm::createStringError(msg);
+  }
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
