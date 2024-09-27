@@ -19,8 +19,8 @@ class FixItDiag : public Diagnostic {
 
 public:
   FixItDiag(llvm::StringRef msg, bool has_fixits)
-      : Diagnostic(msg, lldb::eSeverityError,
-                   DiagnosticOrigin::eDiagnosticOriginLLDB, custom_diag_id),
+      : Diagnostic(DiagnosticOrigin::eDiagnosticOriginLLDB, custom_diag_id,
+                   DiagnosticDetail{{}, lldb::eSeverityError, msg.str(), {}}),
         m_has_fixits(has_fixits) {}
   bool HasFixIts() const override { return m_has_fixits; }
 };
@@ -30,8 +30,8 @@ namespace {
 class TextDiag : public Diagnostic {
 public:
   TextDiag(llvm::StringRef msg, lldb::Severity severity)
-      : Diagnostic(msg, severity, DiagnosticOrigin::eDiagnosticOriginLLDB,
-                   custom_diag_id) {}
+      : Diagnostic(DiagnosticOrigin::eDiagnosticOriginLLDB, custom_diag_id,
+                   DiagnosticDetail{{}, severity, msg.str(), msg.str()}) {}
 };
 } // namespace
 
@@ -42,8 +42,8 @@ TEST(DiagnosticManagerTest, AddDiagnostic) {
   std::string msg = "foo bar has happened";
   lldb::Severity severity = lldb::eSeverityError;
   DiagnosticOrigin origin = DiagnosticOrigin::eDiagnosticOriginLLDB;
-  auto diag =
-      std::make_unique<Diagnostic>(msg, severity, origin, custom_diag_id);
+  auto diag = std::make_unique<Diagnostic>(
+      origin, custom_diag_id, DiagnosticDetail{{}, severity, msg, {}});
   mgr.AddDiagnostic(std::move(diag));
   EXPECT_EQ(1U, mgr.Diagnostics().size());
   const Diagnostic *got = mgr.Diagnostics().front().get();
@@ -196,4 +196,14 @@ TEST(DiagnosticManagerTest, FixedExpression) {
   // Setting the fixed expression again should also change it.
   mgr.SetFixedExpression("bar");
   EXPECT_EQ("bar", mgr.GetFixedExpression());
+}
+
+TEST(DiagnosticManagerTest, StatusConversion) {
+  DiagnosticManager mgr;
+  mgr.AddDiagnostic(std::make_unique<TextDiag>("abc", lldb::eSeverityError));
+  mgr.AddDiagnostic(std::make_unique<TextDiag>("def", lldb::eSeverityWarning));
+  Status status =
+      Status::FromError(mgr.GetAsError(lldb::eExpressionParseError));
+  EXPECT_EQ(std::string("error: abc\nwarning: def\n"),
+            std::string(status.AsCString()));
 }
