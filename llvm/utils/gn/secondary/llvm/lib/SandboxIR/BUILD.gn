@@ -10,6 +10,7 @@ static_library("SandboxIR") {
     "BasicBlock.cpp",
     "Constant.cpp",
     "Context.cpp",
+    "Instruction.cpp",
     "Module.cpp",
     "Pass.cpp",
     "PassManager.cpp",
