@@ -1322,7 +1322,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
-  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr())) {
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+      StorageType->isPointerType()) {
     // FIXME: Are there other cases where this is a problem?
     StorageType = StorageType->getPointeeType();
   }
