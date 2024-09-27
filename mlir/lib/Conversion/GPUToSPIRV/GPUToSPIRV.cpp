@@ -606,6 +606,22 @@ public:
   }
 };
 
+/// Formulate unique variable/constant name after
+/// searching in the module for existing variable/constant names.
+/// This is to avoid name collision with existing variables.
+/// Example: printfMsg0, printfMsg1, printfMsg2, ...
+std::string constructVarName(spirv::ModuleOp moduleOp, llvm::StringRef prefix) {
+  std::string name;
+  unsigned number = 0;
+
+  do {
+    name.clear();
+    name = (prefix + llvm::Twine(number++)).str();
+  } while (moduleOp.lookupSymbol(name));
+
+  return name;
+}
+
 /// Pattern to convert a gpu.printf op into a SPIR-V CLPrintf op.
 
 LogicalResult GPUPrintfConversion::matchAndRewrite(
@@ -614,27 +630,15 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 
   Location loc = gpuPrintfOp.getLoc();
 
-  auto moduleOp = gpuPrintfOp.getParentOfType<spirv::ModuleOp>();
+  auto moduleOp = gpuPrintfOp->getParentOfType<spirv::ModuleOp>();
   if (!moduleOp)
     return failure();
-
-  const char formatStringPrefix[] = "printfMsg";
-  unsigned stringNumber = 0;
-  SmallString<16> globalVarName;
-  spirv::GlobalVariableOp globalVar;
 
   // SPIR-V global variable is used to initialize printf
   // format string value, if there are multiple printf messages,
   // each global var needs to be created with a unique name.
-  // like printfMsg0, printfMsg1, ...
-  // Formulate unique global variable name after
-  // searching in the module for existing global variable names.
-  // This is to avoid name collision with existing global variables.
-  do {
-    globalVarName.clear();
-    (formatStringPrefix + llvm::Twine(stringNumber++))
-        .toStringRef(globalVarName);
-  } while (moduleOp.lookupSymbol(globalVarName));
+  std::string globalVarName = constructVarName(moduleOp, "printfMsg");
+  spirv::GlobalVariableOp globalVar;
 
   IntegerType i8Type = rewriter.getI8Type();
   IntegerType i32Type = rewriter.getI32Type();
@@ -644,12 +648,10 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
   // unique name for this spec constant like
   // @printfMsg0_sc0, @printfMsg0_sc1, ... by searching in the module
   // for existing spec constant names.
-  unsigned specConstantNum = 0;
   auto createSpecConstant = [&](unsigned value) {
     auto attr = rewriter.getI8IntegerAttr(value);
-    SmallString<16> specCstName;
-    (llvm::Twine(globalVarName) + "_sc" + llvm::Twine(specConstantNum++))
-        .toStringRef(specCstName);
+    std::string specCstName =
+        constructVarName(moduleOp, (llvm::Twine(globalVarName) + "_sc").str());
 
     return rewriter.create<spirv::SpecConstantOp>(
         loc, rewriter.getStringAttr(specCstName), attr);
@@ -680,8 +682,11 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     size_t contentSize = constituents.size();
     auto globalType = spirv::ArrayType::get(i8Type, contentSize);
     spirv::SpecConstantCompositeOp specCstComposite;
-    SmallString<16> specCstCompositeName;
-    (llvm::Twine(globalVarName) + "_scc").toStringRef(specCstCompositeName);
+    // There will be one SpecConstantCompositeOp per printf message/global var,
+    // so no need do lookup for existing ones.
+    std::string specCstCompositeName =
+        (llvm::Twine(globalVarName) + "_scc").str();
+
     specCstComposite = rewriter.create<spirv::SpecConstantCompositeOp>(
         loc, TypeAttr::get(globalType),
         rewriter.getStringAttr(specCstCompositeName),
@@ -698,7 +703,8 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 
     globalVar->setAttr("Constant", rewriter.getUnitAttr());
   }
-  // Get SSA value of Global variable
+  // Get SSA value of Global variable and create pointer to i8 to point to
+  // the format string.
   Value globalPtr = rewriter.create<spirv::AddressOfOp>(loc, globalVar);
   Value fmtStr = rewriter.create<spirv::BitcastOp>(
       loc,
@@ -706,13 +712,13 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
       globalPtr);
 
   // Get printf arguments
-  auto argsRange = adaptor.getArgs();
-  SmallVector<Value, 4> printfArgs;
-  printfArgs.reserve(argsRange.size() + 1);
-  printfArgs.append(argsRange.begin(), argsRange.end());
+  SmallVector<Value, 4> printfArgs = llvm::to_vector<4>(adaptor.getArgs());
 
   rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
 
+  // Need to erase the gpu.printf op as gpu.printf does not use result vs
+  // spirv::CLPrintfOp has i32 resultType so cannot replace with new SPIR-V
+  // printf op.
   rewriter.eraseOp(gpuPrintfOp);
 
   return success();
