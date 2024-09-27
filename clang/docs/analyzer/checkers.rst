@@ -3442,6 +3442,27 @@ Check for non-determinism caused by sorting of pointers.
 alpha.WebKit
 ^^^^^^^^^^^^
 
+.. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.NoUncheckedPtrMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
+
+.. code-block:: cpp
+
+ struct CheckableObj {
+   void incrementPtrCount() {}
+   void decrementPtrCount() {}
+ };
+
+ struct Foo {
+   CheckableObj* ptr; // warn
+   CheckableObj& ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
 .. _alpha-webkit-UncountedCallArgsChecker:
 
 alpha.webkit.UncountedCallArgsChecker

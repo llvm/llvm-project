@@ -12658,10 +12658,67 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas from the caller.
-   The ``tail`` marker additionally implies that the callee does not access
-   varargs from the caller. Calls marked ``musttail`` must obey the following
-   additional  rules:
+   Both markers imply that the callee does not access allocas, va_args, or
+   byval arguments from the caller. As an exception to that, an alloca or byval
+   argument may be passed to the callee as a byval argument, which can be
+   dereferenced inside the callee. For example:
+
+.. code-block:: llvm
+
+      declare void @take_byval(ptr byval(i64))
+      declare void @take_ptr(ptr)
+
+      ; Invalid (assuming @take_ptr dereferences the pointer), because %local
+      ; may be de-allocated before the call to @take_ptr.
+      define void @invalid_alloca() {
+      entry:
+        %local = alloca i64
+        tail call void @take_ptr(ptr %local)
+        ret void
+      }
+
+      ; Valid, the byval attribute causes the memory allocated by %local to be
+      ; copied into @take_byval's stack frame.
+      define void @byval_alloca() {
+      entry:
+        %local = alloca i64
+        tail call void @take_byval(ptr byval(i64) %local)
+        ret void
+      }
+
+      ; Invalid, because @use_global_va_list uses the variadic arguments from
+      ; @invalid_va_list.
+      %struct.va_list = type { ptr }
+      @va_list = external global %struct.va_list
+      define void @use_global_va_list() {
+      entry:
+        %arg = va_arg ptr @va_list, i64
+        ret void
+      }
+      define void @invalid_va_list(i32 %a, ...) {
+      entry:
+        call void @llvm.va_start.p0(ptr @va_list)
+        tail call void @use_global_va_list()
+        ret void
+      }
+
+      ; Valid, byval argument forwarded to tail call as another byval argument.
+      define void @forward_byval(ptr byval(i64) %x) {
+      entry:
+        tail call void @take_byval(ptr byval(i64) %x)
+        ret void
+      }
+
+      ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
+      ; passed to tail callee as non-byval ptr.
+      define void @invalid_byval(ptr byval(i64) %x) {
+      entry:
+        tail call void @take_ptr(ptr %x)
+        ret void
+      }
+
+
+   Calls marked ``musttail`` must obey the following additional rules:
 
    - The call must immediately precede a :ref:`ret <i_ret>` instruction,
      or a pointer bitcast followed by a ret instruction.
