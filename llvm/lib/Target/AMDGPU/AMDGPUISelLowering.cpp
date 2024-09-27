@@ -913,7 +913,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
   case ISD::INTRINSIC_W_CHAIN: {
-    unsigned IntrID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    unsigned IntrID = N->getConstantOperandVal(1);
     return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
   case ISD::LOAD:
