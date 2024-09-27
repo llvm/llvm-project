@@ -65,6 +65,9 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   void withReturnValueSlot(const Expr *E,
                            llvm::function_ref<RValue(ReturnValueSlot)> Fn);
 
+  void DoZeroInitPadding(const Address BaseAddr, uint64_t StartBitOffset,
+                         uint64_t EndBitOffset);
+
 public:
   AggExprEmitter(CodeGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
     : CGF(cgf), Builder(CGF.Builder), Dest(Dest),
@@ -1701,14 +1704,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
   const bool ZeroInitPadding =
       CGF.CGM.shouldZeroInitPadding() && !Dest.isZeroed();
-  const Address BaseLoc = Dest.getAddress().withElementType(CGF.Int8Ty);
-  auto DoZeroInitPadding = [&](CharUnits Offset, CharUnits Size) {
-    if (Size.isPositive()) {
-      Address Loc = CGF.Builder.CreateConstGEP(BaseLoc, Offset.getQuantity());
-      llvm::Constant *SizeVal = CGF.Builder.getInt64(Size.getQuantity());
-      CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
-    }
-  };
+  const Address BaseAddr = Dest.getAddress().withElementType(CGF.Int8Ty);
 
   if (record->isUnion()) {
     // Only initialize one field of a union. The field itself is
@@ -1735,11 +1731,10 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
       // Store the initializer into the field
       EmitInitializationToLValue(InitExprs[0], FieldLoc);
       if (ZeroInitPadding) {
-        CharUnits TotalSize =
-            Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
-        CharUnits FieldSize =
-            CGF.getContext().getTypeSizeInChars(FieldLoc.getType());
-        DoZeroInitPadding(FieldSize, TotalSize - FieldSize);
+        uint64_t TotalSize = CGF.getContext().toBits(
+            Dest.getPreferredSize(CGF.getContext(), DestLV.getType()));
+        uint64_t FieldSize = CGF.getContext().getTypeSize(FieldLoc.getType());
+        DoZeroInitPadding(BaseAddr, FieldSize, TotalSize);
       }
     } else {
       // Default-initialize to null.
@@ -1754,7 +1749,7 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
   const ASTRecordLayout &Layout = CGF.getContext().getASTRecordLayout(record);
-  CharUnits SizeSoFar = CharUnits::Zero();
+  uint64_t LastFieldBitOffset = 0;
   for (const auto *field : record->fields()) {
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
@@ -1773,22 +1768,15 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
     if (ZeroInitPadding) {
       uint64_t StartBitOffset = Layout.getFieldOffset(field->getFieldIndex());
-      CharUnits StartOffset =
-          CGF.getContext().toCharUnitsFromBits(StartBitOffset);
-      DoZeroInitPadding(SizeSoFar, StartOffset - SizeSoFar);
+      DoZeroInitPadding(BaseAddr, LastFieldBitOffset, StartBitOffset);
       if (!field->isBitField()) {
-        CharUnits FieldSize =
-            CGF.getContext().getTypeSizeInChars(field->getType());
-        SizeSoFar = StartOffset + FieldSize;
+        LastFieldBitOffset =
+            StartBitOffset + CGF.getContext().getTypeSize(field->getType());
       } else {
         const CGRecordLayout &RL =
             CGF.getTypes().getCGRecordLayout(field->getParent());
         const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
-        uint64_t EndBitOffset = StartBitOffset + Info.Size;
-        SizeSoFar = CGF.getContext().toCharUnitsFromBits(EndBitOffset);
-        if (EndBitOffset % CGF.getContext().getCharWidth() != 0) {
-          SizeSoFar++;
-        }
+        LastFieldBitOffset = StartBitOffset + Info.Size;
       }
     }
 
@@ -1818,9 +1806,48 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     }
   }
   if (ZeroInitPadding) {
-    CharUnits TotalSize =
-        Dest.getPreferredSize(CGF.getContext(), DestLV.getType());
-    DoZeroInitPadding(SizeSoFar, TotalSize - SizeSoFar);
+    uint64_t TotalSize = CGF.getContext().toBits(
+        Dest.getPreferredSize(CGF.getContext(), DestLV.getType()));
+    DoZeroInitPadding(BaseAddr, LastFieldBitOffset, TotalSize);
+  }
+}
+
+void AggExprEmitter::DoZeroInitPadding(const Address BaseAddr,
+                                       uint64_t StartBitOffset,
+                                       uint64_t EndBitOffset) {
+  if (StartBitOffset >= EndBitOffset)
+    return;
+
+  auto InitBytes = [&](uint64_t Start, uint64_t End) {
+    Address Addr = CGF.Builder.CreateConstGEP(BaseAddr, Start);
+    llvm::Constant *SizeVal = CGF.Builder.getInt64(End - Start);
+    CGF.Builder.CreateMemSet(Addr, CGF.Builder.getInt8(0), SizeVal, false);
+  };
+  auto InitBits = [&](uint64_t Byte, uint64_t Start, uint64_t End) {
+    Address Addr = CGF.Builder.CreateConstGEP(BaseAddr, Byte);
+    llvm::Value *Val = Builder.CreateLoad(Addr);
+    Val = Builder.CreateAnd(Val, ~llvm::APInt::getBitsSet(8, Start, End));
+    Builder.CreateStore(Val, Addr);
+  };
+
+  uint64_t StartBit = StartBitOffset % 8;
+  uint64_t StartByte = StartBitOffset / 8;
+  uint64_t EndBit = EndBitOffset % 8;
+  uint64_t EndByte = EndBitOffset / 8;
+
+  if (StartByte < EndByte) {
+    if (StartBit != 0) {
+      InitBits(StartByte, StartBit, 8);
+      StartBit = 0;
+      StartByte++;
+    }
+    if (StartByte < EndByte) {
+      InitBytes(StartByte, EndByte);
+      StartByte = EndByte;
+    }
+  }
+  if (EndBit != 0) {
+    InitBits(EndByte, StartBit, EndBit);
   }
 }
 
