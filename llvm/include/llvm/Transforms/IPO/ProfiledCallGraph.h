@@ -138,6 +138,7 @@ public:
   }
 
 private:
+  // A helper to not recalculate FunctionId hash
   class PrehashedFunctionId {
   public:
     PrehashedFunctionId() = default;
@@ -146,6 +147,9 @@ private:
 
     const FunctionId &GetId() const { return Id; }
 
+    // Implicit conversion for hash_value(PrehashedFunctionId) to work.
+    // You are not supposed to use it directly, since it converts into
+    // hash-represeting FunctionId and thus drops the Name, use `GetId` instead.
     operator FunctionId() const {
       return FunctionId{Hash};
     }
