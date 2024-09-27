@@ -858,20 +858,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
   }
   case Instruction::SRem: {
     const APInt *Rem;
-    // X % -1 demands all the bits because we don't want to introduce
-    // INT_MIN % -1 (== undef) by accident.
-    if (match(I->getOperand(1), m_APInt(Rem)) && !Rem->isAllOnes()) {
-      if (Rem->isPowerOf2()) {
-        if (DemandedMask.ult(*Rem)) // srem won't affect demanded bits
-          return I->getOperand(0);
+    if (match(I->getOperand(1), m_APInt(Rem)) && Rem->isPowerOf2()) {
+      if (DemandedMask.ult(*Rem)) // srem won't affect demanded bits
+        return I->getOperand(0);
 
-        APInt LowBits = *Rem - 1;
-        APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
-        if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Depth + 1, Q))
-          return I;
-        Known = KnownBits::srem(LHSKnown, KnownBits::makeConstant(*Rem));
-        break;
-      }
+      APInt LowBits = *Rem - 1;
+      APInt Mask2 = LowBits | APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(I, 0, Mask2, LHSKnown, Depth + 1, Q))
+        return I;
+      Known = KnownBits::srem(LHSKnown, KnownBits::makeConstant(*Rem));
+      break;
     }
 
     llvm::computeKnownBits(I, Known, Depth, Q);
