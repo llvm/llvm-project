@@ -338,5 +338,39 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
   llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 }
 
+Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
+                           unsigned int Inc) {
+  // Update the ring buffer. Top byte of ThreadLong defines the size of the
+  // buffer in pages, it must be a power of two, and the start of the buffer
+  // must be aligned by twice that much. Therefore wrap around of the ring
+  // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
+  // The use of AShr instead of LShr is due to
+  //   https://bugs.llvm.org/show_bug.cgi?id=39030
+  // Runtime library makes sure not to use the highest bit.
+  //
+  // Mechanical proof of this address calculation can be found at:
+  // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
+  //
+  // Example of the wrap case for N = 1
+  // Pointer:   0x01AAAAAAAAAAAFF8
+  //                     +
+  //            0x0000000000000008
+  //                     =
+  //            0x01AAAAAAAAAAB000
+  //                     &
+  // WrapMask:  0xFFFFFFFFFFFFF000
+  //                     =
+  //            0x01AAAAAAAAAAA000
+  //
+  // Then the WrapMask will be a no-op until the next wrap case.
+  assert((4096 % Inc) == 0);
+  Value *WrapMask = IRB.CreateXor(
+      IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+      ConstantInt::get(ThreadLong->getType(), (uint64_t)-1));
+  return IRB.CreateAnd(
+      IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),
+      WrapMask);
+}
+
 } // namespace memtag
 } // namespace llvm
