@@ -1300,6 +1300,7 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
   llvm::StringSet<> known_external_plugin_search_paths;
   llvm::StringSet<> known_compiler_plugin_library_paths;
   llvm::StringSet<> known_compiler_plugin_executable_paths;
+  llvm::StringSet<> known_resolved_plugin_configs;
   for (auto &elem : search_path_options.PluginSearchOpts) {
     plugin_search_options.push_back(elem);
 
@@ -1477,6 +1478,25 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
                 plugin_search_options.emplace_back(
                     swift::PluginSearchOption::LoadPluginExecutable{
                         plugin.str(), modules_vec});
+            continue;
+          }
+          case swift::PluginSearchOption::Kind::ResolvedPluginConfig: {
+            // Resolved plugin config.
+            StringRef lib_path;
+            StringRef exe_path;
+            StringRef modules_list;
+            std::tie(lib_path, exe_path) = opt.second.split('#');
+            std::tie(exe_path, modules_list) = exe_path.split('#');
+            std::vector<std::string> modules_vec;
+            for (auto name : llvm::split(modules_list, ','))
+              modules_vec.emplace_back(name);
+            if (known_resolved_plugin_configs.insert(opt.second).second)
+              if ((lib_path.empty() || exists(lib_path)) &&
+                  (exe_path.empty() || exists(exe_path)))
+                plugin_search_options.emplace_back(
+                    swift::PluginSearchOption::ResolvedPluginConfig{
+                        lib_path.str(), exe_path.str(),
+                        std::move(modules_vec)});
             continue;
           }
           }
