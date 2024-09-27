@@ -67,13 +67,13 @@ void PosixReturnCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *LessThanZeroOp =
           Result.Nodes.getNodeAs<BinaryOperator>("ltzop")) {
     SourceLocation OperatorLoc = LessThanZeroOp->getOperatorLoc();
-    const char NewBinOp =
-        LessThanZeroOp->getOpcode() == BinaryOperator::Opcode::BO_LT ? '>'
-                                                                     : '<';
+    StringRef NewBinOp =
+        LessThanZeroOp->getOpcode() == BinaryOperator::Opcode::BO_LT ? ">"
+                                                                     : "<";
     diag(OperatorLoc, "the comparison always evaluates to false because %0 "
                       "always returns non-negative values")
         << getFunctionSpelling(Result)
-        << FixItHint::CreateReplacement(OperatorLoc, Twine(NewBinOp).str());
+        << FixItHint::CreateReplacement(OperatorLoc, NewBinOp);
     return;
   }
   if (const auto *AlwaysTrueOp =
