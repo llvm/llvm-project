@@ -581,29 +581,28 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   Instruction *Base =
       insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
 
-  int NextTag = 0;
+  unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
                           llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
-    int Tag = NextTag;
+    unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
     Function *TagP = Intrinsic::getDeclaration(
         F->getParent(), Intrinsic::aarch64_tagp, {Info.AI->getType()});
-    Instruction *TagPCall =
-        IRB.CreateCall(TagP, {Constant::getNullValue(Info.AI->getType()), Base,
-                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
+    Instruction *TagPCall = IRB.CreateCall(
+        TagP, {Info.AI, Base, ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");
     // Does not replace metadata, so we don't have to handle DbgVariableRecords.
     Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !memtag::isLifetimeIntrinsic(U.getUser());
+      return !memtag::isLifetimeIntrinsic(U.getUser()) &&
+             U.getUser() != TagPCall;
     });
-    TagPCall->setOperand(0, Info.AI);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
@@ -643,7 +642,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         II->eraseFromParent();
     }
 
-    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
+    memtag::annotateDebugRecords(Info, Tag);
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime
