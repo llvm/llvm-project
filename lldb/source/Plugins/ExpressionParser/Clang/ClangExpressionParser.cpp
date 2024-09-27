@@ -176,15 +176,22 @@ public:
     m_manager = manager;
   }
 
-  /// Returns the last ClangDiagnostic message that the DiagnosticManager
-  /// received or a nullptr if the DiagnosticMangager hasn't seen any
-  /// Clang diagnostics yet.
+  /// Returns the last error ClangDiagnostic message that the
+  /// DiagnosticManager received or a nullptr.
   ClangDiagnostic *MaybeGetLastClangDiag() const {
     if (m_manager->Diagnostics().empty())
       return nullptr;
-    lldb_private::Diagnostic *diag = m_manager->Diagnostics().back().get();
-    ClangDiagnostic *clang_diag = dyn_cast<ClangDiagnostic>(diag);
-    return clang_diag;
+    auto &diags = m_manager->Diagnostics();
+    for (auto it = diags.rbegin(); it != diags.rend(); it++) {
+      lldb_private::Diagnostic *diag = it->get();
+      if (ClangDiagnostic *clang_diag = dyn_cast<ClangDiagnostic>(diag)) {
+        if (clang_diag->GetSeverity() == lldb::eSeverityWarning)
+          return nullptr;
+        if (clang_diag->GetSeverity() == lldb::eSeverityError)
+          return clang_diag;
+      }
+    }
+    return nullptr;
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -214,8 +221,6 @@ public:
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
 
     DiagnosticDetail detail;
-    bool make_new_diagnostic = true;
-
     switch (DiagLevel) {
     case DiagnosticsEngine::Level::Fatal:
     case DiagnosticsEngine::Level::Error:
@@ -229,9 +234,6 @@ public:
       detail.severity = lldb::eSeverityInfo;
       break;
     case DiagnosticsEngine::Level::Note:
-      m_manager->AppendMessageToDiagnostic(m_output);
-      make_new_diagnostic = false;
-
       // 'note:' diagnostics for errors and warnings can also contain Fix-Its.
       // We add these Fix-Its to the last error diagnostic to make sure
       // that we later have all Fix-Its related to an 'error' diagnostic when
@@ -249,7 +251,6 @@ public:
       AddAllFixIts(clang_diag, Info);
       break;
     }
-    if (make_new_diagnostic) {
       // ClangDiagnostic messages are expected to have no whitespace/newlines
       // around them.
       std::string stripped_output =
@@ -269,6 +270,7 @@ public:
           loc.line = fsloc.getSpellingLineNumber();
           loc.column = fsloc.getSpellingColumnNumber();
           loc.in_user_input = filename == m_filename;
+          loc.hidden = filename.starts_with("<lldb wrapper ");
 
           // Find the range of the primary location.
           for (const auto &range : Info.getRanges()) {
@@ -298,7 +300,6 @@ public:
         AddAllFixIts(new_diagnostic.get(), Info);
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
-    }
   }
 
   void BeginSourceFile(const LangOptions &LO, const Preprocessor *PP) override {
