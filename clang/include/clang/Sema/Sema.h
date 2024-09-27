@@ -14264,7 +14264,9 @@ public:
   ///
   /// This is intended for use when transforming 'sizeof...(Arg)' in order to
   /// avoid actually expanding the pack where possible.
-  std::optional<unsigned> getFullyPackExpandedSize(TemplateArgument Arg);
+  std::optional<unsigned>
+  getFullyPackExpandedSize(TemplateArgument Arg,
+                           const NamedDecl *&ParameterPack);
 
   /// Called when an expression computing the size of a parameter pack
   /// is parsed.

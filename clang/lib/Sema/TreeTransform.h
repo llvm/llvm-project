@@ -15237,6 +15237,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
 
   // Try to compute the result without performing a partial substitution.
   std::optional<unsigned> Result = 0;
+  NamedDecl *NewPack = E->getPack();
   for (const TemplateArgument &Arg : PackArgs) {
     if (!Arg.isPackExpansion()) {
       Result = *Result + 1;
@@ -15260,9 +15261,14 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
                                                /*Uneval*/ true))
       return true;
 
+    const NamedDecl *TransformedParameterPack = nullptr;
     // See if we can determine the number of arguments from the result.
-    std::optional<unsigned> NumExpansions =
-        getSema().getFullyPackExpandedSize(OutPattern.getArgument());
+    std::optional<unsigned> NumExpansions = getSema().getFullyPackExpandedSize(
+        OutPattern.getArgument(), TransformedParameterPack);
+    if (TransformedParameterPack && !E->isPartiallySubstituted()) {
+      assert(PackArgs.size() == 1);
+      NewPack = const_cast<NamedDecl *>(TransformedParameterPack);
+    }
     if (!NumExpansions) {
       // No: we must be in an alias template expansion, and we're going to need
       // to actually expand the packs.
@@ -15277,7 +15283,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   // substituting.
   if (Result)
     return getDerived().RebuildSizeOfPackExpr(
-        E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
+        E->getOperatorLoc(), NewPack, E->getPackLoc(), E->getRParenLoc(),
         *Result, std::nullopt);
 
   TemplateArgumentListInfo TransformedPackArgs(E->getPackLoc(),
@@ -15304,10 +15310,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
 
   if (PartialSubstitution)
     return getDerived().RebuildSizeOfPackExpr(
-        E->getOperatorLoc(), E->getPack(), E->getPackLoc(), E->getRParenLoc(),
+        E->getOperatorLoc(), NewPack, E->getPackLoc(), E->getRParenLoc(),
         std::nullopt, Args);
 
-  return getDerived().RebuildSizeOfPackExpr(E->getOperatorLoc(), E->getPack(),
+  return getDerived().RebuildSizeOfPackExpr(E->getOperatorLoc(), NewPack,
                                             E->getPackLoc(), E->getRParenLoc(),
                                             Args.size(), std::nullopt);
 }
