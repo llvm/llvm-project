@@ -23,6 +23,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
@@ -261,6 +262,125 @@ static bool runIPSCCP(
             }
           }
         }
+      }
+    }
+  }
+
+  //  If a function has one use, has an alloca parameter, and its caller has
+  //  nothing but geps/stores to the alloca, push the alloca definition and all
+  //  stores/geps into the caller. For now, rely on argpromotion to clean up the
+  //  dead arguments left in the caller
+  for (auto &F : M) {
+    if (F.hasOneUse() && canTrackArgumentsInterprocedurally(&F)) {
+      CallInst *CI = dyn_cast<CallInst>(*F.user_begin());
+      if (!CI)
+        continue;
+      for (auto &Arg : CI->args()) {
+        auto AI = dyn_cast<AllocaInst>(Arg);
+        if (!AI)
+          continue;
+
+        auto GetAllocaUsers = [&CI](AllocaInst *AI,
+                                    SmallVector<Value *> &AllocaUsers) -> bool {
+          for (User *U : AI->users()) {
+            if (U == CI)
+              continue;
+
+            auto I = dyn_cast<Instruction>(U);
+            if (!I)
+              continue;
+            switch (I->getOpcode()) {
+            default: {
+              return false;
+            }
+            case Instruction::Store: {
+              auto SI = cast<StoreInst>(U);
+              if (SI->isVolatile() || !isa<Constant>(SI->getValueOperand())) {
+                return false;
+              }
+              AllocaUsers.push_back(SI);
+              break;
+            }
+            case Instruction::GetElementPtr: {
+              auto GEP = cast<GetElementPtrInst>(U);
+              auto SI = dyn_cast<StoreInst>(*GEP->users().begin());
+              if (GEP->getNumUses() != 1 || !SI ||
+                  !isa<Constant>(SI->getValueOperand())) {
+                return false;
+              }
+              AllocaUsers.push_back(GEP);
+              break;
+            }
+            }
+          }
+          return !AllocaUsers.empty();
+        };
+
+        SmallVector<Value *> AllocaUsers;
+        if (!GetAllocaUsers(AI, AllocaUsers))
+          continue;
+
+        // Copy uses of the Alloca to the callee
+        IRBuilder<> B(&F.getEntryBlock().front());
+        DataLayout DL = AI->getDataLayout();
+        AllocaInst *NewAI =
+            B.CreateAlloca(AI->getAllocatedType(), nullptr, AI->getName());
+        F.getArg(Arg.getOperandNo())->replaceAllUsesWith(NewAI);
+        NewAI->setAlignment(AI->getAlign());
+
+        for (auto U : AllocaUsers) {
+          switch (cast<Instruction>(U)->getOpcode()) {
+          default:
+            llvm_unreachable("Illegal user type in AllocaUsers");
+          case Instruction::Store: {
+            auto SI = cast<StoreInst>(U);
+            auto NewStore = B.CreateStore(SI->getValueOperand(), NewAI);
+            NewStore->setAlignment(SI->getAlign());
+            break;
+          }
+          case Instruction::GetElementPtr: {
+            auto GEP = cast<GetElementPtrInst>(U);
+
+            SmallVector<Value *> GepIndices;
+            for (unsigned i = 0; i < GEP->getNumIndices(); i++)
+              GepIndices.push_back(GEP->getOperand(i + 1));
+
+            GetElementPtrInst *NewGep = cast<GetElementPtrInst>(
+                B.CreateGEP(GEP->getSourceElementType(), NewAI, GepIndices));
+            NewGep->setNoWrapFlags(GEP->getNoWrapFlags());
+
+            auto SI = cast<StoreInst>(*GEP->users().begin());
+            auto NewStore = B.CreateStore(SI->getValueOperand(), NewGep);
+            NewStore->setAlignment(SI->getAlign());
+          }
+          }
+        }
+
+        // Remove old uses of the Alloca in the caller
+        while (!AllocaUsers.empty()) {
+          Instruction *I = cast<Instruction>(AllocaUsers.pop_back_val());
+          switch (I->getOpcode()) {
+          default:
+            llvm_unreachable("Illegal user type when removing Alloca users");
+          case Instruction::Store: {
+            I->removeFromParent();
+            I->deleteValue();
+            break;
+          }
+          case Instruction::GetElementPtr: {
+            auto SI = cast<Instruction>(*I->users().begin());
+            SI->removeFromParent();
+            SI->deleteValue();
+            I->removeFromParent();
+            I->deleteValue();
+          }
+          }
+        }
+        MadeChanges = true;
+
+        // TODO:
+        //  - delete dead params here instead of relying on argpromotion
+        //  - remove empty alloca instruction
       }
     }
   }
