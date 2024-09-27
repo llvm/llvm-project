@@ -13,7 +13,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
