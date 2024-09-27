@@ -633,6 +633,23 @@ cc_test(
 )
 
 cc_test(
+    name = "sandboxir_tests",
+    size = "small",
+    srcs = glob(
+        ["SandboxIR/*.cpp"],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:SandboxIR",
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+cc_test(
     name = "profile_data_tests",
     size = "small",
     srcs = glob(

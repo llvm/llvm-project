@@ -3504,9 +3504,7 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
     if (failed(linalg::vectorize(rewriter, target, vectorSizes,
                                  getScalableSizes(),
-                                 getVectorizeNdExtract().has_value()
-                                     ? getVectorizeNdExtract().value()
-                                     : false))) {
+                                 getVectorizeNdExtract().value_or(false)))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }
