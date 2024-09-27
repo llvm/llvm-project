@@ -1364,13 +1364,14 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
-  SafeUDivMode = true;
+  bool PrevSafeMode = SafeUDivMode;
+  SafeUDivMode = IsSequential;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    SafeUDivMode = i != 0;
+    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1385,6 +1386,7 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
     }
     LHS = Sel;
   }
+  SafeUDivMode = PrevSafeMode;
   return LHS;
 }
 

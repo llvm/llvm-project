@@ -794,9 +794,7 @@ define i64 @multi_exit_4_exit_count_with_urem_by_value_in_latch(ptr %dst, i64 %N
 ; CHECK-LABEL: define i64 @multi_exit_4_exit_count_with_urem_by_value_in_latch(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP11:%.*]] = freeze i64 [[N]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP11]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP12]]
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[N]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 42, [[TMP1]]
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP2]], i64 0)
@@ -1082,6 +1080,46 @@ exit:
   ret i64 %p
 }
 
+define i64 @multi_exit_exit_count_with_udiv_by_0_in_latch(ptr %dst, i64 %N) {
+; CHECK-LABEL: define i64 @multi_exit_exit_count_with_udiv_by_0_in_latch(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[D:%.*]] = udiv i64 42, 0
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i64 [[IV]], [[D]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[P]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 1, ptr %gep
+  %c.0 = icmp slt i64 %iv, %N
+  br i1 %c.0, label %loop.latch, label %exit
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %d = udiv i64 42, 0
+  %c.1 = icmp slt i64 %iv, %d
+  br i1 %c.1, label %loop.header, label %exit
+
+exit:
+  %p = phi i64 [ 1, %loop.header ], [ 0, %loop.latch]
+  ret i64 %p
+}
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
