@@ -273,8 +273,11 @@ void ProcessMinidump::RefreshStateAfterStop() {
         // No stop.
         return;
       }
+      const char * description = nullptr;
+      if ((exception_stream.ExceptionRecord.ExceptionFlags & llvm::minidump::Exception::LLDB_FLAG) == llvm::minidump::Exception::LLDB_FLAG)
+        description = reinterpret_cast<const char *>(exception_stream.ExceptionRecord.ExceptionInformation);
 
-      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo);
+      stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo, description);
     } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
       stop_info = StopInfoMachException::CreateStopReasonWithMachException(
           *stop_thread, exception_stream.ExceptionRecord.ExceptionCode, 2,
