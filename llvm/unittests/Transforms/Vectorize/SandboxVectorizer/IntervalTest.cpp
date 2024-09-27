@@ -1,4 +1,4 @@
-//===- InstrIntervalTest.cpp ----------------------------------------------===//
+//===- IntervalTest.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrInterval.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
-#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
-struct InstrIntervalTest : public testing::Test {
+struct IntervalTest : public testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
 
@@ -27,7 +26,7 @@ struct InstrIntervalTest : public testing::Test {
   }
 };
 
-TEST_F(InstrIntervalTest, Basic) {
+TEST_F(IntervalTest, Basic) {
   parseIR(C, R"IR(
 define void @foo(i8 %v0) {
   %add0 = add i8 %v0, %v0
@@ -46,39 +45,40 @@ define void @foo(i8 %v0) {
   auto *I2 = &*It++;
   auto *Ret = &*It++;
 
-  sandboxir::InstrInterval Interval(I0, Ret);
+  sandboxir::Interval<sandboxir::Instruction> Intvl(I0, Ret);
 #ifndef NDEBUG
-  EXPECT_DEATH(sandboxir::InstrInterval(I1, I0), ".*before.*");
+  EXPECT_DEATH(sandboxir::Interval<sandboxir::Instruction>(I1, I0),
+               ".*before.*");
 #endif // NDEBUG
-  // Check InstrInterval(ArrayRef), from(), to().
+  // Check Interval<sandboxir::Instruction>(ArrayRef), from(), to().
   {
-    sandboxir::InstrInterval Interval(
+    sandboxir::Interval<sandboxir::Instruction> Intvl(
         SmallVector<sandboxir::Instruction *>({I0, Ret}));
-    EXPECT_EQ(Interval.top(), I0);
-    EXPECT_EQ(Interval.bottom(), Ret);
+    EXPECT_EQ(Intvl.top(), I0);
+    EXPECT_EQ(Intvl.bottom(), Ret);
   }
   {
-    sandboxir::InstrInterval Interval(
+    sandboxir::Interval<sandboxir::Instruction> Intvl(
         SmallVector<sandboxir::Instruction *>({Ret, I0}));
-    EXPECT_EQ(Interval.top(), I0);
-    EXPECT_EQ(Interval.bottom(), Ret);
+    EXPECT_EQ(Intvl.top(), I0);
+    EXPECT_EQ(Intvl.bottom(), Ret);
   }
   {
-    sandboxir::InstrInterval Interval(
+    sandboxir::Interval<sandboxir::Instruction> Intvl(
         SmallVector<sandboxir::Instruction *>({I0, I0}));
-    EXPECT_EQ(Interval.top(), I0);
-    EXPECT_EQ(Interval.bottom(), I0);
+    EXPECT_EQ(Intvl.top(), I0);
+    EXPECT_EQ(Intvl.bottom(), I0);
   }
 
   // Check empty().
-  EXPECT_FALSE(Interval.empty());
-  sandboxir::InstrInterval Empty;
+  EXPECT_FALSE(Intvl.empty());
+  sandboxir::Interval<sandboxir::Instruction> Empty;
   EXPECT_TRUE(Empty.empty());
-  sandboxir::InstrInterval One(I0, I0);
+  sandboxir::Interval<sandboxir::Instruction> One(I0, I0);
   EXPECT_FALSE(One.empty());
   // Check contains().
   for (auto &I : *BB) {
-    EXPECT_TRUE(Interval.contains(&I));
+    EXPECT_TRUE(Intvl.contains(&I));
     EXPECT_FALSE(Empty.contains(&I));
   }
   EXPECT_FALSE(One.contains(I1));
@@ -86,6 +86,6 @@ define void @foo(i8 %v0) {
   EXPECT_FALSE(One.contains(Ret));
   // Check iterator.
   auto BBIt = BB->begin();
-  for (auto &I : Interval)
+  for (auto &I : Intvl)
     EXPECT_EQ(&I, &*BBIt++);
 }
