@@ -32,6 +32,10 @@ public:
       : V(APInt(0, 0ULL, false),
           llvm::FixedPointSemantics(0, 0, false, false, false)) {}
 
+  static FixedPoint Zero(llvm::FixedPointSemantics Sem) {
+    return FixedPoint(APInt(Sem.getWidth(), 0ULL, Sem.isSigned()), Sem);
+  }
+
   operator bool() const { return V.getBoolValue(); }
   template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
   explicit operator Ty() const {
