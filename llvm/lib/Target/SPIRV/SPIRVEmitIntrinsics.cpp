@@ -189,6 +189,13 @@ bool isConvergenceIntrinsic(const Instruction *I) {
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
 }
 
+bool expectIgnoredInIRTranslation(const Instruction *I) {
+  const auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  return II->getIntrinsicID() == Intrinsic::invariant_start;
+}
+
 bool allowEmitFakeUse(const Value *Arg) {
   if (const auto *II = dyn_cast<IntrinsicInst>(Arg))
     if (Function *F = II->getCalledFunction())
@@ -1563,7 +1570,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName() && !I->getType()->isAggregateType()) {
+  if (I->hasName() && !I->getType()->isAggregateType() &&
+      !expectIgnoredInIRTranslation(I)) {
     reportFatalOnTokenType(I);
     setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};
