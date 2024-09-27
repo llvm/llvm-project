@@ -38,6 +38,4 @@ tt(2)%yy=1
   tt(1)%yy(2) = tt(1)%yy(1)
 !$omp atomic read
   tt(1)%yy(2) = tt(2)%yy(2)
-!CHECK: pass
-print *,'pass'
 end
