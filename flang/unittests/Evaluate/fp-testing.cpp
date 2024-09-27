@@ -8,7 +8,7 @@
 #endif
 
 using Fortran::common::RoundingMode;
-using Fortran::evaluate::RealFlag;
+using Fortran::common::RealFlag;
 
 ScopedHostFloatingPointEnvironment::ScopedHostFloatingPointEnvironment(
 #if __x86_64__
