@@ -16,6 +16,7 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "DynamicAllocator.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
 #include "FunctionPointer.h"
