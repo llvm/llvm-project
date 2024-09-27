@@ -160,7 +160,10 @@ private:
   /// Whether the current mode is known.
   bool CurrentModeKnown;
 
-  /// Current mode bits.
+  /// Current mode values. The current mode is suitable for all instructions
+  /// between the previous mode set, MostRecentModeSet, and the previous
+  /// instruction. If it can be updated to include the current instruction we
+  /// will do it, and if it can't we will insert a new mode set.
   ModeTy CurrentMode;
 
   /// Number of current hard clause instructions.
