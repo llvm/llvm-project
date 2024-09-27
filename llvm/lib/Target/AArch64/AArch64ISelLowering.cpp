@@ -21954,8 +21954,8 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
     auto Doti32 = DAG.getNode(Opcode, DL, ReducedTypeHalved,
                               DAG.getConstant(0, DL, ReducedTypeHalved), A, B);
     auto Extended = DAG.getSExtOrTrunc(Doti32, DL, ReducedType);
-    return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
-                       {NarrowOp, Extended});
+    return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(), NarrowOp,
+                       Extended);
   }
 
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
