@@ -144,11 +144,7 @@ option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
 if(MINGW)
-  if (LIBCXXABI_ENABLE_SHARED)
-    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-mingw.cfg.in")
-  else()
-    set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-static-mingw.cfg.in")
-  endif()
+  set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
 elseif(WIN32) # clang-cl
   if (LIBCXXABI_ENABLE_SHARED)
     set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-shared-clangcl.cfg.in")
