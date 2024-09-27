@@ -672,8 +672,8 @@ if.false:
   ret void
 }
 
-define i32 @str_transcode0(i1 %cond1, ptr %p, i1 %cond2) {
-; CHECK-LABEL: @str_transcode0(
+define i32 @succ_phi_has_3input(i1 %cond1, ptr %p, i1 %cond2) {
+; CHECK-LABEL: @succ_phi_has_3input(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BB3:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
@@ -725,6 +725,37 @@ if.false:
 
 if.true:
   %res = phi i32 [ %0, %if.false ], [ 0, %entry ]
+  ret i32 %res
+}
+
+define i32 @succ1to0_phi3(ptr %p, ptr %p2, i32 %x) {
+; CHECK-LABEL: @succ1to0_phi3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[P:%.*]], null
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[TMP0]] to <1 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[X:%.*]] to <1 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr [[P]], i32 4, <1 x i1> [[TMP1]], <1 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i32> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP4]] to <1 x i32>
+; CHECK-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> [[TMP5]], ptr [[P2:%.*]], i32 4, <1 x i1> [[TMP1]])
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 0, i32 [[TMP4]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SPEC_SELECT]], [[TMP4]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %cond = icmp eq ptr %p, null
+  br i1 %cond, label %if.true, label %if.false
+
+if.false:
+  %0 = load i32, ptr %p
+  store i32 %0, ptr %p2
+  br label %if.true
+
+if.true:
+  %res0 = phi i32 [ %0, %if.false ], [ 0, %entry ]
+  %res1 = phi i32 [ %0, %if.false ], [ %x, %entry ]
+  %res = add i32 %res0, %res1
   ret i32 %res
 }
 

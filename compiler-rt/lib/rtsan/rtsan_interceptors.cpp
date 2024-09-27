@@ -64,13 +64,15 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("open");
 
-  va_list args;
-  va_start(args, oflag);
-  const mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (OpenReadsVaArgs(oflag)) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(open)(path, oflag, mode);
+  }
 
-  const int result = REAL(open)(path, oflag, mode);
-  return result;
+  return REAL(open)(path, oflag);
 }
 
 #if SANITIZER_INTERCEPT_OPEN64
@@ -79,13 +81,15 @@ INTERCEPTOR(int, open64, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("open64");
 
-  va_list args;
-  va_start(args, oflag);
-  const mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (OpenReadsVaArgs(oflag)) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(open64)(path, oflag, mode);
+  }
 
-  const int result = REAL(open64)(path, oflag, mode);
-  return result;
+  return REAL(open64)(path, oflag);
 }
 #define RTSAN_MAYBE_INTERCEPT_OPEN64 INTERCEPT_FUNCTION(open64)
 #else
@@ -97,13 +101,15 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("openat");
 
-  va_list args;
-  va_start(args, oflag);
-  mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (OpenReadsVaArgs(oflag)) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(openat)(fd, path, oflag, mode);
+  }
 
-  const int result = REAL(openat)(fd, path, oflag, mode);
-  return result;
+  return REAL(openat)(fd, path, oflag);
 }
 
 #if SANITIZER_INTERCEPT_OPENAT64
@@ -112,13 +118,15 @@ INTERCEPTOR(int, openat64, int fd, const char *path, int oflag, ...) {
   // O_NONBLOCK
   __rtsan_notify_intercepted_call("openat64");
 
-  va_list args;
-  va_start(args, oflag);
-  mode_t mode = va_arg(args, int);
-  va_end(args);
+  if (OpenReadsVaArgs(oflag)) {
+    va_list args;
+    va_start(args, oflag);
+    const mode_t mode = va_arg(args, int);
+    va_end(args);
+    return REAL(openat64)(fd, path, oflag, mode);
+  }
 
-  const int result = REAL(openat64)(fd, path, oflag, mode);
-  return result;
+  return REAL(openat64)(fd, path, oflag);
 }
 #define RTSAN_MAYBE_INTERCEPT_OPENAT64 INTERCEPT_FUNCTION(openat64)
 #else

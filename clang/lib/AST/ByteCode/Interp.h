@@ -2573,6 +2573,7 @@ inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
+  assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;
 }
@@ -2584,6 +2585,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
+  assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;
 }
@@ -2947,6 +2949,17 @@ static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// Check if the initializer and storage types of a placement-new expression
+/// match.
+bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
+                          std::optional<uint64_t> ArraySize = std::nullopt);
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CheckNewTypeMismatchArray(InterpState &S, CodePtr OpPC, const Expr *E) {
+  const auto &Size = S.Stk.pop<T>();
+  return CheckNewTypeMismatch(S, OpPC, E, static_cast<uint64_t>(Size));
+}
+bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E);
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//

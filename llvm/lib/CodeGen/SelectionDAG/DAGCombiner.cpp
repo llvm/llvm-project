@@ -508,6 +508,7 @@ namespace {
     SDValue visitFSQRT(SDNode *N);
     SDValue visitFCOPYSIGN(SDNode *N);
     SDValue visitFPOW(SDNode *N);
+    SDValue visitFCANONICALIZE(SDNode *N);
     SDValue visitSINT_TO_FP(SDNode *N);
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
@@ -1980,6 +1981,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FREEZE:             return visitFREEZE(N);
   case ISD::GET_FPENV_MEM:      return visitGET_FPENV_MEM(N);
   case ISD::SET_FPENV_MEM:      return visitSET_FPENV_MEM(N);
+  case ISD::FCANONICALIZE:      return visitFCANONICALIZE(N);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
@@ -2086,6 +2088,19 @@ static SDValue getInputChainForNode(SDNode *N) {
     for (unsigned i = 1; i < NumOps-1; ++i)
       if (N->getOperand(i).getValueType() == MVT::Other)
         return N->getOperand(i);
+  }
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFCANONICALIZE(SDNode *N) {
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDLoc dl(N);
+
+  // Canonicalize undef to quiet NaN.
+  if (Operand.isUndef()) {
+    APFloat CanonicalQNaN = APFloat::getQNaN(VT.getFltSemantics());
+    return DAG.getConstantFP(CanonicalQNaN, dl, VT);
   }
   return SDValue();
 }

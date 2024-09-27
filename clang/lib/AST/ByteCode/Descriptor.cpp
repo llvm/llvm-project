@@ -15,6 +15,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Source.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -389,12 +390,17 @@ Descriptor::Descriptor(const DeclTy &D)
 }
 
 QualType Descriptor::getType() const {
-  if (const auto *E = asExpr())
-    return E->getType();
   if (const auto *D = asValueDecl())
     return D->getType();
-  if (const auto *T = dyn_cast<TypeDecl>(asDecl()))
+  if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
+
+  // The Source sometimes has a different type than the once
+  // we really save. Try to consult the Record first.
+  if (isRecord())
+    return QualType(ElemRecord->getDecl()->getTypeForDecl(), 0);
+  if (const auto *E = asExpr())
+    return E->getType();
   llvm_unreachable("Invalid descriptor type");
 }
 
@@ -415,6 +421,14 @@ SourceLocation Descriptor::getLocation() const {
     return D->getLocation();
   if (auto *E = Source.dyn_cast<const Expr *>())
     return E->getExprLoc();
+  llvm_unreachable("Invalid descriptor type");
+}
+
+SourceInfo Descriptor::getLoc() const {
+  if (const auto *D = Source.dyn_cast<const Decl *>())
+    return SourceInfo(D);
+  if (const auto *E = Source.dyn_cast<const Expr *>())
+    return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
 }
 

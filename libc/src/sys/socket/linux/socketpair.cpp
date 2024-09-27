@@ -10,10 +10,9 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/errno/libc_errno.h"
-
 #include <linux/net.h>   // For SYS_SOCKET socketcall number.
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -37,6 +36,9 @@ LLVM_LIBC_FUNCTION(int, socketpair,
     libc_errno = -ret;
     return -1;
   }
+
+  MSAN_UNPOISON(sv, sizeof(int) * 2);
+
   return ret;
 }
 

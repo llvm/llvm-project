@@ -3965,6 +3965,10 @@ static AtomicRMWInst::BinOp mapFromLLVMRMWBinOp(LLVMAtomicRMWBinOp BinOp) {
       return AtomicRMWInst::UIncWrap;
     case LLVMAtomicRMWBinOpUDecWrap:
       return AtomicRMWInst::UDecWrap;
+    case LLVMAtomicRMWBinOpUSubCond:
+      return AtomicRMWInst::USubCond;
+    case LLVMAtomicRMWBinOpUSubSat:
+      return AtomicRMWInst::USubSat;
   }
 
   llvm_unreachable("Invalid LLVMAtomicRMWBinOp value!");
@@ -3991,6 +3995,10 @@ static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
       return LLVMAtomicRMWBinOpUIncWrap;
     case AtomicRMWInst::UDecWrap:
       return LLVMAtomicRMWBinOpUDecWrap;
+    case AtomicRMWInst::USubCond:
+      return LLVMAtomicRMWBinOpUSubCond;
+    case AtomicRMWInst::USubSat:
+      return LLVMAtomicRMWBinOpUSubSat;
     default: break;
   }
 
@@ -4052,7 +4060,7 @@ LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name) {
-  return wrap(unwrap(B)->CreateGlobalStringPtr(Str, Name));
+  return wrap(unwrap(B)->CreateGlobalString(Str, Name));
 }
 
 LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {
