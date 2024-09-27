@@ -19,6 +19,7 @@
 #include "llvm/ADT/iterator.h"
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <set>
 #include <utility>
 
@@ -147,6 +148,22 @@ public:
   using const_iterator = SmallSetIterator<T, N, C>;
 
   SmallSet() = default;
+  SmallSet(const SmallSet &) = default;
+  SmallSet(SmallSet &&) = default;
+
+  template <typename IterT> SmallSet(IterT Begin, IterT End) {
+    insert(Begin, End);
+  }
+
+  template <typename RangeT>
+  explicit SmallSet(const iterator_range<RangeT> &R) {
+    insert(R.begin(), R.end());
+  }
+
+  SmallSet(std::initializer_list<T> L) { insert(L.begin(), L.end()); }
+
+  SmallSet &operator=(const SmallSet &) = default;
+  SmallSet &operator=(SmallSet &&) = default;
 
   [[nodiscard]] bool empty() const { return Vector.empty() && Set.empty(); }
 
