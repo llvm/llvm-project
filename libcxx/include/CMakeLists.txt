@@ -23,7 +23,6 @@ set(files
   __algorithm/find_if.h
   __algorithm/find_if_not.h
   __algorithm/find_segment_if.h
-  __algorithm/fold.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
   __algorithm/for_each_segment.h
@@ -98,6 +97,7 @@ set(files
   __algorithm/ranges_find_if.h
   __algorithm/ranges_find_if_not.h
   __algorithm/ranges_find_last.h
+  __algorithm/ranges_fold.h
   __algorithm/ranges_for_each.h
   __algorithm/ranges_for_each_n.h
   __algorithm/ranges_generate.h
