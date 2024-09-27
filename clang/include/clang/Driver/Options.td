@@ -2978,7 +2978,7 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
   MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
-                      !strconcat("(", open_cl.KeyPath, " || ", hlsl.KeyPath, ")") #
+                      open_cl.KeyPath #
                           " ? LangOptions::LaxVectorConversionKind::None" #
                           " : LangOptions::LaxVectorConversionKind::All">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
