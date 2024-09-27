@@ -1234,4 +1234,14 @@ define <2 x float> @test_fneg_nnan_ninf_mul_with_vec_const(<2 x float> %a) {
   ret <2 x float> %f2
 }
 
+define <2 x float> @test_fneg_nnan_ninf_mul_ninf_with_vec_const(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_nnan_ninf_mul_ninf_with_vec_const(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nnan ninf <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul ninf <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg nnan ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
 !0 = !{}
