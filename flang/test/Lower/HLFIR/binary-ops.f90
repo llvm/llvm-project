@@ -1,6 +1,5 @@
 ! Test lowering of binary intrinsic operations to HLFIR
 ! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -o - -fwrapv %s 2>&1 | FileCheck %s --check-prefix=NO-NSW
 
 subroutine int_add(x, y, z)
  integer :: x, y, z
@@ -209,32 +208,6 @@ end subroutine
 ! CHECK:  %[[VAL_12:.*]] = fir.load %{{.*}} : !fir.ref<i64>
 ! CHECK:  %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_12]] : i64
 ! CHECK:  arith.select %[[VAL_13]], %[[VAL_11]], %[[VAL_12]] : i64
-
-subroutine subscript(a, i, j, k)
-  integer :: a(:,:,:), i, j, k
-  a(i+1, j-2, k*3) = 5
-end subroutine
-! CHECK-LABEL: func.func @_QPsubscript(
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}i"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}j"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}k"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %c1{{[^ ]*}} overflow<nsw> : i32
-! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_10:.*]] = arith.subi %[[VAL_9]], %c2{{[^ ]*}} overflow<nsw> : i32
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_12:.*]] = arith.muli %c3{{[^ ]*}}, %[[VAL_11]] overflow<nsw> : i32
-
-! NO-NSW-LABEL: func.func @_QPsubscript(
-! NO-NSW:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}i"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! NO-NSW:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}j"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! NO-NSW:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}k"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! NO-NSW:  %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
-! NO-NSW:  %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %c1{{[^ ]*}} : i32
-! NO-NSW:  %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! NO-NSW:  %[[VAL_10:.*]] = arith.subi %[[VAL_9]], %c2{{[^ ]*}} : i32
-! NO-NSW:  %[[VAL_11:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
-! NO-NSW:  %[[VAL_12:.*]] = arith.muli %c3{{[^ ]*}}, %[[VAL_11]] : i32
 
 subroutine cmp_int(l, x, y)
   logical :: l
