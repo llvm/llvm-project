@@ -519,6 +519,11 @@ def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
   "Enable Armv9.5-A TLBI VMALL for Dirty State">;
 
 //===----------------------------------------------------------------------===//
+//  Armv9.6 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+
+//===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
 
@@ -827,6 +832,9 @@ def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
+def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
+  [],
+  !listconcat(HasV9_5aOps.DefaultExts, [])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
