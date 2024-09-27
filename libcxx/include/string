@@ -1683,15 +1683,15 @@ public:
 #if _LIBCPP_STD_VER <= 20
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string
   substr(size_type __pos = 0, size_type __n = npos) const {
-    return basic_string(*this, __pos, __n);
+    return basic_string(*this, __pos, __n, __alloc());
   }
 #else
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string substr(size_type __pos = 0, size_type __n = npos) const& {
-    return basic_string(*this, __pos, __n);
+    return basic_string(*this, __pos, __n, __alloc());
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string substr(size_type __pos = 0, size_type __n = npos) && {
-    return basic_string(std::move(*this), __pos, __n);
+    return basic_string(std::move(*this), __pos, __n, __alloc());
   }
 #endif
 
