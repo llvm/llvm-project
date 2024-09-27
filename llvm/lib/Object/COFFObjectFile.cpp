@@ -763,7 +763,7 @@ Error COFFObjectFile::initLoadConfigPtr() {
       if (Error E =
               getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
         return E;
-      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+      if (Error E = checkOffset(Data, IntPtr, sizeof(*CHPEMetadata)))
         return E;
 
       CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
@@ -2369,7 +2369,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
         Expected<StringRef> Contents = S.getContents();
         if (!Contents)
           return Contents.takeError();
-        return Contents->slice(Offset, Offset + Entry.DataSize);
+        return Contents->substr(Offset, Entry.DataSize);
       }
     }
     return createStringError(object_error::parse_failed,

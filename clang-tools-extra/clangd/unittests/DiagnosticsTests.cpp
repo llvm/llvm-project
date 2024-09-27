@@ -748,6 +748,10 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   TU.ExtraArgs = {"-Wunused"};
   TU.ClangTidyProvider = addClangArgs({"-Wno-unused"}, {});
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+
+  TU.ExtraArgs = {"-Wno-unused"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, {"-*, clang-diagnostic-*"});
+  EXPECT_THAT(TU.build().getDiagnostics(), SizeIs(1));
 }
 
 TEST(DiagnosticTest, LongFixMessages) {
@@ -938,6 +942,23 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
                              "prefer using 'override' or (rarely) 'final' "
                              "instead of 'virtual'"),
                         withFix(equalToFix(ExpectedFix2))))));
+}
+
+TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
+  std::string Main = R"cpp(
+    extern "C" {
+    #include "b.h"
+    }
+  )cpp";
+  std::string Header = R"cpp(
+    #define EXTERN extern
+    EXTERN int waldo();
+  )cpp";
+  auto TU = TestTU::withCode(Main);
+  TU.AdditionalFiles["b.h"] = Header;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
+  // Check that no assertion failures occur during the build
+  TU.build();
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -1961,6 +1982,30 @@ TEST(Diagnostics, Tags) {
       ifTidyChecks(UnorderedElementsAre(
           AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
                 withTag(DiagnosticTag::Deprecated)))));
+}
+
+TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Werror"};
+  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  TU.Code = Test.code().str();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Make sure severity for clang-tidy finding isn't bumped to
+                // error due to Werror in compile flags.
+                diagSeverity(DiagnosticsEngine::Warning)))));
+
+  TU.ClangTidyProvider =
+      addTidyChecks("modernize-use-using", /*WarningsAsErrors=*/"modernize-*");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Unless bumped explicitly with WarnAsError.
+                diagSeverity(DiagnosticsEngine::Error)))));
 }
 
 TEST(Diagnostics, DeprecatedDiagsAreHints) {

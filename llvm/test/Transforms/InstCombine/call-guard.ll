@@ -80,7 +80,7 @@ define void @negative_load(i32 %V1, ptr %P) {
 define void @deref_load(i32 %V1, ptr dereferenceable(4) align 4 %P) nofree nosync {
 ; CHECK-LABEL: @deref_load(
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V2]], [[V1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V1:%.*]], [[V2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 123) [ "deopt"() ]
 ; CHECK-NEXT:    ret void

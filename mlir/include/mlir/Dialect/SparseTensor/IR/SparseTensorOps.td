@@ -1644,7 +1644,7 @@ def IterateOp : SparseTensor_Op<"iterate",
       return getIterSpace().getType().getSpaceDim();
     }
     BlockArgument getIterator() {
-      return getRegion().getArguments().front();
+      return getRegion().getArguments().back();
     }
     std::optional<BlockArgument> getLvlCrd(Level lvl) {
       if (getCrdUsedLvls()[lvl]) {
@@ -1654,9 +1654,8 @@ def IterateOp : SparseTensor_Op<"iterate",
       return std::nullopt;
     }
     Block::BlockArgListType getCrds() {
-      // The first block argument is iterator, the remaining arguments are
-      // referenced coordinates.
-      return getRegion().getArguments().slice(1, getCrdUsedLvls().count());
+      // User-provided iteration arguments -> coords -> iterator.
+      return getRegion().getArguments().slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
     unsigned getNumRegionIterArgs() {
       return getRegion().getArguments().size() - 1 - getCrdUsedLvls().count();
@@ -1749,6 +1748,10 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region VariadicRegion<SizedRegion<1>>:$caseRegions);
 
+  let builders = [
+    OpBuilder<(ins "ValueRange":$iterSpace, "ValueRange":$initArgs, "unsigned":$numCases)>,
+  ];
+
   let extraClassDeclaration = [{
     unsigned getSpaceDim() {
       return llvm::cast<::mlir::sparse_tensor::IterSpaceType>(
@@ -1765,24 +1768,28 @@ def SparseTensor_CoIterateOp : SparseTensor_Op<"coiterate",
       });
     }
 
-    // The block arguments starts with referenced coordinates, follows by
-    // user-provided iteration arguments and ends with iterators.
+    // The block arguments starts with user-provided iteration arguments,
+    // follows by referenced coordinates and ends with iterators.
     Block::BlockArgListType getCrds(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .take_front(getCrdUsedLvls().count());
+          .slice(getNumRegionIterArgs(), getCrdUsedLvls().count());
     }
-    unsigned getNumRegionIterArgs(unsigned regionIdx) {
+    unsigned getNumRegionIterArgs() {
       return getInitArgs().size();
     }
     Block::BlockArgListType getRegionIterArgs(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
-          .slice(getCrdUsedLvls().count(), getNumRegionIterArgs(regionIdx));
+          .take_front(getNumRegionIterArgs());
     }
     Block::BlockArgListType getRegionIterators(unsigned regionIdx) {
       return getRegion(regionIdx).getArguments()
           .take_back(getRegionDefinedSpace(regionIdx).count());
     }
     ValueRange getYieldedValues(unsigned regionIdx);
+
+    // Returns a vector of regions that are the `sub-cases` of the given case region.
+    // E.g., `case %it1, _, %it3` is a subcase of `case %it1, %it2, %it3`.
+    SmallVector<Region *> getSubCasesOf(unsigned regionIdx);
   }];
 
   let hasVerifier = 1;

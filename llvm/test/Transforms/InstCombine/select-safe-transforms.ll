@@ -194,7 +194,7 @@ define i1 @andn_or_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
 define i1 @andn_or_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @andn_or_cmp_2_partial_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y:%.*]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sge i16 %a, %b
@@ -735,7 +735,7 @@ define i1 @orn_and_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
 define i1 @orn_and_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @orn_and_cmp_2_partial_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_INV]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y:%.*]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %x = icmp sge i16 %a, %b

@@ -20,6 +20,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -55,6 +56,9 @@ private:
   LocalVectorTy Descriptors;
 };
 
+using FunctionDeclTy =
+    llvm::PointerUnion<const FunctionDecl *, const BlockExpr *>;
+
 /// Bytecode function.
 ///
 /// Contains links to the bytecode of the function, as well as metadata
@@ -89,15 +93,20 @@ public:
   CodePtr getCodeEnd() const { return Code.data() + Code.size(); }
 
   /// Returns the original FunctionDecl.
-  const FunctionDecl *getDecl() const { return F; }
+  const FunctionDecl *getDecl() const {
+    return Source.dyn_cast<const FunctionDecl *>();
+  }
+  const BlockExpr *getExpr() const {
+    return Source.dyn_cast<const BlockExpr *>();
+  }
 
   /// Returns the name of the function decl this code
   /// was generated for.
   const std::string getName() const {
-    if (!F)
+    if (!Source || !getDecl())
       return "<<expr>>";
 
-    return F->getQualifiedNameAsString();
+    return getDecl()->getQualifiedNameAsString();
   }
 
   /// Returns a parameter descriptor.
@@ -135,13 +144,20 @@ public:
   bool isVirtual() const;
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const { return isa<CXXConstructorDecl>(F); }
+  bool isConstructor() const {
+    return isa_and_nonnull<CXXConstructorDecl>(
+        Source.dyn_cast<const FunctionDecl *>());
+  }
   /// Checks if the function is a destructor.
-  bool isDestructor() const { return isa<CXXDestructorDecl>(F); }
+  bool isDestructor() const {
+    return isa_and_nonnull<CXXDestructorDecl>(
+        Source.dyn_cast<const FunctionDecl *>());
+  }
 
   /// Returns the parent record decl, if any.
   const CXXRecordDecl *getParentDecl() const {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
+            Source.dyn_cast<const FunctionDecl *>()))
       return MD->getParent();
     return nullptr;
   }
@@ -149,7 +165,8 @@ public:
   /// Returns whether this function is a lambda static invoker,
   /// which we generate custom byte code for.
   bool isLambdaStaticInvoker() const {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
+            Source.dyn_cast<const FunctionDecl *>()))
       return MD->isLambdaStaticInvoker();
     return false;
   }
@@ -157,7 +174,8 @@ public:
   /// Returns whether this function is the call operator
   /// of a lambda record decl.
   bool isLambdaCallOperator() const {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
+            Source.dyn_cast<const FunctionDecl *>()))
       return clang::isLambdaCallOperator(MD);
     return false;
   }
@@ -175,11 +193,11 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getBuiltinID() const { return F->getBuiltinID(); }
+  unsigned getBuiltinID() const { return BuiltinID; }
 
-  bool isBuiltin() const { return F->getBuiltinID() != 0; }
+  bool isBuiltin() const { return getBuiltinID() != 0; }
 
-  bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
+  bool isUnevaluatedBuiltin() const;
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
@@ -194,7 +212,8 @@ public:
   }
 
   bool isThisPointerExplicit() const {
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
+            Source.dyn_cast<const FunctionDecl *>()))
       return MD->isExplicitObjectMemberFunction();
     return false;
   }
@@ -205,11 +224,11 @@ public:
 
 private:
   /// Construct a function representing an actual function.
-  Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
+  Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, bool UnevaluatedBuiltin);
+           bool HasRVO, unsigned BuiltinID);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -233,7 +252,7 @@ private:
   /// Program reference.
   Program &P;
   /// Declaration this function was compiled from.
-  const FunctionDecl *F;
+  FunctionDeclTy Source;
   /// Local area size: storage + metadata.
   unsigned FrameSize = 0;
   /// Size of the argument stack.
@@ -266,7 +285,7 @@ private:
   bool HasBody = false;
   bool Defined = false;
   bool Variadic = false;
-  bool IsUnevaluatedBuiltin = false;
+  unsigned BuiltinID = 0;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

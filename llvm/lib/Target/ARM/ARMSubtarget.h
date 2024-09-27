@@ -133,7 +133,7 @@ protected:
   int PreISelOperandLatencyAdjustment = 2;
 
   /// What alignment is preferred for loop bodies and functions, in log2(bytes).
-  unsigned PrefLoopLogAlignment = 0;
+  unsigned PreferBranchLogAlignment = 0;
 
   /// The cost factor for MVE instructions, representing the multiple beats an
   // instruction can take. The default is 2, (set in initSubtargetFeatures so
@@ -208,13 +208,6 @@ public:
   const ARMBaseRegisterInfo *getRegisterInfo() const override {
     return &InstrInfo->getRegisterInfo();
   }
-
-  /// The correct instructions have been implemented to initialize undef
-  /// registers, therefore the ARM Architecture is supported by the Init Undef
-  /// Pass. This will return true as the pass needs to be supported for all
-  /// types of instructions. The pass will then perform more checks to ensure it
-  /// should be applying the Pseudo Instructions.
-  bool supportsInitUndef() const override { return true; }
 
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
@@ -483,7 +476,9 @@ public:
     return isROPI() || !isTargetELF();
   }
 
-  unsigned getPrefLoopLogAlignment() const { return PrefLoopLogAlignment; }
+  unsigned getPreferBranchLogAlignment() const {
+    return PreferBranchLogAlignment;
+  }
 
   unsigned
   getMVEVectorCostFactor(TargetTransformInfo::TargetCostKind CostKind) const {

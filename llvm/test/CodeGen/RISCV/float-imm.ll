@@ -24,8 +24,8 @@ define float @float_imm() nounwind {
 ;
 ; RV64ZFINX-LABEL: float_imm:
 ; RV64ZFINX:       # %bb.0:
-; RV64ZFINX-NEXT:    lui a0, %hi(.LCPI0_0)
-; RV64ZFINX-NEXT:    lw a0, %lo(.LCPI0_0)(a0)
+; RV64ZFINX-NEXT:    lui a0, 263313
+; RV64ZFINX-NEXT:    addiw a0, a0, -37
 ; RV64ZFINX-NEXT:    ret
   ret float 3.14159274101257324218750
 }

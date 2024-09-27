@@ -21,11 +21,7 @@
 #include "test_macros.h"
 
 // These types have "private" constructors.
-extern std::chrono::time_zone tz;
-extern std::chrono::time_zone_link link;
-extern std::chrono::leap_second leap;
-
-void test() {
+void test(std::chrono::time_zone tz, std::chrono::time_zone_link link, std::chrono::leap_second leap) {
   std::chrono::tzdb_list& list = std::chrono::get_tzdb_list();
   list.front();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   list.begin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

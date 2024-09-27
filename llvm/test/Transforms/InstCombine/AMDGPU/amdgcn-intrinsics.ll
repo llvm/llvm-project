@@ -1161,6 +1161,85 @@ define <2 x half> @constant_rtz_pkrtz() {
   ret <2 x half> %cvt
 }
 
+define <2 x half> @fpext_const_cvt_pkrtz(half %x) {
+; CHECK-LABEL: @fpext_const_cvt_pkrtz(
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half poison, half 0xH4200>, half [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %ext = fpext half %x to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %ext, float 3.0)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @const_fpext_cvt_pkrtz(half %y) {
+; CHECK-LABEL: @const_fpext_cvt_pkrtz(
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> <half 0xH4500, half poison>, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %ext = fpext half %y to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 5.0, float %ext)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @const_fpext_multi_cvt_pkrtz(half %y) {
+; CHECK-LABEL: @const_fpext_multi_cvt_pkrtz(
+; CHECK-NEXT:    [[CVT1:%.*]] = insertelement <2 x half> <half 0xH4500, half poison>, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[CVT2:%.*]] = insertelement <2 x half> <half 0xH4200, half poison>, half [[Y]], i64 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x half> [[CVT1]], [[CVT2]]
+; CHECK-NEXT:    ret <2 x half> [[ADD]]
+;
+  %ext = fpext half %y to float
+  %cvt1 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 5.0, float %ext)
+  %cvt2 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 3.0, float %ext)
+  %add = fadd <2 x half> %cvt1, %cvt2
+  ret <2 x half> %add
+}
+
+define <2 x half> @fpext_fpext_cvt_pkrtz(half %x, half %y) {
+; CHECK-LABEL: @fpext_fpext_cvt_pkrtz(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[X:%.*]], i64 0
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> [[TMP1]], half [[Y:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %extx = fpext half %x to float
+  %exty = fpext half %y to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %extx, float %exty)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @fpext_fpext_bf16_cvt_pkrtz(bfloat %x, bfloat %y) {
+; CHECK-LABEL: @fpext_fpext_bf16_cvt_pkrtz(
+; CHECK-NEXT:    [[EXTX:%.*]] = fpext bfloat [[X:%.*]] to float
+; CHECK-NEXT:    [[EXTY:%.*]] = fpext bfloat [[Y:%.*]] to float
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[EXTX]], float [[EXTY]])
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %extx = fpext bfloat %x to float
+  %exty = fpext bfloat %y to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %extx, float %exty)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @poison_fpext_cvt_pkrtz(half %y) {
+; CHECK-LABEL: @poison_fpext_cvt_pkrtz(
+; CHECK-NEXT:    [[CVT:%.*]] = insertelement <2 x half> poison, half [[Y:%.*]], i64 1
+; CHECK-NEXT:    ret <2 x half> [[CVT]]
+;
+  %ext = fpext half %y to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %ext)
+  ret <2 x half> %cvt
+}
+
+define <2 x half> @fpext_poison_cvt_pkrtz(half %x) {
+; CHECK-LABEL: @fpext_poison_cvt_pkrtz(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> poison, half [[X:%.*]], i64 0
+; CHECK-NEXT:    ret <2 x half> [[TMP1]]
+;
+  %ext = fpext half %x to float
+  %cvt = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %ext, float poison)
+  ret <2 x half> %cvt
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pknorm.i16
 ; --------------------------------------------------------------------
@@ -2888,8 +2967,7 @@ define i32 @readlane_idempotent(i32 %arg, i32 %lane) {
 define i32 @readlane_idempotent_different_lanes(i32 %arg, i32 %lane0, i32 %lane1) {
 ; CHECK-LABEL: @readlane_idempotent_different_lanes(
 ; CHECK-NEXT:    [[READ0:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 [[LANE0:%.*]])
-; CHECK-NEXT:    [[READ1:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[READ0]], i32 [[LANE1:%.*]])
-; CHECK-NEXT:    ret i32 [[READ1]]
+; CHECK-NEXT:    ret i32 [[READ0]]
 ;
   %read0 = call i32 @llvm.amdgcn.readlane(i32 %arg, i32 %lane0)
   %read1 = call i32 @llvm.amdgcn.readlane(i32 %read0, i32 %lane1)
@@ -3057,6 +3135,22 @@ define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1)
 ; CHECK-NEXT:    ret void
 ;
   %res = call i32 @llvm.amdgcn.permlanex16.i32(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.permlane64
+; --------------------------------------------------------------------
+
+define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src0) {
+; CHECK-LABEL: @permlane64_uniform(
+; CHECK-NEXT:    [[SRC1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0:%.*]])
+; CHECK-NEXT:    store i32 [[SRC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %src1 = call i32 @llvm.amdgcn.readfirstlane(i32 %src0)
+  %res = call i32 @llvm.amdgcn.permlane64(i32 %src1)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }

@@ -63,9 +63,10 @@ static SmallVector<Value> createVariablesForResults(T op,
 
   for (OpResult result : op.getResults()) {
     Type resultType = result.getType();
+    Type varType = emitc::LValueType::get(resultType);
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
     emitc::VariableOp var =
-        rewriter.create<emitc::VariableOp>(loc, resultType, noInit);
+        rewriter.create<emitc::VariableOp>(loc, varType, noInit);
     resultVariables.push_back(var);
   }
 
@@ -78,6 +79,14 @@ static void assignValues(ValueRange values, SmallVector<Value> &variables,
                          PatternRewriter &rewriter, Location loc) {
   for (auto [value, var] : llvm::zip(values, variables))
     rewriter.create<emitc::AssignOp>(loc, var, value);
+}
+
+SmallVector<Value> loadValues(const SmallVector<Value> &variables,
+                              PatternRewriter &rewriter, Location loc) {
+  return llvm::map_to_vector<>(variables, [&](Value var) {
+    Type type = cast<emitc::LValueType>(var.getType()).getValueType();
+    return rewriter.create<emitc::LoadOp>(loc, type, var).getResult();
+  });
 }
 
 static void lowerYield(SmallVector<Value> &resultVariables,
@@ -126,15 +135,26 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   // Erase the auto-generated terminator for the lowered for op.
   rewriter.eraseOp(loweredBody->getTerminator());
 
+  IRRewriter::InsertPoint ip = rewriter.saveInsertionPoint();
+  rewriter.setInsertionPointToEnd(loweredBody);
+
+  SmallVector<Value> iterArgsValues =
+      loadValues(resultVariables, rewriter, loc);
+
+  rewriter.restoreInsertionPoint(ip);
+
   SmallVector<Value> replacingValues;
   replacingValues.push_back(loweredFor.getInductionVar());
-  replacingValues.append(resultVariables.begin(), resultVariables.end());
+  replacingValues.append(iterArgsValues.begin(), iterArgsValues.end());
 
   rewriter.mergeBlocks(forOp.getBody(), loweredBody, replacingValues);
   lowerYield(resultVariables, rewriter,
              cast<scf::YieldOp>(loweredBody->getTerminator()));
 
-  rewriter.replaceOp(forOp, resultVariables);
+  // Load variables into SSA values after the for loop.
+  SmallVector<Value> resultValues = loadValues(resultVariables, rewriter, loc);
+
+  rewriter.replaceOp(forOp, resultValues);
   return success();
 }
 
@@ -174,7 +194,10 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     lowerRegion(resultVariables, rewriter, elseRegion, loweredElseRegion);
   }
 
-  rewriter.replaceOp(ifOp, resultVariables);
+  rewriter.setInsertionPointAfter(ifOp);
+  SmallVector<Value> results = loadValues(resultVariables, rewriter, loc);
+
+  rewriter.replaceOp(ifOp, results);
   return success();
 }
 
@@ -212,7 +235,10 @@ IndexSwitchOpLowering::matchAndRewrite(IndexSwitchOp indexSwitchOp,
   lowerRegion(resultVariables, rewriter, indexSwitchOp.getDefaultRegion(),
               loweredSwitch.getDefaultRegion());
 
-  rewriter.replaceOp(indexSwitchOp, resultVariables);
+  rewriter.setInsertionPointAfter(indexSwitchOp);
+  SmallVector<Value> results = loadValues(resultVariables, rewriter, loc);
+
+  rewriter.replaceOp(indexSwitchOp, results);
   return success();
 }
 

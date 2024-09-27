@@ -862,10 +862,15 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isFP8DstSelInst(unsigned Opc);
+
+LLVM_READONLY
 bool isInvalidSingleUseConsumerInst(unsigned Opc);
 
 LLVM_READONLY
 bool isInvalidSingleUseProducerInst(unsigned Opc);
+
+bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);

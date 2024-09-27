@@ -878,3 +878,48 @@ define <16 x i64> @vremu_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext 
   %v = call <16 x i64> @llvm.vp.urem.v16i64(<16 x i64> %va, <16 x i64> %vb, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
 }
+
+
+declare <3 x i8> @llvm.vp.urem.v3i8(<3 x i8>, <3 x i8>, <3 x i1>, i32)
+
+define <3 x i8> @vremu_vv_v3i8_unmasked(<3 x i8> %va, <3 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vremu_vv_v3i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.urem.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> splat (i1 true), i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vremu_vv_v3i8_unmasked_avl3(<3 x i8> %va, <3 x i8> %b) {
+; CHECK-LABEL: vremu_vv_v3i8_unmasked_avl3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.urem.v3i8(<3 x i8> %va, <3 x i8> %b, <3 x i1> splat (i1 true), i32 3)
+  ret <3 x i8> %v
+}
+
+declare <7 x i8> @llvm.vp.urem.v7i8(<7 x i8>, <7 x i8>, <7 x i1>, i32)
+
+define <7 x i8> @vremu_vv_v7i8_unmasked(<7 x i8> %va, <7 x i8> %b, i32 zeroext %evl) {
+; CHECK-LABEL: vremu_vv_v7i8_unmasked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <7 x i8> @llvm.vp.urem.v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> splat (i1 true), i32 %evl)
+  ret <7 x i8> %v
+}
+
+define <7 x i8> @vremu_vv_v7i8_unmasked_avl7(<7 x i8> %va, <7 x i8> %b) {
+; CHECK-LABEL: vremu_vv_v7i8_unmasked_avl7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 7, e8, mf2, ta, ma
+; CHECK-NEXT:    vremu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %v = call <7 x i8> @llvm.vp.urem.v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> splat (i1 true), i32 7)
+  ret <7 x i8> %v
+}

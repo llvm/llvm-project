@@ -1,10 +1,33 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -pedantic-errors -verify=expected,since-cxx23 %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -pedantic-errors -verify=expected,since-cxx23,since-cxx26 %s
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
+
+namespace std {
+#if __cplusplus >= 202002L
+  struct strong_ordering {
+    int n;
+    constexpr operator int() const { return n; }
+    static const strong_ordering less, equal, greater;
+  };
+  constexpr strong_ordering strong_ordering::less{-1},
+      strong_ordering::equal{0}, strong_ordering::greater{1};
+#endif
+} // namespace std
 
 namespace cwg2718 { // cwg2718: 2.7
 struct B {};
@@ -17,6 +40,27 @@ void f(B b) {
 
 struct D : B {};
 } // namespace cwg2718
+
+namespace cwg2749 { // cwg2749: 20
+
+extern int x[2];
+struct Y {
+  int i;
+  int j;
+};
+extern Y y[2];
+
+static_assert(__enable_constant_folding(static_cast<void*>(&x[0]) < static_cast<void*>(&x[1])), "");
+static_assert(__enable_constant_folding(static_cast<void*>(&y[0].i) < static_cast<void*>(&y[0].j)), "");
+static_assert(__enable_constant_folding(static_cast<void*>(&y[0].j) < static_cast<void*>(&y[1].i)), "");
+
+#if __cplusplus >= 202002L
+static_assert((static_cast<void*>(&x[0]) <=> static_cast<void*>(&x[1])) == std::strong_ordering::less);
+static_assert((static_cast<void*>(&y[0].i) <=> static_cast<void*>(&y[0].j)) == std::strong_ordering::less);
+static_assert((static_cast<void*>(&y[0].j) <=> static_cast<void*>(&y[1].i)) == std::strong_ordering::less);
+#endif
+
+} // namespace cwg2749
 
 namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L
@@ -134,7 +178,7 @@ void test() {
 }
 
 namespace cwg2798 { // cwg2798: 17
-#if __cpp_static_assert >= 202306
+#if __cplusplus > 202302L
 struct string {
   constexpr string() {
     data_ = new char[6]();

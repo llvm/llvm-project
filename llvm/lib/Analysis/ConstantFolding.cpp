@@ -2122,7 +2122,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       }
 
       LibFunc Fp128Func = NotLibFunc;
-      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+      if (TLI && TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
           Fp128Func == LibFunc_logl)
         return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
     }

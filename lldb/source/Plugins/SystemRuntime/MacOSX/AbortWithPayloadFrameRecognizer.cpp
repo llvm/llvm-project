@@ -36,8 +36,9 @@ void RegisterAbortWithPayloadFrameRecognizer(Process *process) {
     return;
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
-      std::make_shared<AbortWithPayloadFrameRecognizer>(), module_name, 
-      sym_name, /*first_instruction_only*/ false);
+      std::make_shared<AbortWithPayloadFrameRecognizer>(), module_name,
+      sym_name, Mangled::NamePreference::ePreferDemangled,
+      /*first_instruction_only*/ false);
 }
 
 RecognizedStackFrameSP

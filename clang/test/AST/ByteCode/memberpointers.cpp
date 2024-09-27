@@ -209,3 +209,20 @@ namespace MemPtrTemporary {
 
   static_assert(apply(A(), &A::f) == 5, "");
 }
+
+namespace IndirectFields {
+  struct I { union { struct { int a, b; }; }; };
+
+  template <typename T, int T::*F>
+  constexpr int ReadField(const T &o) {
+    return F ? o.*F : 0;
+  }
+  void ReadFields() {
+    I i;
+    ReadField<I, &I::a>(i);
+    ReadField<I, &I::b>(i);
+  }
+
+  constexpr I i{12};
+  static_assert(ReadField<I, &I::a>(i) == 12, "");
+}

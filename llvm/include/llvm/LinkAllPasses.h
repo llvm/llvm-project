@@ -90,6 +90,7 @@ struct ForcePassLinking {
     (void)llvm::createLoopExtractorPass();
     (void)llvm::createLoopSimplifyPass();
     (void)llvm::createLoopStrengthReducePass();
+    (void)llvm::createLoopTermFoldPass();
     (void)llvm::createLoopUnrollPass();
     (void)llvm::createLowerGlobalDtorsLegacyPass();
     (void)llvm::createLowerInvokePass();
@@ -129,6 +130,7 @@ struct ForcePassLinking {
     (void)llvm::createLowerAtomicPass();
     (void)llvm::createLoadStoreVectorizerPass();
     (void)llvm::createPartiallyInlineLibCallsPass();
+    (void)llvm::createScalarizerPass();
     (void)llvm::createSeparateConstOffsetFromGEPPass();
     (void)llvm::createSpeculativeExecutionPass();
     (void)llvm::createSpeculativeExecutionIfHasBranchDivergencePass();

@@ -41,31 +41,40 @@ public:
   virtual bool runOnFunction(Function &F) override {
     DenseSet<Instruction *> ToRemove;
 
+    // Is the instruction is a convergent intrinsic, add it to kill-list and
+    // returns true. Returns false otherwise.
+    auto CleanupIntrinsic = [&](IntrinsicInst *II) {
+      if (II->getIntrinsicID() != Intrinsic::experimental_convergence_entry &&
+          II->getIntrinsicID() != Intrinsic::experimental_convergence_loop &&
+          II->getIntrinsicID() != Intrinsic::experimental_convergence_anchor)
+        return false;
+
+      II->replaceAllUsesWith(UndefValue::get(II->getType()));
+      ToRemove.insert(II);
+      return true;
+    };
+
+    // Replace the given CallInst by a similar CallInst with no convergencectrl
+    // attribute.
+    auto CleanupCall = [&](CallInst *CI) {
+      auto OB = CI->getOperandBundle(LLVMContext::OB_convergencectrl);
+      if (!OB.has_value())
+        return;
+
+      auto *NewCall = CallBase::removeOperandBundle(
+          CI, LLVMContext::OB_convergencectrl, CI->getIterator());
+      NewCall->copyMetadata(*CI);
+      CI->replaceAllUsesWith(NewCall);
+      ToRemove.insert(CI);
+    };
+
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-          if (II->getIntrinsicID() !=
-                  Intrinsic::experimental_convergence_entry &&
-              II->getIntrinsicID() !=
-                  Intrinsic::experimental_convergence_loop &&
-              II->getIntrinsicID() !=
-                  Intrinsic::experimental_convergence_anchor) {
+        if (auto *II = dyn_cast<IntrinsicInst>(&I))
+          if (CleanupIntrinsic(II))
             continue;
-          }
-
-          II->replaceAllUsesWith(UndefValue::get(II->getType()));
-          ToRemove.insert(II);
-        } else if (auto *CI = dyn_cast<CallInst>(&I)) {
-          auto OB = CI->getOperandBundle(LLVMContext::OB_convergencectrl);
-          if (!OB.has_value())
-            continue;
-
-          auto *NewCall = CallBase::removeOperandBundle(
-              CI, LLVMContext::OB_convergencectrl, CI);
-          NewCall->copyMetadata(*CI);
-          CI->replaceAllUsesWith(NewCall);
-          ToRemove.insert(CI);
-        }
+        if (auto *CI = dyn_cast<CallInst>(&I))
+          CleanupCall(CI);
       }
     }
 

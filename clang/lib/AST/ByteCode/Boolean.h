@@ -44,6 +44,7 @@ public:
   Boolean operator-() const { return Boolean(V); }
   Boolean operator-(const Boolean &Other) const { return Boolean(V - Other.V); }
   Boolean operator~() const { return Boolean(true); }
+  Boolean operator!() const { return Boolean(!V); }
 
   template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
   explicit operator Ty() const {

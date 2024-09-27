@@ -32,9 +32,9 @@ InsertPosition::InsertPosition(Instruction *InsertBefore)
 InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
     : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
+Instruction::Instruction(Type *ty, unsigned it, AllocInfo AllocInfo,
                          InsertPosition InsertBefore)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
+    : User(ty, Value::InstructionVal + it, AllocInfo) {
   // When called with an iterator, there must be a block to insert into.
   if (InstListType::iterator InsertIt = InsertBefore; InsertIt.isValid()) {
     BasicBlock *BB = InsertIt.getNodeParent();
@@ -1171,7 +1171,10 @@ Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
 const Instruction *
 Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
+    if (!isa<DbgInfoIntrinsic>(I) &&
+        !(SkipPseudoOp && isa<PseudoProbeInst>(I)) &&
+        !(isa<IntrinsicInst>(I) &&
+          cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fake_use))
       return I;
   return nullptr;
 }

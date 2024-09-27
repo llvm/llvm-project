@@ -1,10 +1,10 @@
 // A collection of various initializers which shouldn't trip up initialization
 // order checking.  If successful, this will just return 0.
 
-// RUN: %clangxx_asan -O0 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=1:verbosity=2 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
-// RUN: %clangxx_asan -O1 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=1:verbosity=2 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
-// RUN: %clangxx_asan -O2 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=1:verbosity=2 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
-// RUN: %clangxx_asan -O3 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=1:verbosity=2 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
+// RUN: %clangxx_asan -O0 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
+// RUN: %clangxx_asan -O1 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
+// RUN: %clangxx_asan -O2 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
+// RUN: %clangxx_asan -O3 %s %p/Helpers/initialization-nobug-extra.cpp -o %t && %env_asan_opts=check_initialization_order=true:report_globals=3 %run %t 2>&1 | FileCheck %s --implicit-check-not "DynInitPoison"
 
 // Simple access:
 // Make sure that accessing a global in the same TU is safe

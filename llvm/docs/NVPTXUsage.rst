@@ -251,9 +251,35 @@ Overview:
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
 
+Electing a thread
+-----------------
+
+'``llvm.nvvm.elect.sync``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare {i32, i1} @llvm.nvvm.elect.sync(i32 %membermask)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.elect.sync``' intrinsic generates the ``elect.sync``
+PTX instruction, which elects one predicated active leader thread from
+a set of threads specified by ``membermask``. The behavior is undefined
+if the executing thread is not in ``membermask``. The laneid of the
+elected thread is captured in the i32 return value. The i1 return
+value is set to ``True`` for the leader thread and ``False`` for all
+the other threads. Election of a leader thread happens deterministically,
+i.e. the same leader thread is elected for the same ``membermask``
+every time. For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+
 Membar/Fences
 -------------
-
 
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

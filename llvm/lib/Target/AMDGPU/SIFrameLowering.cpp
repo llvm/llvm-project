@@ -829,12 +829,12 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     }
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc2)
-      .addImm(Rsrc23 & 0xffffffff)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Lo_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc3)
-      .addImm(Rsrc23 >> 32)
-      .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
+        .addImm(Hi_32(Rsrc23))
+        .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
   } else if (ST.isAmdHsaOrMesa(Fn)) {
     assert(PreloadedScratchRsrcReg);
 
@@ -1342,16 +1342,10 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   // Allocate spill slots for WWM reserved VGPRs.
-  // For chain functions, we only need to do this if we have calls to
-  // llvm.amdgcn.cs.chain.
-  bool IsChainWithoutCalls =
-      FuncInfo->isChainFunction() && !MF.getFrameInfo().hasTailCall();
-  if (!FuncInfo->isEntryFunction() && !IsChainWithoutCalls) {
-    for (Register Reg : FuncInfo->getWWMReservedRegs()) {
-      const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-      FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
-                                 TRI->getSpillAlign(*RC));
-    }
+  for (Register Reg : FuncInfo->getWWMReservedRegs()) {
+    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+    FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
+                               TRI->getSpillAlign(*RC));
   }
 
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
@@ -1414,10 +1408,15 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         // the debug value instructions. We should instead, update it with the
         // correct register value. But not sure the register value alone is
         for (MachineInstr &MI : MBB) {
-          if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
-              !MFI.isFixedObjectIndex(MI.getOperand(0).getIndex()) &&
-              SpillFIs[MI.getOperand(0).getIndex()]) {
-            MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
+          if (MI.isDebugValue()) {
+            uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
+            if (MI.getOperand(StackOperandIdx).isFI() &&
+                !MFI.isFixedObjectIndex(
+                    MI.getOperand(StackOperandIdx).getIndex()) &&
+                SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
+              MI.getOperand(StackOperandIdx)
+                  .ChangeToRegister(Register(), false /*isDef*/);
+            }
           }
         }
       }

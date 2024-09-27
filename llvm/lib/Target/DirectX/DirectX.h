@@ -34,6 +34,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL Data Scalarization Pass
+void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
+
+/// Pass to scalarize llvm global data into a DXIL legal form
+ModulePass *createDXILDataScalarizationLegacyPass();
+
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
@@ -41,19 +47,19 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 ModulePass *createDXILOpLoweringLegacyPass();
 
 /// Initializer for DXILTranslateMetadata.
-void initializeDXILTranslateMetadataPass(PassRegistry &);
+void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 
 /// Pass to emit metadata for DXIL.
-ModulePass *createDXILTranslateMetadataPass();
+ModulePass *createDXILTranslateMetadataLegacyPass();
 
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILResourceMDWrapperPass(PassRegistry &);
 
 /// Pass to pretty print DXIL metadata.
-ModulePass *createDXILPrettyPrinterPass(raw_ostream &OS);
+ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
 /// Initializer for DXILPrettyPrinter.
-void initializeDXILPrettyPrinterPass(PassRegistry &);
+void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);

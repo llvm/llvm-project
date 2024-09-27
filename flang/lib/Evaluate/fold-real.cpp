@@ -468,11 +468,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
                 ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
                                          const Scalar<TY> &y) -> Scalar<T> {
-                  bool reverseCompare{
-                      Scalar<T>::binaryPrecision < Scalar<TY>::binaryPrecision};
-                  switch (reverseCompare
-                          ? y.Compare(Scalar<TY>::Convert(x).value)
-                          : x.Compare(Scalar<T>::Convert(y).value)) {
+                  auto xBig{Scalar<LargestReal>::Convert(x).value};
+                  auto yBig{Scalar<LargestReal>::Convert(y).value};
+                  switch (xBig.Compare(yBig)) {
                   case Relation::Unordered:
                     if (context.languageFeatures().ShouldWarn(
                             common::UsageWarning::FoldingValueChecks)) {
@@ -483,9 +481,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                   case Relation::Equal:
                     break;
                   case Relation::Less:
-                    return x.NEAREST(!reverseCompare).value;
+                    return x.NEAREST(true).value;
                   case Relation::Greater:
-                    return x.NEAREST(reverseCompare).value;
+                    return x.NEAREST(false).value;
                   }
                   return x; // dodge bogus "missing return" GCC warning
                 }));

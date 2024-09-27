@@ -62,7 +62,7 @@ using GISelFlags = std::uint16_t;
 void emitEncodingMacrosDef(raw_ostream &OS);
 void emitEncodingMacrosUndef(raw_ostream &OS);
 
-std::string getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset,
+std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
                                     int HwModeIdx);
 
 /// Takes a sequence of \p Rules and group them based on the predicates
@@ -516,14 +516,14 @@ protected:
   GISelFlags Flags = 0;
 
   std::vector<std::string> RequiredSimplePredicates;
-  std::vector<Record *> RequiredFeatures;
+  std::vector<const Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
 
   DenseSet<unsigned> ErasedInsnIDs;
 
   ArrayRef<SMLoc> SrcLoc;
 
-  typedef std::tuple<Record *, unsigned, unsigned>
+  typedef std::tuple<const Record *, unsigned, unsigned>
       DefinedComplexPatternSubOperand;
   typedef StringMap<DefinedComplexPatternSubOperand>
       DefinedComplexPatternSubOperandMap;
@@ -553,8 +553,12 @@ public:
   uint64_t getRuleID() const { return RuleID; }
 
   InstructionMatcher &addInstructionMatcher(StringRef SymbolicName);
-  void addRequiredFeature(Record *Feature);
-  const std::vector<Record *> &getRequiredFeatures() const;
+  void addRequiredFeature(const Record *Feature) {
+    RequiredFeatures.push_back(Feature);
+  }
+  ArrayRef<const Record *> getRequiredFeatures() const {
+    return RequiredFeatures;
+  }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
   int getHwModeIdx() const { return HwModeIdx; }
@@ -649,7 +653,8 @@ public:
 
   void definePhysRegOperand(Record *Reg, OperandMatcher &OM);
 
-  Error defineComplexSubOperand(StringRef SymbolicName, Record *ComplexPattern,
+  Error defineComplexSubOperand(StringRef SymbolicName,
+                                const Record *ComplexPattern,
                                 unsigned RendererID, unsigned SubOperandID,
                                 StringRef ParentSymbolicName);
 
@@ -2336,7 +2341,7 @@ private:
   const CodeGenInstruction *I;
   InstructionMatcher *Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
-  SmallPtrSet<Record *, 4> DeadImplicitDefs;
+  SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
   std::vector<const InstructionMatcher *> CopiedFlags;
   std::vector<StringRef> SetFlags;
@@ -2364,7 +2369,7 @@ public:
 
   void chooseInsnToMutate(RuleMatcher &Rule);
 
-  void setDeadImplicitDef(Record *R) { DeadImplicitDefs.insert(R); }
+  void setDeadImplicitDef(const Record *R) { DeadImplicitDefs.insert(R); }
 
   template <class Kind, class... Args> Kind &addRenderer(Args &&...args) {
     OperandRenderers.emplace_back(

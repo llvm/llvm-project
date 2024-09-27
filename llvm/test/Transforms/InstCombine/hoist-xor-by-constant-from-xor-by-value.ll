@@ -64,7 +64,7 @@ define i8 @t4_extrause(i8 %x, i8 %y) {
 define i8 @t5_commutativity(i8 %x) {
 ; CHECK-LABEL: @t5_commutativity(
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], 42
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

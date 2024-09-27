@@ -1,4 +1,4 @@
-// REQUIRES: linux || windows
+// REQUIRES: target={{.*(linux|solaris|windows-msvc).*}}
 
 // RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation=true -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw

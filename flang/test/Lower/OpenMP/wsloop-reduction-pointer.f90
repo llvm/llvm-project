@@ -18,11 +18,13 @@ program reduce_pointer
   deallocate(v)
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> alloc {
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
+! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>, %[[VAL_3:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<i32>) -> i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64

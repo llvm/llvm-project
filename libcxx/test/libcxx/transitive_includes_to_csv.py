@@ -62,12 +62,12 @@ def is_libcxx_header(header: str) -> bool:
 
 def parse_file(file: pathlib.Path) -> List[str]:
     """
-    Parse a file containing --trace-include output to generate a list of the top-level C++ includes
+    Parse a file containing --trace-includes output to generate a list of the top-level C++ includes
     contained in it.
 
-    This effectively generates the dependency graph of C++ Standard Library headers of the header
-    whose --trace-include it is. In order to get the expected result of --trace-include, the
-    -fshow-skipped-includes flag also needs to be passed.
+    This effectively generates the list of public libc++ headers of the header whose --trace-includes it is.
+    In order to get the expected result of --trace-includes, the -fshow-skipped-includes flag also needs to
+    be passed.
     """
     result = list()
     with file.open(encoding="utf-8") as f:
@@ -85,10 +85,6 @@ def parse_file(file: pathlib.Path) -> List[str]:
             if header.level == 1:
                 level = 999
                 result.append(header)
-                continue
-
-            # Skip libc++ headers included transitively.
-            if header.level > level:
                 continue
 
             # Detail headers are transparent too: we attribute all includes of public libc++

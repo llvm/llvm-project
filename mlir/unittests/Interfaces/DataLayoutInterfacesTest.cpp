@@ -58,9 +58,9 @@ public:
 /// Simple data layout spec containing a list of entries that always verifies
 /// as valid.
 struct CustomDataLayoutSpec
-    : public Attribute::AttrBase<CustomDataLayoutSpec, Attribute,
-                                 DataLayoutSpecStorage,
-                                 DataLayoutSpecInterface::Trait> {
+    : public Attribute::AttrBase<
+          CustomDataLayoutSpec, Attribute, DataLayoutSpecStorage,
+          DLTIQueryInterface::Trait, DataLayoutSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
@@ -92,6 +92,9 @@ struct CustomDataLayoutSpec
   StringAttr getStackAlignmentIdentifier(MLIRContext *context) const {
     return Builder(context).getStringAttr(kStackAlignmentKeyName);
   }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
+  }
 };
 
 class TargetSystemSpecStorage : public AttributeStorage {
@@ -113,9 +116,9 @@ public:
 };
 
 struct CustomTargetSystemSpec
-    : public Attribute::AttrBase<CustomTargetSystemSpec, Attribute,
-                                 TargetSystemSpecStorage,
-                                 TargetSystemSpecInterface::Trait> {
+    : public Attribute::AttrBase<
+          CustomTargetSystemSpec, Attribute, TargetSystemSpecStorage,
+          DLTIQueryInterface::Trait, TargetSystemSpecInterface::Trait> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(CustomDataLayoutSpec)
 
   using Base::Base;
@@ -137,6 +140,9 @@ struct CustomTargetSystemSpec
         return entry.second;
     }
     return std::nullopt;
+  }
+  FailureOr<Attribute> query(DataLayoutEntryKey key) const {
+    return llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
   }
 };
 

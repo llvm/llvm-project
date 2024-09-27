@@ -939,6 +939,7 @@ def : RWSysReg<"SCTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"SCTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"SCTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b000>;
 def : RWSysReg<"ACTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"ACTLR_EL12",         0b11, 0b101, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
 def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;

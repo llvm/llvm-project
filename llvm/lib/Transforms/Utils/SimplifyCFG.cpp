@@ -117,6 +117,18 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
+static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
+    "simplifycfg-hoist-loads-stores-with-cond-faulting", cl::Hidden,
+    cl::init(true),
+    cl::desc("Hoist loads/stores if the target supports "
+             "conditional faulting"));
+
+static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
+    "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
+    cl::desc("Control the maximal conditonal load/store that we are willing "
+             "to speculatively execute to eliminate conditional branch "
+             "(default = 6)"));
+
 static cl::opt<unsigned>
     HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
                          cl::init(20),
@@ -271,7 +283,7 @@ class SimplifyCFGOpt {
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
 
-  bool hoistCommonCodeFromSuccessors(BasicBlock *BB, bool EqTermsOnly);
+  bool hoistCommonCodeFromSuccessors(Instruction *TI, bool EqTermsOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
       SmallVectorImpl<Instruction *> &OtherSuccTIs);
@@ -386,9 +398,6 @@ static void addPredecessorToBlock(BasicBlock *Succ, BasicBlock *NewPred,
 /// expensive.
 static InstructionCost computeSpeculationCost(const User *I,
                                               const TargetTransformInfo &TTI) {
-  assert((!isa<Instruction>(I) ||
-          isSafeToSpeculativelyExecute(cast<Instruction>(I))) &&
-         "Instruction is not safe to speculatively execute!");
   return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 }
 
@@ -409,12 +418,11 @@ static InstructionCost computeSpeculationCost(const User *I,
 /// After this function returns, Cost is increased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// Budget, false is returned and Cost is undefined.
-static bool dominatesMergePoint(Value *V, BasicBlock *BB,
+static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
                                 SmallPtrSetImpl<Instruction *> &AggressiveInsts,
-                                InstructionCost &Cost,
-                                InstructionCost Budget,
+                                InstructionCost &Cost, InstructionCost Budget,
                                 const TargetTransformInfo &TTI,
-                                unsigned Depth = 0) {
+                                AssumptionCache *AC, unsigned Depth = 0) {
   // It is possible to hit a zero-cost cycle (phi/gep instructions for example),
   // so limit the recursion depth.
   // TODO: While this recursion limit does prevent pathological behavior, it
@@ -449,7 +457,7 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, it looks like the instruction IS in the "condition".  Check to
   // see if it's a cheap instruction to unconditionally compute, and if it
   // only uses stuff defined outside of the condition.  If so, hoist it out.
-  if (!isSafeToSpeculativelyExecute(I))
+  if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
   Cost += computeSpeculationCost(I, TTI);
@@ -468,8 +476,8 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
   // Okay, we can only really hoist these out if their operands do
   // not take us over the cost threshold.
   for (Use &Op : I->operands())
-    if (!dominatesMergePoint(Op, BB, AggressiveInsts, Cost, Budget, TTI,
-                             Depth + 1))
+    if (!dominatesMergePoint(Op, BB, InsertPt, AggressiveInsts, Cost, Budget,
+                             TTI, AC, Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts.insert(I);
@@ -988,20 +996,20 @@ bool SimplifyCFGOpt::simplifyEqualityComparisonWithOnlyPredecessor(
   // which value (or set of values) this is.
   ConstantInt *TIV = nullptr;
   BasicBlock *TIBB = TI->getParent();
-  for (unsigned i = 0, e = PredCases.size(); i != e; ++i)
-    if (PredCases[i].Dest == TIBB) {
+  for (const auto &[Value, Dest] : PredCases)
+    if (Dest == TIBB) {
       if (TIV)
         return false; // Cannot handle multiple values coming to this block.
-      TIV = PredCases[i].Value;
+      TIV = Value;
     }
   assert(TIV && "No edge from pred to succ?");
 
   // Okay, we found the one constant that our value can be if we get into TI's
   // BB.  Find out which successor will unconditionally be branched to.
   BasicBlock *TheRealDest = nullptr;
-  for (unsigned i = 0, e = ThisCases.size(); i != e; ++i)
-    if (ThisCases[i].Value == TIV) {
-      TheRealDest = ThisCases[i].Dest;
+  for (const auto &[Value, Dest] : ThisCases)
+    if (Value == TIV) {
+      TheRealDest = Dest;
       break;
     }
 
@@ -1583,12 +1591,167 @@ static void hoistLockstepIdenticalDbgVariableRecords(
   }
 }
 
+static bool areIdenticalUpToCommutativity(const Instruction *I1,
+                                          const Instruction *I2) {
+  if (I1->isIdenticalToWhenDefined(I2))
+    return true;
+
+  if (auto *Cmp1 = dyn_cast<CmpInst>(I1))
+    if (auto *Cmp2 = dyn_cast<CmpInst>(I2))
+      return Cmp1->getPredicate() == Cmp2->getSwappedPredicate() &&
+             Cmp1->getOperand(0) == Cmp2->getOperand(1) &&
+             Cmp1->getOperand(1) == Cmp2->getOperand(0);
+
+  if (I1->isCommutative() && I1->isSameOperationAs(I2)) {
+    return I1->getOperand(0) == I2->getOperand(1) &&
+           I1->getOperand(1) == I2->getOperand(0) &&
+           equal(drop_begin(I1->operands(), 2), drop_begin(I2->operands(), 2));
+  }
+
+  return false;
+}
+
+/// If the target supports conditional faulting,
+/// we look for the following pattern:
+/// \code
+///   BB:
+///     ...
+///     %cond = icmp ult %x, %y
+///     br i1 %cond, label %TrueBB, label %FalseBB
+///   FalseBB:
+///     store i32 1, ptr %q, align 4
+///     ...
+///   TrueBB:
+///     %maskedloadstore = load i32, ptr %b, align 4
+///     store i32 %maskedloadstore, ptr %p, align 4
+///     ...
+/// \endcode
+///
+/// and transform it into:
+///
+/// \code
+///   BB:
+///     ...
+///     %cond = icmp ult %x, %y
+///     %maskedloadstore = cload i32, ptr %b, %cond
+///     cstore i32 %maskedloadstore, ptr %p, %cond
+///     cstore i32 1, ptr %q, ~%cond
+///     br i1 %cond, label %TrueBB, label %FalseBB
+///   FalseBB:
+///     ...
+///   TrueBB:
+///     ...
+/// \endcode
+///
+/// where cload/cstore are represented by llvm.masked.load/store intrinsics,
+/// e.g.
+///
+/// \code
+///   %vcond = bitcast i1 %cond to <1 x i1>
+///   %v0 = call <1 x i32> @llvm.masked.load.v1i32.p0
+///                         (ptr %b, i32 4, <1 x i1> %vcond, <1 x i32> poison)
+///   %maskedloadstore = bitcast <1 x i32> %v0 to i32
+///   call void @llvm.masked.store.v1i32.p0
+///                          (<1 x i32> %v0, ptr %p, i32 4, <1 x i1> %vcond)
+///   %cond.not = xor i1 %cond, true
+///   %vcond.not = bitcast i1 %cond.not to <1 x i>
+///   call void @llvm.masked.store.v1i32.p0
+///              (<1 x i32> <i32 1>, ptr %q, i32 4, <1x i1> %vcond.not)
+/// \endcode
+///
+/// So we need to turn hoisted load/store into cload/cstore.
+static void hoistConditionalLoadsStores(
+    BranchInst *BI,
+    SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
+    bool Invert) {
+  auto &Context = BI->getParent()->getContext();
+  auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
+  auto *Cond = BI->getOperand(0);
+  // Construct the condition if needed.
+  BasicBlock *BB = BI->getParent();
+  IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
+  Value *Mask = Builder.CreateBitCast(
+      Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
+      VCondTy);
+  for (auto *I : SpeculatedConditionalLoadsStores) {
+    IRBuilder<> Builder(I);
+    // We currently assume conditional faulting load/store is supported for
+    // scalar types only when creating new instructions. This can be easily
+    // extended for vector types in the future.
+    assert(!getLoadStoreType(I)->isVectorTy() && "not implemented");
+    auto *Op0 = I->getOperand(0);
+    CallInst *MaskedLoadStore = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      // Handle Load.
+      auto *Ty = I->getType();
+      PHINode *PN = nullptr;
+      Value *PassThru = nullptr;
+      for (User *U : I->users())
+        if ((PN = dyn_cast<PHINode>(U))) {
+          PassThru = Builder.CreateBitCast(PN->getIncomingValueForBlock(BB),
+                                           FixedVectorType::get(Ty, 1));
+          break;
+        }
+      MaskedLoadStore = Builder.CreateMaskedLoad(
+          FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
+      Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
+      if (PN)
+        PN->setIncomingValue(PN->getBasicBlockIndex(BB), NewLoadStore);
+      I->replaceAllUsesWith(NewLoadStore);
+    } else {
+      // Handle Store.
+      auto *StoredVal =
+          Builder.CreateBitCast(Op0, FixedVectorType::get(Op0->getType(), 1));
+      MaskedLoadStore = Builder.CreateMaskedStore(
+          StoredVal, I->getOperand(1), cast<StoreInst>(I)->getAlign(), Mask);
+    }
+    // For non-debug metadata, only !annotation, !range, !nonnull and !align are
+    // kept when hoisting (see Instruction::dropUBImplyingAttrsAndMetadata).
+    //
+    // !nonnull, !align : Not support pointer type, no need to keep.
+    // !range: Load type is changed from scalar to vector, but the metadata on
+    //         vector specifies a per-element range, so the semantics stay the
+    //         same. Keep it.
+    // !annotation: Not impact semantics. Keep it.
+    if (const MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
+      MaskedLoadStore->addRangeRetAttr(getConstantRangeFromMetadata(*Ranges));
+    I->dropUBImplyingAttrsAndUnknownMetadata({LLVMContext::MD_annotation});
+    // FIXME: DIAssignID is not supported for masked store yet.
+    // (Verifier::visitDIAssignIDMetadata)
+    at::deleteAssignmentMarkers(I);
+    I->eraseMetadataIf([](unsigned MDKind, MDNode *Node) {
+      return Node->getMetadataID() == Metadata::DIAssignIDKind;
+    });
+    MaskedLoadStore->copyMetadata(*I);
+    I->eraseFromParent();
+  }
+}
+
+static bool isSafeCheapLoadStore(const Instruction *I,
+                                 const TargetTransformInfo &TTI) {
+  // Not handle volatile or atomic.
+  if (auto *L = dyn_cast<LoadInst>(I)) {
+    if (!L->isSimple())
+      return false;
+  } else if (auto *S = dyn_cast<StoreInst>(I)) {
+    if (!S->isSimple())
+      return false;
+  } else
+    return false;
+
+  // llvm.masked.load/store use i32 for alignment while load/store use i64.
+  // That's why we have the alignment limitation.
+  // FIXME: Update the prototype of the intrinsics?
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+         getLoadStoreAlignment(I) < Value::MaximumAlignment;
+}
+
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If EqTermsOnly is
 /// given, only perform hoisting in case both blocks only contain a terminator.
 /// In that case, only the original BI will be replaced and selects for PHIs are
 /// added.
-bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
+bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
                                                    bool EqTermsOnly) {
   // This does very trivial matching, with limited scanning, to find identical
   // instructions in the two blocks. In particular, we don't want to get into
@@ -1596,6 +1759,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
   // such, we currently just scan for obviously identical instructions in an
   // identical order, possibly separated by the same number of non-identical
   // instructions.
+  BasicBlock *BB = TI->getParent();
   unsigned int SuccSize = succ_size(BB);
   if (SuccSize < 2)
     return false;
@@ -1606,8 +1770,6 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
   for (auto *Succ : successors(BB))
     if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
       return false;
-
-  auto *TI = BB->getTerminator();
 
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
@@ -1676,7 +1838,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+      if (AllInstsAreIdentical && (!areIdenticalUpToCommutativity(I1, I2) ||
                                    MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }
@@ -1922,6 +2084,9 @@ static bool isLifeTimeMarker(const Instruction *I) {
 // into variables.
 static bool replacingOperandWithVariableIsCheap(const Instruction *I,
                                                 int OpIdx) {
+  // Divide/Remainder by constant is typically much cheaper than by variable.
+  if (I->isIntDivRem())
+    return OpIdx != 1;
   return !isa<IntrinsicInst>(I);
 }
 
@@ -1994,28 +2159,6 @@ static bool canSinkInstructions(
       return false;
   }
 
-  // Because SROA can't handle speculating stores of selects, try not to sink
-  // loads, stores or lifetime markers of allocas when we'd have to create a
-  // PHI for the address operand. Also, because it is likely that loads or
-  // stores of allocas will disappear when Mem2Reg/SROA is run, don't sink
-  // them.
-  // This can cause code churn which can have unintended consequences down
-  // the line - see https://llvm.org/bugs/show_bug.cgi?id=30244.
-  // FIXME: This is a workaround for a deficiency in SROA - see
-  // https://llvm.org/bugs/show_bug.cgi?id=30188
-  if (isa<StoreInst>(I0) && any_of(Insts, [](const Instruction *I) {
-        return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
-      }))
-    return false;
-  if (isa<LoadInst>(I0) && any_of(Insts, [](const Instruction *I) {
-        return isa<AllocaInst>(I->getOperand(0)->stripPointerCasts());
-      }))
-    return false;
-  if (isLifeTimeMarker(I0) && any_of(Insts, [](const Instruction *I) {
-        return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
-      }))
-    return false;
-
   // For calls to be sinkable, they must all be indirect, or have same callee.
   // I.e. if we have two direct calls to different callees, we don't want to
   // turn that into an indirect call. Likewise, if we have an indirect call,
@@ -2053,6 +2196,16 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
+      // SROA can't speculate lifetime markers of selects/phis, and the
+      // backend may handle such lifetimes incorrectly as well (#104776).
+      // Don't sink lifetimes if it would introduce a phi on the pointer
+      // argument.
+      if (isLifeTimeMarker(I0) && OI == 1 &&
+          any_of(Insts, [](const Instruction *I) {
+            return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
+          }))
+        return false;
+
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
@@ -2324,6 +2477,16 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   bool followedByDeoptOrUnreachable = IsBlockFollowedByDeoptOrUnreachable(BB);
 
   if (!followedByDeoptOrUnreachable) {
+    // Check whether this is the pointer operand of a load/store.
+    auto IsMemOperand = [](Use &U) {
+      auto *I = cast<Instruction>(U.getUser());
+      if (isa<LoadInst>(I))
+        return U.getOperandNo() == LoadInst::getPointerOperandIndex();
+      if (isa<StoreInst>(I))
+        return U.getOperandNo() == StoreInst::getPointerOperandIndex();
+      return false;
+    };
+
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
@@ -2335,6 +2498,13 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
               return InstructionsToSink.contains(V);
             })) {
           ++NumPHIInsts;
+          // Do not separate a load/store from the gep producing the address.
+          // The gep can likely be folded into the load/store as an addressing
+          // mode. Additionally, a load of a gep is easier to analyze than a
+          // load of a phi.
+          if (IsMemOperand(U) &&
+              any_of(It->second, [](Value *V) { return isa<GEPOperator>(V); }))
+            return false;
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
           // See @creating_too_many_phis in sink-common-code.ll.
@@ -3001,7 +3171,7 @@ static bool isProfitableToSpeculate(const BranchInst *BI, bool Invert,
 ///     %sub = sub %x, %y
 ///     br label BB2
 ///   EndBB:
-///     %phi = phi [ %sub, %ThenBB ], [ 0, %EndBB ]
+///     %phi = phi [ %sub, %ThenBB ], [ 0, %BB ]
 ///     ...
 /// \endcode
 ///
@@ -3052,6 +3222,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
+  bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
+                          Options.HoistLoadsStoresWithCondFaulting;
+  SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
   EphemeralValueTracker EphTracker;
@@ -3080,22 +3253,34 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
-    ++SpeculatedInstructions;
+    bool IsSafeCheapLoadStore = HoistLoadsStores &&
+                                isSafeCheapLoadStore(&I, TTI) &&
+                                SpeculatedConditionalLoadsStores.size() <
+                                    HoistLoadsStoresWithCondFaultingThreshold;
+    // Not count load/store into cost if target supports conditional faulting
+    // b/c it's cheap to speculate it.
+    if (IsSafeCheapLoadStore)
+      SpeculatedConditionalLoadsStores.push_back(&I);
+    else
+      ++SpeculatedInstructions;
+
     if (SpeculatedInstructions > 1)
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!isSafeToSpeculativelyExecute(&I) &&
-        !(HoistCondStores && (SpeculatedStoreValue = isSafeToSpeculateStore(
-                                  &I, BB, ThenBB, EndBB))))
+    if (!IsSafeCheapLoadStore &&
+        !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
+        !(HoistCondStores && !SpeculatedStoreValue &&
+          (SpeculatedStoreValue =
+               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
       return false;
-    if (!SpeculatedStoreValue &&
+    if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
     // Store the store speculation candidate.
-    if (SpeculatedStoreValue)
+    if (!SpeculatedStore && SpeculatedStoreValue)
       SpeculatedStore = cast<StoreInst>(&I);
 
     // Do not hoist the instruction if any of its operands are defined but not
@@ -3122,11 +3307,11 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
   // Check that we can insert the selects and that it's not too expensive to do
   // so.
-  bool Convert = SpeculatedStore != nullptr;
+  bool Convert =
+      SpeculatedStore != nullptr || !SpeculatedConditionalLoadsStores.empty();
   InstructionCost Cost = 0;
   Convert |= validateAndCostRequiredSelects(BB, ThenBB, EndBB,
-                                            SpeculatedInstructions,
-                                            Cost, TTI);
+                                            SpeculatedInstructions, Cost, TTI);
   if (!Convert || Cost > Budget)
     return false;
 
@@ -3213,6 +3398,9 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
         It.dropOneDbgRecord(&DR);
   BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
              std::prev(ThenBB->end()));
+
+  if (!SpeculatedConditionalLoadsStores.empty())
+    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert);
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -3482,7 +3670,8 @@ static bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
 /// Given a BB that starts with the specified two-entry PHI node,
 /// see if we can eliminate it.
 static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL,
+                                DomTreeUpdater *DTU, AssumptionCache *AC,
+                                const DataLayout &DL,
                                 bool SpeculateUnpredictables) {
   // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
   // statement", which has a very simple dominance structure.  Basically, we
@@ -3572,10 +3761,10 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       continue;
     }
 
-    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
-                             Cost, Budget, TTI) ||
-        !dominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
-                             Cost, Budget, TTI))
+    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
+                             AggressiveInsts, Cost, Budget, TTI, AC) ||
+        !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
+                             AggressiveInsts, Cost, Budget, TTI, AC))
       return Changed;
   }
 
@@ -6339,9 +6528,10 @@ SwitchLookupTable::SwitchLookupTable(
     if (LinearMappingPossible) {
       LinearOffset = cast<ConstantInt>(TableContents[0]);
       LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      bool MayWrap = false;
       APInt M = LinearMultiplier->getValue();
-      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+      bool MayWrap = true;
+      if (isIntN(M.getBitWidth(), TableSize - 1))
+        (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
       LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
       ++NumLinearMaps;
@@ -7112,6 +7302,119 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+/// Fold switch over ucmp/scmp intrinsic to br if two of the switch arms have
+/// the same destination.
+static bool simplifySwitchOfCmpIntrinsic(SwitchInst *SI, IRBuilderBase &Builder,
+                                         DomTreeUpdater *DTU) {
+  auto *Cmp = dyn_cast<CmpIntrinsic>(SI->getCondition());
+  if (!Cmp || !Cmp->hasOneUse())
+    return false;
+
+  SmallVector<uint32_t, 4> Weights;
+  bool HasWeights = extractBranchWeights(getBranchWeightMDNode(*SI), Weights);
+  if (!HasWeights)
+    Weights.resize(4); // Avoid checking HasWeights everywhere.
+
+  // Normalize to [us]cmp == Res ? Succ : OtherSucc.
+  int64_t Res;
+  BasicBlock *Succ, *OtherSucc;
+  uint32_t SuccWeight = 0, OtherSuccWeight = 0;
+  BasicBlock *Unreachable = nullptr;
+
+  if (SI->getNumCases() == 2) {
+    // Find which of 1, 0 or -1 is missing (handled by default dest).
+    SmallSet<int64_t, 3> Missing;
+    Missing.insert(1);
+    Missing.insert(0);
+    Missing.insert(-1);
+
+    Succ = SI->getDefaultDest();
+    SuccWeight = Weights[0];
+    OtherSucc = nullptr;
+    for (auto &Case : SI->cases()) {
+      std::optional<int64_t> Val =
+          Case.getCaseValue()->getValue().trySExtValue();
+      if (!Val)
+        return false;
+      if (!Missing.erase(*Val))
+        return false;
+      if (OtherSucc && OtherSucc != Case.getCaseSuccessor())
+        return false;
+      OtherSucc = Case.getCaseSuccessor();
+      OtherSuccWeight += Weights[Case.getSuccessorIndex()];
+    }
+
+    assert(Missing.size() == 1 && "Should have one case left");
+    Res = *Missing.begin();
+  } else if (SI->getNumCases() == 3 && SI->defaultDestUndefined()) {
+    // Normalize so that Succ is taken once and OtherSucc twice.
+    Unreachable = SI->getDefaultDest();
+    Succ = OtherSucc = nullptr;
+    for (auto &Case : SI->cases()) {
+      BasicBlock *NewSucc = Case.getCaseSuccessor();
+      uint32_t Weight = Weights[Case.getSuccessorIndex()];
+      if (!OtherSucc || OtherSucc == NewSucc) {
+        OtherSucc = NewSucc;
+        OtherSuccWeight += Weight;
+      } else if (!Succ) {
+        Succ = NewSucc;
+        SuccWeight = Weight;
+      } else if (Succ == NewSucc) {
+        std::swap(Succ, OtherSucc);
+        std::swap(SuccWeight, OtherSuccWeight);
+      } else
+        return false;
+    }
+    for (auto &Case : SI->cases()) {
+      std::optional<int64_t> Val =
+          Case.getCaseValue()->getValue().trySExtValue();
+      if (!Val || (Val != 1 && Val != 0 && Val != -1))
+        return false;
+      if (Case.getCaseSuccessor() == Succ) {
+        Res = *Val;
+        break;
+      }
+    }
+  } else {
+    return false;
+  }
+
+  // Determine predicate for the missing case.
+  ICmpInst::Predicate Pred;
+  switch (Res) {
+  case 1:
+    Pred = ICmpInst::ICMP_UGT;
+    break;
+  case 0:
+    Pred = ICmpInst::ICMP_EQ;
+    break;
+  case -1:
+    Pred = ICmpInst::ICMP_ULT;
+    break;
+  }
+  if (Cmp->isSigned())
+    Pred = ICmpInst::getSignedPredicate(Pred);
+
+  MDNode *NewWeights = nullptr;
+  if (HasWeights)
+    NewWeights = MDBuilder(SI->getContext())
+                     .createBranchWeights(SuccWeight, OtherSuccWeight);
+
+  BasicBlock *BB = SI->getParent();
+  Builder.SetInsertPoint(SI->getIterator());
+  Value *ICmp = Builder.CreateICmp(Pred, Cmp->getLHS(), Cmp->getRHS());
+  Builder.CreateCondBr(ICmp, Succ, OtherSucc, NewWeights,
+                       SI->getMetadata(LLVMContext::MD_unpredictable));
+  OtherSucc->removePredecessor(BB);
+  if (Unreachable)
+    Unreachable->removePredecessor(BB);
+  SI->eraseFromParent();
+  Cmp->eraseFromParent();
+  if (DTU && Unreachable)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, Unreachable}});
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -7144,6 +7447,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (eliminateDeadSwitchCases(SI, DTU, Options.AC, DL))
     return requestResimplify();
 
+  if (simplifySwitchOfCmpIntrinsic(SI, Builder, DTU))
+    return requestResimplify();
+
   if (trySwitchToSelect(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
@@ -7166,7 +7472,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (HoistCommon &&
-      hoistCommonCodeFromSuccessors(SI->getParent(), !Options.HoistCommonInsts))
+      hoistCommonCodeFromSuccessors(SI, !Options.HoistCommonInsts))
     return requestResimplify();
 
   return false;
@@ -7524,8 +7830,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // can hoist it up to the branching block.
   if (BI->getSuccessor(0)->getSinglePredecessor()) {
     if (BI->getSuccessor(1)->getSinglePredecessor()) {
-      if (HoistCommon && hoistCommonCodeFromSuccessors(
-                             BI->getParent(), !Options.HoistCommonInsts))
+      if (HoistCommon &&
+          hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
@@ -7600,6 +7906,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       case Instruction::Call:
       case Instruction::CallBr:
       case Instruction::Invoke:
+      case Instruction::UDiv:
+      case Instruction::URem:
+        // Note: signed div/rem of INT_MIN / -1 is also immediate UB, not
+        // implemented to avoid code complexity as it is unclear how useful such
+        // logic is.
+      case Instruction::SDiv:
+      case Instruction::SRem:
         return true;
       }
     });
@@ -7701,6 +8014,9 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
           }
       }
     }
+    // Div/Rem by zero is immediate UB
+    if (match(Use, m_BinOp(m_Value(), m_Specific(I))) && Use->isIntDivRem())
+      return true;
   }
   return false;
 }
@@ -7821,7 +8137,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     // eliminate it, do so now.
     if (auto *PN = dyn_cast<PHINode>(BB->begin()))
       if (PN->getNumIncomingValues() == 2)
-        if (foldTwoEntryPHINode(PN, TTI, DTU, DL,
+        if (foldTwoEntryPHINode(PN, TTI, DTU, Options.AC, DL,
                                 Options.SpeculateUnpredictables))
           return true;
   }

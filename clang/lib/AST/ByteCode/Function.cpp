@@ -16,15 +16,17 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
+Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
-    : P(P), F(F), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
+                   bool HasThisPointer, bool HasRVO, unsigned BuiltinID)
+    : P(P), Source(Source), ArgSize(ArgSize), ParamTypes(std::move(ParamTypes)),
       Params(std::move(Params)), ParamOffsets(std::move(ParamOffsets)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO), Variadic(F->isVariadic()),
-      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
+      HasThisPointer(HasThisPointer), HasRVO(HasRVO), BuiltinID(BuiltinID) {
+  if (const auto *F = Source.dyn_cast<const FunctionDecl *>())
+    Variadic = F->isVariadic();
+}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -45,7 +47,24 @@ SourceInfo Function::getSource(CodePtr PC) const {
 }
 
 bool Function::isVirtual() const {
-  if (const auto *M = dyn_cast<CXXMethodDecl>(F))
+  if (const auto *M = dyn_cast_if_present<CXXMethodDecl>(
+          Source.dyn_cast<const FunctionDecl *>()))
     return M->isVirtual();
   return false;
+}
+
+/// Unevaluated builtins don't get their arguments put on the stack
+/// automatically. They instead operate on the AST of their Call
+/// Expression.
+/// Similar information is available via ASTContext::BuiltinInfo,
+/// but that is not correct for our use cases.
+static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
+  return BuiltinID == Builtin::BI__builtin_classify_type ||
+         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         BuiltinID == Builtin::BI__builtin_constant_p ||
+         BuiltinID == Builtin::BI__noop;
+}
+
+bool Function::isUnevaluatedBuiltin() const {
+  return ::isUnevaluatedBuiltin(BuiltinID);
 }

@@ -38,13 +38,14 @@ EvalEmitter::~EvalEmitter() {
 void EvalEmitter::cleanup() { S.cleanup(); }
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
-                                            bool ConvertResultToRValue) {
+                                            bool ConvertResultToRValue,
+                                            bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E)) {
+  if (!this->visitExpr(E, DestroyToplevelScope)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
@@ -165,11 +166,16 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
   if (ConvertResultToRValue) {
     if (!Ptr.isZero() && !Ptr.isDereferencable())
       return false;
+
+    if (S.getLangOpts().CPlusPlus11 && Ptr.isBlockPointer() &&
+        !CheckFinalLoad(S, OpPC, Ptr)) {
+      return false;
+    }
+
     // Never allow reading from a non-const pointer, unless the memory
     // has been created in this evaluation.
-    if (!Ptr.isZero() && Ptr.isBlockPointer() &&
-        Ptr.block()->getEvalID() != Ctx.getEvalID() &&
-        (!CheckLoad(S, OpPC, Ptr, AK_Read) || !Ptr.isConst()))
+    if (!Ptr.isZero() && !Ptr.isConst() && Ptr.isBlockPointer() &&
+        Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
     if (std::optional<APValue> V =
@@ -214,7 +220,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
+          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }

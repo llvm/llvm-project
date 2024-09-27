@@ -50,6 +50,7 @@ STATISTIC(NumNoUndef, "Number of function returns inferred as noundef returns");
 STATISTIC(NumReturnedArg, "Number of arguments inferred as returned");
 STATISTIC(NumWillReturn, "Number of functions inferred as willreturn");
 STATISTIC(NumCold, "Number of functions inferred as cold");
+STATISTIC(NumNoReturn, "Number of functions inferred as no return");
 
 static bool setDoesNotAccessMemory(Function &F) {
   if (F.doesNotAccessMemory())
@@ -64,6 +65,14 @@ static bool setIsCold(Function &F) {
     return false;
   F.addFnAttr(Attribute::Cold);
   ++NumCold;
+  return true;
+}
+
+static bool setNoReturn(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoReturn))
+    return false;
+  F.addFnAttr(Attribute::NoReturn);
+  ++NumNoReturn;
   return true;
 }
 
@@ -1103,6 +1112,15 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_abort:
     Changed |= setIsCold(F);
     break;
+  case LibFunc_terminate:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    break;
+  case LibFunc_cxa_throw:
+    Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    // Don't add `nofree` on `__cxa_throw`
+    return Changed;
   // int __nvvm_reflect(const char *)
   case LibFunc_nvvm_reflect:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1173,6 +1191,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fabs:
   case LibFunc_fabsf:
   case LibFunc_fabsl:
+  case LibFunc_fdim:
+  case LibFunc_fdiml:
+  case LibFunc_fdimf:
   case LibFunc_ffs:
   case LibFunc_ffsl:
   case LibFunc_ffsll:
@@ -1250,6 +1271,18 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
     Changed |= setOnlyWritesMemory(F);
+    Changed |= setWillReturn(F);
+    break;
+  case LibFunc_sincos:
+  case LibFunc_sincosf:
+  case LibFunc_sincosl:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotFreeMemory(F);
+    Changed |= setOnlyWritesMemory(F);
+    Changed |= setOnlyWritesMemory(F, 1);
+    Changed |= setOnlyWritesMemory(F, 2);
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
     break;
   default:

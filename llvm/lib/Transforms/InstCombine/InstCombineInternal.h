@@ -51,7 +51,6 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class GlobalVariable;
-class LoopInfo;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
@@ -66,15 +65,15 @@ public:
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
+                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, LI) {}
+                     BFI, BPI, PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
-  bool prepareWorklist(Function &F,
-                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
+  bool prepareWorklist(Function &F);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -585,6 +584,10 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  /// Common transforms for add / disjoint or
+  Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
+                                      bool NUW);
+
   /// Canonicalize the position of binops relative to shufflevector.
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
@@ -630,6 +633,11 @@ public:
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
   Instruction *foldPHIArgIntToPtrToPHI(PHINode &PN);
+
+  /// If the phi is within a phi web, which is formed by the def-use chain
+  /// of phis and all the phis in the web are only used in the other phis.
+  /// In this case, these phis are dead and we will remove all of them.
+  bool foldDeadPhiWeb(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
@@ -729,6 +737,7 @@ public:
 
   // Helpers of visitSelectInst().
   Instruction *foldSelectOfBools(SelectInst &SI);
+  Instruction *foldSelectToCmp(SelectInst &SI);
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);

@@ -11,9 +11,13 @@
 // <mdspan>
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
+#include <array>
 #include <cassert>
+#include <concepts>
+#include <cstdint>
+#include <span> // dynamic_extent
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -33,7 +37,7 @@ constexpr bool test() {
   ASSERT_SAME_TYPE(decltype(std::layout_stride::mapping(std::extents<int, D>(), std::array<char, 1>{1})),
                    std::layout_stride::mapping<std::extents<int, D>>);
   ASSERT_SAME_TYPE(
-      decltype(std::layout_stride::mapping(std::extents<unsigned, D, 3>(), std::array<int64_t, 2>{3, 100})),
+      decltype(std::layout_stride::mapping(std::extents<unsigned, D, 3>(), std::array<std::int64_t, 2>{3, 100})),
       std::layout_stride::mapping<std::extents<unsigned, D, 3>>);
 
   ASSERT_SAME_TYPE(decltype(std::layout_stride::mapping(std::extents<int>(), std::span<unsigned, 0>())),
@@ -43,7 +47,7 @@ constexpr bool test() {
   ASSERT_SAME_TYPE(decltype(std::layout_stride::mapping(std::extents<int, D>(), std::declval<std::span<char, 1>>())),
                    std::layout_stride::mapping<std::extents<int, D>>);
   ASSERT_SAME_TYPE(
-      decltype(std::layout_stride::mapping(std::extents<unsigned, D, 3>(), std::declval<std::span<int64_t, 2>>())),
+      decltype(std::layout_stride::mapping(std::extents<unsigned, D, 3>(), std::declval<std::span<std::int64_t, 2>>())),
       std::layout_stride::mapping<std::extents<unsigned, D, 3>>);
   return true;
 }

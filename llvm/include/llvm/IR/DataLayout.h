@@ -115,14 +115,6 @@ private:
   // FIXME: `unsigned char` truncates the value parsed by `parseSpecifier`.
   SmallVector<unsigned char, 8> LegalIntWidths;
 
-  /// Type specifier used by some internal functions.
-  enum class TypeSpecifier {
-    Integer = 'i',
-    Float = 'f',
-    Vector = 'v',
-    Aggregate = 'a'
-  };
-
   /// Primitive type specifications. Sorted and uniqued by type bit width.
   SmallVector<PrimitiveSpec, 6> IntSpecs;
   SmallVector<PrimitiveSpec, 4> FloatSpecs;
@@ -145,10 +137,9 @@ private:
   /// well-defined bitwise representation.
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
-  /// Attempts to set the specification for the given type.
-  /// Returns an error description on failure.
-  Error setPrimitiveSpec(TypeSpecifier Specifier, uint32_t BitWidth,
-                         Align ABIAlign, Align PrefAlign);
+  /// Sets or updates the specification for the given primitive type.
+  void setPrimitiveSpec(char Specifier, uint32_t BitWidth, Align ABIAlign,
+                        Align PrefAlign);
 
   /// Searches for a pointer specification that matches the given address space.
   /// Returns the default address space specification if not found.
@@ -164,7 +155,13 @@ private:
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
-  /// Attempts to parse a pointer specification ('p').
+  /// Attempts to parse primitive specification ('i', 'f', or 'v').
+  Error parsePrimitiveSpec(StringRef Spec);
+
+  /// Attempts to parse aggregate specification ('a').
+  Error parseAggregateSpec(StringRef Spec);
+
+  /// Attempts to parse pointer specification ('p').
   Error parsePointerSpec(StringRef Spec);
 
   /// Attempts to parse a single specification.
@@ -223,15 +220,9 @@ public:
 
   bool isIllegalInteger(uint64_t Width) const { return !isLegalInteger(Width); }
 
-  /// Returns true if the given alignment exceeds the natural stack alignment.
-  bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
-  }
-
-  Align getStackAlignment() const {
-    assert(StackNaturalAlign && "StackNaturalAlign must be defined");
-    return *StackNaturalAlign;
-  }
+  /// Returns the natural stack alignment, or MaybeAlign() if one wasn't
+  /// specified.
+  MaybeAlign getStackAlignment() const { return StackNaturalAlign; }
 
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
@@ -430,8 +421,9 @@ public:
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
-    TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
+    TypeSize StoreSizeInBits = getTypeStoreSizeInBits(Ty);
+    return {StoreSizeInBits.getKnownMinValue() / 8,
+            StoreSizeInBits.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by
@@ -442,7 +434,10 @@ public:
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
   TypeSize getTypeStoreSizeInBits(Type *Ty) const {
-    return 8 * getTypeStoreSize(Ty);
+    TypeSize BaseSize = getTypeSizeInBits(Ty);
+    uint64_t AlignedSizeInBits =
+        alignToPowerOf2(BaseSize.getKnownMinValue(), 8);
+    return {AlignedSizeInBits, BaseSize.isScalable()};
   }
 
   /// Returns true if no extra padding bits are needed when storing the

@@ -772,7 +772,7 @@ public:
   SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   SDValue getValueType(EVT);
-  SDValue getRegister(unsigned Reg, EVT VT);
+  SDValue getRegister(Register Reg, EVT VT);
   SDValue getRegisterMask(const uint32_t *RegMask);
   SDValue getEHLabel(const SDLoc &dl, SDValue Root, MCSymbol *Label);
   SDValue getLabelNode(unsigned Opcode, const SDLoc &dl, SDValue Root,
@@ -784,7 +784,7 @@ public:
     return getBlockAddress(BA, VT, Offset, true, TargetFlags);
   }
 
-  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, unsigned Reg,
+  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, Register Reg,
                        SDValue N) {
     return getNode(ISD::CopyToReg, dl, MVT::Other, Chain,
                    getRegister(Reg, N.getValueType()), N);
@@ -793,7 +793,7 @@ public:
   // This version of the getCopyToReg method takes an extra operand, which
   // indicates that there is potentially an incoming glue value (if Glue is not
   // null) and that there should be a glue result.
-  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, unsigned Reg, SDValue N,
+  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, Register Reg, SDValue N,
                        SDValue Glue) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, N.getValueType()), N, Glue };
@@ -810,7 +810,7 @@ public:
                    ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
 
-  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, unsigned Reg, EVT VT) {
+  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT) {
     SDVTList VTs = getVTList(VT, MVT::Other);
     SDValue Ops[] = { Chain, getRegister(Reg, VT) };
     return getNode(ISD::CopyFromReg, dl, VTs, Ops);
@@ -819,7 +819,7 @@ public:
   // This version of the getCopyFromReg method takes an extra operand, which
   // indicates that there is potentially an incoming glue value (if Glue is not
   // null) and that there should be a glue result.
-  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, unsigned Reg, EVT VT,
+  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT,
                          SDValue Glue) {
     SDVTList VTs = getVTList(VT, MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, VT), Glue };
@@ -1164,7 +1164,12 @@ public:
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4);
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, const SDNodeFlags Flags);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDValue N4, SDValue N5);
+  SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
+                  SDValue N2, SDValue N3, SDValue N4, SDValue N5,
+                  const SDNodeFlags Flags);
 
   // Specialize again based on number of operands for nodes with a VTList
   // rather than a single VT.
@@ -1588,6 +1593,11 @@ public:
   /// Return the specified value casted to
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
+
+  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
+  /// its operands and ReducedTY is the intrinsic's return type.
+  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                              SDValue Op2);
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);

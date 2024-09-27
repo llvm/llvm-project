@@ -351,6 +351,21 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   return values;
 }
 
+std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
+  if (value.getDefiningOp<vector::VectorScaleOp>())
+    return 1;
+  auto mul = value.getDefiningOp<arith::MulIOp>();
+  if (!mul)
+    return {};
+  auto lhs = mul.getLhs();
+  auto rhs = mul.getRhs();
+  if (lhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(rhs);
+  if (rhs.getDefiningOp<vector::VectorScaleOp>())
+    return getConstantIntValue(lhs);
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // CombiningKindAttr
 //===----------------------------------------------------------------------===//
@@ -2896,10 +2911,17 @@ public:
         linearize(completePositions, computeStrides(destTy.getShape()));
 
     SmallVector<Attribute> insertedValues;
-    if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(sourceCst))
-      llvm::append_range(insertedValues, denseSource.getValues<Attribute>());
-    else
-      insertedValues.push_back(sourceCst);
+    Type destEltType = destTy.getElementType();
+
+    // The `convertIntegerAttr` method specifically handles the case
+    // for `llvm.mlir.constant` which can hold an attribute with a
+    // different type than the return type.
+    if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(sourceCst)) {
+      for (auto value : denseSource.getValues<Attribute>())
+        insertedValues.push_back(convertIntegerAttr(value, destEltType));
+    } else {
+      insertedValues.push_back(convertIntegerAttr(sourceCst, destEltType));
+    }
 
     auto allValues = llvm::to_vector(denseDest.getValues<Attribute>());
     copy(insertedValues, allValues.begin() + insertBeginPosition);
@@ -2907,6 +2929,17 @@ public:
 
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newAttr);
     return success();
+  }
+
+private:
+  /// Converts the expected type to an IntegerAttr if there's
+  /// a mismatch.
+  Attribute convertIntegerAttr(Attribute attr, Type expectedType) const {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
   }
 };
 
@@ -4751,7 +4784,14 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 VectorType vecTy,
                                                  MemRefType memRefTy) {
+  // If rank==0 or size==1 it's equivalent to scalar load/store, so we don't
+  // need any strides limitations.
+  if (!vecTy.isScalable() &&
+      (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
+    return success();
+
   if (!isLastMemrefDimUnitStride(memRefTy))
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
@@ -4761,7 +4801,7 @@ LogicalResult vector::LoadOp::verify() {
   VectorType resVecTy = getVectorType();
   MemRefType memRefTy = getMemRefType();
 
-  if (failed(verifyLoadStoreMemRefLayout(*this, memRefTy)))
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
   // Checks for vector memrefs.
@@ -4793,7 +4833,7 @@ LogicalResult vector::StoreOp::verify() {
   VectorType valueVecTy = getVectorType();
   MemRefType memRefTy = getMemRefType();
 
-  if (failed(verifyLoadStoreMemRefLayout(*this, memRefTy)))
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
   // Checks for vector memrefs.
@@ -5869,21 +5909,6 @@ LogicalResult CreateMaskOp::verify() {
   return success();
 }
 
-std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
-  if (value.getDefiningOp<vector::VectorScaleOp>())
-    return 1;
-  auto mul = value.getDefiningOp<arith::MulIOp>();
-  if (!mul)
-    return {};
-  auto lhs = mul.getLhs();
-  auto rhs = mul.getRhs();
-  if (lhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(rhs);
-  if (rhs.getDefiningOp<vector::VectorScaleOp>())
-    return getConstantIntValue(lhs);
-  return {};
-}
-
 namespace {
 
 /// Pattern to rewrite a CreateMaskOp with a ConstantMaskOp.
@@ -6106,7 +6131,9 @@ LogicalResult MaskOp::verify() {
   Block &block = getMaskRegion().getBlocks().front();
   if (block.getOperations().empty())
     return emitOpError("expects a terminator within the mask region");
-  if (block.getOperations().size() > 2)
+
+  unsigned numMaskRegionOps = block.getOperations().size();
+  if (numMaskRegionOps > 2)
     return emitOpError("expects only one operation to mask");
 
   // Terminator checks.
@@ -6118,10 +6145,13 @@ LogicalResult MaskOp::verify() {
     return emitOpError(
         "expects number of results to match mask region yielded values");
 
-  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
   // Empty vector.mask. Nothing else to check.
-  if (!maskableOp)
+  if (numMaskRegionOps == 1)
     return success();
+
+  auto maskableOp = dyn_cast<MaskableOpInterface>(block.front());
+  if (!maskableOp)
+    return emitOpError("expects a MaskableOpInterface within the mask region");
 
   // Result checks.
   if (maskableOp->getNumResults() != getNumResults())

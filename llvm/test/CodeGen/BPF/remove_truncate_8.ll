@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=bpf -mcpu=v1 -verify-machineinstrs | FileCheck %s
 ; Source Code:
 ;   struct loc_prog {
 ;     unsigned int ip;

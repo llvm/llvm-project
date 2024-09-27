@@ -413,6 +413,12 @@ public:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
+    case LibFunc_asin:         case LibFunc_asinf:      case LibFunc_asinl:
+    case LibFunc_acos:         case LibFunc_acosf:      case LibFunc_acosl:
+    case LibFunc_atan:         case LibFunc_atanf:      case LibFunc_atanl:
+    case LibFunc_sinh:         case LibFunc_sinhf:      case LibFunc_sinhl:
+    case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
+    case LibFunc_tanh:         case LibFunc_tanhf:      case LibFunc_tanhl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:

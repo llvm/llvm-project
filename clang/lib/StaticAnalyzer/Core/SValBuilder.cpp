@@ -174,7 +174,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
 }
 
 DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
-                                                   const Expr *expr,
+                                                   const Stmt *St,
                                                    const LocationContext *LCtx,
                                                    QualType type,
                                                    unsigned count) {
@@ -184,7 +184,7 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.conjureSymbol(expr, LCtx, type, count, symbolTag);
+  SymbolRef sym = SymMgr.conjureSymbol(St, LCtx, type, count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -210,22 +210,24 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedOrUnknownSVal
-SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                      const LocationContext *LCtx,
-                                      unsigned VisitCount) {
+DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
+                                                  const LocationContext *LCtx,
+                                                  unsigned VisitCount) {
   QualType T = E->getType();
   return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
 }
 
-DefinedOrUnknownSVal
-SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                      const LocationContext *LCtx,
-                                      QualType type, unsigned VisitCount) {
+DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
+                                                  const LocationContext *LCtx,
+                                                  QualType type,
+                                                  unsigned VisitCount) {
   assert(Loc::isLocType(type));
   assert(SymbolManager::canSymbolicate(type));
-  if (type->isNullPtrType())
-    return makeZeroVal(type);
+  if (type->isNullPtrType()) {
+    // makeZeroVal() returns UnknownVal only in case of FP number, which
+    // is not the case.
+    return makeZeroVal(type).castAs<DefinedSVal>();
+  }
 
   SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
