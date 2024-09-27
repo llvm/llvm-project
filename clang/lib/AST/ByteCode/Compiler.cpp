@@ -724,9 +724,9 @@ bool Compiler<Emitter>::VisitFixedPointLiteral(const FixedPointLiteral *E) {
   assert(E->getType()->isFixedPointType());
   assert(classifyPrim(E) == PT_FixedPoint);
 
-  // FIXME: Semantics.
+  auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
   APInt Value = E->getValue();
-  return this->emitConstFixedPoint(Value, E);
+  return this->emitConstFixedPoint(FixedPoint(Value, Sem), E);
 }
 
 template <class Emitter>
