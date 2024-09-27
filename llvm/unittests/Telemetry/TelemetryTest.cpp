@@ -318,15 +318,16 @@ private:
 // Custom vendor-defined Telemeter that has additional data-collection point.
 class TestTelemeter : public Telemeter {
 public:
-  TestTelemeter(std::string SessionId) : Uuid(SessionId), Counter(0) {}
+  TestTelemeter(std::string SessionId, TestContext *Ctxt)
+      : Uuid(SessionId), Counter(0), CurrentContext(Ctxt) {}
 
   static std::unique_ptr<TestTelemeter>
   createInstance(Config *config, TestContext *CurrentContext) {
     if (!config->EnableTelemetry)
       return nullptr;
     CurrentContext->ExpectedUuid = nextUuid();
-    std::unique_ptr<TestTelemeter> Telemeter =
-        std::make_unique<TestTelemeter>(CurrentContext->ExpectedUuid);
+    std::unique_ptr<TestTelemeter> Telemeter = std::make_unique<TestTelemeter>(
+        CurrentContext->ExpectedUuid, CurrentContext);
     // Set up Destination based on the given config.
     for (const std::string &Dest : config->AdditionalDestinations) {
       // The destination(s) are ALSO defined by vendor, so it should understand
@@ -344,7 +345,6 @@ public:
             llvm::Twine("unknown destination: ", Dest).str().c_str());
       }
     }
-    Telemeter->CurrentContext = CurrentContext;
     return Telemeter;
   }
 
