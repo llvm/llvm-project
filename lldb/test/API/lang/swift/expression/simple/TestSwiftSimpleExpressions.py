@@ -21,7 +21,6 @@ import sys
 
 
 class TestSwiftSimpleExpressions(TestBase):
-    @skipIf(bugnumber = "rdar://135575668")
     @swiftTest
     def test_simple_swift_expressions(self):
         """Tests that we can run simple Swift expressions correctly"""
