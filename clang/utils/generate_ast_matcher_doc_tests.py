@@ -86,10 +86,7 @@ from collections import defaultdict
 from enum import Enum
 from functools import reduce
 from pathlib import Path
-from subprocess import run
 from sys import exit
-from tempfile import TemporaryDirectory
-from typing import Optional
 
 statistics = defaultdict(int)
 
@@ -425,64 +422,6 @@ cuda_header: str = """
 """
 
 
-def can_code_compile(
-    code: str,
-    headers: list,
-    compile_commands,
-) -> bool:
-    """Check if the code can compile using the provided arguments.
-    This is used to determine if a code snippet could actually compile in
-    one of the specified language versions. Provides an earlier warning
-    than after building and executing the test suite.
-
-    Args:
-        code: The code to test
-        headers: Headers, if any
-        compile_commands: The compile arguments, if any
-
-    Returns:
-        If the code compiled with the specified compile arguments.
-    """
-    tmp_dir = TemporaryDirectory()
-    tmp_path = Path(tmp_dir.name)
-
-    is_cuda = compile_commands and compile_commands.is_cuda()
-    if is_cuda:
-        return True
-
-    code_file_name = "code.cpp"
-    if compile_commands and compile_commands.lang_spec.cxx == "":
-        code_file_name = "code.c"
-    if compile_commands and "cuda" in compile_commands.lang_spec.raw:
-        code_file_name = "code.cu"
-
-    (tmp_path / code_file_name).write_text(code)
-
-    for header_name, header_content in headers:
-        file_path = tmp_path / header_name
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(header_content)
-
-    args: list[str] = []
-    if compile_commands:
-        args = get_with_lang_spec(compile_commands)
-
-    invocation = [
-        "clang",
-        *args,
-        "-c",
-        "-Wno-everything",
-        code_file_name,
-    ]
-    res = run(invocation, cwd=tmp_path, check=False)
-    if res.returncode == 0:
-        return True
-
-    print(f"args: {res.args}")
-    print(f"code: \n{code}")
-    return False
-
-
 class MatchType(Enum):
     """Available types of a match, specified by using the lowercase version in
     doxygen: '\\match{type=typestr}'.
@@ -615,11 +554,6 @@ class TestCase:
 
         if self.compile_args and self.compile_args.lang_spec.objc != "":
             statistics["skipped_objc"] += 1
-            return ""
-
-        if not can_code_compile(self.code, self.headers, self.compile_args):
-            self.diag("failed to compile")
-            statistics["compile_failures"] += 1
             return ""
 
         statistics["code_snippets"] += 1
