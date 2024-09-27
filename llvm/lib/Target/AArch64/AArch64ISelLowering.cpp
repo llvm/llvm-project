@@ -21948,14 +21948,14 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
   // product followed by a zero / sign extension
   if ((ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) ||
       (ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8)) {
-    EVT ReducedTypeHalved = (ReducedType.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+    EVT ReducedTypeHalved =
+        (ReducedType.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
 
-    auto Doti32 =
-        DAG.getNode(Opcode, DL, ReducedTypeHalved,
-                    DAG.getConstant(0, DL, ReducedTypeHalved), A, B);
+    auto Doti32 = DAG.getNode(Opcode, DL, ReducedTypeHalved,
+                              DAG.getConstant(0, DL, ReducedTypeHalved), A, B);
     auto Extended = DAG.getSExtOrTrunc(Doti32, DL, ReducedType);
     return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(),
-                                  {NarrowOp, Extended});
+                       {NarrowOp, Extended});
   }
 
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
