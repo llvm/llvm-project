@@ -17,6 +17,7 @@
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/User.h"
