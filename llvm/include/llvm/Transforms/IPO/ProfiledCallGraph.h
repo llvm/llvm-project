@@ -57,25 +57,6 @@ struct ProfiledCallGraphNode {
   edges Edges;
 };
 
-class PrehashedFunctionId {
-public:
-  PrehashedFunctionId() = default;
-
-  PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
-
-  uint64_t GetHash() const { return Hash; }
-
-  const FunctionId &GetId() const { return Id; }
-
-private:
-  FunctionId Id;
-  uint64_t Hash;
-};
-
-inline uint64_t hash_value(const PrehashedFunctionId &Obj) {
-  return Obj.GetHash();
-}
-
 class ProfiledCallGraph {
 public:
   using iterator = ProfiledCallGraphNode::iterator;
@@ -157,6 +138,23 @@ public:
   }
 
 private:
+  class PrehashedFunctionId {
+  public:
+    PrehashedFunctionId() = default;
+
+    PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
+
+    const FunctionId &GetId() const { return Id; }
+
+    operator FunctionId() const {
+      return FunctionId{Hash};
+    }
+
+  private:
+    FunctionId Id;
+    uint64_t Hash;
+  };
+
   void addProfiledFunction(const PrehashedFunctionId &Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
