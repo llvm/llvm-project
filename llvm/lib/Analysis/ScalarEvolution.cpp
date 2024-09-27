@@ -4306,8 +4306,10 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   for (unsigned i = 1, e = Ops.size(); i != e; ++i) {
     bool MayBeUB = SCEVExprContains(Ops[i], [this](const SCEV *S) {
       auto *UDiv = dyn_cast<SCEVUDivExpr>(S);
-      // The UDiv may be UB if the divisor is poison or zero. Unless the divisor is a non-zero constant, we have to assume the UDiv may be UB.
-      return UDiv && (!isa<SCEVConstant>(UDiv->getOperand(1)) || !isKnownNonZero(UDiv->getOperand(1)));
+      // The UDiv may be UB if the divisor is poison or zero. Unless the divisor
+      // is a non-zero constant, we have to assume the UDiv may be UB.
+      return UDiv && (!isa<SCEVConstant>(UDiv->getOperand(1)) ||
+                      !isKnownNonZero(UDiv->getOperand(1)));
     });
 
     if (MayBeUB)
