@@ -30,6 +30,10 @@ define i32 @multiple_exits_with_predicates(ptr %src1, ptr readonly %src2, i32 %e
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      {1,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i32 1023
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%for.body> Added Flags: <nusw>
+; CHECK-NEXT:      {1,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (1023 umin (-1 + (1 umax %end)))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%for.body> Added Flags: <nusw>

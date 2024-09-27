@@ -10,6 +10,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/common/UDPSocket.h"
@@ -457,6 +458,19 @@ NativeSocket Socket::CreateSocket(const int domain, const int type,
     SetLastError(error);
 
   return sock;
+}
+
+Status Socket::Accept(Socket *&socket) {
+  MainLoop accept_loop;
+  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> expected_handles =
+      Accept(accept_loop,
+             [&accept_loop, &socket](std::unique_ptr<Socket> sock) {
+               socket = sock.release();
+               accept_loop.RequestTermination();
+             });
+  if (!expected_handles)
+    return Status::FromError(expected_handles.takeError());
+  return accept_loop.Run();
 }
 
 NativeSocket Socket::AcceptSocket(NativeSocket sockfd, struct sockaddr *addr,

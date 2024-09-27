@@ -46,7 +46,7 @@ static constexpr char indent16[] = "                "; // 16 spaces
 // Print out the first three columns of a line.
 static void writeHeader(raw_ostream &os, uint64_t vma, uint64_t lma,
                         uint64_t size, uint64_t align) {
-  if (config->is64)
+  if (ctx.arg.is64)
     os << format("%16llx %16llx %8llx %5lld ", vma, lma, size, align);
   else
     os << format("%8llx %8llx %8llx %5lld ", vma, lma, size, align);
@@ -153,7 +153,7 @@ static void writeMapFile(raw_fd_ostream &os) {
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(syms);
 
   // Print out the header line.
-  int w = config->is64 ? 16 : 8;
+  int w = ctx.arg.is64 ? 16 : 8;
   os << right_justify("VMA", w) << ' ' << right_justify("LMA", w)
      << "     Size Align Out     In      Symbol\n";
 
@@ -257,22 +257,22 @@ static void writeCref(raw_fd_ostream &os) {
 }
 
 void elf::writeMapAndCref() {
-  if (config->mapFile.empty() && !config->cref)
+  if (ctx.arg.mapFile.empty() && !ctx.arg.cref)
     return;
 
   llvm::TimeTraceScope timeScope("Write map file");
 
   // Open a map file for writing.
   std::error_code ec;
-  StringRef mapFile = config->mapFile.empty() ? "-" : config->mapFile;
+  StringRef mapFile = ctx.arg.mapFile.empty() ? "-" : ctx.arg.mapFile;
   raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
     error("cannot open " + mapFile + ": " + ec.message());
     return;
   }
 
-  if (!config->mapFile.empty())
+  if (!ctx.arg.mapFile.empty())
     writeMapFile(os);
-  if (config->cref)
+  if (ctx.arg.cref)
     writeCref(os);
 }

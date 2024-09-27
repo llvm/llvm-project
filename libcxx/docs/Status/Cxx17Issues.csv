@@ -306,7 +306,7 @@
 "`LWG2905 <https://wg21.link/LWG2905>`__","is_constructible_v<unique_ptr<P, D>, P, D const &> should be false when D is not copy constructible","2017-02 (Kona)","|Complete|","",""
 "`LWG2908 <https://wg21.link/LWG2908>`__","The less-than operator for shared pointers could do more","2017-02 (Kona)","|Complete|","",""
 "`LWG2911 <https://wg21.link/LWG2911>`__","An is_aggregate type trait is needed","2017-02 (Kona)","|Complete|","",""
-"`LWG2921 <https://wg21.link/LWG2921>`__","packaged_task and type-erased allocators","2017-02 (Kona)","|Complete|","",""
+"`LWG2921 <https://wg21.link/LWG2921>`__","packaged_task and type-erased allocators","2017-02 (Kona)","|Complete|","20.0","Originally implemented in LLVM 6.0 but reverted later. Old documentation incorrectly said it was implemented."
 "`LWG2934 <https://wg21.link/LWG2934>`__","optional<const T> doesn't compare with T","2017-02 (Kona)","|Complete|","",""
 "","","","","",""
 "`LWG2901 <https://wg21.link/LWG2901>`__","Variants cannot properly support allocators","2017-07 (Toronto)","|Complete|","",""

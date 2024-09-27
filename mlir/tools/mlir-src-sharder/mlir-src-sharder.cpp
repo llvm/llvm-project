@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     // any.
     if (auto existingOrErr =
             llvm::MemoryBuffer::getFile(outputFilename, /*IsText=*/true))
-      if (std::move(existingOrErr.get())->getBuffer() == os.str())
+      if (std::move(existingOrErr.get())->getBuffer() == outputStr)
         shouldWriteOutput = false;
   }
 

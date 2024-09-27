@@ -63,8 +63,8 @@ static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
 }
 
 class X86FoldTablesEmitter {
-  RecordKeeper &Records;
-  CodeGenTarget Target;
+  const RecordKeeper &Records;
+  const CodeGenTarget Target;
 
   // Represents an entry in the folding table
   class X86FoldTableEntry {
@@ -196,7 +196,7 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable4;
 
 public:
-  X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
+  X86FoldTablesEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
 
   // run - Generate the 6 X86 memory fold tables.
   void run(raw_ostream &OS);
@@ -446,7 +446,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   assert((IsManual || Table.find(RegInst) == Table.end()) &&
          "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
-  Record *RegRec = RegInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
@@ -537,8 +537,8 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
                                         uint16_t S, bool IsManual,
                                         bool IsBroadcast) {
 
-  Record *RegRec = RegInst->TheDef;
-  Record *MemRec = MemInst->TheDef;
+  const Record *RegRec = RegInst->TheDef;
+  const Record *MemRec = MemInst->TheDef;
   unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
@@ -670,7 +670,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   // added into memory fold tables.
   auto RegInstsForBroadcast = RegInsts;
 
-  Record *AsmWriter = Target.getAsmWriter();
+  const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
     StringRef RegInstName = RegInst->TheDef->getName();
@@ -721,8 +721,8 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
 
   // Add the manually mapped instructions listed above.
   for (const ManualMapEntry &Entry : ManualMapSet) {
-    Record *RegInstIter = Records.getDef(Entry.RegInstStr);
-    Record *MemInstIter = Records.getDef(Entry.MemInstStr);
+    const Record *RegInstIter = Records.getDef(Entry.RegInstStr);
+    const Record *MemInstIter = Records.getDef(Entry.MemInstStr);
 
     updateTables(&(Target.getInstruction(RegInstIter)),
                  &(Target.getInstruction(MemInstIter)), Entry.Strategy, true);

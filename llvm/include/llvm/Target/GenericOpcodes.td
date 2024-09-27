@@ -769,6 +769,18 @@ def G_UITOFP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_FPTOSI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
+def G_FPTOUI_SAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_FABS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -1033,6 +1045,13 @@ def G_FASIN : GenericInstruction {
 def G_FATAN : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN2 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = false;
 }
 
@@ -1529,7 +1548,7 @@ def G_INSERT_SUBVECTOR : GenericInstruction {
 // Generic extract subvector.
 def G_EXTRACT_SUBVECTOR : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src, untyped_imm_0:$idx);
+  let InOperandList = (ins type1:$src, untyped_imm_0:$idx);
   let hasSideEffects = false;
 }
 

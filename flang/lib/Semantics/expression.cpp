@@ -298,7 +298,7 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
     // Subscripts of named constants are checked in folding.
     // Subscripts of DATA statement objects are checked in data statement
     // conversion to initializers.
-    CheckConstantSubscripts(ref);
+    CheckSubscripts(ref);
   }
   return Designate(DataRef{std::move(ref)});
 }
@@ -326,7 +326,7 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
       std::move(dataRef.u));
 }
 
-void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
+void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
   const Symbol &arraySymbol{ref.base().GetLastSymbol()};
   Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
@@ -390,6 +390,13 @@ void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   for (Subscript &ss : ref.subscript()) {
     auto dimLB{ToInt64(lb[dim])};
     auto dimUB{ToInt64(ub[dim])};
+    if (dimUB && dimLB && *dimUB < *dimLB) {
+      AttachDeclaration(
+          Say("Empty array dimension %d cannot be subscripted as an element or non-empty array section"_err_en_US,
+              dim + 1),
+          arraySymbol);
+      break;
+    }
     std::optional<ConstantSubscript> val[2];
     int vals{0};
     if (auto *triplet{std::get_if<Triplet>(&ss.u)}) {
@@ -2744,7 +2751,6 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
               (!procedure->IsElemental() && nonElemental)) {
             int d{ComputeCudaMatchingDistance(
                 context_.languageFeatures(), *procedure, localActuals)};
-            llvm::errs() << "matching distance: " << d << "\n";
             if (d != crtMatchingDistance) {
               if (d > crtMatchingDistance) {
                 continue;
@@ -3217,7 +3223,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, callStmt);
       Say("Internal error: Expression analysis failed on CALL statement: %s"_err_en_US,
-          dump.str());
+          buf);
     }
   }
 }
@@ -3841,8 +3847,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       std::string buf;
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, x);
-      Say("Internal error: Expression analysis failed on: %s"_err_en_US,
-          dump.str());
+      Say("Internal error: Expression analysis failed on: %s"_err_en_US, buf);
     }
     return std::nullopt;
   }
@@ -4610,8 +4615,7 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     }
     for (std::size_t i{0}; !proc && i < actuals_.size(); ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *
-          binding{FindBoundOp(oprName, i, generic, /*isSubroutine=*/true)}) {
+      if (const Symbol *binding{FindBoundOp(oprName, i, generic, true)}) {
         if (CheckAccessibleSymbol(scope, DEREF(generic))) {
           // ignore inaccessible type-bound ASSIGNMENT(=) generic
         } else if (const Symbol *

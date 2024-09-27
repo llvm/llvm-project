@@ -37,8 +37,10 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SILoadStoreOptimizer.h"
+#include "SILowerSGPRSpills.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIPeepholeSDWA.h"
 #include "SIShrinkInstructions.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -52,6 +54,7 @@
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
+#include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -308,12 +311,6 @@ static cl::opt<bool> EnableSIModeRegisterPass(
   cl::init(true),
   cl::Hidden);
 
-// Enable GFX11.5+ s_singleuse_vdst insertion
-static cl::opt<bool>
-    EnableInsertSingleUseVDST("amdgpu-enable-single-use-vdst",
-                              cl::desc("Enable s_singleuse_vdst insertion"),
-                              cl::init(false), cl::Hidden);
-
 // Enable GFX11+ s_delay_alu insertion
 static cl::opt<bool>
     EnableInsertDelayAlu("amdgpu-enable-delay-alu",
@@ -411,11 +408,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
-  initializeSILowerSGPRSpillsPass(*PR);
+  initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
-  initializeSIPeepholeSDWAPass(*PR);
+  initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
@@ -447,7 +444,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
-  initializeAMDGPUInsertSingleUseVDSTPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
@@ -1275,7 +1271,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&GCNDPPCombineLegacyID);
   addPass(&SILoadStoreOptimizerLegacyID);
   if (isPassEnabled(EnableSDWAPeephole)) {
-    addPass(&SIPeepholeSDWAID);
+    addPass(&SIPeepholeSDWALegacyID);
     addPass(&EarlyMachineLICMID);
     addPass(&MachineCSELegacyID);
     addPass(&SIFoldOperandsLegacyID);
@@ -1439,7 +1435,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createSGPRAllocPass(false));
 
   // Equivalent of PEI for SGPRs.
-  addPass(&SILowerSGPRSpillsID);
+  addPass(&SILowerSGPRSpillsLegacyID);
   addPass(&SIPreAllocateWWMRegsID);
 
   addPass(createVGPRAllocPass(false));
@@ -1463,7 +1459,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createVirtRegRewriter(false));
 
   // Equivalent of PEI for SGPRs.
-  addPass(&SILowerSGPRSpillsID);
+  addPass(&SILowerSGPRSpillsLegacyID);
   addPass(&SIPreAllocateWWMRegsID);
 
   addPass(createVGPRAllocPass(true));
@@ -1514,9 +1510,6 @@ void GCNPassConfig::addPreEmitPass() {
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
   addPass(&PostRAHazardRecognizerID);
-
-  if (isPassEnabled(EnableInsertSingleUseVDST, CodeGenOptLevel::Less))
-    addPass(&AMDGPUInsertSingleUseVDSTID);
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less))
     addPass(&AMDGPUInsertDelayAluID);
@@ -1602,7 +1595,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
                          RegName.Value.size(), SourceMgr::DK_Error,
                          "incorrect register class for field", RegName.Value,
-                         std::nullopt, std::nullopt);
+                         {}, {});
     SourceRange = RegName.SourceRange;
     return true;
   };
@@ -1738,6 +1731,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   MFI->Mode.FP64FP16Denormals.Output = YamlMFI.Mode.FP64FP16OutputDenormals
                                            ? DenormalMode::IEEE
                                            : DenormalMode::PreserveSign;
+
+  if (YamlMFI.HasInitWholeWave)
+    MFI->setInitWholeWave();
 
   return false;
 }

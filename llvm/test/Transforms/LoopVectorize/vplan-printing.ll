@@ -161,12 +161,11 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT:  IR %red.next.lcssa = phi float [ %red.next, %for.body ] (extra operand: vp<[[RED_EX]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %red.next.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -444,12 +443,11 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.end>
+; CHECK-NEXT:   IR %muladd.lcssa = phi float [ %muladd, %for.body ] (extra operand: vp<[[RED_EX]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out float %muladd.lcssa = vp<[[RED_EX]]>
 ; CHECK-NEXT:}
 
 entry:
@@ -577,6 +575,8 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:   IR %div = udiv i64 %y, 492802768830814060
+; CHECK-NEXT:   IR %inc = add i64 %div, 1
 ; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV (1 + ((15 + (%y /u 492802768830814060))<nuw><nsw> /u (1 + (%y /u 492802768830814060))<nuw><nsw>))<nuw><nsw>
 ; CHECK-NEXT:   EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
 ; CHECK-NEXT: No successors
@@ -666,12 +666,11 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[EXIT]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: Live-out i32 %lcssa = vp<[[EXIT]]>
 ; CHECK-NEXT: }
 ;
 entry:
@@ -1037,6 +1036,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>
+; CHECK-NEXT:   IR %for.1.lcssa = phi i16 [ %for.1, %loop ] (extra operand: vp<[[FOR_RESULT]]>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
@@ -1044,7 +1044,6 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   Live-out i16 %for.1 = vp<[[RESUME_P]]>
-; CHECK-NEXT:   Live-out i16 %for.1.lcssa = vp<[[FOR_RESULT]]>
 ; CHECK-NEXT: }
 ;
 entry:

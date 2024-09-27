@@ -1720,6 +1720,398 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sel
 }
 
+;
+; sub(select(icmp(a,b),a,b),select(icmp(a,b),b,a)) -> abdu(a,b)
+;
+
+define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
+; NOZBB-LABEL: abd_select_i8:
+; NOZBB:       # %bb.0:
+; NOZBB-NEXT:    andi a2, a1, 255
+; NOZBB-NEXT:    andi a3, a0, 255
+; NOZBB-NEXT:    bltu a3, a2, .LBB23_2
+; NOZBB-NEXT:  # %bb.1:
+; NOZBB-NEXT:    sub a0, a0, a1
+; NOZBB-NEXT:    ret
+; NOZBB-NEXT:  .LBB23_2:
+; NOZBB-NEXT:    sub a0, a1, a0
+; NOZBB-NEXT:    ret
+;
+; ZBB-LABEL: abd_select_i8:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    andi a1, a1, 255
+; ZBB-NEXT:    andi a0, a0, 255
+; ZBB-NEXT:    minu a2, a0, a1
+; ZBB-NEXT:    maxu a0, a0, a1
+; ZBB-NEXT:    sub a0, a0, a2
+; ZBB-NEXT:    ret
+  %cmp = icmp ult i8 %a, %b
+  %ab = select i1 %cmp, i8 %a, i8 %b
+  %ba = select i1 %cmp, i8 %b, i8 %a
+  %sub = sub i8 %ba, %ab
+  ret i8 %sub
+}
+
+define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
+; RV32I-LABEL: abd_select_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 16
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    and a3, a0, a2
+; RV32I-NEXT:    and a2, a1, a2
+; RV32I-NEXT:    bgeu a2, a3, .LBB24_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB24_2:
+; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: abd_select_i16:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    and a3, a0, a2
+; RV64I-NEXT:    and a2, a1, a2
+; RV64I-NEXT:    bgeu a2, a3, .LBB24_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB24_2:
+; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; ZBB-LABEL: abd_select_i16:
+; ZBB:       # %bb.0:
+; ZBB-NEXT:    zext.h a1, a1
+; ZBB-NEXT:    zext.h a0, a0
+; ZBB-NEXT:    minu a2, a0, a1
+; ZBB-NEXT:    maxu a0, a0, a1
+; ZBB-NEXT:    sub a0, a0, a2
+; ZBB-NEXT:    ret
+  %cmp = icmp ule i16 %a, %b
+  %ab = select i1 %cmp, i16 %a, i16 %b
+  %ba = select i1 %cmp, i16 %b, i16 %a
+  %sub = sub i16 %ba, %ab
+  ret i16 %sub
+}
+
+define i32 @abd_select_i32(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: abd_select_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    bltu a1, a0, .LBB25_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sub a0, a1, a0
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB25_2:
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: abd_select_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    sext.w a3, a1
+; RV64I-NEXT:    bltu a3, a2, .LBB25_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    subw a0, a1, a0
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB25_2:
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: abd_select_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    minu a2, a0, a1
+; RV32ZBB-NEXT:    maxu a0, a0, a1
+; RV32ZBB-NEXT:    sub a0, a0, a2
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: abd_select_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    slli a1, a1, 32
+; RV64ZBB-NEXT:    srli a1, a1, 32
+; RV64ZBB-NEXT:    slli a0, a0, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
+; RV64ZBB-NEXT:    minu a2, a0, a1
+; RV64ZBB-NEXT:    maxu a0, a0, a1
+; RV64ZBB-NEXT:    sub a0, a0, a2
+; RV64ZBB-NEXT:    ret
+  %cmp = icmp ugt i32 %a, %b
+  %ab = select i1 %cmp, i32 %a, i32 %b
+  %ba = select i1 %cmp, i32 %b, i32 %a
+  %sub = sub i32 %ab, %ba
+  ret i32 %sub
+}
+
+define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: abd_select_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beq a1, a3, .LBB26_3
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sltu a4, a1, a3
+; RV32I-NEXT:    bnez a4, .LBB26_4
+; RV32I-NEXT:  .LBB26_2:
+; RV32I-NEXT:    mv a4, a1
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    j .LBB26_5
+; RV32I-NEXT:  .LBB26_3:
+; RV32I-NEXT:    sltu a4, a0, a2
+; RV32I-NEXT:    beqz a4, .LBB26_2
+; RV32I-NEXT:  .LBB26_4:
+; RV32I-NEXT:    mv a4, a3
+; RV32I-NEXT:    mv a5, a2
+; RV32I-NEXT:  .LBB26_5:
+; RV32I-NEXT:    sltu a2, a5, a0
+; RV32I-NEXT:    sub a1, a4, a1
+; RV32I-NEXT:    sub a1, a1, a2
+; RV32I-NEXT:    sub a0, a5, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: abd_select_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    bgeu a0, a1, .LBB26_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    sub a0, a1, a0
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB26_2:
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: abd_select_i64:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sltu a4, a0, a2
+; RV32ZBB-NEXT:    sub a3, a1, a3
+; RV32ZBB-NEXT:    sub a3, a3, a4
+; RV32ZBB-NEXT:    sub a2, a0, a2
+; RV32ZBB-NEXT:    beq a3, a1, .LBB26_2
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    sltu a0, a1, a3
+; RV32ZBB-NEXT:    j .LBB26_3
+; RV32ZBB-NEXT:  .LBB26_2:
+; RV32ZBB-NEXT:    sltu a0, a0, a2
+; RV32ZBB-NEXT:  .LBB26_3:
+; RV32ZBB-NEXT:    neg a1, a0
+; RV32ZBB-NEXT:    xor a2, a2, a1
+; RV32ZBB-NEXT:    sltu a4, a2, a1
+; RV32ZBB-NEXT:    xor a1, a3, a1
+; RV32ZBB-NEXT:    add a1, a1, a0
+; RV32ZBB-NEXT:    sub a1, a1, a4
+; RV32ZBB-NEXT:    add a0, a2, a0
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: abd_select_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    minu a2, a0, a1
+; RV64ZBB-NEXT:    maxu a0, a0, a1
+; RV64ZBB-NEXT:    sub a0, a0, a2
+; RV64ZBB-NEXT:    ret
+  %cmp = icmp uge i64 %a, %b
+  %ab = select i1 %cmp, i64 %a, i64 %b
+  %ba = select i1 %cmp, i64 %b, i64 %a
+  %sub = sub i64 %ab, %ba
+  ret i64 %sub
+}
+
+define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
+; RV32I-LABEL: abd_select_i128:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lw a7, 4(a2)
+; RV32I-NEXT:    lw a3, 4(a1)
+; RV32I-NEXT:    lw a6, 8(a2)
+; RV32I-NEXT:    lw t0, 12(a2)
+; RV32I-NEXT:    lw a5, 12(a1)
+; RV32I-NEXT:    lw a4, 8(a1)
+; RV32I-NEXT:    beq a5, t0, .LBB27_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    sltu t1, a5, t0
+; RV32I-NEXT:    j .LBB27_3
+; RV32I-NEXT:  .LBB27_2:
+; RV32I-NEXT:    sltu t1, a4, a6
+; RV32I-NEXT:  .LBB27_3:
+; RV32I-NEXT:    lw t3, 0(a2)
+; RV32I-NEXT:    lw a1, 0(a1)
+; RV32I-NEXT:    beq a3, a7, .LBB27_5
+; RV32I-NEXT:  # %bb.4:
+; RV32I-NEXT:    sltu a2, a3, a7
+; RV32I-NEXT:    j .LBB27_6
+; RV32I-NEXT:  .LBB27_5:
+; RV32I-NEXT:    sltu a2, a1, t3
+; RV32I-NEXT:  .LBB27_6:
+; RV32I-NEXT:    xor t2, a5, t0
+; RV32I-NEXT:    xor t4, a4, a6
+; RV32I-NEXT:    or t2, t4, t2
+; RV32I-NEXT:    beqz t2, .LBB27_8
+; RV32I-NEXT:  # %bb.7:
+; RV32I-NEXT:    mv a2, t1
+; RV32I-NEXT:  .LBB27_8:
+; RV32I-NEXT:    bnez a2, .LBB27_10
+; RV32I-NEXT:  # %bb.9:
+; RV32I-NEXT:    mv a2, t3
+; RV32I-NEXT:    mv t1, a7
+; RV32I-NEXT:    mv t4, t0
+; RV32I-NEXT:    mv t2, a6
+; RV32I-NEXT:    j .LBB27_11
+; RV32I-NEXT:  .LBB27_10:
+; RV32I-NEXT:    mv a2, a1
+; RV32I-NEXT:    mv t1, a3
+; RV32I-NEXT:    mv t4, a5
+; RV32I-NEXT:    mv t2, a4
+; RV32I-NEXT:    mv a1, t3
+; RV32I-NEXT:    mv a3, a7
+; RV32I-NEXT:    mv a5, t0
+; RV32I-NEXT:    mv a4, a6
+; RV32I-NEXT:  .LBB27_11:
+; RV32I-NEXT:    sltu a6, a4, t2
+; RV32I-NEXT:    sub a7, a5, t4
+; RV32I-NEXT:    sltu a5, a1, a2
+; RV32I-NEXT:    sub a6, a7, a6
+; RV32I-NEXT:    mv a7, a5
+; RV32I-NEXT:    beq a3, t1, .LBB27_13
+; RV32I-NEXT:  # %bb.12:
+; RV32I-NEXT:    sltu a7, a3, t1
+; RV32I-NEXT:  .LBB27_13:
+; RV32I-NEXT:    sub a4, a4, t2
+; RV32I-NEXT:    sltu t0, a4, a7
+; RV32I-NEXT:    sub a6, a6, t0
+; RV32I-NEXT:    sub a4, a4, a7
+; RV32I-NEXT:    sub a3, a3, t1
+; RV32I-NEXT:    sub a3, a3, a5
+; RV32I-NEXT:    sub a1, a1, a2
+; RV32I-NEXT:    sw a1, 0(a0)
+; RV32I-NEXT:    sw a3, 4(a0)
+; RV32I-NEXT:    sw a4, 8(a0)
+; RV32I-NEXT:    sw a6, 12(a0)
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: abd_select_i128:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    beq a1, a3, .LBB27_3
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    sltu a4, a1, a3
+; RV64I-NEXT:    beqz a4, .LBB27_4
+; RV64I-NEXT:  .LBB27_2:
+; RV64I-NEXT:    mv a4, a1
+; RV64I-NEXT:    mv a5, a0
+; RV64I-NEXT:    mv a1, a3
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    j .LBB27_5
+; RV64I-NEXT:  .LBB27_3:
+; RV64I-NEXT:    sltu a4, a0, a2
+; RV64I-NEXT:    bnez a4, .LBB27_2
+; RV64I-NEXT:  .LBB27_4:
+; RV64I-NEXT:    mv a4, a3
+; RV64I-NEXT:    mv a5, a2
+; RV64I-NEXT:  .LBB27_5:
+; RV64I-NEXT:    sltu a2, a0, a5
+; RV64I-NEXT:    sub a1, a1, a4
+; RV64I-NEXT:    sub a1, a1, a2
+; RV64I-NEXT:    sub a0, a0, a5
+; RV64I-NEXT:    ret
+;
+; RV32ZBB-LABEL: abd_select_i128:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lw a5, 0(a2)
+; RV32ZBB-NEXT:    lw a3, 0(a1)
+; RV32ZBB-NEXT:    lw t1, 12(a2)
+; RV32ZBB-NEXT:    lw a7, 8(a2)
+; RV32ZBB-NEXT:    lw a4, 8(a1)
+; RV32ZBB-NEXT:    lw a6, 12(a1)
+; RV32ZBB-NEXT:    lw t0, 4(a2)
+; RV32ZBB-NEXT:    lw a1, 4(a1)
+; RV32ZBB-NEXT:    sltu a2, a4, a7
+; RV32ZBB-NEXT:    sub t1, a6, t1
+; RV32ZBB-NEXT:    sltu t2, a3, a5
+; RV32ZBB-NEXT:    sub a2, t1, a2
+; RV32ZBB-NEXT:    mv t1, t2
+; RV32ZBB-NEXT:    beq a1, t0, .LBB27_2
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    sltu t1, a1, t0
+; RV32ZBB-NEXT:  .LBB27_2:
+; RV32ZBB-NEXT:    sub a7, a4, a7
+; RV32ZBB-NEXT:    sltu t3, a7, t1
+; RV32ZBB-NEXT:    sub a2, a2, t3
+; RV32ZBB-NEXT:    sub a7, a7, t1
+; RV32ZBB-NEXT:    beq a2, a6, .LBB27_4
+; RV32ZBB-NEXT:  # %bb.3:
+; RV32ZBB-NEXT:    sltu t1, a6, a2
+; RV32ZBB-NEXT:    j .LBB27_5
+; RV32ZBB-NEXT:  .LBB27_4:
+; RV32ZBB-NEXT:    sltu t1, a4, a7
+; RV32ZBB-NEXT:  .LBB27_5:
+; RV32ZBB-NEXT:    sub t0, a1, t0
+; RV32ZBB-NEXT:    sub t0, t0, t2
+; RV32ZBB-NEXT:    sub a5, a3, a5
+; RV32ZBB-NEXT:    beq t0, a1, .LBB27_7
+; RV32ZBB-NEXT:  # %bb.6:
+; RV32ZBB-NEXT:    sltu a1, a1, t0
+; RV32ZBB-NEXT:    j .LBB27_8
+; RV32ZBB-NEXT:  .LBB27_7:
+; RV32ZBB-NEXT:    sltu a1, a3, a5
+; RV32ZBB-NEXT:  .LBB27_8:
+; RV32ZBB-NEXT:    xor a3, a2, a6
+; RV32ZBB-NEXT:    xor a4, a7, a4
+; RV32ZBB-NEXT:    or a3, a4, a3
+; RV32ZBB-NEXT:    beqz a3, .LBB27_10
+; RV32ZBB-NEXT:  # %bb.9:
+; RV32ZBB-NEXT:    mv a1, t1
+; RV32ZBB-NEXT:  .LBB27_10:
+; RV32ZBB-NEXT:    neg a6, a1
+; RV32ZBB-NEXT:    xor a3, a7, a6
+; RV32ZBB-NEXT:    sltu a4, a3, a6
+; RV32ZBB-NEXT:    xor a2, a2, a6
+; RV32ZBB-NEXT:    add a2, a2, a1
+; RV32ZBB-NEXT:    sub a4, a2, a4
+; RV32ZBB-NEXT:    xor a2, a5, a6
+; RV32ZBB-NEXT:    sltu a5, a2, a6
+; RV32ZBB-NEXT:    xor a7, t0, a6
+; RV32ZBB-NEXT:    mv t1, a5
+; RV32ZBB-NEXT:    beqz t0, .LBB27_12
+; RV32ZBB-NEXT:  # %bb.11:
+; RV32ZBB-NEXT:    sltu t1, a7, a6
+; RV32ZBB-NEXT:  .LBB27_12:
+; RV32ZBB-NEXT:    add a3, a3, a1
+; RV32ZBB-NEXT:    sltu a6, a3, t1
+; RV32ZBB-NEXT:    sub a4, a4, a6
+; RV32ZBB-NEXT:    sub a3, a3, t1
+; RV32ZBB-NEXT:    add a7, a7, a1
+; RV32ZBB-NEXT:    sub a5, a7, a5
+; RV32ZBB-NEXT:    add a1, a2, a1
+; RV32ZBB-NEXT:    sw a1, 0(a0)
+; RV32ZBB-NEXT:    sw a5, 4(a0)
+; RV32ZBB-NEXT:    sw a3, 8(a0)
+; RV32ZBB-NEXT:    sw a4, 12(a0)
+; RV32ZBB-NEXT:    ret
+;
+; RV64ZBB-LABEL: abd_select_i128:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sltu a4, a0, a2
+; RV64ZBB-NEXT:    sub a3, a1, a3
+; RV64ZBB-NEXT:    sub a3, a3, a4
+; RV64ZBB-NEXT:    sub a2, a0, a2
+; RV64ZBB-NEXT:    beq a3, a1, .LBB27_2
+; RV64ZBB-NEXT:  # %bb.1:
+; RV64ZBB-NEXT:    sltu a0, a1, a3
+; RV64ZBB-NEXT:    j .LBB27_3
+; RV64ZBB-NEXT:  .LBB27_2:
+; RV64ZBB-NEXT:    sltu a0, a0, a2
+; RV64ZBB-NEXT:  .LBB27_3:
+; RV64ZBB-NEXT:    neg a1, a0
+; RV64ZBB-NEXT:    xor a2, a2, a1
+; RV64ZBB-NEXT:    sltu a4, a2, a1
+; RV64ZBB-NEXT:    xor a1, a3, a1
+; RV64ZBB-NEXT:    add a1, a1, a0
+; RV64ZBB-NEXT:    sub a1, a1, a4
+; RV64ZBB-NEXT:    add a0, a2, a0
+; RV64ZBB-NEXT:    ret
+  %cmp = icmp ult i128 %a, %b
+  %ab = select i1 %cmp, i128 %a, i128 %b
+  %ba = select i1 %cmp, i128 %b, i128 %a
+  %sub = sub i128 %ba, %ab
+  ret i128 %sub
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
@@ -1737,4 +2129,3 @@ declare i32 @llvm.umin.i32(i32, i32)
 declare i64 @llvm.umin.i64(i64, i64)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
-; NOZBB: {{.*}}

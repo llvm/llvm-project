@@ -36,15 +36,25 @@ cv.subrnr a0, a1, a2
 # CHECK-ENCODING: [0x2b,0xb5,0xc5,0x8c]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
 
-cv.slet t0, t1, t2
-# CHECK-INSTR: cv.slet t0, t1, t2
+cv.sle t0, t1, t2
+# CHECK-INSTR: cv.sle t0, t1, t2
 # CHECK-ENCODING: [0xab,0x32,0x73,0x52]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
 
-cv.slet a0, a1, a2
-# CHECK-INSTR: cv.slet a0, a1, a2
+cv.slet t0, t1, t2
+# CHECK-INSTR: cv.sle t0, t1, t2
+# CHECK-ENCODING: [0xab,0x32,0x73,0x52]
+# CHECK-NO-EXT: unrecognized instruction mnemonic
+
+cv.sle a0, a1, a2
+# CHECK-INSTR: cv.sle a0, a1, a2
 # CHECK-ENCODING: [0x2b,0xb5,0xc5,0x52]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
+
+cv.slet a0, a1, a2
+# CHECK-INSTR: cv.sle a0, a1, a2
+# CHECK-ENCODING: [0x2b,0xb5,0xc5,0x52]
+# CHECK-NO-EXT: unrecognized instruction mnemonic
 
 cv.subrn t0, t1, t2, 0
 # CHECK-INSTR: cv.subrn t0, t1, t2, 0
@@ -261,15 +271,25 @@ cv.extbs a0, a1
 # CHECK-ENCODING: [0x2b,0xb5,0x05,0x64]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
 
-cv.sletu t0, t1, t2
-# CHECK-INSTR: cv.sletu t0, t1, t2
+cv.sleu t0, t1, t2
+# CHECK-INSTR: cv.sleu t0, t1, t2
 # CHECK-ENCODING: [0xab,0x32,0x73,0x54]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
 
-cv.sletu a0, a1, a2
-# CHECK-INSTR: cv.sletu a0, a1, a2
+cv.sletu t0, t1, t2
+# CHECK-INSTR: cv.sleu t0, t1, t2
+# CHECK-ENCODING: [0xab,0x32,0x73,0x54]
+# CHECK-NO-EXT: unrecognized instruction mnemonic
+
+cv.sleu a0, a1, a2
+# CHECK-INSTR: cv.sleu a0, a1, a2
 # CHECK-ENCODING: [0x2b,0xb5,0xc5,0x54]
 # CHECK-NO-EXT: instruction requires the following: 'XCValu' (CORE-V ALU Operations){{$}}
+
+cv.sletu a0, a1, a2
+# CHECK-INSTR: cv.sleu a0, a1, a2
+# CHECK-ENCODING: [0x2b,0xb5,0xc5,0x54]
+# CHECK-NO-EXT: unrecognized instruction mnemonic
 
 cv.min t0, t1, t2
 # CHECK-INSTR: cv.min t0, t1, t2

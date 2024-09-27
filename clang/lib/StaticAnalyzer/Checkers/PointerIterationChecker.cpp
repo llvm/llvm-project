@@ -51,7 +51,7 @@ static void emitDiagnostics(const BoundNodes &Match, const Decl *D,
 
   BR.EmitBasicReport(ADC->getDecl(), Checker,
                      "Iteration of pointer-like elements", "Non-determinism",
-                     OS.str(), Location, Range);
+                     Diagnostics, Location, Range);
 }
 
 // Assumption: Iteration of ordered containers of pointers is deterministic.

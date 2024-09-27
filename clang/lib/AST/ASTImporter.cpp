@@ -5469,6 +5469,9 @@ ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   case BuiltinTemplateKind::BTK__type_pack_element:
     ToD = Importer.getToContext().getTypePackElementDecl();
     break;
+  case BuiltinTemplateKind::BTK__builtin_common_type:
+    ToD = Importer.getToContext().getBuiltinCommonTypeDecl();
+    break;
   }
   assert(ToD && "BuiltinTemplateDecl of unsupported kind!");
   Importer.MapImported(D, ToD);
@@ -10019,8 +10022,8 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
         ToIncludeLocOrFakeLoc = ToSM.getLocForStartOfFile(ToSM.getMainFileID());
 
       if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
-        // FIXME: We probably want to use getVirtualFile(), so we don't hit the
-        // disk again
+        // FIXME: We probably want to use getVirtualFileRef(), so we don't hit
+        // the disk again
         // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
         // than mmap the files several times.
         auto Entry =

@@ -200,11 +200,11 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
     assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
-    assert(ScalableValue % 8 == 0 &&
+    assert(ScalableValue % (RISCV::RVVBitsPerBlock / 8) == 0 &&
            "Reserve the stack by the multiple of one vector size.");
-    assert(isInt<32>(ScalableValue / 8) &&
+    assert(isInt<32>(ScalableValue / (RISCV::RVVBitsPerBlock / 8)) &&
            "Expect the number of vector registers within 32-bits.");
-    uint32_t NumOfVReg = ScalableValue / 8;
+    uint32_t NumOfVReg = ScalableValue / (RISCV::RVVBitsPerBlock / 8);
     BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
         .setMIFlag(Flag);
 

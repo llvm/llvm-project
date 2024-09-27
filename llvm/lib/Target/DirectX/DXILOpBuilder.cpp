@@ -386,6 +386,7 @@ static Error makeOpError(dxil::OpCode OpCode, Twine Msg) {
 
 Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
                                                 ArrayRef<Value *> Args,
+                                                const Twine &Name,
                                                 Type *RetTy) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
@@ -451,12 +452,12 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   OpArgs.push_back(IRB.getInt32(llvm::to_underlying(OpCode)));
   OpArgs.append(Args.begin(), Args.end());
 
-  return IRB.CreateCall(DXILFn, OpArgs);
+  return IRB.CreateCall(DXILFn, OpArgs, Name);
 }
 
 CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
-                                  Type *RetTy) {
-  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, RetTy);
+                                  const Twine &Name, Type *RetTy) {
+  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, Name, RetTy);
   if (Error E = Result.takeError())
     llvm_unreachable("Invalid arguments for operation");
   return *Result;

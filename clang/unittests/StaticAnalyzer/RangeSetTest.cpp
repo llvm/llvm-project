@@ -25,7 +25,7 @@ template <class RangeOrSet> static std::string toString(const RangeOrSet &Obj) {
   std::string ObjRepresentation;
   llvm::raw_string_ostream SS(ObjRepresentation);
   Obj.dump(SS);
-  return SS.str();
+  return ObjRepresentation;
 }
 LLVM_ATTRIBUTE_UNUSED static std::string toString(const llvm::APSInt &Point) {
   return toString(Point, 10);

@@ -208,6 +208,16 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
   [IntrConvergent, IntrHasSideEffects, IntrNoMem, IntrNoCallback,
    IntrNoFree, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
+// Sets the function into whole-wave-mode and returns whether the lane was
+// active when entering the function. A branch depending on this return will
+// revert the EXEC mask to what it was when entering the function, thus
+// resulting in a no-op. This pattern is used to optimize branches when function
+// tails need to be run in whole-wave-mode. It may also have other consequences
+// (mostly related to WWM CSR handling) that differentiate it from using
+// a plain `amdgcn.init.exec -1`.
+def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
+    IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
+
 def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
@@ -1026,18 +1036,14 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimAtomicIntrinsics = {
         }
   }
 
-  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> {
-    defm ""
-        : AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
-  }
+  multiclass AMDGPUImageDimAtomic<string opmod, LLVMType rettype = llvm_anyint_ty> :
+    AMDGPUImageDimAtomicX<opmod, [AMDGPUArg<LLVMMatchType<0>, "vdata">], rettype>;
 
-  multiclass AMDGPUImageDimFloatAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
-  }
+  multiclass AMDGPUImageDimFloatAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_anyfloat_ty>;
 
-  multiclass AMDGPUImageDimAnyAtomic<string opmod> {
-    defm "" : AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
-  }
+  multiclass AMDGPUImageDimAnyAtomic<string opmod> :
+    AMDGPUImageDimAtomic<opmod, llvm_any_ty>;
 
   defm int_amdgcn_image_atomic_swap : AMDGPUImageDimAnyAtomic<"ATOMIC_SWAP">;
   defm int_amdgcn_image_atomic_add : AMDGPUImageDimAtomic<"ATOMIC_ADD">;

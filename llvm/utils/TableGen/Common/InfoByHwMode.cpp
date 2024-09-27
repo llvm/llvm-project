@@ -28,7 +28,8 @@ std::string llvm::getModeName(unsigned Mode) {
   return (Twine('m') + Twine(Mode)).str();
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
+                                     const CodeGenHwModes &CGH) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
   for (const HwModeSelect::PairType &P : MS.Items) {
     auto I = Map.insert({P.first, MVT(llvm::getValueType(P.second))});
@@ -39,7 +40,8 @@ ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(Record *R, MVT T) : ValueTypeByHwMode(T) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, MVT T)
+    : ValueTypeByHwMode(T) {
   if (R->isSubClassOf("PtrValueType"))
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
@@ -102,7 +104,7 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
 LLVM_DUMP_METHOD
 void ValueTypeByHwMode::dump() const { dbgs() << *this << '\n'; }
 
-ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
+ValueTypeByHwMode llvm::getValueTypeByHwMode(const Record *Rec,
                                              const CodeGenHwModes &CGH) {
 #ifndef NDEBUG
   if (!Rec->isSubClassOf("ValueType"))

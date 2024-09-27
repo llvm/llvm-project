@@ -516,8 +516,7 @@ void X86ATTInstPrinter::printU8Imm(const MCInst *MI, unsigned Op,
 
 void X86ATTInstPrinter::printSTiRegOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  unsigned Reg = Op.getReg();
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
   // Override the default printing to print st(0) instead st.
   if (Reg == X86::ST0)
     markup(OS, Markup::Register) << "%st(0)";

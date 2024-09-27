@@ -612,7 +612,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
   llvm::raw_string_ostream Out(Buffer);
   Ctx->mangleCanonicalTypeName(Ty, Out);
 
-  return Out.str();
+  return Buffer;
 }
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy,
@@ -798,7 +798,6 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     FD->printQualifiedName(POut, Policy);
 
     if (IK == PredefinedIdentKind::Function) {
-      POut.flush();
       Out << Proto;
       return std::string(Name);
     }
@@ -880,14 +879,11 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
       }
     }
 
-    TOut.flush();
     if (!TemplateParams.empty()) {
       // remove the trailing comma and space
       TemplateParams.resize(TemplateParams.size() - 2);
       POut << " [" << TemplateParams << "]";
     }
-
-    POut.flush();
 
     // Print "auto" for all deduced return types. This includes C++1y return
     // type deduction and lambdas. For trailing return types resolve the
@@ -1924,7 +1920,6 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
-  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -1945,6 +1940,7 @@ bool CastExpr::CastConsistency() const {
   case CK_BuiltinFnToFnPtr:
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
+  case CK_HLSLVectorTruncation:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;

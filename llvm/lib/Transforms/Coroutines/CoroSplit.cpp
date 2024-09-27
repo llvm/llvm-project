@@ -887,6 +887,45 @@ Value *CoroCloner::deriveNewFramePointer() {
   llvm_unreachable("bad ABI");
 }
 
+/// Adjust the scope line of the funclet to the first line number after the
+/// suspend point. This avoids a jump in the line table from the function
+/// declaration (where prologue instructions are attributed to) to the suspend
+/// point.
+/// Only adjust the scope line when the files are the same.
+/// If no candidate line number is found, fallback to the line of ActiveSuspend.
+static void updateScopeLine(Instruction *ActiveSuspend,
+                            DISubprogram &SPToUpdate) {
+  if (!ActiveSuspend)
+    return;
+
+  auto *Successor = ActiveSuspend->getNextNonDebugInstruction();
+  // Corosplit splits the BB around ActiveSuspend, so the meaningful
+  // instructions are not in the same BB.
+  if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
+      Branch && Branch->isUnconditional())
+    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+
+  // Find the first successor of ActiveSuspend with a non-zero line location.
+  // If that matches the file of ActiveSuspend, use it.
+  for (; Successor; Successor = Successor->getNextNonDebugInstruction()) {
+    auto DL = Successor->getDebugLoc();
+    if (!DL || DL.getLine() == 0)
+      continue;
+
+    if (SPToUpdate.getFile() == DL->getFile()) {
+      SPToUpdate.setScopeLine(DL.getLine());
+      return;
+    }
+
+    break;
+  }
+
+  // If the search above failed, fallback to the location of ActiveSuspend.
+  if (auto DL = ActiveSuspend->getDebugLoc())
+    if (SPToUpdate.getFile() == DL->getFile())
+      SPToUpdate.setScopeLine(DL->getLine());
+}
+
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex, uint64_t Size,
                                  Align Alignment, bool NoAlias) {
@@ -955,18 +994,10 @@ void CoroCloner::create() {
 
   auto &Context = NewF->getContext();
 
-  // For async functions / continuations, adjust the scope line of the
-  // clone to the line number of the suspend point. However, only
-  // adjust the scope line when the files are the same. This ensures
-  // line number and file name belong together. The scope line is
-  // associated with all pre-prologue instructions. This avoids a jump
-  // in the linetable from the function declaration to the suspend point.
   if (DISubprogram *SP = NewF->getSubprogram()) {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
-    if (ActiveSuspend)
-      if (auto DL = ActiveSuspend->getDebugLoc())
-        if (SP->getFile() == DL->getFile())
-          SP->setScopeLine(DL->getLine());
+    updateScopeLine(ActiveSuspend, *SP);
+
     // Update the linkage name to reflect the modified symbol name. It
     // is necessary to update the linkage name in Swift, since the
     // mangling changes for resume functions. It might also be the
@@ -2030,7 +2061,8 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   lowerAwaitSuspends(F, Shape);
 
   simplifySuspendPoints(Shape);
-  buildCoroutineFrame(F, Shape, TTI, MaterializableCallback);
+  normalizeCoroutine(F, Shape, TTI);
+  buildCoroutineFrame(F, Shape, MaterializableCallback);
   replaceFrameSizeAndAlignment(Shape);
   bool isNoSuspendCoroutine = Shape.CoroSuspends.empty();
 
@@ -2079,12 +2111,13 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   return Shape;
 }
 
-static void updateCallGraphAfterCoroutineSplit(
+static LazyCallGraph::SCC &updateCallGraphAfterCoroutineSplit(
     LazyCallGraph::Node &N, const coro::Shape &Shape,
     const SmallVectorImpl<Function *> &Clones, LazyCallGraph::SCC &C,
     LazyCallGraph &CG, CGSCCAnalysisManager &AM, CGSCCUpdateResult &UR,
     FunctionAnalysisManager &FAM) {
 
+  auto *CurrentSCC = &C;
   if (!Clones.empty()) {
     switch (Shape.ABI) {
     case coro::ABI::Switch:
@@ -2104,13 +2137,16 @@ static void updateCallGraphAfterCoroutineSplit(
     }
 
     // Let the CGSCC infra handle the changes to the original function.
-    updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR, FAM);
+    CurrentSCC = &updateCGAndAnalysisManagerForCGSCCPass(CG, *CurrentSCC, N, AM,
+                                                         UR, FAM);
   }
 
   // Do some cleanup and let the CGSCC infra see if we've cleaned up any edges
   // to the split functions.
   postSplitCleanup(N.getFunction());
-  updateCGAndAnalysisManagerForFunctionPass(CG, C, N, AM, UR, FAM);
+  CurrentSCC = &updateCGAndAnalysisManagerForFunctionPass(CG, *CurrentSCC, N,
+                                                          AM, UR, FAM);
+  return *CurrentSCC;
 }
 
 /// Replace a call to llvm.coro.prepare.retcon.
@@ -2199,6 +2235,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
 
+  auto *CurrentSCC = &C;
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
@@ -2210,7 +2247,8 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     coro::Shape Shape =
         splitCoroutine(F, Clones, FAM.getResult<TargetIRAnalysis>(F),
                        OptimizeFrame, MaterializableCallback);
-    updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
+    CurrentSCC = &updateCallGraphAfterCoroutineSplit(
+        *N, Shape, Clones, *CurrentSCC, CG, AM, UR, FAM);
 
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     ORE.emit([&]() {
@@ -2222,14 +2260,14 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
 
     if (!Shape.CoroSuspends.empty()) {
       // Run the CGSCC pipeline on the original and newly split functions.
-      UR.CWorklist.insert(&C);
+      UR.CWorklist.insert(CurrentSCC);
       for (Function *Clone : Clones)
         UR.CWorklist.insert(CG.lookupSCC(CG.get(*Clone)));
     }
   }
 
   for (auto *PrepareFn : PrepareFns) {
-    replaceAllPrepares(PrepareFn, CG, C);
+    replaceAllPrepares(PrepareFn, CG, *CurrentSCC);
   }
 
   return PreservedAnalyses::none();

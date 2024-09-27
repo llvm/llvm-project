@@ -238,3 +238,109 @@ define i32 @fcmp_ueq_q(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+define half @fadd_neg_0p5(half %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, 0.5
+; CHECK-NEXT:    fsub.h fa0, fa0, fa5
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: fadd_neg_0p5:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZFHMIN-NEXT:    fli.s fa4, 0.5
+; ZFHMIN-NEXT:    fsub.s fa5, fa5, fa4
+; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZFHMIN-NEXT:    ret
+  %a = fadd half %x, -0.5
+  ret half %a
+}
+
+define half @fma_neg_addend(half %x, half %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, 0.5
+; CHECK-NEXT:    fmsub.h fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: fma_neg_addend:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZFHMIN-NEXT:    fli.s fa3, 0.5
+; ZFHMIN-NEXT:    fmsub.s fa5, fa4, fa5, fa3
+; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZFHMIN-NEXT:    ret
+  %a = call half @llvm.fma.f32(half %x, half %y, half -0.5)
+  ret half %a
+}
+
+define half @fma_neg_multiplicand(half %x, half %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, 0.125
+; CHECK-NEXT:    fnmsub.h fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: fma_neg_multiplicand:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; ZFHMIN-NEXT:    fli.s fa3, 0.125
+; ZFHMIN-NEXT:    fnmsub.s fa5, fa3, fa4, fa5
+; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZFHMIN-NEXT:    ret
+  %a = call half @llvm.fma.f32(half %x, half -0.125, half %y)
+  ret half %a
+}
+
+define half @fma_neg_addend_multiplicand(half %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, 0.25
+; CHECK-NEXT:    fli.h fa4, 0.5
+; CHECK-NEXT:    fnmadd.h fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: fma_neg_addend_multiplicand:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZFHMIN-NEXT:    fli.s fa4, 0.25
+; ZFHMIN-NEXT:    fli.s fa3, 0.5
+; ZFHMIN-NEXT:    fnmadd.s fa5, fa3, fa5, fa4
+; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZFHMIN-NEXT:    ret
+  %a = call half @llvm.fma.f32(half %x, half -0.5, half -0.25)
+  ret half %a
+}
+
+define half @select_loadfpimm(half %x) nounwind {
+; CHECK-LABEL: select_loadfpimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fle.h a0, fa5, fa0
+; CHECK-NEXT:    fli.h fa0, 0.5
+; CHECK-NEXT:    bnez a0, .LBB16_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fneg.h fa0, fa0
+; CHECK-NEXT:  .LBB16_2: # %entry
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: select_loadfpimm:
+; ZFHMIN:       # %bb.0: # %entry
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
+; ZFHMIN-NEXT:    xori a0, a0, 1
+; ZFHMIN-NEXT:    slli a0, a0, 1
+; ZFHMIN-NEXT:    lui a1, %hi(.LCPI16_0)
+; ZFHMIN-NEXT:    addi a1, a1, %lo(.LCPI16_0)
+; ZFHMIN-NEXT:    add a0, a1, a0
+; ZFHMIN-NEXT:    flh fa0, 0(a0)
+; ZFHMIN-NEXT:    ret
+entry:
+  %cmp = fcmp ult half %x, 0.000000e+00
+  %sel = select i1 %cmp, half -5.000000e-01, half 5.000000e-01
+  ret half %sel
+}

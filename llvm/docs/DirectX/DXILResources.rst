@@ -361,6 +361,12 @@ Examples:
      - ``i32``
      - Index into the buffer
 
+.. code-block:: llvm
+
+   %ret = call {<4 x float>, i1}
+       @llvm.dx.typedBufferLoad.checkbit.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
+           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+
 Texture and Typed Buffer Stores
 -------------------------------
 

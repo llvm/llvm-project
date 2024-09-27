@@ -152,7 +152,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUISelLowering.cpp",
     "AMDGPUImageIntrinsicOptimizer.cpp",
     "AMDGPUInsertDelayAlu.cpp",
-    "AMDGPUInsertSingleUseVDST.cpp",
     "AMDGPUInstCombineIntrinsic.cpp",
     "AMDGPUInstrInfo.cpp",
     "AMDGPUInstructionSelector.cpp",

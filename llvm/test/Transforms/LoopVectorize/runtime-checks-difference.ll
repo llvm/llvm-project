@@ -323,36 +323,30 @@ outer.exit:
 define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, ptr %src) {
 ; CHECK-LABEL: @use_diff_checks_when_retrying_with_rt_checks(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr %src to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr %dst to i64
 ; CHECK-NEXT:    br i1 false, label %scalar.ph, label %vector.memcheck
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 %off, 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr %dst, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 8000
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr %dst, i64 [[TMP1]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr %dst, i64 8000
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr %src, i64 8000
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr %src, i64 8
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr %src, i64 8008
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr %dst, [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP3]]
-; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr %src, [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    [[BOUND09:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[BOUND110:%.*]] = icmp ult ptr [[SCEVGEP4]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT11:%.*]] = and i1 [[BOUND09]], [[BOUND110]]
-; CHECK-NEXT:    [[CONFLICT_RDX12:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT11]]
-; CHECK-NEXT:    [[BOUND013:%.*]] = icmp ult ptr %dst, [[SCEVGEP3]]
-; CHECK-NEXT:    [[BOUND114:%.*]] = icmp ult ptr %src, [[SCEVGEP2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT15:%.*]] = and i1 [[BOUND013]], [[BOUND114]]
-; CHECK-NEXT:    [[CONFLICT_RDX16:%.*]] = or i1 [[CONFLICT_RDX12]], [[FOUND_CONFLICT15]]
-; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr %dst, [[SCEVGEP5]]
-; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[SCEVGEP4]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT19:%.*]] = and i1 [[BOUND017]], [[BOUND118]]
-; CHECK-NEXT:    [[CONFLICT_RDX20:%.*]] = or i1 [[CONFLICT_RDX16]], [[FOUND_CONFLICT19]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX20]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 %off, -8
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 %off, 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[DST1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[SRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP3]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[SRC2]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], [[DST1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[TMP1]]
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP6]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX5:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = icmp ult i64 [[TMP7]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX7:%.*]] = or i1 [[CONFLICT_RDX5]], [[DIFF_CHECK6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[DST1]], -8
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[SRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP9]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX7]], [[DIFF_CHECK8]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %scalar.ph, label %vector.ph
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label %vector.body
 ;
