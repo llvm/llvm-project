@@ -100,7 +100,7 @@ functions:
       - type: int
   - name: remap_file_pages
     standards:
-      - LINUX
+      - Linux
     return_type: int
     arguments:
       - type: void *

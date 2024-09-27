@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H
 
 #include "src/__support/macros/config.h"
-#include <sys/mman.h>
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-int remap_file_pages(void *addr, size_t size, int prot, size_t pgoff, int flags);
+int remap_file_pages(void *addr, size_t size, int prot, size_t pgoff,
+                     int flags);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif //LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H
+#endif // LLVM_LIBC_SRC_SYS_MMAN_REMAP_FILE_PAGES_H

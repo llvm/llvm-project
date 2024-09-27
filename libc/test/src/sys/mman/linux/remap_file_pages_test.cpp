@@ -10,12 +10,11 @@
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/remap_file_pages.h"
+#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "src/unistd/sysconf.h"
 
 #include <sys/mman.h>
-
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -36,7 +35,8 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   LIBC_NAMESPACE::libc_errno = 0;
 
   // Now try to remap the pages
-  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ, page_size, 0),
+  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ,
+                                               page_size, 0),
               Succeeds());
 
   // Reset error number for the new function
@@ -55,7 +55,8 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
   ASSERT_NE(addr, MAP_FAILED);
 
   // Try to remap pages with an invalid flag MAP_PRIVATE
-  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ, 0, MAP_PRIVATE),
+  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ, 0,
+                                               MAP_PRIVATE),
               Fails(EINVAL));
 
   // Clean up
@@ -67,8 +68,9 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidAddress) {
   ASSERT_GT(page_size, size_t(0));
 
   // Use an address that we haven't mapped
-  void *invalid_addr = reinterpret_cast<void*>(0x12345000);
+  void *invalid_addr = reinterpret_cast<void *>(0x12345000);
 
-  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(invalid_addr, page_size, PROT_READ, 0, 0),
+  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(invalid_addr, page_size,
+                                               PROT_READ, 0, 0),
               Fails(EINVAL));
 }
