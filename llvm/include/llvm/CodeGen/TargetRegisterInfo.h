@@ -1213,6 +1213,15 @@ public:
   virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
     return false;
   }
+
+  virtual std::pair<bool, uint8_t> getVRegFlagValue(StringRef Name) const {
+    return {false, 0};
+  }
+
+  virtual SmallVector<std::string>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
+    return {};
+  }
 };
 
 //===----------------------------------------------------------------------===//

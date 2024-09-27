@@ -47,6 +47,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
+  std::vector<::uint8_t> Flags;
 };
 
 using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
@@ -149,6 +150,8 @@ public:
   ///
   /// Return null if the name isn't a register bank.
   const RegisterBank *getRegBank(StringRef Name);
+
+  bool getVRegFlagValue(StringRef FlagName, uint8_t& FlagValue) const;
 
   PerTargetMIParsingState(const TargetSubtargetInfo &STI)
     : Subtarget(STI) {
