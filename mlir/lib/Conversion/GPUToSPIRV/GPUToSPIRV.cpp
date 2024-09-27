@@ -651,7 +651,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
   auto createSpecConstant = [&](unsigned value) {
     auto attr = rewriter.getI8IntegerAttr(value);
     std::string specCstName =
-        makeVarName(moduleOp, (llvm::Twine(globalVarName) + "_sc"));
+        makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
 
     return rewriter.create<spirv::SpecConstantOp>(
         loc, rewriter.getStringAttr(specCstName), attr);
@@ -711,7 +711,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
       spirv::PointerType::get(i8Type, spirv::StorageClass::UniformConstant),
       globalPtr);
 
-  // Get printf arguments
+  // Get printf arguments.
   auto printfArgs = llvm::to_vector_of<Value, 4>(adaptor.getArgs());
 
   rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
