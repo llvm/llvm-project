@@ -45,7 +45,7 @@
 //   - generate the AST matcher reference html file
 //   - test the documentation using a special syntax
 //
-//  TLDR:
+//  Test Annotations:
 //
 //  The automatic testing uses doxygen commands (aliases) to extract the
 //  relevant information about an example of using a matcher from the
@@ -164,10 +164,6 @@
 //  check-clang-unit` to test the documentation.
 //
 //  ... the example I wrote is wrong?
-//
-//  The test-generation script will try to compile your example code before it
-//  continues. This makes finding issues with your example code easier because
-//  the test-failures are much more verbose.
 //
 //  The test-failure output of the generated test file will provide information
 //  about
