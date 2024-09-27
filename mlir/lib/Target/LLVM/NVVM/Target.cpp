@@ -30,6 +30,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
 
@@ -92,6 +93,7 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
   // If `targetOptions` have an empty toolkitPath use `getCUDAToolkitPath`
   if (toolkitPath.empty())
     toolkitPath = getCUDAToolkitPath();
+  llvm::errs() << toolkitPath;
 
   // Append the files in the target attribute.
   if (ArrayAttr files = target.getLink())
@@ -401,6 +403,26 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
                                 /*MemoryLimit=*/0,
                                 /*ErrMsg=*/&message))
     return emitLogError("`ptxas`");
+#define DEBUG_TYPE "dump-sass"
+  LLVM_DEBUG({
+    std::optional<std::string> nvdisasm = findTool("nvdisasm");
+    SmallVector<StringRef> nvdisasmArgs(
+        {StringRef("nvdisasm"), StringRef(cubinFile.first)});
+    if (llvm::sys::ExecuteAndWait(nvdisasm.value(), nvdisasmArgs,
+                                  /*Env=*/std::nullopt,
+                                  /*Redirects=*/redirects,
+                                  /*SecondsToWait=*/0,
+                                  /*MemoryLimit=*/0,
+                                  /*ErrMsg=*/&message))
+      return emitLogError("`nvdisasm`");
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      llvm::dbgs().flush();
+    }
+  });
+#undef DEBUG_TYPE
 
   // Invoke `fatbin`.
   message.clear();
@@ -532,8 +554,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
 
 #if !LLVM_HAS_NVPTX_TARGET
-  getOperation()->emitError(
-      "The `NVPTX` target was not built. Please enable it when building LLVM.");
+  getOperation()->emitError("The `NVPTX` target was not built. Please enable "
+                            "it when building LLVM.");
   return std::nullopt;
 #endif // LLVM_HAS_NVPTX_TARGET
 
