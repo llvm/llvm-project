@@ -864,7 +864,7 @@ static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
       "For statically shaped Linalg Ops, only one "
       "non-unit loop dim is expected");
 
-  size_t idx = loopRanges.size() - 1;
+  ssize_t idx = loopRanges.size() - 1;
   for (; idx >= 0; idx--)
     if (loopRanges[idx] != 1)
       break;
