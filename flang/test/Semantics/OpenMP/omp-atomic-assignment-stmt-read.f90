@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %flang_fc1 -fopenmp %s -o -
 
 integer :: x, vv(2), xx(2)
 type t1

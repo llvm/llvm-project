@@ -1796,7 +1796,8 @@ inline void OmpStructureChecker::ErrIfLHSAndRHSSymbolsMatch(
   const auto *e{GetExpr(context_, expr)};
   const auto *v{GetExpr(context_, var)};
   if (e && v) {
-    const Symbol &varSymbol = evaluate::GetSymbolVector(*v).front();
+    auto vSyms{evaluate::GetSymbolVector(*v)};
+    const Symbol &varSymbol = vSyms.front();
     for (const Symbol &symbol : evaluate::GetSymbolVector(*e)) {
       if (varSymbol == symbol) {
         const Fortran::common::Indirection<Fortran::parser::Designator>
