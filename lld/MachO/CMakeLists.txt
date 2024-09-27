@@ -44,6 +44,7 @@ add_lld_library(lldMachO
   Core
   DebugInfoDWARF
   Demangle
+  IPO
   LTO
   MC
   ObjCARCOpts

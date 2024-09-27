@@ -11,9 +11,9 @@ RUN: llvm-cgdata --merge %t/merge-empty.o --output %t/merge-empty.cgdata
 # No summary appear with the header only cgdata.
 RUN: llvm-cgdata --show %t/merge-empty.cgdata | count 0
 
-# Synthesize raw cgdata without the header (24 byte) from the indexed cgdata.
+# Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
 RUN: llvm-cgdata --convert --format binary %t/raw-single.cgtext -o %t/raw-single.cgdata
-RUN: od -t x1 -j 24 -An %t/raw-single.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-single-bytes.txt
+RUN: od -t x1 -j 32 -An %t/raw-single.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-single-bytes.txt
 
 RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-single-bytes.txt)/g" %t/merge-single-template.ll > %t/merge-single.ll
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-single.ll -o %t/merge-single.o

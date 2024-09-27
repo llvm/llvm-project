@@ -25,6 +25,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/ObjCARC.h"
 
 using namespace lld;
@@ -38,6 +39,8 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
                                    config->thinLTOPrefixReplaceNew);
 }
 
+extern cl::opt<bool> EnableGlobalMergeFunc;
+
 static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
@@ -48,7 +51,10 @@ static lto::Config createConfig() {
   c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.DiagHandler = diagnosticHandler;
-
+  c.PreCodeGenPassesHook = [](legacy::PassManager &pm) {
+    if (EnableGlobalMergeFunc)
+      pm.add(createGlobalMergeFuncPass());
+  };
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
   c.TimeTraceEnabled = config->timeTraceEnabled;
@@ -97,7 +103,6 @@ BitcodeCompiler::BitcodeCompiler() {
         onIndexWrite, config->thinLTOEmitIndexFiles,
         config->thinLTOEmitImportsFiles);
   }
-
   ltoObj = std::make_unique<lto::LTO>(createConfig(), backend);
 }
 
