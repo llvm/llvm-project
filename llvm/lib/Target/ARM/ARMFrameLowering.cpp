@@ -721,6 +721,14 @@ struct StackAdjustingInsts {
     MachineBasicBlock::iterator I;
     unsigned SPAdjust;
     bool BeforeFPSet;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    void dump() {
+      dbgs() << "  " << (BeforeFPSet ? "before-fp " : "          ")
+             << "sp-adjust=" << SPAdjust;
+      I->dump();
+    }
+#endif
   };
 
   SmallVector<InstInfo, 4> Insts;
@@ -755,6 +763,14 @@ struct StackAdjustingInsts {
               .setMIFlags(MachineInstr::FrameSetup);
     }
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() {
+    dbgs() << "StackAdjustingInsts:\n";
+    for (auto &Info : Insts)
+      Info.dump();
+  }
+#endif
 };
 
 } // end anonymous namespace
@@ -873,6 +889,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   bool NeedsWinCFI = needsWinCFI(MF);
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
+
+  LLVM_DEBUG(dbgs() << "Emitting prologue for " << MF.getName() << "\n");
 
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
@@ -1246,8 +1264,10 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // throughout the process. If we have a frame pointer, it takes over the job
   // half-way through, so only the first few .cfi_def_cfa_offset instructions
   // actually get emitted.
-  if (!NeedsWinCFI)
+  if (!NeedsWinCFI) {
+    LLVM_DEBUG(DefCFAOffsetCandidates.dump());
     DefCFAOffsetCandidates.emitDefCFAOffsets(MBB, dl, TII, HasFP);
+  }
 
   if (STI.isTargetELF() && hasFP(MF))
     MFI.setOffsetAdjustment(MFI.getOffsetAdjustment() -
@@ -1326,6 +1346,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   bool isARM = !AFI->isThumbFunction();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
+
+  LLVM_DEBUG(dbgs() << "Emitting epilogue for " << MF.getName() << "\n");
 
   // Amount of stack space we reserved next to incoming args for either
   // varargs registers or stack arguments in tail calls made by this function.
