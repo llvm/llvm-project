@@ -251,7 +251,9 @@ private:
     return {const_iterator(Set.insert(std::forward<ArgType>(V)).first), true};
   }
 
-  auto vfind(const T &V) const {
+  // Handwritten linear search. The use of std::find might hurt performance as
+  // its implementation may be optimized for larger containers.
+  typename SmallVector<T, N>::const_iterator vfind(const T &V) const {
     for (auto I = Vector.begin(), E = Vector.end(); I != E; ++I)
       if (*I == V)
         return I;
