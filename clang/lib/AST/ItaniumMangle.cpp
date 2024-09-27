@@ -2270,6 +2270,14 @@ void CXXNameMangler::mangleTemplatePrefix(GlobalDecl GD,
     mangleTemplateParameter(TTP->getDepth(), TTP->getIndex());
   } else {
     const DeclContext *DC = Context.getEffectiveDeclContext(ND);
+    if (const auto *FD = dyn_cast<FunctionTemplateDecl>(GD.getDecl())) {
+      // Member-like constrained friends are mangled as if they were members of
+      // the enclosing class.
+      if (FD->getTemplatedDecl()->isMemberLikeConstrainedFriend() &&
+          getASTContext().getLangOpts().getClangABICompat() >
+              LangOptions::ClangABI::Ver17)
+      DC = GD.getDecl()->getLexicalDeclContext()->getRedeclContext();
+    }
     manglePrefix(DC, NoFunction);
     if (isa<BuiltinTemplateDecl>(ND) || isa<ConceptDecl>(ND))
       mangleUnqualifiedName(GD, DC, nullptr);
