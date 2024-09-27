@@ -540,6 +540,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::asin, GL::Asin);
   case TargetOpcode::G_FATAN:
     return selectExtInst(ResVReg, ResType, I, CL::atan, GL::Atan);
+  case TargetOpcode::G_FATAN2:
+    return selectExtInst(ResVReg, ResType, I, CL::atan2, GL::Atan2);
   case TargetOpcode::G_FCOSH:
     return selectExtInst(ResVReg, ResType, I, CL::cosh, GL::Cosh);
   case TargetOpcode::G_FSINH:
