@@ -1,5 +1,6 @@
 @AUTO_GEN_COMMENT@
 
+config.bin_dir = "@CMAKE_BINARY_DIR@"
 config.bin_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
