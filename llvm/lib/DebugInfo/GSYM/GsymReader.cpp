@@ -412,9 +412,8 @@ void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
     dump(OS, *FI.MergedFunctions);
   }
 
-  if (FI.CallSites) {
+  if (FI.CallSites)
     dump(OS, *FI.CallSites);
-  }
 }
 
 void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
