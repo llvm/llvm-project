@@ -144,7 +144,7 @@ expand_template(
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
         # Define to enable checks that alter the LLVM C++ ABI
-        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
+        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 1",
 
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
