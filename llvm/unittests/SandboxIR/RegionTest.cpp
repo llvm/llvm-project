@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
