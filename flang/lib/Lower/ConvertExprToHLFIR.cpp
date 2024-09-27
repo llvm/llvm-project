@@ -1594,6 +1594,8 @@ private:
       return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
     };
     auto iofBackup = builder.getIntegerOverflowFlags();
+    // nsw is never added to operations on vector subscripts
+    // even if -fno-wrapv is enabled.
     builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::none);
     mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
                                                   shape, typeParams, genKernel,
