@@ -21,7 +21,7 @@ static int allocated_;
 template <class T, class Sz>
 struct test_alloc {
   typedef Sz size_type;
-  typedef std::make_signed<Sz>::type difference_type;
+  typedef typename std::make_signed<Sz>::type difference_type;
   typedef T value_type;
   typedef value_type* pointer;
   typedef const value_type* const_pointer;
