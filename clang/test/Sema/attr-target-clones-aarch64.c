@@ -24,17 +24,17 @@ int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void)
 // expected-error@+3 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
 // expected-warning@+1 {{version list contains entries that don't impact code generation}}
-int __attribute__((target_clones("dgh+memtag+rpres", "ebf16+dpb+sha1", "default"))) redecl4(void) { return 1; }
+int __attribute__((target_clones("dgh+memtag+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
 // expected-note@-2 {{previous declaration is here}}
 int __attribute__((target_clones("flagm2", "default"))) redef2(void) { return 1; }
 
-int __attribute__((target_clones("f32mm", "f64mm", "sha1+fp"))) redef3(void) { return 1; }
+int __attribute__((target_clones("f32mm", "f64mm", "sha2+fp"))) redef3(void) { return 1; }
 // expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
-int __attribute__((target_clones("f32mm", "sha1+fp", "f64mm"))) redef3(void) { return 1; }
+int __attribute__((target_clones("f32mm", "sha2+fp", "f64mm"))) redef3(void) { return 1; }
 
 int __attribute__((target_clones("rdm+lse+rdm", "lse+rdm"))) dup1(void) { return 1; }
 // expected-warning@+1 {{version list contains duplicate entries}}
