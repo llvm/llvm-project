@@ -2237,6 +2237,11 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
+    if ((isa<LoadInst>(Ingredient) &&
+         !Ctx.TTI.isLegalMaskedGather(Ty, Alignment)) ||
+        (isa<StoreInst>(Ingredient) &&
+         !Ctx.TTI.isLegalMaskedScatter(Ty, Alignment)))
+      return InstructionCost::getInvalid();
     return Ctx.TTI.getAddressComputationCost(Ty) +
            Ctx.TTI.getGatherScatterOpCost(Ingredient.getOpcode(), Ty, Ptr,
                                           IsMasked, Alignment, CostKind,
