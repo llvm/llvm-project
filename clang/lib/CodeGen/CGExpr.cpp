@@ -122,7 +122,7 @@ RawAddress CodeGenFunction::CreateTempAlloca(llvm::Type *Ty, CharUnits Align,
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
     V = getTargetHooks().performAddrSpaceCast(
         *this, V, getASTAllocaAddressSpace(), LangAS::Default,
-        Ty->getPointerTo(DestAddrSpace), /*non-null*/ true);
+        Builder.getPtrTy(DestAddrSpace), /*non-null*/ true);
   }
 
   return RawAddress(V, Ty, Align, KnownNonNull);
@@ -469,7 +469,8 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         if (AS != LangAS::Default)
           C = TCG.performAddrSpaceCast(
               CGF.CGM, GV, AS, LangAS::Default,
-              GV->getValueType()->getPointerTo(
+              llvm::PointerType::get(
+                  CGF.getLLVMContext(),
                   CGF.getContext().getTargetAddressSpace(LangAS::Default)));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
@@ -3207,7 +3208,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
-      auto PtrTy = ATPO.getElementType()->getPointerTo(TargetAS);
+      auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
       auto ASC = getTargetHooks().performAddrSpaceCast(
           CGM, ATPO.getPointer(), AS, T.getAddressSpace(), PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
@@ -3835,9 +3836,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
       llvm::StructType::get(Int8Ty, SourceLocationTy, VoidPtrTy);
 
   llvm::Value *V = Builder.CreateConstGEP2_32(
-      CfiCheckFailDataTy,
-      Builder.CreatePointerCast(Data, CfiCheckFailDataTy->getPointerTo(0)), 0,
-      0);
+      CfiCheckFailDataTy, Builder.CreatePointerCast(Data, UnqualPtrTy), 0, 0);
 
   Address CheckKindAddr(V, Int8Ty, getIntAlign());
   llvm::Value *CheckKind = Builder.CreateLoad(CheckKindAddr);
@@ -6114,36 +6113,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   if (ResolvedFnInfo)
     *ResolvedFnInfo = &FnInfo;
-
-  // C99 6.5.2.2p6:
-  //   If the expression that denotes the called function has a type
-  //   that does not include a prototype, [the default argument
-  //   promotions are performed]. If the number of arguments does not
-  //   equal the number of parameters, the behavior is undefined. If
-  //   the function is defined with a type that includes a prototype,
-  //   and either the prototype ends with an ellipsis (, ...) or the
-  //   types of the arguments after promotion are not compatible with
-  //   the types of the parameters, the behavior is undefined. If the
-  //   function is defined with a type that does not include a
-  //   prototype, and the types of the arguments after promotion are
-  //   not compatible with those of the parameters after promotion,
-  //   the behavior is undefined [except in some trivial cases].
-  // That is, in the general case, we should assume that a call
-  // through an unprototyped function type works like a *non-variadic*
-  // call.  The way we make this work is to cast to the exact type
-  // of the promoted arguments.
-  //
-  // Chain calls use this same code path to add the invisible chain parameter
-  // to the function type.
-  if (isa<FunctionNoProtoType>(FnType) || Chain) {
-    llvm::Type *CalleeTy = getTypes().GetFunctionType(FnInfo);
-    int AS = Callee.getFunctionPointer()->getType()->getPointerAddressSpace();
-    CalleeTy = CalleeTy->getPointerTo(AS);
-
-    llvm::Value *CalleePtr = Callee.getFunctionPointer();
-    CalleePtr = Builder.CreateBitCast(CalleePtr, CalleeTy, "callee.knr.cast");
-    Callee.setFunctionPointer(CalleePtr);
-  }
 
   // HIP function pointer contains kernel handle when it is used in triple
   // chevron. The kernel stub needs to be loaded from kernel handle and used
