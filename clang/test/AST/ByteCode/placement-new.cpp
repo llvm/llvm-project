@@ -271,3 +271,18 @@ namespace ConstructAt {
                                           // both-note {{in call}}
 
 }
+
+namespace UsedToCrash {
+  struct S {
+      int* i;
+      constexpr S() : i(new int(42)) {} // #no-deallocation
+      constexpr ~S() {delete i;}
+  };
+  consteval void alloc() {
+      S* s = new S();
+      s->~S();
+      new (s) S();
+      delete s;
+  }
+  int alloc1 = (alloc(), 0);
+}
