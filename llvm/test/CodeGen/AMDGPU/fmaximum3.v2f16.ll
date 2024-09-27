@@ -8,7 +8,7 @@ define <2 x half> @fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) 
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v0, v2, v0, v1
-; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1210-GISEL-LABEL: fmaximum3_v2f16:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
@@ -17,7 +17,7 @@ define <2 x half> @fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c) 
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v0, v1, v1
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v2, v0, v0
-; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %min = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %b)
   %res = call <2 x half> @llvm.maximum.v2f16(<2 x half> %c, <2 x half> %min)
@@ -30,7 +30,7 @@ define <2 x half> @fmaximum3_v2f16_vss(<2 x half> %a, <2 x half> inreg %b, <2 x 
 ; GFX1210-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v0, s1, v0, s0
-; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1210-GISEL-LABEL: fmaximum3_v2f16_vss:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
@@ -39,7 +39,7 @@ define <2 x half> @fmaximum3_v2f16_vss(<2 x half> %a, <2 x half> inreg %b, <2 x 
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v0, s0, s0
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, s1, v0, v0
-; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %min = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %b)
   %res = call <2 x half> @llvm.maximum.v2f16(<2 x half> %c, <2 x half> %min)
@@ -53,7 +53,7 @@ define <3 x half> @fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c) 
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v0, v4, v0, v2
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v1, v5, v1, v3
-; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1210-GISEL-LABEL: fmaximum3_v3f16:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
@@ -64,7 +64,7 @@ define <3 x half> @fmaximum3_v3f16(<3 x half> %a, <3 x half> %b, <3 x half> %c) 
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v4, v0, v0
 ; GFX1210-GISEL-NEXT:    v_maximum_f16 v1, v5, v1
-; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %min = call <3 x half> @llvm.maximum.v3f16(<3 x half> %a, <3 x half> %b)
   %res = call <3 x half> @llvm.maximum.v3f16(<3 x half> %c, <3 x half> %min)
@@ -78,7 +78,7 @@ define <4 x half> @fmaximum3_v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) 
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v0, v4, v0, v2
 ; GFX1210-SDAG-NEXT:    v_pk_maximum3_f16 v1, v5, v1, v3
-; GFX1210-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1210-GISEL-LABEL: fmaximum3_v4f16:
 ; GFX1210-GISEL:       ; %bb.0: ; %entry
@@ -89,7 +89,7 @@ define <4 x half> @fmaximum3_v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c) 
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v0, v4, v0, v0
 ; GFX1210-GISEL-NEXT:    v_pk_maximum3_f16 v1, v5, v1, v1
-; GFX1210-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %min = call <4 x half> @llvm.maximum.v4f16(<4 x half> %a, <4 x half> %b)
   %res = call <4 x half> @llvm.maximum.v4f16(<4 x half> %c, <4 x half> %min)

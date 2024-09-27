@@ -497,7 +497,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
     ; GCN-NEXT: s_set_vgpr_msb 0
-    ; GCN-NEXT: s_swappc_b64
+    ; GCN-NEXT: s_swap_pc_i64
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     $exec = S_SWAPPC_B64 undef $sgpr0_sgpr1
 
@@ -519,7 +519,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
     ; GCN-NEXT: s_set_vgpr_msb 0
-    ; GCN-NEXT: s_setpc_b64
+    ; GCN-NEXT: s_set_pc_i64
     $vgpr0 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
@@ -529,7 +529,7 @@ body:             |
 
   bb.6:
     ; ASM-NEXT: %bb.6:
-    ; GCN-NEXT: s_setpc_b64
+    ; GCN-NEXT: s_set_pc_i64
     S_SETPC_B64 undef $sgpr0_sgpr1, implicit-def $exec
 
     ; But do not reset mode before a branch if it was zero
@@ -557,7 +557,7 @@ body:             |
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
     ; GCN-NEXT: s_set_vgpr_msb 0
-    ; GCN-NEXT: s_setpc_b64
+    ; GCN-NEXT: s_set_pc_i64
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     S_SETPC_B64_return undef $sgpr0_sgpr1, implicit-def $exec
 

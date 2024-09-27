@@ -3803,7 +3803,7 @@ define i32 @mul_pow2_plus_1(i32 %val) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_lshl_add_u32 v0, v0, 3, v0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; EG-LABEL: mul_pow2_plus_1:
 ; EG:       ; %bb.0:

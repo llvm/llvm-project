@@ -1732,7 +1732,7 @@ define double @global_atomic_fadd_f64_rtn_pat(ptr addrspace(1) %ptr, double %dat
 ; GFX1210-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -1769,7 +1769,7 @@ define double @global_atomic_fadd_f64_rtn_pat_agent(ptr addrspace(1) %ptr, doubl
 ; GFX1210-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -1808,7 +1808,7 @@ define double @global_atomic_fadd_f64_rtn_pat_system(ptr addrspace(1) %ptr, doub
 ; GFX1210-NEXT:    global_atomic_add_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -1835,7 +1835,7 @@ define double @global_atomic_fmax_f64_rtn(ptr addrspace(1) %ptr, double %data) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_atomic_max_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
   ret double %ret
@@ -1862,7 +1862,7 @@ define double @global_atomic_fmin_f64_rtn(ptr addrspace(1) %ptr, double %data) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_atomic_min_num_f64 v[0:1], v[0:1], v[2:3], off th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
   ret double %ret
@@ -2080,7 +2080,7 @@ define double @flat_atomic_fadd_f64_rtn_pat(ptr %ptr) #1 {
 ; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -2117,7 +2117,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_agent(ptr %ptr) #1 {
 ; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -2159,7 +2159,7 @@ define double @flat_atomic_fadd_f64_rtn_pat_system(ptr %ptr) #1 {
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr %ptr, double 4.0 syncscope("one-as") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -2274,7 +2274,7 @@ define double @flat_atomic_fmin_f64_rtn(ptr %ptr, double %data) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
   ret double %ret
@@ -2337,7 +2337,7 @@ define double @flat_atomic_fmax_f64_rtn(ptr %ptr, double %data) {
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
   ret double %ret
@@ -2408,7 +2408,7 @@ define double @local_atomic_fadd_f64_rtn(ptr addrspace(3) %ptr, double %data) {
 ; GFX1210-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1210-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %ptr, double %data, i32 0, i32 0, i1 0)
   ret double %ret
@@ -2547,7 +2547,7 @@ define double @local_atomic_fadd_f64_rtn_pat(ptr addrspace(3) %ptr, double %data
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 4.0
 ; GFX1210-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = atomicrmw fadd ptr addrspace(3) %ptr, double 4.0 seq_cst, !amdgpu.no.fine.grained.memory !0
   ret double %ret
@@ -2579,7 +2579,7 @@ define double @local_atomic_fadd_f64_rtn_ieee_unsafe(ptr addrspace(3) %ptr, doub
 ; GFX1210-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1210-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %ptr, double %data, i32 0, i32 0, i1 0)
   ret double %ret
@@ -2611,7 +2611,7 @@ define double @local_atomic_fadd_f64_rtn_ieee_safe(ptr addrspace(3) %ptr, double
 ; GFX1210-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1210-NEXT:    ds_add_rtn_f64 v[0:1], v0, v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
 main_body:
   %ret = call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %ptr, double %data, i32 0, i32 0, i1 0)
   ret double %ret
@@ -2638,7 +2638,7 @@ define double @flat_atomic_fmin_f64_intrinsic_rtn__posoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 511
   %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
   ret double %ret
@@ -2670,7 +2670,7 @@ define double @flat_atomic_fmin_f64_intrinsic_rtn__negoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[0:1], v[2:3] offset:-4088 th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 -511
   %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %gep, double %data)
   ret double %ret
@@ -2697,7 +2697,7 @@ define void @flat_atomic_fmin_f64_intrinsic_noret__posoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 511
   %unused = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
   ret void
@@ -2729,7 +2729,7 @@ define void @flat_atomic_fmin_f64_intrinsic_noret__negoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3] offset:-4088
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 -511
   %unused = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %gep, double %data)
   ret void
@@ -2756,7 +2756,7 @@ define double @flat_atomic_fmax_f64_intrinsic_rtn__posoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 511
   %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
   ret double %ret
@@ -2788,7 +2788,7 @@ define double @flat_atomic_fmax_f64_intrinsic_rtn__negoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[0:1], v[2:3] offset:-4088 th:TH_ATOMIC_RETURN
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 -511
   %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %gep, double %data)
   ret double %ret
@@ -2815,7 +2815,7 @@ define void @flat_atomic_fmax_f64_intrinsic_noret__posoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3]
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 511
   %unused = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
   ret void
@@ -2847,7 +2847,7 @@ define void @flat_atomic_fmax_f64_intrinsic_noret__negoffset(ptr %ptr, double %d
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3] offset:-4088
 ; GFX1210-NEXT:    s_wait_dscnt 0x0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %gep = getelementptr double, ptr %ptr, i64 -511
   %unused = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %gep, double %data)
   ret void

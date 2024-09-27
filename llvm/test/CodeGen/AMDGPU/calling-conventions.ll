@@ -137,7 +137,7 @@ define fastcc float @fastcc(float %arg0) #0 {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_add_f32_e32 v0, 4.0, v0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
   %add = fadd float %arg0, 4.0
   ret float %add
 }
@@ -166,7 +166,7 @@ define coldcc float @coldcc(float %arg0) #0 {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_add_f32_e32 v0, 4.0, v0
-; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-NEXT:    s_set_pc_i64 s[30:31]
  %add = fadd float %arg0, 4.0
  ret float %add
 }
@@ -261,7 +261,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1210-LABEL: call_coldcc:
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_mov_b64 s[10:11], s[4:5]
-; GFX1210-NEXT:    s_getpc_b64 s[4:5]
+; GFX1210-NEXT:    s_get_pc_i64 s[4:5]
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_nc_u64 s[4:5], s[4:5], coldcc@GOTPCREL+8
 ; GFX1210-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
@@ -272,7 +272,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1210-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GFX1210-NEXT:    s_swap_pc_i64 s[30:31], s[6:7]
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1210-NEXT:    s_endpgm
   %val = call float @coldcc(float 1.0)
@@ -370,7 +370,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1210-LABEL: call_fastcc:
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_mov_b64 s[10:11], s[4:5]
-; GFX1210-NEXT:    s_getpc_b64 s[4:5]
+; GFX1210-NEXT:    s_get_pc_i64 s[4:5]
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_nc_u64 s[4:5], s[4:5], fastcc@GOTPCREL+8
 ; GFX1210-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 1.0
@@ -381,7 +381,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1210-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
-; GFX1210-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GFX1210-NEXT:    s_swap_pc_i64 s[30:31], s[6:7]
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1210-NEXT:    s_endpgm
   %val = call float @fastcc(float 1.0)
