@@ -9,6 +9,7 @@
 #include "ContainerContainsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -32,7 +33,8 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto FindCall =
       cxxMemberCallExpr(
-          argumentCountIs(1),
+          anyOf(argumentCountIs(1),
+                allOf(argumentCountIs(2), hasArgument(1, cxxDefaultArgExpr()))),
           callee(cxxMethodDecl(
               hasName("find"),
               hasParameter(0, hasType(hasUnqualifiedDesugaredType(
@@ -50,6 +52,12 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto Literal0 = integerLiteral(equals(0));
   const auto Literal1 = integerLiteral(equals(1));
+
+  const auto StringLikeClass = cxxRecordDecl(
+      hasAnyName("::std::basic_string", "::std::basic_string_view",
+                 "::absl::string_view"));
+  const auto StringNpos = declRefExpr(
+      to(varDecl(hasName("npos"), hasDeclContext(StringLikeClass))));
 
   auto AddSimpleMatcher = [&](auto Matcher) {
     Finder->addMatcher(
@@ -94,12 +102,14 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
           .bind("negativeComparison"));
 
-  // Find membership tests based on `find() == end()`.
+  // Find membership tests based on `find() == end() or find() == npos`.
   AddSimpleMatcher(
-      binaryOperator(hasOperatorName("!="), hasOperands(FindCall, EndCall))
+      binaryOperator(hasOperatorName("!="),
+                     hasOperands(FindCall, anyOf(EndCall, StringNpos)))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasOperatorName("=="), hasOperands(FindCall, EndCall))
+      binaryOperator(hasOperatorName("=="),
+                     hasOperands(FindCall, anyOf(EndCall, StringNpos)))
           .bind("negativeComparison"));
 }
 
