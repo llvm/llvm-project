@@ -45,18 +45,6 @@ __unw_remove_dynamic_eh_frame_section(const void *) ORC_RT_WEAK_IMPORT;
 
 namespace {
 
-Error validatePointerSectionExtent(const char *SectionName,
-                                   const ExecutorAddrRange &SE) {
-  if (SE.size() % sizeof(uintptr_t)) {
-    std::ostringstream ErrMsg;
-    ErrMsg << std::hex << "Size of " << SectionName << " 0x"
-           << SE.Start.getValue() << " -- 0x" << SE.End.getValue()
-           << " is not a pointer multiple";
-    return make_error<StringError>(ErrMsg.str());
-  }
-  return Error::success();
-}
-
 struct TLSInfoEntry {
   unsigned long Key = 0;
   unsigned long DataAddress = 0;
