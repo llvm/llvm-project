@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(struct tm *, localtime, (const time_t *t_ptr)) {
   if (t_ptr == nullptr || *t_ptr > cpp::numeric_limits<int32_t>::max()) {
-      return nullptr;
+    return nullptr;
   }
 
   return time_utils::localtime(t_ptr);

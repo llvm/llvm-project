@@ -15,13 +15,27 @@
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
+#include "hdr/types/size_t.h"
+#include "hdr/types/struct_tm.h"
+#include "hdr/types/time_t.h"
+#include <stddef.h> // For size_t.
+#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "time_constants.h"
 #include "src/time/mktime.h"
+<<<<<<< HEAD
 #include "src/__support/CPP/limits.h"
 
+||||||| parent of e680eb5c7689 ([libc] implement localtime)
+#include "src/__support/CPP/limits.h"
+
+#include <stdint.h>
+
+=======
+
+>>>>>>> e680eb5c7689 ([libc] implement localtime)
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
@@ -113,8 +127,9 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
   return &result;
 }
 
-LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr, struct tm *result) {
-  //time_t time = *t;
+LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
+                                          struct tm *result) {
+  // time_t time = *t;
   int64_t t = *t_ptr;
 
   // Update the tm structure's year, month, day, etc. from seconds.
