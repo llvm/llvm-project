@@ -928,7 +928,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
 
     SDNode *Res;
-    if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
+    if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
+      Res =
+          CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+    } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
       Res = CurDAG->getMachineNode(
           Opc, DL, VT, Imm,
           CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));

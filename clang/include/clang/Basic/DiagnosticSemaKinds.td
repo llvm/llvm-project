@@ -12388,12 +12388,16 @@ def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match 
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
+def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used only on HLSL intangible type %1">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
+def err_hlsl_vector_compound_assignment_truncation : Error<
+  "left hand operand of type %0 to compound assignment cannot be truncated "
+  "when used with right hand operand of type %1">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;

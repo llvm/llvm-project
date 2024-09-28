@@ -268,6 +268,8 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
+  virtual ~MCRegisterInfo() {}
+
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
   void InitMCRegisterInfo(const MCRegisterDesc *D, unsigned NR, unsigned RA,

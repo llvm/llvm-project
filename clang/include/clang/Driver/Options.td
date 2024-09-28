@@ -1055,6 +1055,7 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
   MetaVarName<"<triple> <arg>">, Group<Link_Group>;
 def Xpreprocessor : Separate<["-"], "Xpreprocessor">, Group<Preprocessor_Group>,
@@ -1975,10 +1976,15 @@ def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fcolor_diagnostics>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fcolor_diagnostics>;
 def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fno_color_diagnostics>;
-def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fno_color_diagnostics>;
+def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Values<"auto,always,never">,
+  HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
   HelpText<"Use ANSI escape codes for diagnostics">,
@@ -2973,7 +2979,7 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
   MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
-                      open_cl.KeyPath #
+                      !strconcat("(", open_cl.KeyPath, " || ", hlsl.KeyPath, ")") #
                           " ? LangOptions::LaxVectorConversionKind::None" #
                           " : LangOptions::LaxVectorConversionKind::All">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,

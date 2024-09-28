@@ -13,7 +13,7 @@
 #define LLVM_SANDBOXIR_UTILS_H
 
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
 
 namespace llvm::sandboxir {
 

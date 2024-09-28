@@ -94,7 +94,6 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_amdgcn_workgroup_id_z", "amdgcn", amdgcn_workgroup_id_z},
       {"__builtin_arm_cdp", "arm", arm_cdp},
       {"__builtin_bpf_preserve_type_info", "bpf", bpf_preserve_type_info},
-      {"__builtin_hlsl_create_handle", "dx", dx_create_handle},
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},

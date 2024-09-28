@@ -31,6 +31,7 @@ class IntegerType;
 class FunctionType;
 class ArrayType;
 class StructType;
+class TargetExtType;
 class Module;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
