@@ -862,8 +862,8 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
       !foreach(arg, P_.DataArgs, arg.Type),    // vdata(VGPR) -- for store/atomic
       !if(P_.IsAtomic, [], [llvm_i32_ty]),     // dmask(imm)
       P_.AddrTypes,                            // vaddr(VGPR)
-      [llvm_v8i32_ty],                         // rsrc(SGPR)
-      !if(P_.IsSample, [llvm_v4i32_ty,         // samp(SGPR)
+      [llvm_any_ty],                           // rsrc(SGPR); Valid types: v4i32 and v8i32
+      !if(P_.IsSample, [llvm_any_ty,           // samp(SGPR);
                         llvm_i1_ty], []),      // unorm(imm)
       [llvm_i32_ty,                            // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
        llvm_i32_ty]),                          // auxiliary/cachepolicy(imm):

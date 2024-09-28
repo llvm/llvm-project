@@ -35,8 +35,6 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RDM);
   if (hwcap & HWCAP_AES)
     setCPUFeature(FEAT_AES);
-  if (hwcap & HWCAP_SHA1)
-    setCPUFeature(FEAT_SHA1);
   if (hwcap & HWCAP_SHA2)
     setCPUFeature(FEAT_SHA2);
   if (hwcap & HWCAP_JSCVT)

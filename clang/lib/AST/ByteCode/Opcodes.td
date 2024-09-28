@@ -106,7 +106,7 @@ def PtrTypeClass : TypeClass {
 }
 
 def NonPtrTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float]);
+  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float], [FixedPoint]);
 }
 
 def AllTypeClass : TypeClass {
@@ -674,6 +674,18 @@ def CastPointerIntegralAP : Opcode {
 def CastPointerIntegralAPS : Opcode {
   let Args = [ArgUint32];
 }
+def CastIntegralFixedPoint : Opcode {
+  let Types = [FixedSizeIntegralTypes];
+  let Args = [ArgUint32];
+  let HasGroup = 1;
+}
+def CastFloatingFixedPoint : Opcode {
+  let Args = [ArgUint32];
+}
+def CastFixedPointFloating : Opcode {
+  let Args = [ArgFltSemantics];
+}
+
 def PtrPtrCast : Opcode {
   let Args = [ArgBool];
 
