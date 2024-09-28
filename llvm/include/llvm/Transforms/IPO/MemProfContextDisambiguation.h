@@ -43,8 +43,13 @@ class MemProfContextDisambiguation
   // ThinLTO backend via opt (to simulate distributed ThinLTO).
   std::unique_ptr<ModuleSummaryIndex> ImportSummaryForTesting;
 
+  // Whether we are building with SamplePGO. This is needed for correctly
+  // updating profile metadata on speculatively promoted calls.
+  bool SamplePGO;
+
 public:
-  MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr);
+  MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
+                               bool SamplePGO = false);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
