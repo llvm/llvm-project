@@ -1463,8 +1463,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
 def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        AttrSizedOperandSegments,
        OffsetSizeAndStrideOpInterface,
-       // TODO: Cannot use an interface here atm, verify this manually for now.
-       // HasParent<"ParallelCombiningOpInterface">
+       HasParent<"ParallelCombiningOpInterface">
   ]> {
   let summary = [{
     Specify the tensor slice update of a single thread of a parent
