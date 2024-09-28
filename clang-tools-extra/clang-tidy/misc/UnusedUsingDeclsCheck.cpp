@@ -27,7 +27,7 @@ AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
 
 AST_MATCHER_P(Type, getTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
               DeclMatcher) {
-  if (const auto *ND = Node.getAsTagDecl())
+  if (const TagDecl *ND = Node.getAsTagDecl())
     return DeclMatcher.matches(*ND, Finder, Builder);
   return false;
 }
