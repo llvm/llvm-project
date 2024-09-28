@@ -9040,6 +9040,31 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                Style);
 }
 
+TEST_F(FormatTest, ExportBlockIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.ExportBlockIndentation = true;
+  verifyFormat("export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}\n",
+               "export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}\n",
+               Style);
+
+  Style.ExportBlockIndentation = false;
+  verifyFormat("export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}\n",
+               "export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}\n",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsBuilderPattern) {
   verifyFormat("return llvm::StringSwitch<Reference::Kind>(name)\n"
                "    .StartsWith(\".eh_frame_hdr\", ORDER_EH_FRAMEHDR)\n"

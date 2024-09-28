@@ -171,6 +171,8 @@ private:
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();
+  void parseCXXExportBlock();
+  void parseNamespaceOrExportBlock(unsigned AddLevels);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
