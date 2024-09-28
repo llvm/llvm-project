@@ -2321,7 +2321,7 @@ static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
   std::memcpy(&Sem, &FPS, sizeof(Sem));
 
   bool Overflow;
-  llvm::APFixedPoint IntResult =
+  llvm::APFixedPoint Result =
       llvm::APFixedPoint::getFromIntValue(Int.toAPSInt(), Sem, &Overflow);
 
   if (Overflow) {
@@ -2329,14 +2329,41 @@ static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
     if (S.checkingForUndefinedBehavior()) {
       S.getASTContext().getDiagnostics().Report(
           E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
-          << IntResult.toString() << E->getType();
+          << Result.toString() << E->getType();
     }
-    S.CCEDiag(E, diag::note_constexpr_overflow) << IntResult << E->getType();
+    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
     if (!S.noteUndefinedBehavior())
       return false;
   }
 
-  S.Stk.push<FixedPoint>(IntResult);
+  S.Stk.push<FixedPoint>(Result);
+  return true;
+}
+
+static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
+                                          uint32_t FPS) {
+  const auto &Float = S.Stk.pop<Floating>();
+
+  FixedPointSemantics Sem(0, 0, false, false, false);
+  std::memcpy(&Sem, &FPS, sizeof(Sem));
+
+  bool Overflow;
+  llvm::APFixedPoint Result =
+      llvm::APFixedPoint::getFromFloatValue(Float.getAPFloat(), Sem, &Overflow);
+
+  if (Overflow) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    if (S.checkingForUndefinedBehavior()) {
+      S.getASTContext().getDiagnostics().Report(
+          E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+          << Result.toString() << E->getType();
+    }
+    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
+    if (!S.noteUndefinedBehavior())
+      return false;
+  }
+
+  S.Stk.push<FixedPoint>(Result);
   return true;
 }
 
