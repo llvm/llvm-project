@@ -1050,8 +1050,7 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-extern unsigned struct_sock_fprog_sz;
-#  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
+#endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;
 
