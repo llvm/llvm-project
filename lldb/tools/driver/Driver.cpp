@@ -442,7 +442,6 @@ int Driver::MainLoop() {
   m_debugger.SetInputFileHandle(stdin, false);
 
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
-  m_debugger.SetShowInlineDiagnostics(true);
 
   struct winsize window_size;
   if ((isatty(STDIN_FILENO) != 0) &&

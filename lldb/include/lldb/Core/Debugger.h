@@ -364,10 +364,6 @@ public:
 
   const std::string &GetInstanceName() { return m_instance_name; }
 
-  bool GetShowInlineDiagnostics() const;
-
-  bool SetShowInlineDiagnostics(bool);
-
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
   void RunIOHandlers();

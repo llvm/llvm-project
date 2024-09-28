@@ -40,7 +40,7 @@ class MixedLanguagesTestCase(TestBase):
         self.runCmd("run")
         self.expect("thread backtrace", substrs=["`main", "lang=c"])
         # Make sure evaluation of C++11 fails.
-        self.expect("expr foo != nullptr", error=True, substrs=["error"])
+        self.expect("expr foo != nullptr", error=True, startstr="error")
 
         # Run to BP at foo (in foo.cpp) and test that the language is C++.
         self.runCmd("breakpoint set -n foo")
