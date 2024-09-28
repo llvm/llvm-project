@@ -810,27 +810,35 @@ static Value calculateGatherOffset(RewriterBase &rewriter,
 
 enum VectorMemoryAccessKind { ScalarBroadcast, Contiguous, Gather };
 
-/// Find the non-unit dim in a linalgOp.
-/// When executing this hook, it is expected that only one dim will be non-unit.
-/// Other cases (i.e. reading n-D vectors) should've been labelled as gather
-/// loads before calling this method. This is used for finding contiguous loads
-/// (represented as `tensor.extract`) within `linalg.generic` Ops. Note that
-/// this condition is expected to hold for statically shaped Linalg Ops only.
-static uint64_t getNonUnitLoopDim(LinalgOp linalgOp) {
-  uint64_t nonUnitDim = 0;
-  uint64_t countNonUnitDim = 0;
-  for (auto tripCount : llvm::enumerate(linalgOp.getStaticLoopRanges())) {
-    if (tripCount.value() != 1) {
-      nonUnitDim = tripCount.index();
-      countNonUnitDim++;
-    }
-  }
-
+/// Find the index of the trailing non-unit dim in linalgOp. This hook is used
+/// when checking whether `tensor.extract` Op (within a `linalg.generic` Op)
+/// represents a contiguous load operation.
+///
+/// Note that when calling this hook, it is assumed that the output vector is
+/// effectively 1D. Other cases (i.e. reading n-D vectors) should've been
+/// labelled as a gather load before entering this method.
+///
+/// Following on from the above, it is assumed that:
+///   * for statically shaped loops, when no masks are used, only one dim is !=
+///   1 (that's what the shape of the output vector is based on).
+///   * for dynamically shaped loops, there might be more non-unit dims
+///   as the output vector type is user-specified.
+///
+/// TODO: Statically shaped loops + vector masking
+static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
+  SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
   assert(linalgOp.hasDynamicShape() ||
-         countNonUnitDim == 1 && "For statically shaped Linalg Ops, only one "
-                                 "non-unit loop dim is expected");
-  (void)countNonUnitDim;
-  return nonUnitDim;
+         llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) ==
+                 1 &&
+             "For statically shaped Linalg Ops, only one "
+             "non-unit loop dim is expected");
+
+  size_t idx = loopRanges.size() - 1;
+  for (; idx >= 0; idx--)
+    if (loopRanges[idx] != 1)
+      break;
+
+  return idx;
 }
 
 /// Checks whether `val` can be used for calculating a loop invariant index.
@@ -854,11 +862,11 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
   assert(defOp && "This is neither a block argument nor an operation result");
 
   // IndexOp is loop invariant as long as its result remains constant across
-  // iterations. Given the assumptions on the loop ranges above, only the
-  // trailing loop dim ever changes.
-  auto trailingLoopDim = linalgOp.getStaticLoopRanges().size() - 1;
-  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp))
-    return (indexOp.getDim() != trailingLoopDim);
+  // iterations. Note that for dynamic shapes, the corresponding dim will also
+  // be conservatively treated as != 1.
+  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
+    return linalgOp.getStaticLoopRanges()[indexOp.getDim()] == 1;
+  }
 
   auto *ancestor = block->findAncestorOpInBlock(*defOp);
 
@@ -877,7 +885,7 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
   return result;
 }
 
-/// Check whether \p val could be used for calculating the trailing index for a
+/// Check whether `val` could be used for calculating the trailing index for a
 /// contiguous load operation.
 ///
 /// There are currently 3 types of values that are allowed here:
@@ -886,13 +894,14 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
 ///   3. results of basic arithmetic operations (linear and continuous)
 ///      involving 1., 2. and 3.
 /// This method returns True if indeed only such values are used in calculating
-/// \p val.
+/// `val.`
 ///
 /// Additionally, the trailing index for a contiguous load operation should
 /// increment by 1 with every loop iteration, i.e. be based on:
 ///   * `linalg.index <dim>` ,
-/// where <dim> is the trailing dim of the iteration space. \p foundIndexOp is
-/// updated to `true` when such an op is found.
+/// where <dim> is the trailing non-unit dim of the iteration space (this way,
+/// `linalg.index <dim>` increments by 1 with every loop iteration).
+/// `foundIndexOp` is updated to `true` when such Op is found.
 static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
                                 bool &foundIndexOp, VectorType resType) {
 
@@ -912,12 +921,10 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   Operation *defOp = val.getDefiningOp();
   assert(defOp && "This is neither a block argument nor an operation result");
 
-  // Given the assumption on the loop ranges above, we expect only 1 non-unit
-  // loop dim.
-  auto nonUnitLoopDim = getNonUnitLoopDim(linalgOp);
-
   if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    foundIndexOp = (indexOp.getDim() == nonUnitLoopDim);
+    auto loopDimThatIncrementsByOne = getTrailingNonUnitLoopDimIdx(linalgOp);
+
+    foundIndexOp = (indexOp.getDim() == loopDimThatIncrementsByOne);
     return true;
   }
 
@@ -1012,7 +1019,10 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
   bool foundIndexOp = false;
   bool isContiguousLoad = isContiguousLoadIdx(linalgOp, extractOpTrailingIdx,
                                               foundIndexOp, resType);
-  isContiguousLoad &= foundIndexOp;
+  // TODO: Support generating contiguous loads for column vectors - that will
+  // require adding a permutation map to tranfer_read Ops.
+  bool isRowVector = resType.getShape().back() != 1;
+  isContiguousLoad &= (foundIndexOp && isRowVector);
 
   if (isContiguousLoad) {
     LDBG("Found contigous load: " << extractOp);
@@ -1072,6 +1082,11 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //  a. scalar loads + broadcast,
   //  b. contiguous loads.
   // Both cases use vector.transfer_read.
+
+  assert(llvm::count_if(resultType.getShape(),
+                        [](uint64_t dim) { return dim != 1; }) &&
+         "Contiguous loads and scalar loads + broadcast only support 1-D "
+         "vectors ATM!");
 
   // Collect indices for `vector.transfer_read`. At this point, the indices will
   // either be scalars or would have been broadcast to vectors matching the
