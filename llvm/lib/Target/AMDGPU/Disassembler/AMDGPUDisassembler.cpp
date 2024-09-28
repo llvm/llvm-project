@@ -1038,18 +1038,18 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     return;
 
   // Widen the register to the correct number of enabled channels.
-  unsigned NewVdata = AMDGPU::NoRegister;
+  MCRegister NewVdata;
   if (DstSize != Info->VDataDwords) {
     auto DataRCID = MCII->get(NewOpcode).operands()[VDataIdx].RegClass;
 
     // Get first subregister of VData
-    unsigned Vdata0 = MI.getOperand(VDataIdx).getReg();
-    unsigned VdataSub0 = MRI.getSubReg(Vdata0, AMDGPU::sub0);
+    MCRegister Vdata0 = MI.getOperand(VDataIdx).getReg();
+    MCRegister VdataSub0 = MRI.getSubReg(Vdata0, AMDGPU::sub0);
     Vdata0 = (VdataSub0 != 0)? VdataSub0 : Vdata0;
 
     NewVdata = MRI.getMatchingSuperReg(Vdata0, AMDGPU::sub0,
                                        &MRI.getRegClass(DataRCID));
-    if (NewVdata == AMDGPU::NoRegister) {
+    if (!NewVdata) {
       // It's possible to encode this such that the low register + enabled
       // components exceeds the register count.
       return;
@@ -1059,11 +1059,11 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   // If not using NSA on GFX10+, widen vaddr0 address register to correct size.
   // If using partial NSA on GFX11+ widen last address register.
   int VAddrSAIdx = IsPartialNSA ? (RsrcIdx - 1) : VAddr0Idx;
-  unsigned NewVAddrSA = AMDGPU::NoRegister;
+  MCRegister NewVAddrSA;
   if (STI.hasFeature(AMDGPU::FeatureNSAEncoding) && (!IsNSA || IsPartialNSA) &&
       AddrSize != Info->VAddrDwords) {
-    unsigned VAddrSA = MI.getOperand(VAddrSAIdx).getReg();
-    unsigned VAddrSubSA = MRI.getSubReg(VAddrSA, AMDGPU::sub0);
+    MCRegister VAddrSA = MI.getOperand(VAddrSAIdx).getReg();
+    MCRegister VAddrSubSA = MRI.getSubReg(VAddrSA, AMDGPU::sub0);
     VAddrSA = VAddrSubSA ? VAddrSubSA : VAddrSA;
 
     auto AddrRCID = MCII->get(NewOpcode).operands()[VAddrSAIdx].RegClass;
