@@ -26,10 +26,10 @@
 
 struct ThrowOnMove {
   ThrowOnMove();
-  ThrowOnMove(const ThrowOnMove&) _NOEXCEPT_(false);
-  ThrowOnMove(ThrowOnMove&&) _NOEXCEPT_(false);
-  ThrowOnMove& operator=(ThrowOnMove&&) _NOEXCEPT_(false);
-  ThrowOnMove& operator=(const ThrowOnMove&) _NOEXCEPT_(false);
+  ThrowOnMove(const ThrowOnMove&) TEST_NOEXCEPT_COND(false);
+  ThrowOnMove(ThrowOnMove&&) TEST_NOEXCEPT_COND(false);
+  ThrowOnMove& operator=(ThrowOnMove&&) TEST_NOEXCEPT_COND(false);
+  ThrowOnMove& operator=(const ThrowOnMove&) TEST_NOEXCEPT_COND(false);
 
   bool operator<(ThrowOnMove const&) const;
   bool operator==(ThrowOnMove const&) const;
@@ -37,9 +37,9 @@ struct ThrowOnMove {
 
 struct NonCopyThrowOnMove {
   NonCopyThrowOnMove();
-  NonCopyThrowOnMove(ThrowOnMove&&) _NOEXCEPT_(false);
+  NonCopyThrowOnMove(NonCopyThrowOnMove&&) TEST_NOEXCEPT_COND(false);
   NonCopyThrowOnMove(const NonCopyThrowOnMove&) = delete;
-  NonCopyThrowOnMove& operator=(ThrowOnMove&&) _NOEXCEPT_(false);
+  NonCopyThrowOnMove& operator=(NonCopyThrowOnMove&&) TEST_NOEXCEPT_COND(false);
   NonCopyThrowOnMove& operator=(const NonCopyThrowOnMove&) = delete;
 
   bool operator<(NonCopyThrowOnMove const&) const;
@@ -48,126 +48,116 @@ struct NonCopyThrowOnMove {
 
 struct ThrowingHash {
   template <class T>
-  std::size_t operator()(const T&) const _NOEXCEPT_(false);
+  std::size_t operator()(const T&) const TEST_NOEXCEPT_COND(false);
 };
 
 struct NoThrowHash {
   template <class T>
-  std::size_t operator()(const T&) const _NOEXCEPT;
+  std::size_t operator()(const T&) const TEST_NOEXCEPT;
 };
 
-template <class T, bool Expected>
-void test_emplacement_strong_exception() {
-  static_assert(std::__container_traits<T>::__emplacement_has_strong_exception_safety_guarantee::value == Expected, "");
+template <bool Expected, class Container>
+void check() {
+  static_assert(
+      std::__container_traits<Container>::__emplacement_has_strong_exception_safety_guarantee == Expected, "");
 }
 
 void test() {
-  test_emplacement_strong_exception<std::list<int>, true>();
-  test_emplacement_strong_exception<std::list<int, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::list<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::list<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::list<NonCopyThrowOnMove>, true>();
+  check<true, std::list<int> >();
+  check<true, std::list<int, test_allocator<int> > >();
+  check<true, std::list<MoveOnly> >();
+  check<true, std::list<ThrowOnMove> >();
+  check<true, std::list<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::forward_list<int>, true>();
-  test_emplacement_strong_exception<std::forward_list<int, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::forward_list<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::forward_list<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::forward_list<NonCopyThrowOnMove>, true>();
+  check<true, std::forward_list<int> >();
+  check<true, std::forward_list<int, test_allocator<int> > >();
+  check<true, std::forward_list<MoveOnly> >();
+  check<true, std::forward_list<ThrowOnMove> >();
+  check<true, std::forward_list<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::deque<int>, true>();
-  test_emplacement_strong_exception<std::deque<int, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::deque<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::deque<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::deque<NonCopyThrowOnMove>, false>();
+  check<true, std::deque<int> >();
+  check<true, std::deque<int, test_allocator<int> > >();
+  check<true, std::deque<MoveOnly> >();
+  check<true, std::deque<ThrowOnMove> >();
+  check<false, std::deque<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::vector<int>, true>();
-  test_emplacement_strong_exception<std::vector<int, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::vector<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::vector<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::vector<NonCopyThrowOnMove>, false>();
+  check<true, std::vector<int> >();
+  check<true, std::vector<int, test_allocator<int> > >();
+  check<true, std::vector<MoveOnly> >();
+  check<true, std::vector<ThrowOnMove> >();
+  check<false, std::vector<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::set<int>, true>();
-  test_emplacement_strong_exception<std::set<int, std::less<int>, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::set<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::set<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::set<NonCopyThrowOnMove>, true>();
+  check<true, std::set<int> >();
+  check<true, std::set<int, std::less<int>, test_allocator<int> > >();
+  check<true, std::set<MoveOnly> >();
+  check<true, std::set<ThrowOnMove> >();
+  check<true, std::set<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::multiset<int>, true>();
-  test_emplacement_strong_exception<std::multiset<int, std::less<int>, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::multiset<MoveOnly>, true>();
-  test_emplacement_strong_exception<std::multiset<ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::multiset<NonCopyThrowOnMove>, true>();
+  check<true, std::multiset<int> >();
+  check<true, std::multiset<int, std::less<int>, test_allocator<int> > >();
+  check<true, std::multiset<MoveOnly> >();
+  check<true, std::multiset<ThrowOnMove> >();
+  check<true, std::multiset<NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::map<int, int>, true>();
-  test_emplacement_strong_exception<std::map<int, int, std::less<int>, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::map<MoveOnly, MoveOnly>, true>();
-  test_emplacement_strong_exception<std::map<ThrowOnMove, ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::map<NonCopyThrowOnMove, NonCopyThrowOnMove>, true>();
+  check<true, std::map<int, int> >();
+  check<true, std::map<int, int, std::less<int>, test_allocator<int> > >();
+  check<true, std::map<MoveOnly, MoveOnly> >();
+  check<true, std::map<ThrowOnMove, ThrowOnMove> >();
+  check<true, std::map<NonCopyThrowOnMove, NonCopyThrowOnMove> >();
 
-  test_emplacement_strong_exception<std::multimap<int, int>, true>();
-  test_emplacement_strong_exception<std::multimap<int, int, std::less<int>, test_allocator<int> >, true>();
-  test_emplacement_strong_exception<std::multimap<MoveOnly, MoveOnly>, true>();
-  test_emplacement_strong_exception<std::multimap<ThrowOnMove, ThrowOnMove>, true>();
-  test_emplacement_strong_exception<std::multimap<NonCopyThrowOnMove, NonCopyThrowOnMove>, true>();
+  check<true, std::multimap<int, int> >();
+  check<true, std::multimap<int, int, std::less<int>, test_allocator<int> > >();
+  check<true, std::multimap<MoveOnly, MoveOnly> >();
+  check<true, std::multimap<ThrowOnMove, ThrowOnMove> >();
+  check<true, std::multimap<NonCopyThrowOnMove, NonCopyThrowOnMove> >();
 
 #if TEST_STD_VER < 11
-  test_emplacement_strong_exception<std::unordered_set<int>, false>();
-  test_emplacement_strong_exception<std::unordered_set<int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    false>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly, NoThrowHash>, false>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly, ThrowingHash>, false>();
+  check<false, std::unordered_set<int> >();
+  check<false, std::unordered_set<int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_set<MoveOnly> >();
+  check<false, std::unordered_set<MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_set<MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_multiset<int>, false>();
-  test_emplacement_strong_exception<std::unordered_multiset<int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    false>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly, NoThrowHash>, false>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly, ThrowingHash>, false>();
+  check<false, std::unordered_multiset<int> >();
+  check<false, std::unordered_multiset<int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_multiset<MoveOnly> >();
+  check<false, std::unordered_multiset<MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_multiset<MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_map<int, int>, false>();
-  test_emplacement_strong_exception<std::unordered_map<int, int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    false>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly, NoThrowHash>, false>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly, ThrowingHash>, false>();
+  check<false, std::unordered_map<int, int> >();
+  check<false, std::unordered_map<int, int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_map<MoveOnly, MoveOnly> >();
+  check<false, std::unordered_map<MoveOnly, MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_map<MoveOnly, MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_multimap<int, int>, false>();
-  test_emplacement_strong_exception<
-      std::unordered_multimap<int, int, std::hash<int>, std::less<int>, test_allocator<int> >,
-      false>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly, NoThrowHash>, false>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly, ThrowingHash>, false>();
+  check<false, std::unordered_multimap<int, int> >();
+  check<false, std::unordered_multimap<int, int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_multimap<MoveOnly, MoveOnly> >();
+  check<false, std::unordered_multimap<MoveOnly, MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_multimap<MoveOnly, MoveOnly, ThrowingHash> >();
 #else
+  check<true, std::unordered_set<int> >();
+  check<true, std::unordered_set<int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_set<MoveOnly> >();
+  check<true, std::unordered_set<MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_set<MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_set<int>, true>();
-  test_emplacement_strong_exception<std::unordered_set<int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    true>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly, NoThrowHash>, true>();
-  test_emplacement_strong_exception<std::unordered_set<MoveOnly, ThrowingHash>, false>();
+  check<true, std::unordered_multiset<int> >();
+  check<true, std::unordered_multiset<int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_multiset<MoveOnly> >();
+  check<true, std::unordered_multiset<MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_multiset<MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_multiset<int>, true>();
-  test_emplacement_strong_exception<std::unordered_multiset<int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    true>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly, NoThrowHash>, true>();
-  test_emplacement_strong_exception<std::unordered_multiset<MoveOnly, ThrowingHash>, false>();
+  check<true, std::unordered_map<int, int> >();
+  check<true, std::unordered_map<int, int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_map<MoveOnly, MoveOnly> >();
+  check<true, std::unordered_map<MoveOnly, MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_map<MoveOnly, MoveOnly, ThrowingHash> >();
 
-  test_emplacement_strong_exception<std::unordered_map<int, int>, true>();
-  test_emplacement_strong_exception<std::unordered_map<int, int, std::hash<int>, std::less<int>, test_allocator<int> >,
-                                    true>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly, NoThrowHash>, true>();
-  test_emplacement_strong_exception<std::unordered_map<MoveOnly, MoveOnly, ThrowingHash>, false>();
-
-  test_emplacement_strong_exception<std::unordered_multimap<int, int>, true>();
-  test_emplacement_strong_exception<
-      std::unordered_multimap<int, int, std::hash<int>, std::less<int>, test_allocator<int> >,
-      true>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly>, false>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly, NoThrowHash>, true>();
-  test_emplacement_strong_exception<std::unordered_multimap<MoveOnly, MoveOnly, ThrowingHash>, false>();
+  check<true, std::unordered_multimap<int, int> >();
+  check<true, std::unordered_multimap<int, int, std::hash<int>, std::less<int>, test_allocator<int> > >();
+  check<false, std::unordered_multimap<MoveOnly, MoveOnly> >();
+  check<true, std::unordered_multimap<MoveOnly, MoveOnly, NoThrowHash> >();
+  check<false, std::unordered_multimap<MoveOnly, MoveOnly, ThrowingHash> >();
 #endif
 }

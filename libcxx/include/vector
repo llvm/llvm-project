@@ -3015,9 +3015,8 @@ struct __container_traits<vector<_Tp, _Allocator> > {
   //  inserting a single element at the end and T is Cpp17CopyInsertable or is_nothrow_move_constructible_v<T> is true,
   //  there are no effects. Otherwise, if an exception is thrown by the move constructor of a non-Cpp17CopyInsertable T,
   //  the effects are unspecified.
-  using __emplacement_has_strong_exception_safety_guarantee =
-      _Or<is_nothrow_move_constructible<_Tp>,
-          __is_cpp17_copy_insertable<typename vector<_Tp, _Allocator>::allocator_type> >;
+  static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
+      _Or<is_nothrow_move_constructible<_Tp>, __is_cpp17_copy_insertable<_Allocator> >::value;
 };
 
 _LIBCPP_END_NAMESPACE_STD
