@@ -53022,9 +53022,10 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
 
   // Check if both inputs are extensions, which will be removed by truncation.
   auto isOpTruncateFree = [](SDValue Op) {
-    return (Op.getOpcode() == ISD::SIGN_EXTEND ||
-            Op.getOpcode() == ISD::ZERO_EXTEND) &&
-           Op.getOperand(0).getScalarValueSizeInBits() <= 16;
+    if (Op.getOpcode() == ISD::SIGN_EXTEND ||
+        Op.getOpcode() == ISD::ZERO_EXTEND)
+      return Op.getOperand(0).getScalarValueSizeInBits() <= 16;
+    return ISD::isBuildVectorOfConstantSDNodes(Op.getNode());
   };
   bool IsTruncateFree = isOpTruncateFree(LHS) && isOpTruncateFree(RHS);
 
