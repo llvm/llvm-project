@@ -12,7 +12,7 @@
 #include "test/src/time/TmHelper.h"
 
 TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
-  const time_t t_ptr = 1;
+  const time_t t_ptr = 0;
   static struct tm input = (struct tm){.tm_sec = 0,
                                        .tm_min = 0,
                                        .tm_hour = 0,
@@ -28,7 +28,7 @@ TEST(LlvmLibcLocaltimeR, ValidUnixTimestamp0) {
   ASSERT_EQ(1, result->tm_mday);
   ASSERT_EQ(2, result->tm_hour);
   ASSERT_EQ(0, result->tm_min);
-  ASSERT_EQ(1, result->tm_sec);
+  ASSERT_EQ(0, result->tm_sec);
   ASSERT_EQ(4, result->tm_wday);
   ASSERT_EQ(0, result->tm_yday);
   ASSERT_EQ(0, result->tm_isdst);
