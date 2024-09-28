@@ -4318,8 +4318,8 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
     //  * %y being poison implies %x is also poison.
     //  * %x cannot be the saturating value (e.g. zero for umin).
     if (::impliesPoison(Ops[i], Ops[i - 1]) ||
-        (isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
-                                         SaturationPoint))) {
+        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, Ops[i - 1],
+                                        SaturationPoint)) {
       SmallVector<const SCEV *> SeqOps = {Ops[i - 1], Ops[i]};
       Ops[i - 1] = getMinMaxExpr(
           SCEVSequentialMinMaxExpr::getEquivalentNonSequentialSCEVType(Kind),

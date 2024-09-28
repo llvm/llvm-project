@@ -305,9 +305,6 @@ public:
   /// location and their operands are defined at this location.
   bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint) const;
 
-  static bool isSafeToExpand(const SCEV *S, bool CanonicalMode,
-                             ScalarEvolution &SE);
-
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   Value *expandCodeFor(const SCEV *SH, Type *Ty, BasicBlock::iterator I);

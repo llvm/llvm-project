@@ -664,8 +664,10 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
   }
 
-  Value *RHS = expand(S->getRHS());
-  if (SafeUDivMode && !SE.isKnownNonZero(S->getRHS())) {
+  const SCEV *RHSExpr = S->getRHS();
+  Value *RHS = expand(RHSExpr);
+  if (SafeUDivMode &&
+      (!isa<SCEVConstant>(RHSExpr) || SE.isKnownNonZero(RHSExpr))) {
     if (!isa<SCEVConstant>(S->getRHS()))
       RHS = Builder.CreateFreeze(RHS);
     RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
@@ -2325,15 +2327,10 @@ struct SCEVFindUnsafe {
 };
 } // namespace
 
-bool SCEVExpander::isSafeToExpand(const SCEV *S, bool CanonicalMode,
-                                  ScalarEvolution &SE) {
+bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
   SCEVFindUnsafe Search(SE, CanonicalMode);
   visitAll(S, Search);
   return !Search.IsUnsafe;
-}
-
-bool SCEVExpander::isSafeToExpand(const SCEV *S) const {
-  return isSafeToExpand(S, CanonicalMode, SE);
 }
 
 bool SCEVExpander::isSafeToExpandAt(const SCEV *S,
