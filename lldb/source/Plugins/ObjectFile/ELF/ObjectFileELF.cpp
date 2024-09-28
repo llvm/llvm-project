@@ -44,6 +44,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "lldb/Target/Process.h"
+
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -2990,15 +2992,31 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
+  bool found_dynsym = false;
   if (!symtab ||
       GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
     if (dynsym) {
+      found_dynsym = true;
       auto [num_symbols, address_class_map] =
           ParseSymbolTable(&lldb_symtab, symbol_id, dynsym);
       symbol_id += num_symbols;
+      m_address_class_map.merge(address_class_map);
+    }
+  }
+  if (!found_dynsym) {
+    // Try and read the dynamic symbol table from the .dynamic section.
+    uint32_t num_symbols = 0;
+    std::optional<DataExtractor> symtab_data =
+        GetDynsymDataFromDynamic(num_symbols);
+    std::optional<DataExtractor> strtab_data = GetDynstrData();
+    if (symtab_data && strtab_data) {
+      auto [num_symbols_parsed, address_class_map] =
+          ParseSymbols(&lldb_symtab, symbol_id, section_list, num_symbols,
+                        symtab_data.value(), strtab_data.value());
+      symbol_id += num_symbols_parsed;
       m_address_class_map.merge(address_class_map);
     }
   }
@@ -3811,6 +3829,33 @@ ObjectFileELF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
                                                          Offset);
 }
 
+std::optional<DataExtractor>
+ObjectFileELF::ReadDataFromDynamic(const ELFDynamic *dyn, uint64_t length,
+                                   uint64_t offset) {
+  // ELFDynamic values contain a "d_ptr" member that will be a load address if
+  // we have an ELF file read from memory, or it will be a file address if it
+  // was read from a ELF file. This function will correctly fetch data pointed
+  // to by the ELFDynamic::d_ptr, or return std::nullopt if the data isn't
+  // available.
+  const lldb::addr_t d_ptr_addr = dyn->d_ptr + offset;
+  if (ProcessSP process_sp = m_process_wp.lock()) {
+    if (DataBufferSP data_sp = ReadMemory(process_sp, d_ptr_addr, length))
+      return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
+  } else {
+    // We have an ELF file with no section headers or we didn't find the
+    // .dynamic section. Try and find the .dynstr section.
+    Address addr;
+    if (!addr.ResolveAddressUsingFileSections(d_ptr_addr, GetSectionList()))
+      return std::nullopt;
+    DataExtractor data;
+    addr.GetSection()->GetSectionData(data);
+    return DataExtractor(data,
+                         d_ptr_addr - addr.GetSection()->GetFileAddress(),
+                         length);
+  }
+  return std::nullopt;
+}
+
 std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   if (SectionList *section_list = GetSectionList()) {
     // Find the SHT_DYNAMIC section.
@@ -3846,23 +3891,7 @@ std::optional<DataExtractor> ObjectFileELF::GetDynstrData() {
   if (strtab == nullptr || strsz == nullptr)
     return std::nullopt;
 
-  if (ProcessSP process_sp = m_process_wp.lock()) {
-    if (DataBufferSP data_sp =
-            ReadMemory(process_sp, strtab->d_ptr, strsz->d_val))
-      return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
-  } else {
-    // We have an ELF file with no section headers or we didn't find the
-    // .dynamic section. Try and find the .dynstr section.
-    Address addr;
-    if (addr.ResolveAddressUsingFileSections(strtab->d_ptr, GetSectionList())) {
-      DataExtractor data;
-      addr.GetSection()->GetSectionData(data);
-      return DataExtractor(data,
-                           strtab->d_ptr - addr.GetSection()->GetFileAddress(),
-                           strsz->d_val);
-    }
-  }
-  return std::nullopt;
+  return ReadDataFromDynamic(strtab, strsz->d_val, /*offset=*/0);
 }
 
 std::optional<lldb_private::DataExtractor> ObjectFileELF::GetDynamicData() {
@@ -3894,4 +3923,104 @@ std::optional<lldb_private::DataExtractor> ObjectFileELF::GetDynamicData() {
     }
   }
   return std::nullopt;
+}
+
+
+std::optional<DataExtractor>
+ObjectFileELF::GetDynsymDataFromDynamic(uint32_t &num_symbols) {
+  // Every ELF file which represents an executable or shared library has
+  // mandatory .dynamic entries. The DT_SYMTAB value contains a pointer to the
+  // symbol table, and DT_SYMENT contains the size of a symbol table entry.
+  // We then can use either the DT_HASH or DT_GNU_HASH to find the number of
+  // symbols in the symbol table as the symbol count is not stored in the
+  // .dynamic section as a key/value pair.
+  //
+  // When loading and ELF file from memory, only the program headers end up
+  // being mapped into memory, and we can find these values in the PT_DYNAMIC
+  // segment.
+  num_symbols = 0;
+  // Get the process in case this is an in memory ELF file.
+  ProcessSP process_sp(m_process_wp.lock());
+  const ELFDynamic *symtab = FindDynamicSymbol(DT_SYMTAB);
+  const ELFDynamic *syment = FindDynamicSymbol(DT_SYMENT);
+  const ELFDynamic *hash = FindDynamicSymbol(DT_HASH);
+  const ELFDynamic *gnu_hash = FindDynamicSymbol(DT_GNU_HASH);
+  // DT_SYMTAB and DT_SYMENT are mandatory.
+  if (symtab == nullptr || syment == nullptr)
+    return std::nullopt;
+  // We must have either a DT_HASH or a DT_GNU_HASH.
+  if (hash == nullptr && gnu_hash == nullptr)
+    return std::nullopt;
+  // The number of symbols in the symbol table is the number of entries in the
+  // symbol table divided by the size of each symbol table entry.
+  // We must figure out the number of symbols in the symbol table using the
+  // DT_HASH or the DT_GNU_HASH as the number of symbols isn't stored anywhere
+  // in the .dynamic section.
+
+  lldb::offset_t offset;
+  if (hash) {
+    // The DT_HASH header contains the number of symbols in the "nchain"
+    // member. The header looks like this:
+    // struct DT_HASH_HEADER {
+    //   uint32_t nbucket;
+    //   uint32_t nchain;
+    // };
+    if (auto data = ReadDataFromDynamic(hash, 8)) {
+      offset = 4;
+      num_symbols = data->GetU32(&offset);
+    }
+  }
+  if (num_symbols == 0 && gnu_hash) {
+    struct DT_GNU_HASH_HEADER {
+      uint32_t nbuckets = 0;
+      uint32_t symoffset = 0;
+      uint32_t bloom_size = 0;
+      uint32_t bloom_shift = 0;
+    };
+    if (auto data = ReadDataFromDynamic(gnu_hash, sizeof(DT_GNU_HASH_HEADER))) {
+      offset = 0;
+      DT_GNU_HASH_HEADER header;
+      header.nbuckets = data->GetU32(&offset);
+      header.symoffset = data->GetU32(&offset);
+      header.bloom_size = data->GetU32(&offset);
+      header.bloom_shift = data->GetU32(&offset);
+      const size_t addr_size = GetAddressByteSize();
+      const addr_t buckets_offset =
+          sizeof(DT_GNU_HASH_HEADER) + addr_size * header.bloom_size;
+      std::vector<uint32_t> buckets;
+      if (auto bucket_data = ReadDataFromDynamic(gnu_hash, header.nbuckets * 4, buckets_offset)) {
+        offset = 0;
+        for (uint32_t i = 0; i < header.nbuckets; ++i)
+          buckets.push_back(bucket_data->GetU32(&offset));
+        // Locate the chain that handles the largest index bucket.
+        uint32_t last_symbol = 0;
+        for (uint32_t bucket_value : buckets)
+          last_symbol = std::max(bucket_value, last_symbol);
+        if (last_symbol < header.symoffset) {
+          num_symbols = header.symoffset;
+        } else {
+          // Walk the bucket's chain to add the chain length to the total.
+          const addr_t chains_base_offset = buckets_offset + header.nbuckets * 4;
+          for (;;) {
+            if (auto chain_entry_data = ReadDataFromDynamic(gnu_hash, 4, chains_base_offset + (last_symbol - header.symoffset) * 4)) {
+              offset = 0;
+              uint32_t chain_entry = chain_entry_data->GetU32(&offset);
+              ++last_symbol;
+              // If the low bit is set, this entry is the end of the chain.
+              if (chain_entry & 1)
+                break;
+            } else {
+              break;
+            }
+          }
+          num_symbols = last_symbol;
+        }
+      }
+    }
+    if (num_symbols > 0)
+      ++num_symbols; // First symbol is always all zeros
+  }
+  if (num_symbols == 0)
+    return std::nullopt;
+  return ReadDataFromDynamic(symtab, syment->d_val * num_symbols);
 }
