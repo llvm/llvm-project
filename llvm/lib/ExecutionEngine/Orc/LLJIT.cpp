@@ -621,7 +621,9 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       [](const JITDylibSearchOrder &SO) { return SO; });
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
-  if (ES.getTargetTriple().isOSBinFormatMachO()) {
+  const Triple &TT = ES.getTargetTriple();
+  if (TT.isOSBinFormatMachO() ||
+      TT.isOSBinFormatELF()) {
     if (InitializedDylib.contains(&JD)) {
       WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
       dlupdate = true;
@@ -640,7 +642,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       else if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
-      return Error::success();
+      return E;
     }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
