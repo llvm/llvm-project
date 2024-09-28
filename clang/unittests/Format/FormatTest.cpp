@@ -9046,22 +9046,22 @@ TEST_F(FormatTest, ExportBlockIndentation) {
   verifyFormat("export {\n"
                "  int x;\n"
                "  int y;\n"
-               "}\n",
+               "}",
                "export {\n"
-               "  int x;\n"
-               "  int y;\n"
-               "}\n",
+               "int x;\n"
+               "int y;\n"
+               "}",
                Style);
 
   Style.ExportBlockIndentation = false;
   verifyFormat("export {\n"
-               "  int x;\n"
-               "  int y;\n"
-               "}\n",
-               "export {\n"
                "int x;\n"
                "int y;\n"
-               "}\n",
+               "}",
+               "export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
                Style);
 }
 
@@ -26613,10 +26613,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
                "  int foo;\n"
                "};",
                Style);
-  verifyFormat("export {\n"
-               "  int foo;\n"
-               "};",
-               Style);
+  verifyFormat("export { int foo; };", Style);
   verifyFormat("export export char const *hello() { return \"hello\"; }");
 
   verifyFormat("import bar;", Style);
