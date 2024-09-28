@@ -3129,7 +3129,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ClangIRVerifyDiags = true;
 
   if (Args.hasArg(OPT_fclangir_call_conv_lowering))
-    Opts.ClangIREnableCallConvLowering = true;
+    Opts.ClangIRCallConvLowering = true;
 
   if (Args.hasArg(OPT_fclangir_analysis_only))
     Opts.ClangIRAnalysisOnly = true;

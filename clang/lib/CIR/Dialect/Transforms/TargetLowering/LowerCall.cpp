@@ -23,9 +23,9 @@ const LowerFunctionInfo &
 arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
                             const OperandRange &args, const FuncType fnType,
                             unsigned numExtraRequiredArgs, bool chainCall) {
-  assert(args.size() >= numExtraRequiredArgs);
+  cir_tl_assert(args.size() >= numExtraRequiredArgs);
 
-  assert(!::cir::MissingFeatures::extParamInfo());
+  cir_tl_assert(!::cir::MissingFeatures::extParamInfo());
 
   // In most cases, there are no optional arguments.
   RequiredArgs required = RequiredArgs::All;
@@ -35,7 +35,7 @@ arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
   // FIXME(cir): Properly check if function is no-proto.
   if (/*IsPrototypedFunction=*/true) {
     if (fnType.isVarArg())
-      llvm_unreachable("NYI");
+      cir_assert_or_abort(!::cir::MissingFeatures::isVarArg(), "NYI");
 
     if (::cir::MissingFeatures::extParamInfo())
       llvm_unreachable("NYI");
@@ -45,7 +45,7 @@ arrangeFreeFunctionLikeCall(LowerTypes &LT, LowerModule &LM,
   // its skipped here since it requires CodeGen info. Maybe this information
   // could be embbed  in the FuncOp during CIRGen.
 
-  assert(!::cir::MissingFeatures::chainCall() && !chainCall && "NYI");
+  cir_tl_assert(!::cir::MissingFeatures::chainCall() && !chainCall && "NYI");
   FnInfoOpts opts = chainCall ? FnInfoOpts::IsChainCall : FnInfoOpts::None;
   return LT.arrangeLLVMFunctionInfo(fnType.getReturnType(), opts,
                                     fnType.getInputs(), required);
@@ -60,7 +60,7 @@ static void appendParameterTypes(SmallVectorImpl<Type> &prefix, FuncType fnTy) {
     return;
   }
 
-  assert(MissingFeatures::extParamInfo());
+  cir_tl_assert(MissingFeatures::extParamInfo());
   llvm_unreachable("NYI");
 }
 
@@ -74,11 +74,11 @@ static void appendParameterTypes(SmallVectorImpl<Type> &prefix, FuncType fnTy) {
 static const LowerFunctionInfo &
 arrangeCIRFunctionInfo(LowerTypes &CGT, bool instanceMethod,
                        SmallVectorImpl<mlir::Type> &prefix, FuncType fnTy) {
-  assert(!MissingFeatures::extParamInfo());
+  cir_tl_assert(!MissingFeatures::extParamInfo());
   RequiredArgs Required = RequiredArgs::forPrototypePlus(fnTy, prefix.size());
   // FIXME: Kill copy.
   appendParameterTypes(prefix, fnTy);
-  assert(!MissingFeatures::qualifiedTypes());
+  cir_tl_assert(!MissingFeatures::qualifiedTypes());
   Type resultType = fnTy.getReturnType();
 
   FnInfoOpts opts =
@@ -110,7 +110,7 @@ void LowerModule::constructAttributeList(StringRef Name,
 
   // TODO(cir): Implement AddAttributesFromFunctionProtoType here.
   // TODO(cir): Implement AddAttributesFromOMPAssumes here.
-  assert(!MissingFeatures::openMP());
+  cir_tl_assert(!MissingFeatures::openMP());
 
   // TODO(cir): Skipping a bunch of AST queries here. We will need to partially
   // implement some of them as this section sets target-specific attributes
@@ -147,8 +147,8 @@ void LowerModule::constructAttributeList(StringRef Name,
     [[fallthrough]];
   case ABIArgInfo::Direct:
     if (RetAI.getInReg())
-      llvm_unreachable("InReg attribute is NYI");
-    assert(!::cir::MissingFeatures::noFPClass());
+      cir_assert_or_abort(!::cir::MissingFeatures::ABIInRegAttribute(), "NYI");
+    cir_tl_assert(!::cir::MissingFeatures::noFPClass());
     break;
   case ABIArgInfo::Ignore:
     break;
@@ -216,7 +216,7 @@ void LowerModule::constructAttributeList(StringRef Name,
       else if (AI.getInReg())
         llvm_unreachable("InReg attribute is NYI");
       // Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
-      assert(!::cir::MissingFeatures::noFPClass());
+      cir_tl_assert(!::cir::MissingFeatures::noFPClass());
       break;
     default:
       llvm_unreachable("Missing ABIArgInfo::Kind");
@@ -227,7 +227,7 @@ void LowerModule::constructAttributeList(StringRef Name,
     }
 
     // TODO(cir): Missing some swift and nocapture stuff here.
-    assert(!::cir::MissingFeatures::extParamInfo());
+    cir_tl_assert(!::cir::MissingFeatures::extParamInfo());
 
     if (!Attrs.empty()) {
       unsigned FirstIRArg, NumIRArgs;
@@ -236,7 +236,7 @@ void LowerModule::constructAttributeList(StringRef Name,
         newFn.setArgAttrs(FirstIRArg + i, Attrs);
     }
   }
-  assert(ArgNo == FI.arg_size());
+  cir_tl_assert(ArgNo == FI.arg_size());
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -245,15 +245,15 @@ const LowerFunctionInfo &LowerTypes::arrangeFunctionDeclaration(FuncOp fnOp) {
   if (MissingFeatures::funcDeclIsCXXMethodDecl())
     llvm_unreachable("NYI");
 
-  assert(!MissingFeatures::qualifiedTypes());
+  cir_tl_assert(!MissingFeatures::qualifiedTypes());
   FuncType FTy = fnOp.getFunctionType();
 
-  assert(!MissingFeatures::CUDA());
+  cir_tl_assert(!MissingFeatures::CUDA());
 
   // When declaring a function without a prototype, always use a
   // non-variadic type.
   if (fnOp.getNoProto()) {
-    llvm_unreachable("NYI");
+    cir_assert_or_abort(!::cir::MissingFeatures::ABINoProtoFunctions(), "NYI");
   }
 
   return arrangeFreeFunctionType(FTy);
@@ -300,12 +300,12 @@ const LowerFunctionInfo &
 LowerTypes::arrangeLLVMFunctionInfo(Type resultType, FnInfoOpts opts,
                                     ArrayRef<Type> argTypes,
                                     RequiredArgs required) {
-  assert(!::cir::MissingFeatures::qualifiedTypes());
+  cir_tl_assert(!::cir::MissingFeatures::qualifiedTypes());
 
   LowerFunctionInfo *FI = nullptr;
 
   // FIXME(cir): Allow user-defined CCs (e.g. __attribute__((vectorcall))).
-  assert(!::cir::MissingFeatures::extParamInfo());
+  cir_tl_assert(!::cir::MissingFeatures::extParamInfo());
   unsigned CC = clangCallConvToLLVMCallConv(clang::CallingConv::CC_C);
 
   // Construct the function info. We co-allocate the ArgInfos.

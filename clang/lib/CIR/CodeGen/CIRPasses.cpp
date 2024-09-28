@@ -71,13 +71,8 @@ mlir::LogicalResult runCIRToCIRPasses(
 
   pm.addPass(mlir::createLoweringPreparePass(&astCtx));
 
-  // FIXME(cir): This pass should run by default, but it is lacking support for
-  // several code bits. Once it's more mature, we should fix this.
-  if (enableCallConvLowering)
-    pm.addPass(mlir::createCallConvLoweringPass());
-
   if (flattenCIR || enableMem2Reg)
-    mlir::populateCIRPreLoweringPasses(pm);
+    mlir::populateCIRPreLoweringPasses(pm, enableCallConvLowering);
 
   if (enableMem2Reg)
     pm.addPass(mlir::createMem2Reg());
@@ -97,7 +92,9 @@ mlir::LogicalResult runCIRToCIRPasses(
 
 namespace mlir {
 
-void populateCIRPreLoweringPasses(OpPassManager &pm) {
+void populateCIRPreLoweringPasses(OpPassManager &pm, bool useCCLowering) {
+  if (useCCLowering)
+    pm.addPass(createCallConvLoweringPass());
   pm.addPass(createFlattenCFGPass());
   pm.addPass(createGotoSolverPass());
 }

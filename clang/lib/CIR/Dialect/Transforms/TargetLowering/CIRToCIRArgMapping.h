@@ -58,7 +58,7 @@ public:
   unsigned totalIRArgs() const { return TotalIRArgs; }
 
   bool hasPaddingArg(unsigned ArgNo) const {
-    assert(ArgNo < ArgInfo.size());
+    cir_tl_assert(ArgNo < ArgInfo.size());
     return ArgInfo[ArgNo].PaddingArgIndex != InvalidIndex;
   }
 
@@ -77,7 +77,7 @@ public:
         onlyRequiredArgs ? FI.getNumRequiredArgs() : FI.arg_size();
     for (LowerFunctionInfo::const_arg_iterator I = FI.arg_begin();
          ArgNo < NumArgs; ++I, ++ArgNo) {
-      assert(I != FI.arg_end());
+      cir_tl_assert(I != FI.arg_end());
       // Type ArgType = I->type;
       const ::cir::ABIArgInfo &AI = I->info;
       // Collect data about IR arguments corresponding to Clang argument ArgNo.
@@ -91,7 +91,7 @@ public:
       case ::cir::ABIArgInfo::Extend:
       case ::cir::ABIArgInfo::Direct: {
         // FIXME(cir): handle sseregparm someday...
-        assert(AI.getCoerceToType() && "Missing coerced type!!");
+        cir_tl_assert(AI.getCoerceToType() && "Missing coerced type!!");
         StructType STy = dyn_cast<StructType>(AI.getCoerceToType());
         if (AI.isDirect() && AI.getCanBeFlattened() && STy) {
           llvm_unreachable("NYI");
@@ -114,7 +114,7 @@ public:
       if (IRArgNo == 1 && SwapThisWithSRet)
         IRArgNo++;
     }
-    assert(ArgNo == ArgInfo.size());
+    cir_tl_assert(ArgNo == ArgInfo.size());
 
     if (::cir::MissingFeatures::inallocaArgs()) {
       llvm_unreachable("NYI");
@@ -126,7 +126,7 @@ public:
   /// Returns index of first IR argument corresponding to ArgNo, and their
   /// quantity.
   std::pair<unsigned, unsigned> getIRArgs(unsigned ArgNo) const {
-    assert(ArgNo < ArgInfo.size());
+    cir_tl_assert(ArgNo < ArgInfo.size());
     return std::make_pair(ArgInfo[ArgNo].FirstArgIndex,
                           ArgInfo[ArgNo].NumberOfArgs);
   }
