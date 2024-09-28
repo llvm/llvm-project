@@ -139,7 +139,6 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
   }
 
   int isdst = calculate_dst(result);
-  result->tm_hour += isdst;
   result->tm_isdst = isdst;
 
   return result;
