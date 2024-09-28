@@ -436,14 +436,14 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc,
   return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
-// Whenever an element is extracted from a vector, and then truncated,
-// canonicalize by converting it to a bitcast followed by an
-// extractelement.
-//
-// Example (little endian):
-//   trunc (extractelement <4 x i64> %X, 0) to i32
-//   --->
-//   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
+/// Whenever an element is extracted from a vector, and then truncated,
+/// canonicalize by converting it to a bitcast followed by an
+/// extractelement.
+///
+/// Example (little endian):
+///   trunc (extractelement <4 x i64> %X, 0) to i32
+///   --->
+///   extractelement <8 x i32> (bitcast <4 x i64> %X to <8 x i32>), i32 0
 static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
                                             InstCombinerImpl &IC) {
   Value *Src = Trunc.getOperand(0);
