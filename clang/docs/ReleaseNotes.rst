@@ -141,6 +141,8 @@ C++ Language Changes
 
 - Add ``__builtin_elementwise_popcount`` builtin for integer types only.
 
+- Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
+
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
 
@@ -567,9 +569,6 @@ AST Matchers
   binding in the first matcher and using it in the second matcher.
 
 - Fixed a crash when traverse lambda expr with invalid captures. (#GH106444)
-
-- The examples in the AST matcher reference are now tested and additional
-  examples and descriptions were added.
 
 clang-format
 ------------

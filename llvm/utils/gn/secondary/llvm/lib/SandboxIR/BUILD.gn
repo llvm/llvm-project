@@ -15,9 +15,9 @@ static_library("SandboxIR") {
     "Pass.cpp",
     "PassManager.cpp",
     "Region.cpp",
-    "SandboxIR.cpp",
     "Tracker.cpp",
     "Type.cpp",
+    "Use.cpp",
     "User.cpp",
     "Value.cpp",
   ]

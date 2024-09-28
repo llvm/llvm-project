@@ -7,6 +7,15 @@ define i32 @ptr_induction_ult(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 4)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i2 ((trunc i64 (ptrtoint ptr %b to i64) to i2) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i2))) to i64) == 0
 ;
 entry:
   %cmp.6 = icmp ult ptr %a, %b
@@ -28,6 +37,15 @@ define i32 @ptr_induction_ult_3_step_6(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((3074457345618258603 * (ptrtoint ptr %b to i64)) + (-3074457345618258603 * (ptrtoint ptr %a to i64))) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) to i1) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) to i1) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((3074457345618258603 * (ptrtoint ptr %b to i64)) + (-3074457345618258603 * (ptrtoint ptr %a to i64))) /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) to i1) to i64) == 0
 ;
 entry:
   %cmp.6 = icmp ult ptr %a, %b
@@ -74,10 +92,24 @@ define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %loop: Predicated constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      Equal predicate: (zext i3 ((trunc i64 (ptrtoint ptr %b to i64) to i3) + (-1 * (trunc i64 (ptrtoint ptr %a to i64) to i3))) to i64) == 0
 ;
 entry:
   %cmp = icmp eq ptr %a, %b
