@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
 #include "src/time/time_utils.h"
 #include "src/__support/CPP/limits.h" // INT_MIN, INT_MAX
 #include "src/__support/common.h"
@@ -236,10 +235,10 @@ int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
 
   int offset;
   if (internal::same_string(timezone, "UTC") == 0) {
-      offset = 0;
+    offset = 0;
   }
   if (internal::same_string(timezone, "Europe/Berlin") == 0) {
-      offset = 2;
+    offset = 2;
   }
 
   // All the data (years, month and remaining days) was calculated from
@@ -271,7 +270,7 @@ int calculate_dst(struct tm *tm) {
   } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
     return 1;
   } else if (tm->tm_mon == 3) {
-      return sunday >= 8;
+    return sunday >= 8;
   }
 
   return sunday <= 0;
