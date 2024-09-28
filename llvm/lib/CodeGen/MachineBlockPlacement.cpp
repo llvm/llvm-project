@@ -3566,10 +3566,10 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     if (EnableExtTspBlockPlacement &&
         (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
         MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-      applyExtTsp(false);
+      applyExtTsp(/*OptForSize=*/false);
       createCFGChainExtTsp();
     } else if (UseExtTspForSize) {
-      applyExtTsp(true);
+      applyExtTsp(/*OptForSize=*/true);
       createCFGChainExtTsp();
     }
   }
@@ -3607,9 +3607,9 @@ void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
     CurrentBlockOrder.push_back(&MBB);
   }
 
-  std::vector<uint64_t> BlockCounts(F->size());
-  std::vector<uint64_t> BlockSizes(F->size());
-  std::vector<codelayout::EdgeCount> JumpCounts;
+  SmallVector<uint64_t, 0> BlockCounts(F->size());
+  SmallVector<uint64_t, 0> BlockSizes(F->size());
+  SmallVector<codelayout::EdgeCount, 0> JumpCounts;
   SmallVector<MachineOperand, 4> Cond; // For analyzeBranch.
   SmallVector<const MachineBasicBlock *, 4> Succs;
   for (MachineBasicBlock &MBB : *F) {
@@ -3626,23 +3626,18 @@ void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
         instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end());
     size_t NumInsts = std::distance(NonDbgInsts.begin(), NonDbgInsts.end());
     BlockSizes[BlockIndex[&MBB]] = 4 * NumInsts;
-    // Getting jump frequencies.
 
-    if (!OptForSize) {
-      for (MachineBasicBlock *Succ : MBB.successors()) {
-        auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-        BlockFrequency JumpFreq = BlockFreq * EP;
-        JumpCounts.push_back(
-            {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
-      }
-    } else {
+    // Getting jump frequencies.
+    if (OptForSize) {
       Cond.clear();
       MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For analyzeBranch.
       if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
         continue;
 
       const MachineBasicBlock *FTB = MBB.getFallThrough();
-
+      // Succs is a collection of distinct destinations of the block reachable
+      // from MBB via a jump instruction; initialize the list using the three
+      // (non-necessarily distinct) blocks, FTB, TBB, and FBB.
       Succs.clear();
       if (TBB && TBB != FTB)
         Succs.push_back(TBB);
@@ -3654,17 +3649,23 @@ void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
       // optimization; prioritize slightly jumps with a single successor, since
       // the corresponding jump instruction will be removed from the binary.
       const uint64_t Freq = Succs.size() == 1 ? 110 : 100;
-      for (const MachineBasicBlock *Succ : Succs) {
+      for (const MachineBasicBlock *Succ : Succs)
         JumpCounts.push_back({BlockIndex[&MBB], BlockIndex[Succ], Freq});
+    } else {
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        auto EP = MBPI->getEdgeProbability(&MBB, Succ);
+        BlockFrequency JumpFreq = BlockFreq * EP;
+        JumpCounts.push_back(
+            {BlockIndex[&MBB], BlockIndex[Succ], JumpFreq.getFrequency()});
       }
     }
   }
 
   LLVM_DEBUG(dbgs() << "Applying ext-tsp layout for |V| = " << F->size()
                     << " with profile = " << F->getFunction().hasProfileData()
-                    << " (" << F->getName().str() << ")" << "\n");
+                    << " (" << F->getName() << ")" << "\n");
 
-  const double OrgScore = calcExtTspScore(BlockSizes, BlockCounts, JumpCounts);
+  const double OrgScore = calcExtTspScore(BlockSizes, JumpCounts);
   LLVM_DEBUG(dbgs() << format("  original  layout score: %0.2f\n", OrgScore));
 
   // Run the layout algorithm.
@@ -3674,8 +3675,7 @@ void MachineBlockPlacement::applyExtTsp(bool OptForSize) {
   for (uint64_t Node : NewOrder) {
     NewBlockOrder.push_back(CurrentBlockOrder[Node]);
   }
-  const double OptScore =
-      calcExtTspScore(NewOrder, BlockSizes, BlockCounts, JumpCounts);
+  const double OptScore = calcExtTspScore(NewOrder, BlockSizes, JumpCounts);
   LLVM_DEBUG(dbgs() << format("  optimized layout score: %0.2f\n", OptScore));
 
   // If the optimization is unsuccessful, fall back to the original block order.
