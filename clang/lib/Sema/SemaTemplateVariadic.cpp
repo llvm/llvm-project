@@ -1211,9 +1211,7 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
-std::optional<unsigned>
-Sema::getFullyPackExpandedSize(TemplateArgument Arg,
-                               const NamedDecl *&ParameterPack) {
+std::optional<unsigned> Sema::getFullyPackExpandedSize(TemplateArgument Arg) {
   assert(Arg.containsUnexpandedParameterPack());
 
   // If this is a substituted pack, grab that pack. If not, we don't know
@@ -1224,20 +1222,17 @@ Sema::getFullyPackExpandedSize(TemplateArgument Arg,
   TemplateArgument Pack;
   switch (Arg.getKind()) {
   case TemplateArgument::Type:
-    if (auto *Subst = Arg.getAsType()->getAs<SubstTemplateTypeParmPackType>()) {
+    if (auto *Subst = Arg.getAsType()->getAs<SubstTemplateTypeParmPackType>())
       Pack = Subst->getArgumentPack();
-      ParameterPack = Subst->getReplacedParameter();
-    } else
+    else
       return std::nullopt;
     break;
 
   case TemplateArgument::Expression:
     if (auto *Subst =
-            dyn_cast<SubstNonTypeTemplateParmPackExpr>(Arg.getAsExpr())) {
+            dyn_cast<SubstNonTypeTemplateParmPackExpr>(Arg.getAsExpr()))
       Pack = Subst->getArgumentPack();
-      ParameterPack = Subst->getParameterPack();
-    } else if (auto *Subst = dyn_cast<FunctionParmPackExpr>(Arg.getAsExpr())) {
-      ParameterPack = Subst->getParameterPack();
+    else if (auto *Subst = dyn_cast<FunctionParmPackExpr>(Arg.getAsExpr()))  {
       for (VarDecl *PD : *Subst)
         if (PD->isParameterPack())
           return std::nullopt;
@@ -1248,10 +1243,9 @@ Sema::getFullyPackExpandedSize(TemplateArgument Arg,
 
   case TemplateArgument::Template:
     if (SubstTemplateTemplateParmPackStorage *Subst =
-            Arg.getAsTemplate().getAsSubstTemplateTemplateParmPack()) {
+            Arg.getAsTemplate().getAsSubstTemplateTemplateParmPack())
       Pack = Subst->getArgumentPack();
-      ParameterPack = Subst->getParameterPack();
-    } else
+    else
       return std::nullopt;
     break;
 
