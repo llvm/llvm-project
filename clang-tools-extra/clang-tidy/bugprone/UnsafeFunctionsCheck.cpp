@@ -50,6 +50,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
     StringRef AnnexKReplacementFunction =
         StringSwitch<StringRef>(FunctionName)
             .Cases("asctime", "asctime_r", "asctime_s")
+            .Cases("ctime", "ctime_r")
+            .Cases("localtime", "localtime_r")
             .Case("gets", "gets_s")
             .Default({});
     if (!AnnexKReplacementFunction.empty())
