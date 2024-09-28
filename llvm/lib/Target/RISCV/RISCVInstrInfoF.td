@@ -310,7 +310,7 @@ def LW_INX : Load_ri<0b010, "lw", GPRF32>, Sched<[WriteLDW, ReadMemBase]>;
 def SW_INX : Store_rri<0b010, "sw", GPRF32>,
              Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 
-// ADDI with GPRF16 register class to use for copy. This should not be used as
+// ADDI with GPRF32 register class to use for copy. This should not be used as
 // general ADDI, so the immediate should always be zero.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveReg = 1,
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
