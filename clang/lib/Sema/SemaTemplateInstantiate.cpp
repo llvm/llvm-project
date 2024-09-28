@@ -1722,17 +1722,16 @@ namespace {
       return inherited::TransformLambdaBody(E, Body);
     }
 
-    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
-      ExprResult Result = inherited::TransformSizeOfPackExpr(E);
-
+    ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc,
+                                     NamedDecl *Pack, SourceLocation PackLoc,
+                                     SourceLocation RParenLoc,
+                                     std::optional<unsigned> Length,
+                                     ArrayRef<TemplateArgument> PartialArgs) {
       if (SemaRef.CodeSynthesisContexts.back().Kind !=
           Sema::CodeSynthesisContext::ConstraintNormalization)
-        return Result;
+        return inherited::RebuildSizeOfPackExpr(OperatorLoc, Pack, PackLoc,
+                                                RParenLoc, Length, PartialArgs);
 
-      if (!Result.isUsable())
-        return Result;
-
-      SizeOfPackExpr *NewExpr = cast<SizeOfPackExpr>(Result.get());
 #ifndef NDEBUG
       for (auto *Iter = TemplateArgs.begin(); Iter != TemplateArgs.end();
            ++Iter)
@@ -1740,12 +1739,13 @@ namespace {
           assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
 #endif
       Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
-      Decl *NewDecl = TransformDecl(NewExpr->getPackLoc(), NewExpr->getPack());
-      if (!NewDecl)
+      Decl *NewPack = TransformDecl(PackLoc, Pack);
+      if (!NewPack)
         return ExprError();
 
-      NewExpr->setPack(cast<NamedDecl>(NewDecl));
-      return NewExpr;
+      return inherited::RebuildSizeOfPackExpr(OperatorLoc,
+                                              cast<NamedDecl>(NewPack), PackLoc,
+                                              RParenLoc, Length, PartialArgs);
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
