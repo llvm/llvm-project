@@ -23,9 +23,10 @@ using APSInt = llvm::APSInt;
 class FixedPoint final {
 private:
   llvm::APFixedPoint V;
-  FixedPoint(llvm::APFixedPoint &&V) : V(std::move(V)) {}
 
 public:
+  FixedPoint(llvm::APFixedPoint &&V) : V(std::move(V)) {}
+  FixedPoint(llvm::APFixedPoint &V) : V(V) {}
   FixedPoint(APInt V, llvm::FixedPointSemantics Sem) : V(V, Sem) {}
   // This needs to be default-constructible so llvm::endian::read works.
   FixedPoint()
@@ -50,6 +51,10 @@ public:
 
   unsigned bitWidth() const { return V.getWidth(); }
   bool isSigned() const { return V.isSigned(); }
+
+  llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
+    return V.convertToFloat(*Sem);
+  }
 
   ComparisonCategoryResult compare(const FixedPoint &Other) const {
     if (Other.V == V)
