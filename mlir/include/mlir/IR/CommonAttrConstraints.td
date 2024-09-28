@@ -178,6 +178,7 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
         summary)> {
     let returnType = cppType;
     let convertFromStorage = fromStorage;
+    list<Attr> allowedAttributes = allowedAttrs;
 }
 
 def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
@@ -743,6 +744,8 @@ class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
   let isOptional = attr.isOptional;
 
   let baseAttr = attr;
+
+  list<AttrConstraint> attrConstraints = constraints;
 }
 
 // An AttrConstraint that holds if all attr constraints specified in

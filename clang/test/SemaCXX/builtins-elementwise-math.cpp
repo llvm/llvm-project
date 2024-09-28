@@ -255,6 +255,14 @@ void test_builtin_elementwise_fma() {
   static_assert(!is_const<decltype(__builtin_elementwise_fma(c, c, c))>::value);
 }
 
+void test_builtin_elementwise_fmod() {
+  const double a = 2;
+  double b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, b))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(b, a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_fmod(a, a))>::value);
+}
+
 void test_builtin_elementwise_pow() {
   const double a = 2;
   double b = 1;

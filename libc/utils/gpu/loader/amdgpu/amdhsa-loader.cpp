@@ -231,8 +231,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   std::memcpy(args, &kernel_args, sizeof(args_t));
 
   // Initialize the necessary implicit arguments to the proper values.
-  bool dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
-              (params.num_blocks_z * params.num_threads_z != 1);
+  int dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
+             (params.num_blocks_z * params.num_threads_z != 1);
   implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
       reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
   implicit_args->grid_dims = dims;
