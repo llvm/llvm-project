@@ -12,3 +12,11 @@ static_assert(-12.0k == -(-(-12.0k)));
 /// Zero-init.
 constexpr _Accum A{};
 static_assert(A == 0.0k);
+
+namespace IntToFixedPointCast {
+  constexpr _Accum B = 13;
+  static_assert(B == 13.0k);
+
+  constexpr _Fract sf = -1;
+  static_assert(sf == -1.0k);
+}
