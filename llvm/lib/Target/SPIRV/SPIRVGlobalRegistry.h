@@ -64,6 +64,10 @@ class SPIRVGlobalRegistry {
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
 
+  // Stores for each function the last inserted SPIR-V Type.
+  // See: SPIRVGlobalRegistry::createOpType.
+  DenseMap<const MachineFunction *, MachineInstr *> LastInsertedTypeMap;
+
   // if a function returns a pointer, this is to map it into TypedPointerType
   DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
 
@@ -96,6 +100,13 @@ class SPIRVGlobalRegistry {
   restOfCreateSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool EmitIR);
+
+  // Internal function creating the an OpType at the correct position in the
+  // function by tweaking the passed "MIRBuilder" insertion point and restoring
+  // it to the correct position. "Op" should be the function creating the
+  // specific OpType you need, and should return the newly created instruction.
+  SPIRVType *createOpType(MachineIRBuilder &MIRBuilder,
+                          std::function<MachineInstr *(MachineIRBuilder &)> Op);
 
 public:
   SPIRVGlobalRegistry(unsigned PointerSize);
