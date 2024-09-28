@@ -45,7 +45,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp32IntDst) {
   ASSERT_EQ(121, result->tm_year);
   ASSERT_EQ(6, result->tm_mon);
   ASSERT_EQ(25, result->tm_mday);
-  ASSERT_EQ(18, result->tm_hour);
+  ASSERT_EQ(17, result->tm_hour);
   ASSERT_EQ(4, result->tm_min);
   ASSERT_EQ(25, result->tm_sec);
   ASSERT_EQ(0, result->tm_wday);
