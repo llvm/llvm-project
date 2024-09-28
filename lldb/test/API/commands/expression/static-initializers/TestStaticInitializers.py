@@ -35,7 +35,7 @@ class StaticInitializers(TestBase):
         self.expect(
             "expr -p -- struct Foo2 { Foo2() { do_abort(); } }; Foo2 f;",
             error=True,
-            substrs=["couldn't run static initializer:"],
+            substrs=["error: couldn't run static initializer:"],
         )
 
     def test_without_process(self):

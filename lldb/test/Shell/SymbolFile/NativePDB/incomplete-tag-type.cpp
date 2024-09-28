@@ -13,7 +13,9 @@
 // CHECK: (lldb) expression d
 // CHECK: (D) $1 = {}
 // CHECK: (lldb) expression static_e_ref
-// CHECK: error:{{.*}}incomplete type 'E' where a complete type is required
+// CHECK: error: {{.*}}incomplete type 'E' where a complete type is required
+// CHECK: static_e_ref
+// CHECK: ^
 
 // Complete base class.
 struct A { int x; A(); };

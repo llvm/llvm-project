@@ -225,8 +225,4 @@ let Definition = "debugger" in {
     DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
-  def ShowInlineDiagnostics: Property<"show-inline-diagnostics", "Boolean">,
-    Global,
-    DefaultFalse,
-    Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
 }

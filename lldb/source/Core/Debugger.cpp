@@ -592,18 +592,7 @@ lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
   const uint32_t idx = ePropertyDWIMPrintVerbosity;
   return GetPropertyAtIndexAs<lldb::DWIMPrintVerbosity>(
       idx, static_cast<lldb::DWIMPrintVerbosity>(
-               g_debugger_properties[idx].default_uint_value != 0));
-}
-
-bool Debugger::GetShowInlineDiagnostics() const {
-  const uint32_t idx = ePropertyShowInlineDiagnostics;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_debugger_properties[idx].default_uint_value);
-}
-
-bool Debugger::SetShowInlineDiagnostics(bool b) {
-  const uint32_t idx = ePropertyShowInlineDiagnostics;
-  return SetPropertyAtIndex(idx, b);
+               g_debugger_properties[idx].default_uint_value));
 }
 
 #pragma mark Debugger
