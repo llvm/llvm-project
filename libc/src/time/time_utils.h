@@ -18,6 +18,8 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "time_constants.h"
+#include "src/time/mktime.h"
+#include "src/__support/CPP/limits.h"
 
 #include <stdint.h>
 
@@ -30,7 +32,8 @@ int64_t mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-int64_t update_from_seconds(int64_t total_seconds, tm *tm);
+extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
+extern int calculate_dst(struct tm *tm);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -94,11 +97,38 @@ LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
   return result;
 }
 
-// TODO: localtime is not yet implemented and a temporary solution is to
-//       use gmtime, https://github.com/llvm/llvm-project/issues/107597
-LIBC_INLINE tm *localtime(const time_t *t_ptr) {
-  static tm result;
-  return time_utils::gmtime_internal(t_ptr, &result);
+LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
+  static struct tm result;
+  int64_t time = *t_ptr;
+
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (update_from_seconds(time, result) < 0) {
+    out_of_range();
+    return nullptr;
+  }
+
+  int isdst = calculate_dst(&result);
+  result.tm_hour += isdst;
+  result.tm_isdst = isdst;
+
+  return &result;
+}
+
+LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr, struct tm *result) {
+  //time_t time = *t;
+  int64_t t = *t_ptr;
+
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (update_from_seconds(t, result) < 0) {
+    out_of_range();
+    return nullptr;
+  }
+
+  int isdst = calculate_dst(result);
+  result->tm_hour += isdst;
+  result->tm_isdst = isdst;
+
+  return result;
 }
 
 // Returns number of years from (1, year).

@@ -38,6 +38,19 @@ functions:
     arguments:
       - type: const time_t *
       - type: char *
+  - name: localtime
+    standard:
+      - stdc
+    return_type: struct tm *
+    arguments:
+      - type: const time_t *
+  - name: localtime_r
+    standard:
+      - stdc
+    return_type: struct tm *
+    arguments:
+      - type: const time_t *
+      - type: struct tm *
   - name: clock
     standard:
       - stdc
