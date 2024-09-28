@@ -256,6 +256,16 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
       static_cast<int>(remainingSeconds % time_constants::SECONDS_PER_MIN);
   // TODO(rtenneti): Need to handle timezone and update of tm_isdst.
   tm->tm_isdst = 0;
+      static_cast<int>(remainingSeconds % TimeConstants::SECONDS_PER_MIN);
+
+  if (offset == 0) {
+    tm->tm_isdst = 1;
+  } else {
+    tm->tm_isdst = 0;
+    tm->tm_hour += offset;
+  }
+
+  fclose(fp);
 
   return 0;
 }
