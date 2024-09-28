@@ -18,6 +18,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -1720,6 +1721,32 @@ namespace {
       // p0588r1.
       llvm::SaveAndRestore _(EvaluateConstraints, true);
       return inherited::TransformLambdaBody(E, Body);
+    }
+
+    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
+      ExprResult Result = inherited::TransformSizeOfPackExpr(E);
+
+      if (SemaRef.CodeSynthesisContexts.back().Kind !=
+          Sema::CodeSynthesisContext::ConstraintNormalization)
+        return Result;
+
+      if (!Result.isUsable())
+        return Result;
+
+      SizeOfPackExpr *NewExpr = cast<SizeOfPackExpr>(Result.get());
+#ifndef NDEBUG
+      for (auto *Iter = TemplateArgs.begin(); Iter != TemplateArgs.end();
+           ++Iter)
+        for (const TemplateArgument &TA : Iter->Args)
+          assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
+#endif
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
+      Decl *NewDecl = TransformDecl(NewExpr->getPackLoc(), NewExpr->getPack());
+      if (!NewDecl)
+        return ExprError();
+
+      NewExpr->setPack(cast<NamedDecl>(NewDecl));
+      return NewExpr;
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
