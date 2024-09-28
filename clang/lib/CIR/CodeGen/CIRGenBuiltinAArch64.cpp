@@ -2208,7 +2208,6 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
   // Determine the type of this overloaded NEON intrinsic.
   NeonTypeFlags neonType(neonTypeConst->getZExtValue());
   bool isUnsigned = neonType.isUnsigned();
-  bool isQuad = neonType.isQuad();
   const bool hasLegalHalfType = getTarget().hasLegalHalfType();
   // The value of allowBFloatArgsAndRet is true for AArch64, but it should
   // come from ABI info.
