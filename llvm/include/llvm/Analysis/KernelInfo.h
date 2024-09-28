@@ -22,7 +22,6 @@ namespace llvm {
 class TargetMachine;
 
 class KernelInfoPrinter : public PassInfoMixin<KernelInfoPrinter> {
-private:
   TargetMachine *TM;
 
 public:
