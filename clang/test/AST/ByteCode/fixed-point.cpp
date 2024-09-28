@@ -31,4 +31,7 @@ namespace FloatToFixedPointCast {
                              // both-note {{outside the range of representable values of type 'const _Fract'}}
 
   constexpr _Fract sf2 = 0.5;
+  static_assert(sf2 == 0.5);
+  constexpr float sf2f = sf2;
+  static_assert(sf2f == 0.5);
 }
