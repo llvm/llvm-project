@@ -783,8 +783,7 @@ bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if ((LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
-      (LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() &&
+  if ((LocVT == MVT::f64 && Subtarget.hasStdExtZdinx() &&
        Subtarget.is64Bit())) {
     if (MCRegister Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
