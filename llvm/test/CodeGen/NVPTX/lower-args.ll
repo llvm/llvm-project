@@ -14,7 +14,7 @@ target triple = "nvptx64-nvidia-cuda"
 ; COMMON-LABEL: load_alignment
 define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %arg) {
 entry:
-; IR: load %class.outer, ptr addrspace(101)
+; IR: load [3 x i64], ptr addrspace(101)
 ; IR-SAME: align 8
 ; PTX: ld.param.u64
 ; PTX-NOT: ld.param.u8

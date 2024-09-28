@@ -626,10 +626,17 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
     // addrspacecast preserves alignment.  Since params are constant, this load
     // is definitely not volatile.
+    const auto StructBytes = *AllocA->getAllocationSize(DL);
+    const auto ChunkBytes = (StructBytes % 8 == 0) ? 8 :
+                            (StructBytes % 4 == 0) ? 4 :
+                            (StructBytes % 2 == 0) ? 2 : 1;
+    Type *ChunkType = Type::getIntNTy(Func->getContext(), 8 * ChunkBytes);
+    Type *OpaqueType = ArrayType::get(ChunkType, StructBytes / ChunkBytes);
     LoadInst *LI =
-        new LoadInst(StructType, ArgInParam, Arg->getName(),
+        new LoadInst(OpaqueType, ArgInParam, Arg->getName(),
                      /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA, FirstInst);
+    new StoreInst(LI, AllocA,
+                  /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
   }
 }
 
