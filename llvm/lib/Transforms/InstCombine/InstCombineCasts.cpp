@@ -477,7 +477,7 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
   uint64_t VecOpIdx = Cst->getZExtValue();
   uint64_t NewIdx = IC.getDataLayout().isBigEndian()
-                        ? (VecOpIdx * TruncRatio) + (TruncRatio - 1)
+                        ? (VecOpIdx + 1) * TruncRatio - 1
                         : VecOpIdx * TruncRatio;
 
   // Adjust index by the whole number of truncated elements.
