@@ -129,7 +129,6 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
 
 LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
                                           struct tm *result) {
-  // time_t time = *t;
   int64_t t = *t_ptr;
 
   // Update the tm structure's year, month, day, etc. from seconds.
