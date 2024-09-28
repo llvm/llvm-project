@@ -1148,14 +1148,14 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   IRBuilder<> Builder(M);
   auto *CopySource = MDep->getSource();
   Instruction *NewCopySource = nullptr;
-  auto CleanupOnRet = llvm::make_scope_exit([&NewCopySource] {
+  auto CleanupOnRet = llvm::make_scope_exit([&] {
     if (NewCopySource && NewCopySource->use_empty())
       // Safety: It's safe here because we will only allocate more instructions
       // after finishing all BatchAA queries, but we have to be careful if we
       // want to do something like this in another place. Then we'd probably
       // have to delay instruction removal until all transforms on an
       // instruction finished.
-      NewCopySource->eraseFromParent();
+      eraseInstruction(NewCopySource);
   });
   MaybeAlign CopySourceAlign = MDep->getSourceAlign();
   // We just need to calculate the actual size of the copy.
