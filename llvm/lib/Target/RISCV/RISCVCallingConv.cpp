@@ -401,7 +401,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if ((ValVT == MVT::f32 && Subtarget.hasStdExtZfinx())) {
+  if (ValVT == MVT::f32 && Subtarget.hasStdExtZfinx()) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR32s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
