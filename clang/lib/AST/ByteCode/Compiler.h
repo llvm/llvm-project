@@ -132,6 +132,7 @@ public:
   bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitComplexBinOp(const BinaryOperator *E);
   bool VisitVectorBinOp(const BinaryOperator *E);
+  bool VisitFixedPointBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitBuiltinCallExpr(const CallExpr *E, unsigned BuiltinID);

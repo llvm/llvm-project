@@ -773,6 +773,8 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
        RHS->getType()->isAnyComplexType()) &&
       BO->isComparisonOp())
     return this->emitComplexComparison(LHS, RHS, BO);
+  if (LHS->getType()->isFixedPointType() || RHS->getType()->isFixedPointType())
+    return this->VisitFixedPointBinOp(BO);
 
   if (BO->isPtrMemOp()) {
     if (!this->visit(LHS))
@@ -1467,6 +1469,55 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   if (DiscardResult && E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
     return false;
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+
+  assert(LHS->getType()->isFixedPointType() ||
+         RHS->getType()->isFixedPointType());
+
+  if (!this->visit(LHS))
+    return false;
+  if (!LHS->getType()->isFixedPointType()) {
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()), I, E))
+      return false;
+  }
+  if (!this->visit(RHS))
+    return false;
+  if (!RHS->getType()->isFixedPointType()) {
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()), I, E))
+      return false;
+  }
+
+  switch (E->getOpcode()) {
+  case BO_EQ:
+    return this->emitEQFixedPoint(E);
+  case BO_NE:
+    return this->emitNEFixedPoint(E);
+#if 0
+  case BO_LT:
+    return this->emitLTFixedPoint(E);
+  case BO_LE:
+    return this->emitLEFixedPoint(E);
+  case BO_GT:
+    return this->emitGTFixedPoint(E);
+  case BO_GE:
+    return this->emitGEFixedPoint(E);
+#endif
+  default:
+    return this->emitInvalid(E);
+  }
+
+  llvm_unreachable("unhandled binop opcode");
 }
 
 template <class Emitter>
