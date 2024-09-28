@@ -12,8 +12,12 @@
 #ifndef LLVM_SANDBOXIR_UTILS_H
 #define LLVM_SANDBOXIR_UTILS_H
 
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include <optional>
 
 namespace llvm::sandboxir {
 
@@ -56,6 +60,38 @@ public:
   static std::optional<llvm::MemoryLocation>
   memoryLocationGetOrNone(const Instruction *I) {
     return llvm::MemoryLocation::getOrNone(cast<llvm::Instruction>(I->Val));
+  }
+
+  /// \Returns the gap between the memory locations accessed by \p I0 and
+  /// \p I1 in bytes.
+  template <typename LoadOrStoreT>
+  static std::optional<int>
+  getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
+                        const DataLayout &DL) {
+    static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
+                      std::is_same_v<LoadOrStoreT, StoreInst>,
+                  "Expected sandboxir::Load or sandboxir::Store!");
+    llvm::Value *Opnd0 = I0->getPointerOperand()->Val;
+    llvm::Value *Opnd1 = I1->getPointerOperand()->Val;
+    llvm::Value *Ptr0 = getUnderlyingObject(Opnd0);
+    llvm::Value *Ptr1 = getUnderlyingObject(Opnd1);
+    if (Ptr0 != Ptr1)
+      return false;
+    llvm::Type *ElemTy = llvm::Type::getInt8Ty(SE.getContext());
+    return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, DL, SE,
+                           /*StrictCheck=*/false, /*CheckType=*/false);
+  }
+
+  /// \Returns true if \p I0 accesses a memory location lower than \p I1.
+  /// Returns false if the difference cannot be determined, if the memory
+  /// locations are equal, or if I1 accesses a memory location greater than I0.
+  template <typename LoadOrStoreT>
+  static bool atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
+                             ScalarEvolution &SE, const DataLayout &DL) {
+    auto Diff = getPointerDiffInBytes(I0, I1, SE, DL);
+    if (!Diff)
+      return false;
+    return *Diff > 0;
   }
 };
 } // namespace llvm::sandboxir
