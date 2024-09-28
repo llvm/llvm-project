@@ -1261,9 +1261,9 @@ private:
     Chunk::storeHeader(Cookie, Ptr, Header);
 
     if (BypassQuarantine) {
-      // Must do this after storeHeader because loadHeader uses a tagged ptr.
       void *BlockBegin;
       if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+        // Must do this after storeHeader because loadHeader uses a tagged ptr.
         if (allocatorSupportsMemoryTagging<AllocatorConfig>())
           Ptr = untagPointer(Ptr);
         BlockBegin = getBlockBegin(Ptr, Header);
