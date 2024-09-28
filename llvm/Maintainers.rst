@@ -204,7 +204,7 @@ Hexagon backend
 Lanai backend
 ~~~~~~~~~~~~~
 | Jacques Pienaar
-| jpienaar\@google.com (email), jpienaar
+| jpienaar\@google.com (email), jpienaar (GitHub)
 
 LoongArch backend
 ~~~~~~~~~~~~~~~~~
