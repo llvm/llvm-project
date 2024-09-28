@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
-#include "bolt/Utils/CommandLineOpts.h"
 
 #define DEBUG_TYPE "longjmp"
 
@@ -326,7 +325,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
     uint64_t DotAddress) {
   // Compute hot cold frontier
-  uint32_t LastHotIndex = -1u;
+  int64_t LastHotIndex = -1u;
   uint32_t CurrentIndex = 0;
   if (opts::HotFunctionsAtEnd) {
     for (BinaryFunction *BF : SortedFunctions) {
@@ -351,22 +350,20 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   // Hot
   CurrentIndex = 0;
   bool ColdLayoutDone = false;
+  auto runColdLayout = [&]() {
+    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
+    ColdLayoutDone = true;
+    if (opts::HotFunctionsAtEnd)
+      DotAddress = alignTo(DotAddress, opts::AlignText);
+  };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
-      // Don't perform any tentative address estimation of a function's cold
-      // layout if it won't be emitted, unless we are ignoring a large number of
-      // functions (ie, on lite mode) and we haven't done such estimation yet.
-      if (opts::processAllFunctions() || ColdLayoutDone)
-        continue;
+      continue;
     }
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex) {
-      DotAddress =
-          tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-      ColdLayoutDone = true;
-      if (opts::HotFunctionsAtEnd)
-        DotAddress = alignTo(DotAddress, opts::AlignText);
-    }
+
+    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
+      runColdLayout();
 
     DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
@@ -385,6 +382,12 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     DotAddress += Func->estimateConstantIslandSize();
     ++CurrentIndex;
   }
+
+  // Ensure that tentative code layout always runs for cold blocks.
+  if (!ColdLayoutDone)
+    runColdLayout();
+  assert(ColdLayoutDone &&
+         "Did not perform tentative code layout for cold blocks.");
 
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
