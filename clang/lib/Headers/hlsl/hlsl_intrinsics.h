@@ -459,27 +459,27 @@ void asuint(double4, out uint4, out uint4);
 
 #elif __is_target_arch(spirv)
 
-void asuint(double4 D, out uint4 lowbits, out uint4 highbits) {
+static inline void asuint(double4 D, out uint4 lowbits, out uint4 highbits) {
   uint4 bottom = __detail::bit_cast<uint4>(D.xy);
   uint4 top = __detail::bit_cast<uint4>(D.zw);
   lowbits = uint4(bottom.x, bottom.z, top.x, top.z);
   highbits = uint4(bottom.y, bottom.w, top.y, top.w);
 }
 
-void asuint(double3 D, out uint3 lowbits, out uint3 highbits) {
+static inline void asuint(double3 D, out uint3 lowbits, out uint3 highbits) {
   uint4 bottom = __detail::bit_cast<uint4>(D.xy);
   uint2 top = __detail::bit_cast<uint2>(D.z);
   lowbits = uint3(bottom.x, bottom.z, top.x);
   highbits = uint3(bottom.y, bottom.w, top.y);
 }
 
-void asuint(double2 D, out uint2 lowbits, out uint2 highbits) {
+static inline void asuint(double2 D, out uint2 lowbits, out uint2 highbits) {
   uint4 bottom = __detail::bit_cast<uint4>(D.xy);
   lowbits = uint2(bottom.x, bottom.z);
   highbits = uint2(bottom.y, bottom.w);
 }
 
-void asuint(double D, out uint lowbits, out uint highbits) {
+static inline void asuint(double D, out uint lowbits, out uint highbits) {
   uint2 bottom = __detail::bit_cast<uint2>(D);
   lowbits = uint(bottom.x);
   highbits = uint(bottom.y);
