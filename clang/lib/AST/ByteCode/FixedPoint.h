@@ -23,9 +23,10 @@ using APSInt = llvm::APSInt;
 class FixedPoint final {
 private:
   llvm::APFixedPoint V;
-  FixedPoint(llvm::APFixedPoint &&V) : V(std::move(V)) {}
 
 public:
+  FixedPoint(llvm::APFixedPoint &&V) : V(std::move(V)) {}
+  FixedPoint(llvm::APFixedPoint &V) : V(V) {}
   FixedPoint(APInt V, llvm::FixedPointSemantics Sem) : V(V, Sem) {}
   // This needs to be default-constructible so llvm::endian::read works.
   FixedPoint()
