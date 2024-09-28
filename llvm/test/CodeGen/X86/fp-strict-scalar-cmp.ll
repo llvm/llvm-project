@@ -4239,7 +4239,7 @@ define float @fcmp_select_ogt(float %f1, float %f2) #0 {
 ; X87:       # %bb.0:
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-NEXT:    fucom %st(1)
+; X87-NEXT:    fcom %st(1)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -4258,13 +4258,13 @@ define float @fcmp_select_ogt(float %f1, float %f2) #0 {
 ; X87-CMOV:       # %bb.0:
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-CMOV-NEXT:    fucomi %st(1), %st
+; X87-CMOV-NEXT:    fcomi %st(1), %st
 ; X87-CMOV-NEXT:    fxch %st(1)
 ; X87-CMOV-NEXT:    fcmovnbe %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(1)
 ; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    retl
-  %cond = call i1 @llvm.experimental.constrained.fcmp.f32(
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
                                                float %f1, float %f2, metadata !"ogt",
                                                metadata !"fpexcept.strict")
   %res = select i1 %cond, float %f1, float %f2
