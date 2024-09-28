@@ -38,6 +38,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
+#include <llvm/ADT/SmallVector.h>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -4221,6 +4222,97 @@ void CombinerHelper::applyExtractVecEltBuildVec(MachineInstr &MI,
     return;
   }
   replaceSingleDefInstWithReg(MI, Reg);
+}
+
+bool CombinerHelper::matchCombineExtractToShuffle(
+    MachineInstr &MI, SmallVectorImpl<std::pair<Register, int>> &VecIndexPair,
+    std::pair<Register, Register> &VectorRegisters) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  const GBuildVector *Build = cast<GBuildVector>(&MI);
+  // This combine tries to find all the build vectors whose source elements
+  // all originate from a G_EXTRACT_VECTOR_ELT from one or two donor vectors.
+  // One example where this may happen is for AI chips where there are a lot
+  // of matrix multiplications. Typically there vectors are disected and then
+  // rearranged into the right transformation.
+  // E.g.
+  //  %donor1(<2 x s32>) = COPY $d0
+  //  %donor2(<2 x s32>) = COPY $d1
+  //  %ext1 = G_EXTRACT_VECTOR_ELT %donor1, 0
+  //  %ext2 = G_EXTRACT_VECTOR_ELT %donor1, 1
+  //  %ext3 = G_EXTRACT_VECTOR_ELT %donor2, 0
+  //  %ext4 = G_EXTRACT_VECTOR_ELT %donor2, 1
+  /// %vector = G_BUILD_VECTOR %ext1, %ext2, %ext3, %ext4
+  // ==>
+  // replace with:
+  //   %vector = G_SHUFFLE_VECTOR %donor1, %donor2, shufflemask(0, 1, 2, 3)
+  SmallSetVector<Register, 2> RegisterVector;
+  const unsigned NumElements = Build->getNumSources();
+  for (unsigned Index = 0; Index < NumElements; Index++) {
+    Register SrcReg = peekThroughBitcast(Build->getSourceReg(Index), MRI);
+    auto *ExtractInstr = getOpcodeDef<GExtractVectorElement>(SrcReg, MRI);
+    if (!ExtractInstr)
+      return false;
+
+    // For shufflemasks we need to know exactly what index to place each element
+    // so if it this build vector doesn't use exclusively constants than we
+    // can't replace with a shufflevector
+    auto Cst = getIConstantVRegVal(ExtractInstr->getIndexReg(), MRI);
+    if (!Cst)
+      return false;
+    unsigned Idx = Cst->getZExtValue();
+
+    Register VectorReg = ExtractInstr->getVectorReg();
+    RegisterVector.insert(VectorReg);
+    VecIndexPair.emplace_back(std::make_pair(VectorReg, Idx));
+  }
+
+  // Create a pair so that we don't need to look for them later. This code is
+  // incorrect if we have more than two vectors in the set. Since we can only
+  // put two vectors in a shuffle, we reject any solution with more than two
+  // anyways.
+  VectorRegisters =
+      std::make_pair(RegisterVector.front(), RegisterVector.back());
+
+  // We check that they're the same type before running. We can also grow the
+  // smaller one to the target size, but there isn't an elegant way to do that
+  // until we have a good lowering for G_EXTRACT_SUBVECTOR.
+  if (MRI.getType(VectorRegisters.first) != MRI.getType(VectorRegisters.second))
+    return false;
+
+  return RegisterVector.size() <= 2;
+}
+
+void CombinerHelper::applyCombineExtractToShuffle(
+    MachineInstr &MI, SmallVectorImpl<std::pair<Register, int>> &MatchInfo,
+    std::pair<Register, Register> &VectorRegisters) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+
+  const Register FirstRegister = VectorRegisters.first;
+  const LLT FirstRegisterType = MRI.getType(FirstRegister);
+  const unsigned VectorSize = FirstRegisterType.getNumElements();
+  SmallVector<int, 32> ShuffleMask;
+  for (auto &Pair : MatchInfo) {
+    const Register VectorReg = Pair.first;
+    int Idx = Pair.second;
+
+    if (VectorReg != VectorRegisters.first) {
+      Idx += VectorSize;
+    }
+    ShuffleMask.emplace_back(Idx);
+  }
+
+  // We could reuse the same vector register and shuffle them both together
+  // but it is nicer for later optimizations to explicitely make it undef.
+  const GBuildVector *BuildVector = cast<GBuildVector>(&MI);
+  Register SecondRegister = VectorRegisters.second;
+  if (FirstRegister == SecondRegister) {
+    SecondRegister = MRI.createGenericVirtualRegister(FirstRegisterType);
+    Builder.buildUndef(SecondRegister);
+  }
+
+  Builder.buildShuffleVector(BuildVector->getOperand(0), FirstRegister,
+                             SecondRegister, ShuffleMask);
+  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchExtractAllEltsFromBuildVector(

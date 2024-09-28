@@ -1351,30 +1351,10 @@ define <4 x i32> @testDUP.v1i32(<1 x i32> %a) {
 }
 
 define <8 x i8> @getl(<16 x i8> %x) #0 {
-; CHECK-SD-LABEL: getl:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: getl:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov b2, v0.b[1]
-; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov v1.b[1], v2.b[0]
-; CHECK-GI-NEXT:    mov b2, v0.b[3]
-; CHECK-GI-NEXT:    mov v1.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[4]
-; CHECK-GI-NEXT:    mov v1.b[3], v2.b[0]
-; CHECK-GI-NEXT:    mov b2, v0.b[5]
-; CHECK-GI-NEXT:    mov v1.b[4], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[6]
-; CHECK-GI-NEXT:    mov b0, v0.b[7]
-; CHECK-GI-NEXT:    mov v1.b[5], v2.b[0]
-; CHECK-GI-NEXT:    mov v1.b[6], v3.b[0]
-; CHECK-GI-NEXT:    mov v1.b[7], v0.b[0]
-; CHECK-GI-NEXT:    fmov d0, d1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: getl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %vecext = extractelement <16 x i8> %x, i32 0
   %vecinit = insertelement <8 x i8> undef, i8 %vecext, i32 0
   %vecext1 = extractelement <16 x i8> %x, i32 1
@@ -1923,49 +1903,12 @@ entry:
 }
 
 define <16 x i8> @test_concat_v16i8_v8i8_v8i8(<8 x i8> %x, <8 x i8> %y) #0 {
-; CHECK-SD-LABEL: test_concat_v16i8_v8i8_v8i8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_concat_v16i8_v8i8_v8i8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b3, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov b4, v0.b[2]
-; CHECK-GI-NEXT:    mov v2.b[1], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[2], v4.b[0]
-; CHECK-GI-NEXT:    mov b4, v0.b[4]
-; CHECK-GI-NEXT:    mov v2.b[3], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[5]
-; CHECK-GI-NEXT:    mov v2.b[4], v4.b[0]
-; CHECK-GI-NEXT:    mov b4, v0.b[6]
-; CHECK-GI-NEXT:    mov b0, v0.b[7]
-; CHECK-GI-NEXT:    mov v2.b[5], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v1.b[2]
-; CHECK-GI-NEXT:    mov v2.b[6], v4.b[0]
-; CHECK-GI-NEXT:    mov v2.b[7], v0.b[0]
-; CHECK-GI-NEXT:    mov b0, v1.b[1]
-; CHECK-GI-NEXT:    mov v2.b[8], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[9], v0.b[0]
-; CHECK-GI-NEXT:    mov b0, v1.b[3]
-; CHECK-GI-NEXT:    mov v2.b[10], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v1.b[4]
-; CHECK-GI-NEXT:    mov v2.b[11], v0.b[0]
-; CHECK-GI-NEXT:    mov b0, v1.b[5]
-; CHECK-GI-NEXT:    mov v2.b[12], v3.b[0]
-; CHECK-GI-NEXT:    mov b3, v1.b[6]
-; CHECK-GI-NEXT:    mov v2.b[13], v0.b[0]
-; CHECK-GI-NEXT:    mov b0, v1.b[7]
-; CHECK-GI-NEXT:    mov v2.b[14], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[15], v0.b[0]
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_concat_v16i8_v8i8_v8i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 entry:
   %vecext = extractelement <8 x i8> %x, i32 0
   %vecinit = insertelement <16 x i8> undef, i8 %vecext, i32 0
@@ -2094,27 +2037,12 @@ entry:
 }
 
 define <8 x i16> @test_concat_v8i16_v4i16_v4i16(<4 x i16> %x, <4 x i16> %y) #0 {
-; CHECK-SD-LABEL: test_concat_v8i16_v4i16_v4i16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_concat_v8i16_v4i16_v4i16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
-; CHECK-GI-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-GI-NEXT:    mov v2.h[4], v1.h[0]
-; CHECK-GI-NEXT:    mov v2.h[5], v1.h[1]
-; CHECK-GI-NEXT:    mov v2.h[6], v1.h[2]
-; CHECK-GI-NEXT:    mov v2.h[7], v1.h[3]
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_concat_v8i16_v4i16_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
 entry:
   %vecext = extractelement <4 x i16> %x, i32 0
   %vecinit = insertelement <8 x i16> undef, i16 %vecext, i32 0
