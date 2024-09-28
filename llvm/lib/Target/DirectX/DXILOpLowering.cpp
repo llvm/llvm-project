@@ -23,7 +23,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
@@ -268,17 +270,20 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
 
     for (Use &U : make_early_inc_range(Intrin->uses())) {
-      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
-        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
+      if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
 
-          size_t IndexVal = IndexOp->getZExtValue();
+        if (EVI->getNumIndices() != 1)
+          return createStringError(std::errc::invalid_argument,
+                                   "Splitdouble has only 2 elements");
 
-          auto *OpEVI = IRB.CreateExtractValue(Op, IndexVal);
-          EEI->replaceAllUsesWith(OpEVI);
-          EEI->eraseFromParent();
-        }
+        size_t IndexVal = EVI->getIndices()[0];
+
+        auto *OpEVI = IRB.CreateExtractValue(Op, IndexVal);
+        EVI->replaceAllUsesWith(OpEVI);
+        EVI->eraseFromParent();
       }
     }
+
     Intrin->eraseFromParent();
 
     return Error::success();

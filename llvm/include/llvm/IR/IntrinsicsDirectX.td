@@ -94,7 +94,7 @@ def int_dx_splitdouble : DefaultAttrsIntrinsic<[llvm_anyint_ty, LLVMMatchType<0>
 def int_dx_radians : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
 def int_dx_splitdouble : DefaultAttrsIntrinsic<
-    [llvm_anyvector_ty], 
+    [llvm_anyint_ty, LLVMMatchType<0>], 
     [llvm_double_ty], 
     [IntrNoMem, IntrWillReturn]>;
 }

@@ -18979,8 +18979,8 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
           Builder->CreateIntrinsic(retType, llvm::Intrinsic::dx_splitdouble,
                                    {arg}, nullptr, "hlsl.asuint");
 
-      Value *arg0 = Builder->CreateExtractElement(CI, (uint64_t)0);
-      Value *arg1 = Builder->CreateExtractElement(CI, (uint64_t)1);
+      Value *arg0 = Builder->CreateExtractValue(CI, 0);
+      Value *arg1 = Builder->CreateExtractValue(CI, 1);
 
       return std::make_pair(arg0, arg1);
     };
@@ -18991,8 +18991,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     auto [Op2BaseLValue, Op2TmpLValue] =
         EmitHLSLOutArgExpr(OutArg2, Args, OutArg2->getType());
 
-    llvm::VectorType *retType =
-        llvm::VectorType::get(Int32Ty, ElementCount::getFixed(2));
+    llvm::StructType *retType = llvm::StructType::get(Int32Ty, Int32Ty);
 
     if (!Op0->getType()->isVectorTy()) {
       auto [arg0, arg1] = emitSplitDouble(&Builder, Op0, retType);
