@@ -213,7 +213,6 @@ struct TempStorage {
     return storage.back().get();
   }
 
-  // TODO: SmallVector
   std::vector<std::unique_ptr<char[]>> storage;
 };
 } // namespace
