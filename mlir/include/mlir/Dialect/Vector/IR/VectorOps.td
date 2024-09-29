@@ -2859,6 +2859,8 @@ def VectorScaleOp : Vector_Op<"vscale",
       setNameFn(getResult(), "vscale");
     }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

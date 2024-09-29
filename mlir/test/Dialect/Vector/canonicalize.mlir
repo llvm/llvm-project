@@ -2742,3 +2742,23 @@ func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
   %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
   return %1 : vector<4xi8>
 }
+
+// -----
+
+// CHECK-LABEL: @redundant_scalable_affine_min
+//       CHECK:   %[[C8:.*]] = arith.constant 8 : index
+//       CHECK:   scf.for
+//   CHECK-NOT:     affine.min
+//       CHECK:     "test.some_use"(%[[C8]]) : (index) -> ()
+//   CHECK-NOT:     affine.min
+func.func @redundant_scalable_affine_min() {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %vscale = vector.vscale
+  %c8_vscale = arith.muli %c8, %vscale : index
+  scf.for %i = %c0 to %c8_vscale step %c8 {
+    %min = affine.min affine_map<(d0)[s0] -> (-d0 + s0, 8)>(%i)[%c8_vscale]
+    "test.some_use"(%min) : (index) -> ()
+  }
+  return
+}

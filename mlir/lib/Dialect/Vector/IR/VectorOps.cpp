@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -719,6 +720,121 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
 void ReductionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<ElideSingleElementReduction>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// VectorScaleOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+class FoldScalableAffineMin : public OpRewritePattern<affine::AffineMinOp> {
+  using OpRewritePattern<affine::AffineMinOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(affine::AffineMinOp affineMin,
+                                PatternRewriter &rewriter) const override {
+    if (affineMin.getDimOperands().size() != 1)
+      return failure();
+
+    if (affineMin.getSymbolOperands().size() != 1)
+      return failure();
+
+    Value symbolOperand = affineMin.getSymbolOperands()[0];
+    Value dimOperand = affineMin.getDimOperands()[0];
+
+    auto symbolVscaleMultiple =
+        vector::getConstantVscaleMultiplier(symbolOperand);
+    if (!symbolVscaleMultiple)
+      return failure();
+
+    auto loop = affineMin->getParentOfType<LoopLikeOpInterface>();
+    if (!loop)
+      return failure();
+    auto inductionVar = loop.getSingleInductionVar();
+    auto lowerBound = loop.getSingleLowerBound();
+    auto upperBound = loop.getSingleUpperBound();
+    auto step = loop.getSingleStep();
+
+    if (!inductionVar || !lowerBound || !upperBound || !step)
+      return failure();
+
+    if (*inductionVar != dimOperand)
+      return failure();
+
+    if (getConstantIntValue(*step) != symbolVscaleMultiple)
+      return failure();
+
+    if (!isZeroIndex(*lowerBound))
+      return failure();
+
+    auto upperBoundValue = llvm::dyn_cast_if_present<Value>(*upperBound);
+    if (!upperBoundValue)
+      return failure();
+
+    auto upperBoundVscaleMultiple =
+        vector::getConstantVscaleMultiplier(upperBoundValue);
+
+    if (upperBoundVscaleMultiple != symbolVscaleMultiple)
+      return failure();
+
+    auto map = affineMin.getAffineMap();
+
+    auto isSymbolMinusDim = [](AffineExpr expr) {
+      auto binop = dyn_cast<AffineBinaryOpExpr>(expr);
+      if (!binop || binop.getKind() != AffineExprKind::Add)
+        return false;
+      if (!isa<AffineSymbolExpr>(binop.getRHS()))
+        return false;
+      auto neg = dyn_cast<AffineBinaryOpExpr>(binop.getLHS());
+      if (!neg || neg.getKind() != AffineExprKind::Mul)
+        return false;
+      if (!isa<AffineDimExpr>(neg.getLHS()))
+        return false;
+      auto cst = dyn_cast<AffineConstantExpr>(neg.getRHS());
+      if (!cst || cst.getValue() != -1)
+        return false;
+      return true;
+    };
+
+    if (!isSymbolMinusDim(map.getResult(0)))
+      return failure();
+    auto cst = dyn_cast<AffineConstantExpr>(map.getResult(1));
+    if (!cst || cst.getValue() != upperBoundVscaleMultiple)
+      return failure();
+
+    // Otherwise, we know:
+    // inductionVar >= 0
+    // inductionVar < cst * vscale
+    // step == cst
+    //
+    // So:
+    // inductionVar == x * vscale
+    // x >= 0
+    // x < vscale
+    //
+    // symbolOperand == cst * vscale
+    // dimOperand = inductionVar = x * cst
+    //
+    // min(-d0 + s0, cst)
+    // = min(-(cst * x) + (cst * vscale), 8)
+    // = min(cst*(vscale - x), cst)
+    // vscale - x >= 1, so cst*(vscale - x) >= cst
+    // so min(cst*(vscale - x), cst) == cst
+
+    rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(affineMin,
+                                                        *symbolVscaleMultiple);
+    return success();
+  }
+};
+
+} // namespace
+
+void VectorScaleOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  // FIXME: This is not _really_ a vector.vscale pattern (though a
+  // vector.vscale op will always be present when this fold applies), but it is
+  // here for lack of a better place.
+  results.add<FoldScalableAffineMin>(context);
 }
 
 //===----------------------------------------------------------------------===//
