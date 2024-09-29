@@ -5465,7 +5465,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // Add "-i128:128"
     std::string I64 = "-i64:64";
     std::string I128 = "-i128:128";
-    if (StringRef Ref = Res; !Ref.contains(I128)) {
+    if (!StringRef(Res).contains(I128)) {
       size_t Pos = Res.find(I64);
       assert(Pos != size_t(-1) && "no i64 data layout found!");
       Res.insert(Pos + I64.size(), I128);
