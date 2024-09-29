@@ -98,7 +98,7 @@ def FloatTypeClass : TypeClass {
 }
 
 def AluTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool]);
+  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [FixedPoint]);
 }
 
 def PtrTypeClass : TypeClass {
@@ -110,7 +110,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [FixedPoint]);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
 }
 
 def ComparableTypeClass : TypeClass {

@@ -1528,6 +1528,9 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   case BO_GE:
     return this->emitGEFixedPoint(E);
 #endif
+  case BO_Add:
+    return this->emitAddFixedPoint(E);
+
   default:
     return this->emitInvalid(E);
   }
