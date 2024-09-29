@@ -29,7 +29,7 @@ namespace {
 
 class RISCV final : public TargetInfo {
 public:
-  RISCV();
+  RISCV(Ctx &);
   uint32_t calcEFlags() const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -107,7 +107,7 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
          (extractBits(imm, 4, 0) << 7);
 }
 
-RISCV::RISCV() {
+RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_RISCV_COPY;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
@@ -1328,7 +1328,7 @@ void elf::mergeRISCVAttributesSections() {
                            mergeAttributesSection(sections));
 }
 
-TargetInfo *elf::getRISCVTargetInfo() {
-  static RISCV target;
+TargetInfo *elf::getRISCVTargetInfo(Ctx &ctx) {
+  static RISCV target(ctx);
   return &target;
 }
