@@ -334,7 +334,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   {
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
-    MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(&TM));
+    MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(&TM));
 
     // Setup the codegen now.
     if (TM.addPassesToEmitFile(PM, MMI, OS, nullptr,

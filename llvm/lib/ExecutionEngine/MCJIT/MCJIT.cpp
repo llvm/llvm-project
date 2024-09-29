@@ -158,7 +158,7 @@ std::unique_ptr<MemoryBuffer> MCJIT::emitObject(Module *M) {
   // generateCodeForModule.
 
   legacy::PassManager PM;
-  auto * LLVMTM = static_cast<LLVMTargetMachine*>(TM.get());
+  auto *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   MachineModuleInfo MMI(LLVMTM);
   Ctx = &MMI.getContext();
 

@@ -296,7 +296,7 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
   Module* Mod = unwrap(M);
 
   legacy::PassManager pass;
-  MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(TM));
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(TM));
 
   std::string error;
 

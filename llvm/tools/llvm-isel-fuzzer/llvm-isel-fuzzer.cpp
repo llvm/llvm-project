@@ -97,7 +97,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   // Build up a PM to do instruction selection.
   legacy::PassManager PM;
-  MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(TM.get()));
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(TM.get()));
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;

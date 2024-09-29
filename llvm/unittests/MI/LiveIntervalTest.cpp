@@ -54,8 +54,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
                              std::nullopt, CodeGenOptLevel::Aggressive)));
 }
 
-std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                 MachineModuleInfo &MMI,
+std::unique_ptr<Module> parseMIR(LLVMContext &Context, MachineModuleInfo &MMI,
                                  std::unique_ptr<MIRParser> &MIR,
                                  const LLVMTargetMachine &TM,
                                  StringRef MIRCode) {

@@ -235,8 +235,8 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   // TODO: This only works for targets implementing LLVMTargetMachine.
   const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
   MachineModuleInfo MMI(&LLVMTM);
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMI);
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), &MMI);
   // Saving reserved registers for client.
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
@@ -250,8 +250,8 @@ Error assembleToStream(const ExegesisTarget &ET,
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
   MachineModuleInfo MMI(TM.get());
-  MachineFunction &MF = createVoidVoidPtrMachineFunction(
-      FunctionID, Module.get(), &MMI);
+  MachineFunction &MF =
+      createVoidVoidPtrMachineFunction(FunctionID, Module.get(), &MMI);
   MF.ensureAlignment(kFunctionAlignment);
 
   // We need to instruct the passes that we're done with SSA and virtual

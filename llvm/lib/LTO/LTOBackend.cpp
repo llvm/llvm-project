@@ -418,7 +418,7 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
   legacy::PassManager CodeGenPasses;
-  MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(TM));
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(TM));
   TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(

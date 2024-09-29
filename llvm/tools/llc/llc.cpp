@@ -692,8 +692,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // Construct a custom pass pipeline that starts after instruction
     // selection.
     if (!getRunPassNames().empty()) {
-      auto *MMIWP =
-          new MachineModuleInfoWrapperPass(MMI);
+      auto *MMIWP = new MachineModuleInfoWrapperPass(MMI);
       if (!MIR) {
         WithColor::warning(errs(), argv[0])
             << "run-pass is for .mir file only.\n";
@@ -722,9 +721,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TPC.setInitialized();
       PM.add(createPrintMIRPass(*OS));
       PM.add(createFreeMachineFunctionPass());
-    } else if (Target->addPassesToEmitFile(
-                   PM, MMI, *OS, DwoOut ? &DwoOut->os() : nullptr,
-                   codegen::getFileType(), NoVerify)) {
+    } else if (Target->addPassesToEmitFile(PM, MMI, *OS,
+                                           DwoOut ? &DwoOut->os() : nullptr,
+                                           codegen::getFileType(), NoVerify)) {
       reportError("target does not support generation of this file type");
     }
 
