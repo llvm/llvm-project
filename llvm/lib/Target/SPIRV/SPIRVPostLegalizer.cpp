@@ -175,23 +175,6 @@ void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
   visit(MF, *MF.begin(), op);
 }
 
-// Sorts basic blocks by dominance to respect the SPIR-V spec.
-void sortBlocks(MachineFunction &MF) {
-  MachineDominatorTree MDT(MF);
-
-  std::unordered_map<MachineBasicBlock *, size_t> Order;
-  Order.reserve(MF.size());
-
-  size_t Index = 0;
-  visit(MF, [&Order, &Index](MachineBasicBlock *MBB) { Order[MBB] = Index++; });
-
-  auto Comparator = [&Order](MachineBasicBlock &LHS, MachineBasicBlock &RHS) {
-    return Order[&LHS] < Order[&RHS];
-  };
-
-  MF.sort(Comparator);
-}
-
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
@@ -200,7 +183,6 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
 
   processNewInstrs(MF, GR, MIB);
-  sortBlocks(MF);
 
   return true;
 }

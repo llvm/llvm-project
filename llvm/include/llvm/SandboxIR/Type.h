@@ -31,6 +31,8 @@ class IntegerType;
 class FunctionType;
 class ArrayType;
 class StructType;
+class TargetExtType;
+class Module;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
@@ -56,6 +58,9 @@ protected:
   friend class ConstantVector;     // For LLVMTy.
   friend class CmpInst;            // For LLVMTy. TODO: Cleanup after
                                    // sandboxir::VectorType is more complete.
+  friend class Utils;              // for LLVMTy
+  friend class TargetExtType;      // For LLVMTy.
+  friend class Module;             // For LLVMTy.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;

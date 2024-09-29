@@ -2861,113 +2861,120 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
   //  clause requires an accessible, unambiguous default constructor for the
   //  class type, unless the list item is also specified in a firstprivate
   //  clause.
+
+  auto FinalizeLastprivate = [&](OMPLastprivateClause *Clause) {
+    SmallVector<Expr *, 8> PrivateCopies;
+    for (Expr *DE : Clause->varlist()) {
+      if (DE->isValueDependent() || DE->isTypeDependent()) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      auto *DRE = cast<DeclRefExpr>(DE->IgnoreParens());
+      auto *VD = cast<VarDecl>(DRE->getDecl());
+      QualType Type = VD->getType().getNonReferenceType();
+      const DSAStackTy::DSAVarData DVar =
+          DSAStack->getTopDSA(VD, /*FromParent=*/false);
+      if (DVar.CKind != OMPC_lastprivate) {
+        // The variable is also a firstprivate, so initialization sequence
+        // for private copy is generated already.
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      // Generate helper private variable and initialize it with the
+      // default value. The address of the original variable is replaced
+      // by the address of the new private variable in CodeGen. This new
+      // variable is not added to IdResolver, so the code in the OpenMP
+      // region uses original variable for proper diagnostics.
+      VarDecl *VDPrivate = buildVarDecl(
+          SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(), VD->getName(),
+          VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
+      SemaRef.ActOnUninitializedDecl(VDPrivate);
+      if (VDPrivate->isInvalidDecl()) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      PrivateCopies.push_back(buildDeclRefExpr(
+          SemaRef, VDPrivate, DE->getType(), DE->getExprLoc()));
+    }
+    Clause->setPrivateCopies(PrivateCopies);
+  };
+
+  auto FinalizeNontemporal = [&](OMPNontemporalClause *Clause) {
+    // Finalize nontemporal clause by handling private copies, if any.
+    SmallVector<Expr *, 8> PrivateRefs;
+    for (Expr *RefExpr : Clause->varlist()) {
+      assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
+      SourceLocation ELoc;
+      SourceRange ERange;
+      Expr *SimpleRefExpr = RefExpr;
+      auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange);
+      if (Res.second)
+        // It will be analyzed later.
+        PrivateRefs.push_back(RefExpr);
+      ValueDecl *D = Res.first;
+      if (!D)
+        continue;
+
+      const DSAStackTy::DSAVarData DVar =
+          DSAStack->getTopDSA(D, /*FromParent=*/false);
+      PrivateRefs.push_back(DVar.PrivateCopy ? DVar.PrivateCopy
+                                             : SimpleRefExpr);
+    }
+    Clause->setPrivateRefs(PrivateRefs);
+  };
+
+  auto FinalizeAllocators = [&](OMPUsesAllocatorsClause *Clause) {
+    for (unsigned I = 0, E = Clause->getNumberOfAllocators(); I < E; ++I) {
+      OMPUsesAllocatorsClause::Data D = Clause->getAllocatorData(I);
+      auto *DRE = dyn_cast<DeclRefExpr>(D.Allocator->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      ValueDecl *VD = DRE->getDecl();
+      if (!VD || !isa<VarDecl>(VD))
+        continue;
+      DSAStackTy::DSAVarData DVar =
+          DSAStack->getTopDSA(VD, /*FromParent=*/false);
+      // OpenMP [2.12.5, target Construct]
+      // Memory allocators that appear in a uses_allocators clause cannot
+      // appear in other data-sharing attribute clauses or data-mapping
+      // attribute clauses in the same construct.
+      Expr *MapExpr = nullptr;
+      if (DVar.RefExpr ||
+          DSAStack->checkMappableExprComponentListsForDecl(
+              VD, /*CurrentRegionOnly=*/true,
+              [VD, &MapExpr](
+                  OMPClauseMappableExprCommon::MappableExprComponentListRef
+                      MapExprComponents,
+                  OpenMPClauseKind C) {
+                auto MI = MapExprComponents.rbegin();
+                auto ME = MapExprComponents.rend();
+                if (MI != ME &&
+                    MI->getAssociatedDeclaration()->getCanonicalDecl() ==
+                        VD->getCanonicalDecl()) {
+                  MapExpr = MI->getAssociatedExpression();
+                  return true;
+                }
+                return false;
+              })) {
+        Diag(D.Allocator->getExprLoc(), diag::err_omp_allocator_used_in_clauses)
+            << D.Allocator->getSourceRange();
+        if (DVar.RefExpr)
+          reportOriginalDsa(SemaRef, DSAStack, VD, DVar);
+        else
+          Diag(MapExpr->getExprLoc(), diag::note_used_here)
+              << MapExpr->getSourceRange();
+      }
+    }
+  };
+
   if (const auto *D = dyn_cast_or_null<OMPExecutableDirective>(CurDirective)) {
     for (OMPClause *C : D->clauses()) {
       if (auto *Clause = dyn_cast<OMPLastprivateClause>(C)) {
-        SmallVector<Expr *, 8> PrivateCopies;
-        for (Expr *DE : Clause->varlist()) {
-          if (DE->isValueDependent() || DE->isTypeDependent()) {
-            PrivateCopies.push_back(nullptr);
-            continue;
-          }
-          auto *DRE = cast<DeclRefExpr>(DE->IgnoreParens());
-          auto *VD = cast<VarDecl>(DRE->getDecl());
-          QualType Type = VD->getType().getNonReferenceType();
-          const DSAStackTy::DSAVarData DVar =
-              DSAStack->getTopDSA(VD, /*FromParent=*/false);
-          if (DVar.CKind == OMPC_lastprivate) {
-            // Generate helper private variable and initialize it with the
-            // default value. The address of the original variable is replaced
-            // by the address of the new private variable in CodeGen. This new
-            // variable is not added to IdResolver, so the code in the OpenMP
-            // region uses original variable for proper diagnostics.
-            VarDecl *VDPrivate = buildVarDecl(
-                SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(),
-                VD->getName(), VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
-            SemaRef.ActOnUninitializedDecl(VDPrivate);
-            if (VDPrivate->isInvalidDecl()) {
-              PrivateCopies.push_back(nullptr);
-              continue;
-            }
-            PrivateCopies.push_back(buildDeclRefExpr(
-                SemaRef, VDPrivate, DE->getType(), DE->getExprLoc()));
-          } else {
-            // The variable is also a firstprivate, so initialization sequence
-            // for private copy is generated already.
-            PrivateCopies.push_back(nullptr);
-          }
-        }
-        Clause->setPrivateCopies(PrivateCopies);
-        continue;
-      }
-      // Finalize nontemporal clause by handling private copies, if any.
-      if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
-        SmallVector<Expr *, 8> PrivateRefs;
-        for (Expr *RefExpr : Clause->varlist()) {
-          assert(RefExpr && "NULL expr in OpenMP nontemporal clause.");
-          SourceLocation ELoc;
-          SourceRange ERange;
-          Expr *SimpleRefExpr = RefExpr;
-          auto Res = getPrivateItem(SemaRef, SimpleRefExpr, ELoc, ERange);
-          if (Res.second)
-            // It will be analyzed later.
-            PrivateRefs.push_back(RefExpr);
-          ValueDecl *D = Res.first;
-          if (!D)
-            continue;
-
-          const DSAStackTy::DSAVarData DVar =
-              DSAStack->getTopDSA(D, /*FromParent=*/false);
-          PrivateRefs.push_back(DVar.PrivateCopy ? DVar.PrivateCopy
-                                                 : SimpleRefExpr);
-        }
-        Clause->setPrivateRefs(PrivateRefs);
-        continue;
-      }
-      if (auto *Clause = dyn_cast<OMPUsesAllocatorsClause>(C)) {
-        for (unsigned I = 0, E = Clause->getNumberOfAllocators(); I < E; ++I) {
-          OMPUsesAllocatorsClause::Data D = Clause->getAllocatorData(I);
-          auto *DRE = dyn_cast<DeclRefExpr>(D.Allocator->IgnoreParenImpCasts());
-          if (!DRE)
-            continue;
-          ValueDecl *VD = DRE->getDecl();
-          if (!VD || !isa<VarDecl>(VD))
-            continue;
-          DSAStackTy::DSAVarData DVar =
-              DSAStack->getTopDSA(VD, /*FromParent=*/false);
-          // OpenMP [2.12.5, target Construct]
-          // Memory allocators that appear in a uses_allocators clause cannot
-          // appear in other data-sharing attribute clauses or data-mapping
-          // attribute clauses in the same construct.
-          Expr *MapExpr = nullptr;
-          if (DVar.RefExpr ||
-              DSAStack->checkMappableExprComponentListsForDecl(
-                  VD, /*CurrentRegionOnly=*/true,
-                  [VD, &MapExpr](
-                      OMPClauseMappableExprCommon::MappableExprComponentListRef
-                          MapExprComponents,
-                      OpenMPClauseKind C) {
-                    auto MI = MapExprComponents.rbegin();
-                    auto ME = MapExprComponents.rend();
-                    if (MI != ME &&
-                        MI->getAssociatedDeclaration()->getCanonicalDecl() ==
-                            VD->getCanonicalDecl()) {
-                      MapExpr = MI->getAssociatedExpression();
-                      return true;
-                    }
-                    return false;
-                  })) {
-            Diag(D.Allocator->getExprLoc(),
-                 diag::err_omp_allocator_used_in_clauses)
-                << D.Allocator->getSourceRange();
-            if (DVar.RefExpr)
-              reportOriginalDsa(SemaRef, DSAStack, VD, DVar);
-            else
-              Diag(MapExpr->getExprLoc(), diag::note_used_here)
-                  << MapExpr->getSourceRange();
-          }
-        }
-        continue;
+        FinalizeLastprivate(Clause);
+      } else if (auto *Clause = dyn_cast<OMPNontemporalClause>(C)) {
+        FinalizeNontemporal(Clause);
+      } else if (auto *Clause = dyn_cast<OMPUsesAllocatorsClause>(C)) {
+        FinalizeAllocators(Clause);
       }
     }
     // Check allocate clauses.

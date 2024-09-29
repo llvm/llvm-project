@@ -320,7 +320,9 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #  include <__ostream/basic_ostream.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__utility/swap.h>
+#  include <ios>
 #  include <istream>
+#  include <locale>
 #  include <string>
 #  include <string_view>
 #  include <version>

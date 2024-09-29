@@ -632,5 +632,44 @@ public:
                                                const MachineRegisterInfo &MRI);
 };
 
+/// An floating-point-like constant.
+///
+/// It abstracts over scalar, fixed-length vectors, and scalable vectors.
+/// In the common case, it provides a common API and feels like an APFloat,
+/// while still providing low-level access.
+/// It can be used for constant-folding.
+///
+/// bool isZero()
+/// abstracts over the kind.
+///
+/// switch(const.getKind())
+/// {
+/// }
+/// provides low-level access.
+class GFConstant {
+public:
+  enum class GFConstantKind { Scalar, FixedVector, ScalableVector };
+
+private:
+  GFConstantKind Kind;
+  SmallVector<APFloat> Values;
+
+public:
+  GFConstant(ArrayRef<APFloat> Values)
+      : Kind(GFConstantKind::FixedVector), Values(Values) {};
+  GFConstant(const APFloat &Value, GFConstantKind Kind) : Kind(Kind) {
+    Values.push_back(Value);
+  }
+
+  /// Returns the kind of of this constant, e.g, Scalar.
+  GFConstantKind getKind() const { return Kind; }
+
+  /// Returns the value, if this constant is a scalar.
+  APFloat getScalarValue() const;
+
+  static std::optional<GFConstant> getConstant(Register Const,
+                                               const MachineRegisterInfo &MRI);
+};
+
 } // End namespace llvm.
 #endif

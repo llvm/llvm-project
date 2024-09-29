@@ -510,22 +510,6 @@ void tools::addLinkerCompressDebugSectionsOption(
   }
 }
 
-void tools::addGPULibraries(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                            llvm::opt::ArgStringList &CmdArgs) {
-  if (Args.hasArg(options::OPT_nostdlib, options::OPT_r,
-                  options::OPT_nodefaultlibs, options::OPT_nolibc,
-                  options::OPT_nogpulibc))
-    return;
-
-  // If the user's toolchain has the 'include/<triple>/` path, we assume it
-  // supports the standard C libraries for the GPU and include them.
-  bool HasLibC = TC.getStdlibIncludePath().has_value();
-  if (HasLibC) {
-    CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lm");
-  }
-}
-
 void tools::AddTargetFeature(const ArgList &Args,
                              std::vector<StringRef> &Features,
                              OptSpecifier OnOpt, OptSpecifier OffOpt,
@@ -2975,4 +2959,23 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       CmdArgs.push_back("-mlarge-data-threshold=0");
     }
   }
+}
+
+void tools::handleColorDiagnosticsArgs(const Driver &D, const ArgList &Args,
+                                       ArgStringList &CmdArgs) {
+  // Color diagnostics are parsed by the driver directly from argv and later
+  // re-parsed to construct this job; claim any possible color diagnostic here
+  // to avoid warn_drv_unused_argument and diagnose bad
+  // OPT_fdiagnostics_color_EQ values.
+  Args.getLastArg(options::OPT_fcolor_diagnostics,
+                  options::OPT_fno_color_diagnostics);
+  if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_color_EQ)) {
+    StringRef Value(A->getValue());
+    if (Value != "always" && Value != "never" && Value != "auto")
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+  }
+
+  if (D.getDiags().getDiagnosticOptions().ShowColors)
+    CmdArgs.push_back("-fcolor-diagnostics");
 }

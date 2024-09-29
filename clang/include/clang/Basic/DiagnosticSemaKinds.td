@@ -2933,15 +2933,9 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
-def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
-def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
-def err_diagnose_if_expected_equals : Error<
-  "expected '=' after diagnostic option">;
-def err_diagnose_if_unexpected_value : Error<
-  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
@@ -3290,7 +3284,7 @@ def err_attribute_unsupported_m_profile
 def err_duplicate_target_attribute
     : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
               " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
-              "attribute string; ">;
+              "attribute string;">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -4687,6 +4681,8 @@ def err_void_only_param : Error<
   "'void' must be the first and only parameter if specified">;
 def err_void_param_qualified : Error<
   "'void' as parameter must not have type qualifiers">;
+def err_void_explicit_object_param : Error<
+  "explicit object parameter cannot have 'void' type">;
 def err_ident_list_in_fn_declaration : Error<
   "a parameter list without types is only allowed in a function definition">;
 def ext_param_not_declared : ExtWarn<
@@ -6800,6 +6796,12 @@ def warn_arc_lifetime_result_type : Warning<
   "ARC %select{unused|__unsafe_unretained|__strong|__weak|__autoreleasing}0 "
   "lifetime qualifier on return type is ignored">,
   InGroup<IgnoredQualifiers>;
+def warn_excess_precision_not_supported : Warning<
+  "excess precision is requested but the target does not support excess "
+  "precision which may result in observable differences in complex division "
+  "behavior%select{|, additional uses where the requested higher precision "
+  "cannot be honored were found but not diagnosed}0">,
+  InGroup<DiagGroup<"higher-precision-for-complex-division">>;
 
 let CategoryName = "ARC Retain Cycle" in {
 
@@ -9907,7 +9909,7 @@ def err_defaulted_comparison_constexpr_mismatch : Error<
   "three-way comparison operator}0 cannot be "
   "declared %select{constexpr|consteval}2 because "
   "%select{it|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function ">;
+  "invokes a non-constexpr comparison function">;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
@@ -10093,10 +10095,14 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter|compound literal}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 "
+  "%select{returned|passed to musttail function}3">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
+  InGroup<ReturnStackAddress>;
+def warn_musttail_local_temp_addr_ref : Warning<
+  "passing %select{address of|reference to}0 local temporary object to musttail function">,
   InGroup<ReturnStackAddress>;
 def err_ret_local_temp_ref : Error<
   "returning reference to local temporary object">;
@@ -11551,7 +11557,7 @@ def err_omp_wrong_device_function_call : Error<
   "function with 'device_type(%0)' is not available on %select{device|host}1">;
 def note_omp_marked_device_type_here : Note<"marked as 'device_type(%0)' here">;
 def err_omp_declare_target_has_local_vars : Error<
-  "local variable '%0' should not be used in 'declare target' directive; ">;
+  "local variable '%0' should not be used in 'declare target' directive;">;
 def warn_omp_declare_target_after_first_use : Warning<
   "declaration marked as declare target after first use, it may lead to incorrect results">,
   InGroup<OpenMPTarget>;
@@ -12373,6 +12379,7 @@ def warn_hlsl_deprecated_register_type_b: Warning<"binding type 'b' only applies
 def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The 'integer constant' binding type is no longer supported">, InGroup<LegacyConstantRegisterBinding>, DefaultError;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
+def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
@@ -12381,12 +12388,16 @@ def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match 
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
+def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used only on HLSL intangible type %1">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
+def err_hlsl_vector_compound_assignment_truncation : Error<
+  "left hand operand of type %0 to compound assignment cannot be truncated "
+  "when used with right hand operand of type %1">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
