@@ -105,7 +105,7 @@ private:
   /// All reaching defs of all reg units for a given MBB
   using MBBDefsInfo = std::vector<MBBRegUnitDefs>;
 
-  /// All reaching defs of all reg units for a all MBBs
+  /// All reaching defs of all reg units for all MBBs
   SmallVector<MBBDefsInfo, 4> AllReachingDefs;
 };
 
