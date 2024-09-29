@@ -697,6 +697,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     return this->emitCastFixedPointFloating(TargetSemantics, CE);
   }
+  case CK_FixedPointToIntegral: {
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitCastFixedPointIntegral(classifyPrim(CE->getType()), CE);
+  }
   case CK_FixedPointCast: {
     if (!this->visit(SubExpr))
       return false;
@@ -1542,7 +1547,6 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
     return this->emitEQFixedPoint(E);
   case BO_NE:
     return this->emitNEFixedPoint(E);
-#if 0
   case BO_LT:
     return this->emitLTFixedPoint(E);
   case BO_LE:
@@ -1551,15 +1555,39 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
     return this->emitGTFixedPoint(E);
   case BO_GE:
     return this->emitGEFixedPoint(E);
-#endif
   case BO_Add:
     return ConvertResult(this->emitAddFixedPoint(E));
+  case BO_Sub:
+    return ConvertResult(this->emitSubFixedPoint(E));
+  case BO_Mul:
+    return ConvertResult(this->emitMulFixedPoint(E));
+  case BO_Div:
+    return ConvertResult(this->emitDivFixedPoint(E));
 
   default:
     return this->emitInvalid(E);
   }
 
   llvm_unreachable("unhandled binop opcode");
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isFixedPointType());
+
+  switch (E->getOpcode()) {
+  case UO_Plus:
+    return this->delegate(SubExpr);
+  case UO_Minus:
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitNegFixedPoint(E);
+  default:
+    return false;
+  }
+
+  llvm_unreachable("Unhandled unary opcode");
 }
 
 template <class Emitter>
@@ -3805,7 +3833,7 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   case PT_FixedPoint: {
     auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
-    return this->emitConstFixedPoint(FixedPoint::Zero(Sem), E);
+    return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
   }
     llvm_unreachable("Implement");
   }
@@ -5471,6 +5499,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return this->VisitComplexUnaryOperator(E);
   if (SubExpr->getType()->isVectorType())
     return this->VisitVectorUnaryOperator(E);
+  if (SubExpr->getType()->isFixedPointType())
+    return this->VisitFixedPointUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {
