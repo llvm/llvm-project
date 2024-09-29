@@ -173,15 +173,17 @@ protected:
 
 public:
   llvm::IntegerType *ShortTy, *IntTy, *LongTy;
-  llvm::PointerType *Int8PtrTy, *Int8PtrPtrTy;
+
+  union {
+    llvm::PointerType *Int8PtrTy;
+    llvm::PointerType *Int8PtrPtrTy;
+  };
+
   llvm::PointerType *Int8PtrProgramASTy;
   llvm::Type *IvarOffsetVarTy;
 
   /// ObjectPtrTy - LLVM type for object handles (typeof(id))
   llvm::PointerType *ObjectPtrTy;
-
-  /// PtrObjectPtrTy - LLVM type for id *
-  llvm::PointerType *PtrObjectPtrTy;
 
   /// SelectorPtrTy - LLVM type for selector handles (typeof(SEL))
   llvm::PointerType *SelectorPtrTy;
@@ -212,8 +214,6 @@ public:
 
   /// SuperTy - LLVM type for struct objc_super.
   llvm::StructType *SuperTy;
-  /// SuperPtrTy - LLVM type for struct objc_super *.
-  llvm::PointerType *SuperPtrTy;
 
   /// PropertyTy - LLVM type for struct objc_property (struct _prop_t
   /// in GCC parlance).
@@ -222,16 +222,23 @@ public:
   /// PropertyListTy - LLVM type for struct objc_property_list
   /// (_prop_list_t in GCC parlance).
   llvm::StructType *PropertyListTy;
-  /// PropertyListPtrTy - LLVM type for struct objc_property_list*.
-  llvm::PointerType *PropertyListPtrTy;
 
   // MethodTy - LLVM type for struct objc_method.
   llvm::StructType *MethodTy;
 
   /// CacheTy - LLVM type for struct objc_cache.
   llvm::Type *CacheTy;
-  /// CachePtrTy - LLVM type for struct objc_cache *.
-  llvm::PointerType *CachePtrTy;
+
+  union {
+    /// PtrObjectPtrTy - LLVM type for id *
+    llvm::PointerType *PtrObjectPtrTy;
+    /// SuperPtrTy - LLVM type for struct objc_super *.
+    llvm::PointerType *SuperPtrTy;
+    /// PropertyListPtrTy - LLVM type for struct objc_property_list*.
+    llvm::PointerType *PropertyListPtrTy;
+    /// CachePtrTy - LLVM type for struct objc_cache *.
+    llvm::PointerType *CachePtrTy;
+  };
 
   llvm::FunctionCallee getGetPropertyFn() {
     CodeGen::CodeGenTypes &Types = CGM.getTypes();
