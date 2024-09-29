@@ -88,21 +88,21 @@ bool WebAssemblyAsmTypeCheck::match(StackType TypeA, StackType TypeB) {
 
 std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
                                                     size_t StartPos) {
-  SmallVector<std::string, 4> Reverse;
+  SmallVector<std::string, 4> TypeStrs;
   for (auto I = Types.size(); I > StartPos; I--) {
     if (std::get_if<Any>(&Types[I - 1]))
-      Reverse.push_back("any");
+      TypeStrs.push_back("any");
     else if (std::get_if<Ref>(&Types[I - 1]))
-      Reverse.push_back("ref");
+      TypeStrs.push_back("ref");
     else
-      Reverse.push_back(
+      TypeStrs.push_back(
           WebAssembly::typeToString(std::get<wasm::ValType>(Types[I - 1])));
   }
 
   std::stringstream SS;
   SS << "[";
   bool First = true;
-  for (auto It = Reverse.rbegin(); It != Reverse.rend(); ++It) {
+  for (auto It = TypeStrs.rbegin(); It != TypeStrs.rend(); ++It) {
     if (!First)
       SS << ", ";
     SS << *It;
