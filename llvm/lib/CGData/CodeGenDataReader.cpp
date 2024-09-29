@@ -31,8 +31,8 @@ setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
 }
 
 Error CodeGenDataReader::mergeFromObjectFile(
-    const object::ObjectFile *Obj,
-    OutlinedHashTreeRecord &GlobalOutlineRecord) {
+    const object::ObjectFile *Obj, OutlinedHashTreeRecord &GlobalOutlineRecord,
+    stable_hash *CombinedHash) {
   Triple TT = Obj->makeTriple();
   auto CGOutLineName =
       getCodeGenDataSectionName(CG_outline, TT.getObjectFormat(), false);
@@ -48,6 +48,9 @@ Error CodeGenDataReader::mergeFromObjectFile(
     auto *EndData = Data + ContentsOrErr->size();
 
     if (*NameOrErr == CGOutLineName) {
+      if (CombinedHash)
+        *CombinedHash =
+            stable_hash_combine(*CombinedHash, xxh3_64bits(*ContentsOrErr));
       // In case dealing with an executable that has concatenated cgdata,
       // we want to merge them into a single cgdata.
       // Although it's not a typical workflow, we support this scenario.

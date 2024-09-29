@@ -13,6 +13,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -36,6 +37,7 @@
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -101,7 +103,7 @@ std::string llvm::computeLTOCacheKey(
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls, StringRef ExtraID) {
   // Compute the unique hash for this entry.
   // This is based on the current compiler version, the module itself, the
   // export list, the hash for every single module in the import list, the
@@ -340,6 +342,9 @@ std::string llvm::computeLTOCacheKey(
       }
     }
   }
+
+  if (!ExtraID.empty())
+    AddString(ExtraID);
 
   return toHex(Hasher.result());
 }
@@ -1373,6 +1378,7 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
 
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
+protected:
   DefaultThreadPool BackendThreadPool;
   AddStreamFn AddStream;
   FileCache Cache;
@@ -1511,25 +1517,89 @@ public:
 /// buffer. Note the codegen data stored in the scratch buffer will be extracted
 /// and merged in the subsequent step.
 class FirstRoundThinBackend : public InProcessThinBackend {
+  AddStreamFn IRAddStream;
+  FileCache IRCache;
+
 public:
   FirstRoundThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch)
-      : InProcessThinBackend(
-            Conf, CombinedIndex, ThinLTOParallelism, ModuleToDefinedGVSummaries,
-            // Allocate a scratch buffer for each task to write output to.
-            [Allocation = &*Scratch](unsigned Task, const Twine &ModuleName) {
-              return std::make_unique<CachedFileStream>(
-                  std::make_unique<raw_svector_ostream>((*Allocation)[Task]));
-            },
-            FileCache(), /*OnWrite=*/nullptr, /*ShouldEmitIndexFiles=*/false,
-            /*ShouldEmitImportsFiles=*/false),
-        Scratch(std::move(Scratch)) {}
+      AddStreamFn CGAddStream, FileCache CGCache, AddStreamFn IRAddStream,
+      FileCache IRCache)
+      : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
+                             ModuleToDefinedGVSummaries, std::move(CGAddStream),
+                             std::move(CGCache), /*OnWrite=*/nullptr,
+                             /*ShouldEmitIndexFiles=*/false,
+                             /*ShouldEmitImportsFiles=*/false),
+        IRAddStream(std::move(IRAddStream)), IRCache(std::move(IRCache)) {}
 
-  /// Scratch space for writing output during the codegen.
-  std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch;
+  Error runThinLTOBackendThread(
+      AddStreamFn CGAddStream, FileCache CGCache, unsigned Task,
+      BitcodeModule BM, ModuleSummaryIndex &CombinedIndex,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      const GVSummaryMapTy &DefinedGlobals,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+    auto RunThinBackend = [&](AddStreamFn CGAddStream,
+                              AddStreamFn IRAddStream) {
+      LTOLLVMContext BackendContext(Conf);
+      Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
+      if (!MOrErr)
+        return MOrErr.takeError();
+
+      return thinBackend(Conf, Task, CGAddStream, **MOrErr, CombinedIndex,
+                         ImportList, DefinedGlobals, &ModuleMap,
+                         Conf.CodeGenOnly, IRAddStream);
+    };
+
+    auto ModuleID = BM.getModuleIdentifier();
+
+    if (ShouldEmitIndexFiles) {
+      if (auto E = emitFiles(ImportList, ModuleID, ModuleID.str()))
+        return E;
+    }
+
+    assert((CGCache.isValid() == IRCache.isValid()) &&
+           "Both caches for CG and IR should have matching availability");
+    if (!CGCache.isValid() || !CombinedIndex.modulePaths().count(ModuleID) ||
+        all_of(CombinedIndex.getModuleHash(ModuleID),
+               [](uint32_t V) { return V == 0; }))
+      // Cache disabled or no entry for this module in the combined index or
+      // no module hash.
+      return RunThinBackend(CGAddStream, IRAddStream);
+
+    // Get CGKey for caching object in CGCache.
+    std::string CGKey = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+    Expected<AddStreamFn> CacheCGAddStreamOrErr =
+        CGCache(Task, CGKey, ModuleID);
+    if (Error Err = CacheCGAddStreamOrErr.takeError())
+      return Err;
+    AddStreamFn &CacheCGAddStream = *CacheCGAddStreamOrErr;
+
+    // Get IRKey for caching (optimized) IR in IRCache.
+    std::string IRKey = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls, /*ExtraID=*/"IR");
+    Expected<AddStreamFn> CacheIRAddStreamOrErr =
+        IRCache(Task, IRKey, ModuleID);
+    if (Error Err = CacheIRAddStreamOrErr.takeError())
+      return Err;
+    AddStreamFn &CacheIRAddStream = *CacheIRAddStreamOrErr;
+
+    assert((CacheCGAddStream == nullptr) == (CacheIRAddStream == nullptr) &&
+           "Both CG and IR caching should be matched");
+    if (CacheIRAddStream) {
+      LLVM_DEBUG(dbgs() << "[FirstRound] Cache Miss for "
+                        << BM.getModuleIdentifier() << "\n");
+      return RunThinBackend(CacheCGAddStream, CacheIRAddStream);
+    }
+
+    return Error::success();
+  }
 };
 
 /// This backend operates in the second round of a two-codegen round process.
@@ -1538,17 +1608,23 @@ public:
 /// the code, utilizing the codegen data merged from the first round. Finally,
 /// it writes the resulting object files as usual.
 class SecondRoundThinBackend : public InProcessThinBackend {
+  ArrayRef<StringRef> IRFiles;
+  stable_hash CombinedCGDataHash;
+
 public:
   SecondRoundThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream)
+      AddStreamFn AddStream, FileCache CGCache, ArrayRef<StringRef> IRFiles,
+      stable_hash CombinedCGDataHash)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
-                             ModuleToDefinedGVSummaries, AddStream, FileCache(),
+                             ModuleToDefinedGVSummaries, AddStream,
+                             std::move(CGCache),
                              /*OnWrite=*/nullptr,
                              /*ShouldEmitIndexFiles=*/false,
-                             /*ShouldEmitImportsFiles=*/false) {}
+                             /*ShouldEmitImportsFiles=*/false),
+        IRFiles(IRFiles), CombinedCGDataHash(CombinedCGDataHash) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -1558,13 +1634,42 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
       MapVector<StringRef, BitcodeModule> &ModuleMap) override {
-    LTOLLVMContext BackendContext(Conf);
-    std::unique_ptr<Module> LoadedModule =
-        cgdata::loadModuleForTwoRounds(BM, Task, BackendContext);
+    auto RunThinBackend = [&](AddStreamFn AddStream) {
+      LTOLLVMContext BackendContext(Conf);
+      std::unique_ptr<Module> LoadedModule =
+          cgdata::loadModuleForTwoRounds(BM, Task, BackendContext, IRFiles);
 
-    return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
-                       ImportList, DefinedGlobals, &ModuleMap,
-                       /*CodeGenOnly=*/true);
+      return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
+                         ImportList, DefinedGlobals, &ModuleMap,
+                         /*CodeGenOnly=*/true);
+    };
+
+    auto ModuleID = BM.getModuleIdentifier();
+    if (!Cache.isValid() || !CombinedIndex.modulePaths().count(ModuleID) ||
+        all_of(CombinedIndex.getModuleHash(ModuleID),
+               [](uint32_t V) { return V == 0; }))
+      // Cache disabled or no entry for this module in the combined index or
+      // no module hash.
+      return RunThinBackend(AddStream);
+
+    // Get Key for caching the final object file in Cache with the combined
+    // CGData hash.
+    std::string Key = computeLTOCacheKey(
+        Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
+        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls,
+        /*ExtraID=*/std::to_string(CombinedCGDataHash));
+    Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
+    if (Error Err = CacheAddStreamOrErr.takeError())
+      return Err;
+    AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
+
+    if (CacheAddStream) {
+      LLVM_DEBUG(dbgs() << "[SecondRound] Cache Miss for "
+                        << BM.getModuleIdentifier() << "\n");
+      return RunThinBackend(CacheAddStream);
+    }
+
+    return Error::success();
   }
 };
 } // end anonymous namespace
@@ -1900,32 +2005,33 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // 1. First round: Run optimization and code generation with a scratch output.
   // 2. Merge codegen data extracted from the scratch output.
   // 3. Second round: Run code generation again using the merged data.
-  LLVM_DEBUG(dbgs() << "Running ThinLTO two-codegen rounds\n");
+  LLVM_DEBUG(dbgs() << "[TwoRounds] Initializing ThinLTO two-codegen rounds\n");
 
-  // Initialize a temporary path to store and retrieve optimized IRs for
-  // two-round code generation.
-  cgdata::initializeTwoCodegenRounds();
+  unsigned MaxTasks = getMaxTasks();
+  auto Parallelism = ThinLTO.Backend.getParallelism();
+  cgdata::StreamCacheData CG(MaxTasks), IR(MaxTasks);
+  cgdata::initializeTwoCodegenRounds(CG, IR, Cache);
 
-  // Create a scratch output to hold intermediate results.
-  auto Outputs =
-      std::make_unique<std::vector<llvm::SmallString<0>>>(getMaxTasks());
-  auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
-      Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
-      ModuleToDefinedGVSummaries, std::move(Outputs));
   // First round: Run optimization and code generation with a scratch output.
-  // Before code generation, serialize modules.
+  // Before code generation, serialize the optimized IR modules.
+  LLVM_DEBUG(dbgs() << "[TwoRounds] Running the first round of codegen\n");
+  auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
+      Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+      CG.AddStream, CG.Cache, IR.AddStream, IR.Cache);
   if (Error E = RunBackends(FirstRoundLTO.get()))
     return E;
 
-  // Merge codegen data extracted from the scratch output.
-  if (Error E = cgdata::mergeCodeGenData(std::move(FirstRoundLTO->Scratch)))
+  LLVM_DEBUG(dbgs() << "[TwoRounds] Merging codegen data\n");
+  stable_hash CombinedHash = 0;
+  if (Error E = cgdata::mergeCodeGenData(CG.getResult(), &CombinedHash))
     return E;
+  LLVM_DEBUG(dbgs() << "[TwoRounds] CGData hash: " << CombinedHash << "\n");
 
   // Second round: Run code generation by reading IRs.
-  std::unique_ptr<ThinBackendProc> SecondRoundLTO =
-      std::make_unique<SecondRoundThinBackend>(
-          Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
-          ModuleToDefinedGVSummaries, AddStream);
+  LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
+  auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
+      Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
+      AddStream, Cache, IR.getResult(), CombinedHash);
   Error E = RunBackends(SecondRoundLTO.get());
 
   return E;

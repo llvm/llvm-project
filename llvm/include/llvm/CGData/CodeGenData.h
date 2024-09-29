@@ -15,11 +15,13 @@
 #define LLVM_CGDATA_CODEGENDATA_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CGData/OutlinedHashTree.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Caching.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <mutex>
@@ -164,22 +166,60 @@ publishOutlinedHashTree(std::unique_ptr<OutlinedHashTree> HashTree) {
   CodeGenData::getInstance().publishOutlinedHashTree(std::move(HashTree));
 }
 
-void initializeTwoCodegenRounds();
+struct StreamCacheData {
+  /// Backing buffer for serialized data stream.
+  SmallVector<SmallString<0>> Outputs;
+  /// Callback function to add serialized data to the stream.
+  AddStreamFn AddStream;
+  /// Backing buffer for cached data.
+  SmallVector<std::unique_ptr<MemoryBuffer>> Files;
+  /// Cache mechanism for storing and retrieving data.
+  FileCache Cache;
+
+  StreamCacheData(unsigned Size) : Outputs(Size), Files(Size) {}
+  StreamCacheData() = delete;
+
+  /// Retrieve results from either the cache or the stream.
+  SmallVector<StringRef> getResult() {
+    unsigned NumOutputs = Outputs.size();
+    SmallVector<StringRef> Result(NumOutputs);
+    for (unsigned I = 0; I < NumOutputs; ++I)
+      if (Files[I])
+        Result[I] = Files[I]->getBuffer();
+      else
+        Result[I] = Outputs[I];
+    return Result;
+  }
+};
+
+/// Establish additional streams and caches for accessing object and IR files.
+/// \p OrigCache refers to the original cache used for accessing the final
+/// object files, which has already been configured and provided by the linker,
+/// if applicable. This cache will be utilized during the second round of the
+/// run. Additionally, we add two more caches at the same location for the first
+/// round of the run.
+void initializeTwoCodegenRounds(StreamCacheData &CG, StreamCacheData &IR,
+                                const FileCache &OrigCache);
 
 /// Save \p TheModule before the first codegen round.
 /// \p Task represents the partition number in the parallel code generation
 /// process.
-void saveModuleForTwoRounds(const Module &TheModule, unsigned Task);
+/// \p AddStream is the callback used to add the serialized module to the
+/// stream.
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
+                            AddStreamFn AddStream);
 
 /// Load the optimized module before the second codegen round.
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
                                                unsigned Task,
-                                               LLVMContext &Context);
+                                               LLVMContext &Context,
+                                               ArrayRef<StringRef> IRFiles);
 
 /// Merge the codegen data from the input files in scratch vector in ThinLTO
-/// two-codegen rounds.
-Error mergeCodeGenData(
-    const std::unique_ptr<std::vector<llvm::SmallString<0>>> InputFiles);
+/// two-codegen rounds. Optionally, \p CombinedHash can be used to compuate
+/// the combined hash of the merged data.
+Error mergeCodeGenData(ArrayRef<StringRef> CGFiles,
+                       stable_hash *CombinedHash = nullptr);
 
 void warn(Error E, StringRef Whence = "");
 void warn(Twine Message, std::string Whence = "", std::string Hint = "");
