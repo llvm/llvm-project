@@ -2209,7 +2209,8 @@ struct DSEState {
       Changed |= tryToShortenEnd(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
       if (IntervalMap.empty())
         continue;
-      Changed |= tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
+      Changed |=
+          tryToShortenBegin(DeadI, IntervalMap, DeadStart, DeadSize, TTI);
     }
     return Changed;
   }
