@@ -96,9 +96,9 @@ static llvm::Error sanitizeOopArguments(const char *ArgV0) {
     llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
     llvm::StringRef Path;
     if (SystemTriple.isOSBinFormatELF())
-      Path = "lib/clang/19/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
+      Path = "lib/clang/20/lib/x86_64-unknown-linux-gnu/liborc_rt.a";
     else if (SystemTriple.isOSBinFormatMachO())
-      Path = "lib/clang/19/lib/darwin/liborc_rt_osx.a";
+      Path = "lib/clang/20/lib/darwin/liborc_rt_osx.a";
     llvm::sys::path::append(OrcPath, Path);
     OrcRuntimePath = OrcPath.str().str();
   }
