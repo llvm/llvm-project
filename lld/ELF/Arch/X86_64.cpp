@@ -898,8 +898,8 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 // "Intel 64 and IA-32 Architectures Software Developer's Manual V2"
 // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
 //    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
-static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
-                          uint8_t modRm, bool isRex2) {
+static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op, uint8_t modRm,
+                          bool isRex2) {
   const uint8_t rex = loc[-3];
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (op == 0x85) {
