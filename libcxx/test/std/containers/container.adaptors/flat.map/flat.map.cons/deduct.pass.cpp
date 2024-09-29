@@ -212,41 +212,6 @@ void test_iter_iter() {
     ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long>);
     assert(std::ranges::equal(m, sorted_arr));
   }
-#if 0
-// spec has no CTAD for (Iter, Iter, Allocator)  or (sorted_unique_t, Iter, Iter, Allocator)
-  {
-    std::flat_map m(std::begin(arr), std::end(arr), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::begin(arrc), std::end(arrc), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::sorted_unique, std::begin(sorted_arr), std::end(sorted_arr), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::sorted_unique, std::begin(sorted_arrc), std::end(sorted_arrc), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-#endif
   {
     std::flat_map<int, short> mo;
     std::flat_map m(mo.begin(), mo.end());
@@ -289,41 +254,6 @@ void test_iter_iter_compare() {
     ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C>);
     assert(std::ranges::equal(m, sorted_arr));
   }
-#if 0
-// spec has no CTAD for (Iter, Iter, Compare, Allocator)  or (sorted_unique_t, Iter, Iter, Compare, Allocator)
-  {
-    std::flat_map m(std::begin(arr), std::end(arr), C(), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::begin(arrc), std::end(arrc), C(), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::sorted_unique, std::begin(sorted_arr), std::end(sorted_arr), C(), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-  {
-    std::flat_map m(std::sorted_unique, std::begin(sorted_arrc), std::end(sorted_arrc), C(), test_allocator<short>(0, 44));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 44);
-    assert(m.values().get_allocator().get_id() == 44);
-  }
-#endif
   {
     std::flat_map<int, short> mo;
     std::flat_map m(mo.begin(), mo.end(), C());
@@ -350,25 +280,6 @@ void test_initializer_list() {
     ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long>);
     assert(std::ranges::equal(m, sorted_arr));
   }
-#if 0
-// spec has no CTAD for (initializer_list, Allocator)  or (sorted_unique_t, initializer_list, Allocator)
-  {
-    std::flat_map m({ std::pair{1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} }, test_allocator<long>(0, 42));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 42);
-    assert(m.values().get_allocator().get_id() == 42);
-  }
-  {
-    std::flat_map m(std::sorted_unique, { std::pair{1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} }, test_allocator<long>(0, 42));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, std::less<int>, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 42);
-    assert(m.values().get_allocator().get_id() == 42);
-  }
-#endif
 }
 
 void test_initializer_list_compare() {
@@ -386,25 +297,6 @@ void test_initializer_list_compare() {
     ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C>);
     assert(std::ranges::equal(m, sorted_arr));
   }
-#if 0
-// spec has no CTAD for (initializer_list, Compare, Allocator)  or (sorted_unique_t, initializer_list, Compare, Allocator)
-  {
-    std::flat_map m({ std::pair{1,1L}, {2,2L}, {1,1L}, {INT_MAX,1L}, {3,1L} }, C(), test_allocator<long>(0, 42));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 42);
-    assert(m.values().get_allocator().get_id() == 42);
-  }
-  {
-    std::flat_map m(std::sorted_unique, { std::pair{INT_MAX,1L}, {3,1L}, {2,2L}, {1,1L} }, C(), test_allocator<long>(0, 42));
-
-    ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long, C, std::vector<int, test_allocator<int>>, std::vector<long, test_allocator<long>>>);
-    assert(std::ranges::equal(m, sorted_arr));
-    assert(m.keys().get_allocator().get_id() == 42);
-    assert(m.values().get_allocator().get_id() == 42);
-  }
-#endif
 }
 
 void test_from_range() {
@@ -464,7 +356,6 @@ int main(int, char**) {
   test_initializer_list_compare();
   test_from_range();
   test_from_range_compare();
-
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_map, std::flat_map<int, short>>();
   {

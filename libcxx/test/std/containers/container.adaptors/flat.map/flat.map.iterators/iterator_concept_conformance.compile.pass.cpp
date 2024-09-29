@@ -100,46 +100,4 @@ void test() {
     static_assert(std::indirectly_movable_storable<RI, std::pair<char*, int>*>);
     static_assert(std::indirectly_movable_storable<CRI, std::pair<char*, int>*>);
   }
-#if 0
-  // vector<bool> is not supported
-  {
-    using C   = std::flat_map<char, bool, std::less<>, std::string, std::vector<bool>>;
-    using I   = C::iterator;
-    using CI  = C::const_iterator;
-    using RI  = C::reverse_iterator;
-    using CRI = C::const_reverse_iterator;
-    static_assert(std::random_access_iterator<I>);
-    static_assert(std::random_access_iterator<CI>);
-    static_assert(std::random_access_iterator<RI>);
-    static_assert(std::random_access_iterator<CRI>);
-    static_assert(!std::contiguous_iterator<I>);
-    static_assert(!std::contiguous_iterator<CI>);
-    static_assert(!std::contiguous_iterator<RI>);
-    static_assert(!std::contiguous_iterator<CRI>);
-    static_assert(!std::indirectly_writable<I, std::pair<char, bool>>);
-    static_assert(!std::indirectly_writable<CI, std::pair<char, bool>>);
-    static_assert(!std::indirectly_writable<RI, std::pair<char, bool>>);
-    static_assert(!std::indirectly_writable<CRI, std::pair<char, bool>>);
-    static_assert(std::sentinel_for<I, I>);
-    static_assert(std::sentinel_for<I, CI>);
-    static_assert(!std::sentinel_for<I, RI>);
-    static_assert(!std::sentinel_for<I, CRI>);
-    static_assert(std::sentinel_for<CI, I>);
-    static_assert(std::sentinel_for<CI, CI>);
-    static_assert(!std::sentinel_for<CI, RI>);
-    static_assert(!std::sentinel_for<CI, CRI>);
-    static_assert(!std::sentinel_for<RI, I>);
-    static_assert(!std::sentinel_for<RI, CI>);
-    static_assert(std::sentinel_for<RI, RI>);
-    static_assert(std::sentinel_for<RI, CRI>);
-    static_assert(!std::sentinel_for<CRI, I>);
-    static_assert(!std::sentinel_for<CRI, CI>);
-    static_assert(std::sentinel_for<CRI, RI>);
-    static_assert(std::sentinel_for<CRI, CRI>);
-    static_assert(std::indirectly_movable_storable<I, std::pair<char, bool>*>);
-    static_assert(std::indirectly_movable_storable<CI, std::pair<char, bool>*>);
-    static_assert(std::indirectly_movable_storable<RI, std::pair<char, bool>*>);
-    static_assert(std::indirectly_movable_storable<CRI, std::pair<char, bool>*>);
-  }
-#endif
 }

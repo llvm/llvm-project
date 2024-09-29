@@ -44,7 +44,7 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M3, const A2&>);
   }
   {
-    //explicit
+    // explicit
     using M =
         std::flat_map<int,
                       long,

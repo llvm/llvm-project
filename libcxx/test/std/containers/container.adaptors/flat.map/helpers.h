@@ -17,6 +17,7 @@
 
 #include "test_allocator.h"
 #include "test_macros.h"
+#include "check_assertion.h"
 
 struct StartsWith {
   explicit StartsWith(char ch) : lower_(1, ch), upper_(1, ch + 1) {}
@@ -377,17 +378,8 @@ void test_swap_exception_guarantee(F&& swap_function) {
     m1.emplace(2, 2);
     m2.emplace(3, 3);
     m2.emplace(4, 4);
-
     // swap is noexcept
-    swap_function(m1, m2);
-
-    assert(m1.keys().size() == m1.values().size());
-    assert(is_sorted_and_unique(m1.keys()));
-    assert(m2.keys().size() == m2.values().size());
-    assert(is_sorted_and_unique(m2.keys()));
-    // In libc++, we clear if anything goes wrong when erasing
-    LIBCPP_ASSERT(m1.size() == 0);
-    LIBCPP_ASSERT(m2.size() == 0);
+    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
   }
 
   {
@@ -403,15 +395,7 @@ void test_swap_exception_guarantee(F&& swap_function) {
     m2.emplace(4, 4);
 
     // swap is noexcept
-    swap_function(m1, m2);
-
-    assert(m1.keys().size() == m1.values().size());
-    assert(is_sorted_and_unique(m1.keys()));
-    assert(m2.keys().size() == m2.values().size());
-    assert(is_sorted_and_unique(m2.keys()));
-    // In libc++, we clear if anything goes wrong when erasing
-    LIBCPP_ASSERT(m1.size() == 0);
-    LIBCPP_ASSERT(m2.size() == 0);
+    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
   }
 
 #endif

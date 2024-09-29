@@ -9,31 +9,37 @@
 #ifndef SUPPORT_NAIVE_STATIC_VECTOR_H
 #define SUPPORT_NAIVE_STATIC_VECTOR_H
 
+#include <cstddef>
+#include <utility>
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template<class T, size_t N>
+template <class T, std::size_t N>
 struct NaiveStaticVector {
   struct CapacityError {};
 
-  using value_type = T;
+  using value_type      = T;
   using difference_type = short;
-  using size_type = unsigned short;
-  using iterator = random_access_iterator<T*>;
-  using const_iterator = random_access_iterator<const T*>;
+  using size_type       = unsigned short;
+  using iterator        = random_access_iterator<T*>;
+  using const_iterator  = random_access_iterator<const T*>;
 
   explicit NaiveStaticVector() = default;
-  template<class It> explicit NaiveStaticVector(It first, It last) { while (first != last) insert(*first++); }
+  template <class It>
+  explicit NaiveStaticVector(It first, It last) {
+    while (first != last)
+      insert(*first++);
+  }
 
   // Moving-from a NaiveStaticVector leaves the source vector holding moved-from objects.
   // This is intentional (the "Naive" in the name).
   // Specifically, moving-out-of a sorted+uniqued NaiveStaticVector<MoveOnly>
   // will leave it in a non-sorted+uniqued state.
 
-  NaiveStaticVector(const NaiveStaticVector&) = default;
-  NaiveStaticVector(NaiveStaticVector&&) = default;  // deliberately don't reset size_
+  NaiveStaticVector(const NaiveStaticVector&)            = default;
+  NaiveStaticVector(NaiveStaticVector&&)                 = default; // deliberately don't reset size_
   NaiveStaticVector& operator=(const NaiveStaticVector&) = default;
-  NaiveStaticVector& operator=(NaiveStaticVector&&) = default;
+  NaiveStaticVector& operator=(NaiveStaticVector&&)      = default;
 
   iterator begin() { return iterator(data_); }
   const_iterator begin() const { return const_iterator(data_); }
@@ -45,7 +51,7 @@ struct NaiveStaticVector {
 
   void clear() { size_ = 0; }
 
-  template<class It>
+  template <class It>
   iterator insert(const_iterator pos, It first, It last) {
     iterator result = pos - cbegin() + begin();
     while (first != last) {
@@ -78,13 +84,11 @@ struct NaiveStaticVector {
     return begin() + i;
   }
 
-  iterator erase(const_iterator pos) {
-    return erase(pos, std::next(pos));
-  }
+  iterator erase(const_iterator pos) { return erase(pos, std::next(pos)); }
 
 private:
   T data_[N];
-  size_t size_ = 0;
+  std::size_t size_ = 0;
 };
 
 #endif // SUPPORT_NAIVE_STATIC_VECTOR_H

@@ -789,20 +789,12 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __y) noexcept {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    try {
-#  endif
-      ranges::swap(__compare_, __y.__compare_);
-      ranges::swap(__containers_.keys, __y.__containers_.keys);
-      ranges::swap(__containers_.values, __y.__containers_.values);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-    } catch (...) {
-      // todo: how can we tell the user that the swap is unsuccessful?
-      // need to swallow the exception because the function is noexcept
-      clear() /* noexcept */;
-      __y.clear() /*noexcept*/;
-    }
-#  endif
+    // warning: The spec has unconditional noexcept, which means that
+    // if any of the following functions throw an exception,
+    // std::terminate will be called
+    ranges::swap(__compare_, __y.__compare_);
+    ranges::swap(__containers_.keys, __y.__containers_.keys);
+    ranges::swap(__containers_.values, __y.__containers_.values);
   }
 
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept {

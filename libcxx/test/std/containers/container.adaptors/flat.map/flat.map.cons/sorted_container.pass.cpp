@@ -189,29 +189,16 @@ int main(int, char**) {
     assert(vm[0].keys().get_allocator().resource() == &mr);
     assert(vm[0].values().get_allocator().resource() == &mr);
   }
-#if 0
   {
     using M = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks({1,2,4,10}, &mr);
-    std::pmr::vector<int> vs({4,3,2,1}, &mr);
+    std::pmr::vector<int> ks({1, 2, 4, 10}, &mr);
+    std::pmr::vector<int> vs({4, 3, 2, 1}, &mr);
     vm.emplace_back(std::sorted_unique, std::move(ks), std::move(vs));
-    assert(ks.empty()); // ks is moved-from (after LWG 3802)
-    assert(vs.empty()); // vs is moved-from (after LWG 3802)
-    assert((vm[0] == M{{1,4}, {2,3}, {4,2}, {10,1}}));
+    assert((vm[0] == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
     assert(vm[0].keys().get_allocator().resource() == &mr);
     assert(vm[0].values().get_allocator().resource() == &mr);
   }
-  {
-    using M = std::flat_map<MoveOnly, MoveOnly, std::less<>, std::pmr::vector<MoveOnly>, std::pmr::vector<MoveOnly>>;
-    std::pmr::vector<M> vm;
-    std::pmr::vector<MoveOnly> ks;
-    std::pmr::vector<MoveOnly> vs;
-    vm.emplace_back(std::sorted_unique, std::move(ks), std::move(vs)); // this was a hard error before LWG 3802
-    assert(vm.size() == 1);
-    assert(vm[0].empty());
-  }
-#endif
   return 0;
 }
