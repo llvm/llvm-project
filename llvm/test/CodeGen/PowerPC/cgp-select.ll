@@ -8,30 +8,32 @@ define dso_local void @wibble(ptr nocapture readonly %arg, i32 signext %arg1, pt
 ; CHECK-NEXT:    li 7, 7
 ; CHECK-NEXT:    cmpwi 4, 2
 ; CHECK-NEXT:    xsaddsp 0, 0, 0
-; CHECK-NEXT:    blt 0, .LBB0_5
+; CHECK-NEXT:    blt 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %bb6
 ; CHECK-NEXT:    clrldi 4, 4, 32
 ; CHECK-NEXT:    addi 4, 4, -1
 ; CHECK-NEXT:    mtctr 4
 ; CHECK-NEXT:    li 4, 8
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb11
 ; CHECK-NEXT:    #
+; CHECK-NEXT:    lfsu 2, 4(3)
+; CHECK-NEXT:    xsaddsp 1, 2, 2
+; CHECK-NEXT:    xvcmpgtsp 3, 2, 0
+; CHECK-NEXT:    fcmpu 0, 2, 0
 ; CHECK-NEXT:    iselgt 7, 4, 7
 ; CHECK-NEXT:    addi 4, 4, 1
-; CHECK-NEXT:    bdz .LBB0_5
-; CHECK-NEXT:  .LBB0_3: # %bb11
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lfsu 1, 4(3)
-; CHECK-NEXT:    fcmpu 0, 1, 0
-; CHECK-NEXT:    ble 0, .LBB0_2
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    xsaddsp 0, 1, 1
-; CHECK-NEXT:    b .LBB0_2
-; CHECK-NEXT:  .LBB0_5: # %bb8
+; CHECK-NEXT:    xxsel 1, 1, 0, 3
+; CHECK-NEXT:    fmr 0, 1
+; CHECK-NEXT:    bdnz .LBB0_2
+; CHECK-NEXT:  # %bb.3: # %bb8
 ; CHECK-NEXT:    stw 7, 0(5)
-; CHECK-NEXT:    stfs 0, 0(6)
+; CHECK-NEXT:    stfs 1, 0(6)
+; CHECK-NEXT:    blr
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    fmr 1, 0
+; CHECK-NEXT:    stw 7, 0(5)
+; CHECK-NEXT:    stfs 1, 0(6)
 ; CHECK-NEXT:    blr
 bb:
   %tmp = load float, ptr %arg, align 4
