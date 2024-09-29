@@ -1073,3 +1073,10 @@ int main() {
   return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
 }
 }
+
+namespace GH100394 {
+struct C {
+  void f(this const C);
+  void f() const ;      // ok
+};
+}
