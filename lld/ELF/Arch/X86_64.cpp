@@ -899,9 +899,8 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
 //    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
 static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
-                          uint8_t modRm) {
+                          uint8_t modRm, bool isRex2) {
   const uint8_t rex = loc[-3];
-  const bool isRex2 = loc[-4] == 0xd5;
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (op == 0x85) {
     // See "TEST-Logical Compare" (4-428 Vol. 2B),
@@ -944,7 +943,6 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
     // REX2.M encodes the map id.
     // R2/X2/B2 provides the fifth and most siginicant bits of the R/X/B
     // register identifiers, each of which can now address all 32 GPRs.
-    // TODO: Add the section number here after APX SPEC is merged into SDM.
     if (isRex2)
       loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
     else
@@ -993,7 +991,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
     assert(!ctx.arg.isPic);
-    relaxGotNoPic(loc, val + 4, op, modRm);
+    relaxGotNoPic(loc, val + 4, op, modRm, rel.type == R_X86_64_REX2_GOTPCRELX);
     return;
   }
 
