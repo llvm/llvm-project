@@ -19,7 +19,6 @@
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "WebAssembly.h"
-#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
