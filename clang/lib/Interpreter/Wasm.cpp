@@ -13,6 +13,7 @@
 #include "Wasm.h"
 #include "IncrementalExecutor.h"
 
+#include <llvm/CodeGen/MachineModuleInfo.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Module.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -48,8 +49,9 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   }
 
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
+  auto *TargetMachine = static_cast<llvm::LLVMTargetMachine *>(
+      Target->createTargetMachine(PTU.TheModule->getTargetTriple(), "", "", TO,
+                                  llvm::Reloc::Model::PIC_));
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
   std::string OutputFileName = PTU.TheModule->getName().str() + ".wasm";
 
@@ -57,7 +59,8 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::raw_fd_ostream OutputFile(llvm::StringRef(OutputFileName), Error);
 
   llvm::legacy::PassManager PM;
-  if (TargetMachine->addPassesToEmitFile(PM, OutputFile, nullptr,
+  llvm::MachineModuleInfo MMI(TargetMachine);
+  if (TargetMachine->addPassesToEmitFile(PM, MMI, OutputFile, nullptr,
                                          llvm::CodeGenFileType::ObjectFile)) {
     return llvm::make_error<llvm::StringError>(
         "Wasm backend cannot produce object.", llvm::inconvertibleErrorCode());

@@ -83,7 +83,7 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
     return llvm::make_error<llvm::StringError>(std::move(Error),
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
-  llvm::LLVMTargetMachine *TargetMachine =
+  auto *TargetMachine =
       static_cast<llvm::LLVMTargetMachine *>(Target->createTargetMachine(
           PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
           llvm::Reloc::Model::PIC_));
