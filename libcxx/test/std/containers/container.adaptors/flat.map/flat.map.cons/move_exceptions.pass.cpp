@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "test_macros.h"
-//#include "MinSequenceContainer.h"
 
 static int countdown = 0;
 

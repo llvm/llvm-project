@@ -40,30 +40,4 @@ void test() {
     static_assert(!std::ranges::borrowed_range<const C>);
     static_assert(!std::ranges::viewable_range<const C>);
   }
-#if 0
-  // vector<bool> is not supported
-  {
-    using C = std::flat_map<char, bool, std::less<>, std::string, std::vector<bool>>;
-
-    static_assert(std::same_as<std::ranges::iterator_t<C>, C::iterator>);
-    static_assert(std::ranges::random_access_range<C>);
-    static_assert(!std::ranges::contiguous_range<C>);
-    static_assert(std::ranges::common_range<C>);
-    static_assert(std::ranges::input_range<C>);
-    static_assert(!std::ranges::view<C>);
-    static_assert(std::ranges::sized_range<C>);
-    static_assert(!std::ranges::borrowed_range<C>);
-    static_assert(std::ranges::viewable_range<C>);
-
-    static_assert(std::same_as<std::ranges::iterator_t<const C>, C::const_iterator>);
-    static_assert(std::ranges::random_access_range<const C>);
-    static_assert(!std::ranges::contiguous_range<const C>);
-    static_assert(std::ranges::common_range<const C>);
-    static_assert(std::ranges::input_range<const C>);
-    static_assert(!std::ranges::view<const C>);
-    static_assert(std::ranges::sized_range<const C>);
-    static_assert(!std::ranges::borrowed_range<const C>);
-    static_assert(!std::ranges::viewable_range<const C>);
-
-#endif
 }

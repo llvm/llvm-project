@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-hardening-mode=none
@@ -18,7 +19,11 @@
 //
 
 #include <flat_map>
-#include <cassert>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "check_assertion.h"
 

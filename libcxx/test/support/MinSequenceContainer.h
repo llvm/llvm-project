@@ -14,17 +14,17 @@
 
 #include "test_iterators.h"
 
-template<class T, class Iterator = random_access_iterator<T*>,
-                  class ConstIterator = random_access_iterator<const T*>>
+template <class T, class Iterator = random_access_iterator<T*>, class ConstIterator = random_access_iterator<const T*>>
 struct MinSequenceContainer {
-  using value_type = T;
+  using value_type      = T;
   using difference_type = short;
-  using size_type = unsigned short;
-  using iterator = Iterator;
-  using const_iterator = ConstIterator;
+  using size_type       = unsigned short;
+  using iterator        = Iterator;
+  using const_iterator  = ConstIterator;
 
   explicit MinSequenceContainer() = default;
-  template<class It> explicit MinSequenceContainer(It first, It last) : data_(first, last) {}
+  template <class It>
+  explicit MinSequenceContainer(It first, It last) : data_(first, last) {}
   MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
   iterator begin() { return iterator(data_.data()); }
   const_iterator begin() const { return const_iterator(data_.data()); }
@@ -36,20 +36,14 @@ struct MinSequenceContainer {
 
   void clear() { data_.clear(); }
 
-  template<class It>
+  template <class It>
   iterator insert(const_iterator p, It first, It last) {
-    auto it = data_.insert(
-      p - cbegin() + data_.begin(),
-      first, last
-    );
+    auto it = data_.insert(p - cbegin() + data_.begin(), first, last);
     return it - data_.begin() + begin();
   }
 
   iterator insert(const_iterator p, int value) {
-    auto it = data_.insert(
-      p - cbegin() + data_.begin(),
-      value
-    );
+    auto it = data_.insert(p - cbegin() + data_.begin(), value);
     return it - data_.begin() + begin();
   }
 
@@ -66,16 +60,16 @@ namespace MinSequenceContainer_detail {
 
 // MinSequenceContainer is non-allocator-aware, because flat_set supports
 // such (non-STL) container types, and we want to make sure they are supported.
-template<class T>
+template <class T>
 concept HasAllocatorType = requires { typename T::allocator_type; };
 static_assert(!HasAllocatorType<MinSequenceContainer<int>>);
 
 // MinSequenceContainer by itself doesn't support .emplace(), because we want
 // to at least somewhat support (non-STL) container types with nothing but .insert().
-template<class T>
-concept HasEmplace = requires (T& t) { t.emplace(42); };
+template <class T>
+concept HasEmplace = requires(T& t) { t.emplace(42); };
 static_assert(!HasEmplace<MinSequenceContainer<int>>);
 
-} // MinSequenceContainer_detail
+} // namespace MinSequenceContainer_detail
 
 #endif // SUPPORT_MIN_SEQUENCE_CONTAINER_H

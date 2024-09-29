@@ -46,20 +46,6 @@ int main(int, char**) {
     m.clear();
     assert(m.empty());
   }
-#if 0
-  // vector<bool> is not supported
-  {
-    typedef std::flat_map<bool, bool> M;
-    M m;
-    ASSERT_SAME_TYPE(decltype(m.empty()), bool);
-    ASSERT_NOEXCEPT(m.empty());
-    assert(m.empty());
-    assert(std::as_const(m).empty());
-    m = {{false, false}};
-    assert(!m.empty());
-    m.clear();
-    assert(m.empty());
-  }
-#endif
+
   return 0;
 }

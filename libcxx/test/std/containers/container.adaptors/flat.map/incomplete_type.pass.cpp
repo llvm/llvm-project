@@ -15,8 +15,6 @@
 
 #include <flat_map>
 
-#include "test_macros.h"
-
 struct A {
   using Map = std::flat_map<A, A>;
   int data;

@@ -29,7 +29,7 @@ int main(int, char**) {
     using C  = std::flat_map<int, int, std::less<int>, std::vector<int, A1>, std::vector<int, A2>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
-    C c;
+    const C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);
     assert(c.max_size() <= 10);
@@ -41,7 +41,7 @@ int main(int, char**) {
     using C  = std::flat_map<int, int, std::less<int>, std::vector<int, A2>, std::vector<int, A1>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
-    C c;
+    const C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);
     assert(c.max_size() <= 10);
@@ -53,7 +53,7 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
     const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
-    C c;
+    const C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);
     assert(c.max_size() <= max_dist);
@@ -64,7 +64,7 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);
     const C::size_type max_dist = static_cast<C::size_type>(std::numeric_limits<C::difference_type>::max());
-    C c;
+    const C c;
     ASSERT_NOEXCEPT(c.max_size());
     ASSERT_SAME_TYPE(decltype(c.max_size()), C::size_type);
     assert(c.max_size() <= max_dist);

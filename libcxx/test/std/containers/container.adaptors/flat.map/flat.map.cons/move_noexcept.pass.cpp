@@ -100,18 +100,5 @@ int main(int, char**) {
     C c;
     C d = std::move(c);
   }
-  // todo: why?
-  /*
-  {
-    // Moving the flat_map copies the comparator (to support std::function comparators)
-    using C = std::flat_map<int, int, MoveSensitiveComp>;
-    LIBCPP_STATIC_ASSERT(std::is_nothrow_move_constructible_v<C>);
-    C c;
-    assert(!c.key_comp().is_moved_from_);
-    C d = std::move(c);
-    LIBCPP_ASSERT(!c.key_comp().is_moved_from_);
-    assert(!d.key_comp().is_moved_from_);
-  }
-  */
   return 0;
 }

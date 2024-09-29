@@ -89,18 +89,5 @@ int main(int, char**) {
   test<std::flat_map<long, int>>();
   test<std::flat_map<double, int>>();
 
-#if 0
-  // vector<bool> is not supported
-  {
-    using M                      = std::flat_map<bool, bool>;
-    std::flat_map<bool, bool> fs = {{true, false}, {false, true}};
-    std::same_as<size_t> auto n  = std::erase_if(fs, [](M::const_reference x) { return x.first; });
-    assert((fs == M{{false, true}}));
-    assert(n == 1);
-    n = std::erase_if(fs, [](const M::value_type& x) { return !x.first; });
-    assert(fs.empty());
-    assert(n == 1);
-  }
-#endif
   return 0;
 }

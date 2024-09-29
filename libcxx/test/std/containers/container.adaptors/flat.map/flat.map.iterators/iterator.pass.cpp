@@ -64,33 +64,6 @@ int main(int, char**) {
     }
     assert(i == m.begin());
   }
-// std::string is not a sequence container
-#if 0
-  {
-    using M = std::flat_map<short, char, std::less<>, std::deque<short>, std::string>;
-    const M m = {{1,'a'}, {2,'b'}, {3,'c'}, {4,'d'}};
-    ASSERT_SAME_TYPE(decltype(m.begin()), M::const_iterator);
-    ASSERT_SAME_TYPE(decltype(m.cbegin()), M::const_iterator);
-    ASSERT_SAME_TYPE(decltype(m.end()), M::const_iterator);
-    ASSERT_SAME_TYPE(decltype(m.cend()), M::const_iterator);
-    assert(m.size() == 4);
-    assert(std::distance(m.begin(), m.end()) == 4);
-    assert(std::distance(m.cbegin(), m.cend()) == 4);
-    M::const_iterator i;  // default-construct 
-    i = m.begin();  // move-assignment
-    for (int j = 1; j <= 4; ++j, ++i) {  // pre-increment
-      assert(i->first == j);
-      assert(i->second == 'a' + j - 1);
-    }
-    assert(i == m.end());
-    for (int j = 4; j >= 1; --j) {
-      --i;  // pre-decrement
-      assert((*i).first == j);
-      assert((*i).second == 'a' + j - 1);
-    }
-    assert(i == m.begin());
-  }
-#endif
   {
     // N3644 testing
     using C = std::flat_map<int, char>;
