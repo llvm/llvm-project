@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMProfileData
   Object
   Support
   Demangle
+  Symbolize
   DebugInfoDWARF
   TargetParser
   )
