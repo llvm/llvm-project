@@ -7,6 +7,7 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
+; IR: [[OPAQUE_OUTER:.*]] = type { <2 x i64>, i64 }
 %class.outer = type <{ %class.inner, i32, [4 x i8] }>
 %class.inner = type { ptr, ptr }
 
@@ -14,7 +15,7 @@ target triple = "nvptx64-nvidia-cuda"
 ; COMMON-LABEL: load_alignment
 define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %arg) {
 entry:
-; IR: load [3 x i64], ptr addrspace(101)
+; IR: load [[OPAQUE_OUTER]], ptr addrspace(101)
 ; IR-SAME: align 8
 ; PTX: ld.param.u64
 ; PTX-NOT: ld.param.u8

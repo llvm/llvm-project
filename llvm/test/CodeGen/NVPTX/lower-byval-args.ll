@@ -5,6 +5,7 @@ source_filename = "<stdin>"
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
+; COMMON: [[OPAQUE_C:.*]] = type { [2 x <2 x i64>], i64, i32, i8 }
 %struct.S = type { i32, i32 }
 
 ; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
@@ -88,8 +89,8 @@ define dso_local void @read_only_gep_asc0(ptr nocapture noundef writeonly %out, 
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -115,8 +116,8 @@ define dso_local void @escape_ptr(ptr nocapture noundef readnone %out, ptr nound
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S3]])
@@ -134,8 +135,8 @@ define dso_local void @escape_ptr_gep(ptr nocapture noundef readnone %out, ptr n
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -155,8 +156,8 @@ define dso_local void @escape_ptr_store(ptr nocapture noundef writeonly %out, pt
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    store ptr [[S3]], ptr [[OUT2]], align 8
@@ -174,8 +175,8 @@ define dso_local void @escape_ptr_gep_store(ptr nocapture noundef writeonly %out
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[B:%.*]] = getelementptr inbounds nuw i8, ptr [[S3]], i64 4
@@ -195,8 +196,8 @@ define dso_local void @escape_ptrtoint(ptr nocapture noundef writeonly %out, ptr
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[OUT1:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[OUT2:%.*]] = addrspacecast ptr addrspace(1) [[OUT1]] to ptr
 ; COMMON-NEXT:    [[I:%.*]] = ptrtoint ptr [[S3]] to i64
@@ -232,8 +233,8 @@ define dso_local void @memcpy_to_param(ptr nocapture noundef readonly %in, ptr n
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[IN1:%.*]] = addrspacecast ptr [[IN]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[IN2:%.*]] = addrspacecast ptr addrspace(1) [[IN1]] to ptr
 ; COMMON-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[S3]], ptr [[IN2]], i64 16, i1 true)
@@ -251,8 +252,8 @@ define dso_local void @copy_on_store(ptr nocapture noundef readonly %in, ptr noc
 ; COMMON-NEXT:  [[BB:.*:]]
 ; COMMON-NEXT:    [[S3:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[S4:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S5:%.*]] = load [1 x i64], ptr addrspace(101) [[S4]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S5]], ptr [[S3]], align 4
+; COMMON-NEXT:    [[S5:%.*]] = load i64, ptr addrspace(101) [[S4]], align 4
+; COMMON-NEXT:    store i64 [[S5]], ptr [[S3]], align 4
 ; COMMON-NEXT:    [[IN1:%.*]] = addrspacecast ptr [[IN]] to ptr addrspace(1)
 ; COMMON-NEXT:    [[IN2:%.*]] = addrspacecast ptr addrspace(1) [[IN1]] to ptr
 ; COMMON-NEXT:    [[I:%.*]] = load i32, ptr [[IN2]], align 4
@@ -273,12 +274,12 @@ define void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i32) %input2,
 ; SM_60-NEXT:    [[OUT8:%.*]] = addrspacecast ptr addrspace(1) [[OUT7]] to ptr
 ; SM_60-NEXT:    [[INPUT24:%.*]] = alloca i32, align 4
 ; SM_60-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT26:%.*]] = load [1 x i32], ptr addrspace(101) [[INPUT25]], align 4
-; SM_60-NEXT:    store [1 x i32] [[INPUT26]], ptr [[INPUT24]], align 4
+; SM_60-NEXT:    [[INPUT26:%.*]] = load i32, ptr addrspace(101) [[INPUT25]], align 4
+; SM_60-NEXT:    store i32 [[INPUT26]], ptr [[INPUT24]], align 4
 ; SM_60-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
 ; SM_60-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT13:%.*]] = load [1 x i32], ptr addrspace(101) [[INPUT12]], align 4
-; SM_60-NEXT:    store [1 x i32] [[INPUT13]], ptr [[INPUT11]], align 4
+; SM_60-NEXT:    [[INPUT13:%.*]] = load i32, ptr addrspace(101) [[INPUT12]], align 4
+; SM_60-NEXT:    store i32 [[INPUT13]], ptr [[INPUT11]], align 4
 ; SM_60-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT24]]
 ; SM_60-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; SM_60-NEXT:    store i32 [[VALLOADED]], ptr [[OUT8]], align 4
@@ -313,12 +314,12 @@ define void @test_select_write(ptr byval(i32) align 4 %input1, ptr byval(i32) %i
 ; COMMON-NEXT:    [[OUT8:%.*]] = addrspacecast ptr addrspace(1) [[OUT7]] to ptr
 ; COMMON-NEXT:    [[INPUT24:%.*]] = alloca i32, align 4
 ; COMMON-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT26:%.*]] = load [1 x i32], ptr addrspace(101) [[INPUT25]], align 4
-; COMMON-NEXT:    store [1 x i32] [[INPUT26]], ptr [[INPUT24]], align 4
+; COMMON-NEXT:    [[INPUT26:%.*]] = load i32, ptr addrspace(101) [[INPUT25]], align 4
+; COMMON-NEXT:    store i32 [[INPUT26]], ptr [[INPUT24]], align 4
 ; COMMON-NEXT:    [[INPUT11:%.*]] = alloca i32, align 4
 ; COMMON-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT13:%.*]] = load [1 x i32], ptr addrspace(101) [[INPUT12]], align 4
-; COMMON-NEXT:    store [1 x i32] [[INPUT13]], ptr [[INPUT11]], align 4
+; COMMON-NEXT:    [[INPUT13:%.*]] = load i32, ptr addrspace(101) [[INPUT12]], align 4
+; COMMON-NEXT:    store i32 [[INPUT13]], ptr [[INPUT11]], align 4
 ; COMMON-NEXT:    [[PTRNEW:%.*]] = select i1 [[COND]], ptr [[INPUT11]], ptr [[INPUT24]]
 ; COMMON-NEXT:    store i32 1, ptr [[PTRNEW]], align 4
 ; COMMON-NEXT:    ret void
@@ -337,12 +338,12 @@ define void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval(%struct.S)
 ; SM_60-NEXT:    [[INOUT8:%.*]] = addrspacecast ptr addrspace(1) [[INOUT7]] to ptr
 ; SM_60-NEXT:    [[INPUT24:%.*]] = alloca [[STRUCT_S]], align 8
 ; SM_60-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT26:%.*]] = load [1 x i64], ptr addrspace(101) [[INPUT25]], align 8
-; SM_60-NEXT:    store [1 x i64] [[INPUT26]], ptr [[INPUT24]], align 8
+; SM_60-NEXT:    [[INPUT26:%.*]] = load i64, ptr addrspace(101) [[INPUT25]], align 8
+; SM_60-NEXT:    store i64 [[INPUT26]], ptr [[INPUT24]], align 8
 ; SM_60-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
 ; SM_60-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; SM_60-NEXT:    [[INPUT13:%.*]] = load [1 x i64], ptr addrspace(101) [[INPUT12]], align 4
-; SM_60-NEXT:    store [1 x i64] [[INPUT13]], ptr [[INPUT11]], align 4
+; SM_60-NEXT:    [[INPUT13:%.*]] = load i64, ptr addrspace(101) [[INPUT12]], align 4
+; SM_60-NEXT:    store i64 [[INPUT13]], ptr [[INPUT11]], align 4
 ; SM_60-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; SM_60:       [[FIRST]]:
 ; SM_60-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
@@ -402,12 +403,12 @@ define void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr byval(%str
 ; COMMON-NEXT:  [[BB:.*:]]
 ; COMMON-NEXT:    [[INPUT24:%.*]] = alloca [[STRUCT_S]], align 8
 ; COMMON-NEXT:    [[INPUT25:%.*]] = addrspacecast ptr [[INPUT2]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT26:%.*]] = load [1 x i64], ptr addrspace(101) [[INPUT25]], align 8
-; COMMON-NEXT:    store [1 x i64] [[INPUT26]], ptr [[INPUT24]], align 8
+; COMMON-NEXT:    [[INPUT26:%.*]] = load i64, ptr addrspace(101) [[INPUT25]], align 8
+; COMMON-NEXT:    store i64 [[INPUT26]], ptr [[INPUT24]], align 8
 ; COMMON-NEXT:    [[INPUT11:%.*]] = alloca [[STRUCT_S]], align 4
 ; COMMON-NEXT:    [[INPUT12:%.*]] = addrspacecast ptr [[INPUT1]] to ptr addrspace(101)
-; COMMON-NEXT:    [[INPUT13:%.*]] = load [1 x i64], ptr addrspace(101) [[INPUT12]], align 4
-; COMMON-NEXT:    store [1 x i64] [[INPUT13]], ptr [[INPUT11]], align 4
+; COMMON-NEXT:    [[INPUT13:%.*]] = load i64, ptr addrspace(101) [[INPUT12]], align 4
+; COMMON-NEXT:    store i64 [[INPUT13]], ptr [[INPUT11]], align 4
 ; COMMON-NEXT:    br i1 [[COND]], label %[[FIRST:.*]], label %[[SECOND:.*]]
 ; COMMON:       [[FIRST]]:
 ; COMMON-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[INPUT11]], i32 0, i32 0
@@ -447,8 +448,27 @@ define dso_local void @padding(ptr nocapture noundef readnone %out, ptr noundef 
 ; COMMON-NEXT:  [[ENTRY:.*:]]
 ; COMMON-NEXT:    [[S1:%.*]] = alloca [[UNION_U]], align 4
 ; COMMON-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
-; COMMON-NEXT:    [[S3:%.*]] = load [1 x i64], ptr addrspace(101) [[S2]], align 4
-; COMMON-NEXT:    store [1 x i64] [[S3]], ptr [[S1]], align 4
+; COMMON-NEXT:    [[S3:%.*]] = load i64, ptr addrspace(101) [[S2]], align 4
+; COMMON-NEXT:    store i64 [[S3]], ptr [[S1]], align 4
+; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S1]])
+; COMMON-NEXT:    ret void
+;
+entry:
+  call void @_Z6escapePv(ptr noundef nonnull %s) #0
+  ret void
+}
+
+%struct.C = type { [45 x i8] }
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+define dso_local void @coalescing(ptr nocapture noundef readnone %out, ptr noundef byval(%struct.C) align 4 %s) local_unnamed_addr #0 {
+; COMMON-LABEL: define dso_local void @coalescing(
+; COMMON-SAME: ptr nocapture noundef readnone [[OUT:%.*]], ptr noundef byval([[STRUCT_C:%.*]]) align 4 [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    [[S1:%.*]] = alloca [[STRUCT_C]], align 4
+; COMMON-NEXT:    [[S2:%.*]] = addrspacecast ptr [[S]] to ptr addrspace(101)
+; COMMON-NEXT:    [[S3:%.*]] = load [[OPAQUE_C]], ptr addrspace(101) [[S2]], align 4
+; COMMON-NEXT:    store [[OPAQUE_C]] [[S3]], ptr [[S1]], align 4
 ; COMMON-NEXT:    call void @_Z6escapePv(ptr noundef nonnull [[S1]])
 ; COMMON-NEXT:    ret void
 ;
