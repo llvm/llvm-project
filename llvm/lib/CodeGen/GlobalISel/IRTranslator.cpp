@@ -3153,7 +3153,8 @@ bool IRTranslator::translateInsertElement(const User &U,
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(2))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
       APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
-      CI = ConstantInt::get(CI->getContext(), NewIdx);
+      auto *NewIdxCI = ConstantInt::get(CI->getContext(), NewIdx);
+      Idx = getOrCreateVReg(*NewIdxCI);
     }
   }
   if (!Idx)
