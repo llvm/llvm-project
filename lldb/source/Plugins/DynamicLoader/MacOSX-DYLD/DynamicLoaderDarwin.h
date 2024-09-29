@@ -58,6 +58,8 @@ public:
 
   std::optional<lldb_private::Address> GetStartAddress() override;
 
+  static void CreateSettings(lldb_private::Debugger &debugger);
+
 protected:
   void PrivateInitialize(lldb_private::Process *process);
 
@@ -174,7 +176,7 @@ protected:
 
   bool UnloadModuleSections(lldb_private::Module *module, ImageInfo &info);
 
-  lldb::ModuleSP FindTargetModuleForImageInfo(ImageInfo &image_info,
+  lldb::ModuleSP FindTargetModuleForImageInfo(const ImageInfo &image_info,
                                               bool can_create,
                                               bool *did_create_ptr);
 

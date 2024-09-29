@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderDarwin.h"
 
+#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -31,6 +32,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -77,6 +79,17 @@ void DynamicLoaderDarwin::DidLaunch() {
   SetNotificationBreakpoint();
 }
 
+void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
+          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForDynamicLoaderPlugin(
+        debugger,
+        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
+        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
+  }
+}
+
 // Clear out the state of this class.
 void DynamicLoaderDarwin::Clear(bool clear_process) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -88,7 +101,7 @@ void DynamicLoaderDarwin::Clear(bool clear_process) {
 }
 
 ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
-    ImageInfo &image_info, bool can_create, bool *did_create_ptr) {
+    const ImageInfo &image_info, bool can_create, bool *did_create_ptr) {
   if (did_create_ptr)
     *did_create_ptr = false;
 
@@ -642,6 +655,41 @@ ModuleSP DynamicLoaderDarwin::GetDYLDModule() {
 
 void DynamicLoaderDarwin::ClearDYLDModule() { m_dyld_module_wp.reset(); }
 
+template <typename InputIterator, typename ResultType>
+static std::vector<ResultType> parallel_map(
+    llvm::ThreadPoolInterface &threadPool, InputIterator first,
+    InputIterator last,
+    llvm::function_ref<ResultType(
+        const typename std::iterator_traits<InputIterator>::value_type &)>
+        transform) {
+  const auto size = std::distance(first, last);
+  std::vector<ResultType> results(size);
+  if (size > 0) {
+    llvm::ThreadPoolTaskGroup taskGroup(threadPool);
+    auto it = first;
+    for (ssize_t i = 0; i < size; ++i, ++it) {
+      taskGroup.async([&, i, it]() { results[i] = transform(*it); });
+    }
+    taskGroup.wait();
+  }
+  return results;
+}
+
+template <typename InputIterator, typename ResultType>
+static std::vector<ResultType>
+map(InputIterator first, InputIterator last,
+    llvm::function_ref<ResultType(
+        const typename std::iterator_traits<InputIterator>::value_type &)>
+        transform) {
+  const auto size = std::distance(first, last);
+  std::vector<ResultType> results(size);
+  auto it = first;
+  for (ssize_t i = 0; i < size; ++i, ++it) {
+    results[i] = transform(*it);
+  }
+  return results;
+}
+
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -651,17 +699,28 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
-  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
+  auto ImageLoad = [this, log](const ImageInfo &image_info) {
     if (log) {
       LLDB_LOGF(log, "Adding new image at address=0x%16.16" PRIx64 ".",
-                image_infos[idx].address);
-      image_infos[idx].PutToLog(log);
+                image_info.address);
+      image_info.PutToLog(log);
     }
+    return FindTargetModuleForImageInfo(image_info, true, nullptr);
+  };
+  bool is_parallel_load =
+      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  auto images =
+      is_parallel_load
+          ? parallel_map<ImageInfo::collection::const_iterator, ModuleSP>(
+                Debugger::GetThreadPool(), image_infos.begin(),
+                image_infos.end(), ImageLoad)
+          : map<ImageInfo::collection::const_iterator, ModuleSP>(
+                image_infos.begin(), image_infos.end(), ImageLoad);
 
+  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
     m_dyld_image_infos.push_back(image_infos[idx]);
 
-    ModuleSP image_module_sp(
-        FindTargetModuleForImageInfo(image_infos[idx], true, nullptr));
+    ModuleSP image_module_sp = images[idx];
 
     if (image_module_sp) {
       ObjectFile *objfile = image_module_sp->GetObjectFile();
