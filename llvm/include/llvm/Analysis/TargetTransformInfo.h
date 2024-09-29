@@ -1114,9 +1114,17 @@ public:
   /// \return the number of registers in the target-provided register class.
   unsigned getNumberOfRegisters(unsigned ClassID) const;
 
+  enum class MoveType {
+    NoMem = 1,
+    MemLD = 2,
+    MemST = 4,
+    All = 7,
+  };
+
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const;
+  bool hasConditionalMoveForType(Type *Ty = nullptr,
+                                 MoveType MT = MoveType::NoMem) const;
 
   /// \return the target-provided register class ID for the provided type,
   /// accounting for type promotion and other type-legalization techniques that
@@ -1978,7 +1986,9 @@ public:
   virtual bool preferToKeepConstantsAttached(const Instruction &Inst,
                                              const Function &Fn) const = 0;
   virtual unsigned getNumberOfRegisters(unsigned ClassID) const = 0;
-  virtual bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const = 0;
+  virtual bool
+  hasConditionalMoveForType(Type *Ty = nullptr,
+                            MoveType MT = MoveType::NoMem) const = 0;
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
@@ -2571,8 +2581,9 @@ public:
   unsigned getNumberOfRegisters(unsigned ClassID) const override {
     return Impl.getNumberOfRegisters(ClassID);
   }
-  bool hasConditionalLoadStoreForType(Type *Ty = nullptr) const override {
-    return Impl.hasConditionalLoadStoreForType(Ty);
+  bool hasConditionalMoveForType(Type *Ty = nullptr,
+                                 MoveType MT = MoveType::NoMem) const override {
+    return Impl.hasConditionalMoveForType(Ty, MT);
   }
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override {
