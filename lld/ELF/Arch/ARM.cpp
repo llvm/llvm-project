@@ -491,9 +491,10 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 // Helper to produce message text when LLD detects that a CALL relocation to
 // a non STT_FUNC symbol that may result in incorrect interworking between ARM
 // or Thumb.
-static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
+static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
+                               const Symbol &s) {
   assert(!s.isFunc());
-  const ErrorPlace place = getErrorPlace(loc);
+  const ErrorPlace place = getErrorPlace(ctx, loc);
   std::string hint;
   if (!place.srcLoc.empty())
     hint = "; " + place.srcLoc;
@@ -630,7 +631,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
@@ -687,7 +688,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == useThumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if ((rel.sym->isFunc() || rel.sym->isInPlt()) ? !useThumb : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done
