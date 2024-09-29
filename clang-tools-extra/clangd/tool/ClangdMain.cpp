@@ -919,6 +919,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
+  Opts.CodeComplete.ExperimentalModulesSupport = ExperimentalModulesSupport;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;

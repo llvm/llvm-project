@@ -41,7 +41,7 @@ struct CodeCompletion;
 
 struct CodeCompleteOptions {
   /// Returns options that can be passed to clang's completion engine.
-  clang::CodeCompleteOptions getClangCompleteOpts(bool ForceLoadExternal) const;
+  clang::CodeCompleteOptions getClangCompleteOpts() const;
 
   /// When true, completion items will contain expandable code snippets in
   /// completion (e.g.  `return ${1:expression}` or `foo(${1:int a}, ${2:int
@@ -51,6 +51,9 @@ struct CodeCompleteOptions {
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
+
+  /// Whether the experimental modules support are enabled.
+  bool ExperimentalModulesSupport = false;
 
   /// Combine overloads into a single completion item where possible.
   /// If none, the implementation may choose an appropriate behavior.
