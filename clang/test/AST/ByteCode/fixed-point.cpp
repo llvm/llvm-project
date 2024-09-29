@@ -42,10 +42,8 @@ namespace BinOps {
   static_assert(1 + A == 14.0k);
   static_assert((A + A) == 26);
 
-  /// FIXME: Conversion between fixed point semantics.
-  static_assert(A + 100000 == 14.0k); // expected-error {{static assertion failed}} \
-                                      // ref-error {{is not an integral constant expression}} \
-                                      // ref-note {{is outside the range of representable values}}
+  static_assert(A + 100000 == 14.0k); // both-error {{is not an integral constant expression}} \
+                                      // both-note {{is outside the range of representable values}}
 }
 
 namespace FixedPointCasts {
