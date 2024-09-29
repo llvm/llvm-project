@@ -550,7 +550,7 @@ Error ELFNixPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
   }
 
   if (!JDS->referenced())
-    return make_error<StringError>("Dylib must be referenced");
+    return make_error<StringError>("dlupdate failed, JITDylib must be open.");
 
   if (auto Err = dlupdateFull(Lock, *JDS))
     return Err;
