@@ -622,8 +622,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
   bool dlupdate = false;
   const Triple &TT = ES.getTargetTriple();
-  if (TT.isOSBinFormatMachO() ||
-      TT.isOSBinFormatELF()) {
+  if (TT.isOSBinFormatMachO() || TT.isOSBinFormatELF()) {
     if (InitializedDylib.contains(&JD)) {
       WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
       dlupdate = true;
