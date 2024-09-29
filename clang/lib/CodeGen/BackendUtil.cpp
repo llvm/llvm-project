@@ -225,7 +225,7 @@ public:
       BuryPointer(std::move(TM));
   }
 
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
 
   // Emit output using the new pass manager for the optimization pipeline.
   void EmitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
@@ -609,8 +609,8 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
                          HSOpts))
     return;
-  TM.reset(static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
-      Triple, TargetOpts.CPU, FeaturesStr, Options, RM, CM, OptLevel)));
+  TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
+                                          Options, RM, CM, OptLevel));
   TM->setLargeDataThreshold(CodeGenOpts.LargeDataThreshold);
 }
 
@@ -1179,7 +1179,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       if (!DwoOS)
         return;
     }
-    MMI = std::make_unique<MachineModuleInfo>(TM.get());
+    MMI = std::make_unique<MachineModuleInfo>(
+        static_cast<LLVMTargetMachine *>(TM.get()));
     if (!AddEmitPasses(CodeGenPasses, *MMI, Action, *OS,
                        DwoOS ? &DwoOS->os() : nullptr))
       // FIXME: Should we handle this error differently?

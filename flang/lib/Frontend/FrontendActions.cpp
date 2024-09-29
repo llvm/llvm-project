@@ -920,7 +920,7 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] codeGenOpts options configuring codegen pipeline
 /// \param [out] os Output stream to emit the generated code to
 static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
-                                              llvm::LLVMTargetMachine &tm,
+                                              llvm::TargetMachine &tm,
                                               BackendActionTy act,
                                               llvm::Module &llvmModule,
                                               const CodeGenOptions &codeGenOpts,
@@ -933,7 +933,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   // Currently only the legacy pass manager is supported.
   // TODO: Switch to the new PM once it's available in the backend.
   llvm::legacy::PassManager codeGenPasses;
-  llvm::MachineModuleInfo mmi(&tm);
+  llvm::MachineModuleInfo mmi(static_cast<llvm::LLVMTargetMachine *>(&tm));
   codeGenPasses.add(
       createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
 
@@ -1371,8 +1371,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, *static_cast<llvm::LLVMTargetMachine *>(&targetMachine), action,
-        *llvmModule, codeGenOpts,
+        diags, targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

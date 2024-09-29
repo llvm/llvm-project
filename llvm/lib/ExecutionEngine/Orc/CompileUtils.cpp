@@ -47,9 +47,8 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
     raw_svector_ostream ObjStream(ObjBufferSV);
 
     legacy::PassManager PM;
-    auto *LLVMTM = static_cast<LLVMTargetMachine *>(&TM);
-    MachineModuleInfo MMI(LLVMTM);
-    if (LLVMTM->addPassesToEmitMC(PM, MMI, ObjStream))
+    MachineModuleInfo MMI(static_cast<LLVMTargetMachine *>(&TM));
+    if (TM.addPassesToEmitMC(PM, MMI, ObjStream))
       return make_error<StringError>("Target does not support MC emission",
                                      inconvertibleErrorCode());
     PM.run(M);

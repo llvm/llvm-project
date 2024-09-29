@@ -375,6 +375,25 @@ public:
   /// with the new pass manager. Only affects the "default" AAManager.
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
+  /// Add passes to the specified pass manager to get the specified file
+  /// emitted. Typically this will involve several steps of code generation.
+  /// This method should return true if emission of this file type is not
+  /// supported, or false on success.
+  virtual bool addPassesToEmitFile(PassManagerBase &, MachineModuleInfo &,
+                                   raw_pwrite_stream &, raw_pwrite_stream *,
+                                   CodeGenFileType,
+                                   bool /*DisableVerify*/ = true) {
+    return true;
+  }
+
+  /// Add passes to the specified pass manager to get machine code emitted with
+  /// the MCJIT. This method returns true if machine code is not supported.
+  virtual bool addPassesToEmitMC(PassManagerBase &, MachineModuleInfo &,
+                                 raw_pwrite_stream &,
+                                 bool /*DisableVerify*/ = true) {
+    return true;
+  }
+
   /// True if subtarget inserts the final scheduling pass on its own.
   ///
   /// Branch relaxation, which must happen after block placement, can
@@ -438,11 +457,10 @@ public:
   /// emitted. Typically this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
-  virtual bool addPassesToEmitFile(PassManagerBase &PM, MachineModuleInfo &MMI,
-                                   raw_pwrite_stream &Out,
-                                   raw_pwrite_stream *DwoOut,
-                                   CodeGenFileType FileType,
-                                   bool DisableVerify = true);
+  bool addPassesToEmitFile(PassManagerBase &PM, MachineModuleInfo &MMI,
+                           raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                           CodeGenFileType FileType,
+                           bool DisableVerify = true) override;
 
   virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                                      raw_pwrite_stream *, CodeGenFileType,
@@ -454,9 +472,9 @@ public:
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported.
-  virtual bool addPassesToEmitMC(PassManagerBase &PM, MachineModuleInfo &MMI,
-                                 raw_pwrite_stream &Out,
-                                 bool DisableVerify = true);
+  bool addPassesToEmitMC(PassManagerBase &PM, MachineModuleInfo &MMI,
+                         raw_pwrite_stream &Out,
+                         bool DisableVerify = true) override;
 
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will
