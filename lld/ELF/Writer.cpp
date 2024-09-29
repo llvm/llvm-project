@@ -1454,7 +1454,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (ctx.arg.emachine == EM_HEXAGON)
-    hexagonTLSSymbolUpdate(ctx.outputSections);
+    hexagonTLSSymbolUpdate(ctx);
 
   uint32_t pass = 0, assignPasses = 0;
   for (;;) {
@@ -1975,7 +1975,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   if (ctx.script->noCrossRefs.size()) {
     llvm::TimeTraceScope timeScope("Check NOCROSSREFS");
-    checkNoCrossRefs<ELFT>();
+    checkNoCrossRefs<ELFT>(ctx);
   }
 
   {

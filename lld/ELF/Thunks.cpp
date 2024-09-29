@@ -1199,7 +1199,8 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   int64_t offset = (gotPlt ? destination.getGotPltVA() : destination.getVA()) -
                    getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
-    reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
+    reportRangeError(ctx, buf, offset, 34, destination,
+                     "R12 setup stub offset");
 
   int nextInstOffset;
   if (ctx.arg.power10Stubs) {
