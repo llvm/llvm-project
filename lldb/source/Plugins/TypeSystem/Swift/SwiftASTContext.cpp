@@ -613,7 +613,7 @@ public:
 
       swift::EnumElementDecl *case_decl = enum_case.decl;
       assert(case_decl);
-      auto arg_type = case_decl->getArgumentInterfaceType();
+      auto arg_type = case_decl->getPayloadInterfaceType();
       CompilerType case_type;
       if (arg_type) {
         case_type = ToCompilerType(
