@@ -19,6 +19,7 @@
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 class Error;
+class raw_ostream;
 
 // None indicates no compression. The other members are a subset of
 // compression::Format, which is used for compressed debug sections in some
@@ -44,6 +45,9 @@ void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
+void compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS,
+                      int Level = DefaultCompression);
+
 Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
@@ -64,6 +68,9 @@ bool isAvailable();
 void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression, bool EnableLdm = false);
+
+void compressToStream(ArrayRef<uint8_t> Input, raw_ostream &OS,
+                      int Level = DefaultCompression, bool EnableLdm = false);
 
 Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
@@ -115,6 +122,10 @@ const char *getReasonIfUnsupported(Format F);
 // *::DefaultCompression for the format.
 void compress(Params P, ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &Output);
+
+// Compress Input into a raw_ostream, without buffering the entire compressed
+// output. Compression parameters are the same as for `compress`.
+void compressToStream(Params P, ArrayRef<uint8_t> Input, raw_ostream &OS);
 
 // Decompress Input. The uncompressed size must be available.
 Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
