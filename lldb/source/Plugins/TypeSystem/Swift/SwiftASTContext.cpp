@@ -6114,7 +6114,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -6205,7 +6204,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -6708,7 +6706,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -6836,7 +6833,6 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -6971,7 +6967,6 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -7272,7 +7267,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -7366,7 +7360,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -7724,7 +7717,6 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");
@@ -7961,7 +7953,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     case swift::TypeKind::Optional:
     case swift::TypeKind::TypeAlias:
-    case swift::TypeKind::Paren:
     case swift::TypeKind::Dictionary:
     case swift::TypeKind::ArraySlice:
       assert(false && "Not a canonical type");
@@ -8340,7 +8331,6 @@ bool SwiftASTContext::DumpTypeValue(
 
   case swift::TypeKind::Optional:
   case swift::TypeKind::TypeAlias:
-  case swift::TypeKind::Paren:
   case swift::TypeKind::Dictionary:
   case swift::TypeKind::ArraySlice:
     assert(false && "Not a canonical type");

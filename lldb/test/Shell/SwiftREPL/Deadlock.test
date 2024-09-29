@@ -8,10 +8,6 @@
 let a = 9007199254740991.0
 // CHECK: a: Double = 9007199254740991
 (a * a - a * a).squareRoot()
-// CHECK: (Double) = {
-// CHECK-NEXT:  _value = 0
-// CHECK-NEXT: }
+// CHECK: Double = 0
 (a * a).addingProduct(-a, a).squareRoot()
-// CHECK: (Double) = {
-// CHECK-NEXT:  _value = NaN
-// CHECK-NEXT: }
+// CHECK: Double = NaN
