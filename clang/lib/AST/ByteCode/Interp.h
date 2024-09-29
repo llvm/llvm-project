@@ -162,6 +162,15 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 
+template <typename T>
+static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << E->getType();
+  return S.noteUndefinedBehavior();
+}
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP);
+
 enum class ShiftDir { Left, Right };
 
 /// Checks if the shift operation is legal.
@@ -365,9 +374,12 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     S.Stk.push<T>(Result);
     return true;
   }
-
   // If for some reason evaluation continues, use the truncated results.
   S.Stk.push<T>(Result);
+
+  // Short-circuit fixed-points here since the error handling is easier.
+  if constexpr (std::is_same_v<T, FixedPoint>)
+    return handleFixedPointOverflow(S, OpPC, Result);
 
   // Slow path - compute the result using another bit of precision.
   APSInt Value = OpAP<APSInt>()(LHS.toAPSInt(Bits), RHS.toAPSInt(Bits));
@@ -385,13 +397,10 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
         << Trunc << Type << E->getSourceRange();
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-
-  if (!S.noteUndefinedBehavior()) {
+  if (!handleOverflow(S, OpPC, Value)) {
     S.Stk.pop<T>();
     return false;
   }
-
   return true;
 }
 
@@ -681,6 +690,13 @@ bool Div(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(Result);
     return true;
   }
+
+  if constexpr (std::is_same_v<T, FixedPoint>) {
+    if (handleFixedPointOverflow(S, OpPC, Result)) {
+      S.Stk.push<T>(Result);
+      return true;
+    }
+  }
   return false;
 }
 
@@ -741,8 +757,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     return true;
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << NegatedValue << Type;
-  return S.noteUndefinedBehavior();
+  return handleOverflow(S, OpPC, NegatedValue);
 }
 
 enum class PushVal : bool {
@@ -804,8 +819,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return true;
   }
 
-  S.CCEDiag(E, diag::note_constexpr_overflow) << APResult << Type;
-  return S.noteUndefinedBehavior();
+  return handleOverflow(S, OpPC, APResult);
 }
 
 /// 1) Pops a pointer from the stack
@@ -2161,6 +2175,22 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
   return true;
 }
 
+inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
+  FixedPointSemantics TargetSemantics(0, 0, false, false, false);
+  std::memcpy(&TargetSemantics, &FPS, sizeof(TargetSemantics));
+
+  const auto &Source = S.Stk.pop<FixedPoint>();
+
+  bool Overflow;
+  FixedPoint Result = Source.toSemantics(TargetSemantics, &Overflow);
+
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
+    return false;
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
+}
+
 /// Like Cast(), but we cast to an arbitrary-bitwidth integral, so we need
 /// to know what bitwidth the result should be.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -2231,13 +2261,8 @@ static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    QualType Type = E->getType();
-
-    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-    return S.noteUndefinedBehavior();
-  }
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
+    return handleOverflow(S, OpPC, F.getAPFloat());
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
@@ -2252,13 +2277,8 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite()) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    QualType Type = E->getType();
-
-    S.CCEDiag(E, diag::note_constexpr_overflow) << F.getAPFloat() << Type;
-    return S.noteUndefinedBehavior();
-  }
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
+    return handleOverflow(S, OpPC, F.getAPFloat());
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   S.Stk.push<IntegralAP<true>>(IntegralAP<true>(Result));
@@ -2321,20 +2341,10 @@ static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
   std::memcpy(&Sem, &FPS, sizeof(Sem));
 
   bool Overflow;
-  llvm::APFixedPoint Result =
-      llvm::APFixedPoint::getFromIntValue(Int.toAPSInt(), Sem, &Overflow);
+  FixedPoint Result = FixedPoint::from(Int.toAPSInt(), Sem, &Overflow);
 
-  if (Overflow) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    if (S.checkingForUndefinedBehavior()) {
-      S.getASTContext().getDiagnostics().Report(
-          E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
-          << Result.toString() << E->getType();
-    }
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
-    if (!S.noteUndefinedBehavior())
-      return false;
-  }
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
+    return false;
 
   S.Stk.push<FixedPoint>(Result);
   return true;
@@ -2348,22 +2358,34 @@ static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
   std::memcpy(&Sem, &FPS, sizeof(Sem));
 
   bool Overflow;
-  llvm::APFixedPoint Result =
-      llvm::APFixedPoint::getFromFloatValue(Float.getAPFloat(), Sem, &Overflow);
+  FixedPoint Result = FixedPoint::from(Float.getAPFloat(), Sem, &Overflow);
 
-  if (Overflow) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    if (S.checkingForUndefinedBehavior()) {
-      S.getASTContext().getDiagnostics().Report(
-          E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
-          << Result.toString() << E->getType();
-    }
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
-    if (!S.noteUndefinedBehavior())
-      return false;
-  }
+  if (Overflow && !handleFixedPointOverflow(S, OpPC, Result))
+    return false;
 
   S.Stk.push<FixedPoint>(Result);
+  return true;
+}
+
+static inline bool CastFixedPointFloating(InterpState &S, CodePtr OpPC,
+                                          const llvm::fltSemantics *Sem) {
+  const auto &Fixed = S.Stk.pop<FixedPoint>();
+
+  S.Stk.push<Floating>(Fixed.toFloat(Sem));
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+static inline bool CastFixedPointIntegral(InterpState &S, CodePtr OpPC) {
+  const auto &Fixed = S.Stk.pop<FixedPoint>();
+
+  bool Overflow;
+  APSInt Int = Fixed.toInt(T::bitWidth(), T::isSigned(), &Overflow);
+
+  if (Overflow && !handleOverflow(S, OpPC, Int))
+    return false;
+
+  S.Stk.push<T>(Int);
   return true;
 }
 
@@ -2555,6 +2577,42 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   auto LHS = S.Stk.pop<LT>();
 
   return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
+}
+
+static inline bool ShiftFixedPoint(InterpState &S, CodePtr OpPC, bool Left) {
+  const auto &RHS = S.Stk.pop<FixedPoint>();
+  const auto &LHS = S.Stk.pop<FixedPoint>();
+  llvm::FixedPointSemantics LHSSema = LHS.getSemantics();
+
+  unsigned ShiftBitWidth =
+      LHSSema.getWidth() - (unsigned)LHSSema.hasUnsignedPadding() - 1;
+
+  // Embedded-C 4.1.6.2.2:
+  //   The right operand must be nonnegative and less than the total number
+  //   of (nonpadding) bits of the fixed-point operand ...
+  if (RHS.isNegative()) {
+    S.CCEDiag(S.Current->getLocation(OpPC), diag::note_constexpr_negative_shift)
+        << RHS.toAPSInt();
+  } else if (static_cast<unsigned>(RHS.toAPSInt().getLimitedValue(
+                 ShiftBitWidth)) != RHS.toAPSInt()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_large_shift)
+        << RHS.toAPSInt() << E->getType() << ShiftBitWidth;
+  }
+
+  FixedPoint Result;
+  if (Left) {
+    if (FixedPoint::shiftLeft(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  } else {
+    if (FixedPoint::shiftRight(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  }
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

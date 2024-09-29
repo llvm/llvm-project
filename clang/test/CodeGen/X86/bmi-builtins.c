@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
 
 
 #include <immintrin.h>
@@ -232,3 +234,32 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
 #endif
 
 #endif // !defined(TEST_TZCNT)
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+char bextr32_0[__bextr_u32(0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_1[__bextr_u32(0x000003F0, 0xFFFF1004) == 0x0000003F ? 1 : -1];
+char bextr32_2[__bextr_u32(0x000003F0, 0xFFFF3008) == 0x00000003 ? 1 : -1];
+
+char bextr32_3[_bextr2_u32(0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_4[_bextr2_u32(0x000003F0, 0xFFFF1004) == 0x0000003F ? 1 : -1];
+char bextr32_5[_bextr2_u32(0x000003F0, 0xFFFF3008) == 0x00000003 ? 1 : -1];
+
+char bextr32_6[_bextr_u32(0x00000000, 0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_7[_bextr_u32(0x000003F0, 0xFFFFFF04, 0xFFFFFF10) == 0x0000003F ? 1 : -1];
+char bextr32_8[_bextr_u32(0x000003F0, 0xFFFFFF08, 0xFFFFFF30) == 0x00000003 ? 1 : -1];
+
+#ifdef __x86_64__
+char bextr64_0[__bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_1[__bextr_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_2[__bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char bextr64_3[_bextr2_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_4[_bextr2_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_5[_bextr2_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char bextr64_6[_bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_7[_bextr_u64(0xF000000000000001ULL, 0x0000000000000001ULL, 0x0000000000000040ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_8[_bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFFFF01ULL, 0xFFFFFFFFFFFFFF10ULL) == 0x0000000000000000ULL ? 1 : -1];
+#endif
+#endif
