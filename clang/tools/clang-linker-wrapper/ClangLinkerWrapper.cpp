@@ -20,6 +20,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/Frontend/Offloading/OffloadWrapper.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/Constants.h"
@@ -1031,9 +1032,9 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
       codegen::InitTargetOptionsFromCodeGenFlags(Triple(M.getTargetTriple()));
   StringRef CPU = "";
   StringRef Features = "";
-  std::unique_ptr<TargetMachine> TM(
+  std::unique_ptr<LLVMTargetMachine> TM(static_cast<LLVMTargetMachine *>(
       T->createTargetMachine(M.getTargetTriple(), CPU, Features, Options,
-                             Reloc::PIC_, M.getCodeModel()));
+                             Reloc::PIC_, M.getCodeModel())));
 
   if (M.getDataLayout().isDefault())
     M.setDataLayout(TM->createDataLayout());
@@ -1051,9 +1052,10 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
   legacy::PassManager CodeGenPasses;
+  MachineModuleInfo MMI(TM.get());
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
+  if (TM->addPassesToEmitFile(CodeGenPasses, MMI, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
     return createStringError("Failed to execute host backend");
   CodeGenPasses.run(M);
