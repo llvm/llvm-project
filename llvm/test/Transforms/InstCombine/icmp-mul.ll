@@ -1227,10 +1227,7 @@ define <2 x i1> @mul_mixed_nsw_nuw_xy_z_setnonzero_vec_ule(<2 x i8> %x, <2 x i8>
 define i1 @icmp_eq_mul_nsw_nonequal(i8 %a, i8 %c) {
 ; CHECK-LABEL: @icmp_eq_mul_nsw_nonequal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[B]], [[C]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1244,10 +1241,7 @@ entry:
 define i1 @icmp_eq_mul_nuw_nonequal(i8 %a, i8 %c) {
 ; CHECK-LABEL: @icmp_eq_mul_nuw_nonequal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw i8 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nuw i8 [[B]], [[C]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1261,10 +1255,7 @@ entry:
 define i1 @icmp_eq_mul_nsw_nonequal_commuted(i8 %a, i8 %c) {
 ; CHECK-LABEL: @icmp_eq_mul_nsw_nonequal_commuted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[C]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1278,10 +1269,7 @@ entry:
 define i1 @icmp_ne_mul_nsw_nonequal(i8 %a, i8 %c) {
 ; CHECK-LABEL: @icmp_ne_mul_nsw_nonequal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i8 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i8 [[B]], [[C]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[C:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
