@@ -61,6 +61,11 @@ public:
 
   FixedPoint truncate(unsigned BitWidth) const { return *this; }
 
+  FixedPoint toSemantics(const llvm::FixedPointSemantics &Sem,
+                         bool *Overflow) const {
+    return FixedPoint(V.convert(Sem, Overflow));
+  }
+
   llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
     return V.convertToFloat(*Sem);
   }

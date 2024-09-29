@@ -697,6 +697,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     return this->emitCastFixedPointFloating(TargetSemantics, CE);
   }
+  case CK_FixedPointCast: {
+    if (!this->visit(SubExpr))
+      return false;
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastFixedPoint(I, CE);
+  }
 
   case CK_ToVoid:
     return discard(SubExpr);
