@@ -568,7 +568,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       bool CodeGenOnly, const std::vector<uint8_t> &CmdArgs) {
+                       bool CodeGenOnly, AddStreamFn IRAddStream,
+                       const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -612,8 +613,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Note that the second codegen round runs only `codegen()` without
         // running `opt()`. We're not reaching here as it's bailed out earlier
         // with `CodeGenOnly` which has been set in `SecondRoundThinBackend`.
-        if (CodeGenDataThinLTOTwoRounds)
-          cgdata::saveModuleForTwoRounds(Mod, Task);
+        if (IRAddStream)
+          cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
         codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
