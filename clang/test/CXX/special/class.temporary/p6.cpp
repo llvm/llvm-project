@@ -304,26 +304,6 @@ void check_dr1815() { // dr1815: yes
 }
 
 namespace P2718R0 {
-extern void block_scope_begin_function();
-extern void block_scope_end_function();
-
-template <typename E> using T2 = std::list<E>;
-template <typename E> const T2<E> &f1_temp(const T2<E> &t)  { return t; }
-template <typename E> const T2<E> &f2_temp(T2<E> t)         { return t; }
-template <typename E> T2<E> g_temp()                        { return T2<E>{}; }
-
-// -- Examples from https://wg21.link/p2718r0
-namespace std_examples {
-using T = std::list<int>;
-const T& f1(const T& t) { return t; }
-const T& f2(T t)        { return t; }
-T g();
-void foo() {
-  for (auto e : f1(g())) {}  // OK, lifetime of return value of g() extended
-  for (auto e : f2(g())) {}  // undefined behavior
-}
-} // namespace std_examples
-
 namespace basic {
 template <typename E> using T2 = std::list<E>;
 template <typename E> const T2<E> &f1_temp(const T2<E> &t)  { return t; }
@@ -520,6 +500,42 @@ void default_init2_dependent() {
 template void default_init1_dependent<DepB<int>>();
 template void default_init2_dependent<DepB<int>>();
 } // namespace default_init
+
+// -- Examples from https://wg21.link/p2718r0
+extern void block_scope_begin_function();
+extern void block_scope_end_function();
+namespace std_examples {
+using T = std::list<int>;
+const T& f1(const T& t) { return t; }
+const T& f2(T t)        { return t; }
+T g();
+void foo() {
+  // CHECK-CXX23: define {{.*}} void @_ZN7P2718R012std_examples3fooEv()
+  // CHECK-CXX23: call void @_ZN7P2718R026block_scope_begin_functionEv
+  block_scope_begin_function();
+  {
+    // CHECK-CXX23-NEXT: call void @_ZN7P2718R012std_examples1gEv
+    // CHECK-CXX23-NEXT: call {{.*}} @_ZN7P2718R012std_examples2f1ERKSt4listIiE
+    // CHECK-CXX23: for.cond.cleanup:
+    // CHECK-CXX23-NEXT: call void @_ZNSt4listIiED1Ev
+    for (auto e : f1(g())) {}  // OK, lifetime of return value of g() extended
+  }
+  // CHECK-CXX23: call void @_ZN7P2718R024block_scope_end_functionEv
+  block_scope_end_function();
+
+  // The lifetime of temporary returned by g() in this case will not be extended.
+  // CHECK-CXX23: call void @_ZN7P2718R026block_scope_begin_functionEv
+  block_scope_begin_function();
+  {
+    // CHECK-CXX23-NEXT: call void @_ZN7P2718R012std_examples1gEv
+    // CHECK-CXX23-NEXT: call {{.*}} @_ZN7P2718R012std_examples2f2ESt4listIiE
+    // CHECK-CXX23-NEXT: call void @_ZNSt4listIiED1Ev
+    for (auto e : f2(g())) {}  // undefined behavior
+  }
+  // CHECK-CXX23: call void @_ZN7P2718R024block_scope_end_functionEv
+  block_scope_end_function();
+}
+} // namespace std_examples
 
 namespace basic {
 using T = std::list<int>;
