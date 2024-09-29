@@ -2260,7 +2260,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
       return std::make_pair(t, false);
 
   // No existing compatible Thunk in range, create a new one
-  Thunk *t = addThunk(*isec, rel);
+  Thunk *t = addThunk(ctx, *isec, rel);
   thunkVec->push_back(t);
   return std::make_pair(t, true);
 }
