@@ -35,3 +35,19 @@ namespace FloatToFixedPointCast {
   constexpr float sf2f = sf2;
   static_assert(sf2f == 0.5);
 }
+
+namespace BinOps {
+  constexpr _Accum A = 13;
+  static_assert(A + 1 == 14.0k);
+  static_assert(1 + A == 14.0k);
+  static_assert((A + A) == 26);
+
+  static_assert(A + 100000 == 14.0k); // both-error {{is not an integral constant expression}} \
+                                      // both-note {{is outside the range of representable values}}
+}
+
+namespace FixedPointCasts {
+  constexpr _Fract B = 0.3;
+  constexpr _Accum A = B;
+  constexpr _Fract C = A;
+}

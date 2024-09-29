@@ -697,6 +697,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
     return this->emitCastFixedPointFloating(TargetSemantics, CE);
   }
+  case CK_FixedPointCast: {
+    if (!this->visit(SubExpr))
+      return false;
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastFixedPoint(I, CE);
+  }
 
   case CK_ToVoid:
     return discard(SubExpr);
@@ -1494,24 +1502,40 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   assert(LHS->getType()->isFixedPointType() ||
          RHS->getType()->isFixedPointType());
 
+  auto LHSSema = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
+  auto RHSSema = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
+
   if (!this->visit(LHS))
     return false;
   if (!LHS->getType()->isFixedPointType()) {
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
     uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
+    std::memcpy(&I, &LHSSema, sizeof(llvm::FixedPointSemantics));
     if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()), I, E))
       return false;
   }
+
   if (!this->visit(RHS))
     return false;
   if (!RHS->getType()->isFixedPointType()) {
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
     uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
+    std::memcpy(&I, &RHSSema, sizeof(llvm::FixedPointSemantics));
     if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()), I, E))
       return false;
   }
+
+  // Convert the result to the target semantics.
+  auto ConvertResult = [&](bool R) -> bool {
+    if (!R)
+      return false;
+    auto ResultSema = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    auto CommonSema = LHSSema.getCommonSemantics(RHSSema);
+    if (ResultSema != CommonSema) {
+      uint32_t I;
+      std::memcpy(&I, &ResultSema, sizeof(ResultSema));
+      return this->emitCastFixedPoint(I, E);
+    }
+    return true;
+  };
 
   switch (E->getOpcode()) {
   case BO_EQ:
@@ -1528,6 +1552,9 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   case BO_GE:
     return this->emitGEFixedPoint(E);
 #endif
+  case BO_Add:
+    return ConvertResult(this->emitAddFixedPoint(E));
+
   default:
     return this->emitInvalid(E);
   }

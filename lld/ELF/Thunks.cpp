@@ -1199,7 +1199,8 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   int64_t offset = (gotPlt ? destination.getGotPltVA() : destination.getVA()) -
                    getThunkTargetSym()->getVA();
   if (!isInt<34>(offset))
-    reportRangeError(buf, offset, 34, destination, "R12 setup stub offset");
+    reportRangeError(ctx, buf, offset, 34, destination,
+                     "R12 setup stub offset");
 
   int nextInstOffset;
   if (ctx.arg.power10Stubs) {
@@ -1437,7 +1438,7 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
   // If we are emitting stubs for NOTOC relocations, we need to tell
   // the PLT resolver that there can be multiple TOCs.
   if (type == R_PPC64_REL24_NOTOC)
-    getPPC64TargetInfo()->ppc64DynamicSectionOpt = 0x2;
+    getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt = 0x2;
 
   if (s.isInPlt())
     return type == R_PPC64_REL24_NOTOC

@@ -12,7 +12,7 @@ __device__ int FileVarDevice;
 // CHECK: @FileVarDeviceShared = addrspace(3) externally_initialized global i32 undef, align 4, !dbg.def ![[FILE_VAR_DEVICE_SHARED_FRAGMENT:[0-9]+]]
 __device__ __shared__ int FileVarDeviceShared;
 
-// CHECK: @FileVarDeviceConstant = addrspace(4) externally_initialized global i32 0, align 4, !dbg.def ![[FILE_VAR_DEVICE_CONSTANT_FRAGMENT:[0-9]+]]
+// CHECK: @FileVarDeviceConstant = addrspace(4) externally_initialized constant i32 0, align 4, !dbg.def ![[FILE_VAR_DEVICE_CONSTANT_FRAGMENT:[0-9]+]]
 __device__ __constant__ int FileVarDeviceConstant;
 
 // CHECK: @_ZZ7kernel1iE13FuncVarShared = internal addrspace(3) global i32 undef, align 4, !dbg.def ![[FUNC_VAR_SHARED_FRAGMENT:[0-9]+]]

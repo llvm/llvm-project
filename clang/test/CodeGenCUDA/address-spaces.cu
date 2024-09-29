@@ -9,7 +9,7 @@
 // CHECK: @i ={{.*}} addrspace(1) externally_initialized global
 __device__ int i;
 
-// CHECK: @j ={{.*}} addrspace(4) externally_initialized global
+// CHECK: @j ={{.*}} addrspace(4) externally_initialized constant
 __constant__ int j;
 
 // CHECK: @k ={{.*}} addrspace(3) global

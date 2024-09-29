@@ -29,6 +29,7 @@ class Symbol;
 
 class TargetInfo {
 public:
+  TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
@@ -113,6 +114,7 @@ public:
     return false;
   }
 
+  Ctx &ctx;
   unsigned defaultCommonPageSize = 4096;
   unsigned defaultMaxPageSize = 4096;
 
@@ -177,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo();
-TargetInfo *getAMDGPUTargetInfo();
-TargetInfo *getARMTargetInfo();
-TargetInfo *getAVRTargetInfo();
-TargetInfo *getHexagonTargetInfo();
-TargetInfo *getLoongArchTargetInfo();
-TargetInfo *getMSP430TargetInfo();
-TargetInfo *getPPC64TargetInfo();
-TargetInfo *getPPCTargetInfo();
-TargetInfo *getRISCVTargetInfo();
-TargetInfo *getSPARCV9TargetInfo();
-TargetInfo *getSystemZTargetInfo();
-TargetInfo *getX86TargetInfo();
-TargetInfo *getX86_64TargetInfo();
-template <class ELFT> TargetInfo *getMipsTargetInfo();
+TargetInfo *getAArch64TargetInfo(Ctx &);
+TargetInfo *getAMDGPUTargetInfo(Ctx &);
+TargetInfo *getARMTargetInfo(Ctx &);
+TargetInfo *getAVRTargetInfo(Ctx &);
+TargetInfo *getHexagonTargetInfo(Ctx &);
+TargetInfo *getLoongArchTargetInfo(Ctx &);
+TargetInfo *getMSP430TargetInfo(Ctx &);
+TargetInfo *getMipsTargetInfo(Ctx &);
+TargetInfo *getPPC64TargetInfo(Ctx &);
+TargetInfo *getPPCTargetInfo(Ctx &);
+TargetInfo *getRISCVTargetInfo(Ctx &);
+TargetInfo *getSPARCV9TargetInfo(Ctx &);
+TargetInfo *getSystemZTargetInfo(Ctx &);
+TargetInfo *getX86TargetInfo(Ctx &);
+TargetInfo *getX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -200,10 +202,10 @@ struct ErrorPlace {
 };
 
 // Returns input section and corresponding source string for the given location.
-ErrorPlace getErrorPlace(const uint8_t *loc);
+ErrorPlace getErrorPlace(Ctx &ctx, const uint8_t *loc);
 
 static inline std::string getErrorLocation(const uint8_t *loc) {
-  return getErrorPlace(loc).loc;
+  return getErrorPlace(ctx, loc).loc;
 }
 
 void processArmCmseSymbols();
@@ -241,14 +243,14 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
 void initSymbolAnchors();
 
-TargetInfo *getTarget();
+TargetInfo *getTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
 void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                       int64_t min, uint64_t max);
-void reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
-                      const Twine &msg);
+void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                      const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {

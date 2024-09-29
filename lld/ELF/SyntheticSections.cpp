@@ -1568,7 +1568,7 @@ DynamicSection<ELFT>::computeContents() {
   }
 
   if (ctx.arg.emachine == EM_PPC64)
-    addInt(DT_PPC64_OPT, getPPC64TargetInfo()->ppc64DynamicSectionOpt);
+    addInt(DT_PPC64_OPT, getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt);
 
   addInt(DT_NULL, 0);
   return entries;

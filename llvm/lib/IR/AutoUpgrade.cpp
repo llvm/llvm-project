@@ -1275,6 +1275,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("rotate."))
         // nvvm.rotate.{b32,b64,right.b64}
         Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
+      else if (Name.consume_front("ptr.gen.to."))
+        // nvvm.ptr.gen.to.{local,shared,global,constant}
+        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
+                 Name.starts_with("global") || Name.starts_with("constant");
+      else if (Name.consume_front("ptr."))
+        // nvvm.ptr.{local,shared,global,constant}.to.gen
+        Expand =
+            (Name.consume_front("local") || Name.consume_front("shared") ||
+             Name.consume_front("global") || Name.consume_front("constant")) &&
+            Name.starts_with(".to.gen");
       else
         Expand = false;
 
@@ -2338,6 +2348,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if ((Name.consume_front("ptr.gen.to.") &&
+              (Name.starts_with("local") || Name.starts_with("shared") ||
+               Name.starts_with("global") || Name.starts_with("constant"))) ||
+             (Name.consume_front("ptr.") &&
+              (Name.consume_front("local") || Name.consume_front("shared") ||
+               Name.consume_front("global") ||
+               Name.consume_front("constant")) &&
+              Name.starts_with(".to.gen"))) {
+    Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
