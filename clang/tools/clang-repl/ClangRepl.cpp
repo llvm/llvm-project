@@ -44,13 +44,12 @@ LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
-static llvm::cl::OptionCategory
-    OOPCategory("Out-of-process Execution Options");
+static llvm::cl::OptionCategory OOPCategory("Out-of-process Execution Options");
 static llvm::cl::opt<std::string> SlabAllocateSizeString(
     "slab-allocate",
     llvm::cl::desc("Allocate from a slab of the given size "
-             "(allowable suffixes: Kb, Mb, Gb. default = "
-             "Kb)"),
+                   "(allowable suffixes: Kb, Mb, Gb. default = "
+                   "Kb)"),
     llvm::cl::init(""), llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<std::string>
     OOPExecutor("oop-executor",
@@ -259,8 +258,8 @@ int main(int argc, const char **argv) {
     EPC = ExitOnErr(
         launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
   } else if (OOPExecutorConnectTCP.getNumOccurrences()) {
-    EPC = ExitOnErr(connectTCPSocket(
-        OOPExecutorConnectTCP, UseSharedMemory, SlabAllocateSizeString));
+    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP, UseSharedMemory,
+                                     SlabAllocateSizeString));
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;

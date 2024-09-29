@@ -55,7 +55,8 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC, StringRef SlabAllocateSizeString) {
+createSharedMemoryManager(SimpleRemoteEPC &SREPC,
+                          StringRef SlabAllocateSizeString) {
   SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
