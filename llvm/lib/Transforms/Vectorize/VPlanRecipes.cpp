@@ -79,6 +79,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenIntrinsicSC:
+    return false;
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
@@ -120,6 +122,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
+  case VPWidenIntrinsicSC:
+    return true;
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
@@ -161,6 +165,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
+  case VPWidenIntrinsicSC:
+    return false;
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
@@ -879,56 +885,105 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  Function *CalledScalarFn = getCalledScalarFunction();
-  assert(!isDbgInfoIntrinsic(CalledScalarFn->getIntrinsicID()) &&
-         "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFrom(getDebugLoc());
 
-  bool UseIntrinsic = VectorIntrinsicID != Intrinsic::not_intrinsic;
-  FunctionType *VFTy = nullptr;
-  if (Variant)
-    VFTy = Variant->getFunctionType();
-  SmallVector<Type *, 2> TysForDecl;
+  FunctionType *VFTy = Variant->getFunctionType();
   // Add return type if intrinsic is overloaded on it.
-  if (UseIntrinsic &&
-      isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
-    TysForDecl.push_back(VectorType::get(
-        CalledScalarFn->getReturnType()->getScalarType(), State.VF));
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(arg_operands())) {
-    // Some intrinsics have a scalar argument - don't replace it with a
-    // vector.
     Value *Arg;
-    if (UseIntrinsic &&
-        isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
-      Arg = State.get(I.value(), VPLane(0));
     // Some vectorized function variants may also take a scalar argument,
     // e.g. linear parameters for pointers. This needs to be the scalar value
     // from the start of the respective part when interleaving.
-    else if (VFTy && !VFTy->getParamType(I.index())->isVectorTy())
+    if (!VFTy->getParamType(I.index())->isVectorTy())
       Arg = State.get(I.value(), VPLane(0));
     else
-      Arg = State.get(I.value());
-    if (UseIntrinsic &&
-        isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+    Args.push_back(Arg);
+  }
+
+  assert(Variant != nullptr && "Can't create vector function.");
+
+  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  if (CI)
+    CI->getOperandBundlesAsDefs(OpBundles);
+
+  CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
+
+  if (isa<FPMathOperator>(V))
+    V->copyFastMathFlags(CI);
+
+  if (!V->getType()->isVoidTy())
+    State.set(this, V);
+  State.addMetadata(V, CI);
+}
+
+InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
+                                  Variant->getFunctionType()->params(),
+                                  CostKind);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-CALL ";
+
+  Function *CalledFn = getCalledScalarFunction();
+  if (CalledFn->getReturnType()->isVoidTy())
+    O << "void ";
+  else {
+    printAsOperand(O, SlotTracker);
+    O << " = ";
+  }
+
+  O << "call";
+  printFlags(O);
+  O << " @" << CalledFn->getName() << "(";
+  interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
+    Op->printAsOperand(O, SlotTracker);
+  });
+  O << ")";
+
+  O << " (using library function";
+  if (Variant->hasName())
+    O << ": " << Variant->getName();
+  O << ")";
+}
+#endif
+
+void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+  assert(State.VF.isVector() && "not widening");
+  State.setDebugLocFrom(getDebugLoc());
+
+  SmallVector<Type *, 2> TysForDecl;
+  // Add return type if intrinsic is overloaded on it.
+  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
+    TysForDecl.push_back(VectorType::get(getResultTy(), State.VF));
+  SmallVector<Value *, 4> Args;
+  for (const auto &I : enumerate(operands())) {
+    // Some intrinsics have a scalar argument - don't replace it with a
+    // vector.
+    Value *Arg;
+    if (isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+      Arg = State.get(I.value(), VPLane(0));
+    else
+      Arg = State.get(I.value(), onlyFirstLaneUsed(I.value()));
+    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
       TysForDecl.push_back(Arg->getType());
     Args.push_back(Arg);
   }
 
-  Function *VectorF;
-  if (UseIntrinsic) {
-    // Use vector version of the intrinsic.
-    Module *M = State.Builder.GetInsertBlock()->getModule();
-    VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
-    assert(VectorF && "Can't retrieve vector intrinsic.");
-  } else {
-#ifndef NDEBUG
-    assert(Variant != nullptr && "Can't create vector function.");
-#endif
-    VectorF = Variant;
-  }
+  // Use vector version of the intrinsic.
+  Module *M = State.Builder.GetInsertBlock()->getModule();
+  Function *VectorF =
+      Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
+  assert(VectorF && "Can't retrieve vector intrinsic.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingInstr());
+  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -942,14 +997,9 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.addMetadata(V, CI);
 }
 
-InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
-                                               VPCostContext &Ctx) const {
+InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
+                                                    VPCostContext &Ctx) const {
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  if (Variant) {
-    return Ctx.TTI.getCallInstrCost(nullptr, Variant->getReturnType(),
-                                    Variant->getFunctionType()->params(),
-                                    CostKind);
-  }
 
   // Some backends analyze intrinsic arguments to determine cost. Use the
   // underlying value for the operand if it has one. Otherwise try to use the
@@ -985,35 +1035,29 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-CALL ";
+StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
+  return Intrinsic::getBaseName(VectorIntrinsicID);
+}
 
-  Function *CalledFn = getCalledScalarFunction();
-  if (CalledFn->getReturnType()->isVoidTy())
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenIntrinsicRecipe::print(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-INTRINSIC ";
+  if (ResultTy->isVoidTy()) {
     O << "void ";
-  else {
+  } else {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
 
   O << "call";
   printFlags(O);
-  O << "  @" << CalledFn->getName() << "(";
-  interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
+  O << getIntrinsicName() << "(";
+
+  interleaveComma(operands(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
-
-  if (VectorIntrinsicID)
-    O << " (using vector intrinsic)";
-  else {
-    O << " (using library function";
-    if (Variant->hasName())
-      O << ": " << Variant->getName();
-    O << ")";
-  }
 }
 #endif
 

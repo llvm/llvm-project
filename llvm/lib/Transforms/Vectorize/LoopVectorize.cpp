@@ -4367,7 +4367,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Store; })
             .Case<VPWidenLoadRecipe>(
                 [](const auto *R) { return Instruction::Load; })
-            .Case<VPWidenCallRecipe>(
+            .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
@@ -4392,11 +4392,17 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       OS << "):";
       if (Opcode == Instruction::Call) {
         auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
-        Function *CalledFn =
-            WidenCall ? WidenCall->getCalledScalarFunction()
-                      : cast<Function>(R->getOperand(R->getNumOperands() - 1)
-                                           ->getLiveInIRValue());
-        OS << " call to " << CalledFn->getName();
+        StringRef Name = "";
+        if (auto *Int = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
+          Name = Int->getIntrinsicName();
+        } else {
+          Function *CalledFn =
+              WidenCall ? WidenCall->getCalledScalarFunction()
+                        : cast<Function>(R->getOperand(R->getNumOperands() - 1)
+                                             ->getLiveInIRValue());
+          Name = CalledFn->getName();
+        }
+        OS << " call to " << Name;
       } else
         OS << " " << Instruction::getOpcodeName(Opcode);
       reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
@@ -4447,6 +4453,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenCanonicalIVSC:
       case VPDef::VPWidenCastSC:
       case VPDef::VPWidenGEPSC:
+      case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
       case VPDef::VPWidenSelectSC:
       case VPDef::VPBlendSC:
@@ -8266,7 +8273,7 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(PHINode *Phi,
   return new VPBlendRecipe(Phi, OperandsWithMask);
 }
 
-VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
+VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                                                    ArrayRef<VPValue *> Operands,
                                                    VFRange &Range) {
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -8297,8 +8304,9 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
-                                 CI->getDebugLoc());
+    return new VPWidenIntrinsicRecipe(*CI, ID,
+                                      make_range(Ops.begin(), Ops.end() - 1),
+                                      CI->getType(), CI->getDebugLoc());
 
   Function *Variant = nullptr;
   std::optional<unsigned> MaskPos;
@@ -8350,9 +8358,8 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
-                                 Intrinsic::not_intrinsic, CI->getDebugLoc(),
-                                 Variant);
+    return new VPWidenCallRecipe(
+        CI, Variant, make_range(Ops.begin(), Ops.end()), CI->getDebugLoc());
   }
 
   return nullptr;
@@ -9218,7 +9225,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
             "Expected instruction to be a call to the llvm.fmuladd intrinsic");
         assert(((MinVF.isScalar() && isa<VPReplicateRecipe>(CurrentLink)) ||
-                isa<VPWidenCallRecipe>(CurrentLink)) &&
+                isa<VPWidenIntrinsicRecipe>(CurrentLink)) &&
                CurrentLink->getOperand(2) == PreviousLink &&
                "expected a call where the previous link is the added operand");
 
