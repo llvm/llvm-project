@@ -13,6 +13,7 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -295,6 +296,7 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
   Module* Mod = unwrap(M);
 
   legacy::PassManager pass;
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(TM));
 
   std::string error;
 
@@ -309,7 +311,7 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
       ft = CodeGenFileType::ObjectFile;
       break;
   }
-  if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {
+  if (TM->addPassesToEmitFile(pass, MMI, OS, nullptr, ft)) {
     error = "TargetMachine can't emit a file of this type";
     *ErrorMessage = strdup(error.c_str());
     return true;
