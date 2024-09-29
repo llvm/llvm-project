@@ -3416,7 +3416,7 @@ int llvm_profdata_main(int argc, char **argvNonConst,
 
   if (argc < 2) {
     errs() << ProgName
-           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+           << ": No subcommand specified! Run llvm-profdata --help for usage.\n";
     return 1;
   }
 
