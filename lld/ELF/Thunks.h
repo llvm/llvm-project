@@ -29,7 +29,7 @@ class ThunkSection;
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:
-  Thunk(Symbol &destination, int64_t addend);
+  Thunk(Ctx &, Symbol &destination, int64_t addend);
   virtual ~Thunk();
 
   virtual uint32_t size() = 0;
@@ -57,6 +57,7 @@ public:
 
   Defined *getThunkTargetSym() const { return syms[0]; }
 
+  Ctx &ctx;
   Symbol &destination;
   int64_t addend;
   llvm::SmallVector<Defined *, 3> syms;
@@ -70,7 +71,7 @@ public:
 // ThunkSection.
 Thunk *addThunk(Ctx &, const InputSection &isec, Relocation &rel);
 
-void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
+void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t gotPltVA,
                            const InputFile *file, int64_t addend);
 void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset);
 
