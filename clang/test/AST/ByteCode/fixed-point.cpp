@@ -50,10 +50,26 @@ namespace BinOps {
 
   static_assert(A + 100000 == 14.0k); // both-error {{is not an integral constant expression}} \
                                       // both-note {{is outside the range of representable values}}
+
+  static_assert((A - A) == 0);
+  constexpr short _Accum mul_ovf1 = 255.0hk * 4.5hk; // both-error {{must be initialized by a constant expression}} \
+                                                     // both-note {{value 123.5 is outside the range of representable values of type 'short _Accum'}}
+  constexpr short _Accum div_ovf1 = 255.0hk / 0.5hk; // both-error {{must be initialized by a constant expression}} \
+                                                     // both-note {{value -2.0 is outside the range of representable values of type 'short _Accum'}}
+
 }
 
 namespace FixedPointCasts {
   constexpr _Fract B = 0.3;
   constexpr _Accum A = B;
   constexpr _Fract C = A;
+}
+
+namespace Cmp {
+  constexpr _Accum A = 13.0k;
+  constexpr _Accum B = 14.0k;
+  static_assert(B > A);
+  static_assert(B >= A);
+  static_assert(A < B);
+  static_assert(A <= B);
 }
