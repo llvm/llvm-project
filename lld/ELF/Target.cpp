@@ -45,7 +45,7 @@ std::string lld::toString(RelType type) {
   return std::string(s);
 }
 
-TargetInfo *elf::getTarget() {
+TargetInfo *elf::getTarget(Ctx &ctx) {
   switch (ctx.arg.emachine) {
   case EM_386:
   case EM_IAMCU:
@@ -94,7 +94,7 @@ TargetInfo *elf::getTarget() {
   }
 }
 
-ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
+ErrorPlace elf::getErrorPlace(Ctx &ctx, const uint8_t *loc) {
   assert(loc != nullptr);
   for (InputSectionBase *d : ctx.inputSections) {
     auto *isec = dyn_cast<InputSection>(d);
