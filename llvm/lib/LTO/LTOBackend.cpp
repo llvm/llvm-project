@@ -418,13 +418,14 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
   legacy::PassManager CodeGenPasses;
+  MachineModuleInfo MMI(static_cast<LLVMTargetMachine*>(TM));
   TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)
     Conf.PreCodeGenPassesHook(CodeGenPasses);
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+  if (TM->addPassesToEmitFile(CodeGenPasses, MMI, *Stream->OS,
                               DwoOut ? &DwoOut->os() : nullptr,
                               Conf.CGFileType))
     report_fatal_error("Failed to setup codegen");
