@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: libcpp-has-abi-fix-unordered-container-size-type, libcpp-abi-no-compressed-pair-padding
 
-// std::unique_ptr is used as an implementation detail of the unordered containers, so the layout of
-// unordered containers changes when bounded unique_ptr is enabled.
-// UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
-
 #include <cstdint>
 #include <unordered_map>
 
