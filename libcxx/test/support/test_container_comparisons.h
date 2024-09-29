@@ -12,18 +12,53 @@
 
 #include <functional>
 #include <set>
+#include <cstddef>
+#include <type_traits>
 
+#include "test_macros.h"
 #include "test_comparisons.h"
+
+#if TEST_STD_VER >= 26
+#  include <inplace_vector>
+
+template <typename C>
+concept is_inplace_vector = std::is_same_v<C, std::inplace_vector<typename C::value_type, C::capacity()>>;
+#else
+template <typename C>
+concept is_inplace_vector = false;
+#endif
+
+template <typename C>
+constexpr bool can_run() {
+  if constexpr (is_inplace_vector<C>) {
+    if consteval {
+      return std::is_trivial_v<typename C::value_type>;
+    }
+  }
+  return true;
+}
+
+template <typename C>
+constexpr std::size_t get_max_size() {
+  if constexpr (is_inplace_vector<C>) {
+    return C::max_size();
+  }
+  return static_cast<std::size_t>(-1);
+}
 
 // Implementation detail of `test_sequence_container_spaceship`
 template <template <typename...> typename Container, typename Elem, typename Order>
 constexpr void test_sequence_container_spaceship_with_type() {
+  if (!can_run<Container<Elem>>())
+    return;
   // Empty containers
   {
     Container<Elem> l1;
     Container<Elem> l2;
     assert(testOrder(l1, l2, Order::equivalent));
   }
+  if (get_max_size<Container<Elem>>() < 2)
+    return;
   // Identical contents
   {
     Container<Elem> l1{1, 1};
@@ -91,6 +126,8 @@ template <template <typename...> typename ContainerAdaptor,
           typename Elem,
           typename Order>
 constexpr void test_sequence_container_adaptor_spaceship_with_type() {
+  if (!can_run<Container<Elem>>())
+    return;
   // Empty containers
   {
     Container<Elem> l1;
@@ -99,6 +136,8 @@ constexpr void test_sequence_container_adaptor_spaceship_with_type() {
     ContainerAdaptor<Elem, Container<Elem>> ca2{l2};
     assert(testOrder(ca1, ca2, Order::equivalent));
   }
+  if (get_max_size<Container<Elem>>() < 2)
+    return;
   // Identical contents
   {
     Container<Elem> l1{1, 1};

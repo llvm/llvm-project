@@ -1,0 +1,82 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+// <inplace_vector>
+
+// explicit inplace_vector(size_type n);
+
+#include <vector>
+#include <cassert>
+
+#include "test_macros.h"
+#include "DefaultOnly.h"
+#include "min_allocator.h"
+#include "test_allocator.h"
+
+template <class C>
+TEST_CONSTEXPR_CXX20 void
+test(typename C::size_type n, typename C::allocator_type const& a = typename C::allocator_type()) {
+  (void)a;
+  // Test without a custom allocator
+  {
+    C c(n);
+    assert(c.size() == n);
+    assert(c.get_allocator() == typename C::allocator_type());
+#if TEST_STD_VER >= 11
+    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
+      assert(*i == typename C::value_type());
+#endif
+  }
+
+  // Test with a custom allocator
+#if TEST_STD_VER >= 14
+  {
+    C c(n, a);
+    assert(c.size() == n);
+    assert(c.get_allocator() == a);
+    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i)
+      assert(*i == typename C::value_type());
+  }
+#endif
+}
+
+TEST_CONSTEXPR_CXX20 bool tests() {
+  test<std::vector<int> >(0);
+  test<std::vector<int> >(50);
+#if TEST_STD_VER >= 11
+  test<std::vector<int, min_allocator<int>>>(0);
+  test<std::vector<int, min_allocator<int>>>(50);
+  test<std::vector<int, safe_allocator<int>>>(0);
+  test<std::vector<int, safe_allocator<int>>>(50);
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER > 17
+  static_assert(tests());
+#endif
+  test<std::vector<DefaultOnly> >(0);
+  test<std::vector<DefaultOnly> >(500);
+  assert(DefaultOnly::count == 0);
+
+#if TEST_STD_VER >= 11
+  test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(0);
+  test<std::vector<DefaultOnly, min_allocator<DefaultOnly>>>(500);
+  test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(0);
+  test<std::vector<DefaultOnly, safe_allocator<DefaultOnly>>>(500);
+  test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(0, test_allocator<DefaultOnly>(23));
+  test<std::vector<DefaultOnly, test_allocator<DefaultOnly>>>(100, test_allocator<DefaultOnly>(23));
+  assert(DefaultOnly::count == 0);
+#endif
+
+  return 0;
+}

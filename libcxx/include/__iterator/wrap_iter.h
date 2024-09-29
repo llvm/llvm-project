@@ -108,6 +108,10 @@ private:
   friend class _LIBCPP_TEMPLATE_VIS span;
   template <class _Tp, size_t _Size>
   friend struct array;
+#if _LIBCPP_STD_VER >= 26
+  template <class _Tp, size_t _Capacity>
+  friend class inplace_vector;
+#endif
 };
 
 template <class _Iter1>

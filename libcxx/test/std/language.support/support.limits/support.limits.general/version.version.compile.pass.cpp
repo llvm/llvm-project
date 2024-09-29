@@ -7022,17 +7022,11 @@
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_inplace_vector
-#     error "__cpp_lib_inplace_vector should be defined in c++26"
-#   endif
-#   if __cpp_lib_inplace_vector != 202406L
-#     error "__cpp_lib_inplace_vector should have the value 202406L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_inplace_vector
-#     error "__cpp_lib_inplace_vector should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should be defined in c++26"
+# endif
+# if __cpp_lib_inplace_vector != 202406L
+#   error "__cpp_lib_inplace_vector should have the value 202406L in c++26"
 # endif
 
 # ifndef __cpp_lib_int_pow2

@@ -685,7 +685,6 @@ feature_test_macros = [
             "name": "__cpp_lib_inplace_vector",
             "values": {"c++26": 202406},  # P0843R14 inplace_vector
             "headers": ["inplace_vector"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_int_pow2",
