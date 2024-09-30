@@ -614,4 +614,11 @@ bool sortBlocks(Function &F) {
   return Modified;
 }
 
+MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
+  MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
+  if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)
+    MaybeDef = MRI.getVRegDef(MaybeDef->getOperand(1).getReg());
+  return MaybeDef;
+}
+
 } // namespace llvm
