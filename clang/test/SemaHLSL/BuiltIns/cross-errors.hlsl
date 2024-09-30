@@ -33,7 +33,7 @@ bool2 builtin_cross_int2_to_float2_promotion(int2 p1)
 float2 builtin_cross_float2(float2 p1, float2 p2)
 {
   return __builtin_hlsl_cross(p1, p2);
-  // expected-error@-1 {{expected vector size of '2', but vector size is '3'}}
+  // expected-error@-1 {{too many elements in vector operand (expected 3 elements, have 2)}}
 }
 
 float3  builtin_cross_float3_int3(float3 p1, int3 p2)

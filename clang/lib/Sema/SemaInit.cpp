@@ -1977,7 +1977,7 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
                    diag::err_vector_incorrect_num_initializers)
-          << (numEltsInit < maxElements) << maxElements << numEltsInit;
+          << (numEltsInit < maxElements) << maxElements << numEltsInit << 0;
     hadError = true;
   }
 }

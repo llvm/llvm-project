@@ -312,8 +312,6 @@ def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
 def err_invalid_vector_complex_decl_spec : Error<
   "cannot use '_Complex' with '__vector'">;
-def err_invalid_vector_size : Error<
-  "expected vector size of '%0', but vector size is '%1'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
@@ -10508,7 +10506,9 @@ def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
 def err_vector_incorrect_num_initializers : Error<
-  "%select{too many|too few}0 elements in vector initialization (expected %1 elements, have %2)">;
+  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
+def err_incorrect_vector_element_count  : Error<
+  err_vector_incorrect_num_initializers.Summary>;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<

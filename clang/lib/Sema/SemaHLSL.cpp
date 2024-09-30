@@ -1840,14 +1840,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
         TheCall->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
     int NumElementsArg2 =
         TheCall->getArg(1)->getType()->getAs<VectorType>()->getNumElements();
+
     if (NumElementsArg1 != 3) {
-      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_invalid_vector_size)
-          << NumElementsArg1 << 3;
+      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_initializers)
+          << LessOrMore << 3 << NumElementsArg1 << 1;
       return true;
     }
     if (NumElementsArg2 != 3) {
-      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_invalid_vector_size)
-          << NumElementsArg2 << 3;
+      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
+
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_initializers)
+          << LessOrMore << 3 << NumElementsArg2 << 1;
       return true;
     }
 
