@@ -72,7 +72,7 @@ static StringRef extractOmpClauseName(const Record *clause) {
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
-  SmallVector<Record *, 1> clauseSuperClasses;
+  SmallVector<const Record *, 1> clauseSuperClasses;
   clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
