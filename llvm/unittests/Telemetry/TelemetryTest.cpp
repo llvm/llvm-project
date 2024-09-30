@@ -190,11 +190,10 @@ struct CustomTelemetryEvent : public VendorCommonTelemetryInfo {
   }
 
   json::Object serializeToJson() const override {
-    json::Object Inner;
-    Inner.try_emplace("SessionId", SessionId);
+    json::Array Inner{{"SessionId", SessionId}};
     int I = 0;
     for (const std::string &M : Msgs) {
-      Inner.try_emplace(("MSG_" + llvm::Twine(I)).str(), M);
+      Inner.push_back(json::Value({("MSG_" + llvm::Twine(I)).str(), M}));
       ++I;
     }
 
@@ -319,7 +318,7 @@ private:
 class TestTelemeter : public Telemeter {
 public:
   TestTelemeter(std::string SessionId, TestContext *Ctxt)
-      : Uuid(SessionId), Counter(0), CurrentContext(Ctxt) {}
+      : CurrentContext(Ctxt), Uuid(SessionId), Counter(0) {}
 
   static std::unique_ptr<TestTelemeter>
   createInstance(Config *config, TestContext *CurrentContext) {
@@ -569,32 +568,28 @@ TEST(TelemetryTest, TelemetryEnabled) {
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    llvm::Expected<json::Value> ExpectedStartup = json::parse(
-        ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
-            .str());
-    ASSERT_TRUE((bool)ExpectedStartup);
-    EXPECT_EQ(ExpectedStartup.get(), *StartupEntry);
+    json::Value ExpectedStartup({
+        {"SessionId", CurrentContext->ExpectedUuid},
+        {"MagicStartupMsg", ("Startup_" + llvm::Twine(ToolName)).str()},
+    });
+    EXPECT_EQ(ExpectedStartup, *StartupEntry);
 
     const json::Value *MidpointEntry =
         CurrentContext->EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
-    llvm::Expected<json::Value> ExpectedMidpoint =
-        json::parse(("{\"MSG_0\":\"Two\",\"MSG_1\":\"Deux\",\"MSG_2\":\"Zwei\","
-                     "\"SessionId\":\"" +
-                     llvm::Twine(CurrentContext->ExpectedUuid) + "\"}")
-                        .str());
-    ASSERT_TRUE((bool)ExpectedMidpoint);
-    EXPECT_EQ(ExpectedMidpoint.get(), *MidpointEntry);
+    json::Value ExpectedMidpoint{{"SessionId", CurrentContext->ExpectedUuid},
+                                 {"MSG_0", "Two"},
+                                 {"MSG_1", "Deux"},
+                                 {"MSG_2", "Zwei"}};
+    EXPECT_EQ(ExpectedMidpoint, *MidpointEntry);
 
     const json::Value *ExitEntry = CurrentContext->EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    llvm::Expected<json::Value> ExpectedExit = json::parse(
-        ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
-            .str());
-    ASSERT_TRUE((bool)ExpectedExit);
-    EXPECT_EQ(ExpectedExit.get(), *ExitEntry);
+    json::Value ExpectedExit({
+        {"SessionId", CurrentContext->ExpectedUuid},
+        {"MagicExitMsg", ("Exit_" + llvm::Twine(ToolName)).str()},
+    });
+    EXPECT_EQ(ExpectedExit, *ExitEntry);
   }
 }
 
@@ -649,38 +644,29 @@ TEST(TelemetryTest, TelemetryEnabledSanitizeData) {
     const json::Value *StartupEntry =
         CurrentContext->EmittedJsons[0].get("Startup");
     ASSERT_NE(StartupEntry, nullptr);
-    llvm::Expected<json::Value> ExpectedStartup = json::parse(
-        ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicStartupMsg\",\"Startup_" + llvm::Twine(ToolName) + "\"]]")
-            .str()
-
-    );
-    ASSERT_TRUE((bool)ExpectedStartup);
-    EXPECT_EQ(ExpectedStartup.get(), *StartupEntry);
+    json::Value ExpectedStartup({
+        {"SessionId", CurrentContext->ExpectedUuid},
+        {"MagicStartupMsg", ("Startup_" + llvm::Twine(ToolName)).str()},
+    });
+    EXPECT_EQ(ExpectedStartup, *StartupEntry);
 
     const json::Value *MidpointEntry =
         CurrentContext->EmittedJsons[1].get("Midpoint");
     ASSERT_NE(MidpointEntry, nullptr);
     // The JsonDestination should have removed the even-positioned msgs.
-    llvm::Expected<json::Value> ExpectedMidpoint = json::parse(
-        ("{\"MSG_0\":\"\",\"MSG_1\":\"Deux\",\"MSG_2\":\"\",\"SessionId\":\"" +
-         llvm::Twine(CurrentContext->ExpectedUuid) + "\"}")
-            .str()
-
-    );
-    ASSERT_TRUE((bool)ExpectedMidpoint);
-    EXPECT_EQ(ExpectedMidpoint.get(), *MidpointEntry);
+    json::Value ExpectedMidpoint{{"SessionId", CurrentContext->ExpectedUuid},
+                                 {"MSG_0", ""},
+                                 {"MSG_1", "Deux"},
+                                 {"MSG_2", ""}};
+    EXPECT_EQ(ExpectedMidpoint, *MidpointEntry);
 
     const json::Value *ExitEntry = CurrentContext->EmittedJsons[2].get("Exit");
     ASSERT_NE(ExitEntry, nullptr);
-    llvm::Expected<json::Value> ExpectedExit = json::parse(
-        ("[[\"SessionId\",\"" + llvm::Twine(CurrentContext->ExpectedUuid) +
-         "\"],[\"MagicExitMsg\",\"Exit_" + llvm::Twine(ToolName) + "\"]]")
-            .str()
-
-    );
-    ASSERT_TRUE((bool)ExpectedExit);
-    EXPECT_EQ(ExpectedExit.get(), *ExitEntry);
+    json::Value ExpectedExit({
+        {"SessionId", CurrentContext->ExpectedUuid},
+        {"MagicExitMsg", ("Exit_" + llvm::Twine(ToolName)).str()},
+    });
+    EXPECT_EQ(ExpectedExit, *ExitEntry);
   }
 }
 
