@@ -8964,6 +8964,8 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
   int Cnt = 0;
   while (++I != E && I->isInsideBundle()) {
     assert(!I->isBundle() && "No nested bundle!");
+    if (isWaitcnt(I->getOpcode()))
+      continue;
     if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
       if (!CoreMI) {
         CoreMI = &*I;
