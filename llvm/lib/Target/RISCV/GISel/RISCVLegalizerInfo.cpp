@@ -945,6 +945,7 @@ static LLT getLMUL1Ty(LLT VecTy) {
 }
 
 bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
+                                                  LegalizerHelper &Helper,
                                                   MachineIRBuilder &MIB) const {
   GExtractSubvector &ES = cast<GExtractSubvector>(MI);
 
@@ -969,17 +970,9 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
     auto BigTyMinElts = BigTy.getElementCount().getKnownMinValue();
     auto LitTyMinElts = LitTy.getElementCount().getKnownMinValue();
     if (BigTyMinElts >= 8 && LitTyMinElts >= 8) {
-      assert(Idx % 8 == 0 && "Invalid index");
-      assert(BigTyMinElts % 8 == 0 && LitTyMinElts % 8 == 0 &&
-             "Unexpected mask vector lowering");
-      Idx /= 8;
-      BigTy = LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8);
-      LitTy = LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
-      auto CastVec = MIB.buildBitcast(BigTy, Src);
-      auto PromotedExtract = MIB.buildExtractSubvector(LitTy, CastVec, Idx);
-      MIB.buildBitcast(Dst, PromotedExtract);
-      MI.eraseFromParent();
-      return true;
+      LLT CastTy =
+          LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
+      return Helper.bitcast(MI, 0, CastTy);
     }
     // We can't slide this mask vector up indexed by its i1 elements.
     // This poses a problem when we wish to insert a scalable vector which
@@ -1123,7 +1116,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SPLAT_VECTOR:
     return legalizeSplatVector(MI, MIRBuilder);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
-    return legalizeExtractSubvector(MI, MIRBuilder);
+    return legalizeExtractSubvector(MI, Helper, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
