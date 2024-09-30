@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_DEBUGTYPEGENERATOR_H
 
 #include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -68,10 +69,12 @@ private:
   mlir::SymbolTable *symbolTable;
   const mlir::DataLayout *dataLayout;
   KindMapping kindMapping;
+  fir::LLVMTypeConverter llvmTypeConverter;
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
   std::uint64_t ptrSize;
   std::uint64_t lenOffset;
+  llvm::DenseMap<mlir::Type, mlir::LLVM::DITypeAttr> typeCache;
 };
 
 } // namespace fir
