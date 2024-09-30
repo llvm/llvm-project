@@ -1499,11 +1499,12 @@ Currently, only the following parameter attributes are defined:
 ``nofpclass(<test mask>)``
     This attribute applies to parameters and return values with
     floating-point and vector of floating-point types, as well as
-    arrays of such types. The test mask has the same format as the
-    second argument to the :ref:`llvm.is.fpclass <llvm.is.fpclass>`,
-    and indicates which classes of floating-point values are not
-    permitted for the value. For example a bitmask of 3 indicates
-    the parameter may not be a NaN.
+    :ref:`supported aggregates <fastmath_return_types>` of such types
+    (matching the supported types for :ref:`fast-math flags <fastmath>`).
+    The test mask has the same format as the second argument to the
+    :ref:`llvm.is.fpclass <llvm.is.fpclass>`, and indicates which classes
+    of floating-point values are not permitted for the value. For example
+    a bitmask of 3 indicates the parameter may not be a NaN.
 
     If the value is a floating-point class indicated by the
     ``nofpclass`` test mask, a :ref:`poison value <poisonvalues>` is
@@ -3709,11 +3710,11 @@ floating-point transformations.
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
 
-.. _fastmath_return_types:
-
 Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
 instructions, the following return types are considered to be floating-point
 types:
+
+.. _fastmath_return_types:
 
 - Floating-point scalar or vector types
 - Array types (nested to any depth) of floating-point scalar or vector types

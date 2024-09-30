@@ -326,6 +326,21 @@ public:
   /// precision.
   float getFPAccuracy() const;
 
+  /// Returns true if `Ty` is a supported floating-point type for phi, select,
+  /// or call FPMathOperators.
+  static bool isSupportedFloatingPointType(Type *Ty) {
+    if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
+      if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
+        return false;
+      Ty = StructTy->elements().front();
+    } else if (ArrayType *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+      do {
+        Ty = ArrayTy->getElementType();
+      } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
+    }
+    return Ty->isFPOrFPVectorTy();
+  }
+
   static bool classof(const Value *V) {
     unsigned Opcode;
     if (auto *I = dyn_cast<Instruction>(V))
@@ -350,17 +365,7 @@ public:
     case Instruction::PHI:
     case Instruction::Select:
     case Instruction::Call: {
-      Type *Ty = V->getType();
-      if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
-        if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
-          return false;
-        Ty = StructTy->elements().front();
-      } else if (ArrayType *ArrayTy = dyn_cast<ArrayType>(Ty)) {
-        do {
-          Ty = ArrayTy->getElementType();
-        } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
-      }
-      return Ty->isFPOrFPVectorTy();
+      return isSupportedFloatingPointType(V->getType());
     }
     default:
       return false;

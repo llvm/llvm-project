@@ -2097,9 +2097,14 @@ declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
 ; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
 declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
 
+; CHECK: declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+
 declare float @unknown_fpclass_func(float)
 
-define float @nofpclass_callsites(float %arg) {
+declare { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float })
+
+define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
   %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
 
@@ -2108,6 +2113,10 @@ define float @nofpclass_callsites(float %arg) {
 
   ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
   %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+
+  ; CHECK: %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+  %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+
   %add0 = fadd float %call0, %call1
   %add1 = fadd float %add0, %call2
   ret float %add1
