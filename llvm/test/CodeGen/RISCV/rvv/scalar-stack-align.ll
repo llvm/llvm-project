@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV64,RV64-V
 
-; FIXME: We are over-aligning the stack on V, wasting stack space.
-
 define ptr @scalar_stack_align16() nounwind {
 ; RV32-ZVE64-LABEL: scalar_stack_align16:
 ; RV32-ZVE64:       # %bb.0:
