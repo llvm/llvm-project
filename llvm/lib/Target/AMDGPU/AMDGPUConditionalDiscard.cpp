@@ -159,15 +159,15 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
 
     bool FirstPred = true;
     for (auto PredBlock : make_early_inc_range(predecessors(&BB))) {
-      auto *PredTerminator = PredBlock->getTerminator();
-      auto *PredBranchInst = cast<BranchInst>(PredTerminator);
+      auto *PredBranchInst = cast<BranchInst>(PredBlock->getTerminator());
 
       BasicBlock *LiveBlock = nullptr;
       auto *Cond = PredBranchInst->getCondition();
       if (PredBranchInst->getSuccessor(0) == &BB) {
         // The old kill block could only be reached if
         // the condition was true - negate the condition.
-        Cond = BinaryOperator::CreateNot(Cond, "", PredTerminator);
+        Cond =
+            BinaryOperator::CreateNot(Cond, "", PredBranchInst->getIterator());
         LiveBlock = PredBranchInst->getSuccessor(1);
       } else {
         LiveBlock = PredBranchInst->getSuccessor(0);
@@ -176,7 +176,7 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
       auto *NewKill = cast<CallInst>(KillCand->clone());
 
       NewKill->setArgOperand(0, Cond);
-      NewKill->insertBefore(PredTerminator);
+      NewKill->insertBefore(PredBranchInst);
 
       if (ConvertToDemote) {
         NewKill->setCalledFunction(Intrinsic::getDeclaration(
@@ -187,7 +187,8 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
           KillBlocksToRemove.push_back(&BB);
 
         // Change the branch to an unconditional one, targeting the live block.
-        auto *NewBranchInst = BranchInst::Create(LiveBlock, PredBranchInst);
+        auto *NewBranchInst =
+            BranchInst::Create(LiveBlock, PredBranchInst->getIterator());
         NewBranchInst->copyMetadata(*PredBranchInst);
         PredBranchInst->eraseFromParent();
       } else {
@@ -214,8 +215,8 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
             // It's possible that the branch became unconditional.
             if (PredBranchInst->getSuccessor(0) ==
                 PredBranchInst->getSuccessor(1)) {
-              auto *NewBranchInst =
-                  BranchInst::Create(OldKillBlockSucc, PredBranchInst);
+              auto *NewBranchInst = BranchInst::Create(
+                  OldKillBlockSucc, PredBranchInst->getIterator());
               NewBranchInst->copyMetadata(*PredBranchInst);
               PredBranchInst->eraseFromParent();
             }

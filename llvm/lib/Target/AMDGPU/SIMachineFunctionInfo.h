@@ -500,6 +500,12 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+#if LLPC_BUILD_GFX12
+  // The size of the scratch space reserved for the CWSR trap handler to spill
+  // some of the dynamic VGPRs.
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
+#endif /* LLPC_BUILD_GFX12 */
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -846,6 +852,17 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
+#if LLPC_BUILD_GFX12
+  // This is only used if we need to save any dynamic VGPRs in scratch.
+  unsigned getScratchReservedForDynamicVGPRs() const {
+    return ScratchReservedForDynamicVGPRs;
+  }
+
+  void setScratchReservedForDynamicVGPRs(unsigned Size) {
+    ScratchReservedForDynamicVGPRs = Size;
+  }
+
+#endif /* LLPC_BUILD_GFX12 */
   // Add user SGPRs.
   Register addPrivateSegmentBuffer(const SIRegisterInfo &TRI);
   Register addDispatchPtr(const SIRegisterInfo &TRI);

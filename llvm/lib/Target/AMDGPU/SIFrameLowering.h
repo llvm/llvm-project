@@ -108,6 +108,12 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
 
   bool requiresStackPointerReference(const MachineFunction &MF) const;
+#if LLPC_BUILD_GFX12
+
+  // Returns true if the function may need to reserve space on the stack for the
+  // CWSR trap handler.
+  bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
+#endif /* LLPC_BUILD_GFX12 */
 };
 
 } // end namespace llvm

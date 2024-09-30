@@ -1264,8 +1264,21 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU, Ctx);
 
+#if LLPC_BUILD_GFX12
+  // For targets that support dynamic VGPRs, set the number of saved dynamic
+  // VGPRs (if any) in the PAL metadata.
+#else /* LLPC_BUILD_GFX12 */
   // Only set AGPRs for supported devices
+#endif /* LLPC_BUILD_GFX12 */
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+#if LLPC_BUILD_GFX12
+  if (STM.isDynamicVGPREnabled() &&
+      MFI->getScratchReservedForDynamicVGPRs() > 0)
+    MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
+                   MFI->getScratchReservedForDynamicVGPRs() / 4);
+
+  // Only set AGPRs for supported devices
+#endif /* LLPC_BUILD_GFX12 */
   if (STM.hasMAIInsts()) {
     MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
   }

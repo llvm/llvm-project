@@ -11,6 +11,50 @@
 
 namespace llvm::sandboxir {
 
+Use OperandUseIterator::operator*() const { return Use; }
+
+OperandUseIterator &OperandUseIterator::operator++() {
+  assert(Use.LLVMUse != nullptr && "Already at end!");
+  User *User = Use.getUser();
+  Use = User->getOperandUseInternal(Use.getOperandNo() + 1, /*Verify=*/false);
+  return *this;
+}
+
+UserUseIterator &UserUseIterator::operator++() {
+  // Get the corresponding llvm::Use, get the next in the list, and update the
+  // sandboxir::Use.
+  llvm::Use *&LLVMUse = Use.LLVMUse;
+  assert(LLVMUse != nullptr && "Already at end!");
+  LLVMUse = LLVMUse->getNext();
+  if (LLVMUse == nullptr) {
+    Use.Usr = nullptr;
+    return *this;
+  }
+  auto *Ctx = Use.Ctx;
+  auto *LLVMUser = LLVMUse->getUser();
+  Use.Usr = cast_or_null<sandboxir::User>(Ctx->getValue(LLVMUser));
+  return *this;
+}
+
+OperandUseIterator OperandUseIterator::operator+(unsigned Num) const {
+  sandboxir::Use U = Use.getUser()->getOperandUseInternal(
+      Use.getOperandNo() + Num, /*Verify=*/true);
+  return OperandUseIterator(U);
+}
+
+OperandUseIterator OperandUseIterator::operator-(unsigned Num) const {
+  assert(Use.getOperandNo() >= Num && "Out of bounds!");
+  sandboxir::Use U = Use.getUser()->getOperandUseInternal(
+      Use.getOperandNo() - Num, /*Verify=*/true);
+  return OperandUseIterator(U);
+}
+
+int OperandUseIterator::operator-(const OperandUseIterator &Other) const {
+  int ThisOpNo = Use.getOperandNo();
+  int OtherOpNo = Other.Use.getOperandNo();
+  return ThisOpNo - OtherOpNo;
+}
+
 Use User::getOperandUseDefault(unsigned OpIdx, bool Verify) const {
   assert((!Verify || OpIdx < getNumOperands()) && "Out of bounds!");
   assert(isa<llvm::User>(Val) && "Non-users have no operands!");

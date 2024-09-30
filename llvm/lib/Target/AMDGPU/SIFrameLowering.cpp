@@ -844,17 +844,63 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
+#if LLPC_BUILD_GFX12
+  if (hasFP(MF) && !mayReserveScratchForCWSR(MF)) {
+#else /* LLPC_BUILD_GFX12 */
   if (hasFP(MF)) {
+#endif /* LLPC_BUILD_GFX12 */
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
   }
 
+#if LLPC_BUILD_GFX12
+  unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
+#endif /* LLPC_BUILD_GFX12 */
   if (requiresStackPointerReference(MF)) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
+#if LLPC_BUILD_GFX12
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(Offset);
+  }
+
+  if (mayReserveScratchForCWSR(MF)) {
+    // We need to check if we're on a compute queue - if we are, then the CWSR
+    // trap handler may need to store some VGPRs on the stack. The first VGPR
+    // block is saved separately, so we only need to allocate space for any
+    // additional VGPR blocks used. For now, we will make sure there's enough
+    // room for the theoretical maximum number of VGPRs that can be allocated.
+    // FIXME: Figure out if the shader uses fewer VGPRs in practice.
+    assert(hasFP(MF));
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    Register SPReg = MFI->getStackPtrOffsetReg();
+    assert(SPReg != AMDGPU::SP_REG);
+    unsigned VGPRSize =
+        llvm::alignTo((ST.getAddressableNumVGPRs() -
+                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
+                          4,
+                      FrameInfo.getMaxAlign());
+    MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
+
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
+        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 1));
+    // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
+    // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
+    // SCC, so we need to check for 0 manually.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
+    // For the FP, we could use a s_cselect, since it's always 0 or VGPRSize.
+    // But for SP, the Offset could be anything, and we can't use 2 literal
+    // constants with s_cselect. For symmetry, we use s_cmovk for both.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
+    if (requiresStackPointerReference(MF))
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
+          .addImm(Offset + VGPRSize);
+#else /* LLPC_BUILD_GFX12 */
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
         .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+#endif /* LLPC_BUILD_GFX12 */
   }
 
   bool NeedsFlatScratchInit =
@@ -2019,9 +2065,9 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   }
 
   return true;
-#if LLPC_BUILD_GFX12
 }
 
+#if LLPC_BUILD_GFX12
 bool SIFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -2115,9 +2161,9 @@ bool SIFrameLowering::restoreCalleeSavedRegisters(
   }
 
   return false;
-#endif /* LLPC_BUILD_GFX12 */
 }
 
+#endif /* LLPC_BUILD_GFX12 */
 MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(
   MachineFunction &MF,
   MachineBasicBlock &MBB,
@@ -2186,7 +2232,19 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
+#if LLPC_BUILD_GFX12
+         mayReserveScratchForCWSR(MF) ||
+#endif /* LLPC_BUILD_GFX12 */
          MF.getTarget().Options.DisableFramePointerElim(MF);
+#if LLPC_BUILD_GFX12
+}
+
+bool SIFrameLowering::mayReserveScratchForCWSR(
+    const MachineFunction &MF) const {
+  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+         AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
+         AMDGPU::isCompute(MF.getFunction().getCallingConv());
+#endif /* LLPC_BUILD_GFX12 */
 }
 
 // This is essentially a reduced version of hasFP for entry functions. Since the
