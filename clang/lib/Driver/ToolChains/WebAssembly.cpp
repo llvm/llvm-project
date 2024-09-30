@@ -9,6 +9,7 @@
 #include "WebAssembly.h"
 #include "CommonArgs.h"
 #include "Gnu.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -173,6 +175,11 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt,
                                  options::OPT_no_wasm_opt, WasmOptDefault);
 
+  if (TargetBuildsComponents(ToolChain.getTriple()) &&
+      Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt, false)) {
+    ToolChain.getDriver().Diag(diag::err_wasm_opt_requested_but_not_supported)
+        << ToolChain.getTriple().str();
+  }
   // If wasm-opt is enabled and optimizations are happening look for the
   // `wasm-opt` program. If it's not found auto-disable it.
   std::string WasmOptPath;
@@ -180,6 +187,14 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
     if (WasmOptPath == "wasm-opt") {
       WasmOptPath = {};
+    }
+    if (WasmOptPath.empty()) {
+      if (Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt,
+                       false)) {
+        ToolChain.getDriver().Diag(diag::err_wasm_opt_not_found_with_flag);
+      } else {
+        ToolChain.getDriver().Diag(diag::warn_wasm_opt_not_found);
+      }
     }
   }
 
