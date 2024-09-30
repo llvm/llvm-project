@@ -194,8 +194,9 @@ public:
       std::size_t &byteCount) {
     auto ch{GetCurrentChar(byteCount)};
     bool inNamelist{mutableModes().inNamelist};
-    while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
-      if (ch && (*ch == ' ' || *ch == '\t')) {
+    while (!ch || *ch == ' ' || *ch == '\t' || *ch == '\n' ||
+        (inNamelist && *ch == '!')) {
+      if (ch && (*ch == ' ' || *ch == '\t' || *ch == '\n')) {
         HandleRelativePosition(byteCount);
       } else if (!AdvanceRecord()) {
         return Fortran::common::nullopt;

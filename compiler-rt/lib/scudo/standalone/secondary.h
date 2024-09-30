@@ -72,13 +72,16 @@ namespace {
 struct CachedBlock {
   static constexpr u16 CacheIndexMax = UINT16_MAX;
   static constexpr u16 InvalidEntry = CacheIndexMax;
-  //   * MaxReleasedCachePages default is currently 4
-  //        - We arrived at this value after noticing that mapping
-  //        in larger memory regions performs better than releasing
-  //        memory and forcing a cache hit. According to the data,
-  //        it suggests that beyond 4 pages, the release execution time is
-  //        longer than the map execution time. In this way, the default
-  //        is dependent on the platform.
+  // We allow a certain amount of fragmentation and part of the fragmented bytes
+  // will be released by `releaseAndZeroPagesToOS()`. This increases the chance
+  // of cache hit rate and reduces the overhead to the RSS at the same time. See
+  // more details in the `MapAllocatorCache::retrieve()` section.
+  //
+  // We arrived at this default value after noticing that mapping in larger
+  // memory regions performs better than releasing memory and forcing a cache
+  // hit. According to the data, it suggests that beyond 4 pages, the release
+  // execution time is longer than the map execution time. In this way,
+  // the default is dependent on the platform.
   static constexpr uptr MaxReleasedCachePages = 4U;
 
   uptr CommitBase = 0;
@@ -725,8 +728,14 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   uptr EntryHeaderPos;
   uptr MaxAllowedFragmentedPages = MaxUnreleasedCachePages;
 
-  if (UNLIKELY(useMemoryTagging<Config>(Options)))
+  if (LIKELY(!useMemoryTagging<Config>(Options))) {
     MaxAllowedFragmentedPages += CachedBlock::MaxReleasedCachePages;
+  } else {
+    // TODO: Enable MaxReleasedCachePages may result in pages for an entry being
+    // partially released and it erases the tag of those pages as well. To
+    // support this feature for MTE, we need to tag those pages again.
+    DCHECK_EQ(MaxAllowedFragmentedPages, MaxUnreleasedCachePages);
+  }
 
   Entry = Cache.retrieve(MaxAllowedFragmentedPages, Size, Alignment,
                          getHeadersSize(), EntryHeaderPos);

@@ -229,7 +229,7 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
   StringRef FilePath = File.getDir().getName();
   StringRef Path = FilePath;
   while (!Path.empty()) {
-    if (auto CurDir = FM.getDirectory(Path)) {
+    if (auto CurDir = FM.getOptionalDirectoryRef(Path)) {
       if (*CurDir == Dir) {
         Result = FilePath.substr(Path.size());
         llvm::sys::path::append(Result,

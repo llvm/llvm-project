@@ -934,6 +934,12 @@ def IsConstantEvaluated : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool()";
 }
 
+def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_is_within_lifetime"];
+  let Attributes = [NoThrow, CustomTypeChecking, Consteval];
+  let Prototype = "bool(void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
@@ -1312,6 +1318,18 @@ def ElementwiseLog2 : Builtin {
 
 def ElementwiseLog10 : Builtin {
   let Spellings = ["__builtin_elementwise_log10"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwisePopcount : Builtin {
+  let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFmod : Builtin {
+  let Spellings = ["__builtin_elementwise_fmod"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4679,16 +4697,16 @@ def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "unsigned int()";
 }
 
+def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool()";
+}
+
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
-}
-
-def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_create_handle"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void*(unsigned char)";
 }
 
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
@@ -4747,6 +4765,25 @@ def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_saturate"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+
+def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_select"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLSign : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_sign"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLStep: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_step"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

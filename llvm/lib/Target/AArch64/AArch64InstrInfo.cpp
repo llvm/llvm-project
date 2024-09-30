@@ -5559,10 +5559,6 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (PNRReg.isValid() && !PNRReg.isVirtual())
     MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
-
-  if (PNRReg.isValid() && PNRReg.isVirtual())
-    BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), PNRReg)
-        .addReg(DestReg);
 }
 
 bool llvm::isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,

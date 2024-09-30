@@ -113,9 +113,13 @@ class TreeTransform {
   class ForgetPartiallySubstitutedPackRAII {
     Derived &Self;
     TemplateArgument Old;
+    // Set the pack expansion index to -1 to avoid pack substitution and
+    // indicate that parameter packs should be instantiated as themselves.
+    Sema::ArgumentPackSubstitutionIndexRAII ResetPackSubstIndex;
 
   public:
-    ForgetPartiallySubstitutedPackRAII(Derived &Self) : Self(Self) {
+    ForgetPartiallySubstitutedPackRAII(Derived &Self)
+        : Self(Self), ResetPackSubstIndex(Self.getSema(), -1) {
       Old = Self.ForgetPartiallySubstitutedPack();
     }
 
@@ -679,10 +683,6 @@ public:
                                       CXXRecordDecl *ThisContext,
                                       Qualifiers ThisTypeQuals,
                                       Fn TransformExceptionSpec);
-
-  template <typename Fn>
-  QualType TransformAttributedType(TypeLocBuilder &TLB, AttributedTypeLoc TL,
-                                   Fn TransformModifiedType);
 
   bool TransformExceptionSpec(SourceLocation Loc,
                               FunctionProtoType::ExceptionSpecInfo &ESI,
@@ -4254,7 +4254,10 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
       getSema(), EnterExpressionEvaluationContext::InitList,
       Construct->isListInitialization());
 
-  getSema().keepInLifetimeExtendingContext();
+  getSema().currentEvaluationContext().InLifetimeExtendingContext =
+      getSema().parentEvaluationContext().InLifetimeExtendingContext;
+  getSema().currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      getSema().parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
@@ -6687,10 +6690,10 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   bool NotYetExpanded = Types.empty();
   bool FullySubstituted = true;
 
-  if (Types.empty())
+  if (Types.empty() && !PIT->expandsToEmptyPack())
     Types = llvm::ArrayRef<QualType>(&Pattern, 1);
 
-  for (const QualType &T : Types) {
+  for (QualType T : Types) {
     if (!T->containsUnexpandedParameterPack()) {
       QualType Transformed = getDerived().TransformType(T);
       if (Transformed.isNull())
@@ -7366,11 +7369,10 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
 }
 
 template <typename Derived>
-template <typename Fn>
-QualType TreeTransform<Derived>::TransformAttributedType(
-    TypeLocBuilder &TLB, AttributedTypeLoc TL, Fn TransformModifiedTypeFn) {
+QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
+                                                         AttributedTypeLoc TL) {
   const AttributedType *oldType = TL.getTypePtr();
-  QualType modifiedType = TransformModifiedTypeFn(TLB, TL.getModifiedLoc());
+  QualType modifiedType = getDerived().TransformType(TLB, TL.getModifiedLoc());
   if (modifiedType.isNull())
     return QualType();
 
@@ -7385,12 +7387,27 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   // FIXME: dependent operand expressions?
   if (getDerived().AlwaysRebuild() ||
       modifiedType != oldType->getModifiedType()) {
-    TypeLocBuilder AuxiliaryTLB;
-    AuxiliaryTLB.reserve(TL.getFullDataSize());
-    QualType equivalentType =
-        getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
-    if (equivalentType.isNull())
-      return QualType();
+    // If the equivalent type is equal to the modified type, we don't want to
+    // transform it as well because:
+    //
+    //   1. The transformation would yield the same result and is therefore
+    //      superfluous, and
+    //
+    //   2. Transforming the same type twice can cause problems, e.g. if it
+    //      is a FunctionProtoType, we may end up instantiating the function
+    //      parameters twice, which causes an assertion since the parameters
+    //      are already bound to their counterparts in the template for this
+    //      instantiation.
+    //
+    QualType equivalentType = modifiedType;
+    if (TL.getModifiedLoc().getType() != TL.getEquivalentTypeLoc().getType()) {
+      TypeLocBuilder AuxiliaryTLB;
+      AuxiliaryTLB.reserve(TL.getFullDataSize());
+      equivalentType =
+          getDerived().TransformType(AuxiliaryTLB, TL.getEquivalentTypeLoc());
+      if (equivalentType.isNull())
+        return QualType();
+    }
 
     // Check whether we can add nullability; it is only represented as
     // type sugar, and therefore cannot be diagnosed in any other way.
@@ -7412,15 +7429,6 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   AttributedTypeLoc newTL = TLB.push<AttributedTypeLoc>(result);
   newTL.setAttr(newAttr);
   return result;
-}
-
-template <typename Derived>
-QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
-                                                         AttributedTypeLoc TL) {
-  return getDerived().TransformAttributedType(
-      TLB, TL, [&](TypeLocBuilder &TLB, TypeLoc ModifiedLoc) -> QualType {
-        return getDerived().TransformType(TLB, ModifiedLoc);
-      });
 }
 
 template <typename Derived>
@@ -7462,8 +7470,35 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
-  llvm_unreachable(
-      "Unexpected TreeTransform for HLSLAttributedResourceTypeLoc");
+
+  const HLSLAttributedResourceType *oldType = TL.getTypePtr();
+
+  QualType WrappedTy = getDerived().TransformType(TLB, TL.getWrappedLoc());
+  if (WrappedTy.isNull())
+    return QualType();
+
+  QualType ContainedTy = QualType();
+  QualType OldContainedTy = oldType->getContainedType();
+  if (!OldContainedTy.isNull()) {
+    TypeSourceInfo *oldContainedTSI = TL.getContainedTypeSourceInfo();
+    if (!oldContainedTSI)
+      oldContainedTSI = getSema().getASTContext().getTrivialTypeSourceInfo(
+          OldContainedTy, SourceLocation());
+    TypeSourceInfo *ContainedTSI = getDerived().TransformType(oldContainedTSI);
+    if (!ContainedTSI)
+      return QualType();
+    ContainedTy = ContainedTSI->getType();
+  }
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
+      ContainedTy != oldType->getContainedType()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(
+        WrappedTy, ContainedTy, oldType->getAttrs());
+  }
+
+  TLB.push<HLSLAttributedResourceTypeLoc>(Result);
+  return Result;
 }
 
 template<typename Derived>
@@ -8906,8 +8941,9 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
 
   // P2718R0 - Lifetime extension in range-based for loops.
   if (getSema().getLangOpts().CPlusPlus23) {
-    auto &LastRecord = getSema().ExprEvalContexts.back();
+    auto &LastRecord = getSema().currentEvaluationContext();
     LastRecord.InLifetimeExtendingContext = true;
+    LastRecord.RebuildDefaultArgOrDefaultInit = true;
   }
   StmtResult Init =
       S->getInit() ? getDerived().TransformStmt(S->getInit()) : StmtResult();
@@ -11824,13 +11860,14 @@ StmtResult TreeTransform<Derived>::TransformOpenACCComputeConstruct(
     OpenACCComputeConstruct *C) {
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+
   if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
                                                   C->getBeginLoc()))
     return StmtError();
 
-  llvm::SmallVector<OpenACCClause *> TransformedClauses =
-      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
-                                              C->clauses());
   // Transform Structured Block.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
                                                 C->getDirectiveKind());
@@ -11849,13 +11886,13 @@ TreeTransform<Derived>::TransformOpenACCLoopConstruct(OpenACCLoopConstruct *C) {
 
   getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
 
-  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
-                                                  C->getBeginLoc()))
-    return StmtError();
-
   llvm::SmallVector<OpenACCClause *> TransformedClauses =
       getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
                                               C->clauses());
+
+  if (getSema().OpenACC().ActOnStartStmtDirective(C->getDirectiveKind(),
+                                                  C->getBeginLoc()))
+    return StmtError();
 
   // Transform Loop.
   SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getSema().OpenACC(),
@@ -14425,6 +14462,13 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     if (TransformExprs(E->getArgs(), E->getNumArgs(), true, Args,
                        &ArgumentChanged))
       return ExprError();
+
+    if (E->isListInitialization() && !E->isStdInitListInitialization()) {
+      ExprResult Res = RebuildInitList(E->getBeginLoc(), Args, E->getEndLoc());
+      if (Res.isInvalid())
+        return ExprError();
+      Args = {Res.get()};
+    }
   }
 
   if (!getDerived().AlwaysRebuild() &&
@@ -14436,12 +14480,9 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
     return SemaRef.MaybeBindToTemporary(E);
   }
 
-  // FIXME: We should just pass E->isListInitialization(), but we're not
-  // prepared to handle list-initialization without a child InitListExpr.
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();
   return getDerived().RebuildCXXTemporaryObjectExpr(
-      T, LParenLoc, Args, E->getEndLoc(),
-      /*ListInitialization=*/LParenLoc.isInvalid());
+      T, LParenLoc, Args, E->getEndLoc(), E->isListInitialization());
 }
 
 template<typename Derived>
@@ -14734,63 +14775,29 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         TPL->containsUnexpandedParameterPack();
   }
 
-  // Transform the type of the original lambda's call operator.
-  // The transformation MUST be done in the CurrentInstantiationScope since
-  // it introduces a mapping of the original to the newly created
-  // transformed parameters.
-  TypeSourceInfo *NewCallOpTSI = nullptr;
-  {
-    auto OldCallOpTypeLoc =
-        E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  TypeLocBuilder NewCallOpTLBuilder;
+  TypeLoc OldCallOpTypeLoc =
+      E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
+  QualType NewCallOpType =
+      getDerived().TransformType(NewCallOpTLBuilder, OldCallOpTypeLoc);
+  if (NewCallOpType.isNull())
+    return ExprError();
+  LSI->ContainsUnexpandedParameterPack |=
+      NewCallOpType->containsUnexpandedParameterPack();
+  TypeSourceInfo *NewCallOpTSI =
+      NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
 
-    auto TransformFunctionProtoTypeLoc =
-        [this](TypeLocBuilder &TLB, FunctionProtoTypeLoc FPTL) -> QualType {
-      SmallVector<QualType, 4> ExceptionStorage;
-      return this->TransformFunctionProtoType(
-          TLB, FPTL, nullptr, Qualifiers(),
-          [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-            return TransformExceptionSpec(FPTL.getBeginLoc(), ESI,
-                                          ExceptionStorage, Changed);
-          });
-    };
-
-    QualType NewCallOpType;
-    TypeLocBuilder NewCallOpTLBuilder;
-
-    if (auto ATL = OldCallOpTypeLoc.getAs<AttributedTypeLoc>()) {
-      NewCallOpType = this->TransformAttributedType(
-          NewCallOpTLBuilder, ATL,
-          [&](TypeLocBuilder &TLB, TypeLoc TL) -> QualType {
-            return TransformFunctionProtoTypeLoc(
-                TLB, TL.castAs<FunctionProtoTypeLoc>());
-          });
-    } else {
-      auto FPTL = OldCallOpTypeLoc.castAs<FunctionProtoTypeLoc>();
-      NewCallOpType = TransformFunctionProtoTypeLoc(NewCallOpTLBuilder, FPTL);
-    }
-
-    if (NewCallOpType.isNull())
-      return ExprError();
-    LSI->ContainsUnexpandedParameterPack |=
-        NewCallOpType->containsUnexpandedParameterPack();
-    NewCallOpTSI =
-        NewCallOpTLBuilder.getTypeSourceInfo(getSema().Context, NewCallOpType);
-  }
-
-  ArrayRef<ParmVarDecl *> Params;
-  if (auto ATL = NewCallOpTSI->getTypeLoc().getAs<AttributedTypeLoc>()) {
-    Params = ATL.getModifiedLoc().castAs<FunctionProtoTypeLoc>().getParams();
-  } else {
-    auto FPTL = NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>();
-    Params = FPTL.getParams();
-  }
+  // The type may be an AttributedType or some other kind of sugar;
+  // get the actual underlying FunctionProtoType.
+  auto FPTL = NewCallOpTSI->getTypeLoc().getAsAdjusted<FunctionProtoTypeLoc>();
+  assert(FPTL && "Not a FunctionProtoType?");
 
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(),
       E->getCallOperator()->getTrailingRequiresClause(), NewCallOpTSI,
       E->getCallOperator()->getConstexprKind(),
-      E->getCallOperator()->getStorageClass(), Params,
+      E->getCallOperator()->getStorageClass(), FPTL.getParams(),
       E->hasExplicitResultType());
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);

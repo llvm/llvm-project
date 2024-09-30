@@ -626,7 +626,7 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
-  list<list<int>> TypeSig = !listconcat(
+  list<int> TypeSig = !listflatten(!listconcat(
     [IIT_RetNumbers[!size(RetTypes)]],
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
@@ -634,7 +634,7 @@ class TypeInfoGen<
           MappingRIdxs,
           ArgCodes,
           ACIdxs[i],
-          a>.ret)));
+          a>.ret))));
 }
 
 //===----------------------------------------------------------------------===//
@@ -669,12 +669,7 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  bit isTarget = false;
-
   TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
-  bit isOverloaded = TypeInfo.isOverloaded;
-  list<LLVMType> Types = TypeInfo.Types;
-  list<list<int>> TypeSig = TypeInfo.TypeSig;
 }
 
 // Intrinsic with default attributes (disable_default_attributes = false).
@@ -1021,6 +1016,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -1637,12 +1633,16 @@ def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
                                                   llvm_vararg_ty],
-                                                  [Throws]>;
+                                                  [Throws, ImmArg<ArgIndex<0>>,
+                                                   ImmArg<ArgIndex<1>>,
+                                                   ImmArg<ArgIndex<3>>]>;
 def int_experimental_patchpoint : Intrinsic<[llvm_any_ty],
                                             [llvm_i64_ty, llvm_i32_ty,
                                              llvm_ptr_ty, llvm_i32_ty,
                                              llvm_vararg_ty],
-                                            [Throws]>;
+                                            [Throws, ImmArg<ArgIndex<0>>,
+                                             ImmArg<ArgIndex<1>>,
+                                             ImmArg<ArgIndex<3>>]>;
 
 
 //===------------------------ Garbage Collection Intrinsics ---------------===//

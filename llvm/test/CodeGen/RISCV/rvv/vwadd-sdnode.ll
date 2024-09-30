@@ -1394,8 +1394,6 @@ define <vscale x 1 x i64> @i1_zext(<vscale x 1 x i1> %va, <vscale x 1 x i64> %vb
 }
 
 ; %x.i32 and %y.i32 are disjoint, so DAGCombiner will combine it into an or.
-; FIXME: We should be able to recover the or into vwaddu.vv if the disjoint
-; flag is set.
 define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <vscale x 2 x i8> %y.i8) {
 ; CHECK-LABEL: vwaddu_vv_disjoint_or_add:
 ; CHECK:       # %bb.0:

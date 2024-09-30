@@ -67,7 +67,7 @@ void StackFrameRecognizerManager::AddRecognizer(
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, false,
                             module, RegularExpressionSP(), symbols,
                             RegularExpressionSP(), symbol_mangling,
-                            first_instruction_only});
+                            first_instruction_only, true});
   BumpGeneration();
 }
 
@@ -77,14 +77,15 @@ void StackFrameRecognizerManager::AddRecognizer(
     bool first_instruction_only) {
   m_recognizers.push_front({(uint32_t)m_recognizers.size(), recognizer, true,
                             ConstString(), module, std::vector<ConstString>(),
-                            symbol, symbol_mangling, first_instruction_only});
+                            symbol, symbol_mangling, first_instruction_only,
+                            true});
   BumpGeneration();
 }
 
 void StackFrameRecognizerManager::ForEach(
-    const std::function<
-        void(uint32_t, std::string, std::string, llvm::ArrayRef<ConstString>,
-             Mangled::NamePreference name_reference, bool)> &callback) {
+    const std::function<void(
+        uint32_t, bool, std::string, std::string, llvm::ArrayRef<ConstString>,
+        Mangled::NamePreference name_preference, bool)> &callback) {
   for (auto entry : m_recognizers) {
     if (entry.is_regexp) {
       std::string module_name;
@@ -95,22 +96,32 @@ void StackFrameRecognizerManager::ForEach(
       if (entry.symbol_regexp)
         symbol_name = entry.symbol_regexp->GetText().str();
 
-      callback(entry.recognizer_id, entry.recognizer->GetName(), module_name,
-               llvm::ArrayRef(ConstString(symbol_name)), entry.symbol_mangling,
-               true);
-
+      callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
+               module_name, llvm::ArrayRef(ConstString(symbol_name)),
+               entry.symbol_mangling, true);
     } else {
-      callback(entry.recognizer_id, entry.recognizer->GetName(),
+      callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
                entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
                false);
     }
   }
 }
 
+bool StackFrameRecognizerManager::SetEnabledForID(uint32_t recognizer_id,
+                                                  bool enabled) {
+  auto found =
+      llvm::find_if(m_recognizers, [recognizer_id](const RegisteredEntry &e) {
+        return e.recognizer_id == recognizer_id;
+      });
+  if (found == m_recognizers.end())
+    return false;
+  found->enabled = enabled;
+  BumpGeneration();
+  return true;
+}
+
 bool StackFrameRecognizerManager::RemoveRecognizerWithID(
     uint32_t recognizer_id) {
-  if (recognizer_id >= m_recognizers.size())
-    return false;
   auto found =
       llvm::find_if(m_recognizers, [recognizer_id](const RegisteredEntry &e) {
         return e.recognizer_id == recognizer_id;
@@ -142,6 +153,9 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   Address current_addr = frame->GetFrameCodeAddress();
 
   for (auto entry : m_recognizers) {
+    if (!entry.enabled)
+      continue;
+
     if (entry.module)
       if (entry.module != module_name)
         continue;

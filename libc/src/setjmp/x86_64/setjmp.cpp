@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
+LLVM_LIBC_FUNCTION(int, setjmp, (jmp_buf buf)) {
   register __UINT64_TYPE__ rbx __asm__("rbx");
   register __UINT64_TYPE__ r12 __asm__("r12");
   register __UINT64_TYPE__ r13 __asm__("r13");

@@ -324,6 +324,12 @@ function(append value)
   endforeach(variable)
 endfunction()
 
+function(prepend value)
+  foreach(variable ${ARGN})
+    set(${variable} "${value} ${${variable}}" PARENT_SCOPE)
+  endforeach(variable)
+endfunction()
+
 function(append_if condition value)
   if (${condition})
     foreach(variable ${ARGN})
@@ -754,6 +760,12 @@ if (MSVC)
       # any code that uses the LLVM_ALIGNAS macro), so this is must be disabled to
       # avoid unwanted alignment warnings.
       -wd4324 # Suppress 'structure was padded due to __declspec(align())'
+      # This is triggered for every variable that is a template type of a class even 
+      # if there private when the class is dllexport'ed
+      -wd4251 # Suppress 'needs to have dll-interface to be used by clients'
+      # We only putting dll export on classes with out of line members so this 
+      # warning gets triggered a lot for bases we haven't exported'
+      -wd4275 # non dll-interface class used as base for dll-interface class
 
       # Promoted warnings.
       -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
@@ -1190,7 +1202,7 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   endif()
   file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
   get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
-  append("/libpath:\"${clang_runtime_dir}\""
+  prepend("/libpath:\"${clang_runtime_dir}\""
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)

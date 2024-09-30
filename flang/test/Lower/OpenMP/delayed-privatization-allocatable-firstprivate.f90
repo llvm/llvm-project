@@ -35,7 +35,7 @@ end subroutine
 ! CHECK-NEXT:    %[[ORIG_BASE_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]]
 ! CHECK-NEXT:    %[[ORIG_BASE_ADDR:.*]] = fir.box_addr %[[ORIG_BASE_VAL]]
 ! CHECK-NEXT:    %[[ORIG_BASE_LD:.*]] = fir.load %[[ORIG_BASE_ADDR]]
-! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_BASE_BOX]] temporary_lhs
+! CHECK-NEXT:    hlfir.assign %[[ORIG_BASE_LD]] to %[[PRIV_PRIV_ARG]] realloc
 ! CHECK-NEXT:  }
 
 ! RUN: %flang -c -emit-llvm -fopenmp -mmlir --openmp-enable-delayed-privatization \

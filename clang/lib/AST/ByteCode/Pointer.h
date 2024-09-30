@@ -46,6 +46,7 @@ struct IntPointer {
   uint64_t Value;
 
   IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
 enum class Storage { Block, Int, Fn };
@@ -241,9 +242,8 @@ public:
     if (asBlockPointer().Base != Offset)
       return *this;
 
-    // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, asBlockPointer().Base, asBlockPointer().Base);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
@@ -711,8 +711,10 @@ private:
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(isBlockPointer());
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
+    assert(asBlockPointer().Base >= sizeof(InlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 

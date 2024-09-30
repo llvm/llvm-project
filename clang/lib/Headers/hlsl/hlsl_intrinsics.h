@@ -9,6 +9,8 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
+#include "hlsl_detail.h"
+
 namespace hlsl {
 
 // Note: Functions in this file are sorted alphabetically, then grouped by base
@@ -360,6 +362,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
+// asfloat builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float asfloat(T Val)
+/// \brief Interprets the bit pattern of x as float point number.
+/// \param Val The input value.
+
+template <typename T, int N>
+constexpr vector<float, N> asfloat(vector<T, N> V) {
+  return __detail::bit_cast<float, T, N>(V);
+}
+
+template <typename T> constexpr float asfloat(T F) {
+  return __detail::bit_cast<float, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
+// asint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
+
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 
@@ -386,6 +421,22 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 float3 asin(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 float4 asin(float4);
+
+//===----------------------------------------------------------------------===//
+// asuint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint asuint(T Val)
+/// \brief Interprets the bit pattern of x as an unsigned integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
+  return __detail::bit_cast<uint, T, N>(V);
+}
+
+template <typename T> constexpr uint asuint(T F) {
+  return __detail::bit_cast<uint, T>(F);
+}
 
 //===----------------------------------------------------------------------===//
 // atan builtins
@@ -615,6 +666,77 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 float4 cosh(float4);
 
 //===----------------------------------------------------------------------===//
+// count bits builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T countbits(T Val)
+/// \brief Return the number of bits (per component) set in the input integer.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t countbits(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t2 countbits(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t3 countbits(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int16_t4 countbits(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t countbits(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t2 countbits(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t3 countbits(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint16_t4 countbits(uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int countbits(int);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int2 countbits(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int3 countbits(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int4 countbits(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint countbits(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint2 countbits(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint3 countbits(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint4 countbits(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t countbits(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t2 countbits(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t3 countbits(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+int64_t4 countbits(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t countbits(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t2 countbits(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t3 countbits(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_popcount)
+uint64_t4 countbits(uint64_t4);
+
+//===----------------------------------------------------------------------===//
 // dot product builtins
 //===----------------------------------------------------------------------===//
 
@@ -806,6 +928,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
+
+//===----------------------------------------------------------------------===//
+// fmod builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T fmod(T x, T y)
+/// \brief Returns the linear interpolation of x to y.
+/// \param x [in] The dividend.
+/// \param y [in] The divisor.
+///
+/// Return the floating-point remainder of the x parameter divided by the y
+/// parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half fmod(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half2 fmod(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half3 fmod(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half4 fmod(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float fmod(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float2 fmod(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float3 fmod(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float4 fmod(float4, float4);
 
 //===----------------------------------------------------------------------===//
 // frac builtins
@@ -1604,6 +1760,32 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_saturate)
 double4 saturate(double4);
 
 //===----------------------------------------------------------------------===//
+// select builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T select(bool Cond, T TrueVal, T FalseVal)
+/// \brief ternary operator.
+/// \param Cond The Condition input value.
+/// \param TrueVal The Value returned if Cond is true.
+/// \param FalseVal The Value returned if Cond is false.
+
+template <typename T>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+T select(bool, T, T);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+///                         vector<T,Sz> FalseVals)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVals The vector values are chosen from when conditions are true.
+/// \param FalseVals The vector values are chosen from when conditions are
+/// false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
+
+//===----------------------------------------------------------------------===//
 // sin builtins
 //===----------------------------------------------------------------------===//
 
@@ -1690,6 +1872,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
 float3 sqrt(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
 float4 sqrt(float4);
+
+//===----------------------------------------------------------------------===//
+// step builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T step(T x, T y)
+/// \brief Returns 1 if the x parameter is greater than or equal to the y
+/// parameter; otherwise, 0. vector. \param x [in] The first floating-point
+/// value to compare. \param y [in] The first floating-point value to compare.
+///
+/// Step is based on the following formula: (x >= y) ? 1 : 0
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half step(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half2 step(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half3 step(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+half4 step(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float step(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float2 step(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float3 step(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_step)
+float4 step(float4, float4);
 
 //===----------------------------------------------------------------------===//
 // tan builtins
@@ -1796,5 +2011,80 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
 __attribute__((convergent)) uint WaveGetLaneIndex();
 
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
+__attribute__((convergent)) bool WaveIsFirstLane();
+
+//===----------------------------------------------------------------------===//
+// sign builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T sign(T Val)
+/// \brief Returns -1 if \a Val is less than zero; 0 if \a Val equals zero; and
+/// 1 if \a Val is greater than zero. \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int sign(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int2 sign(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int3 sign(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_sign)
+int4 sign(double4);
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

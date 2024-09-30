@@ -5166,6 +5166,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
 
+              // Reject, but continue to parse 'float(this void)' as
+              // 'float(void)'.
+              if (Param->isExplicitObjectParameter()) {
+                S.Diag(Param->getLocation(),
+                       diag::err_void_explicit_object_param);
+                Param->setExplicitObjectParameterLoc(SourceLocation());
+              }
+
               // Do not add 'void' to the list.
               break;
             }
@@ -5801,8 +5809,10 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
 
 static void fillHLSLAttributedResourceTypeLoc(HLSLAttributedResourceTypeLoc TL,
                                               TypeProcessingState &State) {
-  TL.setSourceRange(
-      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr()));
+  HLSLAttributedResourceLocInfo LocInfo =
+      State.getSema().HLSL().TakeLocForHLSLAttribute(TL.getTypePtr());
+  TL.setSourceRange(LocInfo.Range);
+  TL.setContainedTypeSourceInfo(LocInfo.ContainedTyInfo);
 }
 
 static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
@@ -6489,6 +6499,15 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 static void HandleBTFTypeTagAttribute(QualType &Type, const ParsedAttr &Attr,
                                       TypeProcessingState &State) {
   Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  // FIXME: we should implement checkCommonAttributeFeatures() in SemaAttr.cpp
+  // such that it handles type attributes, and then call that from
+  // processTypeAttrs() instead of one-off checks like this.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
 
   // Check the number of attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -8834,8 +8853,14 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
     case ParsedAttr::AT_HLSLResourceClass:
-    case ParsedAttr::AT_HLSLROV: {
-      if (state.getSema().HLSL().handleResourceTypeAttr(attr))
+    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLRawBuffer:
+    case ParsedAttr::AT_HLSLContainedType: {
+      // Only collect HLSL resource type attributes that are in
+      // decl-specifier-seq; do not collect attributes on declarations or those
+      // that get to slide after declaration name.
+      if (TAL == TAL_DeclSpec &&
+          state.getSema().HLSL().handleResourceTypeAttr(type, attr))
         attr.setUsedAsTypeAttr();
       break;
     }

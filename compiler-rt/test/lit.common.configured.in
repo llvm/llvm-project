@@ -71,6 +71,8 @@ else:
 
 set_default("have_internal_symbolizer", @COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER_PYBOOL@)
 set_default("have_zlib", @ZLIB_FOUND_PYBOOL@)
+set_default("zlib_include_dir", "@ZLIB_INCLUDE_DIR@")
+set_default("zlib_library", "@ZLIB_LIBRARY@")
 set_default("libcxx_used", "@LLVM_LIBCXX_USED@")
 
 # LLVM tools dir can be passed in lit parameters, so try to

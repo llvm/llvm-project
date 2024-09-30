@@ -874,4 +874,207 @@ define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
   ret i32 %ashr
 }
 
+
+define i32 @lsb_mask_sign_zext(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_commuted(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %not, %sub
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+; Negative tests
+
+define i32 @lsb_mask_sign_zext_wrong_cst1(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -2
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_wrong_cst2(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, 2
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_wrong_cst3(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_wrong_cst3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 30
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = lshr i32 %and, 30
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_zext_multiuse(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_zext_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  call void @use(i32 %and)
+  %shr = lshr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_commuted(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %not, %sub
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+; Negative tests
+
+define i32 @lsb_mask_sign_sext_wrong_cst1(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -2
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -2
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_wrong_cst2(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, 2
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_wrong_cst3(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_wrong_cst3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 30
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  %shr = ashr i32 %and, 30
+  ret i32 %shr
+}
+
+define i32 @lsb_mask_sign_sext_multiuse(i32 %x) {
+; CHECK-LABEL: @lsb_mask_sign_sext_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[X]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[NOT]]
+; CHECK-NEXT:    call void @use(i32 [[AND]])
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[AND]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+entry:
+  %sub = add i32 %x, -1
+  %not = xor i32 %x, -1
+  %and = and i32 %sub, %not
+  call void @use(i32 %and)
+  %shr = ashr i32 %and, 31
+  ret i32 %shr
+}
+
 declare void @use(i32)

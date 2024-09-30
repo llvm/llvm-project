@@ -374,7 +374,10 @@ macros = {
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
+    "_LIBCPP_ABI_BOUNDED_UNIQUE_PTR": "libcpp-has-abi-bounded-unique_ptr",
+    "_LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE": "libcpp-has-abi-fix-unordered-container-size-type",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
+    "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
@@ -608,9 +611,16 @@ DEFAULT_FEATURES += [
 # Those are used for backdeployment features below, do not use directly in tests.
 DEFAULT_FEATURES += [
     Feature(
+        name="_target-has-llvm-18",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "target={{.+}}-apple-macosx{{15(.[0-9]+)?(.[0-9]+)?}}",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
         name="_target-has-llvm-17",
         when=lambda cfg: BooleanExpression.evaluate(
-            "target={{.+}}-apple-macosx{{14.[4-9](.0)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
+            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.0)?}} || target={{.+}}-apple-macosx{{1[5-9]([.].+)?}}",
             cfg.available_features,
         ),
     ),

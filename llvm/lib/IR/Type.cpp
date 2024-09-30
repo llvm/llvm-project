@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -348,7 +349,7 @@ FunctionType *FunctionType::get(Type *ReturnType,
 }
 
 FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
-  return get(Result, std::nullopt, isVarArg);
+  return get(Result, {}, isVarArg);
 }
 
 bool FunctionType::isValidReturnType(Type *RetTy) {
@@ -514,7 +515,7 @@ StructType *StructType::create(LLVMContext &Context, StringRef Name) {
 }
 
 StructType *StructType::get(LLVMContext &Context, bool isPacked) {
-  return get(Context, std::nullopt, isPacked);
+  return get(Context, {}, isPacked);
 }
 
 StructType *StructType::create(LLVMContext &Context, ArrayRef<Type*> Elements,
@@ -792,6 +793,13 @@ TargetExtType::TargetExtType(LLVMContext &C, StringRef Name,
 TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
                                   ArrayRef<Type *> Types,
                                   ArrayRef<unsigned> Ints) {
+  return cantFail(getOrError(C, Name, Types, Ints));
+}
+
+Expected<TargetExtType *> TargetExtType::getOrError(LLVMContext &C,
+                                                    StringRef Name,
+                                                    ArrayRef<Type *> Types,
+                                                    ArrayRef<unsigned> Ints) {
   const TargetExtTypeKeyInfo::KeyTy Key(Name, Types, Ints);
   TargetExtType *TT;
   // Since we only want to allocate a fresh target type in case none is found
@@ -799,8 +807,8 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
   // one for inserting the newly allocated one), here we instead lookup based on
   // Key and update the reference to the target type in-place to a newly
   // allocated one if not found.
-  auto Insertion = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
-  if (Insertion.second) {
+  auto [Iter, Inserted] = C.pImpl->TargetExtTypes.insert_as(nullptr, Key);
+  if (Inserted) {
     // The target type was not found. Allocate one and update TargetExtTypes
     // in-place.
     TT = (TargetExtType *)C.pImpl->Alloc.Allocate(
@@ -808,12 +816,29 @@ TargetExtType *TargetExtType::get(LLVMContext &C, StringRef Name,
             sizeof(unsigned) * Ints.size(),
         alignof(TargetExtType));
     new (TT) TargetExtType(C, Name, Types, Ints);
-    *Insertion.first = TT;
-  } else {
-    // The target type was found. Just return it.
-    TT = *Insertion.first;
+    *Iter = TT;
+    return checkParams(TT);
   }
-  return TT;
+
+  // The target type was found. Just return it.
+  return *Iter;
+}
+
+Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
+  // Opaque types in the AArch64 name space.
+  if (TTy->Name == "aarch64.svcount" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() != 0))
+    return createStringError(
+        "target extension type aarch64.svcount should have no parameters");
+
+  // Opaque types in the RISC-V name space.
+  if (TTy->Name == "riscv.vector.tuple" &&
+      (TTy->getNumTypeParameters() != 1 || TTy->getNumIntParameters() != 1))
+    return createStringError(
+        "target extension type riscv.vector.tuple should have one "
+        "type parameter and one integer parameter");
+
+  return TTy;
 }
 
 namespace {
@@ -853,6 +878,10 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
   }
+
+  // DirectX resources
+  if (Name.starts_with("dx."))
+    return TargetTypeInfo(PointerType::get(C, 0));
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

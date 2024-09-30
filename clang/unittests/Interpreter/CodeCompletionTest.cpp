@@ -26,7 +26,7 @@ auto CB = clang::IncrementalCompilerBuilder();
 
 class CodeCompletionTest : public InterpreterTestBase {
 public:
-  std::unique_ptr<Interpreter> Interp;
+  std::unique_ptr<clang::Interpreter> Interp;
 
   void SetUp() override {
     if (!HostSupportsJIT())

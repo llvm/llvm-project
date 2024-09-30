@@ -67,6 +67,108 @@ loop:
   br label %loop
 }
 
+; Hoist ADD and copy NUW if both ops have it.
+; Version where operands are commuted.
+define void @add_nuw_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; Another version where operands are commuted.
+define void @add_nuw_comm2(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; Another version where operands are commuted.
+define void @add_nuw_comm3(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_comm3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = add nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist ADD and copy NUW if both ops have it.
+; A version where the LHS and RHS of the outer BinOp are BinOps.
+define void @add_nuw_twobinops(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_twobinops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C2_PLUS_2:%.*]] = add nuw i64 [[C2:%.*]], 2
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw i64 [[C1:%.*]], [[C2_PLUS_2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %c2.plus.2 = add nuw i64 %c2, 2
+  %index.next = add nuw i64 %step.add, %c2.plus.2
+  br label %loop
+}
+
 ; Hoist MUL and drop NUW even if both ops have it.
 define void @mul_nuw(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_nuw(
@@ -88,6 +190,108 @@ loop:
   %step.add = mul nuw i64 %index, %c1
   call void @use(i64 %step.add)
   %index.next = mul nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Version where operands are commuted.
+define void @mul_nuw_comm(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %step.add, %c2
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Another version where operands are commuted.
+define void @mul_nuw_comm2(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; Another version where operands are commuted.
+define void @mul_nuw_comm3(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_comm3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %index.next = mul nuw i64 %c2, %step.add
+  br label %loop
+}
+
+; Hoist MUL and drop NUW even if both ops have it.
+; A version where the LHS and RHS of the outer BinOp are BinOps.
+define void @mul_nuw_twobinops(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @mul_nuw_twobinops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C2_PLUS_2:%.*]] = add nuw i64 [[C2:%.*]], 2
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = mul i64 [[C1:%.*]], [[C2_PLUS_2]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = mul nuw i64 [[C1]], [[INDEX]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = mul i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = mul nuw i64 %c1, %index
+  call void @use(i64 %step.add)
+  %c2.plus.2 = add nuw i64 %c2, 2
+  %index.next = mul nuw i64 %step.add, %c2.plus.2
   br label %loop
 }
 
@@ -233,17 +437,17 @@ loop:
   br label %loop
 }
 
-; Don't hoist floating-point ops, even if they are associative. This would be
-; valid, but is currently disabled.
-define void @fadd(float %c1, float %c2) {
-; CHECK-LABEL: @fadd(
+; The simple case. Hoist if fast is present on both instructions.
+define void @fadd_fast(float %c1, float %c2) {
+; CHECK-LABEL: @fadd_fast(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fadd fast float [[C1:%.*]], [[C2:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd fast float [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd fast float [[INDEX]], [[C1]]
 ; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = fadd fast float [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fadd fast float [[INDEX]], [[INVARIANT_OP]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
@@ -254,6 +458,226 @@ loop:
   %step.add = fadd fast float %index, %c1
   call void @use(float %step.add)
   %index.next = fadd fast float %step.add, %c2
+  br label %loop
+}
+
+; The simple case. Hoist if fast is present on both instructions.
+define void @fmul_fast(float %c1, float %c2) {
+; CHECK-LABEL: @fmul_fast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fmul fast float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul fast float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fmul fast float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fmul fast float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fmul fast float %step.add, %c2
+  br label %loop
+}
+
+; The minimum case.
+; Hoist if reasassoc and nsz are present on both instructions.
+define void @fadd_reassoc_nsz(float %c1, float %c2) {
+; CHECK-LABEL: @fadd_reassoc_nsz(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fadd reassoc nsz float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc nsz float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fadd reassoc nsz float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fadd reassoc nsz float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fadd reassoc nsz float %step.add, %c2
+  br label %loop
+}
+
+; The minimum case.
+; Hoist if reasassoc and nsz are present on both instructions.
+define void @fmul_reassoc_nsz(float %c1, float %c2) {
+; CHECK-LABEL: @fmul_reassoc_nsz(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fmul reassoc nsz float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fmul reassoc nsz float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fmul reassoc nsz float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fmul reassoc nsz float %step.add, %c2
+  br label %loop
+}
+
+; Don't hoist if both reassoc and nsz aren't present on both instructions.
+define void @fadd_nonassoc(float %c1, float %c2) {
+; CHECK-LABEL: @fadd_nonassoc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc float [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = fadd reassoc nsz float [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fadd reassoc float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fadd reassoc nsz float %step.add, %c2
+  br label %loop
+}
+
+; Don't hoist if both reassoc and nsz aren't present on both instructions.
+define void @fmul_noassoc(float %c1, float %c2) {
+; CHECK-LABEL: @fmul_noassoc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz float [[INDEX]], [[C1:%.*]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = fmul nsz float [[STEP_ADD]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fmul reassoc nsz float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fmul nsz float %step.add, %c2
+  br label %loop
+}
+
+; No intersection in flags present on both instructions,
+; except reassoc and nsz.
+define void @fadd_fmf_nointersect(float %c1, float %c2) {
+; CHECK-LABEL: @fadd_fmf_nointersect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fadd reassoc nsz float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc nnan nsz float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fadd reassoc nsz float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fadd reassoc nsz nnan float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fadd reassoc nsz ninf float %step.add, %c2
+  br label %loop
+}
+
+; No intersection in flags present on both instructions,
+; except reassoc and nsz.
+define void @fmul_fmf_nointersect(float %c1, float %c2) {
+; CHECK-LABEL: @fmul_fmf_nointersect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fmul reassoc nsz float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz contract float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fmul reassoc nsz float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fmul reassoc nsz contract float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fmul reassoc nnan nsz float %step.add, %c2
+  br label %loop
+}
+
+; Non-empty intersection in flags present on both instructions,
+; including reassoc and nsz.
+define void @fadd_fmf_intersect(float %c1, float %c2) {
+; CHECK-LABEL: @fadd_fmf_intersect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fadd reassoc ninf nsz float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fadd reassoc nnan ninf nsz float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fadd reassoc ninf nsz float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fadd reassoc nnan nsz ninf float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fadd reassoc ninf nsz float %step.add, %c2
+  br label %loop
+}
+
+; Non-empty intersection in flags present on both instructions,
+; including reassoc and nsz.
+define void @fmul_fmf_intersect(float %c1, float %c2) {
+; CHECK-LABEL: @fmul_fmf_intersect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = fmul reassoc nsz afn float [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = fmul reassoc nsz arcp afn float [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(float [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = fmul reassoc nsz afn float [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi float [ 0., %entry ], [ %index.next, %loop ]
+  %step.add = fmul reassoc afn nsz arcp float %index, %c1
+  call void @use(float %step.add)
+  %index.next = fmul reassoc nsz afn float %step.add, %c2
   br label %loop
 }
 

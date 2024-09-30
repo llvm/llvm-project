@@ -385,7 +385,7 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
   os << "relocation against symbol in discarded section: " + name;
   for (const std::string &s : symbolLocations)
     os << s;
-  error(os.str());
+  error(out);
 }
 
 void SectionChunk::writeTo(uint8_t *buf) const {
@@ -774,6 +774,10 @@ void StringChunk::writeTo(uint8_t *buf) const {
   buf[str.size()] = '\0';
 }
 
+ImportThunkChunk::ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
+    : NonSectionCodeChunk(ImportThunkKind), live(!ctx.config.doGC),
+      impSymbol(s), ctx(ctx) {}
+
 ImportThunkChunkX64::ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s)
     : ImportThunkChunk(ctx, s) {
   // Intel Optimization Manual says that all branch targets
@@ -1000,16 +1004,7 @@ void BaserelChunk::writeTo(uint8_t *buf) const {
 }
 
 uint8_t Baserel::getDefaultType(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
-  case ARM64:
-    return IMAGE_REL_BASED_DIR64;
-  case I386:
-  case ARMNT:
-    return IMAGE_REL_BASED_HIGHLOW;
-  default:
-    llvm_unreachable("unknown machine type");
-  }
+  return is64Bit(machine) ? IMAGE_REL_BASED_DIR64 : IMAGE_REL_BASED_HIGHLOW;
 }
 
 MergeChunk::MergeChunk(uint32_t alignment)
@@ -1100,6 +1095,57 @@ void CHPERedirectionChunk::writeTo(uint8_t *buf) const {
     entries[i].Source = exportThunks[i].first->getRVA();
     entries[i].Destination = exportThunks[i].second->getRVA();
   }
+}
+
+ImportThunkChunkARM64EC::ImportThunkChunkARM64EC(ImportFile *file)
+    : ImportThunkChunk(file->ctx, file->impSym), file(file) {}
+
+size_t ImportThunkChunkARM64EC::getSize() const {
+  if (!extended)
+    return sizeof(importThunkARM64EC);
+  // The last instruction is replaced with an inline range extension thunk.
+  return sizeof(importThunkARM64EC) + sizeof(arm64Thunk) - sizeof(uint32_t);
+}
+
+void ImportThunkChunkARM64EC::writeTo(uint8_t *buf) const {
+  memcpy(buf, importThunkARM64EC, sizeof(importThunkARM64EC));
+  applyArm64Addr(buf, file->impSym->getRVA(), rva, 12);
+  applyArm64Ldr(buf + 4, file->impSym->getRVA() & 0xfff);
+
+  // The exit thunk may be missing. This can happen if the application only
+  // references a function by its address (in which case the thunk is never
+  // actually used, but is still required to fill the auxiliary IAT), or in
+  // cases of hand-written assembly calling an imported ARM64EC function (where
+  // the exit thunk is ignored by __icall_helper_arm64ec). In such cases, MSVC
+  // link.exe uses 0 as the RVA.
+  uint32_t exitThunkRVA = exitThunk ? exitThunk->getRVA() : 0;
+  applyArm64Addr(buf + 8, exitThunkRVA, rva + 8, 12);
+  applyArm64Imm(buf + 12, exitThunkRVA & 0xfff, 0);
+
+  Defined *helper = cast<Defined>(file->ctx.config.arm64ECIcallHelper);
+  if (extended) {
+    // Replace last instruction with an inline range extension thunk.
+    memcpy(buf + 16, arm64Thunk, sizeof(arm64Thunk));
+    applyArm64Addr(buf + 16, helper->getRVA(), rva + 16, 12);
+    applyArm64Imm(buf + 20, helper->getRVA() & 0xfff, 0);
+  } else {
+    applyArm64Branch26(buf + 16, helper->getRVA() - rva - 16);
+  }
+}
+
+bool ImportThunkChunkARM64EC::verifyRanges() {
+  if (extended)
+    return true;
+  auto helper = cast<Defined>(file->ctx.config.arm64ECIcallHelper);
+  return isInt<28>(helper->getRVA() - rva - 16);
+}
+
+uint32_t ImportThunkChunkARM64EC::extendRanges() {
+  if (extended || verifyRanges())
+    return 0;
+  extended = true;
+  // The last instruction is replaced with an inline range extension thunk.
+  return sizeof(arm64Thunk) - sizeof(uint32_t);
 }
 
 } // namespace lld::coff

@@ -1626,7 +1626,7 @@ uint32_t Module::Hash() {
   const auto mtime = llvm::sys::toTimeT(m_object_mod_time);
   if (mtime > 0)
     id_strm << mtime;
-  return llvm::djbHash(id_strm.str());
+  return llvm::djbHash(identifier);
 }
 
 std::string Module::GetCacheKey() {
@@ -1636,7 +1636,7 @@ std::string Module::GetCacheKey() {
   if (m_object_name)
     strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);
-  return strm.str();
+  return key;
 }
 
 DataFileCache *Module::GetIndexCache() {

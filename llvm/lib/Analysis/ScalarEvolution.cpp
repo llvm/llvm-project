@@ -2255,7 +2255,7 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
 static bool
-CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
+CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
                              SmallVectorImpl<const SCEV *> &NewOps,
                              APInt &AccumulatedConstant,
                              ArrayRef<const SCEV *> Ops, const APInt &Scale,
@@ -2753,7 +2753,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    DenseMap<const SCEV *, APInt> M;
+    SmallDenseMap<const SCEV *, APInt, 16> M;
     SmallVector<const SCEV *, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
@@ -3544,6 +3544,22 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
       // Fold if both operands are constant.
       if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
         return getConstant(LHSC->getAPInt().udiv(RHSC->getAPInt()));
+    }
+  }
+
+  // ((-C + (C smax %x)) /u %x) evaluates to zero, for any positive constant C.
+  if (const auto *AE = dyn_cast<SCEVAddExpr>(LHS);
+      AE && AE->getNumOperands() == 2) {
+    if (const auto *VC = dyn_cast<SCEVConstant>(AE->getOperand(0))) {
+      const APInt &NegC = VC->getAPInt();
+      if (NegC.isNegative() && !NegC.isMinSignedValue()) {
+        const auto *MME = dyn_cast<SCEVSMaxExpr>(AE->getOperand(1));
+        if (MME && MME->getNumOperands() == 2 &&
+            isa<SCEVConstant>(MME->getOperand(0)) &&
+            cast<SCEVConstant>(MME->getOperand(0))->getAPInt() == -NegC &&
+            MME->getOperand(1) == RHS)
+          return getZero(LHS->getType());
+      }
     }
   }
 
@@ -4503,7 +4519,7 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
 ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
-    return std::nullopt;
+    return {};
   return SI->second.getArrayRef();
 }
 
@@ -8175,10 +8191,13 @@ ScalarEvolution::getSmallConstantTripCount(const Loop *L,
   return getConstantTripCount(ExitCount);
 }
 
-unsigned ScalarEvolution::getSmallConstantMaxTripCount(const Loop *L) {
+unsigned ScalarEvolution::getSmallConstantMaxTripCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+
   const auto *MaxExitCount =
-      dyn_cast<SCEVConstant>(getConstantMaxBackedgeTakenCount(L));
-  return getConstantTripCount(MaxExitCount);
+      Predicates ? getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
+                 : getConstantMaxBackedgeTakenCount(L);
+  return getConstantTripCount(dyn_cast<SCEVConstant>(MaxExitCount));
 }
 
 unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
@@ -8285,6 +8304,11 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
 const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
+}
+
+const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
+    const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
+  return getPredicatedBackedgeTakenInfo(L).getConstantMax(this, &Preds);
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
@@ -8578,8 +8602,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getExact(
     Ops.push_back(BECount);
 
     if (Preds)
-      for (const auto *P : ENT.Predicates)
-        Preds->push_back(P);
+      append_range(*Preds, ENT.Predicates);
 
     assert((Preds || ENT.hasAlwaysTruePredicate()) &&
            "Predicate should be always true!");
@@ -8600,8 +8623,7 @@ ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
       if (ENT.hasAlwaysTruePredicate())
         return &ENT;
       else if (Predicates) {
-        for (const auto *P : ENT.Predicates)
-          Predicates->push_back(P);
+        append_range(*Predicates, ENT.Predicates);
         return &ENT;
       }
     }
@@ -8610,14 +8632,18 @@ ScalarEvolution::BackedgeTakenInfo::getExitNotTaken(
 }
 
 /// getConstantMax - Get the constant max backedge taken count for the loop.
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
-  auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
-    return !ENT.hasAlwaysTruePredicate();
-  };
-
-  if (!getConstantMax() || any_of(ExitNotTaken, PredicateNotAlwaysTrue))
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
+    ScalarEvolution *SE,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) const {
+  if (!getConstantMax())
     return SE->getCouldNotCompute();
+
+  for (const auto &ENT : ExitNotTaken)
+    if (!ENT.hasAlwaysTruePredicate()) {
+      if (!Predicates)
+        return SE->getCouldNotCompute();
+      append_range(*Predicates, ENT.Predicates);
+    }
 
   assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
           isa<SCEVConstant>(getConstantMax())) &&
@@ -8643,8 +8669,7 @@ const SCEV *ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(
                "dominate latch!");
         ExitCounts.push_back(ExitCount);
         if (Predicates)
-          for (const auto *P : ENT.Predicates)
-            Predicates->push_back(P);
+          append_range(*Predicates, ENT.Predicates);
 
         assert((Predicates || ENT.hasAlwaysTruePredicate()) &&
                "Predicate should be always true!");
@@ -8668,12 +8693,12 @@ bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E)
-    : ExitLimit(E, E, E, false, std::nullopt) {}
+    : ExitLimit(E, E, E, false) {}
 
 ScalarEvolution::ExitLimit::ExitLimit(
     const SCEV *E, const SCEV *ConstantMaxNotTaken,
     const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-    ArrayRef<const SmallPtrSetImpl<const SCEVPredicate *> *> PredSetList)
+    ArrayRef<ArrayRef<const SCEVPredicate *>> PredLists)
     : ExactNotTaken(E), ConstantMaxNotTaken(ConstantMaxNotTaken),
       SymbolicMaxNotTaken(SymbolicMaxNotTaken), MaxOrZero(MaxOrZero) {
   // If we prove the max count is zero, so is the symbolic bound.  This happens
@@ -8696,9 +8721,15 @@ ScalarEvolution::ExitLimit::ExitLimit(
   assert((isa<SCEVCouldNotCompute>(ConstantMaxNotTaken) ||
           isa<SCEVConstant>(ConstantMaxNotTaken)) &&
          "No point in having a non-constant max backedge taken count!");
-  for (const auto *PredSet : PredSetList)
-    for (const auto *P : *PredSet)
-      addPredicate(P);
+  SmallPtrSet<const SCEVPredicate *, 4> SeenPreds;
+  for (const auto PredList : PredLists)
+    for (const auto *P : PredList) {
+      if (SeenPreds.contains(P))
+        continue;
+      assert(!isa<SCEVUnionPredicate>(P) && "Only add leaf predicates here!");
+      SeenPreds.insert(P);
+      Predicates.push_back(P);
+    }
   assert((isa<SCEVCouldNotCompute>(E) || !E->getType()->isPointerTy()) &&
          "Backedge count should be int");
   assert((isa<SCEVCouldNotCompute>(ConstantMaxNotTaken) ||
@@ -8706,12 +8737,13 @@ ScalarEvolution::ExitLimit::ExitLimit(
          "Max backedge count should be int");
 }
 
-ScalarEvolution::ExitLimit::ExitLimit(
-    const SCEV *E, const SCEV *ConstantMaxNotTaken,
-    const SCEV *SymbolicMaxNotTaken, bool MaxOrZero,
-    const SmallPtrSetImpl<const SCEVPredicate *> &PredSet)
+ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E,
+                                      const SCEV *ConstantMaxNotTaken,
+                                      const SCEV *SymbolicMaxNotTaken,
+                                      bool MaxOrZero,
+                                      ArrayRef<const SCEVPredicate *> PredList)
     : ExitLimit(E, ConstantMaxNotTaken, SymbolicMaxNotTaken, MaxOrZero,
-                { &PredSet }) {}
+                ArrayRef({PredList})) {}
 
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
@@ -9073,7 +9105,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     SymbolicMaxBECount =
         isa<SCEVCouldNotCompute>(BECount) ? ConstantMaxBECount : BECount;
   return ExitLimit(BECount, ConstantMaxBECount, SymbolicMaxBECount, false,
-                   { &EL0.Predicates, &EL1.Predicates });
+                   {ArrayRef(EL0.Predicates), ArrayRef(EL1.Predicates)});
 }
 
 ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
@@ -10104,8 +10136,11 @@ const SCEV *ScalarEvolution::stripInjectiveFunctions(const SCEV *S) const {
 /// A and B isn't important.
 ///
 /// If the equation does not have a solution, SCEVCouldNotCompute is returned.
-static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
-                                               ScalarEvolution &SE) {
+static const SCEV *
+SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
+                             SmallVectorImpl<const SCEVPredicate *> *Predicates,
+
+                             ScalarEvolution &SE) {
   uint32_t BW = A.getBitWidth();
   assert(BW == SE.getTypeSizeInBits(B->getType()));
   assert(A != 0 && "A must be non-zero.");
@@ -10121,8 +10156,22 @@ static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
   //
   // B is divisible by D if and only if the multiplicity of prime factor 2 for B
   // is not less than multiplicity of this prime factor for D.
-  if (SE.getMinTrailingZeros(B) < Mult2)
-    return SE.getCouldNotCompute();
+  if (SE.getMinTrailingZeros(B) < Mult2) {
+    // Check if we can prove there's no remainder using URem.
+    const SCEV *URem =
+        SE.getURemExpr(B, SE.getConstant(APInt::getOneBitSet(BW, Mult2)));
+    const SCEV *Zero = SE.getZero(B->getType());
+    if (!SE.isKnownPredicate(CmpInst::ICMP_EQ, URem, Zero)) {
+      // Try to add a predicate ensuring B is a multiple of 1 << Mult2.
+      if (!Predicates)
+        return SE.getCouldNotCompute();
+
+      // Avoid adding a predicate that is known to be false.
+      if (SE.isKnownPredicate(CmpInst::ICMP_NE, URem, Zero))
+        return SE.getCouldNotCompute();
+      Predicates->push_back(SE.getEqualPredicate(URem, Zero));
+    }
+  }
 
   // 3. Compute I: the multiplicative inverse of (A / D) in arithmetic
   // modulo (N / D).
@@ -10424,7 +10473,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // effectively V != 0.  We know and take advantage of the fact that this
   // expression only being used in a comparison by zero context.
 
-  SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+  SmallVector<const SCEVPredicate *> Predicates;
   // If the value is a constant
   if (const SCEVConstant *C = dyn_cast<SCEVConstant>(V)) {
     // If the value is already zero, the branch will execute zero times.
@@ -10552,8 +10601,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // Solve the general equation.
   if (!StepC || StepC->getValue()->isZero())
     return getCouldNotCompute();
-  const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
-                                               getNegativeSCEV(Start), *this);
+  const SCEV *E = SolveLinEquationWithOverflow(
+      StepC->getAPInt(), getNegativeSCEV(Start),
+      AllowPredicates ? &Predicates : nullptr, *this);
 
   const SCEV *M = E;
   if (E != getCouldNotCompute()) {
@@ -12842,7 +12892,7 @@ ScalarEvolution::ExitLimit
 ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
                                   const Loop *L, bool IsSigned,
                                   bool ControlsOnlyExit, bool AllowPredicates) {
-  SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+  SmallVector<const SCEVPredicate *> Predicates;
 
   const SCEVAddRecExpr *IV = dyn_cast<SCEVAddRecExpr>(LHS);
   bool PredicatedIV = false;
@@ -13282,7 +13332,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
     const SCEV *LHS, const SCEV *RHS, const Loop *L, bool IsSigned,
     bool ControlsOnlyExit, bool AllowPredicates) {
-  SmallPtrSet<const SCEVPredicate *, 4> Predicates;
+  SmallVector<const SCEVPredicate *> Predicates;
   // We handle only IV > Invariant
   if (!isLoopInvariant(RHS, L))
     return getCouldNotCompute();
@@ -13652,7 +13702,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
       PrintSCEVWithTypeHint(OS, EC);
       if (isa<SCEVCouldNotCompute>(EC)) {
         // Retry with predicates.
-        SmallVector<const SCEVPredicate *, 4> Predicates;
+        SmallVector<const SCEVPredicate *> Predicates;
         EC = SE->getPredicatedExitCount(L, ExitingBlock, &Predicates);
         if (!isa<SCEVCouldNotCompute>(EC)) {
           OS << "\n  predicated exit count for " << ExitingBlock->getName()
@@ -13704,7 +13754,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
       PrintSCEVWithTypeHint(OS, ExitBTC);
       if (isa<SCEVCouldNotCompute>(ExitBTC)) {
         // Retry with predicates.
-        SmallVector<const SCEVPredicate *, 4> Predicates;
+        SmallVector<const SCEVPredicate *> Predicates;
         ExitBTC = SE->getPredicatedExitCount(L, ExitingBlock, &Predicates,
                                              ScalarEvolution::SymbolicMaximum);
         if (!isa<SCEVCouldNotCompute>(ExitBTC)) {
@@ -13721,7 +13771,8 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 
   SmallVector<const SCEVPredicate *, 4> Preds;
   auto *PBT = SE->getPredicatedBackedgeTakenCount(L, Preds);
-  if (PBT != BTC || !Preds.empty()) {
+  if (PBT != BTC) {
+    assert(!Preds.empty() && "Different predicated BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -13735,11 +13786,33 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
     for (const auto *P : Preds)
       P->print(OS, 4);
   }
-
   Preds.clear();
+
+  auto *PredConstantMax =
+      SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
+  if (PredConstantMax != ConstantBTC) {
+    assert(!Preds.empty() &&
+           "different predicated constant max BTC but no predicates");
+    OS << "Loop ";
+    L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
+    OS << ": ";
+    if (!isa<SCEVCouldNotCompute>(PredConstantMax)) {
+      OS << "Predicated constant max backedge-taken count is ";
+      PrintSCEVWithTypeHint(OS, PredConstantMax);
+    } else
+      OS << "Unpredictable predicated constant max backedge-taken count.";
+    OS << "\n";
+    OS << " Predicates:\n";
+    for (const auto *P : Preds)
+      P->print(OS, 4);
+  }
+  Preds.clear();
+
   auto *PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
+    assert(!Preds.empty() &&
+           "Different predicated symbolic max BTC, but no predicates");
     OS << "Loop ";
     L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ": ";
@@ -14661,7 +14734,7 @@ public:
   /// If \p NewPreds is non-null, rewrite is free to add further predicates to
   /// \p NewPreds such that the result will be an AddRecExpr.
   static const SCEV *rewrite(const SCEV *S, const Loop *L, ScalarEvolution &SE,
-                             SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
+                             SmallVectorImpl<const SCEVPredicate *> *NewPreds,
                              const SCEVPredicate *Pred) {
     SCEVPredicateRewriter Rewriter(L, SE, NewPreds, Pred);
     return Rewriter.visit(S);
@@ -14717,9 +14790,10 @@ public:
   }
 
 private:
-  explicit SCEVPredicateRewriter(const Loop *L, ScalarEvolution &SE,
-                        SmallPtrSetImpl<const SCEVPredicate *> *NewPreds,
-                        const SCEVPredicate *Pred)
+  explicit SCEVPredicateRewriter(
+      const Loop *L, ScalarEvolution &SE,
+      SmallVectorImpl<const SCEVPredicate *> *NewPreds,
+      const SCEVPredicate *Pred)
       : SCEVRewriteVisitor(SE), NewPreds(NewPreds), Pred(Pred), L(L) {}
 
   bool addOverflowAssumption(const SCEVPredicate *P) {
@@ -14727,7 +14801,7 @@ private:
       // Check if we've already made this assumption.
       return Pred && Pred->implies(P);
     }
-    NewPreds->insert(P);
+    NewPreds->push_back(P);
     return true;
   }
 
@@ -14763,7 +14837,7 @@ private:
     return PredicatedRewrite->first;
   }
 
-  SmallPtrSetImpl<const SCEVPredicate *> *NewPreds;
+  SmallVectorImpl<const SCEVPredicate *> *NewPreds;
   const SCEVPredicate *Pred;
   const Loop *L;
 };
@@ -14778,8 +14852,8 @@ ScalarEvolution::rewriteUsingPredicate(const SCEV *S, const Loop *L,
 
 const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
     const SCEV *S, const Loop *L,
-    SmallPtrSetImpl<const SCEVPredicate *> &Preds) {
-  SmallPtrSet<const SCEVPredicate *, 4> TransformPreds;
+    SmallVectorImpl<const SCEVPredicate *> &Preds) {
+  SmallVector<const SCEVPredicate *> TransformPreds;
   S = SCEVPredicateRewriter::rewrite(S, L, *this, &TransformPreds, nullptr);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(S);
 
@@ -14788,8 +14862,7 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
 
   // Since the transformation was successful, we can now transfer the SCEV
   // predicates.
-  for (const auto *P : TransformPreds)
-    Preds.insert(P);
+  Preds.append(TransformPreds.begin(), TransformPreds.end());
 
   return AddRec;
 }
@@ -15036,7 +15109,7 @@ bool PredicatedScalarEvolution::hasNoOverflow(
 
 const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(Value *V) {
   const SCEV *Expr = this->getSCEV(V);
-  SmallPtrSet<const SCEVPredicate *, 4> NewPreds;
+  SmallVector<const SCEVPredicate *, 4> NewPreds;
   auto *New = SE.convertSCEVToAddRecWithPredicates(Expr, &L, NewPreds);
 
   if (!New)

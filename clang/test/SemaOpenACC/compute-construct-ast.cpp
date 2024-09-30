@@ -117,5 +117,26 @@ struct S {
 void use() {
   TemplFunc<S>();
 }
-#endif
 
+struct HasCtor { HasCtor(); operator int(); ~HasCtor();};
+
+void useCtorType() {
+  // CHECK-LABEL: useCtorType
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels num_workers(HasCtor{})
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} kernels
+  // CHECK-NEXT: num_workers clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'int'
+  // CHECK-NEXT: MemberExpr{{.*}}.operator int
+  // CHECK-NEXT: MaterializeTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXBindTemporaryExpr{{.*}}'HasCtor'
+  // CHECK-NEXT: CXXTemporaryObjectExpr{{.*}}'HasCtor'
+
+  while(true);
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+}
+#endif

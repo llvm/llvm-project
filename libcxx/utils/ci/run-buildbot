@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 set -ex
 set -o pipefail
@@ -714,6 +714,29 @@ mingw-dll-i686)
           -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
+;;
+mingw-incomplete-sysroot)
+    # When bringing up a new cross compiler from scratch, we build
+    # libunwind/libcxx in a setup where the toolchain is incomplete and
+    # unable to perform the normal linker checks; this requires a few
+    # special cases in the CMake files.
+    #
+    # Building in an incomplete setup requires setting CMAKE_*_COMPILER_WORKS,
+    # as CMake fails to probe the compiler. This case also requires
+    # setting CMAKE_CXX_COMPILER_TARGET, as LLVM's heuristics for setting
+    # the triple fails when CMake hasn't been able to probe the environment.
+    # (This is what one has to do when building the initial libunwind/libcxx
+    # for a new toolchain.)
+    clean
+    generate-cmake \
+          -DCMAKE_C_COMPILER_WORKS=TRUE \
+          -DCMAKE_CXX_COMPILER_WORKS=TRUE \
+          -DCMAKE_C_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -DCMAKE_CXX_COMPILER_TARGET=x86_64-w64-windows-gnu \
+          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
+    # Only test that building succeeds; there's not much extra value in running
+    # the tests here, as it would be equivalent to the mingw-dll config above.
+    ${NINJA} -vC "${BUILD_DIR}"
 ;;
 aix)
     clean

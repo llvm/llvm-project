@@ -26,10 +26,10 @@ end subroutine
 !CHECK:         omp.task
 !CHECK:           %[[PRIV_IEXP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiexp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[TEMP0:.*]] = fir.load %[[IEXP]]#0 : !fir.ref<i32>
-!CHECK:           hlfir.assign %[[TEMP0]] to %[[PRIV_IEXP]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:           hlfir.assign %[[TEMP0]] to %[[PRIV_IEXP]]#0 : i32, !fir.ref<i32>
 !CHECK:           %[[PRIV_IIMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiimp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %[[TEMP1:.*]] = fir.load %[[IIMP]]#0 : !fir.ref<i32>
-!CHECK:           hlfir.assign %[[TEMP1]] to %[[PRIV_IIMP]]#0 temporary_lhs : i32, !fir.ref<i32>
+!CHECK:           hlfir.assign %[[TEMP1]] to %[[PRIV_IIMP]]#0 : i32, !fir.ref<i32>
 subroutine test_implicit_use2()
   implicit none
   integer :: iexp, iimp

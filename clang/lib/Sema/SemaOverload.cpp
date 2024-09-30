@@ -2032,26 +2032,42 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
+  // HLSL allows implicit truncation of vector types.
+  if (S.getLangOpts().HLSL) {
+    auto *ToExtType = ToType->getAs<ExtVectorType>();
+    auto *FromExtType = FromType->getAs<ExtVectorType>();
+
+    // If both arguments are vectors, handle possible vector truncation and
+    // element conversion.
+    if (ToExtType && FromExtType) {
+      unsigned FromElts = FromExtType->getNumElements();
+      unsigned ToElts = ToExtType->getNumElements();
+      if (FromElts < ToElts)
+        return false;
+      if (FromElts == ToElts)
+        ElConv = ICK_Identity;
+      else
+        ElConv = ICK_HLSL_Vector_Truncation;
+
+      QualType FromElTy = FromExtType->getElementType();
+      QualType ToElTy = ToExtType->getElementType();
+      if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
+        return true;
+      return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
+    }
+    if (FromExtType && !ToExtType) {
+      ElConv = ICK_HLSL_Vector_Truncation;
+      QualType FromElTy = FromExtType->getElementType();
+      if (S.Context.hasSameUnqualifiedType(FromElTy, ToType))
+        return true;
+      return IsVectorElementConversion(S, FromElTy, ToType, ICK, From);
+    }
+    // Fallthrough for the case where ToType is a vector and FromType is not.
+  }
+
   // There are no conversions between extended vector types, only identity.
   if (auto *ToExtType = ToType->getAs<ExtVectorType>()) {
-    if (auto *FromExtType = FromType->getAs<ExtVectorType>()) {
-      // HLSL allows implicit truncation of vector types.
-      if (S.getLangOpts().HLSL) {
-        unsigned FromElts = FromExtType->getNumElements();
-        unsigned ToElts = ToExtType->getNumElements();
-        if (FromElts < ToElts)
-          return false;
-        if (FromElts == ToElts)
-          ElConv = ICK_Identity;
-        else
-          ElConv = ICK_HLSL_Vector_Truncation;
-
-        QualType FromElTy = FromExtType->getElementType();
-        QualType ToElTy = ToExtType->getElementType();
-        if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
-          return true;
-        return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
-      }
+    if (FromType->getAs<ExtVectorType>()) {
       // There are no conversions between extended vector types other than the
       // identity conversion.
       return false;
@@ -6551,29 +6567,22 @@ static void
 collectViableConversionCandidates(Sema &SemaRef, Expr *From, QualType ToType,
                                   UnresolvedSetImpl &ViableConversions,
                                   OverloadCandidateSet &CandidateSet) {
-  for (unsigned I = 0, N = ViableConversions.size(); I != N; ++I) {
-    DeclAccessPair FoundDecl = ViableConversions[I];
+  for (const DeclAccessPair &FoundDecl : ViableConversions.pairs()) {
     NamedDecl *D = FoundDecl.getDecl();
     CXXRecordDecl *ActingContext = cast<CXXRecordDecl>(D->getDeclContext());
     if (isa<UsingShadowDecl>(D))
       D = cast<UsingShadowDecl>(D)->getTargetDecl();
 
-    CXXConversionDecl *Conv;
-    FunctionTemplateDecl *ConvTemplate;
-    if ((ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)))
-      Conv = cast<CXXConversionDecl>(ConvTemplate->getTemplatedDecl());
-    else
-      Conv = cast<CXXConversionDecl>(D);
-
-    if (ConvTemplate)
+    if (auto *ConvTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
       SemaRef.AddTemplateConversionCandidate(
           ConvTemplate, FoundDecl, ActingContext, From, ToType, CandidateSet,
-          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit*/ true);
-    else
-      SemaRef.AddConversionCandidate(Conv, FoundDecl, ActingContext, From,
-                                     ToType, CandidateSet,
-                                     /*AllowObjCConversionOnExplicit=*/false,
-                                     /*AllowExplicit*/ true);
+          /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
+      continue;
+    }
+    CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
+    SemaRef.AddConversionCandidate(
+        Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+        /*AllowObjCConversionOnExplicit=*/false, /*AllowExplicit=*/true);
   }
 }
 
@@ -14768,7 +14777,9 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           // Check for a self move.
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
           // lifetime check.
-          checkExprLifetime(*this, AssignedEntity{Args[0]}, Args[1]);
+          checkExprLifetime(
+              *this, AssignedEntity{Args[0], dyn_cast<CXXMethodDecl>(FnDecl)},
+              Args[1]);
         }
         if (ImplicitThis) {
           QualType ThisType = Context.getPointerType(ImplicitThis->getType());

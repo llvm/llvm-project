@@ -1341,6 +1341,9 @@ struct InformationCache {
   const ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return the flat address space if the associated target has.
+  std::optional<unsigned> getFlatAddressSpace() const;
+
 private:
   struct FunctionInfo {
     ~FunctionInfo();
@@ -6119,6 +6122,7 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator begin() const = 0;
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
+  virtual bool reachesReturn() const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6248,7 +6252,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
   /// to be called if the AA is invalid.
-  virtual int32_t getAddressSpace() const = 0;
+  virtual uint32_t getAddressSpace() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAddressSpace &createForPosition(const IRPosition &IRP,
@@ -6266,11 +6270,12 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
     return (AA->getIdAddr() == &ID);
   }
 
-  // No address space which indicates the associated value is dead.
-  static const int32_t NoAddressSpace = -1;
-
   /// Unique ID (due to the unique address)
   static const char ID;
+
+protected:
+  // Invalid address space which indicates the associated value is dead.
+  static const uint32_t InvalidAddressSpace = ~0U;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {

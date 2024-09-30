@@ -80,8 +80,8 @@ set(include_files
   ${include_directory}/Profiling.h
   ${include_directory}/State.h
   ${include_directory}/Synchronization.h
-  ${include_directory}/Types.h
-  ${include_directory}/Utils.h
+  ${include_directory}/DeviceTypes.h
+  ${include_directory}/DeviceUtils.h
   ${include_directory}/Workshare.h
 )
 
@@ -99,7 +99,7 @@ set(src_files
   ${source_directory}/State.cpp
   ${source_directory}/Synchronization.cpp
   ${source_directory}/Tasking.cpp
-  ${source_directory}/Utils.cpp
+  ${source_directory}/DeviceUtils.cpp
   ${source_directory}/Workshare.cpp
 )
 
@@ -125,7 +125,7 @@ list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 # Set flags for LLVM Bitcode compilation.
 set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
-             -nocudalib -nogpulib -nostdinc
+             -nocudalib -nogpulib -nogpuinc -nostdlibinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
              -DOMPTARGET_DEVICE_RUNTIME
@@ -270,7 +270,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
       -mllvm -openmp-opt-disable
       -foffload-lto -fvisibility=hidden --offload-device-only
-      -nocudalib -nogpulib -nostdinc -Wno-unknown-cuda-version
+      -nocudalib -nogpulib -nogpuinc -nostdlibinc -Wno-unknown-cuda-version
     )
     target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
     target_include_directories(${ide_target_name} PRIVATE

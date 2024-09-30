@@ -570,7 +570,7 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
 /// debug expression to a register in the forwarded register worklist.
 struct FwdRegParamInfo {
   /// The described parameter register.
-  unsigned ParamReg;
+  uint64_t ParamReg;
 
   /// Debug expression that has been built up when walking through the
   /// instruction chain that produces the parameter's value.
@@ -578,7 +578,7 @@ struct FwdRegParamInfo {
 };
 
 /// Register worklist for finding call site values.
-using FwdRegWorklist = MapVector<unsigned, SmallVector<FwdRegParamInfo, 2>>;
+using FwdRegWorklist = MapVector<uint64_t, SmallVector<FwdRegParamInfo, 2>>;
 /// Container for the set of registers known to be clobbered on the path to a
 /// call site.
 using ClobberedRegSet = SmallSet<Register, 16>;
@@ -2061,8 +2061,10 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
-  bool PrevInstInDiffBB = PrevInstBB && PrevInstBB != MI->getParent();
-  if (DL == PrevInstLoc && !PrevInstInDiffBB) {
+  bool PrevInstInSameSection =
+      (!PrevInstBB ||
+       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
+  if (DL == PrevInstLoc && PrevInstInSameSection) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2091,7 +2093,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     //   possibly debug information; we want it to have a source location.
     // - Instruction is at the top of a block; we don't want to inherit the
     //   location from the physically previous (maybe unrelated) block.
-    if (UnknownLocations == Enable || PrevLabel || PrevInstInDiffBB) {
+    if (UnknownLocations == Enable || PrevLabel ||
+        (PrevInstBB && PrevInstBB != MI->getParent())) {
       // Preserve the file and column numbers, if we can, to save space in
       // the encoded line table.
       // Do not update PrevInstLoc, it remembers the last non-0 line.
@@ -2111,16 +2114,14 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // (The new location might be an explicit line 0, which we do emit.)
   if (DL.getLine() == 0 && LastAsmLine == 0)
     return;
-  if (DL == PrologEndLoc) {
+  if (MI == PrologEndLoc) {
     Flags |= DWARF2_FLAG_PROLOGUE_END | DWARF2_FLAG_IS_STMT;
-    PrologEndLoc = DebugLoc();
+    PrologEndLoc = nullptr;
   }
   // If the line changed, we call that a new statement; unless we went to
-  // line 0 and came back, in which case it is not a new statement. We also
-  // mark is_stmt for the first non-0 line in each BB, in case a predecessor BB
-  // ends with a different line.
+  // line 0 and came back, in which case it is not a new statement.
   unsigned OldLine = PrevInstLoc ? PrevInstLoc.getLine() : LastAsmLine;
-  if (DL.getLine() && (DL.getLine() != OldLine || PrevInstInDiffBB))
+  if (DL.getLine() && DL.getLine() != OldLine)
     Flags |= DWARF2_FLAG_IS_STMT;
 
   const MDNode *Scope = DL.getScope();
@@ -2131,10 +2132,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
+static std::pair<const MachineInstr *, bool>
+findPrologueEndLoc(const MachineFunction *MF) {
   // First known non-DBG_VALUE and non-frame setup location marks
   // the beginning of the function body.
-  DebugLoc LineZeroLoc;
+  const MachineInstr *LineZeroLoc = nullptr;
   const Function &F = MF->getFunction();
 
   // Some instructions may be inserted into prologue after this function. Must
@@ -2151,9 +2153,9 @@ static std::pair<DebugLoc, bool> findPrologueEndLoc(const MachineFunction *MF) {
           // meaningful breakpoint. If none is found, return the first
           // location after the frame setup.
           if (MI.getDebugLoc().getLine())
-            return std::make_pair(MI.getDebugLoc(), IsEmptyPrologue);
+            return std::make_pair(&MI, IsEmptyPrologue);
 
-          LineZeroLoc = MI.getDebugLoc();
+          LineZeroLoc = &MI;
         }
         IsEmptyPrologue = false;
       }
@@ -2184,30 +2186,29 @@ static void recordSourceLine(AsmPrinter &Asm, unsigned Line, unsigned Col,
                                          Discriminator, Fn);
 }
 
-DebugLoc DwarfDebug::emitInitialLocDirective(const MachineFunction &MF,
-                                             unsigned CUID) {
-  std::pair<DebugLoc, bool> PrologEnd = findPrologueEndLoc(&MF);
-  DebugLoc PrologEndLoc = PrologEnd.first;
+const MachineInstr *
+DwarfDebug::emitInitialLocDirective(const MachineFunction &MF, unsigned CUID) {
+  std::pair<const MachineInstr *, bool> PrologEnd = findPrologueEndLoc(&MF);
+  const MachineInstr *PrologEndLoc = PrologEnd.first;
   bool IsEmptyPrologue = PrologEnd.second;
 
-  // Get beginning of function.
-  if (PrologEndLoc) {
-    // If the prolog is empty, no need to generate scope line for the proc.
-    if (IsEmptyPrologue)
+  // If the prolog is empty, no need to generate scope line for the proc.
+  if (IsEmptyPrologue)
+    // In degenerate cases, we can have functions with no source locations
+    // at all. These want a scope line, to avoid a totally empty function.
+    // Thus, only skip scope line if there's location to place prologue_end.
+    if (PrologEndLoc)
       return PrologEndLoc;
 
-    // Ensure the compile unit is created if the function is called before
-    // beginFunction().
-    (void)getOrCreateDwarfCompileUnit(
-        MF.getFunction().getSubprogram()->getUnit());
-    // We'd like to list the prologue as "not statements" but GDB behaves
-    // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
-    const DISubprogram *SP = PrologEndLoc->getInlinedAtScope()->getSubprogram();
-    ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
-                       CUID, getDwarfVersion(), getUnits());
-    return PrologEndLoc;
-  }
-  return DebugLoc();
+  // Ensure the compile unit is created if the function is called before
+  // beginFunction().
+  DISubprogram *SP = MF.getFunction().getSubprogram();
+  (void)getOrCreateDwarfCompileUnit(SP->getUnit());
+  // We'd like to list the prologue as "not statements" but GDB behaves
+  // poorly if we do that. Revisit this with caution/GDB (7.5+) testing.
+  ::recordSourceLine(*Asm, SP->getScopeLine(), 0, SP, DWARF2_FLAG_IS_STMT,
+                     CUID, getDwarfVersion(), getUnits());
+  return PrologEndLoc;
 }
 
 // Gather pre-function debug information.  Assumes being called immediately
@@ -3681,8 +3682,10 @@ void DwarfDebug::beginCodeAlignment(const MachineBasicBlock &MBB) {
     return;
 
   auto PrevLoc = Asm->OutStreamer->getContext().getCurrentDwarfLoc();
-  Asm->OutStreamer->emitDwarfLocDirective(
-      PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
-  MCDwarfLineEntry::make(Asm->OutStreamer.get(),
-                         Asm->OutStreamer->getCurrentSectionOnly());
+  if (PrevLoc.getLine()) {
+    Asm->OutStreamer->emitDwarfLocDirective(
+        PrevLoc.getFileNum(), 0, PrevLoc.getColumn(), 0, 0, 0, StringRef());
+    MCDwarfLineEntry::make(Asm->OutStreamer.get(),
+                           Asm->OutStreamer->getCurrentSectionOnly());
+  }
 }

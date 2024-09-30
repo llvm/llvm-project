@@ -1035,6 +1035,40 @@ def LLVM_TBAATagArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantRangeAttr
+//===----------------------------------------------------------------------===//
+def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
+  let parameters = (ins
+    "::llvm::APInt":$lower,
+    "::llvm::APInt":$upper
+  );
+  let summary = "A range of two integers, corresponding to LLVM's ConstantRange";
+  let description = [{
+    A pair of two integers, mapping to the ConstantRange structure in LLVM IR,
+    which is allowed to wrap or be empty.
+
+    The range represented is [Lower, Upper), and is either signed or unsigned
+    depending on context.
+
+    `lower` and `upper` must have the same width.
+
+    Syntax:
+    ```
+    `<` `i`(width($lower)) $lower `,` $upper `>`
+  }];
+
+  let builders = [
+    AttrBuilder<(ins "uint32_t":$bitWidth, "int64_t":$lower, "int64_t":$upper), [{
+      return $_get($_ctxt, ::llvm::APInt(bitWidth, lower), ::llvm::APInt(bitWidth, upper));
+    }]>
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+  let genVerifyDecl = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
 // VScaleRangeAttr
 //===----------------------------------------------------------------------===//
 

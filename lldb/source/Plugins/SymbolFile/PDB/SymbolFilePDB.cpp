@@ -28,6 +28,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_DIA_SDK
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"

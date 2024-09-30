@@ -1852,22 +1852,6 @@ bool Attributor::checkForAllUses(
 
     User &Usr = *U->getUser();
     AddUsers(Usr, /* OldUse */ nullptr);
-
-    auto *RI = dyn_cast<ReturnInst>(&Usr);
-    if (!RI)
-      continue;
-
-    Function &F = *RI->getFunction();
-    auto CallSitePred = [&](AbstractCallSite ACS) {
-      return AddUsers(*ACS.getInstruction(), U);
-    };
-    if (!checkForAllCallSites(CallSitePred, F, /* RequireAllCallSites */ true,
-                              &QueryingAA, UsedAssumedInformation)) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Could not follow return instruction "
-                           "to all call sites: "
-                        << *RI << "\n");
-      return false;
-    }
   }
 
   return true;
@@ -3308,6 +3292,12 @@ const ArrayRef<Function *>
 InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
   assert(A.isClosedWorldModule() && "Cannot see all indirect callees!");
   return IndirectlyCallableFunctions;
+}
+
+std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
+  if (TargetTriple.isAMDGPU() || TargetTriple.isNVPTX())
+    return 0;
+  return std::nullopt;
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,

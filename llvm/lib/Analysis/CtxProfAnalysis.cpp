@@ -29,6 +29,15 @@ cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
 
+static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
+    "ctx-profile-printer-level",
+    cl::init(CtxProfAnalysisPrinterPass::PrintMode::JSON), cl::Hidden,
+    cl::values(clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::Everything,
+                          "everything", "print everything - most verbose"),
+               clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::JSON, "json",
+                          "just the json representation of the profile")),
+    cl::desc("Verbosity level of the contextual profile printer pass."));
+
 namespace llvm {
 namespace json {
 Value toJSON(const PGOCtxProfContext &P) {
@@ -96,12 +105,20 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
 }
 AnalysisKey CtxProfAnalysis::Key;
 
-CtxProfAnalysis::CtxProfAnalysis(StringRef Profile)
-    : Profile(Profile.empty() ? UseCtxProfile : Profile) {}
+CtxProfAnalysis::CtxProfAnalysis(std::optional<StringRef> Profile)
+    : Profile([&]() -> std::optional<StringRef> {
+        if (Profile)
+          return *Profile;
+        if (UseCtxProfile.getNumOccurrences())
+          return UseCtxProfile;
+        return std::nullopt;
+      }()) {}
 
 PGOContextualProfile CtxProfAnalysis::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Profile);
+  if (!Profile)
+    return {};
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(*Profile);
   if (auto EC = MB.getError()) {
     M.getContext().emitError("could not open contextual profile file: " +
                              EC.message());
@@ -115,6 +132,23 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     return {};
   }
 
+  DenseSet<GlobalValue::GUID> ProfileRootsInModule;
+  for (const auto &F : M)
+    if (!F.isDeclaration())
+      if (auto GUID = AssignGUIDPass::getGUID(F);
+          MaybeCtx->find(GUID) != MaybeCtx->end())
+        ProfileRootsInModule.insert(GUID);
+
+  // Trim first the roots that aren't in this module.
+  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
+    if (!ProfileRootsInModule.contains(RootGuid))
+      MaybeCtx->erase(RootGuid);
+  // If none of the roots are in the module, we have no profile (for this
+  // module)
+  if (MaybeCtx->empty())
+    return {};
+
+  // OK, so we have a valid profile and it's applicable to roots in this module.
   PGOContextualProfile Result;
 
   for (const auto &F : M) {
@@ -149,12 +183,8 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   }
   // If we made it this far, the Result is valid - which we mark by setting
   // .Profiles.
-  // Trim first the roots that aren't in this module.
-  DenseSet<GlobalValue::GUID> ProfiledGUIDs;
-  for (auto &[RootGuid, _] : llvm::make_early_inc_range(*MaybeCtx))
-    if (!Result.FuncInfo.contains(RootGuid))
-      MaybeCtx->erase(RootGuid);
   Result.Profiles = std::move(*MaybeCtx);
+  Result.initIndex();
   return Result;
 }
 
@@ -165,11 +195,14 @@ PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
   return 0;
 }
 
+CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
+    : OS(OS), Mode(PrintLevel) {}
+
 PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
   CtxProfAnalysis::Result &C = MAM.getResult<CtxProfAnalysis>(M);
   if (!C) {
-    M.getContext().emitError("Invalid CtxProfAnalysis");
+    OS << "No contextual profile was provided.\n";
     return PreservedAnalyses::all();
   }
 
@@ -202,26 +235,40 @@ PreservedAnalyses CtxProfAnalysisPrinterPass::run(Module &M,
 }
 
 InstrProfCallsite *CtxProfAnalysis::getCallsiteInstrumentation(CallBase &CB) {
-  while (auto *Prev = CB.getPrevNode())
+  if (!InstrProfCallsite::canInstrumentCallsite(CB))
+    return nullptr;
+  for (auto *Prev = CB.getPrevNode(); Prev; Prev = Prev->getPrevNode()) {
     if (auto *IPC = dyn_cast<InstrProfCallsite>(Prev))
       return IPC;
+    assert(!isa<CallBase>(Prev) &&
+           "didn't expect to find another call, that's not the callsite "
+           "instrumentation, before an instrumentable callsite");
+  }
   return nullptr;
 }
 
 InstrProfIncrementInst *CtxProfAnalysis::getBBInstrumentation(BasicBlock &BB) {
   for (auto &I : BB)
     if (auto *Incr = dyn_cast<InstrProfIncrementInst>(&I))
-      return Incr;
+      if (!isa<InstrProfIncrementInstStep>(&I))
+        return Incr;
+  return nullptr;
+}
+
+InstrProfIncrementInstStep *
+CtxProfAnalysis::getSelectInstrumentation(SelectInst &SI) {
+  Instruction *Prev = &SI;
+  while ((Prev = Prev->getPrevNode()))
+    if (auto *Step = dyn_cast<InstrProfIncrementInstStep>(Prev))
+      return Step;
   return nullptr;
 }
 
 template <class ProfilesTy, class ProfTy>
 static void preorderVisit(ProfilesTy &Profiles,
-                          function_ref<void(ProfTy &)> Visitor,
-                          GlobalValue::GUID Match = 0) {
+                          function_ref<void(ProfTy &)> Visitor) {
   std::function<void(ProfTy &)> Traverser = [&](auto &Ctx) {
-    if (!Match || Ctx.guid() == Match)
-      Visitor(Ctx);
+    Visitor(Ctx);
     for (auto &[_, SubCtxSet] : Ctx.callsites())
       for (auto &[__, Subctx] : SubCtxSet)
         Traverser(Subctx);
@@ -230,16 +277,44 @@ static void preorderVisit(ProfilesTy &Profiles,
     Traverser(P);
 }
 
-void PGOContextualProfile::update(Visitor V, const Function *F) {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
+void PGOContextualProfile::initIndex() {
+  // Initialize the head of the index list for each function. We don't need it
+  // after this point.
+  DenseMap<GlobalValue::GUID, PGOCtxProfContext *> InsertionPoints;
+  for (auto &[Guid, FI] : FuncInfo)
+    InsertionPoints[Guid] = &FI.Index;
   preorderVisit<PGOCtxProfContext::CallTargetMapTy, PGOCtxProfContext>(
-      *Profiles, V, G);
+      *Profiles, [&](PGOCtxProfContext &Ctx) {
+        auto InsertIt = InsertionPoints.find(Ctx.guid());
+        if (InsertIt == InsertionPoints.end())
+          return;
+        // Insert at the end of the list. Since we traverse in preorder, it
+        // means that when we iterate the list from the beginning, we'd
+        // encounter the contexts in the order we would have, should we have
+        // performed a full preorder traversal.
+        InsertIt->second->Next = &Ctx;
+        Ctx.Previous = InsertIt->second;
+        InsertIt->second = &Ctx;
+      });
+}
+
+void PGOContextualProfile::update(Visitor V, const Function &F) {
+  assert(isFunctionKnown(F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(F);
+  for (auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<PGOCtxProfContext *>(Node));
 }
 
 void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
-  GlobalValue::GUID G = F ? getDefinedFunctionGUID(*F) : 0U;
-  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
-                const PGOCtxProfContext>(*Profiles, V, G);
+  if (!F)
+    return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                         const PGOCtxProfContext>(*Profiles, V);
+  assert(isFunctionKnown(*F));
+  GlobalValue::GUID G = getDefinedFunctionGUID(*F);
+  for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
+       Node = Node->Next)
+    V(*reinterpret_cast<const PGOCtxProfContext *>(Node));
 }
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
@@ -260,4 +335,26 @@ const CtxProfFlatProfile PGOContextualProfile::flatten() const {
           It->second[I] += Ctx.counters()[I];
       });
   return Flat;
+}
+
+void CtxProfAnalysis::collectIndirectCallPromotionList(
+    CallBase &IC, Result &Profile,
+    SetVector<std::pair<CallBase *, Function *>> &Candidates) {
+  const auto *Instr = CtxProfAnalysis::getCallsiteInstrumentation(IC);
+  if (!Instr)
+    return;
+  Module &M = *IC.getParent()->getModule();
+  const uint32_t CallID = Instr->getIndex()->getZExtValue();
+  Profile.visit(
+      [&](const PGOCtxProfContext &Ctx) {
+        const auto &Targets = Ctx.callsites().find(CallID);
+        if (Targets == Ctx.callsites().end())
+          return;
+        for (const auto &[Guid, _] : Targets->second)
+          if (auto Name = Profile.getFunctionName(Guid); !Name.empty())
+            if (auto *Target = M.getFunction(Name))
+              if (Target->hasFnAttribute(Attribute::AlwaysInline))
+                Candidates.insert({&IC, Target});
+      },
+      IC.getCaller());
 }
