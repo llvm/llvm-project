@@ -197,6 +197,11 @@ struct VectorLayout {
   uint64_t SplitSize = 0;
 };
 
+static bool isStructOfVectors(Type *Ty) {
+  return isa<StructType>(Ty) && Ty->getNumContainedTypes() > 0 &&
+         isa<FixedVectorType>(Ty->getContainedType(0));
+}
+
 /// Concatenate the given fragments to a single vector value of the type
 /// described in @p VS.
 static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
@@ -276,6 +281,7 @@ public:
   bool visitBitCastInst(BitCastInst &BCI);
   bool visitInsertElementInst(InsertElementInst &IEI);
   bool visitExtractElementInst(ExtractElementInst &EEI);
+  bool visitExtractValueInst(ExtractValueInst &EVI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI);
   bool visitPHINode(PHINode &PHI);
   bool visitLoadInst(LoadInst &LI);
@@ -552,7 +558,10 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
 // Determine how Ty is split, if at all.
 std::optional<VectorSplit> ScalarizerVisitor::getVectorSplit(Type *Ty) {
   VectorSplit Split;
-  Split.VecTy = dyn_cast<FixedVectorType>(Ty);
+  if (isStructOfVectors(Ty))
+    Split.VecTy = cast<FixedVectorType>(Ty->getContainedType(0));
+  else
+    Split.VecTy = dyn_cast<FixedVectorType>(Ty);
   if (!Split.VecTy)
     return {};
 
@@ -1030,6 +1039,33 @@ bool ScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
   return true;
 }
 
+bool ScalarizerVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
+  Value *Op = EVI.getOperand(0);
+  Type *OpTy = Op->getType();
+  ValueVector Res;
+  if (!isStructOfVectors(OpTy))
+    return false;
+  // Note: isStructOfVectors is also used in getVectorSplit.
+  // The intent is to bail on this visit if it isn't a struct
+  // of vectors. Downside is that when it is true we do two
+  // isStructOfVectors calls.
+  std::optional<VectorSplit> VS = getVectorSplit(OpTy);
+  if (!VS)
+    return false;
+  Scatterer Op0 = scatter(&EVI, Op, *VS);
+  assert(!EVI.getIndices().empty() && "Make sure an index exists");
+  // Note for our use case we only care about the top level index.
+  unsigned Index = EVI.getIndices()[0];
+  for (unsigned OpIdx = 0; OpIdx < Op0.size(); ++OpIdx) {
+    Value *ResElem = Builder.CreateExtractValue(
+        Op0[OpIdx], Index, EVI.getName() + ".elem" + std::to_string(Index));
+    Res.push_back(ResElem);
+  }
+  // replaceUses(&EVI, Res);
+  gather(&EVI, Res, *VS);
+  return true;
+}
+
 bool ScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
   std::optional<VectorSplit> VS = getVectorSplit(EEI.getOperand(0)->getType());
   if (!VS)
@@ -1196,7 +1232,7 @@ bool ScalarizerVisitor::finish() {
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // insertelements and/or shufflevectors.
-      Value *Res;
+      Value *Res = nullptr;
       if (auto *Ty = dyn_cast<FixedVectorType>(Op->getType())) {
         BasicBlock *BB = Op->getParent();
         IRBuilder<> Builder(Op);
@@ -1209,6 +1245,35 @@ bool ScalarizerVisitor::finish() {
         Res = concatenate(Builder, CV, VS, Op->getName());
 
         Res->takeName(Op);
+      } else if (auto *Ty = dyn_cast<StructType>(Op->getType())) {
+        BasicBlock *BB = Op->getParent();
+        IRBuilder<> Builder(Op);
+        if (isa<PHINode>(Op))
+          Builder.SetInsertPoint(BB, BB->getFirstInsertionPt());
+
+        // Iterate over each element in the struct
+        uint NumOfStructElements = Ty->getNumElements();
+        SmallVector<ValueVector, 4> ElemCV(NumOfStructElements);
+        for (unsigned I = 0; I < NumOfStructElements; ++I) {
+          for (auto *CVelem : CV) {
+            Value *Elem = Builder.CreateExtractValue(
+                CVelem, I, Op->getName() + ".elem" + std::to_string(I));
+            ElemCV[I].push_back(Elem);
+          }
+        }
+        Res = PoisonValue::get(Ty);
+        for (unsigned I = 0; I < NumOfStructElements; ++I) {
+          Type *ElemTy = Ty->getElementType(I);
+          assert(isa<FixedVectorType>(ElemTy) &&
+                 "Only Structs of all FixedVectorType supported");
+          VectorSplit VS = *getVectorSplit(ElemTy);
+          assert(VS.NumFragments == CV.size());
+
+          Value *ConcatenatedVector =
+              concatenate(Builder, ElemCV[I], VS, Op->getName());
+          Res = Builder.CreateInsertValue(Res, ConcatenatedVector, I,
+                                          Op->getName() + ".insert");
+        }
       } else {
         assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
         Res = CV[0];
