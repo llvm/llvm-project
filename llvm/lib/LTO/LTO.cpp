@@ -1429,7 +1429,7 @@ public:
         return E;
     }
 
-    if (!Cache || !CombinedIndex.modulePaths().count(ModuleID) ||
+    if (!Cache.isValid() || !CombinedIndex.modulePaths().count(ModuleID) ||
         all_of(CombinedIndex.getModuleHash(ModuleID),
                [](uint32_t V) { return V == 0; }))
       // Cache disabled or no entry for this module in the combined index or

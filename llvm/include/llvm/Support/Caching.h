@@ -54,8 +54,28 @@ using AddStreamFn = std::function<Expected<std::unique_ptr<CachedFileStream>>(
 ///
 /// if (AddStreamFn AddStream = Cache(Task, Key, ModuleName))
 ///   ProduceContent(AddStream);
-using FileCache = std::function<Expected<AddStreamFn>(
+using FileCacheFunction = std::function<Expected<AddStreamFn>(
     unsigned Task, StringRef Key, const Twine &ModuleName)>;
+
+struct FileCache {
+  FileCache(FileCacheFunction CacheFn, const std::string &DirectoryPath)
+      : CacheFunction(std::move(CacheFn)), CacheDirectoryPath(DirectoryPath) {}
+  FileCache() = default;
+
+  Expected<AddStreamFn> operator()(unsigned Task, StringRef Key,
+                                   const Twine &ModuleName) {
+    assert(isValid() && "Invalid cache function");
+    return CacheFunction(Task, Key, ModuleName);
+  }
+  const std::string &getCacheDirectoryPath() const {
+    return CacheDirectoryPath;
+  }
+  bool isValid() const { return static_cast<bool>(CacheFunction); }
+
+private:
+  FileCacheFunction CacheFunction = nullptr;
+  std::string CacheDirectoryPath;
+};
 
 /// This type defines the callback to add a pre-existing file (e.g. in a cache).
 ///
