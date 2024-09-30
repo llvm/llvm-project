@@ -3,16 +3,18 @@
 // CHECK: call i32 asm "foo0", {{.*}} [[READNONE:#[0-9]+]]
 // CHECK: call i32 asm "foo1", {{.*}} [[READNONE]]
 // CHECK: call i32 asm "foo2", {{.*}} [[NOATTRS:#[0-9]+]]
-// CHECK: call i32 asm sideeffect "foo3", {{.*}} [[NOATTRS]]
-// CHECK: call i32 asm "foo4", {{.*}} [[READONLY:#[0-9]+]]
-// CHECK: call i32 asm "foo5", {{.*}} [[READONLY]]
-// CHECK: call i32 asm "foo6", {{.*}} [[NOATTRS]]
-// CHECK: call void asm sideeffect "foo7", {{.*}} [[NOATTRS]]
+// CHECK: call i32 asm sideeffect "foo3", {{.*}} [[INACCESSIBLEMEMONLY:#[0-9]+]]
+// CHECK: call i32 asm "foo4", {{.*}} [[ARGREAD:#[0-9]+]]
+// CHECK: call i32 asm "foo5", {{.*}} [[ARGREAD]]
+// CHECK: call i32 asm "foo6", {{.*}} [[ARGWRITE:#[0-9]+]]
+// CHECK: call void asm sideeffect "foo7", {{.*}} [[INACCESSIBLEMEMONLY]]
 // CHECK: call i32 asm "foo8", {{.*}} [[READNONE]]
 
-// CHECK: attributes [[READNONE]] = { nounwind memory(none) }
-// CHECK: attributes [[NOATTRS]] = { nounwind }
-// CHECK: attributes [[READONLY]] = { nounwind memory(read) }
+// CHECK: attributes [[READNONE]] = { nounwind willreturn memory(none) }
+// CHECK: attributes [[NOATTRS]] = { nounwind willreturn }
+// CHECK: attributes [[INACCESSIBLEMEMONLY]] = { nounwind memory(inaccessiblemem: readwrite) }
+// CHECK: attributes [[ARGREAD]] = { nounwind willreturn memory(argmem: read) }
+// CHECK: attributes [[ARGWRITE]] = { nounwind willreturn memory(argmem: write) }
 
 int g0, g1;
 
