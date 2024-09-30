@@ -1566,6 +1566,13 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
       CallInst::Create(StructIFnTy, StructICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(StructICall));
 
+  Type *EmptyStructTy = StructType::get(C);
+  FunctionType *EmptyStructFnTy = FunctionType::get(EmptyStructTy, {});
+  Value *EmptyStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> EmptyStructCall(
+      CallInst::Create(EmptyStructFnTy, EmptyStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(EmptyStructCall));
+
   Type *NamedStructFTy = StructType::create({FTy, FTy}, "AStruct");
   FunctionType *NamedStructFFnTy = FunctionType::get(NamedStructFTy, {});
   Value *NamedStructFCallee = Constant::getNullValue(PtrTy);
@@ -1580,19 +1587,33 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
       CallInst::Create(MixedStructFnTy, MixedStructCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(MixedStructCall));
 
-  Type *StructFTy = StructType::get(FTy, FTy);
+  Type *StructFTy = StructType::get(FTy, FTy, FTy);
   FunctionType *StructFFnTy = FunctionType::get(StructFTy, {});
   Value *StructFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> StructFCall(
       CallInst::Create(StructFFnTy, StructFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(StructFCall));
 
-  Type *StructVFTy = StructType::get(VFTy, VFTy);
+  Type *StructVFTy = StructType::get(VFTy, VFTy, VFTy, VFTy);
   FunctionType *StructVFFnTy = FunctionType::get(StructVFTy, {});
   Value *StructVFCallee = Constant::getNullValue(PtrTy);
   std::unique_ptr<CallInst> StructVFCall(
       CallInst::Create(StructVFFnTy, StructVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(StructVFCall));
+
+  Type *NestedStructFTy = StructType::get(StructFTy, StructFTy, StructFTy);
+  FunctionType *NestedStructFFnTy = FunctionType::get(NestedStructFTy, {});
+  Value *NestedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NestedStructFCall(
+      CallInst::Create(NestedStructFFnTy, NestedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NestedStructFCall));
+
+  Type *AStructFTy = ArrayType::get(StructFTy, 5);
+  FunctionType *AStructFFnTy = FunctionType::get(AStructFTy, {});
+  Value *AStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> AStructFCall(
+      CallInst::Create(AStructFFnTy, AStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(AStructFCall));
 }
 
 TEST(InstructionsTest, FNegInstruction) {

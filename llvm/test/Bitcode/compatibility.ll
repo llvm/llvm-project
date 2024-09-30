@@ -1123,21 +1123,21 @@ define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <
 }
 
 declare { float, float } @fmf_struct_f32()
-declare { double, double } @fmf_struct_f64()
-declare { <4 x double>, <4 x double> } @fmf_struct_v4f64()
+declare { double, double, double } @fmf_struct_f64()
+declare { <4 x double> } @fmf_struct_v4f64()
 
 ; CHECK-LABEL: fastMathFlagsForStructCalls(
-define void @fastMathFlagsForStructCalls({ float, float } %f, { double, double } %d1, { <4 x double>, <4 x double> } %d2) {
+define void @fastMathFlagsForStructCalls() {
   %call.fast = call fast { float, float } @fmf_struct_f32()
   ; CHECK: %call.fast = call fast { float, float } @fmf_struct_f32()
 
   ; Throw in some other attributes to make sure those stay in the right places.
 
-  %call.nsz.arcp = notail call nsz arcp { double, double } @fmf_struct_f64()
-  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double } @fmf_struct_f64()
+  %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
 
-  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double>, <4 x double> } @fmf_struct_v4f64()
-  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double>, <4 x double> } @fmf_struct_v4f64()
+  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
 
   ret void
 }
