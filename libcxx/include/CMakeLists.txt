@@ -687,7 +687,6 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
-  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
