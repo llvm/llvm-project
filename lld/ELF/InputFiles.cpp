@@ -296,7 +296,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> void elf::doParseFile(Ctx &ctx, InputFile *file) {
+template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
   if (!isCompatible(file))
     return;
 
