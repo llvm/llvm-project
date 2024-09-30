@@ -14,13 +14,22 @@
 namespace mlir {
 namespace tensor {
 
-// Return a PadOp that pads `source` to `type` size. Output sizes (from `type`)
-// are assumed to be static and greater than the potentially dynamic input sizes
-// (from `source`). The op performs "high" padding (i.e. it adds trailing
-// padding values until the desired size is met).
-PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
+// Return a PadOp that pads `source` to `resType` size. The op performs "high"
+// padding, i.e. it adds trailing padding values until the desired size is met.
+// Output sizes are assumed to be greater than the input sizes. The padding
+// width is calculated as: resDim - sourceDim.
+//
+// Handling static sizes is trivial. Dynamic dimensions are trickier (*):
+//  1. dynamic input sizes are extracted from `source`
+//  2. for dynamic output dims, there are two options:
+//    2.1 all output dynamic dim sizes are specified in `dynOutDim`,
+//    2.2 `dynOutDim` is empty and the corresponding padding width is set to 0.
+//
+// (*) Note that `resType` is just a shape and it only encodes the actual sizes
+// for _static_ dimensions.
+PadOp createPadHighOp(RankedTensorType resType, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder,
-                      std::optional<Value> dynOutDim = {});
+                      SmallVector<Value> dynOutDim = {});
 
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.

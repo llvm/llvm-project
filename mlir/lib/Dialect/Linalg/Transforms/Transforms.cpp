@@ -1048,8 +1048,8 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
   DenseMap<int64_t, OpFoldResult> tileAndPosMapping =
       packOp.getDimAndTileMapping();
 
-  // The size of a dynamic tile (if present).
-  Value dynamicTileSize;
+  // The sizes of dynamic tiles
+  SmallVector<Value> dynamicTileSizes;
 
   // Collect dims for the padded shape.
   SmallVector<int64_t> paddedShape;
@@ -1080,14 +1080,13 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
     paddedShape.push_back(ShapedType::kDynamic);
 
     // Get the value that holds the dynamic size.
-    assert(!dynamicTileSize && "Only one dynamic tile is supported ATM.");
-    dynamicTileSize = llvm::dyn_cast_if_present<Value>(tileSizeForDim);
+    dynamicTileSizes.push_back(llvm::dyn_cast<Value>(tileSizeForDim));
   }
   auto resultType =
       RankedTensorType::get(paddedShape, inputType.getElementType());
   return tensor::createPadHighOp(resultType, input, packOp.getPaddingValue(),
                                  /*nofold=*/false, loc, builder,
-                                 dynamicTileSize);
+                                 dynamicTileSizes);
 }
 
 // Normalizes a permutation on a higher rank space to its actual size, e.g.

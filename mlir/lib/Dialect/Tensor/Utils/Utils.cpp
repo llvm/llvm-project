@@ -22,36 +22,43 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
+PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
                                     Value pad, bool nofold, Location loc,
                                     OpBuilder &b,
-                                    std::optional<Value> dynOutDim) {
+                                    SmallVector<Value> dynOutDims) {
 
-  assert(type.getNumDynamicDims() <= 1 &&
-         "At most one output dim can be dynamic!");
+  assert((resType.getNumDynamicDims() == dynOutDims.size()) ||
+         dynOutDims.empty() &&
+             "Either none or all output dynamic dims must be specified!");
 
   // Init "low" and "high" padding values ("low" is kept as is, "high" is
   // computed below).
-  SmallVector<OpFoldResult> low(type.getRank(), b.getIndexAttr(0));
-  SmallVector<OpFoldResult> high(type.getRank(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult> low(resType.getRank(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult> high(resType.getRank(), b.getIndexAttr(0));
 
-  for (const auto [idx, val] : enumerate(type.getShape())) {
-    bool isOutDimDynamic = ShapedType::isDynamic(val);
-    assert((!isOutDimDynamic || dynOutDim.has_value()) &&
-           "dynamic output dim requires dynOutDim to be set");
+  size_t outDimIdx = 0;
 
-    // Compute the padding width: outDim - srcDim.
+  for (const auto [idx, val] : enumerate(resType.getShape())) {
+    bool isDimDynamic = ShapedType::isDynamic(val);
+    bool updatePadHigh = !isDimDynamic || !dynOutDims.empty();
+
+    // Keep the default padding width (i.e. "0") when the output dim is dynamic
+    // and no actual output sizes have been provided.
+    if (!updatePadHigh)
+      continue;
+
+    // Compute the padding width: resDim - sourceDim.
     AffineExpr d0, d1;
     bindDims(b.getContext(), d0, d1);
-    OpFoldResult srcDim = tensor::getMixedSize(b, loc, source, idx);
-    Value outDim = isOutDimDynamic
-                       ? dynOutDim.value()
+    OpFoldResult sourceDim = tensor::getMixedSize(b, loc, source, idx);
+    Value outDim = isDimDynamic
+                       ? dynOutDims[outDimIdx++]
                        : b.create<arith::ConstantIndexOp>(loc, val).getResult();
 
     high[idx] = affine::makeComposedFoldedAffineApply(b, loc, d0 - d1,
-                                                      {outDim, srcDim});
+                                                      {outDim, sourceDim});
   }
-  return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
+  return b.create<PadOp>(loc, resType, source, low, high, pad, nofold);
 }
 
 SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
