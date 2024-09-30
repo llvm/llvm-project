@@ -491,8 +491,7 @@ static bool isArgUnmodifiedByAllCalls(Argument *Arg,
                                       FunctionAnalysisManager &FAM) {
   for (User *U : Arg->getParent()->users()) {
 
-    assert(isa<CallBase>(U) && "Expected all users of Function to be CallBase");
-    CallBase *Call = cast<CallBase>(U);
+    auto *Call = cast<CallBase>(U);
 
     MemoryLocation Loc =
         MemoryLocation::getForArgument(Call, Arg->getArgNo(), nullptr);
