@@ -1542,19 +1542,30 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
     return true;
   };
 
+  auto MaybeCastToBool = [&](bool Result) {
+    if (!Result)
+      return false;
+    PrimType T = classifyPrim(E);
+    if (DiscardResult)
+      return this->emitPop(T, E);
+    if (T != PT_Bool)
+      return this->emitCast(PT_Bool, T, E);
+    return true;
+  };
+
   switch (E->getOpcode()) {
   case BO_EQ:
-    return this->emitEQFixedPoint(E);
+    return MaybeCastToBool(this->emitEQFixedPoint(E));
   case BO_NE:
-    return this->emitNEFixedPoint(E);
+    return MaybeCastToBool(this->emitNEFixedPoint(E));
   case BO_LT:
-    return this->emitLTFixedPoint(E);
+    return MaybeCastToBool(this->emitLTFixedPoint(E));
   case BO_LE:
-    return this->emitLEFixedPoint(E);
+    return MaybeCastToBool(this->emitLEFixedPoint(E));
   case BO_GT:
-    return this->emitGTFixedPoint(E);
+    return MaybeCastToBool(this->emitGTFixedPoint(E));
   case BO_GE:
-    return this->emitGEFixedPoint(E);
+    return MaybeCastToBool(this->emitGEFixedPoint(E));
   case BO_Add:
     return ConvertResult(this->emitAddFixedPoint(E));
   case BO_Sub:
