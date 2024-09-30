@@ -682,7 +682,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // lanes that are around only for the purposes of derivatives to take part
   // in any cross-lane communication, and we use a branch on whether the lane is
   // live to do this.
-  if (false) {
+  if (IsPixelShader) {
     // Record I's original position as the entry block.
     PixelEntryBB = I.getParent();
 
@@ -705,35 +705,29 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // This is the value in the atomic operation we need to combine in order to
   // reduce the number of atomic operations.
   Value *V = I.getOperand(ValIdx);
-  // ------------------------------------
-  Type *const WaveTy = B.getIntNTy(ST->getWavefrontSize());
-  CallInst *const WaveRed =
-      B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
-
-  // ------------------------------------
 
   // We need to know how many lanes are active within the wavefront, and we do
   // this by doing a ballot of active lanes.
-  // Type *const WaveTy = B.getIntNTy(ST->getWavefrontSize());
-  // CallInst *const Ballot =
-  //     B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
+  Type *const WaveTy = B.getIntNTy(ST->getWavefrontSize());
+  CallInst *const Ballot =
+      B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is
   // below us only if its associated index was less than ours. We do this by
   // using the mbcnt intrinsic.
-  // Value *Mbcnt;
-  // if (ST->isWave32()) {
-  //   Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
-  //                             {Ballot, B.getInt32(0)});
-  // } else {
-  //   Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
-  //   Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
-  //   Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
-  //                             {ExtractLo, B.getInt32(0)});
-  //   Mbcnt =
-  //       B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
-  // }
+  Value *Mbcnt;
+  if (ST->isWave32()) {
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+                              {Ballot, B.getInt32(0)});
+  } else {
+    Value *const ExtractLo = B.CreateTrunc(Ballot, Int32Ty);
+    Value *const ExtractHi = B.CreateTrunc(B.CreateLShr(Ballot, 32), Int32Ty);
+    Mbcnt = B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {},
+                              {ExtractLo, B.getInt32(0)});
+    Mbcnt =
+        B.CreateIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {}, {ExtractHi, Mbcnt});
+  }
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
@@ -751,47 +745,46 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Value *ExclScan = nullptr;
   Value *NewV = nullptr;
 
-  // const bool NeedResult = !I.use_empty();
-  const bool NeedResult = false;
+  const bool NeedResult = !I.use_empty();
 
   BasicBlock *ComputeLoop = nullptr;
   BasicBlock *ComputeEnd = nullptr;
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
-  if (false) {
-    if (ScanImpl == ScanOptions::DPP) {
-      // First we need to set all inactive invocations to the identity value, so
-      // that they can correctly contribute to the final result.
-      NewV =
-          B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-      if (!NeedResult && ST->hasPermLaneX16()) {
-        // On GFX10 the permlanex16 instruction helps us build a reduction
-        // without too many readlanes and writelanes, which are generally bad
-        // for performance.
-        NewV = buildReduction(B, ScanOp, NewV, Identity);
-      } else {
-        NewV = buildScan(B, ScanOp, NewV, Identity);
-        if (NeedResult)
-          ExclScan = buildShiftRight(B, NewV, Identity);
-        // Read the value from the last lane, which has accumulated the values
-        // of each active lane in the wavefront. This will be our new value
-        // which we will provide to the atomic operation.
-        Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-        NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
-                                 {NewV, LastLaneIdx});
-      }
-      // Finally mark the readlanes in the WWM section.
-      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
-    } else if (ScanImpl == ScanOptions::Iterative) {
-      // Alternative implementation for scan
-      ComputeLoop = BasicBlock::Create(C, "ComputeLoop", F);
-      ComputeEnd = BasicBlock::Create(C, "ComputeEnd", F);
-      std::tie(ExclScan, NewV) = buildScanIteratively(B, ScanOp, Identity, V, I,
-                                                      ComputeLoop, ComputeEnd);
-    } else {
-      llvm_unreachable("Atomic Optimzer is disabled for None strategy");
-    }
-  } else {
+  // if (ValDivergent) {
+  //   if (ScanImpl == ScanOptions::DPP) {
+  //     // First we need to set all inactive invocations to the identity value, so
+  //     // that they can correctly contribute to the final result.
+  //     NewV =
+  //         B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
+  //     if (!NeedResult && ST->hasPermLaneX16()) {
+  //       // On GFX10 the permlanex16 instruction helps us build a reduction
+  //       // without too many readlanes and writelanes, which are generally bad
+  //       // for performance.
+  //       NewV = buildReduction(B, ScanOp, NewV, Identity);
+  //     } else {
+  //       NewV = buildScan(B, ScanOp, NewV, Identity);
+  //       if (NeedResult)
+  //         ExclScan = buildShiftRight(B, NewV, Identity);
+  //       // Read the value from the last lane, which has accumulated the values
+  //       // of each active lane in the wavefront. This will be our new value
+  //       // which we will provide to the atomic operation.
+  //       Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
+  //       NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
+  //                                {NewV, LastLaneIdx});
+  //     }
+  //     // Finally mark the readlanes in the WWM section.
+  //     NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
+  //   } else if (ScanImpl == ScanOptions::Iterative) {
+  //     // Alternative implementation for scan
+  //     ComputeLoop = BasicBlock::Create(C, "ComputeLoop", F);
+  //     ComputeEnd = BasicBlock::Create(C, "ComputeEnd", F);
+  //     std::tie(ExclScan, NewV) = buildScanIteratively(B, ScanOp, Identity, V, I,
+  //                                                     ComputeLoop, ComputeEnd);
+  //   } else {
+  //     llvm_unreachable("Atomic Optimzer is disabled for None strategy");
+  //   }
+  // } else {
   //   switch (Op) {
   //   default:
   //     llvm_unreachable("Unhandled atomic op");
@@ -800,17 +793,17 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   //   case AtomicRMWInst::Sub: {
   //     // The new value we will be contributing to the atomic operation is the
   //     // old value times the number of active lanes.
-  //     // Value *const Ctpop = B.CreateIntCast(
-  //     //     B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
-  //     // NewV = buildMul(B, V, Ctpop);
+  //     Value *const Ctpop = B.CreateIntCast(
+  //         B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
+  //     NewV = buildMul(B, V, Ctpop);
   //     break;
   //   }
   //   case AtomicRMWInst::FAdd:
   //   case AtomicRMWInst::FSub: {
-  //     // Value *const Ctpop = B.CreateIntCast(
-  //     //     B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
-  //     // Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
-  //     // NewV = B.CreateFMul(V, CtpopFP);
+  //     Value *const Ctpop = B.CreateIntCast(
+  //         B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
+  //     Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
+  //     NewV = B.CreateFMul(V, CtpopFP);
   //     break;
   //   }
   //   case AtomicRMWInst::And:
@@ -835,12 +828,13 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   //     break;
   //   }
   // }
-  }
 
+
+  NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
   // We only want a single lane to enter our new control flow, and we do this
   // by checking if there are any active lanes below us. Only one lane will
   // have 0 active lanes below us, so that will be the only one to progress.
-  // Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
+  Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
 
   // Store I's original basic block before we split the block.
   BasicBlock *const OriginalBB = I.getParent();
@@ -850,8 +844,8 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // new block such that:
   // entry --> single_lane -\
   //       \------------------> exit
-  // Instruction *const SingleLaneTerminator =
-  //     SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
+  Instruction *const SingleLaneTerminator =
+      SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, &DTU, nullptr);
 
   // At this point, we have split the I's block to allow one lane in wavefront
   // to update the precomputed reduced value. Also, completed the codegen for
@@ -863,27 +857,27 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // single lane done updating the final reduced value.
   BasicBlock *Predecessor = nullptr;
   // if (ValDivergent && ScanImpl == ScanOptions::Iterative) {
-    // Move terminator from I's block to ComputeEnd block.
-    //
-    // OriginalBB is known to have a branch as terminator because
-    // SplitBlockAndInsertIfThen will have inserted one.
-    // BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
-    // B.SetInsertPoint(ComputeEnd);
-    // Terminator->removeFromParent();
-    // B.Insert(Terminator);
+  //   // Move terminator from I's block to ComputeEnd block.
+  //   //
+  //   // OriginalBB is known to have a branch as terminator because
+  //   // SplitBlockAndInsertIfThen will have inserted one.
+  //   BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
+  //   B.SetInsertPoint(ComputeEnd);
+  //   Terminator->removeFromParent();
+  //   B.Insert(Terminator);
 
-    // Branch to ComputeLoop Block unconditionally from the I's block for
-    // iterative approach.
-    // B.SetInsertPoint(OriginalBB);
-    // B.CreateBr(ComputeLoop);
+  //   // Branch to ComputeLoop Block unconditionally from the I's block for
+  //   // iterative approach.
+  //   B.SetInsertPoint(OriginalBB);
+  //   B.CreateBr(ComputeLoop);
 
-    // Update the dominator tree for new control flow.
-    // SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
-    //     {{DominatorTree::Insert, OriginalBB, ComputeLoop},
-    //      {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
+  //   // Update the dominator tree for new control flow.
+  //   SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
+  //       {{DominatorTree::Insert, OriginalBB, ComputeLoop},
+  //        {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
 
-    // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
-    // the DT edges as well.
+  //   // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
+  //   // the DT edges as well.
   //   for (auto *Succ : Terminator->successors()) {
   //     DomTreeUpdates.push_back({DominatorTree::Insert, ComputeEnd, Succ});
   //     DomTreeUpdates.push_back({DominatorTree::Delete, OriginalBB, Succ});
@@ -895,102 +889,103 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // } else {
   //   Predecessor = OriginalBB;
   // }
+  Predecessor = OriginalBB;
   // Move the IR builder into single_lane next.
-  // B.SetInsertPoint(SingleLaneTerminator);
+  B.SetInsertPoint(SingleLaneTerminator);
 
   // Clone the original atomic operation into single lane, replacing the
   // original value with our newly created one.
   Instruction *const NewI = I.clone();
   B.Insert(NewI);
-  NewI->setOperand(ValIdx, WaveRed);
+  NewI->setOperand(ValIdx, NewV);
 
   // Move the IR builder into exit next, and start inserting just before the
   // original instruction.
-  // B.SetInsertPoint(&I);
+  B.SetInsertPoint(&I);
 
-  // if (NeedResult) {
-  //   // Create a PHI node to get our new atomic result into the exit block.
-  //   PHINode *const PHI = B.CreatePHI(Ty, 2);
-  //   PHI->addIncoming(PoisonValue::get(Ty), Predecessor);
-  //   PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
+  if (NeedResult) {
+    // Create a PHI node to get our new atomic result into the exit block.
+    PHINode *const PHI = B.CreatePHI(Ty, 2);
+    PHI->addIncoming(PoisonValue::get(Ty), Predecessor);
+    PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
 
-  //   // We need to broadcast the value who was the lowest active lane (the first
-  //   // lane) to all other lanes in the wavefront.
-  //   Value *BroadcastI = nullptr;
-  //   BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
+    // We need to broadcast the value who was the lowest active lane (the first
+    // lane) to all other lanes in the wavefront.
+    Value *BroadcastI = nullptr;
+    BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
 
-  //   // Now that we have the result of our single atomic operation, we need to
-  //   // get our individual lane's slice into the result. We use the lane offset
-  //   // we previously calculated combined with the atomic result value we got
-  //   // from the first lane, to get our lane's index into the atomic result.
-  //   Value *LaneOffset = nullptr;
-  //   if (ValDivergent) {
-  //     if (ScanImpl == ScanOptions::DPP) {
-  //       LaneOffset =
-  //           B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
-  //     } else if (ScanImpl == ScanOptions::Iterative) {
-  //       LaneOffset = ExclScan;
-  //     } else {
-  //       llvm_unreachable("Atomic Optimzer is disabled for None strategy");
-  //     }
-  //   } else {
-  //     Mbcnt = isAtomicFloatingPointTy ? B.CreateUIToFP(Mbcnt, Ty)
-  //                                     : B.CreateIntCast(Mbcnt, Ty, false);
-  //     switch (Op) {
-  //     default:
-  //       llvm_unreachable("Unhandled atomic op");
-  //     case AtomicRMWInst::Add:
-  //     case AtomicRMWInst::Sub:
-  //       LaneOffset = buildMul(B, V, Mbcnt);
-  //       break;
-  //     case AtomicRMWInst::And:
-  //     case AtomicRMWInst::Or:
-  //     case AtomicRMWInst::Max:
-  //     case AtomicRMWInst::Min:
-  //     case AtomicRMWInst::UMax:
-  //     case AtomicRMWInst::UMin:
-  //     case AtomicRMWInst::FMin:
-  //     case AtomicRMWInst::FMax:
-  //       LaneOffset = B.CreateSelect(Cond, Identity, V);
-  //       break;
-  //     case AtomicRMWInst::Xor:
-  //       LaneOffset = buildMul(B, V, B.CreateAnd(Mbcnt, 1));
-  //       break;
-  //     case AtomicRMWInst::FAdd:
-  //     case AtomicRMWInst::FSub: {
-  //       LaneOffset = B.CreateFMul(V, Mbcnt);
-  //       break;
-  //     }
-  //     }
-  //   }
-  //   Value *Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
-  //   if (isAtomicFloatingPointTy) {
-  //     // For fadd/fsub the first active lane of LaneOffset should be the
-  //     // identity (-0.0 for fadd or +0.0 for fsub) but the value we calculated
-  //     // is V * +0.0 which might have the wrong sign or might be nan (if V is
-  //     // inf or nan).
-  //     //
-  //     // For all floating point ops if the in-memory value was a nan then the
-  //     // binop we just built might have quieted it or changed its payload.
-  //     //
-  //     // Correct all these problems by using BroadcastI as the result in the
-  //     // first active lane.
-  //     Result = B.CreateSelect(Cond, BroadcastI, Result);
-  //   }
+    // Now that we have the result of our single atomic operation, we need to
+    // get our individual lane's slice into the result. We use the lane offset
+    // we previously calculated combined with the atomic result value we got
+    // from the first lane, to get our lane's index into the atomic result.
+    Value *LaneOffset = nullptr;
+    if (ValDivergent) {
+      if (ScanImpl == ScanOptions::DPP) {
+        LaneOffset =
+            B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
+      } else if (ScanImpl == ScanOptions::Iterative) {
+        LaneOffset = ExclScan;
+      } else {
+        llvm_unreachable("Atomic Optimzer is disabled for None strategy");
+      }
+    } else {
+      Mbcnt = isAtomicFloatingPointTy ? B.CreateUIToFP(Mbcnt, Ty)
+                                      : B.CreateIntCast(Mbcnt, Ty, false);
+      switch (Op) {
+      default:
+        llvm_unreachable("Unhandled atomic op");
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+        LaneOffset = buildMul(B, V, Mbcnt);
+        break;
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Max:
+      case AtomicRMWInst::Min:
+      case AtomicRMWInst::UMax:
+      case AtomicRMWInst::UMin:
+      case AtomicRMWInst::FMin:
+      case AtomicRMWInst::FMax:
+        LaneOffset = B.CreateSelect(Cond, Identity, V);
+        break;
+      case AtomicRMWInst::Xor:
+        LaneOffset = buildMul(B, V, B.CreateAnd(Mbcnt, 1));
+        break;
+      case AtomicRMWInst::FAdd:
+      case AtomicRMWInst::FSub: {
+        LaneOffset = B.CreateFMul(V, Mbcnt);
+        break;
+      }
+      }
+    }
+    Value *Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
+    if (isAtomicFloatingPointTy) {
+      // For fadd/fsub the first active lane of LaneOffset should be the
+      // identity (-0.0 for fadd or +0.0 for fsub) but the value we calculated
+      // is V * +0.0 which might have the wrong sign or might be nan (if V is
+      // inf or nan).
+      //
+      // For all floating point ops if the in-memory value was a nan then the
+      // binop we just built might have quieted it or changed its payload.
+      //
+      // Correct all these problems by using BroadcastI as the result in the
+      // first active lane.
+      Result = B.CreateSelect(Cond, BroadcastI, Result);
+    }
 
-  //   if (IsPixelShader) {
-  //     // Need a final PHI to reconverge to above the helper lane branch mask.
-  //     B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
+    if (IsPixelShader) {
+      // Need a final PHI to reconverge to above the helper lane branch mask.
+      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
 
-  //     PHINode *const PHI = B.CreatePHI(Ty, 2);
-  //     PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
-  //     PHI->addIncoming(Result, I.getParent());
-  //     I.replaceAllUsesWith(PHI);
-  //   } else {
-  //     // Replace the original atomic instruction with the new one.
-  //     I.replaceAllUsesWith(Result);
-  //   }
-  // }
+      PHINode *const PHI = B.CreatePHI(Ty, 2);
+      PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
+      PHI->addIncoming(Result, I.getParent());
+      I.replaceAllUsesWith(PHI);
+    } else {
+      // Replace the original atomic instruction with the new one.
+      I.replaceAllUsesWith(Result);
+    }
+  }
 
   // And delete the original.
   I.eraseFromParent();
