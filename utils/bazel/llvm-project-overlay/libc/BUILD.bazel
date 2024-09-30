@@ -1825,26 +1825,11 @@ libc_math_function(
     ],
 )
 
-libc_math_function(
-    name = "ceil",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceil")
 
-libc_math_function(
-    name = "ceilf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceilf")
 
-libc_math_function(
-    name = "ceill",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceill")
 
 libc_math_function(name = "ceilf128")
 
@@ -2126,19 +2111,9 @@ libc_math_function(
     ],
 )
 
-libc_math_function(
-    name = "floor",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "floor")
 
-libc_math_function(
-    name = "floorf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "floorf")
 
 libc_math_function(name = "floorl")
 
@@ -2639,19 +2614,9 @@ libc_math_function(name = "rintl")
 
 libc_math_function(name = "rintf128")
 
-libc_math_function(
-    name = "round",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "round")
 
-libc_math_function(
-    name = "roundf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "roundf")
 
 libc_math_function(name = "roundl")
 
@@ -2850,19 +2815,9 @@ libc_math_function(name = "totalordermagl")
 
 libc_math_function(name = "totalordermagf128")
 
-libc_math_function(
-    name = "trunc",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "trunc")
 
-libc_math_function(
-    name = "truncf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "truncf")
 
 libc_math_function(name = "truncl")
 

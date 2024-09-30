@@ -71,6 +71,7 @@ cc_library(
         "lib/orc/interval_map.h",
         "lib/orc/interval_set.h",
         "lib/orc/jit_dispatch.h",
+        "lib/orc/sections_tracker.h",
         "lib/orc/simple_packed_serialization.h",
         "lib/orc/stl_extras.h",
         "lib/orc/string_pool.h",

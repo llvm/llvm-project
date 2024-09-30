@@ -2067,7 +2067,7 @@ static LogicalResult generateCopy(
     // fastMemRefType is a constant shaped memref.
     auto maySizeInBytes = getIntOrFloatMemRefSizeInBytes(fastMemRefType);
     // We don't account for things of unknown size.
-    *sizeInBytes = maySizeInBytes ? *maySizeInBytes : 0;
+    *sizeInBytes = maySizeInBytes.value_or(0);
 
     LLVM_DEBUG(emitRemarkForBlock(*block)
                << "Creating fast buffer of type " << fastMemRefType

@@ -626,7 +626,7 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
-  list<list<int>> TypeSig = !listconcat(
+  list<int> TypeSig = !listflatten(!listconcat(
     [IIT_RetNumbers[!size(RetTypes)]],
     !foreach(i, !range(AllTypes),
       !foreach(a, AllTypes[i].Sig,
@@ -634,7 +634,7 @@ class TypeInfoGen<
           MappingRIdxs,
           ArgCodes,
           ACIdxs[i],
-          a>.ret)));
+          a>.ret))));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1016,6 +1016,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_asin : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_acos : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_atan : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_atan2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;

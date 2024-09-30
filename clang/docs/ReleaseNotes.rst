@@ -43,7 +43,7 @@ code bases.
   still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
   `config file
   <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
-  
+
 - The ``clang-rename`` tool has been removed.
 
 C/C++ Language Potentially Breaking Changes
@@ -81,10 +81,29 @@ C++ Specific Potentially Breaking Changes
     template <typename T>
     void f();
 
+- During constant evaluation, comparisons between different evaluations of the
+  same string literal are now correctly treated as non-constant, and comparisons
+  between string literals that cannot possibly overlap in memory are now treated
+  as constant. This updates Clang to match the anticipated direction of open core
+  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
+  issue is resolved.
+
+  .. code-block:: c++
+
+    constexpr const char *f() { return "hello"; }
+    constexpr const char *g() { return "world"; }
+    // Used to evaluate to false, now error: non-constant comparison.
+    constexpr bool a = f() == f();
+    // Might evaluate to true or false, as before.
+    bool at_runtime() { return f() == f(); }
+    // Was error, now evaluates to false.
+    constexpr bool b = f() == g();
+
 ABI Changes in This Version
 ---------------------------
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
+- Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -115,13 +134,15 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
-- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension
   of temporary created by aggregate initialization using a default member
   initializer.
 
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
 - Add ``__builtin_elementwise_popcount`` builtin for integer types only.
+
+- Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
 
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
@@ -336,7 +357,9 @@ Improvements to Clang's diagnostics
   local variables passed to function calls using the ``[[clang::musttail]]``
   attribute.
 
-- Clang now diagnoses when a required expression has a local parameter of void type, aligning with the function parameter (#GH109831).
+- Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
+
+- Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -453,6 +476,9 @@ Miscellaneous Clang Crashes Fixed
   Now a diagnostic is emitted. (#GH35741)
 
 - Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
+
+- Fixed internal assertion firing when a declaration in the implicit global
+  module is found through ADL. (GH#109879)
 
 OpenACC Specific Changes
 ------------------------
