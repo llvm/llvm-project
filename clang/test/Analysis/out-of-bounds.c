@@ -210,10 +210,10 @@ int loop_suppress_after_zero_iterations(unsigned len) {
   // Previously this would have produced an overflow warning because splitting
   // the state on the loop condition introduced an execution path where the
   // analyzer thinks that len == 0.
-  // There are very many situations where the programmer knows that an argument
-  // is positive, but this is not indicated in the source code, so we must
-  // avoid reporting errors (especially out of bounds errors) on these
-  // branches, because otherwise we'd get prohibitively many false positives.
+  // There are many situations where the programmer knows that an argument is
+  // positive, but this is not indicated in the source code, so we must avoid
+  // reporting errors (especially out of bounds errors) on these branches,
+  // because otherwise we'd get prohibitively many false positives.
   return GlobalArray[len - 1]; // no-warning
 }
 
@@ -231,7 +231,8 @@ void loop_suppress_in_third_iteration(int len) {
   for (int i = 0; i < len; i++) {
     // We should suppress array bounds errors on the third and later iterations
     // of loops, because sometimes programmers write a loop in sitiuations
-    // where they know that there will be at most two iterations.
+    // where they know that there will be at most two iterations, but the
+    // analyzer cannot deduce this property.
     buf[i] = 1; // no-warning
   }
 }
@@ -263,7 +264,10 @@ void loop_suppress_in_third_iteration_logical_and(int len, int flag) {
 void loop_suppress_in_third_iteration_logical_and_2(int len, int flag) {
   int buf[2] = {0};
   for (int i = 0; flag && i < len; i++) {
-    // If the two operands of '&&' are flipped, the suppression works.
+    // If the two operands of '&&' are flipped, the suppression works, because
+    // then 'flag' is the terminator statement associated with '&&' (which
+    // determines whether the short-circuiting happens or not) and 'i < len' is
+    // the terminator statement of the loop itself.
     buf[i] = 1; // no-warning
   }
 }

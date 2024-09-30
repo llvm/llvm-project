@@ -226,9 +226,8 @@ bool clang::ento::seenWeakLoopAssumption(ProgramStateRef State) {
 
 // This trait points to the last expression (logical operator) where an eager
 // assumption introduced a state split (i.e. both cases were feasible). This is
-// used by the WeakLoopAssumption heuristic to find situations where the an
-// eager assumption introduces a state split within the evaluation of a loop
-// condition.
+// used by the WeakLoopAssumption heuristic to find situations where an eager
+// assumption introduces a state split in the evaluation of a loop condition.
 REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeAssumptionAt, const Expr *)
 
 //===----------------------------------------------------------------------===//
@@ -2838,8 +2837,12 @@ void ExprEngine::processBranch(
     const Expr *EagerlyAssumeExpr =
         PrevState->get<LastEagerlyAssumeAssumptionAt>();
     const Expr *ConditionExpr = dyn_cast<Expr>(Condition);
-    if (ConditionExpr)
+    if (ConditionExpr) {
+      // Ignore casts to ensure equivalent behavior with and without
+      // eagerly-assume. This is a mostly theoretical question an I don't see a
+      // good reason for putting casts around a conditional expression.
       ConditionExpr = ConditionExpr->IgnoreParenCasts();
+    }
     bool DidEagerlyAssume = EagerlyAssumeExpr == ConditionExpr;
     bool BothFeasible = (DidEagerlyAssume || (StTrue && StFalse)) &&
                         builder.isFeasible(true) && builder.isFeasible(false);
@@ -2852,9 +2855,11 @@ void ExprEngine::processBranch(
           // When programmers write a loop, they imply that at least two
           // iterations are possible (otherwise they would just write an `if`),
           // but the third iteration is not implied: there are situations where
-          // the programmer knows that there won't be a third iteration (e.g.
-          // they iterate over a structure that has <= 2 elements) but this is
-          // not marked in the source code.
+          // the programmer knows that there won't be a third iteration, but
+          // this is not marked in the source code. (For example, the ffmpeg
+          // project has 2-element arrays which are accessed from loops where
+          // the number of steps is opaque and the analyzer cannot deduce that
+          // there are <= 2 iterations.)
           // Checkers may use this heuristic mark to discard results found on
           // branches that contain this "weak" assumption.
           StTrue = recordWeakLoopAssumption(StTrue);

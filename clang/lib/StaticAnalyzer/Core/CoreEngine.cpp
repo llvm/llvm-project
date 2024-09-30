@@ -448,13 +448,12 @@ void CoreEngine::HandleBranch(const Stmt *Cond, const Stmt *Term,
       Counter.getNumVisited(LC->getStackFrame(), B->getBlockID());
   std::optional<unsigned> IterationsFinishedInLoop = std::nullopt;
   if (isa<ForStmt, WhileStmt, CXXForRangeStmt>(Term)) {
-    // FIXME: This code approximates the number of finished iteration based on
+    // FIXME: This code approximates the number of finished iterations based on
     // the block count, i.e. the number of evaluations of the terminator block
     // on the current execution path (which includes the current evaluation, so
-    // is always at least 1). This is probably acceptable for the
-    // checker-specific false positive suppression that currently uses this
-    // value, but it would be better to calcuate an accurate count of
-    // iterations.
+    // is always >= 1). This is probably acceptable for the checker-specific
+    // false positive suppression that currently uses this value, but it would
+    // be better to calcuate an accurate count of iterations.
     assert(BlockCount >= 1);
     IterationsFinishedInLoop = BlockCount - 1;
   } else if (isa<DoStmt>(Term)) {

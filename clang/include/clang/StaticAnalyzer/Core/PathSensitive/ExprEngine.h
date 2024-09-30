@@ -121,19 +121,28 @@ struct EvalCallOptions {
   EvalCallOptions() {}
 };
 
-/// Simple control flow statements like `if` only produce a single state split,
-/// so the fact that they are included in the source code implies that both
-/// branches are possible (at least under some conditions) and the analyzer can
-/// freely assume either of them. (This is not entirely true, because there may
-/// be unmarked logical correlations between `if` statements, but is a good
-/// enough heuristic and the analyzer strongly relies on it.)
-/// On the other hand, in a loop the state may be split repeatedly at each
-/// evaluation of the loop condition, and this can lead to following "weak"
-/// assumptions even though the code does not imply that they're valid and the
-/// programmer intended to cover them.
-/// This function is called to mark the `State` when the engine makes an
-/// assumption which is weak. Checkers may use this heuristical mark to discard
-/// result and reduce the amount of false positives.
+/// Simple control flow statements like `if` can only produce a single two-way
+/// state split, so when the analyzer cannot determine the value of the
+/// condition, it can assume either of the two options, because the fact that
+/// they are in the source code implies that the programmer thought that they
+/// are possible (at least under some conditions).
+/// (Note that this heuristic is not entirely correct when there are _several_
+/// `if` statements with unmarked logical connections between them, but it's
+/// still good enough and the analyzer heavily relies on it.)
+/// In contrast with this, a single loop statement can produce multiple state
+/// splits, and we cannot always single out safe assumptions where we can say
+/// that "the programmer included this loop in the source code, so they clearly
+/// thought that this execution path is possible".
+/// However, the analyzer wants to explore the code in and after the loop, so
+/// it makes assumptions about the loop condition (to get a concrete execution
+/// path) even when they are not justified.
+/// This function is called by the engine to mark the `State` when it makes an
+/// assumption which is "weak". Checkers may use this heuristical mark to
+/// discard the result and reduce the amount of false positives.
+/// TODO: Instead of just marking these branches for checker-specific handling,
+/// we could discard them completely. I suspect that this could eliminate some
+/// false positives without suppressing too many true positives, but I didn't
+/// have time to measure its effects.
 ProgramStateRef recordWeakLoopAssumption(ProgramStateRef State);
 
 /// Returns true if `recordWeakLoopAssumption()` was called on the execution
@@ -341,9 +350,9 @@ public:
                                ExplodedNode *Pred);
 
   /// ProcessBranch - Called by CoreEngine.  Used to generate successor
-  ///  nodes by processing the 'effects' of a branch condition.
+  /// nodes by processing the 'effects' of a branch condition.
   /// If the branch condition is a loop condition, IterationsFinishedInLoop is
-  /// the number of already finished iterations (0, 1, 2...); otherwise it's
+  /// the number of already finished iterations (0, 1, 2, ...); otherwise it's
   /// std::nullopt.
   void processBranch(const Stmt *Condition, NodeBuilderContext &BuilderCtx,
                      ExplodedNode *Pred, ExplodedNodeSet &Dst,
