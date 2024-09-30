@@ -24,18 +24,18 @@ public:
   typedef int (*IsCanonicalFunc)(T);
 
   void testSpecialNumbers(IsCanonicalFunc func) {
-    EXPECT_EQ(func(aNaN), 0);
-    EXPECT_EQ(func(neg_aNaN), 0);
+    EXPECT_EQ(func(aNaN), 1);
+    EXPECT_EQ(func(neg_aNaN), 1);
     EXPECT_EQ(func(sNaN), 0);
     EXPECT_EQ(func(neg_sNaN), 0);
-    EXPECT_EQ(func(inf), 0);
-    EXPECT_EQ(func(neg_inf), 0);
-    EXPECT_EQ(func(min_normal), 0);
-    EXPECT_EQ(func(max_normal), 0);
-    EXPECT_EQ(func(neg_max_normal), 0);
-    EXPECT_EQ(func(min_denormal), 0);
-    EXPECT_EQ(func(neg_min_denormal), 0);
-    EXPECT_EQ(func(max_denormal), 0);
+    EXPECT_EQ(func(inf), 1);
+    EXPECT_EQ(func(neg_inf), 1);
+    EXPECT_EQ(func(min_normal), 1);
+    EXPECT_EQ(func(max_normal), 1);
+    EXPECT_EQ(func(neg_max_normal), 1);
+    EXPECT_EQ(func(min_denormal), 1);
+    EXPECT_EQ(func(neg_min_denormal), 1);
+    EXPECT_EQ(func(max_denormal), 1);
     EXPECT_EQ(func(zero), 1);
     EXPECT_EQ(func(neg_zero), 1);
   }
