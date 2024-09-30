@@ -1488,8 +1488,6 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
     Operation *consumerOp = opOperand.getOwner();
     if (isa<scf::YieldOp, tensor::ParallelInsertSliceOp>(consumerOp))
       continue;
-    if (operand && *operand != opOperand)
-      return failure();
     // TODO: We have to init result of consumer before scf.for, use
     //       DestinationStyleOpInterface to get result shape from init for now.
     //       Add support for other op such as op has InferTypeOpInterface.
@@ -1501,7 +1499,9 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
     operand = &opOperand;
   }
 
-  return operand;
+  if (operand)
+    return operand;
+  return failure();
 }
 
 /// Find the perfectly nested loops outside of given loop(included) sorted from
