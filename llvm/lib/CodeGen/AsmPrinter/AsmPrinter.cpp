@@ -1433,7 +1433,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->AddComment("BB id");
       // Emit the BB ID for this basic block.
       // We only emit BaseID since CloneID is unset for
-      // -basic-block-adress-map.
+      // basic-block-sections=labels.
       // TODO: Emit the full BBID when labels and sections can be mixed
       // together.
       OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
@@ -1867,7 +1867,7 @@ void AsmPrinter::emitFunctionBody() {
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a
     // section.
-    if (MF->getTarget().Options.BBAddrMap ||
+    if (MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap ||
         (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection()))
       OutStreamer->emitLabel(MBB.getEndSymbol());
 
@@ -2022,7 +2022,7 @@ void AsmPrinter::emitFunctionBody() {
   // Emit section containing BB address offsets and their metadata, when
   // BB labels are requested for this function. Skip empty functions.
   if (HasAnyRealCode) {
-    if (MF->getTarget().Options.BBAddrMap)
+    if (MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap)
       emitBBAddrMapSection(*MF);
     else if (PgoAnalysisMapFeatures.getBits() != 0)
       MF->getContext().reportWarning(
@@ -2645,7 +2645,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
-      MF.getTarget().Options.BBAddrMap) {
+      MF.getTarget().Options.BBAddrMap || MF.hasBBLabels()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;
@@ -4193,7 +4193,8 @@ bool AsmPrinter::shouldEmitLabelForBasicBlock(
   // With `-fbasic-block-sections=`, a label is needed for every non-entry block
   // in the labels mode (option `=labels`) and every section beginning in the
   // sections mode (`=all` and `=list=`).
-  if ((MF->getTarget().Options.BBAddrMap || MBB.isBeginSection()) &&
+  if ((MF->hasBBLabels() || MF->getTarget().Options.BBAddrMap ||
+       MBB.isBeginSection()) &&
       !MBB.isEntryBlock())
     return true;
   // A label is needed for any block with at least one predecessor (when that

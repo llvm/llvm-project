@@ -780,7 +780,7 @@ bool MIParser::parseBasicBlockDefinition(
                             "' is not defined in the function '" +
                             MF.getName() + "'");
   }
-  auto *MBB = MF.CreateMachineBasicBlock(BB, BBID);
+  auto *MBB = MF.CreateMachineBasicBlock(BB);
   MF.insert(MF.end(), MBB);
   bool WasInserted = MBBSlots.insert(std::make_pair(ID, MBB)).second;
   if (!WasInserted)
@@ -798,6 +798,13 @@ bool MIParser::parseBasicBlockDefinition(
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
+  }
+  if (BBID.has_value()) {
+    // BBSectionsType is set to `List` if any basic blocks has `SectionID`.
+    // Here, we set it to `Labels` if it hasn't been set above.
+    if (!MF.hasBBSections())
+      MF.setBBSectionsType(BasicBlockSection::Labels);
+    MBB->setBBID(BBID.value());
   }
   MBB->setCallFrameSize(CallFrameSize);
   return false;
