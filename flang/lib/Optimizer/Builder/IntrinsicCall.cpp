@@ -265,6 +265,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"free", &I::genFree},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -436,6 +437,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
     {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
     {"matmul",
@@ -3581,6 +3583,12 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -5305,6 +5313,13 @@ IntrinsicLibrary::genLoc(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, zero);
       })
       .getResults()[0];
+}
+
+mlir::Value IntrinsicLibrary::genMalloc(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genMalloc(builder, loc, args[0]));
 }
 
 // MASKL, MASKR
