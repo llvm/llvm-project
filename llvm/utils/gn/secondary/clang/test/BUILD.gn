@@ -124,13 +124,13 @@ write_lit_config("lit_site_cfg") {
       "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/bin", dir),
       "LLVM_LIT_ERRC_MESSAGES=no such file or directory;is a directory;" +
           "invalid argument;permission denied",
-      "PERL_EXECUTABLE="
+      "PERL_EXECUTABLE=",
     ]
   } else {
     extra_values += [
       "CMAKE_LIBRARY_OUTPUT_DIRECTORY=" + rebase_path("$root_out_dir/lib", dir),
       "LLVM_LIT_ERRC_MESSAGES=",
-      "PERL_EXECUTABLE=/usr/bin/perl"
+      "PERL_EXECUTABLE=/usr/bin/perl",
     ]
   }
 

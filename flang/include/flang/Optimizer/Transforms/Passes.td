@@ -428,4 +428,19 @@ def CufOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   ];
 }
 
+def CufImplicitDeviceGlobal :
+    Pass<"cuf-implicit-device-global", "mlir::ModuleOp"> {
+  let summary = "Flag globals used in device function with data attribute";
+  let dependentDialects = [
+    "cuf::CUFDialect"
+  ];
+}
+
+def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
+  let summary = "Add constructor to register CUDA Fortran allocators";
+  let dependentDialects = [
+    "mlir::func::FuncDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

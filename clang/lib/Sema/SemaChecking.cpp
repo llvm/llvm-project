@@ -2755,6 +2755,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_pow: {
     if (BuiltinElementwiseMath(TheCall))
       return ExprError();
@@ -6559,7 +6560,6 @@ CheckFormatHandler::HandleInvalidConversionSpecifier(unsigned argIndex,
       OS << "\\u" << llvm::format("%04x", CodePoint);
     else
       OS << "\\U" << llvm::format("%08x", CodePoint);
-    OS.flush();
     Specifier = CodePointStr;
   }
 

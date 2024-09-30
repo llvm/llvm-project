@@ -4,14 +4,10 @@
 define i64 @align_deref_align(i1 %c, ptr %p) {
 ; CHECK-LABEL: define i64 @align_deref_align(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "align"(ptr [[P]], i64 8) ]
-; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i64 [[V]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -30,17 +26,12 @@ exit:
 define i64 @assume_deref_align2(i1 %c1, i32 %x, ptr %p) {
 ; CHECK-LABEL: define i64 @assume_deref_align2(
 ; CHECK-SAME: i1 [[C1:%.*]], i32 [[X:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "align"(ptr [[P]], i64 8) ]
-; CHECK-NEXT:    br i1 [[C1]], label %[[IF1:.*]], label %[[EXIT:.*]]
-; CHECK:       [[IF1]]:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 10
-; CHECK-NEXT:    br i1 [[C2]], label %[[IF2:.*]], label %[[EXIT]]
-; CHECK:       [[IF2]]:
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF2]] ], [ 1, %[[IF1]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i64 [[V]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i64 [[SPEC_SELECT]], i64 0
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -86,14 +77,17 @@ exit:
   ret i64 %res
 }
 
-; FIXME: This is a miscompile.
 define i64 @deref_no_hoist(i1 %c, ptr align 8 dereferenceable(8) %p1) {
 ; CHECK-LABEL: define i64 @deref_no_hoist(
 ; CHECK-SAME: i1 [[C:%.*]], ptr align 8 dereferenceable(8) [[P1:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1]], align 8, !align [[META0:![0-9]+]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1]], align 8, !dereferenceable [[META0:![0-9]+]], !align [[META0]]
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P2]], align 8
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C]], i64 [[V]], i64 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:

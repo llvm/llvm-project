@@ -10,8 +10,11 @@ define void @d() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr null, align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr @d, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> zeroinitializer, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[BROADCAST_SPLAT]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x float> zeroinitializer, <2 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP4]], align 4
@@ -27,7 +30,7 @@ define void @d() {
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr float, ptr @d, i64 [[I]]
-; CHECK-NEXT:    [[I5:%.*]] = tail call i1 @llvm.is.fpclass.f32(float 0.000000e+00, i32 0)
+; CHECK-NEXT:    [[I5:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[I3]], i32 0)
 ; CHECK-NEXT:    [[I6:%.*]] = select i1 [[I5]], float 0.000000e+00, float 0.000000e+00
 ; CHECK-NEXT:    store float [[I6]], ptr [[I4]], align 4
 ; CHECK-NEXT:    [[I7]] = add i64 [[I]], 1
@@ -43,7 +46,7 @@ loop:
   %i = phi i64 [ 0, %entry ], [ %i7, %loop ]
   %i3 = load float, ptr null, align 4
   %i4 = getelementptr float, ptr @d, i64 %i
-  %i5 = tail call i1 @llvm.is.fpclass.f32(float 0.0, i32 0)
+  %i5 = tail call i1 @llvm.is.fpclass.f32(float %i3, i32 0)
   %i6 = select i1 %i5, float 0.0, float 0.0
   store float %i6, ptr %i4, align 4
   %i7 = add i64 %i, 1

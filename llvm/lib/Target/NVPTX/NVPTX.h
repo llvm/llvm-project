@@ -117,23 +117,37 @@ enum Ordering : OrderingUnderlyingType {
   // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
   Acquire = (OrderingUnderlyingType)AtomicOrdering::Acquire,
   Release = (OrderingUnderlyingType)AtomicOrdering::Release,
-  // AcquireRelease = 6, // TODO
+  AcquireRelease = (OrderingUnderlyingType)AtomicOrdering::AcquireRelease,
   SequentiallyConsistent =
       (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
   Volatile = SequentiallyConsistent + 1,
   RelaxedMMIO = Volatile + 1,
-  LAST = RelaxedMMIO
+  LASTORDERING = RelaxedMMIO
+};
+
+using ScopeUnderlyingType = unsigned int;
+enum Scope : ScopeUnderlyingType {
+  Thread = 0,
+  Block = 1,
+  Cluster = 2,
+  Device = 3,
+  System = 4,
+  LASTSCOPE = System
+};
+
+using AddressSpaceUnderlyingType = unsigned int;
+enum AddressSpace : AddressSpaceUnderlyingType {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Const = 4,
+  Local = 5,
+
+  // NVPTX Backend Private:
+  Param = 101
 };
 
 namespace PTXLdStInstCode {
-enum AddressSpace {
-  GENERIC = 0,
-  GLOBAL = 1,
-  CONSTANT = 2,
-  SHARED = 3,
-  PARAM = 4,
-  LOCAL = 5
-};
 enum FromType {
   Unsigned = 0,
   Signed,

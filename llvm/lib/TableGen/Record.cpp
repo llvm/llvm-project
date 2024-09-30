@@ -226,22 +226,22 @@ std::string DagRecTy::getAsString() const {
 }
 
 static void ProfileRecordRecTy(FoldingSetNodeID &ID,
-                               ArrayRef<Record *> Classes) {
+                               ArrayRef<const Record *> Classes) {
   ID.AddInteger(Classes.size());
-  for (Record *R : Classes)
+  for (const Record *R : Classes)
     ID.AddPointer(R);
 }
 
 RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
-                              ArrayRef<Record *> UnsortedClasses) {
+                              ArrayRef<const Record *> UnsortedClasses) {
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
   if (UnsortedClasses.empty())
     return &RKImpl.AnyRecord;
 
   FoldingSet<RecordRecTy> &ThePool = RKImpl.RecordTypePool;
 
-  SmallVector<Record *, 4> Classes(UnsortedClasses);
-  llvm::sort(Classes, [](Record *LHS, Record *RHS) {
+  SmallVector<const Record *, 4> Classes(UnsortedClasses);
+  llvm::sort(Classes, [](const Record *LHS, const Record *RHS) {
     return LHS->getNameInitAsString() < RHS->getNameInitAsString();
   });
 
@@ -263,16 +263,16 @@ RecordRecTy *RecordRecTy::get(RecordKeeper &RK,
 #endif
 
   void *Mem = RKImpl.Allocator.Allocate(
-      totalSizeToAlloc<Record *>(Classes.size()), alignof(RecordRecTy));
+      totalSizeToAlloc<const Record *>(Classes.size()), alignof(RecordRecTy));
   RecordRecTy *Ty = new (Mem) RecordRecTy(RK, Classes.size());
   std::uninitialized_copy(Classes.begin(), Classes.end(),
-                          Ty->getTrailingObjects<Record *>());
+                          Ty->getTrailingObjects<const Record *>());
   ThePool.InsertNode(Ty, IP);
   return Ty;
 }
-RecordRecTy *RecordRecTy::get(Record *Class) {
+RecordRecTy *RecordRecTy::get(const Record *Class) {
   assert(Class && "unexpected null class");
-  return get(Class->getRecords(), Class);
+  return get(Class->getRecords(), {Class});
 }
 
 void RecordRecTy::Profile(FoldingSetNodeID &ID) const {
@@ -285,7 +285,7 @@ std::string RecordRecTy::getAsString() const {
 
   std::string Str = "{";
   bool First = true;
-  for (Record *R : getClasses()) {
+  for (const Record *R : getClasses()) {
     if (!First)
       Str += ", ";
     First = false;
@@ -295,11 +295,10 @@ std::string RecordRecTy::getAsString() const {
   return Str;
 }
 
-bool RecordRecTy::isSubClassOf(Record *Class) const {
-  return llvm::any_of(getClasses(), [Class](Record *MySuperClass) {
-                                      return MySuperClass == Class ||
-                                             MySuperClass->isSubClassOf(Class);
-                                    });
+bool RecordRecTy::isSubClassOf(const Record *Class) const {
+  return llvm::any_of(getClasses(), [Class](const Record *MySuperClass) {
+    return MySuperClass == Class || MySuperClass->isSubClassOf(Class);
+  });
 }
 
 bool RecordRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
@@ -310,9 +309,9 @@ bool RecordRecTy::typeIsConvertibleTo(const RecTy *RHS) const {
   if (!RTy)
     return false;
 
-  return llvm::all_of(RTy->getClasses(), [this](Record *TargetClass) {
-                                           return isSubClassOf(TargetClass);
-                                         });
+  return llvm::all_of(RTy->getClasses(), [this](const Record *TargetClass) {
+    return isSubClassOf(TargetClass);
+  });
 }
 
 bool RecordRecTy::typeIsA(const RecTy *RHS) const {
@@ -320,11 +319,11 @@ bool RecordRecTy::typeIsA(const RecTy *RHS) const {
 }
 
 static RecordRecTy *resolveRecordTypes(RecordRecTy *T1, RecordRecTy *T2) {
-  SmallVector<Record *, 4> CommonSuperClasses;
-  SmallVector<Record *, 4> Stack(T1->getClasses());
+  SmallVector<const Record *, 4> CommonSuperClasses;
+  SmallVector<const Record *, 4> Stack(T1->getClasses());
 
   while (!Stack.empty()) {
-    Record *R = Stack.pop_back_val();
+    const Record *R = Stack.pop_back_val();
 
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
@@ -838,7 +837,6 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         std::string S;
         raw_string_ostream OS(S);
         OS << *Def->getDef();
-        OS.flush();
         return StringInit::get(RK, S);
       } else {
         // Otherwise, print the value of the variable.
@@ -987,6 +985,32 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       }
     }
     break;
+
+  case LISTFLATTEN:
+    if (ListInit *LHSList = dyn_cast<ListInit>(LHS)) {
+      ListRecTy *InnerListTy = dyn_cast<ListRecTy>(LHSList->getElementType());
+      // list of non-lists, !listflatten() is a NOP.
+      if (!InnerListTy)
+        return LHS;
+
+      auto Flatten = [](ListInit *List) -> std::optional<std::vector<Init *>> {
+        std::vector<Init *> Flattened;
+        // Concatenate elements of all the inner lists.
+        for (Init *InnerInit : List->getValues()) {
+          ListInit *InnerList = dyn_cast<ListInit>(InnerInit);
+          if (!InnerList)
+            return std::nullopt;
+          for (Init *InnerElem : InnerList->getValues())
+            Flattened.push_back(InnerElem);
+        };
+        return Flattened;
+      };
+
+      auto Flattened = Flatten(LHSList);
+      if (Flattened)
+        return ListInit::get(*Flattened, InnerListTy->getElementType());
+    }
+    break;
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -1011,6 +1035,9 @@ std::string UnOpInit::getAsString() const {
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
   case LOG2 : Result = "!logtwo"; break;
+  case LISTFLATTEN:
+    Result = "!listflatten";
+    break;
   case REPR:
     Result = "!repr";
     break;
@@ -2134,8 +2161,8 @@ std::string ExistsOpInit::getAsString() const {
 
 RecTy *TypedInit::getFieldType(StringInit *FieldName) const {
   if (RecordRecTy *RecordType = dyn_cast<RecordRecTy>(getType())) {
-    for (Record *Rec : RecordType->getClasses()) {
-      if (RecordVal *Field = Rec->getValue(FieldName))
+    for (const Record *Rec : RecordType->getClasses()) {
+      if (const RecordVal *Field = Rec->getValue(FieldName))
         return Field->getType();
     }
   }
@@ -2803,7 +2830,7 @@ void Record::checkName() {
 }
 
 RecordRecTy *Record::getType() const {
-  SmallVector<Record *, 4> DirectSCs;
+  SmallVector<const Record *, 4> DirectSCs;
   getDirectSuperClasses(DirectSCs);
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
@@ -2854,7 +2881,8 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
   return false;
 }
 
-void Record::getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const {
+void Record::getDirectSuperClasses(
+    SmallVectorImpl<const Record *> &Classes) const {
   ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
 
   while (!SCs.empty()) {

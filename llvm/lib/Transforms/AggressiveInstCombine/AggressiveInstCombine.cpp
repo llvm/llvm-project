@@ -1052,6 +1052,13 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
+  // We want these instructions to be recognized as inlined instructions for the
+  // compare call, but we don't have a source location for the definition of
+  // that function, since we're generating that code now. Because the generated
+  // code is a viable point for a memory access error, we make the pragmatic
+  // choice here to directly use CI's location so that we have useful
+  // attribution for the generated code.
+  B.SetCurrentDebugLocation(CI->getDebugLoc());
 
   BasicBlock *BBCI = CI->getParent();
   BasicBlock *BBTail =

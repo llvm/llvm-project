@@ -370,12 +370,28 @@ bool any(double4);
 /// \param Val The input value.
 
 template <typename T, int N>
-_HLSL_INLINE vector<float, N> asfloat(vector<T, N> V) {
+constexpr vector<float, N> asfloat(vector<T, N> V) {
   return __detail::bit_cast<float, T, N>(V);
 }
 
-template <typename T> _HLSL_INLINE float asfloat(T F) {
+template <typename T> constexpr float asfloat(T F) {
   return __detail::bit_cast<float, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
+// asint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
+
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -414,12 +430,11 @@ float4 asin(float4);
 /// \brief Interprets the bit pattern of x as an unsigned integer.
 /// \param Val The input value.
 
-template <typename T, int N>
-_HLSL_INLINE vector<uint, N> asuint(vector<T, N> V) {
+template <typename T, int N> constexpr vector<uint, N> asuint(vector<T, N> V) {
   return __detail::bit_cast<uint, T, N>(V);
 }
 
-template <typename T> _HLSL_INLINE uint asuint(T F) {
+template <typename T> constexpr uint asuint(T F) {
   return __detail::bit_cast<uint, T>(F);
 }
 
@@ -913,6 +928,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
+
+//===----------------------------------------------------------------------===//
+// fmod builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T fmod(T x, T y)
+/// \brief Returns the linear interpolation of x to y.
+/// \param x [in] The dividend.
+/// \param y [in] The divisor.
+///
+/// Return the floating-point remainder of the x parameter divided by the y
+/// parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half fmod(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half2 fmod(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half3 fmod(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half4 fmod(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float fmod(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float2 fmod(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float3 fmod(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float4 fmod(float4, float4);
 
 //===----------------------------------------------------------------------===//
 // frac builtins

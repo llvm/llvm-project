@@ -1885,6 +1885,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FASIN;
     case Intrinsic::atan:
       return TargetOpcode::G_FATAN;
+    case Intrinsic::atan2:
+      return TargetOpcode::G_FATAN2;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
     case Intrinsic::bitreverse:
@@ -2198,7 +2200,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     for (const auto &Arg : CI.args())
       for (auto VReg : getOrCreateVRegs(*Arg))
         VRegs.push_back(VReg);
-    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, std::nullopt, VRegs);
+    MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
     return true;
   }
   case Intrinsic::dbg_declare: {
