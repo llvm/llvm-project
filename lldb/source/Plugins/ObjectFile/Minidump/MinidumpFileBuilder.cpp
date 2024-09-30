@@ -853,7 +853,7 @@ Status MinidumpFileBuilder::AddMemoryList() {
   uint64_t total_size = GetCurrentDataEndOffset();
   auto iterator = all_core_memory_vec.begin();
   while (iterator != all_core_memory_vec.end()) {
-    if (m_saved_stack_ranges.count(iterator->range.start()) > 0) {
+    if (m_thread_by_range_end.count(iterator->range.end()) > 0) {
       // We don't save stacks twice.
       ranges_32.push_back(*iterator);
       total_size +=
