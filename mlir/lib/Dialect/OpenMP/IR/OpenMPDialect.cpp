@@ -1683,6 +1683,37 @@ LogicalResult SingleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LoopWrapperInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult LoopWrapperInterface::verifyImpl() {
+  Operation *op = this->getOperation();
+  if (op->getNumRegions() != 1)
+    return emitOpError() << "loop wrapper contains multiple regions";
+
+  Region &region = op->getRegion(0);
+  if (!region.hasOneBlock())
+    return emitOpError() << "loop wrapper contains multiple blocks";
+
+  if (::llvm::range_size(region.getOps()) != 2)
+    return emitOpError()
+           << "loop wrapper does not contain exactly two nested ops";
+
+  Operation &firstOp = *region.op_begin();
+  Operation &secondOp = *(std::next(region.op_begin()));
+
+  if (!secondOp.hasTrait<OpTrait::IsTerminator>())
+    return emitOpError()
+           << "second nested op in loop wrapper is not a terminator";
+
+  if (!::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp))
+    return emitOpError() << "first nested op in loop wrapper is not "
+                            "another loop wrapper or `omp.loop_nest`";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // WsloopOp
 //===----------------------------------------------------------------------===//
 
@@ -1712,32 +1743,6 @@ void printWsloop(OpAsmPrinter &p, Operation *op, Region &region,
                               reductionSymbols);
   }
   p.printRegion(region, /*printEntryBlockArgs=*/false);
-}
-
-static LogicalResult verifyLoopWrapperInterface(Operation *op) {
-  if (op->getNumRegions() != 1)
-    return op->emitOpError() << "loop wrapper contains multiple regions";
-
-  Region &region = op->getRegion(0);
-  if (!region.hasOneBlock())
-    return op->emitOpError() << "loop wrapper contains multiple blocks";
-
-  if (::llvm::range_size(region.getOps()) != 2)
-    return op->emitOpError()
-           << "loop wrapper does not contain exactly two nested ops";
-
-  Operation &firstOp = *region.op_begin();
-  Operation &secondOp = *(std::next(region.op_begin()));
-
-  if (!secondOp.hasTrait<OpTrait::IsTerminator>())
-    return op->emitOpError()
-           << "second nested op in loop wrapper is not a terminator";
-
-  if (!::llvm::isa<LoopNestOp, LoopWrapperInterface>(firstOp))
-    return op->emitOpError() << "first nested op in loop wrapper is not "
-                                "another loop wrapper or `omp.loop_nest`";
-
-  return success();
 }
 
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
@@ -1770,9 +1775,6 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult WsloopOp::verify() {
-  if (verifyLoopWrapperInterface(*this).failed())
-    return failure();
-
   bool isCompositeChildLeaf =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
@@ -1829,9 +1831,6 @@ LogicalResult SimdOp::verify() {
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
 
-  if (verifyLoopWrapperInterface(*this).failed())
-    return failure();
-
   if (getNestedWrapper())
     return emitOpError() << "must wrap an 'omp.loop_nest' directly";
 
@@ -1870,9 +1869,6 @@ LogicalResult DistributeOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
-
-  if (verifyLoopWrapperInterface(*this).failed())
-    return failure();
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
@@ -2078,9 +2074,6 @@ LogicalResult TaskloopOp::verify() {
         "the grainsize clause and num_tasks clause are mutually exclusive and "
         "may not appear on the same taskloop directive");
   }
-
-  if (verifyLoopWrapperInterface(*this).failed())
-    return failure();
 
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())

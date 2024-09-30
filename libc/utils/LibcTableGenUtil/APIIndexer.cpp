@@ -25,8 +25,8 @@ static const char StandardSpecClassName[] = "StandardSpec";
 static const char PublicAPIClassName[] = "PublicAPI";
 
 static bool isa(const llvm::Record *Def, const llvm::Record *TypeClass) {
-  llvm::RecordRecTy *RecordType = Def->getType();
-  llvm::ArrayRef<llvm::Record *> Classes = RecordType->getClasses();
+  const llvm::RecordRecTy *RecordType = Def->getType();
+  llvm::ArrayRef<const llvm::Record *> Classes = RecordType->getClasses();
   // We want exact types. That is, we don't want the classes listed in
   // spec.td to be subclassed. Hence, we do not want the record |Def|
   // to be of more than one class type..

@@ -1341,13 +1341,6 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
-  // Allocate spill slots for WWM reserved VGPRs.
-  for (Register Reg : FuncInfo->getWWMReservedRegs()) {
-    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-    FuncInfo->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
-                               TRI->getSpillAlign(*RC));
-  }
-
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
                                && EnableSpillVGPRToAGPR;
 
@@ -1573,11 +1566,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isChainFunction() && !MF.getFrameInfo().hasTailCall())
     return;
 
-  MFI->shiftSpillPhysVGPRsToLowestRange(MF);
-
   TargetFrameLowering::determineCalleeSaves(MF, SavedVGPRs, RS);
-  if (MFI->isEntryFunction())
-    return;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -1587,19 +1576,9 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   MachineInstr *ReturnMI = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      // WRITELANE instructions used for SGPR spills can overwrite the inactive
-      // lanes of VGPRs and callee must spill and restore them even if they are
-      // marked Caller-saved.
-
-      // TODO: Handle this elsewhere at an early point. Walking through all MBBs
-      // here would be a bad heuristic. A better way should be by calling
-      // allocateWWMSpill during the regalloc pipeline whenever a physical
-      // register is allocated for the intended virtual registers.
-      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR)
-        MFI->allocateWWMSpill(MF, MI.getOperand(0).getReg());
-      else if (MI.getOpcode() == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
-        MFI->allocateWWMSpill(MF, MI.getOperand(1).getReg());
-      else if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
+      // TODO: Walking through all MBBs here would be a bad heuristic. Better
+      // handle them elsewhere.
+      if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
         NeedExecCopyReservedReg = true;
       else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
                MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
@@ -1614,6 +1593,23 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     }
   }
 
+  SmallVector<Register> SortedWWMVGPRs;
+  for (Register Reg : MFI->getWWMReservedRegs()) {
+    // The shift-back is needed only for the VGPRs used for SGPR spills and they
+    // are of 32-bit size. SIPreAllocateWWMRegs pass can add tuples into WWM
+    // reserved registers.
+    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+    if (TRI->getRegSizeInBits(*RC) > 32)
+      continue;
+    SortedWWMVGPRs.push_back(Reg);
+  }
+
+  sort(SortedWWMVGPRs, std::greater<Register>());
+  MFI->shiftWwmVGPRsToLowestRange(MF, SortedWWMVGPRs, SavedVGPRs);
+
+  if (MFI->isEntryFunction())
+    return;
+
   // Remove any VGPRs used in the return value because these do not need to be saved.
   // This prevents CSR restore from clobbering return VGPRs.
   if (ReturnMI) {
@@ -1621,6 +1617,13 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
       if (Op.isReg())
         SavedVGPRs.reset(Op.getReg());
     }
+  }
+
+  // Create the stack objects for WWM registers now.
+  for (Register Reg : MFI->getWWMReservedRegs()) {
+    const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+    MFI->allocateWWMSpill(MF, Reg, TRI->getSpillSize(*RC),
+                          TRI->getSpillAlign(*RC));
   }
 
   // Ignore the SGPRs the default implementation found.
@@ -1638,14 +1641,6 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // allow the default insertion to handle them.
   for (auto &Reg : MFI->getWWMSpills())
     SavedVGPRs.reset(Reg.first);
-
-  // Mark all lane VGPRs as BB LiveIns.
-  for (MachineBasicBlock &MBB : MF) {
-    for (auto &Reg : MFI->getWWMSpills())
-      MBB.addLiveIn(Reg.first);
-
-    MBB.sortUniqueLiveIns();
-  }
 }
 
 void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,

@@ -5459,6 +5459,17 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       I = BVHead;
     }
 
+    auto CompareByBasicBlocks = [&](BasicBlock *BB1, BasicBlock *BB2) {
+      assert(BB1 != BB2 && "Expected different basic blocks.");
+      auto *NodeA = DT->getNode(BB1);
+      auto *NodeB = DT->getNode(BB2);
+      assert(NodeA && "Should only process reachable instructions");
+      assert(NodeB && "Should only process reachable instructions");
+      assert((NodeA == NodeB) ==
+                 (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
+             "Different nodes should have different DFS numbers");
+      return NodeA->getDFSNumIn() < NodeB->getDFSNumIn();
+    };
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
@@ -5471,8 +5482,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());
       auto *FirstUserOfPhi2 = cast<Instruction>(*V2->user_begin());
       if (FirstUserOfPhi1->getParent() != FirstUserOfPhi2->getParent())
-        return DT->dominates(FirstUserOfPhi1->getParent(),
-                             FirstUserOfPhi2->getParent());
+        return CompareByBasicBlocks(FirstUserOfPhi1->getParent(),
+                                    FirstUserOfPhi2->getParent());
       auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1);
       auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2);
       auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1);
@@ -5489,8 +5500,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         if (UserBVHead[I1] == UserBVHead[I2])
           return getElementIndex(IE1) < getElementIndex(IE2);
         if (UserBVHead[I1]->getParent() != UserBVHead[I2]->getParent())
-          return DT->dominates(UserBVHead[I1]->getParent(),
-                               UserBVHead[I2]->getParent());
+          return CompareByBasicBlocks(UserBVHead[I1]->getParent(),
+                                      UserBVHead[I2]->getParent());
         return UserBVHead[I1]->comesBefore(UserBVHead[I2]);
       }
       if (EE1 && !EE2)
@@ -5500,16 +5511,16 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       if (EE1 && EE2) {
         if (EE1->getOperand(0) == EE2->getOperand(0))
           return getElementIndex(EE1) < getElementIndex(EE2);
-        auto *I1 = dyn_cast<Instruction>(EE1->getOperand(0));
-        if (I1 && !I2)
+        auto *Inst1 = dyn_cast<Instruction>(EE1->getOperand(0));
+        if (Inst1 && !I2)
           return true;
-        if (!I1 && I2)
+        if (!Inst1 && I2)
           return false;
-        auto *I2 = dyn_cast<Instruction>(EE2->getOperand(0));
-        if (I1 && I2) {
-          if (I1->getParent() != I2->getParent())
-            return DT->dominates(I1->getParent(), I2->getParent());
-          return I1->comesBefore(I2);
+        auto *Inst2 = dyn_cast<Instruction>(EE2->getOperand(0));
+        if (Inst1 && Inst2) {
+          if (Inst1->getParent() != Inst2->getParent())
+            return CompareByBasicBlocks(Inst1->getParent(), Inst2->getParent());
+          return Inst1->comesBefore(Inst2);
         }
         auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
         auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
@@ -5519,9 +5530,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
           return false;
         if (P1 && P2)
           return P1->getArgNo() < P2->getArgNo();
-        // TODO: add analysis for other value kinds.
-        return EE1->getOperand(0)->getValueID() <
-               EE2->getOperand(0)->getValueID();
+        return false;
       }
       return false;
     };
@@ -9424,10 +9433,18 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       bool NeedShuffle =
           count(VL, *It) > 1 &&
           (VL.front() != *It || !all_of(VL.drop_front(), IsaPred<UndefValue>));
-      if (!NeedShuffle)
+      if (!NeedShuffle) {
+        if (isa<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          return TTI.getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+              std::distance(VL.begin(), It) * getNumElements(ScalarTy),
+              cast<FixedVectorType>(ScalarTy));
+        }
         return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                       CostKind, std::distance(VL.begin(), It),
                                       PoisonValue::get(VecTy), *It);
+      }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
