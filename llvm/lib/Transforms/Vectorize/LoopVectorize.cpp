@@ -408,7 +408,7 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 /// the following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
-///   3) Returns upper bound estimate if known, and if CanUseConstantMax.
+///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
 ///   4) Returns std::nullopt if all of the above failed.
 static std::optional<unsigned>
 getSmallBestKnownTC(ScalarEvolution &SE, Loop *L,
