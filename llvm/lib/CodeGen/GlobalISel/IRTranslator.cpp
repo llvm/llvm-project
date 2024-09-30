@@ -3193,15 +3193,16 @@ bool IRTranslator::translateInsertVector(const User &U,
       return translateCopy(U, *U.getOperand(0), MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
-      // We are inserting an illegal fixed vector into a fixed vector, use the
-      // scalar as it is not a legal vector type in LLT.
+      // We are inserting an illegal fixed vector into a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
       Register Idx = getOrCreateVReg(*CI);
       MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, Idx);
       return true;
     }
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
-      // We are inserting an illegal fixed vector into a scalable vector, use
-      // a scalar element insert.
+      // We are inserting an illegal fixed vector into a scalable
+      // vector, use a scalar element insert.
       LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
@@ -3268,15 +3269,16 @@ bool IRTranslator::translateExtractVector(const User &U,
       return translateCopy(U, *U.getOperand(0), MIRBuilder);
     }
     if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
-      // We are extracting a fixed vector from a fixed vector, use the
-      // scalar as it is not a legal vector type in LLT.
+      // We are extracting an illegal fixed vector from a legal fixed
+      // vector, use the scalar as it is not a legal vector type in
+      // LLT.
       Register Idx = getOrCreateVReg(*CI);
       MIRBuilder.buildExtractVectorElement(Res, Vec, Idx);
       return true;
     }
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
-      // We are extracting a fixed vector from a scalable vector, use
-      // a scalar element extract.
+      // We are extracting an illegal fixed vector from a scalable
+      // vector, use a scalar element extract.
       LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
