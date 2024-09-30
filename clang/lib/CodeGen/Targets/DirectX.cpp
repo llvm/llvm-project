@@ -46,14 +46,14 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
     // convert element type
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
 
-    const char* TypeName = ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
-    SmallVector<unsigned, 3> Ints = {
-      /*IsWriteable*/ ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV,
-      /*IsROV*/ ResAttrs.IsROV
-    };
+    const char *TypeName =
+        ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
+    SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
+                                         llvm::dxil::ResourceClass::UAV,
+                                     /*IsROV*/ ResAttrs.IsROV};
     if (!ResAttrs.RawBuffer)
       Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
-    
+
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
   case llvm::dxil::ResourceClass::CBuffer:
