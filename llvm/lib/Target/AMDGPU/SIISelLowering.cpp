@@ -6797,8 +6797,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
 
   // Special case: for shifts, the RHS always needs a zext.
-  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
-      Op.getOpcode() == ISD::SRA)
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
   else
     RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
