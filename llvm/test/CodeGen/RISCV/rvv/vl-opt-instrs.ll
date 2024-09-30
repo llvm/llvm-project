@@ -147,7 +147,7 @@ define <vscale x 4 x i32> @vrsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwaddu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwaddu.vv:
+; NOVLOPT-LABEL: vwaddu_vv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwaddu.vv v12, v8, v10
@@ -155,7 +155,7 @@ define <vscale x 4 x i64> @vwaddu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwaddu.vv:
+; VLOPT-LABEL: vwaddu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwaddu.vv v12, v8, v10
@@ -168,7 +168,7 @@ define <vscale x 4 x i64> @vwaddu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i64> @vwaddu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwaddu.vx:
+; NOVLOPT-LABEL: vwaddu_vx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwaddu.vx v12, v8, a0
@@ -176,7 +176,7 @@ define <vscale x 4 x i64> @vwaddu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwaddu.vx:
+; VLOPT-LABEL: vwaddu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwaddu.vx v12, v8, a0
@@ -189,7 +189,7 @@ define <vscale x 4 x i64> @vwaddu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwsubu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsubu.vv:
+; NOVLOPT-LABEL: vwsubu_vv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsubu.vv v12, v8, v10
@@ -197,7 +197,7 @@ define <vscale x 4 x i64> @vwsubu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsubu.vv:
+; VLOPT-LABEL: vwsubu_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsubu.vv v12, v8, v10
@@ -210,7 +210,7 @@ define <vscale x 4 x i64> @vwsubu_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i64> @vwsubu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsubu.vx:
+; NOVLOPT-LABEL: vwsubu_vx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsubu.vx v12, v8, a0
@@ -218,7 +218,7 @@ define <vscale x 4 x i64> @vwsubu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsubu.vx:
+; VLOPT-LABEL: vwsubu_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsubu.vx v12, v8, a0
@@ -231,7 +231,7 @@ define <vscale x 4 x i64> @vwsubu_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwadd.vv:
+; NOVLOPT-LABEL: vwadd_vv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwadd.vv v12, v8, v10
@@ -239,7 +239,7 @@ define <vscale x 4 x i64> @vwadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwadd.vv:
+; VLOPT-LABEL: vwadd_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwadd.vv v12, v8, v10
@@ -252,7 +252,7 @@ define <vscale x 4 x i64> @vwadd_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vwadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwadd.vx:
+; NOVLOPT-LABEL: vwadd_vx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwadd.vx v12, v8, a0
@@ -260,7 +260,7 @@ define <vscale x 4 x i64> @vwadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwadd.vx:
+; VLOPT-LABEL: vwadd_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwadd.vx v12, v8, a0
@@ -273,7 +273,7 @@ define <vscale x 4 x i64> @vwadd_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsub.vv:
+; NOVLOPT-LABEL: vwsub_vv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsub.vv v12, v8, v10
@@ -281,7 +281,7 @@ define <vscale x 4 x i64> @vwsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsub.vv:
+; VLOPT-LABEL: vwsub_vv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsub.vv v12, v8, v10
@@ -294,7 +294,7 @@ define <vscale x 4 x i64> @vwsub_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vwsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsub.vx:
+; NOVLOPT-LABEL: vwsub_vx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsub.vx v12, v8, a0
@@ -302,7 +302,7 @@ define <vscale x 4 x i64> @vwsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsub.vx:
+; VLOPT-LABEL: vwsub_vx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsub.vx v12, v8, a0
@@ -315,7 +315,7 @@ define <vscale x 4 x i64> @vwsub_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwaddu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwaddu.wv:
+; NOVLOPT-LABEL: vwaddu_wv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwaddu.wv v8, v8, v12
@@ -323,7 +323,7 @@ define <vscale x 4 x i64> @vwaddu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwaddu.wv:
+; VLOPT-LABEL: vwaddu_wv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwaddu.wv v8, v8, v12
@@ -336,7 +336,7 @@ define <vscale x 4 x i64> @vwaddu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i64> @vwaddu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwaddu.wx:
+; NOVLOPT-LABEL: vwaddu_wx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwaddu.wx v8, v8, a0
@@ -344,7 +344,7 @@ define <vscale x 4 x i64> @vwaddu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwaddu.wx:
+; VLOPT-LABEL: vwaddu_wx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwaddu.wx v8, v8, a0
@@ -357,7 +357,7 @@ define <vscale x 4 x i64> @vwaddu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwsubu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsubu.wv:
+; NOVLOPT-LABEL: vwsubu_wv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsubu.wv v8, v8, v12
@@ -365,7 +365,7 @@ define <vscale x 4 x i64> @vwsubu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsubu.wv:
+; VLOPT-LABEL: vwsubu_wv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsubu.wv v8, v8, v12
@@ -378,7 +378,7 @@ define <vscale x 4 x i64> @vwsubu_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i64> @vwsubu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsubu.wx:
+; NOVLOPT-LABEL: vwsubu_wx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsubu.wx v8, v8, a0
@@ -386,7 +386,7 @@ define <vscale x 4 x i64> @vwsubu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsubu.wx:
+; VLOPT-LABEL: vwsubu_wx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsubu.wx v8, v8, a0
@@ -399,7 +399,7 @@ define <vscale x 4 x i64> @vwsubu_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwadd_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwadd.wv:
+; NOVLOPT-LABEL: vwadd_wv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwadd.wv v8, v8, v12
@@ -407,7 +407,7 @@ define <vscale x 4 x i64> @vwadd_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwadd.wv:
+; VLOPT-LABEL: vwadd_wv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwadd.wv v8, v8, v12
@@ -420,7 +420,7 @@ define <vscale x 4 x i64> @vwadd_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vwadd_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwadd.wx:
+; NOVLOPT-LABEL: vwadd_wx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwadd.wx v8, v8, a0
@@ -428,7 +428,7 @@ define <vscale x 4 x i64> @vwadd_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwadd.wx:
+; VLOPT-LABEL: vwadd_wx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwadd.wx v8, v8, a0
@@ -441,7 +441,7 @@ define <vscale x 4 x i64> @vwadd_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i64> @vwsub_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsub.wv:
+; NOVLOPT-LABEL: vwsub_wv:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsub.wv v8, v8, v12
@@ -449,7 +449,7 @@ define <vscale x 4 x i64> @vwsub_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsub.wv:
+; VLOPT-LABEL: vwsub_wv:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsub.wv v8, v8, v12
@@ -462,7 +462,7 @@ define <vscale x 4 x i64> @vwsub_wv(<vscale x 4 x i64> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vwsub_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsub.wx:
+; NOVLOPT-LABEL: vwsub_wx:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vwsub.wx v8, v8, a0
@@ -470,7 +470,7 @@ define <vscale x 4 x i64> @vwsub_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsub.wx:
+; VLOPT-LABEL: vwsub_wx:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vwsub.wx v8, v8, a0
@@ -483,7 +483,7 @@ define <vscale x 4 x i64> @vwsub_wx(<vscale x 4 x i64> %a, i32 %b, iXLen %vl) {
 }
 
 define <vscale x 4 x i32> @vsext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vsext.vf2:
+; NOVLOPT-LABEL: vsext_vf2:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vsext.vf2 v12, v8
@@ -491,7 +491,7 @@ define <vscale x 4 x i32> @vsext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vsext.vf2:
+; VLOPT-LABEL: vsext_vf2:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vsext.vf2 v12, v8
@@ -503,7 +503,7 @@ define <vscale x 4 x i32> @vsext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i32> @vsext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vsext.vf4:
+; NOVLOPT-LABEL: vsext_vf4:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vsext.vf4 v12, v8
@@ -511,7 +511,7 @@ define <vscale x 4 x i32> @vsext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vsext.vf4:
+; VLOPT-LABEL: vsext_vf4:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vsext.vf4 v12, v8
@@ -523,7 +523,7 @@ define <vscale x 4 x i32> @vsext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vsext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vsext.vf8:
+; NOVLOPT-LABEL: vsext_vf8:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; NOVLOPT-NEXT:    vsext.vf8 v16, v8
@@ -531,7 +531,7 @@ define <vscale x 4 x i64> @vsext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v16, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vsext.vf8:
+; VLOPT-LABEL: vsext_vf8:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; VLOPT-NEXT:    vsext.vf8 v16, v8
@@ -543,7 +543,7 @@ define <vscale x 4 x i64> @vsext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b
 }
 
 define <vscale x 4 x i32> @vzext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vzext.vf2:
+; NOVLOPT-LABEL: vzext_vf2:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vzext.vf2 v12, v8
@@ -551,7 +551,7 @@ define <vscale x 4 x i32> @vzext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vzext.vf2:
+; VLOPT-LABEL: vzext_vf2:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vzext.vf2 v12, v8
@@ -563,7 +563,7 @@ define <vscale x 4 x i32> @vzext_vf2(<vscale x 4 x i16> %a, <vscale x 4 x i32> %
 }
 
 define <vscale x 4 x i32> @vzext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vzext.vf4:
+; NOVLOPT-LABEL: vzext_vf4:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vzext.vf4 v12, v8
@@ -571,7 +571,7 @@ define <vscale x 4 x i32> @vzext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vzext.vf4:
+; VLOPT-LABEL: vzext_vf4:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vzext.vf4 v12, v8
@@ -583,7 +583,7 @@ define <vscale x 4 x i32> @vzext_vf4(<vscale x 4 x i8> %a, <vscale x 4 x i32> %b
 }
 
 define <vscale x 4 x i64> @vzext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vzext.vf8:
+; NOVLOPT-LABEL: vzext_vf8:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; NOVLOPT-NEXT:    vzext.vf8 v16, v8
@@ -591,7 +591,7 @@ define <vscale x 4 x i64> @vzext_vf8(<vscale x 4 x i8> %a, <vscale x 4 x i64> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v16, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vzext.vf8:
+; VLOPT-LABEL: vzext_vf8:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; VLOPT-NEXT:    vzext.vf8 v16, v8
@@ -847,7 +847,7 @@ define <vscale x 4 x i32> @vwmaccu_vx(<vscale x 4 x i16> %a, i16 %b, iXLen %vl) 
 }
 
 define <vscale x 4 x i32> @vmv_v_i(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
-; NOVLOPT-LABEL: vmv.v.i:
+; NOVLOPT-LABEL: vmv_v_i:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmv.v.i v10, 5
@@ -855,7 +855,7 @@ define <vscale x 4 x i32> @vmv_v_i(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vmv.v.i:
+; VLOPT-LABEL: vmv_v_i:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmv.v.i v10, 5
@@ -867,7 +867,7 @@ define <vscale x 4 x i32> @vmv_v_i(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 }
 
 define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
-; NOVLOPT-LABEL: vmv.v.x:
+; NOVLOPT-LABEL: vmv_v_x:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vmv.v.x v10, a0
@@ -875,7 +875,7 @@ define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 ; NOVLOPT-NEXT:    vadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vmv.v.x:
+; VLOPT-LABEL: vmv_v_x:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmv.v.x v10, a0
@@ -887,7 +887,7 @@ define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 }
 
 define <vscale x 4 x i32> @vwsll_vi(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b, iXLen %vl) {
-; NOVLOPT-LABEL: vwsll.vi:
+; NOVLOPT-LABEL: vwsll_vi:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; NOVLOPT-NEXT:    vwsll.vi v12, v8, 1
@@ -895,7 +895,7 @@ define <vscale x 4 x i32> @vwsll_vi(<vscale x 4 x i16> %a, <vscale x 4 x i32> %b
 ; NOVLOPT-NEXT:    vadd.vv v8, v12, v10
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vwsll.vi:
+; VLOPT-LABEL: vwsll_vi:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; VLOPT-NEXT:    vwsll.vi v12, v8, 1
