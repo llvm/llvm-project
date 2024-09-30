@@ -8,7 +8,7 @@
 
 // <string>
 
-// allocate/deallocate must match.
+// Make sure the size we allocate and deallocate match. See https://github.com/llvm/llvm-project/pull/90292.
 
 #include <string>
 #include <cassert>
