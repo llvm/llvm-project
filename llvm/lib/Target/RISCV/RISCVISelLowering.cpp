@@ -8774,9 +8774,8 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   if ((ValVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
       ValVT == MVT::bf16) {
-    // If we don't have vfmv.s.f for f16/bf16, insert into fmv.x.h first
+    // If we don't have vfmv.s.f for f16/bf16, use fmv.x.h first.
     MVT IntVT = VecVT.changeTypeToInteger();
-    // SDValue IntVal = DAG.getBitcast(IntVT.getVectorElementType(), Val);
     SDValue IntInsert = DAG.getNode(
         ISD::INSERT_VECTOR_ELT, DL, IntVT, DAG.getBitcast(IntVT, Vec),
         DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Val), Idx);
