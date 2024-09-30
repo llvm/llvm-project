@@ -24,12 +24,17 @@ using namespace mlir::tensor;
 PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
                                     Value pad, bool nofold, Location loc,
                                     OpBuilder &b) {
+
+  // TODO: Either relax or turn this into a failure
+  assert(!ShapedType::isDynamicShape(type.getShape()) &&
+         "The output type is dynamic - that's not supported ATM.");
+
+  // Init "low" and "high" padding values ("low" is kept as is, "high" is
+  // computed below).
   SmallVector<OpFoldResult> low(type.getRank(), b.getIndexAttr(0));
   SmallVector<OpFoldResult> high(type.getRank(), b.getIndexAttr(0));
+
   for (const auto &en : enumerate(type.getShape())) {
-    // Pad only the static dimensions of the result tensor type.
-    if (ShapedType::isDynamic(en.value()))
-      continue;
     // Compute the padding width.
     AffineExpr d0;
     bindDims(b.getContext(), d0);
