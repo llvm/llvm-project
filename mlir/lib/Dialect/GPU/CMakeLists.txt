@@ -67,9 +67,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRSideEffectInterfaces
-  MLIRSPIRVTarget
   MLIRSupport
-  MLIRROCDLTarget
   MLIRTransformUtils
   MLIRVectorDialect
   )

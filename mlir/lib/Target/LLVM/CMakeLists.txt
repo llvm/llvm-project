@@ -125,7 +125,6 @@ add_mlir_dialect_library(MLIRROCDLTarget
   MLIRSupport
   MLIRGPUDialect
   MLIRTargetLLVM
-  MLIRROCDLToLLVMIRTranslation
   )
 
 if(MLIR_ENABLE_ROCM_CONVERSIONS)
