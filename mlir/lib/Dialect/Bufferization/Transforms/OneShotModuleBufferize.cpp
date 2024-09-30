@@ -313,8 +313,8 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
         return WalkResult::skip();
 
       FunctionOpInterface calledFunction = getCalledFunction(callOp);
-      assert(calledFunction &&
-             "could not retrieved called FunctionOpInterface");
+      if (!calledFunction)
+        return WalkResult::skip();
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
       if (!hasTensorSignature(calledFunction))
