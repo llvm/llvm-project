@@ -80,6 +80,33 @@ GetDemangledType(swift::Demangle::Demangler &dem, llvm::StringRef name) {
   return GetType(dem.demangleSymbol(name));
 }
 
+/// Wrap node in Global/TypeMangling/Type.
+static swift::Demangle::NodePointer
+mangleType(swift::Demangle::Demangler &dem,
+           swift::Demangle::NodePointer typeNode) {
+  auto *global = dem.createNode(Node::Kind::Global);
+  auto *typeMangling = dem.createNode(Node::Kind::TypeMangling);
+  global->addChild(typeMangling, dem);
+  auto *type = dem.createNode(Node::Kind::Type);
+  typeMangling->addChild(type, dem);
+  type->addChild(typeNode, dem);
+  return global;
+}
+
+/// Produce a type mangling for a class.
+inline ManglingErrorOr<std::string> mangleClass(swift::Demangle::Demangler &dem,
+                                                llvm::StringRef moduleName,
+                                                llvm::StringRef className) {
+  auto *classNode = dem.createNode(Node::Kind::Class);
+  auto *module =
+      dem.createNodeWithAllocatedText(Node::Kind::Module, moduleName);
+  auto *identifier =
+      dem.createNodeWithAllocatedText(Node::Kind::Identifier, className);
+  classNode->addChild(module, dem);
+  classNode->addChild(identifier, dem);
+  return mangleNode(mangleType(dem, classNode));
+}
+
 } // namespace swift_demangle
 } // namespace lldb_private
 
