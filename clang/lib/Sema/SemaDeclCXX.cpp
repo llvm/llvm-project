@@ -2629,10 +2629,6 @@ bool Sema::isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS) {
   return false;
 }
 
-/// Check the validity of a C++ base class specifier.
-///
-/// \returns a new CXXBaseSpecifier if well-formed, emits diagnostics
-/// and returns NULL otherwise.
 CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                                            SourceRange SpecifierRange,
                                            bool Virtual, AccessSpecifier Access,

@@ -1286,31 +1286,6 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
-  // C++23 [temp.dep.general]p2:
-  //   The component name of an unqualified-id is dependent if
-  //   - it is a conversion-function-id whose conversion-type-id
-  //     is dependent, or
-  //   - it is operator= and the current class is a templated entity, or
-  //   - the unqualified-id is the postfix-expression in a dependent call.
-  if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
-      Name.getCXXNameType()->isDependentType()) {
-    R.setNotFoundInCurrentInstantiation();
-    return false;
-  }
-
-  // If this is the name of an implicitly-declared special member function,
-  // go through the scope stack to implicitly declare
-  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
-    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
-      if (DeclContext *DC = PreS->getEntity()) {
-        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
-            Name.getCXXOverloadedOperator() == OO_Equal) {
-          R.setNotFoundInCurrentInstantiation();
-          return false;
-        }
-        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
-      }
-  }
 
   // C++23 [temp.dep.general]p2:
   //   The component name of an unqualified-id is dependent if

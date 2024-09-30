@@ -3980,10 +3980,6 @@ public:
   void ActOnReenterFunctionContext(Scope *S, Decl *D);
   void ActOnExitFunctionContext();
 
-  /// getCurLocalScopeDecl - Return the Decl for either of:
-  /// block, lambda, captured statement, function, or nullptr.
-  Decl *getCurLocalScopeDecl();
-
   /// Add this decl to the scope shadowed decl chains.
   void PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext = true);
 
@@ -6731,6 +6727,10 @@ public:
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
                                   bool HasTrailingLParen);
 
+  /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
+  /// declaration name, generally during template instantiation.
+  /// There's a large number of things which don't need to be done along
+  /// this path.
   ExprResult BuildQualifiedDeclarationNameExpr(
       CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
       bool IsAddressOfOperand, TypeSourceInfo **RecoveryTSI = nullptr);
