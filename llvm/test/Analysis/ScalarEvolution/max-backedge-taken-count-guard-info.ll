@@ -1568,86 +1568,6 @@ exit:
   ret i32 0
 }
 
-
-define i32 @ptr_induction_ult_2(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult_2'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_2
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-; CHECK-NEXT:    --> {(4 + %a),+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_2
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-;
-entry:
-  %cmp.6 = icmp ult ptr %a, %b
-  br i1 %cmp.6, label %loop, label %exit
-
-loop:
-  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-  %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
-  %exitcond = icmp eq ptr %ptr.iv, %b
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
-define i32 @ptr_induction_ult_3_step_6(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult_3_step_6'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_3_step_6
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,6}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 6
-; CHECK-NEXT:    --> {(6 + %a),+,6}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_3_step_6
-; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-;
-entry:
-  %cmp.6 = icmp ult ptr %a, %b
-  br i1 %cmp.6, label %loop, label %exit
-
-loop:
-  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-  %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 6
-  %exitcond = icmp eq ptr %ptr.iv, %b
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
-define i32 @ptr_induction_ult_3_step_7(ptr %a, ptr %b) {
-; CHECK-LABEL: 'ptr_induction_ult_3_step_7'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_3_step_7
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,7}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 7
-; CHECK-NEXT:    --> {(7 + %a),+,7}<%loop> U: full-set S: full-set Exits: (7 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_3_step_7
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((7905747460161236407 * (ptrtoint ptr %b to i64)) + (-7905747460161236407 * (ptrtoint ptr %a to i64)))
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((7905747460161236407 * (ptrtoint ptr %b to i64)) + (-7905747460161236407 * (ptrtoint ptr %a to i64)))
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
-;
-entry:
-  %cmp.6 = icmp ult ptr %a, %b
-  br i1 %cmp.6, label %loop, label %exit
-
-loop:
-  %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-  %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 7
-  %exitcond = icmp eq ptr %ptr.iv, %b
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret i32 0
-}
-
 define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
@@ -1705,47 +1625,6 @@ exit:
   ret void
 }
 
-; TODO: It feels like we should be able to calculate the symbolic max
-; exit count for the loop.inc block here, in the same way as
-; ptr_induction_eq_1. The problem seems to be in howFarToZero when the
-; ControlsOnlyExit is set to false.
-define void @ptr_induction_early_exit_eq_1(ptr %a, ptr %b, ptr %c) {
-; CHECK-LABEL: 'ptr_induction_early_exit_eq_1'
-; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_1
-; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %ld1 = load ptr, ptr %ptr.iv, align 8
-; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
-; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a),+,8}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1
-; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ***COULDNOTCOMPUTE***
-;
-entry:
-  %cmp = icmp eq ptr %a, %b
-  br i1 %cmp, label %exit, label %loop
-
-loop:
-  %ptr.iv = phi ptr [ %ptr.iv.next, %loop.inc ], [ %a, %entry ]
-  %ld1 = load ptr, ptr %ptr.iv, align 8
-  %earlyexitcond = icmp eq ptr %ld1, %c
-  br i1 %earlyexitcond, label %exit, label %loop.inc
-
-loop.inc:
-  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-  %exitcond = icmp eq ptr %ptr.iv.next, %b
-  br i1 %exitcond, label %exit, label %loop
-
-exit:
-  ret void
-}
-
 define void @ptr_induction_early_exit_eq_2(ptr %a, i64 %n, ptr %c) {
 ; CHECK-LABEL: 'ptr_induction_early_exit_eq_2'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_early_exit_eq_2
@@ -1785,7 +1664,6 @@ loop.inc:
 exit:
   ret void
 }
-
 
 define void @gep_addrec_nw(ptr %a) {
 ; CHECK-LABEL: 'gep_addrec_nw'

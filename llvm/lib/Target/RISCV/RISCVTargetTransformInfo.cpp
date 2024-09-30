@@ -1182,10 +1182,10 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      return DstLT.first *
-                 getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                         DstLT.second, CostKind) +
+      // vmerge.vim v8, v8, -1, v0 (repeated per split)
+      return getRISCVInstructionCost(RISCV::VMV_V_I, DstLT.second, CostKind) +
+             DstLT.first * getRISCVInstructionCost(RISCV::VMERGE_VIM,
+                                                   DstLT.second, CostKind) +
              DstLT.first - 1;
     }
     break;

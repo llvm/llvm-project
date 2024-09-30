@@ -1,288 +1,26 @@
-//===- SandboxIR.h ----------------------------------------------*- C++ -*-===//
+//===- Instruction.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Sandbox IR is a lightweight overlay transactional IR on top of LLVM IR.
-// Features:
-// - You can save/rollback the state of the IR at any time.
-// - Any changes made to Sandbox IR will automatically update the underlying
-//   LLVM IR so both IRs are always in sync.
-// - Feels like LLVM IR, similar API.
-//
-// SandboxIR forms a class hierarchy that resembles that of LLVM IR
-// but is in the `sandboxir` namespace:
-//
-// namespace sandboxir {
-//
-// Value -+- Argument
-//        |
-//        +- BasicBlock
-//        |
-//        +- User ------+- Constant ------ Function
-//                      |
-//                      +- Instruction -+- BinaryOperator
-//                                      |
-//                                      +- BranchInst
-//                                      |
-//                                      +- CastInst --------+- AddrSpaceCastInst
-//                                      |                   |
-//                                      |                   +- BitCastInst
-//                                      |                   |
-//                                      |                   +- FPExtInst
-//                                      |                   |
-//                                      |                   +- FPToSIInst
-//                                      |                   |
-//                                      |                   +- FPToUIInst
-//                                      |                   |
-//                                      |                   +- FPTruncInst
-//                                      |                   |
-//                                      |                   +- IntToPtrInst
-//                                      |                   |
-//                                      |                   +- PtrToIntInst
-//                                      |                   |
-//                                      |                   +- SExtInst
-//                                      |                   |
-//                                      |                   +- SIToFPInst
-//                                      |                   |
-//                                      |                   +- TruncInst
-//                                      |                   |
-//                                      |                   +- UIToFPInst
-//                                      |                   |
-//                                      |                   +- ZExtInst
-//                                      |
-//                                      +- CallBase --------+- CallBrInst
-//                                      |                   |
-//                                      |                   +- CallInst
-//                                      |                   |
-//                                      |                   +- InvokeInst
-//                                      |
-//                                      +- CmpInst ---------+- ICmpInst
-//                                      |                   |
-//                                      |                   +- FCmpInst
-//                                      |
-//                                      +- ExtractElementInst
-//                                      |
-//                                      +- GetElementPtrInst
-//                                      |
-//                                      +- InsertElementInst
-//                                      |
-//                                      +- OpaqueInst
-//                                      |
-//                                      +- PHINode
-//                                      |
-//                                      +- ReturnInst
-//                                      |
-//                                      +- SelectInst
-//                                      |
-//                                      +- ShuffleVectorInst
-//                                      |
-//                                      +- ExtractValueInst
-//                                      |
-//                                      +- InsertValueInst
-//                                      |
-//                                      +- StoreInst
-//                                      |
-//                                      +- UnaryInstruction -+- LoadInst
-//                                      |                    |
-//                                      |                    +- CastInst
-//                                      |
-//                                      +- UnaryOperator
-//                                      |
-//                                      +- UnreachableInst
-//
-// Use
-//
-// } // namespace sandboxir
-//
 
-#ifndef LLVM_SANDBOXIR_SANDBOXIR_H
-#define LLVM_SANDBOXIR_SANDBOXIR_H
+#ifndef LLVM_SANDBOXIR_INSTRUCTION_H
+#define LLVM_SANDBOXIR_INSTRUCTION_H
 
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/User.h"
-#include "llvm/IR/Value.h"
-#include "llvm/SandboxIR/Argument.h"
+#include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
-#include "llvm/SandboxIR/Context.h"
-#include "llvm/SandboxIR/Module.h"
-#include "llvm/SandboxIR/Tracker.h"
-#include "llvm/SandboxIR/Type.h"
-#include "llvm/SandboxIR/Use.h"
 #include "llvm/SandboxIR/User.h"
-#include "llvm/SandboxIR/Value.h"
-#include "llvm/Support/raw_ostream.h"
-#include <iterator>
 
-namespace llvm {
-
-namespace sandboxir {
-
-class BasicBlock;
-class ConstantInt;
-class ConstantFP;
-class ConstantAggregateZero;
-class ConstantPointerNull;
-class PoisonValue;
-class BlockAddress;
-class DSOLocalEquivalent;
-class ConstantTokenNone;
-class GlobalValue;
-class GlobalObject;
-class GlobalIFunc;
-class GlobalVariable;
-class GlobalAlias;
-class NoCFIValue;
-class ConstantPtrAuth;
-class ConstantExpr;
-class Context;
-class Function;
-class Module;
-class Instruction;
-class VAArgInst;
-class FreezeInst;
-class FenceInst;
-class SelectInst;
-class ExtractElementInst;
-class InsertElementInst;
-class ShuffleVectorInst;
-class ExtractValueInst;
-class InsertValueInst;
-class BranchInst;
-class UnaryInstruction;
-class LoadInst;
-class ReturnInst;
-class StoreInst;
-class User;
-class UnreachableInst;
-class Value;
-class CallBase;
-class CallInst;
-class InvokeInst;
-class CallBrInst;
-class LandingPadInst;
-class FuncletPadInst;
-class CatchPadInst;
-class CleanupPadInst;
-class CatchReturnInst;
-class CleanupReturnInst;
-class GetElementPtrInst;
-class CastInst;
-class PossiblyNonNegInst;
-class PtrToIntInst;
-class BitCastInst;
-class AllocaInst;
-class ResumeInst;
-class CatchSwitchInst;
-class SwitchInst;
-class UnaryOperator;
-class BinaryOperator;
-class PossiblyDisjointInst;
-class AtomicRMWInst;
-class AtomicCmpXchgInst;
-class CmpInst;
-class ICmpInst;
-class FCmpInst;
-
-/// Iterator for `Instruction`s in a `BasicBlock.
-/// \Returns an sandboxir::Instruction & when derereferenced.
-class BBIterator {
-public:
-  using difference_type = std::ptrdiff_t;
-  using value_type = Instruction;
-  using pointer = value_type *;
-  using reference = value_type &;
-  using iterator_category = std::bidirectional_iterator_tag;
-
-private:
-  llvm::BasicBlock *BB;
-  llvm::BasicBlock::iterator It;
-  Context *Ctx;
-  pointer getInstr(llvm::BasicBlock::iterator It) const;
-
-public:
-  BBIterator() : BB(nullptr), Ctx(nullptr) {}
-  BBIterator(llvm::BasicBlock *BB, llvm::BasicBlock::iterator It, Context *Ctx)
-      : BB(BB), It(It), Ctx(Ctx) {}
-  reference operator*() const { return *getInstr(It); }
-  BBIterator &operator++();
-  BBIterator operator++(int) {
-    auto Copy = *this;
-    ++*this;
-    return Copy;
-  }
-  BBIterator &operator--();
-  BBIterator operator--(int) {
-    auto Copy = *this;
-    --*this;
-    return Copy;
-  }
-  bool operator==(const BBIterator &Other) const {
-    assert(Ctx == Other.Ctx && "BBIterators in different context!");
-    return It == Other.It;
-  }
-  bool operator!=(const BBIterator &Other) const { return !(*this == Other); }
-  /// \Returns the SBInstruction that corresponds to this iterator, or null if
-  /// the instruction is not found in the IR-to-SandboxIR tables.
-  pointer get() const { return getInstr(It); }
-  /// \Returns the parent BB.
-  BasicBlock *getNodeParent() const;
-};
-
-/// Contains a list of sandboxir::Instruction's.
-class BasicBlock : public Value {
-  /// Builds a graph that contains all values in \p BB in their original form
-  /// i.e., no vectorization is taking place here.
-  void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
-  friend class Context;     // For `buildBasicBlockFromIR`
-  friend class Instruction; // For LLVM Val.
-
-  BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
-      : Value(ClassID::Block, BB, SBCtx) {
-    buildBasicBlockFromLLVMIR(BB);
-  }
-
-public:
-  ~BasicBlock() = default;
-  /// For isa/dyn_cast.
-  static bool classof(const Value *From) {
-    return From->getSubclassID() == Value::ClassID::Block;
-  }
-  Function *getParent() const;
-  using iterator = BBIterator;
-  iterator begin() const;
-  iterator end() const {
-    auto *BB = cast<llvm::BasicBlock>(Val);
-    return iterator(BB, BB->end(), &Ctx);
-  }
-  std::reverse_iterator<iterator> rbegin() const {
-    return std::make_reverse_iterator(end());
-  }
-  std::reverse_iterator<iterator> rend() const {
-    return std::make_reverse_iterator(begin());
-  }
-  Context &getContext() const { return Ctx; }
-  Instruction *getTerminator() const;
-  bool empty() const { return begin() == end(); }
-  Instruction &front() const;
-  Instruction &back() const;
-
-#ifndef NDEBUG
-  void verify() const final;
-  void dumpOS(raw_ostream &OS) const final;
-#endif
-};
+namespace llvm::sandboxir {
 
 /// A sandboxir::User with operands, opcode and linked with previous/next
 /// instructions in an instruction list.
-class Instruction : public sandboxir::User {
+class Instruction : public User {
 public:
   enum class Opcode {
 #define OP(OPC) OPC,
@@ -294,7 +32,7 @@ public:
 protected:
   Instruction(ClassID ID, Opcode Opc, llvm::Instruction *I,
               sandboxir::Context &SBCtx)
-      : sandboxir::User(ID, I, SBCtx), Opc(Opc) {}
+      : User(ID, I, SBCtx), Opc(Opc) {}
 
   Opcode Opc;
 
@@ -2998,7 +2736,6 @@ public:
   }
 };
 
-} // namespace sandboxir
-} // namespace llvm
+} // namespace llvm::sandboxir
 
-#endif // LLVM_SANDBOXIR_SANDBOXIR_H
+#endif // LLVM_SANDBOXIR_INSTRUCTION_H
