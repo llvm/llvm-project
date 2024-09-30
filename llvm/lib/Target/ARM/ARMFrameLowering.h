@@ -91,11 +91,11 @@ private:
   void emitPushInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     ArrayRef<CalleeSavedInfo> CSI, unsigned StmOpc,
                     unsigned StrOpc, bool NoGap,
-                    std::function<bool(unsigned)> Func) const;
+                    function_ref<bool(unsigned)> Func) const;
   void emitPopInst(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    MutableArrayRef<CalleeSavedInfo> CSI, unsigned LdmOpc,
                    unsigned LdrOpc, bool isVarArg, bool NoGap,
-                   std::function<bool(unsigned)> Func) const;
+                   function_ref<bool(unsigned)> Func) const;
 
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,

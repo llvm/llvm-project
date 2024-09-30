@@ -1561,7 +1561,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     ArrayRef<CalleeSavedInfo> CSI,
                                     unsigned StmOpc, unsigned StrOpc,
                                     bool NoGap,
-                                    std::function<bool(unsigned)> Func) const {
+                                    function_ref<bool(unsigned)> Func) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -1634,7 +1634,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
                                    MutableArrayRef<CalleeSavedInfo> CSI,
                                    unsigned LdmOpc, unsigned LdrOpc,
                                    bool isVarArg, bool NoGap,
-                                   std::function<bool(unsigned)> Func) const {
+                                   function_ref<bool(unsigned)> Func) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
