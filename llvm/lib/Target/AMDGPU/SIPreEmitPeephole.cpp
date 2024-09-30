@@ -326,9 +326,8 @@ bool SIPreEmitPeephole::mustRetainExeczBranch(
       if (TII->hasUnwantedEffectsWhenEXECEmpty(MI))
         return true;
 
-      // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(MI) || TII->isVMEM(MI) || TII->isFLAT(MI) ||
-          TII->isDS(MI) || TII->isWaitcnt(MI.getOpcode()))
+      // Waitcnt instructions are potentially expensive even if EXEC = 0.
+      if (TII->isWaitcnt(MI.getOpcode()))
         return true;
 
       ++NumInstr;

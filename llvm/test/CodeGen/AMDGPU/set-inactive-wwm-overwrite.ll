@@ -13,7 +13,6 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  ; %bb.3: ; %.then
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, v3, s1
@@ -24,7 +23,7 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 ; GCN-NEXT:    v_mov_b32_e32 v4, -1
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    buffer_store_dword v4, v0, s[4:7], 0 offen
-; GCN-NEXT:  .LBB0_4: ; %.end
+; GCN-NEXT:  ; %bb.4: ; %.end
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, -1
