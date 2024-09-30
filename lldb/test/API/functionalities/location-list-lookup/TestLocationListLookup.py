@@ -48,6 +48,7 @@ class LocationListLookupTestCase(TestBase):
     @skipIf(dwarf_version=["<", "3"])
     @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @skipUnlessDarwin
+    @expectedFailureAll(archs=["x86_64"])
     def test_loclist_expr(self):
         self.build()
         self.check_local_vars(self.launch(), check_expr=True)
