@@ -597,7 +597,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   SplatActions.clampScalar(1, sXLen, sXLen);
 
+  LegalityPredicate ExtractSubvecBitcastPred = [=](const LegalityQuery &Query) {
+    LLT DstTy = Query.Types[0];
+    LLT SrcTy = Query.Types[1];
+    return DstTy.getElementType() == LLT::scalar(1) &&
+           DstTy.getElementCount().getKnownMinValue() >= 8 &&
+           SrcTy.getElementCount().getKnownMinValue() >= 8;
+  };
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
+      // We don't have the ability to slide mask vectors down indexed by their
+      // i1 elements; the smallest we can do is i8. Often we are able to bitcast
+      // to equivalent i8 vectors.
+      .bitcastIf(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST), ExtractSubvecBitcastPred),
+          /*Mutation=*/nullptr)
       .customIf(
           LegalityPredicates::any(typeIsLegalBoolVec(0, BoolVecTys, ST),
                                   typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST)));
@@ -963,17 +976,7 @@ bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
   LLT LitTy = MRI.getType(Dst);
   LLT BigTy = MRI.getType(Src);
 
-  // We don't have the ability to slide mask vectors down indexed by their i1
-  // elements; the smallest we can do is i8. Often we are able to bitcast to
-  // equivalent i8 vectors.
   if (LitTy.getElementType() == LLT::scalar(1)) {
-    auto BigTyMinElts = BigTy.getElementCount().getKnownMinValue();
-    auto LitTyMinElts = LitTy.getElementCount().getKnownMinValue();
-    if (BigTyMinElts >= 8 && LitTyMinElts >= 8) {
-      LLT CastTy =
-          LLT::vector(LitTy.getElementCount().divideCoefficientBy(8), 8);
-      return Helper.bitcast(MI, 0, CastTy);
-    }
     // We can't slide this mask vector up indexed by its i1 elements.
     // This poses a problem when we wish to insert a scalable vector which
     // can't be re-expressed as a larger type. Just choose the slow path and

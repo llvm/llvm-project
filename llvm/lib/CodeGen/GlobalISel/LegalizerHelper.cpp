@@ -3678,12 +3678,7 @@ LegalizerHelper::bitcastConcatVector(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
                                          LLT CastTy) {
-  auto ES = dyn_cast<GExtractSubvector>(&MI);
-  if (!ES)
-    return UnableToLegalize;
-
-  if (!CastTy.isVector())
-    return UnableToLegalize;
+  auto ES = cast<GExtractSubvector>(&MI);
 
   if (TypeIdx != 0)
     return UnableToLegalize;
@@ -3705,16 +3700,12 @@ LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
     return Legalized;
 
   auto AdjustAmt = CastTy.getScalarType().getSizeInBits();
-  if (DstTyMinElts < AdjustAmt || SrcTyMinElts < AdjustAmt)
-    return UnableToLegalize;
-
   if (Idx % AdjustAmt != 0 || DstTyMinElts % AdjustAmt != 0 ||
       SrcTyMinElts % AdjustAmt != 0)
     return UnableToLegalize;
 
   Idx /= AdjustAmt;
   SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
-
   auto CastVec = MIRBuilder.buildBitcast(SrcTy, Src);
   auto PromotedES = MIRBuilder.buildExtractSubvector(CastTy, CastVec, Idx);
   MIRBuilder.buildBitcast(Dst, PromotedES);
