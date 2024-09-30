@@ -12472,9 +12472,8 @@ instruction's return value on the same edge).
 The optional ``fast-math-flags`` marker indicates that the phi has one
 or more :ref:`fast-math-flags <fastmath>`. These are optimization hints
 to enable otherwise unsafe floating-point optimizations. Fast-math-flags
-are only valid for phis that return a floating-point scalar or vector
-type, or an array (nested to any depth) of floating-point scalar or vector
-types.
+are only valid for phis that return a floating-point scalar or vector type,
+possibly within an array (nested to any depth), or a homogeneous struct literal.
 
 Semantics:
 """"""""""
@@ -12523,8 +12522,8 @@ class <t_firstclass>` type.
 #. The optional ``fast-math flags`` marker indicates that the select has one or more
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for selects that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for selects that return a floating-point scalar or vector type, possibly
+   within an array (nested to any depth), or a homogeneous struct literal.
 
 Semantics:
 """"""""""
@@ -12762,8 +12761,8 @@ This instruction requires several arguments:
 #. The optional ``fast-math flags`` marker indicates that the call has one or more
    :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for calls that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for calls that return a floating-point scalar or vector type, possibly within
+   an array (nested to any depth), or a homogeneous struct literal.
 
 #. The optional "cconv" marker indicates which :ref:`calling
    convention <callingconv>` the call should use. If none is
@@ -20528,7 +20527,8 @@ the explicit vector length.
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
    only valid for selects that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   possibly within an array (nested to any depth), or a homogeneous struct
+   literal.
 
 Semantics:
 """"""""""
@@ -20586,7 +20586,8 @@ is the pivot.
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
    only valid for merges that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   possibly within an array (nested to any depth), or a homogeneous struct
+   literal.
 
 Semantics:
 """"""""""

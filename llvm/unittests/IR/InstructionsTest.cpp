@@ -1559,12 +1559,40 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
-  Type *AAVFTy = ArrayType::get(AVFTy, 2);
-  FunctionType *AAVFFnTy = FunctionType::get(AAVFTy, {});
-  Value *AAVFCallee = Constant::getNullValue(PtrTy);
-  std::unique_ptr<CallInst> AAVFCall(
-      CallInst::Create(AAVFFnTy, AAVFCallee, {}, ""));
-  EXPECT_TRUE(isa<FPMathOperator>(AAVFCall));
+  Type *StructITy = StructType::get(ITy, ITy);
+  FunctionType *StructIFnTy = FunctionType::get(StructITy, {});
+  Value *StructICallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructICall(
+      CallInst::Create(StructIFnTy, StructICallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(StructICall));
+
+  Type *NamedStructFTy = StructType::create({FTy, FTy}, "AStruct");
+  FunctionType *NamedStructFFnTy = FunctionType::get(NamedStructFTy, {});
+  Value *NamedStructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> NamedStructFCall(
+      CallInst::Create(NamedStructFFnTy, NamedStructFCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(NamedStructFCall));
+
+  Type *MixedStructTy = StructType::get(FTy, ITy);
+  FunctionType *MixedStructFnTy = FunctionType::get(MixedStructTy, {});
+  Value *MixedStructCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> MixedStructCall(
+      CallInst::Create(MixedStructFnTy, MixedStructCallee, {}, ""));
+  EXPECT_FALSE(isa<FPMathOperator>(MixedStructCall));
+
+  Type *StructFTy = StructType::get(FTy, FTy);
+  FunctionType *StructFFnTy = FunctionType::get(StructFTy, {});
+  Value *StructFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructFCall(
+      CallInst::Create(StructFFnTy, StructFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructFCall));
+
+  Type *StructVFTy = StructType::get(VFTy, VFTy);
+  FunctionType *StructVFFnTy = FunctionType::get(StructVFTy, {});
+  Value *StructVFCallee = Constant::getNullValue(PtrTy);
+  std::unique_ptr<CallInst> StructVFCall(
+      CallInst::Create(StructVFFnTy, StructVFCallee, {}, ""));
+  EXPECT_TRUE(isa<FPMathOperator>(StructVFCall));
 }
 
 TEST(InstructionsTest, FNegInstruction) {
