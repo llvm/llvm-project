@@ -18,7 +18,7 @@
 // it works with the dynamic runtime.
 // XFAIL: target={{.*netbsd.*}} && !asan-dynamic-runtime
 
-#if _MSC_VER && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(disable : 4273)
 #endif
 

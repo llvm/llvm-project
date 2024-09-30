@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#if _MSC_VER
+#ifdef _MSC_VER
 #include <malloc.h>
 #endif
 
