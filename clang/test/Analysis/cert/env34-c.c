@@ -15,13 +15,8 @@ lconv *localeconv(void);
 
 typedef struct {
 } tm;
-char *asctime(const tm *timeptr)
-;
-typedef struct {
-} tm;
+char *asctime(const tm *timeptr);
 char *ctime(const tm *timeptr);
-typedef struct {
-} tm;
 struct tm *localtime(struct tm *tm);
 
 int strcmp(const char*, const char*);
