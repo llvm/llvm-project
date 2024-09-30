@@ -23,7 +23,7 @@ using namespace llvm;
 
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext) {
-  auto GOCS = [this, FuncName, &OutContext](StringRef Suffix) {
+  auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
     return OutContext.getOrCreateSymbol(FuncName + Twine(Suffix));
   };
   switch (RIK) {
@@ -61,7 +61,7 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   MCSymbol *MaxAGPRSym = getMaxAGPRSymbol(OutContext);
   MCSymbol *MaxSGPRSym = getMaxSGPRSymbol(OutContext);
 
-  auto assignMaxRegSym = [this, &OutContext](MCSymbol *Sym, int32_t RegCount) {
+  auto assignMaxRegSym = [&OutContext](MCSymbol *Sym, int32_t RegCount) {
     const MCExpr *MaxExpr = MCConstantExpr::create(RegCount, OutContext);
     Sym->setVariableValue(MaxExpr);
   };
