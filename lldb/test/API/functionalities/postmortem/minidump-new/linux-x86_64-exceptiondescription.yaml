@@ -22,7 +22,7 @@ Streams:
     Thread ID:       0x31F222
     Exception Record:
       Exception Code:  0x2
-      Exception Flags: 0x80000000
+      Exception Flags: 0x4C4C4442
       Exception Address: 0x555555556671
       Number of Parameters: 1
       Parameter 0:     0x696F706B61657262
