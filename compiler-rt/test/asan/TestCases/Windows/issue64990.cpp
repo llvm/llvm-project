@@ -4,7 +4,7 @@
 
 // UNSUPPORTED: target={{.*-windows-gnu}}
 
-#if _MSC_VER && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <string.h>
 #endif
 
@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
     throw 1;
   } catch (...) {
     // Make asan generate call to __asan_memcpy inside the EH pad.
-#if _MSC_VER && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
     memcpy(buff1, buff2 + 3, 6);
 #else
     __builtin_memcpy(buff1, buff2 + 3, 6);

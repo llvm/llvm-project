@@ -8,7 +8,7 @@
 #include <windows.h>
 #endif
 
-#if _MSC_VER && !defined(__clang__)
+#if defined(_MSC_VER) && !defined(__clang__)
 #define __builtin_trap() __asm ud2;
 #endif
 

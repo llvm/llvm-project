@@ -10,7 +10,7 @@ struct C {
 };
 
 int ATTRIBUTE_NOINLINE
-#if __clang__ || !defined(_MSC_VER)
+#if defined(__clang__) || !defined(_MSC_VER)
 __attribute__((optnone))
 #endif
 hide(int x) { return x; }
