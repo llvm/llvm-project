@@ -2028,6 +2028,22 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
   return false;
 }
 
+bool CheckWindowsIntrinsic(
+    const Symbol &intrinsic, evaluate::FoldingContext &foldingContext) {
+  parser::ContextualMessages &messages{foldingContext.messages()};
+  // TODO: there are other intrinsics that are unsupported on Windows that
+  // should be added here.
+  if (intrinsic.name() == "getuid") {
+    messages.Say(
+        "User IDs do not exist on Windows. This function will always return 1"_warn_en_US);
+  }
+  if (intrinsic.name() == "getgid") {
+    messages.Say(
+        "Group IDs do not exist on Windows. This function will always return 1"_warn_en_US);
+  }
+  return true;
+}
+
 bool CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, SemanticsContext &context,
     const Scope &scope, bool treatingExternalAsImplicit,

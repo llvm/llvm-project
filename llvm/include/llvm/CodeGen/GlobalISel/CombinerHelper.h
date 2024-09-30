@@ -600,6 +600,9 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
 
+  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);

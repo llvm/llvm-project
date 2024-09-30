@@ -338,7 +338,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
-      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
       if (IID == Intrinsic::not_intrinsic)
         // Don't do anything for unknown intrinsics.
         continue;
@@ -5239,7 +5239,7 @@ bool LLParser::parseDISubrange(MDNode *&Result, bool IsDistinct) {
   Metadata *UpperBound = nullptr;
   Metadata *Stride = nullptr;
 
-  auto convToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+  auto convToMetadata = [&](const MDSignedOrMDField &Bound) -> Metadata * {
     if (Bound.isMDSignedField())
       return ConstantAsMetadata::get(ConstantInt::getSigned(
           Type::getInt64Ty(Context), Bound.getMDSignedValue()));
@@ -5271,7 +5271,7 @@ bool LLParser::parseDIGenericSubrange(MDNode *&Result, bool IsDistinct) {
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  auto ConvToMetadata = [&](MDSignedOrMDField Bound) -> Metadata * {
+  auto ConvToMetadata = [&](const MDSignedOrMDField &Bound) -> Metadata * {
     if (Bound.isMDSignedField())
       return DIExpression::get(
           Context, {dwarf::DW_OP_consts,
@@ -6301,7 +6301,7 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
   // intrinsics in the new debug info format.
   if (!Name.starts_with("llvm.dbg."))
     return false;
-  Intrinsic::ID FnID = Function::lookupIntrinsicID(Name);
+  Intrinsic::ID FnID = Intrinsic::lookupIntrinsicID(Name);
   return FnID == Intrinsic::dbg_declare || FnID == Intrinsic::dbg_value ||
          FnID == Intrinsic::dbg_assign;
 }

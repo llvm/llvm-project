@@ -26,7 +26,7 @@ using namespace lld::elf;
 namespace {
 class PPC final : public TargetInfo {
 public:
-  PPC();
+  PPC(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -79,7 +79,7 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
   if (!ctx.arg.isPic) {
     for (const Symbol *sym :
          cast<PPC32GlinkSection>(*ctx.in.plt).canonical_plts) {
-      writePPC32PltCallStub(buf, sym->getGotPltVA(), nullptr, 0);
+      writePPC32PltCallStub(ctx, buf, sym->getGotPltVA(), nullptr, 0);
       buf += 16;
       glink += 16;
     }
@@ -152,7 +152,7 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
     write32(buf, 0x60000000);
 }
 
-PPC::PPC() {
+PPC::PPC(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_PPC_COPY;
   gotRel = R_PPC_GLOB_DAT;
   pltRel = R_PPC_JMP_SLOT;
@@ -181,7 +181,7 @@ void PPC::writeIplt(uint8_t *buf, const Symbol &sym,
                     uint64_t /*pltEntryAddr*/) const {
   // In -pie or -shared mode, assume r30 points to .got2+0x8000, and use a
   // .got2.plt_pic32. thunk.
-  writePPC32PltCallStub(buf, sym.getGotPltVA(), sym.file, 0x8000);
+  writePPC32PltCallStub(ctx, buf, sym.getGotPltVA(), sym.file, 0x8000);
 }
 
 void PPC::writeGotHeader(uint8_t *buf) const {
@@ -525,7 +525,7 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo() {
-  static PPC target;
+TargetInfo *elf::getPPCTargetInfo(Ctx &ctx) {
+  static PPC target(ctx);
   return &target;
 }

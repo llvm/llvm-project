@@ -8606,6 +8606,9 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       return DAG.getNode(IEEE2008Op, DL, VT, LHS, RHS, Flags);
   }
 
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
+    return DAG.UnrollVectorOp(Node);
+
   // If only one operand is NaN, override it with another operand.
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(LHS)) {
     LHS = DAG.getSelectCC(DL, LHS, LHS, RHS, LHS, ISD::SETUO);

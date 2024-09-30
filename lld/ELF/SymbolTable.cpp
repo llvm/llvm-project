@@ -29,8 +29,6 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-SymbolTable elf::symtab;
-
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
   int &idx1 = symMap[CachedHashStringRef(sym->getName())];
@@ -217,7 +215,7 @@ bool SymbolTable::assignExactVersion(SymbolVersion ver, uint16_t versionId,
   // Get a list of symbols which we need to assign the version to.
   SmallVector<Symbol *, 0> syms = findByVersion(ver);
 
-  auto getName = [](uint16_t ver) -> std::string {
+  auto getName = [&ctx = ctx](uint16_t ver) -> std::string {
     if (ver == VER_NDX_LOCAL)
       return "VER_NDX_LOCAL";
     if (ver == VER_NDX_GLOBAL)

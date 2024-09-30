@@ -20,6 +20,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#ifdef _WIN32
+// UID and GID don't exist on Windows, these exist to avoid errors.
+typedef std::uint32_t uid_t;
+typedef std::uint32_t gid_t;
+#else
+#include "sys/types.h" //pid_t
+#endif
+
 extern "C" {
 
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
@@ -34,6 +42,12 @@ std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 // GNU Fortran 77 compatibility subroutine GETARG(N, ARG).
 void FORTRAN_PROCEDURE_NAME(getarg)(
     std::int32_t &n, char *arg, std::int64_t length);
+
+// Calls getgid()
+gid_t RTNAME(GetGID)();
+
+// Calls getuid()
+uid_t RTNAME(GetUID)();
 
 // GNU extension subroutine GETLOG(C).
 void FORTRAN_PROCEDURE_NAME(getlog)(char *name, std::int64_t length);

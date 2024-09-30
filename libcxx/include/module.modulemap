@@ -714,7 +714,6 @@ module std_private_algorithm_find_first_of                               [system
 module std_private_algorithm_find_if                                     [system] { header "__algorithm/find_if.h" }
 module std_private_algorithm_find_if_not                                 [system] { header "__algorithm/find_if_not.h" }
 module std_private_algorithm_find_segment_if                             [system] { header "__algorithm/find_segment_if.h" }
-module std_private_algorithm_fold                                        [system] { header "__algorithm/fold.h" }
 module std_private_algorithm_for_each                                    [system] { header "__algorithm/for_each.h" }
 module std_private_algorithm_for_each_n                                  [system] { header "__algorithm/for_each_n.h" }
 module std_private_algorithm_for_each_segment                            [system] { header "__algorithm/for_each_segment.h" }
@@ -823,6 +822,7 @@ module std_private_algorithm_ranges_find_first_of                        [system
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
 module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
+module std_private_algorithm_ranges_fold                                 [system] { header "__algorithm/ranges_fold.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result
@@ -1498,6 +1498,7 @@ module std_private_memory_allocator                       [system] { header "__m
 module std_private_memory_allocator_arg_t                 [system] { header "__memory/allocator_arg_t.h" }
 module std_private_memory_allocator_destructor            [system] { header "__memory/allocator_destructor.h" }
 module std_private_memory_allocator_traits                [system] { header "__memory/allocator_traits.h" }
+module std_private_memory_array_cookie                    [system] { header "__memory/array_cookie.h" }
 module std_private_memory_assume_aligned                  [system] { header "__memory/assume_aligned.h" }
 module std_private_memory_auto_ptr                        [system] { header "__memory/auto_ptr.h" }
 module std_private_memory_builtin_new_allocator           [system] {
