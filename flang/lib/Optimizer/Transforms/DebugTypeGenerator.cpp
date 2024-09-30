@@ -123,6 +123,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     mlir::Attribute lowerAttr = nullptr;
     // If declaration has a lower bound, use it.
     if (declOp && declOp.getShift().size() > index) {
+      // TODO: Handle case where lower bound is a variable (instead of a
+      // constant as handled here)
       if (std::optional<std::int64_t> optint =
               getIntIfConstant(declOp.getShift()[index]))
         lowerAttr = mlir::IntegerAttr::get(intTy, llvm::APInt(64, *optint));
