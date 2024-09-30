@@ -205,6 +205,9 @@ Resolutions to C++ Defect Reports
 - Reject explicit object parameters with type ``void`` (``this void``).
   (`CWG2915: Explicit object parameters of type void <https://cplusplus.github.io/CWG/issues/2915.html>`_).
 
+- Clang now allows trailing requires clause on explicit deduction guides.
+  (`CWG2707: Deduction guides cannot have a trailing requires-clause <https://cplusplus.github.io/CWG/issues/2707.html>`_).
+
 C Language Changes
 ------------------
 
