@@ -193,12 +193,16 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
   return source;
 }
 
-MemrefValue skipSubViewsAndCasts(MemrefValue source) {
+MemrefValue skipViewLikeOps(MemrefValue source) {
   while (auto op = source.getDefiningOp()) {
     if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
       source = cast<MemrefValue>(subView.getSource());
-    } else if (auto cast = dyn_cast<memref::CastOp>(op)) {
-      source = cast.getSource();
+    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
+      source = castOp.getSource();
+    } else if (auto collapse = dyn_cast<memref::CollapseShapeOp>(op)) {
+      source = cast<MemrefValue>(collapse.getSrc());
+    } else if (auto expand = dyn_cast<memref::ExpandShapeOp>(op)) {
+      source = cast<MemrefValue>(expand.getSrc());
     } else {
       return source;
     }
