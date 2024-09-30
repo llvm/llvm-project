@@ -358,4 +358,8 @@ void test_write_zt() __arm_streaming __arm_inout("zt0") {
   // Check index
   svwrite_lane_zt(0, svundef_s8(), 0);  // expected-error {{argument value 0 is outside the valid range [1, 3]}}
   svwrite_lane_zt(0, svundef_s8(), 4);  // expected-error {{argument value 4 is outside the valid range [1, 3]}}
+
+void test_luti4_zt_x4(svuint8x2_t op) __arm_streaming __arm_in("zt0") {
+  // Check Zt tile 0
+  svluti4_zt_u8_x4(1, op);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }
