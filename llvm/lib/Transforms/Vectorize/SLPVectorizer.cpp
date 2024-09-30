@@ -7512,7 +7512,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   auto TryToFindDuplicates = [&](const InstructionsState &S,
                                  bool DoNotFail = false) {
     // Check that every instruction appears once in this bundle.
-    DenseMap<Value *, unsigned> UniquePositions(VL.size());
+    SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
     for (Value *V : VL) {
       if (isConstant(V)) {
         ReuseShuffleIndices.emplace_back(
@@ -18383,7 +18383,8 @@ public:
       for (Value *V : Candidates)
         TrackedVals.try_emplace(V, V);
 
-    auto At = [](MapVector<Value *, unsigned> &MV, Value *V) -> unsigned & {
+    auto At = [](SmallMapVector<Value *, unsigned, 16> &MV,
+                 Value *V) -> unsigned & {
       auto *It = MV.find(V);
       assert(It != MV.end() && "Unable to find given key.");
       return It->second;
@@ -18470,7 +18471,7 @@ public:
                                     RdxKind != RecurKind::FMul &&
                                     RdxKind != RecurKind::FMulAdd;
       // Gather same values.
-      MapVector<Value *, unsigned> SameValuesCounter;
+      SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
       if (IsSupportedHorRdxIdentityOp)
         for (Value *V : Candidates) {
           Value *OrigV = TrackedToOrig.at(V);
@@ -19089,10 +19090,10 @@ private:
 
   /// Emits actual operation for the scalar identity values, found during
   /// horizontal reduction analysis.
-  Value *emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder,
-                       BoUpSLP &R,
-                       const MapVector<Value *, unsigned> &SameValuesCounter,
-                       const DenseMap<Value *, Value *> &TrackedToOrig) {
+  Value *
+  emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
+                const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
+                const DenseMap<Value *, Value *> &TrackedToOrig) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
