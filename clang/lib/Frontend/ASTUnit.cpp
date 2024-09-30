@@ -2398,7 +2398,7 @@ void ASTUnit::TranslateStoredDiagnostics(
     // Rebuild the StoredDiagnostic.
     if (SD.Filename.empty())
       continue;
-    auto FE = FileMgr.getFile(SD.Filename);
+    auto FE = FileMgr.getOptionalFileRef(SD.Filename);
     if (!FE)
       continue;
     SourceLocation FileLoc;
