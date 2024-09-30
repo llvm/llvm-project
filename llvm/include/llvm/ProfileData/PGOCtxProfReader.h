@@ -68,8 +68,7 @@ public:
   CallsiteMapTy &callsites() { return Callsites; }
 
   void ingestContext(uint32_t CSId, PGOCtxProfContext &&Other) {
-    auto [Iter, _] = callsites().try_emplace(CSId, CallTargetMapTy());
-    Iter->second.emplace(Other.guid(), std::move(Other));
+    callsites()[CSId].emplace(Other.guid(), std::move(Other));
   }
 
   void ingestAllContexts(uint32_t CSId, CallTargetMapTy &&Other) {
