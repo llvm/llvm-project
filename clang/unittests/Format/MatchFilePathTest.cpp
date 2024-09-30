@@ -164,6 +164,40 @@ TEST_F(MatchFilePathTest, Path) {
   EXPECT_FALSE(match("foo\\", R"(foo*\)"));
 }
 
+TEST_F(MatchFilePathTest, DoubleAsterisk) {
+  EXPECT_TRUE(match("a/b/c/d.cpp", "**b**"));
+  EXPECT_TRUE(match("a/b/c/d.cpp", "**/b/**"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**d_*"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**/d_*"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**d_**"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**/d_**"));
+
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**/b/c/**"));
+
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "a/**/b/c/d_e.cpp"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "a/**/c/d_e.cpp"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "a/**/b/**/d_e.cpp"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "**/b/**/d_e.cpp"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "a/**/**/b/**"));
+
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "**/d"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "**/b/d"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "**/b/d/**"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "**/b/c/"));
+
+  // Multiple consecutive asterisks are treated as **
+  EXPECT_TRUE(match("a/b/c/d.cpp", "***b****"));
+  EXPECT_TRUE(match("a/b/c/d.cpp", "****/b/***"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "***d_**"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "****/d_*"));
+  EXPECT_TRUE(match("a/b/c/d_e.cpp", "***/b/c/*****"));
+
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "*****/d"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "***/b/d"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "*****/b/d/***"));
+  EXPECT_FALSE(match("a/b/c/d_e.cpp", "***/b/c"));
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
