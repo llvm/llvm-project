@@ -235,14 +235,16 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
     return false;
   }
 
-  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
-    APSInt LHSInt = LHS.toAPSInt();
-    SmallString<32> Trunc;
-    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    const Expr *E = S.Current->getExpr(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
-    return false;
+  if constexpr (!std::is_same_v<T, FixedPoint>) {
+    if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
+      APSInt LHSInt = LHS.toAPSInt();
+      SmallString<32> Trunc;
+      (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
+      return false;
+    }
   }
   return true;
 }
@@ -2577,6 +2579,42 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   auto LHS = S.Stk.pop<LT>();
 
   return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
+}
+
+static inline bool ShiftFixedPoint(InterpState &S, CodePtr OpPC, bool Left) {
+  const auto &RHS = S.Stk.pop<FixedPoint>();
+  const auto &LHS = S.Stk.pop<FixedPoint>();
+  llvm::FixedPointSemantics LHSSema = LHS.getSemantics();
+
+  unsigned ShiftBitWidth =
+      LHSSema.getWidth() - (unsigned)LHSSema.hasUnsignedPadding() - 1;
+
+  // Embedded-C 4.1.6.2.2:
+  //   The right operand must be nonnegative and less than the total number
+  //   of (nonpadding) bits of the fixed-point operand ...
+  if (RHS.isNegative()) {
+    S.CCEDiag(S.Current->getLocation(OpPC), diag::note_constexpr_negative_shift)
+        << RHS.toAPSInt();
+  } else if (static_cast<unsigned>(RHS.toAPSInt().getLimitedValue(
+                 ShiftBitWidth)) != RHS.toAPSInt()) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_large_shift)
+        << RHS.toAPSInt() << E->getType() << ShiftBitWidth;
+  }
+
+  FixedPoint Result;
+  if (Left) {
+    if (FixedPoint::shiftLeft(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  } else {
+    if (FixedPoint::shiftRight(LHS, RHS, ShiftBitWidth, &Result) &&
+        !handleFixedPointOverflow(S, OpPC, Result))
+      return false;
+  }
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
