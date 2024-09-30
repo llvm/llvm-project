@@ -346,8 +346,7 @@ static constexpr {} IIT_Table[] = {{
                 FixedEncodingTypeName);
 
   unsigned MaxOffset = 0;
-  for (const auto [Idx, FixedEncoding, Int] : 
-       enumerate(FixedEncodings, Ints)) {
+  for (const auto [Idx, FixedEncoding, Int] : enumerate(FixedEncodings, Ints)) {
     if ((Idx & 7) == 7)
       OS << "\n  ";
 
