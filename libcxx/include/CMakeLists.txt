@@ -552,6 +552,8 @@ set(files
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
+  __memory/start_lifetime_as.h
+  __memory/start_lifetime_as_array.h
   __memory/swap_allocator.h
   __memory/temp_value.h
   __memory/temporary_buffer.h
