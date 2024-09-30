@@ -2820,18 +2820,20 @@ void ExprEngine::processBranch(
     ProgramStateRef PrevState = PredN->getState();
 
     ProgramStateRef StTrue, StFalse;
-    if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN))
+    StTrue = StFalse = PrevState;
+
+    if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN)) {
       std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
-    else {
-      assert(!isa<ObjCForCollectionStmt>(Condition));
-      // TODO: instead of this shortcut perhaps it would be better to "rejoin"
-      // the common execution path with
-      // StTrue = StFalse = PrevState;
-      builder.generateNode(PrevState, true, PredN);
-      builder.generateNode(PrevState, false, PredN);
-      continue;
+
+      if (!StTrue)
+        builder.markInfeasible(true);
+
+      if (!StFalse)
+        builder.markInfeasible(false);
     }
-    if (StTrue && StFalse)
+    bool BothFeasible = builder.isFeasible(true) && builder.isFeasible(false);
+
+    if (BothFeasible)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
     const Expr *EagerlyAssumeExpr =
@@ -2844,49 +2846,39 @@ void ExprEngine::processBranch(
       ConditionExpr = ConditionExpr->IgnoreParenCasts();
     }
     bool DidEagerlyAssume = EagerlyAssumeExpr == ConditionExpr;
-    bool BothFeasible = (DidEagerlyAssume || (StTrue && StFalse)) &&
-                        builder.isFeasible(true) && builder.isFeasible(false);
 
     // Process the true branch.
     if (builder.isFeasible(true)) {
-      if (StTrue) {
-        if (BothFeasible && IterationsFinishedInLoop &&
-            *IterationsFinishedInLoop >= 2) {
-          // When programmers write a loop, they imply that at least two
-          // iterations are possible (otherwise they would just write an `if`),
-          // but the third iteration is not implied: there are situations where
-          // the programmer knows that there won't be a third iteration, but
-          // this is not marked in the source code. (For example, the ffmpeg
-          // project has 2-element arrays which are accessed from loops where
-          // the number of steps is opaque and the analyzer cannot deduce that
-          // there are <= 2 iterations.)
-          // Checkers may use this heuristic mark to discard results found on
-          // branches that contain this "weak" assumption.
-          StTrue = recordWeakLoopAssumption(StTrue);
-        }
-        builder.generateNode(StTrue, true, PredN);
-      } else {
-        builder.markInfeasible(true);
+      if ((BothFeasible || DidEagerlyAssume) && IterationsFinishedInLoop &&
+          *IterationsFinishedInLoop >= 2) {
+        // When programmers write a loop, they imply that at least two
+        // iterations are possible (otherwise they would just write an `if`),
+        // but the third iteration is not implied: there are situations where
+        // the programmer knows that there won't be a third iteration, but
+        // this is not marked in the source code. (For example, the ffmpeg
+        // project has 2-element arrays which are accessed from loops where
+        // the number of steps is opaque and the analyzer cannot deduce that
+        // there are <= 2 iterations.)
+        // Checkers may use this heuristic mark to discard results found on
+        // branches that contain this "weak" assumption.
+        StTrue = recordWeakLoopAssumption(StTrue);
       }
+      builder.generateNode(StTrue, true, PredN);
     }
 
     // Process the false branch.
     if (builder.isFeasible(false)) {
-      if (StFalse) {
-        if (BothFeasible && IterationsFinishedInLoop &&
-            *IterationsFinishedInLoop == 0) {
-          // There are many situations where the programmers know that there
-          // will be at least one iteration in a loop (e.g. a structure is not
-          // empty) but the analyzer cannot deduce this and reports false
-          // positives after skipping the loop.
-          // Checkers may use this heuristic mark to discard results found on
-          // branches that contain this "weak" assumption.
-          StFalse = recordWeakLoopAssumption(StFalse);
-        }
-        builder.generateNode(StFalse, false, PredN);
-      } else {
-        builder.markInfeasible(false);
+      if ((BothFeasible || DidEagerlyAssume) && IterationsFinishedInLoop &&
+          *IterationsFinishedInLoop == 0) {
+        // There are many situations where the programmers know that there
+        // will be at least one iteration in a loop (e.g. a structure is not
+        // empty) but the analyzer cannot deduce this and reports false
+        // positives after skipping the loop.
+        // Checkers may use this heuristic mark to discard results found on
+        // branches that contain this "weak" assumption.
+        StFalse = recordWeakLoopAssumption(StFalse);
       }
+      builder.generateNode(StFalse, false, PredN);
     }
   }
   currBldrCtx = nullptr;
