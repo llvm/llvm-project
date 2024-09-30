@@ -395,7 +395,7 @@ define i32 @ashr_sel_op1_use(i1 %b) {
 ; CHECK-LABEL: @ashr_sel_op1_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 2, i32 0
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 -2, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[B]], i32 -1, i32 -2
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 2, i32 0

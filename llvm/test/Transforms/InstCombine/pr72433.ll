@@ -6,8 +6,7 @@ define i32 @widget(i32 %arg, i32 %arg1) {
 ; CHECK-SAME: i32 [[ARG:%.*]], i32 [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[ARG]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 20, [[TMP0]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ICMP]], i32 40, i32 20
 ; CHECK-NEXT:    [[XOR:%.*]] = zext i1 [[ICMP]] to i32
 ; CHECK-NEXT:    [[ADD9:%.*]] = or disjoint i32 [[MUL]], [[XOR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[ICMP]] to i32

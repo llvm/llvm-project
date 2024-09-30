@@ -1265,6 +1265,9 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     }
   }
 
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -1612,6 +1615,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   if (Instruction *Overflow = foldLShrOverflowBit(I))
     return Overflow;
 
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -1819,6 +1825,9 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     auto *NewAShr = Builder.CreateAShr(X, Op1, Op0->getName() + ".not");
     return BinaryOperator::CreateNot(NewAShr);
   }
+
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
 
   return nullptr;
 }
