@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMSandboxIR
   Module.cpp
   Pass.cpp
   PassManager.cpp
+  Region.cpp
   SandboxIR.cpp
   Tracker.cpp
   Type.cpp
