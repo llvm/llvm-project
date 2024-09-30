@@ -61,6 +61,37 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  iscanonical
+  SRCS
+    iscanonical.cpp
+  HDRS
+    ../iscanonical.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  iscanonicalf
+  SRCS
+    iscanonicalf.cpp
+  HDRS
+    ../iscanonicalf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  iscanonicall
+  SRCS
+    iscanonicall.cpp
+  HDRS
+    ../iscanonicall.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+
+add_entrypoint_object(
   ceil
   SRCS
     ceil.cpp
