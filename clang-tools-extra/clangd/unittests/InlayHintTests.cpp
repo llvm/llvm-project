@@ -1484,11 +1484,14 @@ TEST(DefaultArguments, Smoke) {
     int foo(int A = 4) { return A; }
     int bar(int A, int B = 1, bool C = foo($default1[[)]]) { return A; }
     int A = bar($explicit[[2]]$default2[[)]];
+
+    void baz(int = 5) { if (false) baz($unnamed[[)]]; };
   )cpp";
 
   assertHints(InlayHintKind::DefaultArgument, Code,
               ExpectedHint{"A: 4", "default1", Left},
-              ExpectedHint{", B: 1, C: foo()", "default2", Left});
+              ExpectedHint{", B: 1, C: foo()", "default2", Left},
+              ExpectedHint{"5", "unnamed", Left});
 
   assertHints(InlayHintKind::Parameter, Code,
               ExpectedHint{"A: ", "explicit", Left});

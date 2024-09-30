@@ -785,19 +785,24 @@ private:
       }
 
       StringRef Name = ParameterNames[I];
-      bool NameHint = shouldHintName(Args[I], Name);
-      bool ReferenceHint = shouldHintReference(Params[I], ForwardedParams[I]);
+      const bool NameHint = shouldHintName(Args[I], Name);
+      const bool ReferenceHint =
+          shouldHintReference(Params[I], ForwardedParams[I]);
 
-      bool IsDefault = isa<CXXDefaultArgExpr>(Args[I]);
+      const bool IsDefault = isa<CXXDefaultArgExpr>(Args[I]);
       HasNonDefaultArgs |= !IsDefault;
       if (Cfg.InlayHints.DefaultArguments && IsDefault) {
-        auto SourceText = Lexer::getSourceText(
+        const auto SourceText = Lexer::getSourceText(
             CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
             AST.getSourceManager(), AST.getLangOpts());
-        FormattedDefaultArgs.emplace_back(llvm::formatv(
-            "{0}: {1}", Name.empty() ? "/*unused*/" : Name,
-            SourceText.size() > Cfg.InlayHints.TypeNameLimit ? "..."
-                                                             : SourceText));
+        const auto Abbrev = SourceText.size() > Cfg.InlayHints.TypeNameLimit
+                                ? "..."
+                                : SourceText;
+        if (NameHint)
+          FormattedDefaultArgs.emplace_back(
+              llvm::formatv("{0}: {1}", Name, Abbrev));
+        else
+          FormattedDefaultArgs.emplace_back(llvm::formatv("{0}", Abbrev));
       }
 
       if (NameHint || ReferenceHint) {
