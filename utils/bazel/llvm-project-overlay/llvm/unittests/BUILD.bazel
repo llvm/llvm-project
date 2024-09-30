@@ -640,6 +640,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:SandboxIR",

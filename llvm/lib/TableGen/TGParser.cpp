@@ -3004,9 +3004,9 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
           DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
         } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
           if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
-            for (Record *R : RecTy->getClasses())
+            for (const Record *R : RecTy->getClasses())
               if (auto *RV = R->getValue(FieldName))
-                RV->addReferenceLoc(FieldNameLoc);
+                const_cast<RecordVal *>(RV)->addReferenceLoc(FieldNameLoc);
           }
         }
       }

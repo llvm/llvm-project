@@ -1510,12 +1510,7 @@ define amdgpu_kernel void @extract_neg_offset_vgpr(ptr addrspace(1) %out) {
 ; NOOPT-NEXT:    s_mov_b32 s23, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s20, s20, s9
 ; NOOPT-NEXT:    s_addc_u32 s21, s21, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v0
-; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -1526,11 +1521,11 @@ define amdgpu_kernel void @extract_neg_offset_vgpr(ptr addrspace(1) %out) {
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    s_waitcnt vmcnt(1)
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 1
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 2
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 3
+; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 2
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 3
 ; NOOPT-NEXT:    s_mov_b32 s0, 16
 ; NOOPT-NEXT:    s_mov_b32 s1, 15
 ; NOOPT-NEXT:    s_mov_b32 s2, 14
@@ -1548,126 +1543,130 @@ define amdgpu_kernel void @extract_neg_offset_vgpr(ptr addrspace(1) %out) {
 ; NOOPT-NEXT:    s_mov_b32 s14, 1
 ; NOOPT-NEXT:    s_mov_b32 s15, 0
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v31, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v22, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v21, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v20, s3
-; NOOPT-NEXT:    v_mov_b32_e32 v19, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v18, s1
-; NOOPT-NEXT:    v_mov_b32_e32 v17, s0
-; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s15
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s7
+; NOOPT-NEXT:    v_mov_b32_e32 v22, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v21, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v19, s3
+; NOOPT-NEXT:    v_mov_b32_e32 v18, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v17, s1
+; NOOPT-NEXT:    v_mov_b32_e32 v16, s0
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 4
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 5
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:72 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 7
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:72 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 6
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 7
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v16
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v16
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_add_i32 m0, s2, 0xfffffe00
-; NOOPT-NEXT:    v_movrels_b32_e32 v1, v1
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:76 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:72 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movrels_b32_e32 v0, v0
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:76 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 6
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 7
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB5_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 4
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 5
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:76 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 1
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 2
-; NOOPT-NEXT:    v_readlane_b32 s3, v0, 3
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:76 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[0:3], 0
-; NOOPT-NEXT:    ; kill: killed $vgpr0
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 0
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 1
+; NOOPT-NEXT:    v_readlane_b32 s2, v31, 2
+; NOOPT-NEXT:    v_readlane_b32 s3, v31, 3
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: extract_neg_offset_vgpr:
@@ -4022,7 +4021,6 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    s_mov_b32 s23, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s20, s20, s9
 ; NOOPT-NEXT:    s_addc_u32 s21, s21, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr16 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:136 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4034,10 +4032,11 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 1
-; NOOPT-NEXT:    v_writelane_b32 v16, s2, 2
-; NOOPT-NEXT:    v_writelane_b32 v16, s3, 3
+; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 2
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 3
 ; NOOPT-NEXT:    s_mov_b32 s0, 16
 ; NOOPT-NEXT:    s_mov_b32 s1, 15
 ; NOOPT-NEXT:    s_mov_b32 s2, 14
@@ -4056,37 +4055,37 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    s_mov_b32 s15, 1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v31, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v22, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v21, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v20, s3
-; NOOPT-NEXT:    v_mov_b32_e32 v19, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v18, s1
-; NOOPT-NEXT:    v_mov_b32_e32 v17, s0
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s7
+; NOOPT-NEXT:    v_mov_b32_e32 v22, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v21, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v19, s3
+; NOOPT-NEXT:    v_mov_b32_e32 v18, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v17, s1
+; NOOPT-NEXT:    v_mov_b32_e32 v16, s0
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v16
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:76 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:80 ; 4-byte Folded Spill
@@ -4103,202 +4102,195 @@ define amdgpu_kernel void @insert_neg_offset_vgpr(ptr addrspace(1) %in, ptr addr
 ; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:124 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:128 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:132 ; 4-byte Folded Spill
-; NOOPT-NEXT:    v_mov_b32_e32 v17, 33
-; NOOPT-NEXT:    buffer_store_dword v17, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v16, 33
+; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 4
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 5
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB14_1: ; =>This Inner Loop Header: Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:136 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 7
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:136 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 6
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 7
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_add_i32 m0, s2, 0xfffffe00
-; NOOPT-NEXT:    v_movreld_b32_e32 v1, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:140 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:144 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:148 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:152 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:156 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:160 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:164 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:168 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:172 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:176 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:180 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:184 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:188 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:192 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:196 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:200 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v0, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:140 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:144 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:148 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:152 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:156 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:160 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:164 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:168 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:172 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:176 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:180 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:184 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:188 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:192 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:196 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:200 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 6
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 7
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB14_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 4
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 5
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:152 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v19, off, s[20:23], 0 offset:156 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v20, off, s[20:23], 0 offset:160 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v21, off, s[20:23], 0 offset:164 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v22, off, s[20:23], 0 offset:168 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v23, off, s[20:23], 0 offset:172 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v24, off, s[20:23], 0 offset:176 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v25, off, s[20:23], 0 offset:180 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v26, off, s[20:23], 0 offset:184 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v27, off, s[20:23], 0 offset:188 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v28, off, s[20:23], 0 offset:192 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v29, off, s[20:23], 0 offset:196 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v30, off, s[20:23], 0 offset:200 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 1
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 2
-; NOOPT-NEXT:    v_readlane_b32 s3, v0, 3
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v19, off, s[20:23], 0 offset:152 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v20, off, s[20:23], 0 offset:156 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v21, off, s[20:23], 0 offset:160 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v22, off, s[20:23], 0 offset:164 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v23, off, s[20:23], 0 offset:168 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v24, off, s[20:23], 0 offset:172 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v25, off, s[20:23], 0 offset:176 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v26, off, s[20:23], 0 offset:180 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v27, off, s[20:23], 0 offset:184 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v28, off, s[20:23], 0 offset:188 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v29, off, s[20:23], 0 offset:192 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v30, off, s[20:23], 0 offset:196 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 offset:200 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(12)
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v16
-; NOOPT-NEXT:    s_waitcnt vmcnt(8)
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v20
-; NOOPT-NEXT:    s_waitcnt vmcnt(4)
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v24
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v28
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 0
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 1
+; NOOPT-NEXT:    v_readlane_b32 s2, v31, 2
+; NOOPT-NEXT:    v_readlane_b32 s3, v31, 3
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v27
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr16 killed $vgpr16 def $vgpr16_vgpr17_vgpr18_vgpr19 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v10
-; NOOPT-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:48
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v13
-; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[0:3], 0 offset:32
+; NOOPT-NEXT:    ; kill: def $vgpr15 killed $vgpr15 def $vgpr15_vgpr16_vgpr17_vgpr18 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v12
+; NOOPT-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10 killed $exec
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
-; NOOPT-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:16
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v1
+; NOOPT-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0 offset:16
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v5
-; NOOPT-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
-; NOOPT-NEXT:    ; kill: killed $vgpr0
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_neg_offset_vgpr:
@@ -4512,7 +4504,6 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    s_mov_b32 s23, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s20, s20, s9
 ; NOOPT-NEXT:    s_addc_u32 s21, s21, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr16 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:136 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xb
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4524,10 +4515,11 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 1
-; NOOPT-NEXT:    v_writelane_b32 v16, s2, 2
-; NOOPT-NEXT:    v_writelane_b32 v16, s3, 3
+; NOOPT-NEXT:    ; implicit-def: $vgpr31 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 1
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 2
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 3
 ; NOOPT-NEXT:    s_mov_b32 s0, 16
 ; NOOPT-NEXT:    s_mov_b32 s1, 15
 ; NOOPT-NEXT:    s_mov_b32 s2, 14
@@ -4546,37 +4538,37 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    s_mov_b32 s15, 1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v31, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v30, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v29, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v28, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v27, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v26, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v25, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v24, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v23, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v22, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v21, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v20, s3
-; NOOPT-NEXT:    v_mov_b32_e32 v19, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v18, s1
-; NOOPT-NEXT:    v_mov_b32_e32 v17, s0
+; NOOPT-NEXT:    v_mov_b32_e32 v30, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v29, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v28, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v27, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v26, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v25, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v24, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v23, s7
+; NOOPT-NEXT:    v_mov_b32_e32 v22, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v21, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v20, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v19, s3
+; NOOPT-NEXT:    v_mov_b32_e32 v18, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v17, s1
+; NOOPT-NEXT:    v_mov_b32_e32 v16, s0
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v16
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:76 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:80 ; 4-byte Folded Spill
@@ -4593,202 +4585,195 @@ define amdgpu_kernel void @insert_neg_inline_offset_vgpr(ptr addrspace(1) %in, p
 ; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:124 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:128 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:132 ; 4-byte Folded Spill
-; NOOPT-NEXT:    v_mov_b32_e32 v17, 0x1f4
-; NOOPT-NEXT:    buffer_store_dword v17, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v16, 0x1f4
+; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v31, s0, 4
+; NOOPT-NEXT:    v_writelane_b32 v31, s1, 5
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB15_1: ; =>This Inner Loop Header: Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:136 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 7
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[20:23], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[20:23], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[20:23], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[20:23], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[20:23], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[20:23], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[20:23], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[20:23], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[20:23], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[20:23], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[20:23], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[20:23], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[20:23], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[20:23], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:68 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:136 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 6
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 7
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_add_i32 m0, s2, -16
-; NOOPT-NEXT:    v_movreld_b32_e32 v1, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:140 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:144 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:148 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:152 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:156 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:160 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:164 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:168 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:172 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:176 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:180 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:184 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:188 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:192 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:196 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:200 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v0, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:140 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:144 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:148 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:152 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:156 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:160 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:164 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:168 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:172 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:176 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:180 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:184 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:188 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:192 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:196 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:200 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[20:23], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[20:23], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[20:23], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[20:23], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[20:23], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[20:23], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[20:23], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[20:23], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[20:23], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[20:23], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[20:23], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[20:23], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[20:23], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v31, s2, 6
+; NOOPT-NEXT:    v_writelane_b32 v31, s3, 7
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v31, off, s[20:23], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB15_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 4
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 5
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:152 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v19, off, s[20:23], 0 offset:156 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v20, off, s[20:23], 0 offset:160 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v21, off, s[20:23], 0 offset:164 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v22, off, s[20:23], 0 offset:168 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v23, off, s[20:23], 0 offset:172 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v24, off, s[20:23], 0 offset:176 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v25, off, s[20:23], 0 offset:180 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v26, off, s[20:23], 0 offset:184 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v27, off, s[20:23], 0 offset:188 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v28, off, s[20:23], 0 offset:192 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v29, off, s[20:23], 0 offset:196 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v30, off, s[20:23], 0 offset:200 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[20:23], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[16:17]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 1
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 2
-; NOOPT-NEXT:    v_readlane_b32 s3, v0, 3
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[20:23], 0 offset:140 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[20:23], 0 offset:144 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[20:23], 0 offset:148 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v19, off, s[20:23], 0 offset:152 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v20, off, s[20:23], 0 offset:156 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v21, off, s[20:23], 0 offset:160 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v22, off, s[20:23], 0 offset:164 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v23, off, s[20:23], 0 offset:168 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v24, off, s[20:23], 0 offset:172 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v25, off, s[20:23], 0 offset:176 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v26, off, s[20:23], 0 offset:180 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v27, off, s[20:23], 0 offset:184 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v28, off, s[20:23], 0 offset:188 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v29, off, s[20:23], 0 offset:192 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v30, off, s[20:23], 0 offset:196 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v31, off, s[20:23], 0 offset:200 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(12)
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v16
-; NOOPT-NEXT:    s_waitcnt vmcnt(8)
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v20
-; NOOPT-NEXT:    s_waitcnt vmcnt(4)
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v24
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v28
+; NOOPT-NEXT:    v_readlane_b32 s0, v31, 0
+; NOOPT-NEXT:    v_readlane_b32 s1, v31, 1
+; NOOPT-NEXT:    v_readlane_b32 s2, v31, 2
+; NOOPT-NEXT:    v_readlane_b32 s3, v31, 3
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v27
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr16 killed $vgpr16 def $vgpr16_vgpr17_vgpr18_vgpr19 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v11
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v10
-; NOOPT-NEXT:    buffer_store_dwordx4 v[16:19], off, s[0:3], 0 offset:48
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v13
-; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[0:3], 0 offset:32
+; NOOPT-NEXT:    ; kill: def $vgpr15 killed $vgpr15 def $vgpr15_vgpr16_vgpr17_vgpr18 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v10
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v9
+; NOOPT-NEXT:    buffer_store_dwordx4 v[15:18], off, s[0:3], 0 offset:48
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v12
+; NOOPT-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:32
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; kill: def $vgpr7 killed $vgpr7 def $vgpr7_vgpr8_vgpr9_vgpr10 killed $exec
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
-; NOOPT-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], 0 offset:16
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v1
+; NOOPT-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0 offset:16
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v5
-; NOOPT-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
-; NOOPT-NEXT:    ; kill: killed $vgpr0
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v4
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_neg_inline_offset_vgpr:
@@ -5053,13 +5038,8 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:    s_mov_b32 s39, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s36, s36, s9
 ; NOOPT-NEXT:    s_addc_u32 s37, s37, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], s[2:3]
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v0
-; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:76 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:76 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
 ; NOOPT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5071,32 +5051,32 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:    s_mov_b32 s5, s8
 ; NOOPT-NEXT:    s_mov_b32 s6, s3
 ; NOOPT-NEXT:    s_mov_b32 s7, s2
-; NOOPT-NEXT:    s_waitcnt vmcnt(1)
-; NOOPT-NEXT:    v_writelane_b32 v0, s4, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s5, 1
-; NOOPT-NEXT:    v_writelane_b32 v0, s6, 2
-; NOOPT-NEXT:    v_writelane_b32 v0, s7, 3
+; NOOPT-NEXT:    ; implicit-def: $vgpr18 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v18, s4, 0
+; NOOPT-NEXT:    v_writelane_b32 v18, s5, 1
+; NOOPT-NEXT:    v_writelane_b32 v18, s6, 2
+; NOOPT-NEXT:    v_writelane_b32 v18, s7, 3
 ; NOOPT-NEXT:    s_mov_b32 s4, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s4, 4
+; NOOPT-NEXT:    v_writelane_b32 v18, s4, 4
 ; NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
 ; NOOPT-NEXT:    s_mov_b32 s5, s2
 ; NOOPT-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; NOOPT-NEXT:    s_mov_b32 s4, 2
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_lshlrev_b32_e64 v1, s4, v1
+; NOOPT-NEXT:    v_lshlrev_b32_e64 v0, s4, v0
 ; NOOPT-NEXT:    s_mov_b32 s4, 0
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    v_mov_b32_e32 v3, 0
-; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v3
-; NOOPT-NEXT:    buffer_load_dword v1, v[1:2], s[0:3], 0 addr64 glc
+; NOOPT-NEXT:    v_mov_b32_e32 v2, 0
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v2
+; NOOPT-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:72 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b32 s0, 1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_add_i32_e64 v1, s[0:1], v1, s0
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:68 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_add_i32_e64 v0, s[0:1], v0, s0
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b32 s16, 16
 ; NOOPT-NEXT:    s_mov_b32 s17, 15
 ; NOOPT-NEXT:    s_mov_b32 s18, 14
@@ -5125,255 +5105,266 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:    s_mov_b32 s13, s18
 ; NOOPT-NEXT:    s_mov_b32 s14, s17
 ; NOOPT-NEXT:    s_mov_b32 s15, s16
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 5
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 6
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 7
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 8
-; NOOPT-NEXT:    v_writelane_b32 v0, s4, 9
-; NOOPT-NEXT:    v_writelane_b32 v0, s5, 10
-; NOOPT-NEXT:    v_writelane_b32 v0, s6, 11
-; NOOPT-NEXT:    v_writelane_b32 v0, s7, 12
-; NOOPT-NEXT:    v_writelane_b32 v0, s8, 13
-; NOOPT-NEXT:    v_writelane_b32 v0, s9, 14
-; NOOPT-NEXT:    v_writelane_b32 v0, s10, 15
-; NOOPT-NEXT:    v_writelane_b32 v0, s11, 16
-; NOOPT-NEXT:    v_writelane_b32 v0, s12, 17
-; NOOPT-NEXT:    v_writelane_b32 v0, s13, 18
-; NOOPT-NEXT:    v_writelane_b32 v0, s14, 19
-; NOOPT-NEXT:    v_writelane_b32 v0, s15, 20
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 5
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 6
+; NOOPT-NEXT:    v_writelane_b32 v18, s2, 7
+; NOOPT-NEXT:    v_writelane_b32 v18, s3, 8
+; NOOPT-NEXT:    v_writelane_b32 v18, s4, 9
+; NOOPT-NEXT:    v_writelane_b32 v18, s5, 10
+; NOOPT-NEXT:    v_writelane_b32 v18, s6, 11
+; NOOPT-NEXT:    v_writelane_b32 v18, s7, 12
+; NOOPT-NEXT:    v_writelane_b32 v18, s8, 13
+; NOOPT-NEXT:    v_writelane_b32 v18, s9, 14
+; NOOPT-NEXT:    v_writelane_b32 v18, s10, 15
+; NOOPT-NEXT:    v_writelane_b32 v18, s11, 16
+; NOOPT-NEXT:    v_writelane_b32 v18, s12, 17
+; NOOPT-NEXT:    v_writelane_b32 v18, s13, 18
+; NOOPT-NEXT:    v_writelane_b32 v18, s14, 19
+; NOOPT-NEXT:    v_writelane_b32 v18, s15, 20
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v16, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v15, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v14, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v13, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v12, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v11, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v10, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v9, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v8, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s3
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s1
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s0
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[36:39], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[36:39], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[36:39], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[36:39], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[36:39], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[36:39], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[36:39], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[36:39], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[36:39], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[36:39], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[36:39], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[36:39], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[36:39], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[36:39], 0 offset:60 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[36:39], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s0
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s1
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s3
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s7
+; NOOPT-NEXT:    v_mov_b32_e32 v8, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v9, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v10, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v11, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v12, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v13, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v14, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v15, s15
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[36:39], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[36:39], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[36:39], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[36:39], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[36:39], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[36:39], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[36:39], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[36:39], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[36:39], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[36:39], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[36:39], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[36:39], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[36:39], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[36:39], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 21
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 22
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 21
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 22
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[36:39], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[36:39], 0 offset:80 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[36:39], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[36:39], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[36:39], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[36:39], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[36:39], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[36:39], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[36:39], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[36:39], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[36:39], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[36:39], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[36:39], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[36:39], 0 offset:60 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[36:39], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[36:39], 0 offset:72 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 23
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 24
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 offset:80 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[36:39], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[36:39], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[36:39], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[36:39], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[36:39], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[36:39], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[36:39], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[36:39], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[36:39], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[36:39], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[36:39], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[36:39], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[36:39], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[36:39], 0 offset:64 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[36:39], 0 offset:72 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 23
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 24
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v16
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v16
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movrels_b32_e32 v1, v1
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:84 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:80 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movrels_b32_e32 v0, v0
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:84 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:80 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 23
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 24
+; NOOPT-NEXT:    v_writelane_b32 v18, s2, 23
+; NOOPT-NEXT:    v_writelane_b32 v18, s3, 24
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[36:39], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB16_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 21
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 22
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 21
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 22
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    s_mov_b32 s4, 17
 ; NOOPT-NEXT:    ;;#ASMEND
 ; NOOPT-NEXT:    s_mov_b32 s16, s4
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 5
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 6
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 7
-; NOOPT-NEXT:    v_readlane_b32 s3, v0, 8
-; NOOPT-NEXT:    v_readlane_b32 s4, v0, 9
-; NOOPT-NEXT:    v_readlane_b32 s5, v0, 10
-; NOOPT-NEXT:    v_readlane_b32 s6, v0, 11
-; NOOPT-NEXT:    v_readlane_b32 s7, v0, 12
-; NOOPT-NEXT:    v_readlane_b32 s8, v0, 13
-; NOOPT-NEXT:    v_readlane_b32 s9, v0, 14
-; NOOPT-NEXT:    v_readlane_b32 s10, v0, 15
-; NOOPT-NEXT:    v_readlane_b32 s11, v0, 16
-; NOOPT-NEXT:    v_readlane_b32 s12, v0, 17
-; NOOPT-NEXT:    v_readlane_b32 s13, v0, 18
-; NOOPT-NEXT:    v_readlane_b32 s14, v0, 19
-; NOOPT-NEXT:    v_readlane_b32 s15, v0, 20
-; NOOPT-NEXT:    v_writelane_b32 v0, s16, 25
-; NOOPT-NEXT:    v_mov_b32_e32 v16, s15
-; NOOPT-NEXT:    v_mov_b32_e32 v15, s14
-; NOOPT-NEXT:    v_mov_b32_e32 v14, s13
-; NOOPT-NEXT:    v_mov_b32_e32 v13, s12
-; NOOPT-NEXT:    v_mov_b32_e32 v12, s11
-; NOOPT-NEXT:    v_mov_b32_e32 v11, s10
-; NOOPT-NEXT:    v_mov_b32_e32 v10, s9
-; NOOPT-NEXT:    v_mov_b32_e32 v9, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v8, s7
-; NOOPT-NEXT:    v_mov_b32_e32 v7, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v6, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v5, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s3
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s1
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s0
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:88 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[36:39], 0 offset:92 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[36:39], 0 offset:96 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[36:39], 0 offset:100 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[36:39], 0 offset:104 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[36:39], 0 offset:108 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[36:39], 0 offset:112 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[36:39], 0 offset:116 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[36:39], 0 offset:120 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[36:39], 0 offset:124 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[36:39], 0 offset:128 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[36:39], 0 offset:132 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[36:39], 0 offset:136 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[36:39], 0 offset:140 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[36:39], 0 offset:144 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[36:39], 0 offset:148 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 5
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 6
+; NOOPT-NEXT:    v_readlane_b32 s2, v18, 7
+; NOOPT-NEXT:    v_readlane_b32 s3, v18, 8
+; NOOPT-NEXT:    v_readlane_b32 s4, v18, 9
+; NOOPT-NEXT:    v_readlane_b32 s5, v18, 10
+; NOOPT-NEXT:    v_readlane_b32 s6, v18, 11
+; NOOPT-NEXT:    v_readlane_b32 s7, v18, 12
+; NOOPT-NEXT:    v_readlane_b32 s8, v18, 13
+; NOOPT-NEXT:    v_readlane_b32 s9, v18, 14
+; NOOPT-NEXT:    v_readlane_b32 s10, v18, 15
+; NOOPT-NEXT:    v_readlane_b32 s11, v18, 16
+; NOOPT-NEXT:    v_readlane_b32 s12, v18, 17
+; NOOPT-NEXT:    v_readlane_b32 s13, v18, 18
+; NOOPT-NEXT:    v_readlane_b32 s14, v18, 19
+; NOOPT-NEXT:    v_readlane_b32 s15, v18, 20
+; NOOPT-NEXT:    v_writelane_b32 v18, s16, 25
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s0
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s1
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s3
+; NOOPT-NEXT:    v_mov_b32_e32 v4, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v5, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v6, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v7, s7
+; NOOPT-NEXT:    v_mov_b32_e32 v8, s8
+; NOOPT-NEXT:    v_mov_b32_e32 v9, s9
+; NOOPT-NEXT:    v_mov_b32_e32 v10, s10
+; NOOPT-NEXT:    v_mov_b32_e32 v11, s11
+; NOOPT-NEXT:    v_mov_b32_e32 v12, s12
+; NOOPT-NEXT:    v_mov_b32_e32 v13, s13
+; NOOPT-NEXT:    v_mov_b32_e32 v14, s14
+; NOOPT-NEXT:    v_mov_b32_e32 v15, s15
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:88 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:92 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[36:39], 0 offset:96 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[36:39], 0 offset:100 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[36:39], 0 offset:104 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[36:39], 0 offset:108 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[36:39], 0 offset:112 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[36:39], 0 offset:116 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[36:39], 0 offset:120 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[36:39], 0 offset:124 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[36:39], 0 offset:128 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[36:39], 0 offset:132 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[36:39], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[36:39], 0 offset:140 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[36:39], 0 offset:144 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[36:39], 0 offset:148 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 26
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 27
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 26
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 27
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[36:39], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB16_4: ; =>This Inner Loop Header: Depth=1
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[36:39], 0 offset:152 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:88 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:92 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:96 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[36:39], 0 offset:100 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[36:39], 0 offset:104 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[36:39], 0 offset:108 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[36:39], 0 offset:112 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[36:39], 0 offset:116 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[36:39], 0 offset:120 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[36:39], 0 offset:124 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[36:39], 0 offset:128 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[36:39], 0 offset:132 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[36:39], 0 offset:136 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[36:39], 0 offset:140 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[36:39], 0 offset:144 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[36:39], 0 offset:148 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[36:39], 0 offset:68 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 28
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 29
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 offset:152 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:88 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:92 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[36:39], 0 offset:96 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[36:39], 0 offset:100 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[36:39], 0 offset:104 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[36:39], 0 offset:108 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[36:39], 0 offset:112 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[36:39], 0 offset:116 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[36:39], 0 offset:120 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[36:39], 0 offset:124 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[36:39], 0 offset:128 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[36:39], 0 offset:132 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[36:39], 0 offset:136 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[36:39], 0 offset:140 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[36:39], 0 offset:144 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[36:39], 0 offset:148 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[36:39], 0 offset:68 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 28
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 29
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v16
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v16
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movrels_b32_e32 v1, v1
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:156 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[36:39], 0 offset:152 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movrels_b32_e32 v0, v0
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:156 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:152 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 28
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 29
+; NOOPT-NEXT:    v_writelane_b32 v18, s2, 28
+; NOOPT-NEXT:    v_writelane_b32 v18, s3, 29
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[36:39], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB16_4
 ; NOOPT-NEXT:  ; %bb.5:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 26
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 27
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 26
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 27
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.6:
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:76 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:156 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:84 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s4, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s5, v0, 1
-; NOOPT-NEXT:    v_readlane_b32 s6, v0, 2
-; NOOPT-NEXT:    v_readlane_b32 s7, v0, 3
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:76 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[36:39], 0 offset:156 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[36:39], 0 offset:84 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[4:7], 0
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 4
+; NOOPT-NEXT:    v_readlane_b32 s4, v18, 0
+; NOOPT-NEXT:    v_readlane_b32 s5, v18, 1
+; NOOPT-NEXT:    v_readlane_b32 s6, v18, 2
+; NOOPT-NEXT:    v_readlane_b32 s7, v18, 3
 ; NOOPT-NEXT:    buffer_store_dword v2, off, s[4:7], 0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v1, s0
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[4:7], 0
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 30
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 31
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 30
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 31
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[36:39], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[36:39], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
@@ -5381,10 +5372,10 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:  ; %bb.7: ; %bb1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s4, v0, 25
+; NOOPT-NEXT:    v_readlane_b32 s4, v18, 25
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s7, s1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
@@ -5401,13 +5392,12 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; NOOPT-NEXT:  .LBB16_8: ; %bb2
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[36:39], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[36:39], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[28:29]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 30
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 31
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 30
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 31
 ; NOOPT-NEXT:    s_or_b64 exec, exec, s[0:1]
-; NOOPT-NEXT:    ; kill: killed $vgpr0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: extract_vgpr_offset_multiple_in_block:
@@ -5827,7 +5817,6 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    s_mov_b32 s31, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s28, s28, s9
 ; NOOPT-NEXT:    s_addc_u32 s29, s29, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr16 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:84 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_load_dwordx2 s[18:19], s[2:3], 0x9
 ; NOOPT-NEXT:    s_load_dwordx2 s[16:17], s[2:3], 0xd
@@ -5841,12 +5830,13 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    s_mov_b32 s21, s24
 ; NOOPT-NEXT:    s_mov_b32 s22, s19
 ; NOOPT-NEXT:    s_mov_b32 s23, s18
-; NOOPT-NEXT:    v_writelane_b32 v16, s20, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s21, 1
-; NOOPT-NEXT:    v_writelane_b32 v16, s22, 2
-; NOOPT-NEXT:    v_writelane_b32 v16, s23, 3
+; NOOPT-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v32, s20, 0
+; NOOPT-NEXT:    v_writelane_b32 v32, s21, 1
+; NOOPT-NEXT:    v_writelane_b32 v32, s22, 2
+; NOOPT-NEXT:    v_writelane_b32 v32, s23, 3
 ; NOOPT-NEXT:    s_mov_b32 s20, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s20, 4
+; NOOPT-NEXT:    v_writelane_b32 v32, s20, 4
 ; NOOPT-NEXT:    ; kill: def $sgpr20 killed $sgpr20 def $sgpr20_sgpr21
 ; NOOPT-NEXT:    s_mov_b32 s21, s18
 ; NOOPT-NEXT:    ; kill: def $sgpr16_sgpr17 killed $sgpr16_sgpr17 def $sgpr16_sgpr17_sgpr18_sgpr19
@@ -5890,115 +5880,113 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v14, s14
 ; NOOPT-NEXT:    v_mov_b32_e32 v15, s15
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 5
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 6
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 5
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 6
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB17_1: ; =>This Inner Loop Header: Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[28:31], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[28:31], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[28:31], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[28:31], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[28:31], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[28:31], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[28:31], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[28:31], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[28:31], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[28:31], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[28:31], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[28:31], 0 offset:60 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:72 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:80 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 7
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 8
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[28:31], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[28:31], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[28:31], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[28:31], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[28:31], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[28:31], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[28:31], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[28:31], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[28:31], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[28:31], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[28:31], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[28:31], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[28:31], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:72 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[28:31], 0 offset:80 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 7
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 8
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movreld_b32_e32 v1, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:88 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:92 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:96 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:100 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:104 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:108 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:112 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:116 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:120 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:124 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:128 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:132 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:136 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:140 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:144 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:148 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v0, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:88 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:92 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:96 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:100 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:104 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:108 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:112 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:116 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:120 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:124 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:128 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:132 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:140 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:144 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:148 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 7
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 8
+; NOOPT-NEXT:    v_writelane_b32 v32, s2, 7
+; NOOPT-NEXT:    v_writelane_b32 v32, s3, 8
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB17_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 5
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 6
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 5
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 6
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:88 ; 4-byte Folded Reload
@@ -6018,16 +6006,16 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_load_dword v14, off, s[28:31], 0 offset:144 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    buffer_load_dword v15, off, s[28:31], 0 offset:148 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
-; NOOPT-NEXT:    v_mov_b32_e32 v17, 63
-; NOOPT-NEXT:    buffer_store_dword v17, off, s[28:31], 0 offset:216 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v16, 63
+; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:216 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
 ; NOOPT-NEXT:    s_waitcnt vmcnt(1)
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 9
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 10
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 9
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:152 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:156 ; 4-byte Folded Spill
@@ -6047,193 +6035,186 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:212 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB17_4: ; =>This Inner Loop Header: Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:152 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:156 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:160 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[28:31], 0 offset:164 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[28:31], 0 offset:168 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[28:31], 0 offset:172 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[28:31], 0 offset:176 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[28:31], 0 offset:180 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[28:31], 0 offset:184 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[28:31], 0 offset:188 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[28:31], 0 offset:192 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[28:31], 0 offset:196 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[28:31], 0 offset:200 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[28:31], 0 offset:204 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[28:31], 0 offset:208 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[28:31], 0 offset:212 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:216 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:76 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 11
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 12
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:152 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[28:31], 0 offset:156 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[28:31], 0 offset:160 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[28:31], 0 offset:164 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[28:31], 0 offset:168 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[28:31], 0 offset:172 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[28:31], 0 offset:176 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[28:31], 0 offset:180 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[28:31], 0 offset:184 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[28:31], 0 offset:188 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[28:31], 0 offset:192 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[28:31], 0 offset:196 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[28:31], 0 offset:200 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[28:31], 0 offset:204 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[28:31], 0 offset:208 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:212 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:216 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[28:31], 0 offset:76 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 11
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 12
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movreld_b32_e32 v1, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:220 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:224 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:228 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:232 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:236 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:240 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:244 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:248 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:252 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:256 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:260 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:264 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:268 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:272 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:276 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:280 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:152 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:156 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:160 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:164 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:168 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:172 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:176 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:180 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:184 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:188 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:192 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:196 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:200 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:204 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:208 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[28:31], 0 offset:212 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v0, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:220 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:224 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:228 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:232 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:236 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:240 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:244 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:248 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:252 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:256 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:260 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:264 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:268 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:272 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:276 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:280 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:152 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[28:31], 0 offset:156 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[28:31], 0 offset:160 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[28:31], 0 offset:164 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[28:31], 0 offset:168 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[28:31], 0 offset:172 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[28:31], 0 offset:176 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[28:31], 0 offset:180 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[28:31], 0 offset:184 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[28:31], 0 offset:188 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[28:31], 0 offset:192 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[28:31], 0 offset:196 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[28:31], 0 offset:200 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[28:31], 0 offset:204 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[28:31], 0 offset:208 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[28:31], 0 offset:212 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 11
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 12
+; NOOPT-NEXT:    v_writelane_b32 v32, s2, 11
+; NOOPT-NEXT:    v_writelane_b32 v32, s3, 12
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB17_4
 ; NOOPT-NEXT:  ; %bb.5:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 9
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 10
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 10
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.6:
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:84 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[28:31], 0 offset:220 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:224 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[28:31], 0 offset:228 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v19, off, s[28:31], 0 offset:232 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v20, off, s[28:31], 0 offset:236 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v21, off, s[28:31], 0 offset:240 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v22, off, s[28:31], 0 offset:244 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v23, off, s[28:31], 0 offset:248 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v24, off, s[28:31], 0 offset:252 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v25, off, s[28:31], 0 offset:256 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v26, off, s[28:31], 0 offset:260 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v27, off, s[28:31], 0 offset:264 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v28, off, s[28:31], 0 offset:268 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v29, off, s[28:31], 0 offset:272 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v30, off, s[28:31], 0 offset:276 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[28:31], 0 offset:280 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s4, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s5, v0, 1
-; NOOPT-NEXT:    v_readlane_b32 s6, v0, 2
-; NOOPT-NEXT:    v_readlane_b32 s7, v0, 3
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[28:31], 0 offset:84 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[28:31], 0 offset:220 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[28:31], 0 offset:224 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v19, off, s[28:31], 0 offset:228 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v20, off, s[28:31], 0 offset:232 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v21, off, s[28:31], 0 offset:236 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v22, off, s[28:31], 0 offset:240 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v23, off, s[28:31], 0 offset:244 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v24, off, s[28:31], 0 offset:248 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v25, off, s[28:31], 0 offset:252 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v26, off, s[28:31], 0 offset:256 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v27, off, s[28:31], 0 offset:260 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v28, off, s[28:31], 0 offset:264 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v29, off, s[28:31], 0 offset:268 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v30, off, s[28:31], 0 offset:272 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v31, off, s[28:31], 0 offset:276 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 offset:280 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(12)
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v17
-; NOOPT-NEXT:    s_waitcnt vmcnt(8)
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v21
-; NOOPT-NEXT:    s_waitcnt vmcnt(4)
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v25
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v32
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v29
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 4
+; NOOPT-NEXT:    v_readlane_b32 s4, v32, 0
+; NOOPT-NEXT:    v_readlane_b32 s5, v32, 1
+; NOOPT-NEXT:    v_readlane_b32 s6, v32, 2
+; NOOPT-NEXT:    v_readlane_b32 s7, v32, 3
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v31
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v28
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; kill: def $vgpr17 killed $vgpr17 def $vgpr17_vgpr18_vgpr19_vgpr20 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
-; NOOPT-NEXT:    buffer_store_dwordx4 v[17:20], off, s[4:7], 0 offset:48
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11_vgpr12_vgpr13 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v16
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v14
-; NOOPT-NEXT:    buffer_store_dwordx4 v[10:13], off, s[4:7], 0 offset:32
+; NOOPT-NEXT:    ; kill: def $vgpr16 killed $vgpr16 def $vgpr16_vgpr17_vgpr18_vgpr19 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v11
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v10
+; NOOPT-NEXT:    buffer_store_dwordx4 v[16:19], off, s[4:7], 0 offset:48
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v13
+; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[4:7], 0 offset:32
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    ; implicit-def: $sgpr1
+; NOOPT-NEXT:    ; implicit-def: $sgpr1
+; NOOPT-NEXT:    ; implicit-def: $sgpr1
+; NOOPT-NEXT:    ; implicit-def: $sgpr1
+; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v5
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v3
-; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[4:7], 0 offset:16
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v4
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
+; NOOPT-NEXT:    buffer_store_dwordx4 v[8:11], off, s[4:7], 0 offset:16
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
-; NOOPT-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v7
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v6
-; NOOPT-NEXT:    buffer_store_dwordx4 v[2:5], off, s[4:7], 0
+; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v7
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v5
+; NOOPT-NEXT:    buffer_store_dwordx4 v[1:4], off, s[4:7], 0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v1, s0
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 13
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 14
+; NOOPT-NEXT:    v_writelane_b32 v32, s0, 13
+; NOOPT-NEXT:    v_writelane_b32 v32, s1, 14
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v32, off, s[28:31], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execz .LBB17_8
 ; NOOPT-NEXT:  ; %bb.7: ; %bb1
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:68 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -6251,13 +6232,12 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:  .LBB17_8: ; %bb2
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[26:27], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[28:31], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[28:31], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[26:27]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 13
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 14
+; NOOPT-NEXT:    v_readlane_b32 s0, v32, 13
+; NOOPT-NEXT:    v_readlane_b32 s1, v32, 14
 ; NOOPT-NEXT:    s_or_b64 exec, exec, s[0:1]
-; NOOPT-NEXT:    ; kill: killed $vgpr0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_vgpr_offset_multiple_in_block:
@@ -7279,28 +7259,28 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    s_mov_b32 s15, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s12, s12, s9
 ; NOOPT-NEXT:    s_addc_u32 s13, s13, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    s_load_dword s2, s[2:3], 0x9
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], -1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr3
 ; NOOPT-NEXT:    s_mov_b32 s3, 0
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOOPT-NEXT:    s_cmp_lg_u32 s2, s3
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 1
+; NOOPT-NEXT:    ; implicit-def: $vgpr4 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v4, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v4, s1, 1
 ; NOOPT-NEXT:    s_mov_b64 s[8:9], exec
 ; NOOPT-NEXT:    s_mov_b64 exec, -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[12:15], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[8:9]
 ; NOOPT-NEXT:    s_cbranch_scc1 .LBB19_3
 ; NOOPT-NEXT:  .LBB19_1: ; %Flow
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[12:15], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[8:9]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 1
+; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
+; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr2
 ; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 s0, 1
@@ -7330,7 +7310,7 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:  .LBB19_3: ; %bb4
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[12:15], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[8:9]
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -7342,24 +7322,21 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
-; NOOPT-NEXT:    ; reg use v[1:4]
+; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 1
+; NOOPT-NEXT:    v_writelane_b32 v4, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v4, s1, 1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[12:15], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[8:9]
 ; NOOPT-NEXT:    s_branch .LBB19_1
 ; NOOPT-NEXT:  .LBB19_4: ; %bb7
-; NOOPT-NEXT:    s_or_saveexec_b64 s[8:9], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_mov_b64 exec, s[8:9]
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s7, s1
@@ -7371,10 +7348,9 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    s_mov_b32 s1, s7
 ; NOOPT-NEXT:    s_mov_b32 s2, s6
 ; NOOPT-NEXT:    s_mov_b32 s3, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s4
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[0:3], 0
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    ; kill: killed $vgpr0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: extract_adjacent_blocks:
@@ -7525,7 +7501,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_mov_b32 s19, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s16, s16, s9
 ; NOOPT-NEXT:    s_addc_u32 s17, s17, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], s[2:3]
 ; NOOPT-NEXT:    s_load_dword s2, s[0:1], 0x9
 ; NOOPT-NEXT:    s_load_dword s0, s[0:1], 0xa
@@ -7534,21 +7509,22 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; NOOPT-NEXT:    s_mov_b32 s3, 0
 ; NOOPT-NEXT:    s_cmp_lg_u32 s2, s3
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 1
+; NOOPT-NEXT:    ; implicit-def: $vgpr4 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v4, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v4, s1, 1
 ; NOOPT-NEXT:    s_mov_b64 s[12:13], exec
 ; NOOPT-NEXT:    s_mov_b64 exec, -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_cbranch_scc1 .LBB20_3
 ; NOOPT-NEXT:  .LBB20_1: ; %Flow
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 0
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 1
+; NOOPT-NEXT:    v_readlane_b32 s0, v4, 0
+; NOOPT-NEXT:    v_readlane_b32 s1, v4, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; NOOPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 s0, 1
@@ -7579,7 +7555,7 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:  .LBB20_3: ; %bb4
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s6, s1
@@ -7591,25 +7567,22 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_mov_b32 s1, s6
 ; NOOPT-NEXT:    s_mov_b32 s2, s5
 ; NOOPT-NEXT:    s_mov_b32 s3, s4
-; NOOPT-NEXT:    buffer_load_dwordx4 v[1:4], off, s[0:3], 0 glc
+; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
-; NOOPT-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4
+; NOOPT-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
-; NOOPT-NEXT:    ; reg use v[1:4]
+; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 1
+; NOOPT-NEXT:    v_writelane_b32 v4, s0, 0
+; NOOPT-NEXT:    v_writelane_b32 v4, s1, 1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_branch .LBB20_1
 ; NOOPT-NEXT:  .LBB20_4: ; %bb7
-; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5_sgpr6_sgpr7
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:    s_mov_b32 s10, s1
@@ -7621,13 +7594,12 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_mov_b32 s1, s10
 ; NOOPT-NEXT:    s_mov_b32 s2, s9
 ; NOOPT-NEXT:    s_mov_b32 s3, s8
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s4
-; NOOPT-NEXT:    v_mov_b32_e32 v2, s5
-; NOOPT-NEXT:    v_mov_b32_e32 v3, s6
-; NOOPT-NEXT:    v_mov_b32_e32 v4, s7
-; NOOPT-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
+; NOOPT-NEXT:    v_mov_b32_e32 v1, s5
+; NOOPT-NEXT:    v_mov_b32_e32 v2, s6
+; NOOPT-NEXT:    v_mov_b32_e32 v3, s7
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    ; kill: killed $vgpr0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_adjacent_blocks:
@@ -9084,49 +9056,48 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    s_mov_b32 s27, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s24, s24, s9
 ; NOOPT-NEXT:    s_addc_u32 s25, s25, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    s_load_dword s1, s[2:3], 0x9
 ; NOOPT-NEXT:    s_load_dword s0, s[2:3], 0xa
+; NOOPT-NEXT:    ; implicit-def: $vgpr18 : SGPR spill to VGPR lane
 ; NOOPT-NEXT:    s_waitcnt lgkmcnt(0)
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 0
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 0
 ; NOOPT-NEXT:    s_mov_b32 s1, 8
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 1
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, 8
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
 ; NOOPT-NEXT:  .LBB26_1: ; %bb2
 ; NOOPT-NEXT:    ; =>This Loop Header: Depth=1
 ; NOOPT-NEXT:    ; Child Loop BB26_3 Depth 2
-; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 0
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 ; 4-byte Folded Reload
+; NOOPT-NEXT:    v_readlane_b32 s2, v18, 0
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], -1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_cmp_ge_i32_e64 s[2:3], v1, s2
-; NOOPT-NEXT:    v_mov_b32_e32 v1, s4
+; NOOPT-NEXT:    v_cmp_ge_i32_e64 s[2:3], v0, s2
+; NOOPT-NEXT:    v_mov_b32_e32 v0, s4
 ; NOOPT-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 2
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 3
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 2
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 3
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_cbranch_vccnz .LBB26_6
 ; NOOPT-NEXT:  ; %bb.2: ; %bb4
 ; NOOPT-NEXT:    ; in Loop: Header=BB26_1 Depth=1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(0)
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v16, 1
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; NOOPT-NEXT:    ; kill: def $sgpr3 killed $sgpr3 killed $sgpr2_sgpr3
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4_sgpr5
@@ -9137,7 +9108,6 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    s_mov_b32 s5, s3
 ; NOOPT-NEXT:    s_mov_b32 s6, s2
 ; NOOPT-NEXT:    s_mov_b32 s7, s1
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    buffer_load_dword v0, off, s[4:7], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:80 ; 4-byte Folded Spill
@@ -9159,13 +9129,13 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    v_mov_b32_e32 v13, s17
 ; NOOPT-NEXT:    v_mov_b32_e32 v14, s18
 ; NOOPT-NEXT:    v_mov_b32_e32 v15, s19
-; NOOPT-NEXT:    v_mov_b32_e32 v17, s0
-; NOOPT-NEXT:    buffer_store_dword v17, off, s[24:27], 0 offset:76 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_mov_b32_e32 v16, s0
+; NOOPT-NEXT:    buffer_store_dword v16, off, s[24:27], 0 offset:76 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 4
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 5
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 4
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 5
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:12 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:16 ; 4-byte Folded Spill
@@ -9186,146 +9156,139 @@ define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) {
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB26_3: ; Parent Loop BB26_1 Depth=1
 ; NOOPT-NEXT:    ; => This Inner Loop Header: Depth=2
-; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[24:27], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[24:27], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[24:27], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[24:27], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[24:27], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[24:27], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[24:27], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[24:27], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[24:27], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[24:27], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[24:27], 0 offset:60 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[24:27], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[24:27], 0 offset:68 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[24:27], 0 offset:72 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[24:27], 0 offset:76 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[24:27], 0 offset:80 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 6
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 7
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[24:27], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[24:27], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[24:27], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[24:27], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[24:27], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[24:27], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[24:27], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[24:27], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[24:27], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[24:27], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[24:27], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[24:27], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[24:27], 0 offset:64 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[24:27], 0 offset:68 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[24:27], 0 offset:72 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[24:27], 0 offset:76 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 offset:80 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 6
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 7
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movreld_b32_e32 v1, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:84 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[24:27], 0 offset:88 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:92 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[24:27], 0 offset:96 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[24:27], 0 offset:100 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[24:27], 0 offset:104 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[24:27], 0 offset:108 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[24:27], 0 offset:112 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[24:27], 0 offset:116 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[24:27], 0 offset:120 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[24:27], 0 offset:124 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[24:27], 0 offset:128 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[24:27], 0 offset:132 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[24:27], 0 offset:136 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[24:27], 0 offset:140 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[24:27], 0 offset:144 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[24:27], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[24:27], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[24:27], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[24:27], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[24:27], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[24:27], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[24:27], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[24:27], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[24:27], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[24:27], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[24:27], 0 offset:60 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[24:27], 0 offset:64 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[24:27], 0 offset:68 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[24:27], 0 offset:72 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v0, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:84 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:88 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[24:27], 0 offset:92 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:96 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[24:27], 0 offset:100 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[24:27], 0 offset:104 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[24:27], 0 offset:108 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[24:27], 0 offset:112 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[24:27], 0 offset:116 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[24:27], 0 offset:120 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[24:27], 0 offset:124 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[24:27], 0 offset:128 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[24:27], 0 offset:132 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[24:27], 0 offset:136 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[24:27], 0 offset:140 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[24:27], 0 offset:144 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[24:27], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[24:27], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[24:27], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[24:27], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[24:27], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[24:27], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[24:27], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[24:27], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[24:27], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[24:27], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[24:27], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[24:27], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[24:27], 0 offset:68 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[24:27], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 6
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 7
+; NOOPT-NEXT:    v_writelane_b32 v18, s2, 6
+; NOOPT-NEXT:    v_writelane_b32 v18, s3, 7
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB26_3
 ; NOOPT-NEXT:  ; %bb.4: ; in Loop: Header=BB26_1 Depth=1
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 5
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 4
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 5
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.5: ; in Loop: Header=BB26_1 Depth=1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:84 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 offset:88 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[24:27], 0 offset:92 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[24:27], 0 offset:96 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[24:27], 0 offset:100 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[24:27], 0 offset:104 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[24:27], 0 offset:108 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[24:27], 0 offset:112 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[24:27], 0 offset:116 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[24:27], 0 offset:120 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[24:27], 0 offset:124 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[24:27], 0 offset:128 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[24:27], 0 offset:132 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[24:27], 0 offset:136 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[24:27], 0 offset:140 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[24:27], 0 offset:144 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 offset:84 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[24:27], 0 offset:88 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[24:27], 0 offset:92 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[24:27], 0 offset:96 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[24:27], 0 offset:100 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[24:27], 0 offset:104 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[24:27], 0 offset:108 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[24:27], 0 offset:112 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[24:27], 0 offset:116 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[24:27], 0 offset:120 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[24:27], 0 offset:124 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[24:27], 0 offset:128 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[24:27], 0 offset:132 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[24:27], 0 offset:136 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[24:27], 0 offset:140 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[24:27], 0 offset:144 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], 0
 ; NOOPT-NEXT:    s_waitcnt vmcnt(14)
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    v_writelane_b32 v0, s0, 2
-; NOOPT-NEXT:    v_writelane_b32 v0, s1, 3
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    s_waitcnt vmcnt(1)
+; NOOPT-NEXT:    v_writelane_b32 v18, s0, 2
+; NOOPT-NEXT:    v_writelane_b32 v18, s1, 3
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v18, off, s[24:27], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:  .LBB26_6: ; %Flow
 ; NOOPT-NEXT:    ; in Loop: Header=BB26_1 Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
+; NOOPT-NEXT:    s_waitcnt expcnt(0)
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[24:27], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v1, 2
-; NOOPT-NEXT:    v_readlane_b32 s1, v1, 3
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    v_readlane_b32 s0, v18, 2
+; NOOPT-NEXT:    v_readlane_b32 s1, v18, 3
 ; NOOPT-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 s0, 1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    v_cmp_ne_u32_e64 s[0:1], v1, s0
 ; NOOPT-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_cbranch_vccnz .LBB26_1
 ; NOOPT-NEXT:  ; %bb.7: ; %bb8
-; NOOPT-NEXT:    s_or_saveexec_b64 s[20:21], -1
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[24:27], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_mov_b64 exec, s[20:21]
-; NOOPT-NEXT:    ; kill: killed $vgpr0
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: broken_phi_bb:
@@ -9570,13 +9533,13 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    s_mov_b32 s19, 0xe8f000
 ; NOOPT-NEXT:    s_add_u32 s16, s16, s5
 ; NOOPT-NEXT:    s_addc_u32 s17, s17, 0
-; NOOPT-NEXT:    ; implicit-def: $vgpr16 : SGPR spill to VGPR lane
-; NOOPT-NEXT:    v_writelane_b32 v16, s4, 0
+; NOOPT-NEXT:    ; implicit-def: $vgpr33 : SGPR spill to VGPR lane
+; NOOPT-NEXT:    v_writelane_b32 v33, s4, 0
 ; NOOPT-NEXT:    s_mov_b32 s4, s1
-; NOOPT-NEXT:    v_readlane_b32 s1, v16, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s4, 1
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 0
+; NOOPT-NEXT:    v_writelane_b32 v33, s4, 1
 ; NOOPT-NEXT:    s_mov_b32 s4, s0
-; NOOPT-NEXT:    v_readlane_b32 s0, v16, 1
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 1
 ; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:144 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v1
 ; NOOPT-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
@@ -9591,17 +9554,17 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:140 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b32 s8, 0xf000
 ; NOOPT-NEXT:    s_mov_b32 s0, 0
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 2
+; NOOPT-NEXT:    v_writelane_b32 v33, s0, 2
 ; NOOPT-NEXT:    s_mov_b32 s2, s0
 ; NOOPT-NEXT:    s_mov_b32 s3, s8
 ; NOOPT-NEXT:    s_mov_b32 s8, s0
 ; NOOPT-NEXT:    s_mov_b32 s9, s0
 ; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9 killed $sgpr8_sgpr9 def $sgpr8_sgpr9_sgpr10_sgpr11
 ; NOOPT-NEXT:    s_mov_b64 s[10:11], s[2:3]
-; NOOPT-NEXT:    v_writelane_b32 v16, s8, 3
-; NOOPT-NEXT:    v_writelane_b32 v16, s9, 4
-; NOOPT-NEXT:    v_writelane_b32 v16, s10, 5
-; NOOPT-NEXT:    v_writelane_b32 v16, s11, 6
+; NOOPT-NEXT:    v_writelane_b32 v33, s8, 3
+; NOOPT-NEXT:    v_writelane_b32 v33, s9, 4
+; NOOPT-NEXT:    v_writelane_b32 v33, s10, 5
+; NOOPT-NEXT:    v_writelane_b32 v33, s11, 6
 ; NOOPT-NEXT:    ; kill: def $sgpr8_sgpr9_sgpr10_sgpr11 killed $sgpr4_sgpr5_sgpr6_sgpr7
 ; NOOPT-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; NOOPT-NEXT:    s_waitcnt expcnt(1)
@@ -9611,7 +9574,6 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:132 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s0
-; NOOPT-NEXT:    v_mov_b32_e32 v31, s0
 ; NOOPT-NEXT:    v_mov_b32_e32 v30, s0
 ; NOOPT-NEXT:    v_mov_b32_e32 v29, s0
 ; NOOPT-NEXT:    v_mov_b32_e32 v28, s0
@@ -9626,22 +9588,23 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    v_mov_b32_e32 v19, s0
 ; NOOPT-NEXT:    v_mov_b32_e32 v18, s0
 ; NOOPT-NEXT:    v_mov_b32_e32 v17, s0
+; NOOPT-NEXT:    v_mov_b32_e32 v16, s0
 ; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v30
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v5, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v6, v26
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v22
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v18
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v29
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v4, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v5, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v16
 ; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:68 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:72 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:76 ; 4-byte Folded Spill
@@ -9659,207 +9622,200 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:124 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:128 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[0:1], exec
-; NOOPT-NEXT:    v_writelane_b32 v16, s0, 7
-; NOOPT-NEXT:    v_writelane_b32 v16, s1, 8
+; NOOPT-NEXT:    v_writelane_b32 v33, s0, 7
+; NOOPT-NEXT:    v_writelane_b32 v33, s1, 8
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[16:19], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v33, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; NOOPT-NEXT:  .LBB27_1: ; =>This Inner Loop Header: Depth=1
-; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
+; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 offset:4 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v1, off, s[16:19], 0 offset:8 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v2, off, s[16:19], 0 offset:12 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v3, off, s[16:19], 0 offset:16 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 offset:20 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[16:19], 0 offset:24 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v6, off, s[16:19], 0 offset:28 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v7, off, s[16:19], 0 offset:32 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v8, off, s[16:19], 0 offset:36 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(6)
+; NOOPT-NEXT:    buffer_load_dword v9, off, s[16:19], 0 offset:40 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(5)
+; NOOPT-NEXT:    buffer_load_dword v10, off, s[16:19], 0 offset:44 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(4)
+; NOOPT-NEXT:    buffer_load_dword v11, off, s[16:19], 0 offset:48 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(3)
+; NOOPT-NEXT:    buffer_load_dword v12, off, s[16:19], 0 offset:52 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(2)
+; NOOPT-NEXT:    buffer_load_dword v13, off, s[16:19], 0 offset:56 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_waitcnt expcnt(1)
+; NOOPT-NEXT:    buffer_load_dword v14, off, s[16:19], 0 offset:60 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v15, off, s[16:19], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v16, off, s[16:19], 0 offset:144 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[16:19], 0 offset:132 ; 4-byte Folded Reload
+; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
+; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 9
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 10
-; NOOPT-NEXT:    buffer_load_dword v1, off, s[16:19], 0 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v2, off, s[16:19], 0 offset:4 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v3, off, s[16:19], 0 offset:8 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 offset:12 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[16:19], 0 offset:16 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[16:19], 0 offset:20 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v7, off, s[16:19], 0 offset:24 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v8, off, s[16:19], 0 offset:28 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(6)
-; NOOPT-NEXT:    buffer_load_dword v9, off, s[16:19], 0 offset:32 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(5)
-; NOOPT-NEXT:    buffer_load_dword v10, off, s[16:19], 0 offset:36 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(4)
-; NOOPT-NEXT:    buffer_load_dword v11, off, s[16:19], 0 offset:40 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(3)
-; NOOPT-NEXT:    buffer_load_dword v12, off, s[16:19], 0 offset:44 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(2)
-; NOOPT-NEXT:    buffer_load_dword v13, off, s[16:19], 0 offset:48 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(1)
-; NOOPT-NEXT:    buffer_load_dword v14, off, s[16:19], 0 offset:52 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v15, off, s[16:19], 0 offset:56 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v16, off, s[16:19], 0 offset:60 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v17, off, s[16:19], 0 offset:144 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[16:19], 0 offset:132 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readfirstlane_b32 s2, v18
-; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v18
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 9
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 10
+; NOOPT-NEXT:    v_readfirstlane_b32 s2, v17
+; NOOPT-NEXT:    v_cmp_eq_u32_e64 s[0:1], s2, v17
 ; NOOPT-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; NOOPT-NEXT:    s_mov_b32 m0, s2
-; NOOPT-NEXT:    v_movreld_b32_e32 v2, v17
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:148 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:152 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:156 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:160 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:164 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:168 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:172 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:176 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:180 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:184 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:188 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:192 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:196 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:200 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:204 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[16:19], 0 offset:208 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:8 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:16 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:20 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:24 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:28 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:32 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:36 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:40 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:44 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:48 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:52 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:56 ; 4-byte Folded Spill
-; NOOPT-NEXT:    buffer_store_dword v16, off, s[16:19], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    v_movreld_b32_e32 v1, v16
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:148 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:152 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:156 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:160 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:164 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:168 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:172 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:176 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:180 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:184 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:188 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:192 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:196 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:200 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:204 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:208 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v1, off, s[16:19], 0 offset:8 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v2, off, s[16:19], 0 offset:12 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:16 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v4, off, s[16:19], 0 offset:20 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v5, off, s[16:19], 0 offset:24 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v6, off, s[16:19], 0 offset:28 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v7, off, s[16:19], 0 offset:32 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v8, off, s[16:19], 0 offset:36 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v9, off, s[16:19], 0 offset:40 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v10, off, s[16:19], 0 offset:44 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v11, off, s[16:19], 0 offset:48 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v12, off, s[16:19], 0 offset:52 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v13, off, s[16:19], 0 offset:56 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v14, off, s[16:19], 0 offset:60 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v15, off, s[16:19], 0 offset:64 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 s[2:3], s[0:1]
-; NOOPT-NEXT:    v_writelane_b32 v0, s2, 9
-; NOOPT-NEXT:    v_writelane_b32 v0, s3, 10
+; NOOPT-NEXT:    v_writelane_b32 v33, s2, 9
+; NOOPT-NEXT:    v_writelane_b32 v33, s3, 10
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
-; NOOPT-NEXT:    buffer_store_dword v0, off, s[16:19], 0 offset:64 ; 4-byte Folded Spill
+; NOOPT-NEXT:    buffer_store_dword v33, off, s[16:19], 0 ; 4-byte Folded Spill
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; NOOPT-NEXT:    s_cbranch_execnz .LBB27_1
 ; NOOPT-NEXT:  ; %bb.2:
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 7
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 8
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 7
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 8
 ; NOOPT-NEXT:    s_mov_b64 exec, s[0:1]
 ; NOOPT-NEXT:  ; %bb.3:
+; NOOPT-NEXT:    buffer_load_dword v4, off, s[16:19], 0 offset:136 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v5, off, s[16:19], 0 offset:140 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v17, off, s[16:19], 0 offset:148 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v18, off, s[16:19], 0 offset:152 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v19, off, s[16:19], 0 offset:156 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v20, off, s[16:19], 0 offset:160 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v21, off, s[16:19], 0 offset:164 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v22, off, s[16:19], 0 offset:168 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v23, off, s[16:19], 0 offset:172 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v24, off, s[16:19], 0 offset:176 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v25, off, s[16:19], 0 offset:180 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v26, off, s[16:19], 0 offset:184 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v27, off, s[16:19], 0 offset:188 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v28, off, s[16:19], 0 offset:192 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v29, off, s[16:19], 0 offset:196 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v30, off, s[16:19], 0 offset:200 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v31, off, s[16:19], 0 offset:204 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v32, off, s[16:19], 0 offset:208 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_or_saveexec_b64 s[12:13], -1
-; NOOPT-NEXT:    buffer_load_dword v0, off, s[16:19], 0 offset:64 ; 4-byte Folded Reload
+; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 ; 4-byte Folded Reload
 ; NOOPT-NEXT:    s_mov_b64 exec, s[12:13]
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_readlane_b32 s0, v0, 3
-; NOOPT-NEXT:    v_readlane_b32 s1, v0, 4
-; NOOPT-NEXT:    v_readlane_b32 s2, v0, 5
-; NOOPT-NEXT:    v_readlane_b32 s3, v0, 6
-; NOOPT-NEXT:    buffer_load_dword v5, off, s[16:19], 0 offset:136 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v6, off, s[16:19], 0 offset:140 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v18, off, s[16:19], 0 offset:148 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v19, off, s[16:19], 0 offset:152 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v20, off, s[16:19], 0 offset:156 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v21, off, s[16:19], 0 offset:160 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v22, off, s[16:19], 0 offset:164 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v23, off, s[16:19], 0 offset:168 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v24, off, s[16:19], 0 offset:172 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v25, off, s[16:19], 0 offset:176 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v26, off, s[16:19], 0 offset:180 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v27, off, s[16:19], 0 offset:184 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v28, off, s[16:19], 0 offset:188 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v29, off, s[16:19], 0 offset:192 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v30, off, s[16:19], 0 offset:196 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v31, off, s[16:19], 0 offset:200 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v32, off, s[16:19], 0 offset:204 ; 4-byte Folded Reload
-; NOOPT-NEXT:    buffer_load_dword v33, off, s[16:19], 0 offset:208 ; 4-byte Folded Reload
-; NOOPT-NEXT:    s_waitcnt vmcnt(12)
-; NOOPT-NEXT:    v_mov_b32_e32 v7, v21
-; NOOPT-NEXT:    v_mov_b32_e32 v8, v20
-; NOOPT-NEXT:    v_mov_b32_e32 v9, v19
-; NOOPT-NEXT:    v_mov_b32_e32 v1, v18
-; NOOPT-NEXT:    s_waitcnt vmcnt(8)
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v25
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v24
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v23
-; NOOPT-NEXT:    v_mov_b32_e32 v10, v22
-; NOOPT-NEXT:    s_waitcnt vmcnt(4)
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v29
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v28
-; NOOPT-NEXT:    v_mov_b32_e32 v17, v27
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v26
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v33
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v32
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v31
-; NOOPT-NEXT:    v_mov_b32_e32 v18, v30
+; NOOPT-NEXT:    v_readlane_b32 s0, v33, 3
+; NOOPT-NEXT:    v_readlane_b32 s1, v33, 4
+; NOOPT-NEXT:    v_readlane_b32 s2, v33, 5
+; NOOPT-NEXT:    v_readlane_b32 s3, v33, 6
+; NOOPT-NEXT:    v_mov_b32_e32 v6, v20
+; NOOPT-NEXT:    v_mov_b32_e32 v7, v19
+; NOOPT-NEXT:    v_mov_b32_e32 v8, v18
+; NOOPT-NEXT:    v_mov_b32_e32 v0, v17
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v24
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v23
+; NOOPT-NEXT:    v_mov_b32_e32 v3, v22
+; NOOPT-NEXT:    v_mov_b32_e32 v9, v21
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v28
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v27
+; NOOPT-NEXT:    v_mov_b32_e32 v16, v26
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v25
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v32
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v31
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v30
+; NOOPT-NEXT:    v_mov_b32_e32 v17, v29
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr18 killed $vgpr18 def $vgpr18_vgpr19_vgpr20_vgpr21 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v19, v14
-; NOOPT-NEXT:    v_mov_b32_e32 v20, v13
-; NOOPT-NEXT:    v_mov_b32_e32 v21, v12
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v6
+; NOOPT-NEXT:    ; kill: def $vgpr17 killed $vgpr17 def $vgpr17_vgpr18_vgpr19_vgpr20 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v18, v13
+; NOOPT-NEXT:    v_mov_b32_e32 v19, v12
+; NOOPT-NEXT:    v_mov_b32_e32 v20, v11
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, v5
-; NOOPT-NEXT:    buffer_store_dwordx4 v[18:21], v[12:13], s[0:3], 0 addr64 offset:48
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr11 killed $vgpr11 def $vgpr11_vgpr12_vgpr13_vgpr14 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v17
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v16
-; NOOPT-NEXT:    v_mov_b32_e32 v14, v15
-; NOOPT-NEXT:    v_mov_b32_e32 v16, v6
-; NOOPT-NEXT:    v_mov_b32_e32 v15, v5
-; NOOPT-NEXT:    buffer_store_dwordx4 v[11:14], v[15:16], s[0:3], 0 addr64 offset:32
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v4
+; NOOPT-NEXT:    buffer_store_dwordx4 v[17:20], v[11:12], s[0:3], 0 addr64 offset:48
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; implicit-def: $sgpr4
 ; NOOPT-NEXT:    ; kill: def $vgpr10 killed $vgpr10 def $vgpr10_vgpr11_vgpr12_vgpr13 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v16
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v15
+; NOOPT-NEXT:    v_mov_b32_e32 v13, v14
+; NOOPT-NEXT:    v_mov_b32_e32 v15, v5
+; NOOPT-NEXT:    v_mov_b32_e32 v14, v4
+; NOOPT-NEXT:    buffer_store_dwordx4 v[10:13], v[14:15], s[0:3], 0 addr64 offset:32
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; kill: def $vgpr9 killed $vgpr9 def $vgpr9_vgpr10_vgpr11_vgpr12 killed $exec
 ; NOOPT-NEXT:    s_waitcnt expcnt(0)
-; NOOPT-NEXT:    v_mov_b32_e32 v11, v4
-; NOOPT-NEXT:    v_mov_b32_e32 v12, v3
-; NOOPT-NEXT:    v_mov_b32_e32 v13, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
+; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
+; NOOPT-NEXT:    v_mov_b32_e32 v12, v1
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v4
 ; NOOPT-NEXT:    v_mov_b32_e32 v2, v5
+; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], v[1:2], s[0:3], 0 addr64 offset:16
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; implicit-def: $sgpr4
+; NOOPT-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; NOOPT-NEXT:    v_mov_b32_e32 v1, v8
+; NOOPT-NEXT:    v_mov_b32_e32 v2, v7
 ; NOOPT-NEXT:    v_mov_b32_e32 v3, v6
-; NOOPT-NEXT:    buffer_store_dwordx4 v[10:13], v[2:3], s[0:3], 0 addr64 offset:16
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; implicit-def: $sgpr4
-; NOOPT-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2_vgpr3_vgpr4 killed $exec
-; NOOPT-NEXT:    v_mov_b32_e32 v2, v9
-; NOOPT-NEXT:    v_mov_b32_e32 v3, v8
-; NOOPT-NEXT:    v_mov_b32_e32 v4, v7
-; NOOPT-NEXT:    buffer_store_dwordx4 v[1:4], v[5:6], s[0:3], 0 addr64
-; NOOPT-NEXT:    ; kill: killed $vgpr0
+; NOOPT-NEXT:    buffer_store_dwordx4 v[0:3], v[4:5], s[0:3], 0 addr64
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: insert_or_disj_index:
