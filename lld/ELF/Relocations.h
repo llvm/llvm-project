@@ -204,7 +204,8 @@ private:
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
-  // The Mips LA25 Thunk is an example of an inline ThunkSection.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection, as is
+  // the AArch64BTLandingPadThunk.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
 
   // Record landing pads, generated for a section + offset destination.

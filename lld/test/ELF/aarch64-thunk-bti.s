@@ -1,14 +1,14 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
-// RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o %t.o
-// RUN: ld.lld --threads=1 --shared --script=lds %t.o -o %t.so --defsym absolute=0xf0000000
-// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=CHECK-PADS
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %t/shared -o %tshared.o
-// RUN: ld.lld --shared -o %tshared.so %tshared.o --soname=t.so
-// RUN: ld.lld %tshared.so --script=lds %t.o -o %t.exe --defsym absolute=0xf0000000
-// RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefix=CHECK-EXE
-// RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck %s --check-prefix=CHECK-PADS
+// RUN: llvm-mc -filetype=obj -triple=aarch64 asm -o a.o
+// RUN: ld.lld --threads=1 --shared --script=lds a.o -o out.so --defsym absolute=0xf0000000
+// RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s --check-prefix=CHECK-PADS
+// RUN: llvm-mc -filetype=obj -triple=aarch64 shared -o shared.o
+// RUN: ld.lld --shared -o shared.so shared.o --soname=shared.so
+// RUN: ld.lld shared.so --script=lds a.o -o exe --defsym absolute=0xf0000000
+// RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-EXE
+// RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-PADS
 
 /// Test thunk generation when destination does not have a BTI compatible
 /// landing pad. Linker must generate landing pad sections for thunks that use
