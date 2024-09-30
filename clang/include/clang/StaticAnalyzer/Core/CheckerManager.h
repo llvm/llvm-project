@@ -221,7 +221,7 @@ public:
     return static_cast<CHECKER *>(CheckerTags[tag]);
   }
 
-    template <typename CHECKER> bool isRegisteredChecker() {
+  template <typename CHECKER> bool isRegisteredChecker() {
     return CheckerTags.contains(getTag<CHECKER>());
   }
 

@@ -58,8 +58,8 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
     BugTypes[CK_DivideZero].reset(
         new BugType(CheckNames[CK_DivideZero], "Division by zero"));
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(
-        *BugTypes[CK_DivideZero], Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(*BugTypes[CK_DivideZero],
+                                                      Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
@@ -118,8 +118,8 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
   if ((stateNotZero && stateZero)) {
     std::vector<SymbolRef> taintedSyms = getTaintedSymbols(C.getState(), *DV);
     if (!taintedSyms.empty()) {
-      reportTaintBug("Division by a tainted value, possibly zero", stateNotZero, C,
-                     taintedSyms);
+      reportTaintBug("Division by a tainted value, possibly zero", stateNotZero,
+                     C, taintedSyms);
       return;
     }
   }
