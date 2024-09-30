@@ -7,6 +7,8 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
+#include "llvm/Support/TimeProfiler.h"
+
 using namespace mlir;
 using namespace mlir::cir;
 
@@ -43,6 +45,7 @@ static void process(mlir::cir::FuncOp func) {
 }
 
 void GotoSolverPass::runOnOperation() {
+  llvm::TimeTraceScope scope("Goto Solver");
   SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](mlir::cir::FuncOp op) { process(op); });
 }

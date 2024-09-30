@@ -172,6 +172,8 @@ public:
   }
 
   void HandleTranslationUnit(ASTContext &C) override {
+    llvm::TimeTraceScope scope("CIR Gen");
+
     // Note that this method is called after `HandleTopLevelDecl` has already
     // ran all over the top level decls. Here clang mostly wraps defered and
     // global codegen, followed by running CIR passes.

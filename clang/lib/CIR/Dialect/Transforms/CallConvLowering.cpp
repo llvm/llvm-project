@@ -18,6 +18,8 @@
 #define GEN_PASS_DEF_CALLCONVLOWERING
 #include "clang/CIR/Dialect/Passes.h.inc"
 
+#include "llvm/Support/TimeProfiler.h"
+
 namespace mlir {
 namespace cir {
 
@@ -30,6 +32,8 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
 
   LogicalResult matchAndRewrite(FuncOp op,
                                 PatternRewriter &rewriter) const final {
+    llvm::TimeTraceScope scope("Call Conv Lowering Pass", op.getSymName().str());
+
     const auto module = op->getParentOfType<mlir::ModuleOp>();
 
     if (!op.getAst())

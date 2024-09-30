@@ -19,6 +19,8 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/Support/TimeProfiler.h"
+
 namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(
     mlir::ModuleOp theModule, mlir::MLIRContext *mlirCtx,
@@ -28,6 +30,8 @@ mlir::LogicalResult runCIRToCIRPasses(
     llvm::StringRef libOptOpts, std::string &passOptParsingFailure,
     bool enableCIRSimplify, bool flattenCIR, bool emitMLIR,
     bool enableCallConvLowering, bool enableMem2Reg) {
+
+  llvm::TimeTraceScope scope("CIR To CIR Passes");
 
   mlir::PassManager pm(mlirCtx);
   pm.addPass(mlir::createCIRCanonicalizePass());

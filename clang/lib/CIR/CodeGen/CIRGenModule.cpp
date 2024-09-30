@@ -75,6 +75,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #include <iterator>
 #include <numeric>
@@ -463,6 +464,19 @@ void CIRGenModule::setDSOLocal(CIRGlobalValueInterface GV) const {
 }
 
 void CIRGenModule::buildGlobal(GlobalDecl GD) {
+  llvm::TimeTraceScope scope("build CIR Global", [&]() -> std::string {
+    auto *ND = dyn_cast<NamedDecl>(GD.getDecl());
+    if (!ND)
+      // TODO: How to print decls which is not named decl?
+      return "Unnamed decl";
+
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    ND->getNameForDiagnostic(OS, getASTContext().getPrintingPolicy(),
+                             /*Qualified=*/true);
+    return Name;
+  });
+
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
   assert(!Global->hasAttr<IFuncAttr>() && "NYI");

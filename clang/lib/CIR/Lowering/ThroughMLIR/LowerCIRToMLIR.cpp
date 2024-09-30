@@ -53,6 +53,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace cir;
 using namespace llvm;
@@ -1419,6 +1420,8 @@ std::unique_ptr<llvm::Module>
 lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
                            std::unique_ptr<mlir::MLIRContext> mlirCtx,
                            LLVMContext &llvmCtx) {
+  llvm::TimeTraceScope scope("Lower from CIR to MLIR To LLVM");
+
   mlir::PassManager pm(mlirCtx.get());
 
   pm.addPass(createConvertCIRToMLIRPass());
@@ -1451,6 +1454,8 @@ std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass() {
 
 mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
                                   mlir::MLIRContext *mlirCtx) {
+  llvm::TimeTraceScope scope("Lower CIR To MLIR");
+
   mlir::PassManager pm(mlirCtx);
 
   pm.addPass(createConvertCIRToMLIRPass());
