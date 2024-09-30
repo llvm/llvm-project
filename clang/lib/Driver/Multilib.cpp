@@ -32,10 +32,9 @@ using namespace llvm::sys;
 
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
                    StringRef IncludeSuffix, const flags_list &Flags,
-                   StringRef ExclusiveGroup,
-                   std::optional<StringRef> FatalError)
+                   StringRef ExclusiveGroup, std::optional<StringRef> Error)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Flags(Flags), ExclusiveGroup(ExclusiveGroup), FatalError(FatalError) {
+      Flags(Flags), ExclusiveGroup(ExclusiveGroup), Error(Error) {
   assert(GCCSuffix.empty() ||
          (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
   assert(OSSuffix.empty() ||
@@ -123,11 +122,11 @@ bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
         continue;
     }
 
-    // If this multilib is actually a placeholder containing a fatal
-    // error message written by the multilib.yaml author, display that
-    // error message, and return failure.
-    if (M.isFatalError()) {
-      D.Diag(clang::diag::err_drv_multilib_custom_error) << M.getFatalError();
+    // If this multilib is actually a placeholder containing an error message
+    // written by the multilib.yaml author, display that error message, and
+    // return failure.
+    if (M.isError()) {
+      D.Diag(clang::diag::err_drv_multilib_custom_error) << M.getErrorMessage();
       return false;
     }
 
@@ -173,7 +172,7 @@ static const VersionTuple MultilibVersionCurrent(1, 0);
 
 struct MultilibSerialization {
   std::string Dir;        // if this record successfully selects a library dir
-  std::string FatalError; // if this record reports a fatal error message
+  std::string Error;      // if this record reports a fatal error message
   std::vector<std::string> Flags;
   std::string Group;
 };
@@ -217,15 +216,15 @@ struct MultilibSetSerialization {
 template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
   static void mapping(llvm::yaml::IO &io, MultilibSerialization &V) {
     io.mapOptional("Dir", V.Dir);
-    io.mapOptional("FatalError", V.FatalError);
+    io.mapOptional("Error", V.Error);
     io.mapRequired("Flags", V.Flags);
     io.mapOptional("Group", V.Group);
   }
   static std::string validate(IO &io, MultilibSerialization &V) {
-    if (V.Dir.empty() && V.FatalError.empty())
-      return "one of the 'Dir' and 'FatalError' keys must be specified";
-    if (!V.Dir.empty() && !V.FatalError.empty())
-      return "the 'Dir' and 'FatalError' keys may not both be specified";
+    if (V.Dir.empty() && V.Error.empty())
+      return "one of the 'Dir' and 'Error' keys must be specified";
+    if (!V.Dir.empty() && !V.Error.empty())
+      return "the 'Dir' and 'Error' keys may not both be specified";
     if (StringRef(V.Dir).starts_with("/"))
       return "paths must be relative but \"" + V.Dir + "\" starts with \"/\"";
     return std::string{};
@@ -311,8 +310,8 @@ MultilibSet::parseYaml(llvm::MemoryBufferRef Input,
   multilib_list Multilibs;
   Multilibs.reserve(MS.Multilibs.size());
   for (const auto &M : MS.Multilibs) {
-    if (!M.FatalError.empty()) {
-      Multilibs.emplace_back("", "", "", M.Flags, M.Group, M.FatalError);
+    if (!M.Error.empty()) {
+      Multilibs.emplace_back("", "", "", M.Flags, M.Group, M.Error);
     } else {
       std::string Dir;
       if (M.Dir != ".")
