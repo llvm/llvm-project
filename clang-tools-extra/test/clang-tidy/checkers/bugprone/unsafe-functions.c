@@ -50,12 +50,24 @@ void f1w(wchar_t *S) {
 
 struct tm;
 char *asctime(const struct tm *TimePtr);
+char *ctime(const struct tm *TimePtr);
+char *localtime(const struct tm *tm);
 
 void f2(const struct tm *Time) {
   asctime(Time);
   // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'asctime' is not bounds-checking and non-reentrant; 'asctime_s' should be used instead
   // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'asctime' is not bounds-checking and non-reentrant; 'asctime_s' should be used instead
   // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:3: warning: function 'asctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
+
+  ctime(Time);
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'asctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
+
+  localtime(Time);
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'asctime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
   char *(*F1)(const struct tm *) = asctime;
   // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:36: warning: function 'asctime' is not bounds-checking and non-reentrant; 'asctime_s' should be used instead
