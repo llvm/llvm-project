@@ -68,8 +68,8 @@ define i32 @test(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[T]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUTEREND]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[OUTERLOOP]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ [[CONV114]], [[OUTERLOOP]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[OUTERLOOP]] ]
 ; CHECK-NEXT:    br label [[INNERLOOP:%.*]]
 ; CHECK:       innerloop:
 ; CHECK-NEXT:    [[I_2132:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC129:%.*]], [[INNERLOOP]] ]

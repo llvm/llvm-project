@@ -234,8 +234,8 @@ define dso_local signext i32 @f2(ptr noalias %A, ptr noalias %B, i32 signext %n)
 ; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[FOR_END_LOOPEXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ], [ 0, [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END4]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -473,6 +473,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
@@ -480,7 +481,6 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -563,6 +563,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.main.loop.iter.check:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.ph:
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[INDUCTION_IV]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = mul <4 x i8> <i8 0, i8 1, i8 2, i8 3>, [[DOTSPLAT]]
@@ -570,7 +571,6 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = mul i8 [[INDUCTION_IV]], 4
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[TMP3]], i64 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <4 x i8> [[DOTSPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vector.body:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

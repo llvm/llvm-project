@@ -66,7 +66,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[T3_I8:%.*]] = zext i1 [[T3_I]] to i8
 ; CHECK-NEXT:    store i8 [[T3_I8]], ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[T1_0_LCSSA]], [[PTR]]
-; CHECK-NEXT:    br i1 [[EC]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[FOR_EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.exit:
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], [[FOR_BODY]] ], [ [[IND_END]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[IV_NEXT_LCSSA]]

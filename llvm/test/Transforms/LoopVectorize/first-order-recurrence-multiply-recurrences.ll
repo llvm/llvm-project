@@ -123,16 +123,16 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT4:%.*]] = phi float [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR6:%.*]] = phi float [ [[SCALAR_RECUR_INIT5]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SCALAR_RECUR6]]
-; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[SCALAR_RECUR]], float [[NEG]], float 0.000000e+00)
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi float [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi float [ [[SCALAR_RECUR_INIT4]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[FOR_2]]
+; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[FOR_1]], float [[NEG]], float 0.000000e+00)
 ; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[FOR_1_NEXT]] = load float, ptr [[A]], align 4
@@ -246,19 +246,19 @@ define void @test_pr54233_for_depend_on_each_other(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi i32 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT2:%.*]] = phi i32 [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR4:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT3]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SCALAR_RECUR4]], 10
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[SCALAR_RECUR4]], [[SCALAR_RECUR]]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT2]], [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[FOR_2]], 10
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[FOR_2]], [[FOR_1]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SHL]], 255
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[OR]]
-; CHECK-NEXT:    [[FOR_1_NEXT]] = xor i32 12, [[SCALAR_RECUR4]]
+; CHECK-NEXT:    [[FOR_1_NEXT]] = xor i32 12, [[FOR_2]]
 ; CHECK-NEXT:    [[FOR_2_NEXT]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[AND]], ptr [[A_GEP]], align 4

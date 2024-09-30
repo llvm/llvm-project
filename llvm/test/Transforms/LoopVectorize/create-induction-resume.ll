@@ -51,8 +51,8 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV_LCSSA1]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[L1_EXIT_VAL]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -67,18 +67,18 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i32 0
 ; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT4]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[L2_HEADER_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
 ; CHECK:       L2.Inner.header:
 ; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[L2_ACCUM_NEXT]] = sub i32 [[L2_ACCUM]], [[L1_EXIT_VAL]]
 ; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[L2_IV]]

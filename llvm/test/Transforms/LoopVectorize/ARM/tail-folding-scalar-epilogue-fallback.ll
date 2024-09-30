@@ -48,7 +48,7 @@ define void @outside_user_blocks_tail_folding(ptr nocapture readonly %ptr, i32 %
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[INCDEC_PTR]], align 1
 ; CHECK-NEXT:    store i8 [[TMP5]], ptr [[BUFF]], align 1
 ; CHECK-NEXT:    [[TOBOOL11:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL11]], label [[END]], label [[BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[INCDEC_PTR_LCSSA:%.*]] = phi ptr [ [[INCDEC_PTR]], [[BODY]] ], [ [[IND_END1]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store ptr [[INCDEC_PTR_LCSSA]], ptr [[POS]], align 4

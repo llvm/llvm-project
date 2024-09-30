@@ -705,8 +705,8 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; AVX512-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX512-NEXT:    br i1 [[CMP_N17]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; AVX512:       vec.epilog.scalar.ph:
-; AVX512-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi ptr [ [[IND_END11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END12]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR]], [[VECTOR_MEMCHECK]] ], [ [[PTR]], [[ITER_CHECK]] ]
-; AVX512-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[IND_END14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END15]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[DEST]], [[VECTOR_MEMCHECK]] ], [ [[DEST]], [[ITER_CHECK]] ]
+; AVX512-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi ptr [ [[IND_END11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END12]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR]], [[ITER_CHECK]] ], [ [[PTR]], [[VECTOR_MEMCHECK]] ]
+; AVX512-NEXT:    [[BC_RESUME_VAL16:%.*]] = phi ptr [ [[IND_END14]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END15]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[DEST]], [[ITER_CHECK]] ], [ [[DEST]], [[VECTOR_MEMCHECK]] ]
 ; AVX512-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX512:       for.body:
 ; AVX512-NEXT:    [[PTR_ADDR_012:%.*]] = phi ptr [ [[BC_RESUME_VAL13]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]

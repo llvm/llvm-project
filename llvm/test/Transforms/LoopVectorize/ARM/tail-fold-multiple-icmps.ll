@@ -31,9 +31,9 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP4]], [[MIDDLE_BLOCK]] ], [ 2147483647, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX2:%.*]] = phi i32 [ [[TMP5]], [[MIDDLE_BLOCK]] ], [ -2147483648, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[MAX_0_LCSSA:%.*]] = phi i32 [ -2147483648, [[ENTRY:%.*]] ], [ [[COND:%.*]], [[FOR_BODY]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]

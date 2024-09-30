@@ -128,7 +128,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_scalarize_with_branch_cond(
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue5 ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue4 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i1 [[OFFSET_IDX]], false
@@ -142,15 +142,15 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
-; CHECK:       pred.store.if4:
+; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if3, label %pred.store.continue4
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    br label %pred.store.continue5
-; CHECK:       pred.store.continue5:
+; CHECK-NEXT:    br label %pred.store.continue4
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
