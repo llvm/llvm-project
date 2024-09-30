@@ -1102,15 +1102,24 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
     RVVStackAlign = std::max(RVVStackAlign, ObjectAlign);
   }
 
+  uint64_t StackSize = Offset;
+
+  // Multiply by vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize *= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
+
   // Ensure the alignment of the RVV stack. Since we want the most-aligned
   // object right at the bottom (i.e., any padding at the top of the frame),
   // readjust all RVV objects down by the alignment padding.
-  uint64_t StackSize = Offset;
   if (auto AlignmentPadding = offsetToAlignment(StackSize, RVVStackAlign)) {
     StackSize += AlignmentPadding;
     for (int FI : ObjectsToAllocate)
       MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
   }
+
+  // Remove vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize /= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
 
   return std::make_pair(StackSize, RVVStackAlign);
 }
