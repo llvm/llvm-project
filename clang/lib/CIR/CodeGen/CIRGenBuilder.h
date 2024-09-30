@@ -372,6 +372,28 @@ public:
   }
   bool isInt(mlir::Type i) { return mlir::isa<mlir::cir::IntType>(i); }
 
+  mlir::cir::IntType getExtendedIntTy(mlir::cir::IntType ty, bool isSigned) {
+    if (isInt8Ty(ty)) {
+      return isSigned ? getSInt16Ty() : getUInt16Ty();
+    }
+    if (isInt16Ty(ty)) {
+      return isSigned ? getSInt32Ty() : getUInt32Ty();
+    }
+    if (isInt32Ty(ty)) {
+      return isSigned ? getSInt64Ty() : getUInt64Ty();
+    }
+    llvm_unreachable("NYI");
+  }
+
+  mlir::cir::VectorType getExtendedElementVectorType(mlir::cir::VectorType vt,
+                                                     bool isSigned = false) {
+    auto elementTy =
+        mlir::dyn_cast_or_null<mlir::cir::IntType>(vt.getEltType());
+    assert(elementTy && "expected int vector");
+    return mlir::cir::VectorType::get(
+        getContext(), getExtendedIntTy(elementTy, isSigned), vt.getSize());
+  }
+
   mlir::cir::LongDoubleType
   getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
