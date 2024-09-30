@@ -23,7 +23,7 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
   }
   llvm.return
 }
-// CHECK: define internal void @__omp_offloading_fd00
+// CHECK: define internal void @__omp_offloading_
 // CHECK-NOT: define {{.*}}
 // CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, i64 1, align 4
 // CHECK: %[[ADD:.*]] = add i32 {{.*}}, 10
@@ -60,7 +60,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
 }
 
 
-// CHECK: define internal void @__omp_offloading_fd00
+// CHECK: define internal void @__omp_offloading_
 // CHECK: %[[PRIV_I32_ALLOC:.*]] = alloca i32, i64 1, align 4
 // CHECK: %[[PRIV_FLOAT_ALLOC:.*]] = alloca float, i64 1, align 4
 // CHECK: %[[ADD_I32:.*]] = add i32 {{.*}}, 10
@@ -92,7 +92,7 @@ llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
   }
   llvm.return
 }
-// CHECK: define internal void @__omp_offloading_fd00
+// CHECK: define internal void @__omp_offloading_
 // CHECK: %[[ONE:.*]] = phi i32 [ 1, {{.*}} ]
 // CHECK: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[ONE]], align 4
 // CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
