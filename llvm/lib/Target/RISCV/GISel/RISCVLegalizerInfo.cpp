@@ -598,8 +598,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   SplatActions.clampScalar(1, sXLen, sXLen);
 
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
-      .customIf(typeIsLegalBoolVec(0, BoolVecTys, ST))
-      .customIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST));
+      .customIf(
+          LegalityPredicates::any(typeIsLegalBoolVec(0, BoolVecTys, ST),
+                                  typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST)));
 
   getLegacyLegalizerInfo().computeTables();
 }
