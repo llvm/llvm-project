@@ -689,6 +689,10 @@ def CastFloatingFixedPoint : Opcode {
 def CastFixedPointFloating : Opcode {
   let Args = [ArgFltSemantics];
 }
+def CastFixedPointIntegral : Opcode {
+  let Types = [FixedSizeIntegralTypes];
+  let HasGroup = 1;
+}
 
 def PtrPtrCast : Opcode {
   let Args = [ArgBool];

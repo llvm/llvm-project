@@ -33,17 +33,20 @@ public:
       : V(APInt(0, 0ULL, false),
           llvm::FixedPointSemantics(0, 0, false, false, false)) {}
 
-  static FixedPoint Zero(llvm::FixedPointSemantics Sem) {
+  static FixedPoint zero(llvm::FixedPointSemantics Sem) {
     return FixedPoint(APInt(Sem.getWidth(), 0ULL, Sem.isSigned()), Sem);
   }
 
-  operator bool() const { return V.getBoolValue(); }
-  template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
-  explicit operator Ty() const {
-    // FIXME
-    return 0;
+  static FixedPoint from(const APSInt &I, llvm::FixedPointSemantics Sem,
+                         bool *Overflow) {
+    return FixedPoint(llvm::APFixedPoint::getFromIntValue(I, Sem, Overflow));
+  }
+  static FixedPoint from(const llvm::APFloat &I, llvm::FixedPointSemantics Sem,
+                         bool *Overflow) {
+    return FixedPoint(llvm::APFixedPoint::getFromFloatValue(I, Sem, Overflow));
   }
 
+  operator bool() const { return V.getBoolValue(); }
   void print(llvm::raw_ostream &OS) const { OS << V; }
 
   APValue toAPValue(const ASTContext &) const { return APValue(V); }
@@ -68,6 +71,10 @@ public:
 
   llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
     return V.convertToFloat(*Sem);
+  }
+
+  llvm::APSInt toInt(unsigned BitWidth, bool Signed, bool *Overflow) const {
+    return V.convertToInt(BitWidth, Signed, Overflow);
   }
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {
