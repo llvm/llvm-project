@@ -47,3 +47,9 @@ namespace BinOps {
                                       // ref-error {{is not an integral constant expression}} \
                                       // ref-note {{is outside the range of representable values}}
 }
+
+namespace FixedPointCasts {
+  constexpr _Fract B = 0.3;
+  constexpr _Accum A = B;
+  constexpr _Fract C = A;
+}

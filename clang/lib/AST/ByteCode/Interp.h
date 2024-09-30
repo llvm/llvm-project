@@ -2161,6 +2161,31 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
   return true;
 }
 
+inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
+  FixedPointSemantics TargetSemantics(0, 0, false, false, false);
+  std::memcpy(&TargetSemantics, &FPS, sizeof(TargetSemantics));
+
+  const auto &Source = S.Stk.pop<FixedPoint>();
+
+  bool Overflow;
+  FixedPoint Result = Source.toSemantics(TargetSemantics, &Overflow);
+
+  if (Overflow) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    if (S.checkingForUndefinedBehavior()) {
+      S.getASTContext().getDiagnostics().Report(
+          E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+          << Result.toDiagnosticString(S.getASTContext()) << E->getType();
+    }
+    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
+    if (!S.noteUndefinedBehavior())
+      return false;
+  }
+
+  S.Stk.push<FixedPoint>(Result);
+  return true;
+}
+
 /// Like Cast(), but we cast to an arbitrary-bitwidth integral, so we need
 /// to know what bitwidth the result should be.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
