@@ -109,13 +109,13 @@ struct tm *localtime(const struct tm *tm);
 
 void f4(const time_t *Timer) {
   ctime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
   // no-warning WITHOUT-ANNEX-K
 
   localtime(Time);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
   // no-warning WITHOUT-ANNEX-K
 }
 
@@ -161,8 +161,8 @@ void fOptional() {
 typedef int errno_t;
 typedef size_t rsize_t;
 errno_t asctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t ctime_r(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t localtime_r(char *S, rsize_t Maxsize, const struct tm *TimePtr);
+errno_t ctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
+errno_t localtime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t strcat_s(char *S1, rsize_t S1Max, const char *S2);
 
 void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
@@ -173,11 +173,11 @@ void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
     return;
 
   // no-warning, safe function from annex K is used
-  if (ctime_r(Buf, BUFSIZ, Time) != 0)
+  if (ctime_s(Buf, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used
-  if (localtime_r(Buf, BUFSIZ, Time) != 0)
+  if (localtime_s(Buf, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used
