@@ -3183,6 +3183,26 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                         Builder.CreateAdd(X, ConstantInt::get(Ty, *C2 - C - 1)),
                         ConstantInt::get(Ty, ~C));
 
+  // zext(V) + C2 <u C -> V + trunc(C2) <u trunc(C) iff C2 s<0 && C s>0
+  Value *V;
+  if (Pred == ICmpInst::ICMP_ULT && match(X, m_ZExt(m_Value(V)))) {
+    Type *NewCmpTy = V->getType();
+    unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
+    if (shouldChangeType(Ty, NewCmpTy) &&
+        C2->getSignificantBits() <= NewCmpBW &&
+        C.getSignificantBits() <= NewCmpBW) {
+      APInt TruncatedOffset = C2->trunc(NewCmpBW);
+      APInt TruncatedRHS = C.trunc(NewCmpBW);
+      if (TruncatedOffset.isNegative() && TruncatedRHS.isNonNegative()) {
+        Value *TruncatedOffsetV = ConstantInt::get(NewCmpTy, TruncatedOffset);
+        Value *TruncatedRV = ConstantInt::get(NewCmpTy, TruncatedRHS);
+        return new ICmpInst(ICmpInst::ICMP_ULT,
+                            Builder.CreateAdd(V, TruncatedOffsetV),
+                            TruncatedRV);
+      }
+    }
+  }
+
   return nullptr;
 }
 
