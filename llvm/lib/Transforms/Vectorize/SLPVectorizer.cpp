@@ -5443,6 +5443,22 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
 
+    SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
+    for (auto [I, V] : zip(UserBVHead, TE.Scalars)) {
+      if (!V->hasNUsesOrMore(1))
+        continue;
+      auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
+      if (!II)
+        continue;
+      Instruction *BVHead = nullptr;
+      BasicBlock *BB = II->getParent();
+      while (II && II->hasOneUse() && II->getParent() == BB) {
+        BVHead = II;
+        II = dyn_cast<InsertElementInst>(II->getOperand(0));
+      }
+      I = BVHead;
+    }
+
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
@@ -5454,21 +5470,60 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         return false;
       auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());
       auto *FirstUserOfPhi2 = cast<Instruction>(*V2->user_begin());
-      if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1))
-        if (auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2)) {
-          if (!areTwoInsertFromSameBuildVector(
-                  IE1, IE2,
-                  [](InsertElementInst *II) { return II->getOperand(0); }))
-            return I1 < I2;
+      if (FirstUserOfPhi1->getParent() != FirstUserOfPhi2->getParent())
+        return DT->dominates(FirstUserOfPhi1->getParent(),
+                             FirstUserOfPhi2->getParent());
+      auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1);
+      auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2);
+      auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1);
+      auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2);
+      if (IE1 && !IE2)
+        return true;
+      if (!IE1 && IE2)
+        return false;
+      if (IE1 && IE2) {
+        if (UserBVHead[I1] && !UserBVHead[I2])
+          return true;
+        if (!UserBVHead[I1])
+          return false;
+        if (UserBVHead[I1] == UserBVHead[I2])
           return getElementIndex(IE1) < getElementIndex(IE2);
-        }
-      if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1))
-        if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
-          if (EE1->getOperand(0) != EE2->getOperand(0))
-            return I1 < I2;
+        if (UserBVHead[I1]->getParent() != UserBVHead[I2]->getParent())
+          return DT->dominates(UserBVHead[I1]->getParent(),
+                               UserBVHead[I2]->getParent());
+        return UserBVHead[I1]->comesBefore(UserBVHead[I2]);
+      }
+      if (EE1 && !EE2)
+        return true;
+      if (!EE1 && EE2)
+        return false;
+      if (EE1 && EE2) {
+        if (EE1->getOperand(0) == EE2->getOperand(0))
           return getElementIndex(EE1) < getElementIndex(EE2);
+        auto *I1 = dyn_cast<Instruction>(EE1->getOperand(0));
+        if (I1 && !I2)
+          return true;
+        if (!I1 && I2)
+          return false;
+        auto *I2 = dyn_cast<Instruction>(EE2->getOperand(0));
+        if (I1 && I2) {
+          if (I1->getParent() != I2->getParent())
+            return DT->dominates(I1->getParent(), I2->getParent());
+          return I1->comesBefore(I2);
         }
-      return I1 < I2;
+        auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
+        auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
+        if (P1 && !P2)
+          return true;
+        if (!P1 && P2)
+          return false;
+        if (P1 && P2)
+          return P1->getArgNo() < P2->getArgNo();
+        // TODO: add analysis for other value kinds.
+        return EE1->getOperand(0)->getValueID() <
+               EE2->getOperand(0)->getValueID();
+      }
+      return false;
     };
     DenseMap<unsigned, unsigned> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
