@@ -16,10 +16,17 @@ namespace llvm::sandboxir {
 
 // Forward declare all classes to avoid some MSVC build errors.
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
+#define DEF_CONST(ID, CLASS) class CLASS;
+#define DEF_USER(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/SandboxIRValues.def"
 class Context;
 class FuncletPadInst;
 class Type;
+class GlobalValue;
+class GlobalObject;
+class Module;
+class UnaryInstruction;
+class CmpInst;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.

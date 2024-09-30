@@ -28,6 +28,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -402,9 +403,9 @@ static InstructionCost computeSpeculationCost(const User *I,
 }
 
 /// If we have a merge point of an "if condition" as accepted above,
-/// return true if the specified value dominates the block.  We
-/// don't handle the true generality of domination here, just a special case
-/// which works well enough for us.
+/// return true if the specified value dominates the block.  We don't handle
+/// the true generality of domination here, just a special case which works
+/// well enough for us.
 ///
 /// If AggressiveInsts is non-null, and if V does not dominate BB, we check to
 /// see if V (which must be an instruction) and its recursive operands
@@ -3057,16 +3058,17 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
-        // Local objects (created by an `alloca` instruction) are always
-        // writable, so once we are past a read from a location it is valid to
-        // also write to that same location.
-        // If the address of the local object never escapes the function, that
-        // means it's never concurrently read or written, hence moving the store
-        // from under the condition will not introduce a data race.
-        auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(StorePtr));
-        if (AI && !PointerMayBeCaptured(AI, false, true))
+        Value *Obj = getUnderlyingObject(StorePtr);
+        bool ExplicitlyDereferenceableOnly;
+        if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
+            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                  /*StoreCaptures=*/true) &&
+            (!ExplicitlyDereferenceableOnly ||
+             isDereferenceablePointer(StorePtr, StoreTy,
+                                      LI->getDataLayout()))) {
           // Found a previous load, return it.
           return LI;
+        }
       }
       // The load didn't work out, but we may still find a store.
     }

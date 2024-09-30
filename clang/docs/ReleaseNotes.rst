@@ -81,10 +81,29 @@ C++ Specific Potentially Breaking Changes
     template <typename T>
     void f();
 
+- During constant evaluation, comparisons between different evaluations of the
+  same string literal are now correctly treated as non-constant, and comparisons
+  between string literals that cannot possibly overlap in memory are now treated
+  as constant. This updates Clang to match the anticipated direction of open core
+  issue `CWG2765 <http://wg21.link/CWG2765>`, but is subject to change once that
+  issue is resolved.
+
+  .. code-block:: c++
+
+    constexpr const char *f() { return "hello"; }
+    constexpr const char *g() { return "world"; }
+    // Used to evaluate to false, now error: non-constant comparison.
+    constexpr bool a = f() == f();
+    // Might evaluate to true or false, as before.
+    bool at_runtime() { return f() == f(); }
+    // Was error, now evaluates to false.
+    constexpr bool b = f() == g();
+
 ABI Changes in This Version
 ---------------------------
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
+- Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -122,6 +141,8 @@ C++ Language Changes
 - Accept C++26 user-defined ``static_assert`` messages in C++11 as an extension.
 
 - Add ``__builtin_elementwise_popcount`` builtin for integer types only.
+
+- Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
 
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
@@ -426,6 +447,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Mangle friend function templates with a constraint that depends on a template parameter from an enclosing template as members of the enclosing class. (#GH110247)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -488,6 +510,13 @@ X86 Support
 - Support ISA of ``AVX10.2``.
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
+
+- The following bit manipulation intrinsics can now be used in constant expressions:
+  all lzcnt intrinsics in lzcntintrin.h 
+  all bextr intrinsics in bmiintrin.h
+  all tzcnt intrinsics in bmiintrin.h
+  all bzhi intrinsics in bmi2intrin.h
+  all intrinsics in tbmintrin.h
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

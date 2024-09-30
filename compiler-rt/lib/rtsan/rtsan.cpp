@@ -114,19 +114,19 @@ SANITIZER_INTERFACE_ATTRIBUTE bool __rtsan_is_initialized() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_enter() {
-  __rtsan::GetContextForThisThread().RealtimePush();
+  GetContextForThisThread().RealtimePush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_realtime_exit() {
-  __rtsan::GetContextForThisThread().RealtimePop();
+  GetContextForThisThread().RealtimePop();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_disable() {
-  __rtsan::GetContextForThisThread().BypassPush();
+  GetContextForThisThread().BypassPush();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_enable() {
-  __rtsan::GetContextForThisThread().BypassPop();
+  GetContextForThisThread().BypassPop();
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void

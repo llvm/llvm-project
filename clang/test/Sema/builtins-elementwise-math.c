@@ -538,6 +538,32 @@ void test_builtin_elementwise_popcount(int i, float f, double d, float4 v, int3 
   // expected-error@-1 {{assigning to 'int3' (vector of 3 'int' values) from incompatible type 'unsigned3' (vector of 3 'unsigned int' values)}}
 }
 
+void test_builtin_elementwise_fmod(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
+  i = __builtin_elementwise_fmod(p, d);
+  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+
+  struct Foo foo = __builtin_elementwise_fmod(i, i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_fmod(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_fmod();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_fmod(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_fmod(v, iv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_fmod(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_fmod(d, v);
+  // expected-error@-1 {{arguments are of different types ('double' vs 'float4' (vector of 4 'float' values))}}
+}
+
 void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_pow(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
@@ -561,7 +587,6 @@ void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, u
   // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
   
 }
-
 
 void test_builtin_elementwise_roundeven(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
