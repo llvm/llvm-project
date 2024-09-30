@@ -1056,7 +1056,7 @@ struct AAPointerInfoImpl
   virtual bool reachesReturn() const override {
     return !ReturnedOffsets.isUnassigned();
   }
-  virtual void addReturnedOffsets(OffsetInfo &OI) const override {
+  virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
     if (ReturnedOffsets.isUnknown()) {
       OI.setUnknown();
       return;
@@ -1933,7 +1933,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
         if (!CSRetPI)
           return false;
         OffsetInfo OI = OffsetInfoMap[CurPtr];
-        CSArgPI->addReturnedOffsets(OI);
+        CSArgPI->addReturnedOffsetsTo(OI);
         Changed =
             translateAndAddState(A, *CSRetPI, OI, *CB, IsRetMustAcc) | Changed;
         return isValidState();
