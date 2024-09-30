@@ -693,21 +693,12 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     if (VD->isExternC())
       return getASTContext().getTranslationUnitDecl();
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FD = D->getAsFunction()) {
     if (FD->isExternC())
       return getASTContext().getTranslationUnitDecl();
     // Member-like constrained friends are mangled as if they were members of
     // the enclosing class.
     if (FD->isMemberLikeConstrainedFriend() &&
-        getASTContext().getLangOpts().getClangABICompat() >
-            LangOptions::ClangABI::Ver17)
-      return D->getLexicalDeclContext()->getRedeclContext();
-  }
-
-  if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D)) {
-    // Member-like constrained friends are mangled as if they were members of
-    // the enclosing class.
-    if (FTD->getTemplatedDecl()->isMemberLikeConstrainedFriend() &&
         getASTContext().getLangOpts().getClangABICompat() >
             LangOptions::ClangABI::Ver17)
       return D->getLexicalDeclContext()->getRedeclContext();
