@@ -12,6 +12,7 @@ add_mlir_translation_library(MLIRSPIRVBinaryUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRSPIRVDialect
   MLIRSupport
   )
 
@@ -20,9 +21,11 @@ add_mlir_translation_library(MLIRSPIRVTranslateRegistration
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRSPIRVDialect
   MLIRSPIRVSerialization
   MLIRSPIRVDeserialization
   MLIRSupport
+  MLIRTranslateLib
   )
 
 add_mlir_dialect_library(MLIRSPIRVTarget
@@ -31,6 +34,7 @@ add_mlir_dialect_library(MLIRSPIRVTarget
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRGPUDialect
+  MLIRSPIRVDialect
   MLIRSPIRVSerialization
   MLIRSupport
   )
