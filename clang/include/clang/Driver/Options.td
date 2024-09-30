@@ -5812,7 +5812,7 @@ def std_EQ : Joined<["-", "--"], "std=">,
     ;
   }]>;
 def stdlib_EQ : Joined<["-", "--"], "stdlib=">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"C++ standard library to use">, Values<"libc++,libstdc++,platform">;
 def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Group<clang_i_Group>,
