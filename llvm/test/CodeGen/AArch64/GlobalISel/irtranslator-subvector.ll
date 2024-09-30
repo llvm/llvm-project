@@ -36,7 +36,7 @@ define double @extract_v4double_vector_insert_const(<4 x double> %a, <2 x double
   ; CHECK-NEXT:   $d0 = COPY [[EVEC]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
 entry:
-  %vector = call <4 x double> @llvm.vector.insert.v4double.v2double(<4 x double> %a, <2 x double> %b, i64 0)
+  %vector = call <4 x double> @llvm.vector.insert.v4f64.v2f64(<4 x double> %a, <2 x double> %b, i64 0)
   %d = extractelement <4 x double> %vector, i32 1
   ret double %d
 }
@@ -56,7 +56,7 @@ define float @extract_v4float_vector_insert_const(<4 x float> %a, <2 x float> %b
   ; CHECK-NEXT:   $s0 = COPY [[EVEC]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
 entry:
-  %vector = call <4 x float> @llvm.vector.insert.v4float.v2float(<4 x float> %a, <2 x float> %b, i64 0)
+  %vector = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> %a, <2 x float> %b, i64 0)
   %d = extractelement <4 x float> %vector, i32 1
   ret float %d
 }
@@ -302,7 +302,7 @@ define i32 @extract_v4ifloat_vector_insert_const_fixed_illegal(<1 x float> %a, <
   ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %vector = call <1  x float> @llvm.vector.insert.v1float.v4float(<1 x float> %a, <1 x float> %b, i64 0)
+  %vector = call <1  x float> @llvm.vector.insert.v1f32.v4f32(<1 x float> %a, <1 x float> %b, i64 0)
   store <1 x float> %vector, ptr %p, align 16
   ret i32 1
 }
