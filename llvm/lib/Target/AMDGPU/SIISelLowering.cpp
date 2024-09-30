@@ -9100,12 +9100,14 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     Ops.push_back(VAddr);
   SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
   EVT RsrcVT = Rsrc.getValueType();
-  if (!IsGFX13Plus && RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32 &&
+      !(IsGFX13Plus && RsrcVT == MVT::i32))
     return Op;
   Ops.push_back(Rsrc);
   if (BaseOpcode->Sampler) {
     SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
-    if (!IsGFX13Plus && Samp.getValueType() != MVT::v4i32)
+    EVT SampVT = Samp.getValueType();
+    if (SampVT != MVT::v4i32 && !(IsGFX13Plus && SampVT == MVT::i32))
       return Op;
     Ops.push_back(Samp);
   }
