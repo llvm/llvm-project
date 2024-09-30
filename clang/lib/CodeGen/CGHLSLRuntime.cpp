@@ -416,7 +416,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
   CI->setCallingConv(Fn->getCallingConv());
-  (void)CI;
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
