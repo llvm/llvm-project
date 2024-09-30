@@ -250,7 +250,8 @@ LIBC_INLINE T fdim(T x, T y) {
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int issignaling(const T &x) {
   FPBits<T> sx(x);
-  if (LIBC_UNLIKELY(sx.is_signaling_nan())) return 1;
+  if (LIBC_UNLIKELY(sx.is_signaling_nan()))
+    return 1;
   return 0;
 }
 
