@@ -1927,6 +1927,22 @@ let SubtargetPredicate = isGFX13Plus, hasSideEffects = 1 in {
   def S_SEMA_SIGNAL_AFTER_VALU : SOPP_Pseudo<"s_sema_signal_after_valu", (ins i16imm:$simm16), "$simm16">;
 }
 
+def s_sema_set_state_imm : ImmLeaf<
+  i32,
+  [{}],
+  SDNodeXForm<imm, [{
+    unsigned ID = (N->getZExtValue() >> 4) & 15;
+    unsigned Reg = AMDGPU::Hwreg::ID_WAVE_SEMA1_STATE + ID - 1;
+    unsigned Enc = AMDGPU::Hwreg::HwregEncoding::encode(Reg, 0, 32);
+    return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i16);
+  }]>
+>;
+
+def : GCNPat <
+  (int_amdgcn_s_sema_set_state s_sema_set_state_imm:$simm16, i32:$sdst),
+  (S_SETREG_B32 $sdst, s_sema_set_state_imm:$simm16)
+>;
+
 //===----------------------------------------------------------------------===//
 // SOPK Patterns
 //===----------------------------------------------------------------------===//

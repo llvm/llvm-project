@@ -7,9 +7,14 @@
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 0) poison
 @sem3 = internal addrspace(3) global target("amdgcn.semaphore", 3) poison
 
-define amdgpu_kernel void @test_sema() {
+define amdgpu_kernel void @test_sema(i32 %arg) {
 ; GFX13-LABEL: test_sema:
 ; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b32 s0, s[2:3], 0x24
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0xbc614e
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
 ; GFX13-NEXT:    s_sema_set_limit 0x4000
 ; GFX13-NEXT:    s_sema_set_limit 0x2000
 ; GFX13-NEXT:    s_sema_set_limit 0x2003
@@ -20,6 +25,9 @@ define amdgpu_kernel void @test_sema() {
 ; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_endpgm
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 0)
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem2, i32 12345678)
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem3, i32 %arg)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)

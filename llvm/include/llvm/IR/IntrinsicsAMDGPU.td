@@ -3204,6 +3204,18 @@ def int_amdgcn_pext_b32 :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_pext_b32">;
 
+// void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) %sem, i32 %state)
+// Sets the SEMA*_STATE wave state register for a semaphore owned by the current
+// rank.
+// The %sem argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_sema_set_state :
+  ClangBuiltin<"__builtin_amdgcn_s_sema_set_state">,
+  Intrinsic<
+    [],
+    [local_ptr_ty, llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  >;
+
 // void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
 // The %sem argument must be uniform, otherwise behavior is undefined.
 // TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %limit in codegen.
