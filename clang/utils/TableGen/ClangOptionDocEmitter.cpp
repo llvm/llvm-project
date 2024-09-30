@@ -282,11 +282,12 @@ void emitOptionName(StringRef Prefix, const Record *Option, raw_ostream &OS) {
     }
   }
 
-  emitOptionWithArgs(Prefix, Option, std::vector<StringRef>(Args.begin(), Args.end()), OS);
+  emitOptionWithArgs(Prefix, Option,
+                     std::vector<StringRef>(Args.begin(), Args.end()), OS);
 
   auto AliasArgs = Option->getValueAsListOfStrings("AliasArgs");
   if (!AliasArgs.empty()) {
-    Record *Alias = Option->getValueAsDef("Alias");
+    const Record *Alias = Option->getValueAsDef("Alias");
     OS << " (equivalent to ";
     emitOptionWithArgs(
         Alias->getValueAsListOfStrings("Prefixes").front(), Alias,
@@ -363,9 +364,8 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   // Prefer a program specific help string.
   // This is a list of (visibilities, string) pairs.
-  std::vector<Record *> VisibilitiesHelp =
-      R->getValueAsListOfDefs("HelpTextsForVariants");
-  for (Record *VisibilityHelp : VisibilitiesHelp) {
+  for (const Record *VisibilityHelp :
+       R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
     ArrayRef<Init *> Visibilities =
         VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
