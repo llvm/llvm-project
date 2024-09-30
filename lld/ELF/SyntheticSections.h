@@ -459,7 +459,7 @@ public:
   /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend() const;
 
-  void computeRaw(SymbolTableBaseSection *symtab);
+  void computeRaw(SymbolTableBaseSection *symt);
 
   Symbol *sym;
   const OutputSection *outputSec = nullptr;
@@ -1426,11 +1426,11 @@ private:
   SmallVector<const Symbol *, 0> symbols;
 };
 
-template <class ELFT> void createSyntheticSections();
+template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
-template <class ELFT> void splitSections();
-void combineEhSections();
+template <class ELFT> void splitSections(Ctx &);
+void combineEhSections(Ctx &);
 
 bool hasMemtag();
 bool canHaveMemtagGlobals();

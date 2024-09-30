@@ -28,7 +28,7 @@ using namespace llvm::object;
 namespace {
 class ARM final : public TargetInfo {
 public:
-  ARM();
+  ARM(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -54,7 +54,7 @@ enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 
 static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
-ARM::ARM() {
+ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
@@ -491,9 +491,10 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 // Helper to produce message text when LLD detects that a CALL relocation to
 // a non STT_FUNC symbol that may result in incorrect interworking between ARM
 // or Thumb.
-static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
+static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
+                               const Symbol &s) {
   assert(!s.isFunc());
-  const ErrorPlace place = getErrorPlace(loc);
+  const ErrorPlace place = getErrorPlace(ctx, loc);
   std::string hint;
   if (!place.srcLoc.empty())
     hint = "; " + place.srcLoc;
@@ -630,7 +631,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
@@ -687,7 +688,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == useThumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if ((rel.sym->isFunc() || rel.sym->isInPlt()) ? !useThumb : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done
@@ -1215,7 +1216,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
       continue;
     }
 
-    if (symtab.cmseImportLib.count(sym->getName())) {
+    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
       error("CMSE symbol '" + sym->getName() +
             "' is multiply defined in import library '" + toString(this) + "'");
       continue;
@@ -1227,7 +1228,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
            Twine(ACLESESYM_SIZE) + " bytes");
     }
 
-    symtab.cmseImportLib[sym->getName()] = sym;
+    ctx.symtab->cmseImportLib[sym->getName()] = sym;
   }
 }
 
@@ -1260,12 +1261,12 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // name with __acle_se_.
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
-void elf::processArmCmseSymbols() {
+void elf::processArmCmseSymbols(Ctx &ctx) {
   if (!ctx.arg.cmseImplib)
     return;
-  // Only symbols with external linkage end up in symtab, so no need to do
+  // Only symbols with external linkage end up in ctx.symtab, so no need to do
   // linkage checks. Only check symbol type.
-  for (Symbol *acleSeSym : symtab.getSymbols()) {
+  for (Symbol *acleSeSym : ctx.symtab->getSymbols()) {
     if (!acleSeSym->getName().starts_with(ACLESESYM_PREFIX))
       continue;
     // If input object build attributes do not support CMSE, error and disable
@@ -1279,7 +1280,7 @@ void elf::processArmCmseSymbols() {
     // Try to find the associated symbol definition.
     // Symbol must have external linkage.
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
-    Symbol *sym = symtab.find(name);
+    Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
       error(toString(acleSeSym->file) + ": cmse special symbol '" +
             acleSeSym->getName() +
@@ -1295,7 +1296,7 @@ void elf::processArmCmseSymbols() {
     }
 
     // <sym> may be redefined later in the link in .gnu.sgstubs
-    symtab.cmseSymMap[name] = {acleSeSym, sym};
+    ctx.symtab->cmseSymMap[name] = {acleSeSym, sym};
   }
 
   // If this is an Arm CMSE secure app, replace references to entry symbol <sym>
@@ -1304,8 +1305,8 @@ void elf::processArmCmseSymbols() {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i) {
       StringRef symName = syms[i]->getName();
-      if (symtab.cmseSymMap.count(symName))
-        syms[i] = symtab.cmseSymMap[symName].acleSeSym;
+      if (ctx.symtab->cmseSymMap.count(symName))
+        syms[i] = ctx.symtab->cmseSymMap[symName].acleSeSym;
     }
   });
 }
@@ -1332,26 +1333,26 @@ ArmCmseSGSection::ArmCmseSGSection()
                        /*alignment=*/32, ".gnu.sgstubs") {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
-  for (auto &[_, sym] : symtab.cmseImportLib) {
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
     if (impLibMaxAddr <= sym->value)
       impLibMaxAddr = sym->value + sym->size;
   }
-  if (symtab.cmseSymMap.empty())
+  if (ctx.symtab->cmseSymMap.empty())
     return;
   addMappingSymbol();
-  for (auto &[_, entryFunc] : symtab.cmseSymMap)
+  for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
-  for (auto &[_, sym] : symtab.cmseImportLib) {
-    if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
+    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
       warn("entry function '" + sym->getName() +
            "' from CMSE import library is not present in secure application");
   }
 
-  if (!symtab.cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
-    for (auto &[_, entryFunc] : symtab.cmseSymMap) {
+  if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
+    for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
         warn("new entry function '" + sym->getName() +
              "' introduced but no output import library specified");
     }
@@ -1360,8 +1361,8 @@ ArmCmseSGSection::ArmCmseSGSection()
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (symtab.cmseImportLib.count(sym->getName()))
-    symtab.inCMSEOutImpLib[sym->getName()] = true;
+  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+    ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||
       cast<Defined>(*acleSeSym).value != cast<Defined>(*sym).value)
@@ -1369,8 +1370,8 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
   ArmCmseSGVeneer *ss = nullptr;
-  if (symtab.cmseImportLib.count(sym->getName())) {
-    Defined *impSym = symtab.cmseImportLib[sym->getName()];
+  if (ctx.symtab->cmseImportLib.count(sym->getName())) {
+    Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
@@ -1451,12 +1452,12 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
   osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
 
-  std::sort(symtab.cmseSymMap.begin(), symtab.cmseSymMap.end(),
+  std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
               return a.second.sym->getVA() < b.second.sym->getVA();
             });
   // Copy the secure gateway entry symbols to the import library symbol table.
-  for (auto &p : symtab.cmseSymMap) {
+  for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
         ctx.internalFile, d->getName(), d->computeBinding(),
@@ -1532,8 +1533,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
           "': " + toString(std::move(e)));
 }
 
-TargetInfo *elf::getARMTargetInfo() {
-  static ARM target;
+TargetInfo *elf::getARMTargetInfo(Ctx &ctx) {
+  static ARM target(ctx);
   return &target;
 }
 

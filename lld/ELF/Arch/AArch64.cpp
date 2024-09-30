@@ -64,7 +64,7 @@ bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
 namespace {
 class AArch64 : public TargetInfo {
 public:
-  AArch64();
+  AArch64(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -109,7 +109,7 @@ static uint64_t getBits(uint64_t val, int start, int end) {
   return (val >> start) & mask;
 }
 
-AArch64::AArch64() {
+AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
@@ -993,7 +993,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 namespace {
 class AArch64BtiPac final : public AArch64 {
 public:
-  AArch64BtiPac();
+  AArch64BtiPac(Ctx &);
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -1004,7 +1004,7 @@ private:
 };
 } // namespace
 
-AArch64BtiPac::AArch64BtiPac() {
+AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   btiHeader = (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
   // A BTI (Branch Target Indicator) Plt Entry is only required if the
   // address of the PLT entry can be taken by the program, which permits an
@@ -1105,18 +1105,6 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     // We didn't add the BTI c instruction so round out size with NOP.
     memcpy(buf + sizeof(addrInst) + sizeof(stdBr), nopData, sizeof(nopData));
 }
-
-static TargetInfo *getTargetInfo() {
-  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t;
-    return &t;
-  }
-  static AArch64 t;
-  return &t;
-}
-
-TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }
 
 template <class ELFT>
 static void
@@ -1219,4 +1207,14 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
             "Symbol is defined as tagged more times than it's used");
     symbol->setIsTagged(true);
   }
+}
+
+TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      ctx.arg.zPacPlt) {
+    static AArch64BtiPac t(ctx);
+    return &t;
+  }
+  static AArch64 t(ctx);
+  return &t;
 }

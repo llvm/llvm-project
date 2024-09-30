@@ -13,6 +13,7 @@
 #include "Relocations.h"
 
 namespace lld::elf {
+struct Ctx;
 class Defined;
 class InputFile;
 class Symbol;
@@ -28,7 +29,7 @@ class ThunkSection;
 // Thunks are assigned to synthetic ThunkSections
 class Thunk {
 public:
-  Thunk(Symbol &destination, int64_t addend);
+  Thunk(Ctx &, Symbol &destination, int64_t addend);
   virtual ~Thunk();
 
   virtual uint32_t size() = 0;
@@ -61,6 +62,7 @@ public:
 
   Defined *getThunkTargetSym() const { return syms[0]; }
 
+  Ctx &ctx;
   Symbol &destination;
   int64_t addend;
   // Alternative target when indirect branch to destination can't be used.
@@ -74,11 +76,13 @@ public:
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection.
-Thunk *addThunk(const InputSection &isec, Relocation &rel);
+Thunk *addThunk(Ctx &, const InputSection &isec, Relocation &rel);
+
 // Create a landing pad Thunk for use when indirect branches from Thunks
 // are restricted.
-Thunk *addLandingPadThunk(Symbol &s, int64_t a);
-void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
+Thunk *addLandingPadThunk(Ctx &, Symbol &s, int64_t a);
+                           
+void writePPC32PltCallStub(Ctx &, uint8_t *buf, uint64_t gotPltVA,
                            const InputFile *file, int64_t addend);
 void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset);
 

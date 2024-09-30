@@ -1105,7 +1105,7 @@ private:
     else
       handleMoveUp(LR, Reg, LaneMask);
     LLVM_DEBUG(dbgs() << "        -->\t" << LR << '\n');
-    LR.verify();
+    assert(LR.verify());
   }
 
   /// Update LR to reflect an instruction has been moved downwards from OldIdx

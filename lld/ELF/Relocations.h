@@ -16,6 +16,7 @@
 #include <vector>
 
 namespace lld::elf {
+struct Ctx;
 class Defined;
 class Symbol;
 class InputSection;
@@ -142,13 +143,13 @@ struct JumpInstrMod {
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations();
-template <class ELFT> void checkNoCrossRefs();
-void reportUndefinedSymbols();
-void postScanRelocations();
-void addGotEntry(Symbol &sym);
+template <class ELFT> void scanRelocations(Ctx &ctx);
+template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
+void reportUndefinedSymbols(Ctx &);
+void postScanRelocations(Ctx &ctx);
+void addGotEntry(Ctx &ctx, Symbol &sym);
 
-void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 class ThunkSection;
@@ -157,6 +158,7 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
+  ThunkCreator(Ctx &ctx) : ctx(ctx) {}
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -180,6 +182,8 @@ private:
                                 uint64_t off);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
+
+  Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
   // is represented as a (section, offset) pair. There may be multiple
