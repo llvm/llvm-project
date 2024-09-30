@@ -31,7 +31,7 @@ using namespace llvm;
 /// Data structure holding function info for kernels.
 class KernelInfo {
   void updateForBB(const BasicBlock &BB, int64_t Direction,
-                   OptimizationRemarkEmitter &ORE);
+                   BlockFrequencyInfo &BFI, OptimizationRemarkEmitter &ORE);
 
 public:
   static void emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
@@ -73,11 +73,30 @@ public:
 
   /// Number of flat address space memory accesses (via load, store, etc.).
   int64_t FlatAddrspaceAccesses = 0;
+
+  /// Estimate of the number of floating point operations typically executed
+  /// based on any available profile data.  If no profile data is available, the
+  /// count is zero.
+  uint64_t FloatingPointOpProfileCount = 0;
 };
 
 static bool isKernelFunction(Function &F) {
   // TODO: Is this general enough?  Consider languages beyond OpenMP.
   return F.hasFnAttribute("kernel");
+}
+
+// For the purposes of KernelInfo::FloatingPointOpProfileCount, should this be
+// considered a floating point operation?
+//
+// TODO: Does this correctly identify floating point operations we care about?
+// For example, we skip phi and load even when they return floating point
+// values.  Should different operations have different weights?
+static bool isFloatingPointOperation(const Instruction &I) {
+  if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I))
+    return At->isFloatingPointOperation();
+  if (!I.getType()->isFPOrFPVectorTy())
+    return false;
+  return I.isBinaryOp() || I.isUnaryOp();
 }
 
 static void identifyFunction(OptimizationRemark &R, const Function &F) {
@@ -86,6 +105,19 @@ static void identifyFunction(OptimizationRemark &R, const Function &F) {
       R << "artificial ";
   }
   R << "function '" << F.getName() << "'";
+}
+
+static void identifyInstruction(OptimizationRemark &R, const Instruction &I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+    R << "'" << II->getCalledFunction()->getName() << "' call";
+  else
+    R << "'" << I.getOpcodeName() << "' instruction";
+  if (!I.getType()->isVoidTy()) {
+    SmallString<20> Name;
+    raw_svector_ostream OS(Name);
+    I.printAsOperand(OS, /*PrintType=*/false, I.getModule());
+    R << " ('" << Name << "')";
+  }
 }
 
 static void remarkAlloca(OptimizationRemarkEmitter &ORE, const Function &Caller,
@@ -153,33 +185,45 @@ static void remarkCall(OptimizationRemarkEmitter &ORE, const Function &Caller,
 
 static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
                                       const Function &Caller,
-                                      const Instruction &Inst) {
+                                      const Instruction &I) {
   ORE.emit([&] {
-    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &Inst);
+    OptimizationRemark R(DEBUG_TYPE, "FlatAddrspaceAccess", &I);
     R << "in ";
     identifyFunction(R, Caller);
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst)) {
-      R << ", '" << II->getCalledFunction()->getName() << "' call";
-    } else {
-      R << ", '" << Inst.getOpcodeName() << "' instruction";
-    }
-    if (!Inst.getType()->isVoidTy()) {
-      SmallString<20> Name;
-      raw_svector_ostream OS(Name);
-      Inst.printAsOperand(OS, /*PrintType=*/false, Caller.getParent());
-      R << " ('" << Name << "')";
-    }
+    R << ", ";
+    identifyInstruction(R, I);
     R << " accesses memory in flat address space";
     return R;
   });
 }
 
+static void remarkFloatingPointOp(OptimizationRemarkEmitter &ORE,
+                                  const Function &Caller,
+                                  const Instruction &I,
+                                  uint64_t BlockProfileCount) {
+  ORE.emit([&] {
+    OptimizationRemark R(DEBUG_TYPE, "FloatingPointOp", &I);
+    R << "in ";
+    identifyFunction(R, Caller);
+    R << ", ";
+    identifyInstruction(R, I);
+    R << " is a floating point op where the block profile count is "
+      << utostr(BlockProfileCount);
+    return R;
+  });
+}
+
 void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
+                             BlockFrequencyInfo &BFI,
                              OptimizationRemarkEmitter &ORE) {
   assert(Direction == 1 || Direction == -1);
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
+  uint64_t BlockProfileCount = 0;
+  // TODO: Is AllowSynthetic what we want?
+  if (auto Val = BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true))
+    BlockProfileCount = *Val;
   for (const Instruction &I : BB.instructionsWithoutDebug()) {
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       Allocas += Direction;
@@ -259,16 +303,25 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     }
+    if (isFloatingPointOperation(I)) {
+      FloatingPointOpProfileCount += Direction * BlockProfileCount;
+      remarkFloatingPointOp(ORE, F, I, BlockProfileCount);
+    }
   }
 }
 
-static void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
-                           StringRef Name, int64_t Value) {
+static std::string toString(bool Val) { return itostr(Val); }
+static std::string toString(int64_t Val) { return itostr(Val); }
+static std::string toString(uint64_t Val) { return utostr(Val); }
+
+template <typename T>
+void remarkProperty(OptimizationRemarkEmitter &ORE, const Function &F,
+                    StringRef Name, T Val) {
   ORE.emit([&] {
     OptimizationRemark R(DEBUG_TYPE, Name, &F);
     R << "in ";
     identifyFunction(R, F);
-    R << ", " << Name << " = " << itostr(Value);
+    R << ", " << Name << " = " << toString(Val);
     return R;
   });
 }
@@ -284,6 +337,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
                                 TargetMachine *TM) {
   KernelInfo KI;
   TargetTransformInfo &TheTTI = FAM.getResult<TargetIRAnalysis>(F);
+  BlockFrequencyInfo &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
   KI.FlatAddrspace = TheTTI.getFlatAddressSpace();
 
   // Record function properties.
@@ -298,7 +352,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   for (const auto &BB : F)
     if (DT.isReachableFromEntry(&BB))
-      KI.updateForBB(BB, +1, ORE);
+      KI.updateForBB(BB, +1, BFI, ORE);
 
 #define REMARK_PROPERTY(PROP_NAME)                                             \
   remarkProperty(ORE, F, #PROP_NAME, KI.PROP_NAME)
@@ -314,6 +368,7 @@ void KernelInfo::emitKernelInfo(Function &F, FunctionAnalysisManager &FAM,
   REMARK_PROPERTY(InlineAssemblyCalls);
   REMARK_PROPERTY(Invokes);
   REMARK_PROPERTY(FlatAddrspaceAccesses);
+  REMARK_PROPERTY(FloatingPointOpProfileCount);
 #undef REMARK_PROPERTY
 
   return;

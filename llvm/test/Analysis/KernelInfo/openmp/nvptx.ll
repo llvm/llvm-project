@@ -27,6 +27,7 @@
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', InlineAssemblyCalls = 0
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', Invokes = 0
 ; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', FlatAddrspaceAccesses = 1
+; CHECK-NEXT: remark: test.c:13:0: in artificial function '[[OFF_FUNC]]_debug__', FloatingPointOpProfileCount = 0
 
 ; CHECK-NEXT: remark: test.c:0:0: in artificial function '[[OFF_FUNC]]', artificial alloca 'dyn_ptr' with static size of 8 bytes
 ; CHECK-NEXT: remark: <unknown>:0:0: in artificial function '[[OFF_FUNC]]', 'store' instruction accesses memory in flat address space
@@ -42,6 +43,7 @@
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', InlineAssemblyCalls = 0
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', Invokes = 0
 ; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', FlatAddrspaceAccesses = 2
+; CHECK-NEXT: remark: test.c:12:0: in artificial function '[[OFF_FUNC]]', FloatingPointOpProfileCount = 0
 
 ; CHECK-NEXT: remark: test.c:4:7: in function 'g', alloca 'i' with static size of 4 bytes
 ; CHECK-NEXT: remark: test.c:5:7: in function 'g', alloca 'a' with static size of 8 bytes
@@ -57,6 +59,7 @@
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', InlineAssemblyCalls = 0
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', Invokes = 0
 ; CHECK-NEXT: remark: test.c:3:0: in function 'g', FlatAddrspaceAccesses = 0
+; CHECK-NEXT: remark: test.c:3:0: in function 'g', FloatingPointOpProfileCount = 0
 ;  CHECK-NOT: remark: {{.*: in function 'g',.*}}
 
 ; A lot of internal functions (e.g., __kmpc_target_init) come next, but we don't

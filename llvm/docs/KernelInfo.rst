@@ -59,3 +59,50 @@ kernel-info can also be inserted into a specified LLVM pass pipeline using
 
   $ opt -disable-output test-openmp-nvptx64-nvidia-cuda-sm_70.bc \
       -pass-remarks=kernel-info -passes='lto<O2>,module(kernel-info)'
+
+PGO
+===
+
+Using LLVM's PGO implementation for GPUs, profile data can augment the info
+reported by kernel-info.  In particular, an estimate of the number of floating
+point operations executed can be reported.
+
+For example, the following computes 2\ :sup:`4`\ , so we expect 4 fmul
+instructions to be executed at run time:
+
+.. code-block:: shell
+
+  $ cat test.c
+  #include <stdio.h>
+  #include <stdlib.h>
+  __attribute__((noinline))
+  double test(double x, int n) {
+    double res = 1;
+    for (int i = 0; i < n; ++i)
+      res *= x;
+    return res;
+  }
+  int main(int argc, char *argv[]) {
+    double x = atof(argv[1]);
+    unsigned n = atoi(argv[2]);
+    #pragma omp target map(tofrom:x)
+    x = test(x, n);
+    printf("%f\n", x);
+    return 0;
+  }
+
+  $ clang -O1 -g -fopenmp --offload-arch=native test.c -o test \
+        -fprofile-generate -fprofile-generate-gpu
+
+  $ LLVM_PROFILE_FILE=test.profraw ./test 2 4
+  16.000000
+
+  $ llvm-profdata merge -output=test.profdata *.profraw
+
+  $ clang -O1 -g -fopenmp --offload-arch=native test.c -foffload-lto \
+        -Rpass=kernel-info -mllvm -kernel-info-end-lto \
+        -fprofile-use-gpu=test.profdata | \
+      grep -i "test.c:.*float"
+  test.c:13:0: in artificial function '__omp_offloading_35_1369040_main_l13', FloatingPointOpProfileCount = 0
+  test.c:7:9: in function 'test.internalized', 'fmul' instruction ('%9') is a floating point op where the block profile count is 4
+  test.c:4:0: in function 'test.internalized', FloatingPointOpProfileCount = 4
