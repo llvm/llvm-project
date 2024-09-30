@@ -260,20 +260,6 @@ static FixedVectorType *getWidenedType(Type *ScalarTy, unsigned VF) {
                               VF * getNumElements(ScalarTy));
 }
 
-/// Returns the number of elements of the given type \p Ty, not less than \p Sz,
-/// which forms type, which splits by \p TTI into whole vector types during
-/// legalization.
-static unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI,
-                                              Type *Ty, unsigned Sz) {
-  if (!isValidElementType(Ty))
-    return bit_ceil(Sz);
-  // Find the number of elements, which forms full vectors.
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  if (NumParts == 0 || NumParts >= Sz)
-    return bit_ceil(Sz);
-  return bit_ceil(divideCeil(Sz, NumParts)) * NumParts;
-}
-
 static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
                                                    SmallVectorImpl<int> &Mask) {
   // The ShuffleBuilder implementation use shufflevector to splat an "element".
@@ -408,7 +394,7 @@ static bool isVectorLikeInstWithConstOps(Value *V) {
 /// total number of elements \p Size and number of registers (parts) \p
 /// NumParts.
 static unsigned getPartNumElems(unsigned Size, unsigned NumParts) {
-  return std::min<unsigned>(Size, bit_ceil(divideCeil(Size, NumParts)));
+  return PowerOf2Ceil(divideCeil(Size, NumParts));
 }
 
 /// Returns correct remaining number of elements, considering total amount \p
@@ -1234,22 +1220,6 @@ static bool doesNotNeedToBeScheduled(Value *V) {
 static bool doesNotNeedToSchedule(ArrayRef<Value *> VL) {
   return !VL.empty() &&
          (all_of(VL, isUsedOutsideBlock) || all_of(VL, areAllOperandsNonInsts));
-}
-
-/// Returns true if widened type of \p Ty elements with size \p Sz represents
-/// full vector type, i.e. adding extra element results in extra parts upon type
-/// legalization.
-static bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
-                                     unsigned Sz) {
-  if (Sz <= 1)
-    return false;
-  if (!isValidElementType(Ty) && !isa<FixedVectorType>(Ty))
-    return false;
-  if (has_single_bit(Sz))
-    return true;
-  const unsigned NumParts = TTI.getNumberOfParts(getWidenedType(Ty, Sz));
-  return NumParts > 0 && NumParts < Sz && has_single_bit(Sz / NumParts) &&
-         Sz % NumParts == 0;
 }
 
 namespace slpvectorizer {
@@ -3341,15 +3311,6 @@ private:
     /// Return true if this is a non-power-of-2 node.
     bool isNonPowOf2Vec() const {
       bool IsNonPowerOf2 = !has_single_bit(Scalars.size());
-      return IsNonPowerOf2;
-    }
-
-    /// Return true if this is a node, which tries to vectorize number of
-    /// elements, forming whole vectors.
-    bool
-    hasNonWholeRegisterOrNonPowerOf2Vec(const TargetTransformInfo &TTI) const {
-      bool IsNonPowerOf2 = !hasFullVectorsOrPowerOf2(
-          TTI, getValueType(Scalars.front()), Scalars.size());
       assert((!IsNonPowerOf2 || ReuseShuffleIndices.empty()) &&
              "Reshuffling not supported with non-power-of-2 vectors yet.");
       return IsNonPowerOf2;
@@ -3469,10 +3430,8 @@ private:
     Last->State = EntryState;
     // FIXME: Remove once support for ReuseShuffleIndices has been implemented
     // for non-power-of-two vectors.
-    assert(
-        (hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()), VL.size()) ||
-         ReuseShuffleIndices.empty()) &&
-        "Reshuffling scalars not yet supported for nodes with padding");
+    assert((has_single_bit(VL.size()) || ReuseShuffleIndices.empty()) &&
+           "Reshuffling scalars not yet supported for nodes with padding");
     Last->ReuseShuffleIndices.append(ReuseShuffleIndices.begin(),
                                      ReuseShuffleIndices.end());
     if (ReorderIndices.empty()) {
@@ -5310,7 +5269,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
   // node.
   if (!TE.ReuseShuffleIndices.empty()) {
     // FIXME: Support ReuseShuffleIndices for non-power-of-two vectors.
-    assert(!TE.hasNonWholeRegisterOrNonPowerOf2Vec(*TTI) &&
+    assert(!TE.isNonPowOf2Vec() &&
            "Reshuffling scalars not yet supported for nodes with padding");
 
     if (isSplat(TE.Scalars))
@@ -5550,7 +5509,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     }
     // FIXME: Remove the non-power-of-two check once findReusedOrderedScalars
     // has been auditted for correctness with non-power-of-two vectors.
-    if (!TE.hasNonWholeRegisterOrNonPowerOf2Vec(*TTI))
+    if (!TE.isNonPowOf2Vec())
       if (std::optional<OrdersType> CurrentOrder = findReusedOrderedScalars(TE))
         return CurrentOrder;
   }
@@ -5703,8 +5662,8 @@ void BoUpSLP::reorderTopToBottom() {
   });
 
   // Reorder the graph nodes according to their vectorization factor.
-  for (unsigned VF = VectorizableTree.front()->getVectorFactor();
-       !VFToOrderedEntries.empty() && VF > 1; VF -= 2 - (VF & 1U)) {
+  for (unsigned VF = VectorizableTree.front()->getVectorFactor(); VF > 1;
+       VF = bit_ceil(VF) / 2) {
     auto It = VFToOrderedEntries.find(VF);
     if (It == VFToOrderedEntries.end())
       continue;
@@ -5712,9 +5671,6 @@ void BoUpSLP::reorderTopToBottom() {
     // used order and reorder scalar elements in the nodes according to this
     // mostly used order.
     ArrayRef<TreeEntry *> OrderedEntries = It->second.getArrayRef();
-    // Delete VF entry upon exit.
-    auto Cleanup = make_scope_exit([&]() { VFToOrderedEntries.erase(It); });
-
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
     MapVector<OrdersType, unsigned,
@@ -7573,26 +7529,25 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         UniqueValues.emplace_back(V);
     }
     size_t NumUniqueScalarValues = UniqueValues.size();
-    bool IsFullVectors = hasFullVectorsOrPowerOf2(
-        *TTI, UniqueValues.front()->getType(), NumUniqueScalarValues);
-    if (NumUniqueScalarValues == VL.size() &&
-        (VectorizeNonPowerOf2 || IsFullVectors)) {
+    if (NumUniqueScalarValues == VL.size()) {
       ReuseShuffleIndices.clear();
     } else {
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-      if ((UserTreeIdx.UserTE &&
-           UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !has_single_bit(VL.size())) {
+      if ((UserTreeIdx.UserTE && UserTreeIdx.UserTE->isNonPowOf2Vec()) ||
+          !llvm::has_single_bit(VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
         return false;
       }
       LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-      if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
-          (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
-             return isa<UndefValue>(V) || !isConstant(V);
-           }))) {
+      if (NumUniqueScalarValues <= 1 ||
+          (UniquePositions.size() == 1 && all_of(UniqueValues,
+                                                 [](Value *V) {
+                                                   return isa<UndefValue>(V) ||
+                                                          !isConstant(V);
+                                                 })) ||
+          !llvm::has_single_bit<uint32_t>(NumUniqueScalarValues)) {
         if (DoNotFail && UniquePositions.size() > 1 &&
             NumUniqueScalarValues > 1 && S.MainOp->isSafeToRemove() &&
             all_of(UniqueValues, [=](Value *V) {
@@ -7600,9 +7555,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                      areAllUsersVectorized(cast<Instruction>(V),
                                            UserIgnoreList);
             })) {
-          // Find the number of elements, which forms full vectors.
-          unsigned PWSz = getFullVectorNumberOfElements(
-              *TTI, UniqueValues.front()->getType(), UniqueValues.size());
+          unsigned PWSz = PowerOf2Ceil(UniqueValues.size());
           if (PWSz == VL.size()) {
             ReuseShuffleIndices.clear();
           } else {
@@ -9840,6 +9793,9 @@ public:
       return nullptr;
     Value *VecBase = nullptr;
     ArrayRef<Value *> VL = E->Scalars;
+    // If the resulting type is scalarized, do not adjust the cost.
+    if (NumParts == VL.size())
+      return nullptr;
     // Check if it can be considered reused if same extractelements were
     // vectorized already.
     bool PrevNodeFound = any_of(
@@ -10494,7 +10450,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InsertMask[Idx] = I + 1;
     }
     unsigned VecScalarsSz = PowerOf2Ceil(NumElts);
-    if (NumOfParts > 0 && NumOfParts < NumElts)
+    if (NumOfParts > 0)
       VecScalarsSz = PowerOf2Ceil((NumElts + NumOfParts - 1) / NumOfParts);
     unsigned VecSz = (1 + OffsetEnd / VecScalarsSz - OffsetBeg / VecScalarsSz) *
                      VecScalarsSz;
@@ -17829,7 +17785,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF))
+      if (!has_single_bit(ActualVF))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
