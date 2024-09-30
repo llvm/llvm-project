@@ -90,9 +90,9 @@ void f2(const struct tm *Time) {
   // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:37: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
   struct tm *(*F1)(const struct tm *) = localtime;
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
-  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
   struct tm *(*F2)(const struct tm *) = &localtime;
   // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:37: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
