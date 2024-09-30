@@ -97,8 +97,8 @@ static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
   return msg + s.getObjMsg(off);
 }
 
-void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
-                           int64_t min, uint64_t max) {
+void elf::reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
+                           const Twine &v, int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
   std::string hint;
   if (rel.sym) {
@@ -285,7 +285,7 @@ template <class ELFT> static bool isReadOnly(SharedSymbol &ss) {
 // them are copied by a copy relocation, all of them need to be copied.
 // Otherwise, they would refer to different places at runtime.
 template <class ELFT>
-static SmallSet<SharedSymbol *, 4> getSymbolsAt(SharedSymbol &ss) {
+static SmallSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
   using Elf_Sym = typename ELFT::Sym;
 
   const auto &file = cast<SharedFile>(*ss.file);
@@ -372,7 +372,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
 // to the variable in .bss. This kind of issue is sometimes very hard to
 // debug. What's a solution? Instead of exporting a variable V from a DSO,
 // define an accessor getV().
-template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
+template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
   // Copy relocation against zero-sized symbol doesn't make sense.
   uint64_t symSize = ss.getSize();
   if (symSize == 0 || ss.alignment == 0)
@@ -397,7 +397,7 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (SharedSymbol *sym : getSymbolsAt<ELFT>(ss))
+  for (SharedSymbol *sym : getSymbolsAt<ELFT>(ctx, ss))
     replaceWithDefined(*sym, *sec, 0, sym->size);
 
   ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->copyRel, *sec, 0, ss);
@@ -526,7 +526,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
 // Custom error message if Sym is defined in a discarded section.
 template <class ELFT>
-static std::string maybeReportDiscarded(Undefined &sym) {
+static std::string maybeReportDiscarded(Ctx &ctx, Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
   if (!file || !sym.discardedSecIdx)
     return "";
@@ -714,7 +714,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   return nullptr;
 }
 
-static void reportUndefinedSymbol(const UndefinedDiag &undef,
+static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
                                   bool correctSpelling) {
   Undefined &sym = *undef.sym;
 
@@ -734,16 +734,16 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   std::string msg;
   switch (ctx.arg.ekind) {
   case ELF32LEKind:
-    msg = maybeReportDiscarded<ELF32LE>(sym);
+    msg = maybeReportDiscarded<ELF32LE>(ctx, sym);
     break;
   case ELF32BEKind:
-    msg = maybeReportDiscarded<ELF32BE>(sym);
+    msg = maybeReportDiscarded<ELF32BE>(ctx, sym);
     break;
   case ELF64LEKind:
-    msg = maybeReportDiscarded<ELF64LE>(sym);
+    msg = maybeReportDiscarded<ELF64LE>(ctx, sym);
     break;
   case ELF64BEKind:
-    msg = maybeReportDiscarded<ELF64BE>(sym);
+    msg = maybeReportDiscarded<ELF64BE>(ctx, sym);
     break;
   default:
     llvm_unreachable("");
@@ -801,7 +801,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     error(msg, ErrorTag::SymbolNotFound, {sym.getName()});
 }
 
-void elf::reportUndefinedSymbols() {
+void elf::reportUndefinedSymbols(Ctx &ctx) {
   // Find the first "undefined symbol" diagnostic for each diagnostic, and
   // collect all "referenced from" lines at the first diagnostic.
   DenseMap<Symbol *, UndefinedDiag *> firstRef;
@@ -817,14 +817,14 @@ void elf::reportUndefinedSymbols() {
   // Enable spell corrector for the first 2 diagnostics.
   for (const auto &[i, undef] : llvm::enumerate(undefs))
     if (!undef.locs.empty())
-      reportUndefinedSymbol(undef, i < 2);
+      reportUndefinedSymbol(ctx, undef, i < 2);
   undefs.clear();
 }
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-static bool maybeReportUndefined(Undefined &sym, InputSectionBase &sec,
-                                 uint64_t offset) {
+static bool maybeReportUndefined(Ctx &ctx, Undefined &sym,
+                                 InputSectionBase &sec, uint64_t offset) {
   std::lock_guard<std::mutex> lock(relocMutex);
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
@@ -947,7 +947,7 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
     addRelativeReloc(*ctx.in.got, off, sym, 0, R_ABS, ctx.target->symbolicRel);
 }
 
-static void addTpOffsetGotEntry(Symbol &sym) {
+static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
   if (!sym.isPreemptible && !ctx.arg.shared) {
@@ -1277,7 +1277,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 // pollute other `handleTlsRelocation` by MIPS `ifs` statements.
 // Mips has a custom MipsGotSection that handles the writing of GOT entries
 // without dynamic relocations.
-static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
+static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
                                         InputSectionBase &c, uint64_t offset,
                                         int64_t addend, RelExpr expr) {
   if (expr == R_MIPS_TLSLD) {
@@ -1314,7 +1314,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   }
 
   if (ctx.arg.emachine == EM_MIPS)
-    return handleMipsTlsRelocation(type, sym, *sec, offset, addend, expr);
+    return handleMipsTlsRelocation(ctx, type, sym, *sec, offset, addend, expr);
 
   // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
   // generate TLSDESC dynamic relocation for the dynamic linker to handle.
@@ -1488,7 +1488,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIndex != 0 &&
-      maybeReportUndefined(cast<Undefined>(sym), *sec, offset))
+      maybeReportUndefined(ctx, cast<Undefined>(sym), *sec, offset))
     return;
 
   if (ctx.arg.emachine == EM_PPC64) {
@@ -1799,7 +1799,7 @@ void elf::postScanRelocations(Ctx &ctx) {
                   ctx.target->pltRel, sym);
     if (flags & NEEDS_COPY) {
       if (sym.isObject()) {
-        invokeELFT(addCopyRelSymbol, cast<SharedSymbol>(sym));
+        invokeELFT(addCopyRelSymbol, ctx, cast<SharedSymbol>(sym));
         // NEEDS_COPY is cleared for sym and its aliases so that in
         // later iterations aliases won't cause redundant copies.
         assert(!sym.hasFlag(NEEDS_COPY));
@@ -1863,7 +1863,7 @@ void elf::postScanRelocations(Ctx &ctx) {
     }
 
     if ((flags & NEEDS_TLSIE) && !(flags & NEEDS_TLSGD_TO_IE))
-      addTpOffsetGotEntry(sym);
+      addTpOffsetGotEntry(ctx, sym);
   };
 
   GotSection *got = ctx.in.got.get();
