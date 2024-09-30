@@ -336,6 +336,8 @@ Improvements to Clang's diagnostics
   local variables passed to function calls using the ``[[clang::musttail]]``
   attribute.
 
+- Clang now diagnoses when a required expression has a local parameter of void type, aligning with the function parameter (#GH109831).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
