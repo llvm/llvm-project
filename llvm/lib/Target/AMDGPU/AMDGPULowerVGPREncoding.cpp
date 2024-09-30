@@ -315,8 +315,8 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
   unsigned LoadOffset = LoadMI->getOperand(LoadOffsetIdx).getImm();
 
   ModeTy NewMode;
-  NewMode.Ops[VSrc0] = {0, LoadIdxReg};
-  NewMode.Ops[VDst] = {0, StoreIdxReg};
+  NewMode.Ops[VSrc0] = {0, LoadIdxReg.asMCReg()};
+  NewMode.Ops[VDst] = {0, StoreIdxReg.asMCReg()};
 
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
@@ -367,9 +367,9 @@ void AMDGPULowerVGPREncoding::lowerIDX(MachineBasicBlock::instr_iterator &MII) {
   NewMode.Ops[VSrc0] = {0, AMDGPU::IDX0};
   NewMode.Ops[VDst] = {0, AMDGPU::IDX0};
   if (IsLoad)
-    NewMode.Ops[VSrc0].IdxReg = IdxReg;
+    NewMode.Ops[VSrc0].IdxReg = IdxReg.asMCReg();
   else
-    NewMode.Ops[VDst].IdxReg = IdxReg;
+    NewMode.Ops[VDst].IdxReg = IdxReg.asMCReg();
 
   unsigned MaxVGPR = ST->getAddressableNumVGPRs() - 1;
   const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
@@ -440,7 +440,8 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
 
         NewMode.Ops[I].IdxReg =
             II->getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
-                .getReg();
+                .getReg()
+                .asMCReg();
 
         --II;
         II->getNextNode()->removeFromBundle();
