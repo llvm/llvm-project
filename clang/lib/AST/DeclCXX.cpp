@@ -1631,9 +1631,32 @@ static bool allLookupResultsAreTheSame(const DeclContext::lookup_result &R) {
 static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   if (!RD.isLambda()) return nullptr;
   DeclarationName Name =
-    RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
-  DeclContext::lookup_result Calls = RD.lookup(Name);
+      RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
+  // If we have multiple call operators, we might be in a situation
+  // where we merged this lambda with one from another module; in that
+  // case, return our method (instead of that of the other lambda).
+  //
+  // This avoids situations where, given two modules A and B, if we
+  // try to instantiate A's call operator in a function in B, anything
+  // in the call operator that relies on local decls in the surrounding
+  // function will crash because it tries to find A's decls, but we only
+  // instantiated B's:
+  //
+  //   template <typename>
+  //   void f() {
+  //     using T = int;      // We only instantiate B's version of this.
+  //     auto L = [](T) { }; // But A's call operator wants A's here.
+  //   }
+  //
+  // To mitigate this, search our own decls first.
+  // FIXME: This feels like a hack; is there a better way of doing this?
+  for (CXXMethodDecl *M : RD.methods())
+    if (M->getDeclName() == Name)
+      return M;
+
+  // Otherwise, do a full lookup to find external decls too.
+  DeclContext::lookup_result Calls = RD.lookup(Name);
   assert(!Calls.empty() && "Missing lambda call operator!");
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
