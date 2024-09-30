@@ -3290,10 +3290,9 @@ bool IRTranslator::translateExtractVector(const User &U,
     }
   }
 
-  ConstantInt *Index = cast<ConstantInt>(U.getOperand(1));
   MIRBuilder.buildExtractSubvector(getOrCreateVReg(U),
                                    getOrCreateVReg(*U.getOperand(0)),
-                                   Index->getZExtValue());
+                                   CI->getZExtValue());
   return true;
 }
 
