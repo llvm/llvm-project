@@ -333,7 +333,6 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
       std::string FallbackName;
       raw_string_ostream OS(FallbackName);
       Msymtab.printSymbolName(OS, Fallback);
-      OS.flush();
       setStr(Uncommon().COFFWeakExternFallbackName, Saver.save(FallbackName));
     }
   }
@@ -358,7 +357,6 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
     if (Error Err = addModule(M))
       return Err;
 
-  COFFLinkerOptsOS.flush();
   setStr(Hdr.COFFLinkerOpts, Saver.save(COFFLinkerOpts));
 
   // We are about to fill in the header's range fields, so reserve space for it

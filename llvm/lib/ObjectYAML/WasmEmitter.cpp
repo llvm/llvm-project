@@ -77,7 +77,6 @@ public:
   SubSectionWriter(raw_ostream &OS) : OS(OS), StringStream(OutString) {}
 
   void done() {
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
     OutString.clear();
@@ -537,7 +536,6 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     Func.Body.writeAsBinary(StringStream);
 
     // Write the section size followed by the content
-    StringStream.flush();
     encodeULEB128(OutString.size(), OS);
     OS << OutString;
   }
@@ -645,8 +643,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     if (HasError)
       return false;
 
-    StringStream.flush();
-
     unsigned HeaderSecSizeEncodingLen =
         Sec->HeaderSecSizeEncodingLen.value_or(5);
     unsigned RequiredLen = getULEB128Size(OutString.size());
@@ -674,7 +670,6 @@ bool WasmWriter::writeWasm(raw_ostream &OS) {
     std::string OutString;
     raw_string_ostream StringStream(OutString);
     writeRelocSection(StringStream, *Sec, SectionIndex++);
-    StringStream.flush();
 
     encodeULEB128(OutString.size(), OS);
     OS << OutString;

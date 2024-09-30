@@ -226,7 +226,6 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       std::string Flag;
       raw_string_ostream FlagOS(Flag);
       Mangler.getNameWithPrefix(FlagOS, GV, false);
-      FlagOS.flush();
       if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
         OS << Flag.substr(1);
       else
@@ -265,7 +264,6 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     std::string Flag;
     raw_string_ostream FlagOS(Flag);
     Mangler.getNameWithPrefix(FlagOS, GV, false);
-    FlagOS.flush();
     if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
       OS << Flag.substr(1);
     else

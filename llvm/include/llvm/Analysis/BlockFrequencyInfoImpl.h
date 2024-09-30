@@ -1838,7 +1838,6 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
 
     raw_string_ostream OS(Result);
     OS << "color=\"red\"";
-    OS.flush();
     return Result;
   }
 
@@ -1898,7 +1897,6 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
       }
     }
 
-    OS.flush();
     return Str;
   }
 };

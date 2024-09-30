@@ -245,7 +245,6 @@ char *LLVMGetDiagInfoDescription(LLVMDiagnosticInfoRef DI) {
   DiagnosticPrinterRawOStream DP(Stream);
 
   unwrap(DI)->print(DP);
-  Stream.flush();
 
   return LLVMCreateMessage(MsgStorage.c_str());
 }
@@ -473,7 +472,6 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
   raw_string_ostream os(buf);
 
   unwrap(M)->print(os, nullptr);
-  os.flush();
 
   return strdup(buf.c_str());
 }
@@ -651,8 +649,6 @@ char *LLVMPrintTypeToString(LLVMTypeRef Ty) {
     unwrap(Ty)->print(os);
   else
     os << "Printing <null> Type";
-
-  os.flush();
 
   return strdup(buf.c_str());
 }
@@ -1046,8 +1042,6 @@ char* LLVMPrintValueToString(LLVMValueRef Val) {
   else
     os << "Printing <null> Value";
 
-  os.flush();
-
   return strdup(buf.c_str());
 }
 
@@ -1063,8 +1057,6 @@ char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record) {
     unwrap(Record)->print(os);
   else
     os << "Printing <null> DbgRecord";
-
-  os.flush();
 
   return strdup(buf.c_str());
 }
