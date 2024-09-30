@@ -18,7 +18,7 @@ const char *Instruction::getOpcodeName(Opcode Opc) {
     return #OPC;
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   }
   llvm_unreachable("Unknown Opcode");
 }
@@ -173,7 +173,7 @@ bool Instruction::classof(const sandboxir::Value *From) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return true;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   default:
     return false;
   }

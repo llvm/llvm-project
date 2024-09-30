@@ -46,7 +46,7 @@ public:
   static bool classof(const sandboxir::Value *From) {
     switch (From->getSubclassID()) {
 #define DEF_CONST(ID, CLASS) case ClassID::ID:
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
       return true;
     default:
       return false;
