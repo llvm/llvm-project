@@ -1109,11 +1109,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
       MachineInstr *Ptr = MRI.getVRegDef(PtrReg);
       if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
         const MachineOperand &Index = Ptr->getOperand(1);
-        unsigned Opcode;
-        if (Subtarget->isThumb())
-          Opcode = ARM::tLDRpci;
-        else
-          Opcode = ARM::LDRcp;
+        unsigned Opcode = (Subtarget->isThumb()) ? ARM::tLDRpci : ARM::LDRcp;
 
         auto Instr = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
                          .addDef(Reg)
