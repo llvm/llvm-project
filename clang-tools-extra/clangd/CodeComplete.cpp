@@ -2125,10 +2125,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   // When an is used, Sema is responsible for completing the main file,
   // the index can provide results from the preamble.
   // Tell Sema not to deserialize the preamble to look for results.
-  //
-  // FIXME: If we're using C++20 modules, force the lookup process to load external decls,
-  // since currently the index doesn't support C++20 modules.
-  Result.LoadExternal = ExperimentalModulesSupport || !Index;
+  Result.LoadExternal = ForceLoadPreamble || !Index;
   Result.IncludeFixIts = IncludeFixIts;
 
   return Result;

@@ -52,8 +52,10 @@ struct CodeCompleteOptions {
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
 
-  /// Whether the experimental modules support are enabled.
-  bool ExperimentalModulesSupport = false;
+  /// Force sema to load decls from preamble even if an index is provided.
+  /// This is helpful for cases the index can't provide symbols, e.g., the
+  /// unsupported yet modules.
+  bool ForceLoadPreamble = false;
 
   /// Combine overloads into a single completion item where possible.
   /// If none, the implementation may choose an appropriate behavior.
