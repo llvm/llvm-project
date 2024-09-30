@@ -1945,7 +1945,8 @@ struct DSEState {
     IRBuilder<> IRB(Malloc);
     Type *SizeTTy = Malloc->getArgOperand(0)->getType();
     auto *Calloc = emitCalloc(ConstantInt::get(SizeTTy, 1),
-                              Malloc->getArgOperand(0), IRB, TLI);
+                              Malloc->getArgOperand(0), IRB, TLI,
+                              Malloc->getType()->getPointerAddressSpace());
     if (!Calloc)
       return false;
 
