@@ -309,9 +309,6 @@ getFuncOpsOrderedByCalls(ModuleOp moduleOp,
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     return funcOp.walk([&](CallOpInterface callOp) -> WalkResult {
-      if (isa<func::CallIndirectOp>(callOp))
-        return WalkResult::skip();
-
       FunctionOpInterface calledFunction = getCalledFunction(callOp);
       if (!calledFunction)
         return WalkResult::skip();
