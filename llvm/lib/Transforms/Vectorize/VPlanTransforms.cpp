@@ -1353,6 +1353,7 @@ void VPlanTransforms::addActiveLaneMask(
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = dyn_cast<VPRecipeBase>(U);
@@ -1384,6 +1385,15 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 VPValue *NewMask = GetNewMask(Red->getCondOp());
                 return new VPReductionEVLRecipe(*Red, EVL, NewMask);
               })
+              .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
+                SmallVector<VPValue *> Ops(Sel->operands());
+                Ops.push_back(&EVL);
+                return new VPWidenIntrinsicRecipe(
+                    Intrinsic::vp_select, make_range(Ops.begin(), Ops.end()),
+
+                    TypeInfo.inferScalarType(Sel));
+              })
+
               .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (!NewRecipe)

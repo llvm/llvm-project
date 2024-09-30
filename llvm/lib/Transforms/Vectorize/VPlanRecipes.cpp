@@ -1039,6 +1039,14 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
   return Intrinsic::getBaseName(VectorIntrinsicID);
 }
 
+bool VPWidenIntrinsicRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // Vector predication intrinsics only demand the the first lane the last
+  // operand (the EVL operand).
+  return VPIntrinsic::isVPIntrinsic(VectorIntrinsicID) &&
+         Op == getOperand(getNumOperands() - 1);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntrinsicRecipe::print(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {

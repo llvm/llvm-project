@@ -1624,13 +1624,22 @@ public:
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
         VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {}
+  template <typename IterT>
+  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                         iterator_range<IterT> CallArguments, Type *Ty,
+                         DebugLoc DL = {})
+      : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
-    return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
-                                      VectorIntrinsicID, operands(), ResultTy,
-                                      getDebugLoc());
+    return isa_and_nonnull<CallInst>(getUnderlyingValue())
+               ? new VPWidenIntrinsicRecipe(
+                     *cast<CallInst>(getUnderlyingValue()), VectorIntrinsicID,
+                     operands(), ResultTy, getDebugLoc())
+               : new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(),
+                                            ResultTy, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1652,6 +1661,8 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe for widening Call instructions using library calls.
