@@ -548,7 +548,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // CFINITEONLY-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan ninf uno double [[MUL_I]], [[MUL_I]]
 // CFINITEONLY-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // CFINITEONLY:       complex_mul_libcall:
-// CFINITEONLY-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// CFINITEONLY-NEXT:    [[CALL:%.*]] = call nnan ninf { double, double } @__muldc3(double noundef nofpclass(nan inf) [[C_REAL]], double noundef nofpclass(nan inf) [[C_IMAG]], double noundef nofpclass(nan inf) [[C_REAL2]], double noundef nofpclass(nan inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // CFINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CFINITEONLY-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // CFINITEONLY-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -605,7 +605,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NONANS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp nnan uno double [[MUL_I]], [[MUL_I]]
 // NONANS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NONANS:       complex_mul_libcall:
-// NONANS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NONANS-NEXT:    [[CALL:%.*]] = call nnan { double, double } @__muldc3(double noundef nofpclass(nan) [[C_REAL]], double noundef nofpclass(nan) [[C_IMAG]], double noundef nofpclass(nan) [[C_REAL2]], double noundef nofpclass(nan) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NONANS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NONANS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NONANS-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -649,7 +649,7 @@ _Complex float defined_complex_func(_Complex float a, _Complex double b, _Comple
 // NOINFS-NEXT:    [[ISNAN_CMP5:%.*]] = fcmp ninf uno double [[MUL_I]], [[MUL_I]]
 // NOINFS-NEXT:    br i1 [[ISNAN_CMP5]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // NOINFS:       complex_mul_libcall:
-// NOINFS-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
+// NOINFS-NEXT:    [[CALL:%.*]] = call ninf { double, double } @__muldc3(double noundef nofpclass(inf) [[C_REAL]], double noundef nofpclass(inf) [[C_IMAG]], double noundef nofpclass(inf) [[C_REAL2]], double noundef nofpclass(inf) [[C_IMAG4]]) #[[ATTR7:[0-9]+]]
 // NOINFS-NEXT:    [[TMP2:%.*]] = extractvalue { double, double } [[CALL]], 0
 // NOINFS-NEXT:    [[TMP3:%.*]] = extractvalue { double, double } [[CALL]], 1
 // NOINFS-NEXT:    br label [[COMPLEX_MUL_CONT]]

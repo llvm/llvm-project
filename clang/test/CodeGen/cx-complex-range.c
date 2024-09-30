@@ -1444,7 +1444,7 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL_FAST-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // FULL_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // FULL_FAST-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { double, double } @__divdc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn { double, double } @__divdc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP4:%.*]] = extractvalue { double, double } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP5:%.*]] = extractvalue { double, double } [[CALL]], 1
 // FULL_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
@@ -2003,7 +2003,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
 // FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // FULL_FAST:       complex_mul_libcall:
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_REAL]], double noundef nofpclass(nan inf) [[A_IMAG]], double noundef nofpclass(nan inf) [[B_REAL]], double noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP4:%.*]] = extractvalue { double, double } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP5:%.*]] = extractvalue { double, double } [[CALL]], 1
 // FULL_FAST-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -2535,7 +2535,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[B_REAL:%.*]] = load x86_fp80, ptr [[B_REALP]], align 16
 // FULL_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[B]], i32 0, i32 1
 // FULL_FAST-NEXT:    [[B_IMAG:%.*]] = load x86_fp80, ptr [[B_IMAGP]], align 16
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { x86_fp80, x86_fp80 }, ptr [[RETVAL]], i32 0, i32 0
@@ -3028,7 +3028,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
 // FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
 // FULL_FAST:       complex_mul_libcall:
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    br label [[COMPLEX_MUL_CONT]]
@@ -3753,7 +3753,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
 // FULL_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
 // FULL_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
-// FULL_FAST-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[CONV]], x86_fp80 noundef nofpclass(nan inf) [[CONV1]]) #[[ATTR2]]
+// FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[CONV]], x86_fp80 noundef nofpclass(nan inf) [[CONV1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
 // FULL_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP0]] to float
