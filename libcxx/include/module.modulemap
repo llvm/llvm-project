@@ -71,7 +71,12 @@ module std_core [system] {
     module alignment_of                               { header "__type_traits/alignment_of.h" }
     module can_extract_key                            { header "__type_traits/can_extract_key.h" }
     module common_reference                           { header "__type_traits/common_reference.h" }
-    module common_type                                { header "__type_traits/common_type.h" }
+    module common_type {
+      header "__type_traits/common_type.h"
+      // We need to export everything from this module because common_type inherits from __builtin_common_type,
+      // which needs to be re-exported.
+      export *
+    }
     module conditional                                { header "__type_traits/conditional.h" }
     module conjunction                                { header "__type_traits/conjunction.h" }
     module copy_cv                                    { header "__type_traits/copy_cv.h" }
