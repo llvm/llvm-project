@@ -2346,6 +2346,12 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // End if-block.
   VPRegionBlock *Parent = RepRecipe->getParent()->getParent();
   bool IfPredicateInstr = Parent ? Parent->isReplicator() : false;
+  assert((Parent || all_of(RepRecipe->operands(),
+                           [](VPValue *Op) {
+                             return Op->isDefinedOutsideLoopRegions();
+                           })) &&
+         "Expected a recipe is either within a region or all of its operands "
+         "are defined outside the vectorized region.");
   if (IfPredicateInstr)
     PredicatedInstructions.push_back(Cloned);
 }
@@ -8950,6 +8956,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         bool NeedsBlends = BB != HeaderBB && !BB->phis().empty();
         return Legal->blockNeedsPredication(BB) || NeedsBlends;
       });
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getSingleSuccessor());
+  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
     // Relevant instructions from basic block BB will be grouped into VPRecipe
     // ingredients and fill a new VPBasicBlock.
@@ -8976,12 +8985,21 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         Operands = {OpRange.begin(), OpRange.end()};
       }
 
-      // Invariant stores inside loop will be deleted and a single store
-      // with the final reduction value will be added to the exit block
+      // The stores with invariant address inside the loop will be deleted, and
+      // in the exit block, a uniform store recipe will be created for the final
+      // invariant store of the reduction.
       StoreInst *SI;
       if ((SI = dyn_cast<StoreInst>(&I)) &&
-          Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
+          Legal->isInvariantAddressOfReduction(SI->getPointerOperand())) {
+        // Only create recipe for the final invariant store of the reduction.
+        if (!Legal->isInvariantStoreOfReduction(SI))
+          continue;
+        auto *Recipe = new VPReplicateRecipe(
+            SI, RecipeBuilder.mapToVPValues(Instr->operands()),
+            true /* IsUniform */);
+        Recipe->insertBefore(*MiddleVPBB, MBIP);
         continue;
+      }
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands, Range, VPBB);
@@ -9150,45 +9168,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   using namespace VPlanPatternMatch;
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
-  // Gather all VPReductionPHIRecipe and sort them so that Intermediate stores
-  // sank outside of the loop would keep the same order as they had in the
-  // original loop.
-  SmallVector<VPReductionPHIRecipe *> ReductionPHIList;
-  for (VPRecipeBase &R : Header->phis()) {
-    if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R))
-      ReductionPHIList.emplace_back(ReductionPhi);
-  }
-  bool HasIntermediateStore = false;
-  stable_sort(ReductionPHIList,
-              [this, &HasIntermediateStore](const VPReductionPHIRecipe *R1,
-                                            const VPReductionPHIRecipe *R2) {
-                auto *IS1 = R1->getRecurrenceDescriptor().IntermediateStore;
-                auto *IS2 = R2->getRecurrenceDescriptor().IntermediateStore;
-                HasIntermediateStore |= IS1 || IS2;
-
-                // If neither of the recipes has an intermediate store, keep the
-                // order the same.
-                if (!IS1 && !IS2)
-                  return false;
-
-                // If only one of the recipes has an intermediate store, then
-                // move it towards the beginning of the list.
-                if (IS1 && !IS2)
-                  return true;
-
-                if (!IS1 && IS2)
-                  return false;
-
-                // If both recipes have an intermediate store, then the recipe
-                // with the later store should be processed earlier. So it
-                // should go to the beginning of the list.
-                return DT->dominates(IS2, IS1);
-              });
-
-  if (HasIntermediateStore && ReductionPHIList.size() > 1)
-    for (VPRecipeBase *R : ReductionPHIList)
-      R->moveBefore(*Header, Header->getFirstNonPhi());
-
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
   for (VPRecipeBase &R : Header->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
@@ -9207,9 +9188,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       for (VPUser *U : Cur->users()) {
         auto *UserRecipe = cast<VPSingleDefRecipe>(U);
         if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
-          assert(match(U, m_Binary<VPInstruction::ExtractFromEnd>(
-                              m_VPValue(), m_VPValue())) &&
-                 "U must be an ExtractFromEnd VPInstruction");
+          assert(UserRecipe->getParent() == MiddleVPBB &&
+                 "U must be either in the loop region or the middle block.");
           continue;
         }
         Worklist.insert(UserRecipe);
@@ -9314,8 +9294,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   }
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*LatchVPBB->begin());
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
@@ -9390,12 +9368,13 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // also modeled in VPlan.
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
+    // Update all users outside the vector region.
+    OrigExitingVPV->replaceUsesWithIf(
+        FinalReductionResult, [](VPUser &User, unsigned) {
+          auto *Parent = cast<VPRecipeBase>(&User)->getParent();
+          return Parent && !Parent->getParent();
+        });
     FinalReductionResult->insertBefore(*MiddleVPBB, IP);
-    OrigExitingVPV->replaceUsesWithIf(FinalReductionResult, [](VPUser &User,
-                                                               unsigned) {
-      return match(&User, m_Binary<VPInstruction::ExtractFromEnd>(m_VPValue(),
-                                                                  m_VPValue()));
-    });
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
