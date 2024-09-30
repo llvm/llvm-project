@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::max_align_t _LIBCPP_USING_IF_EXISTS;
   using std::nullptr_t;
   using std::ptrdiff_t _LIBCPP_USING_IF_EXISTS;

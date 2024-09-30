@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // class template scoped_allocator_adaptor
   using std::scoped_allocator_adaptor;
 

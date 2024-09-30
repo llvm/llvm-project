@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::imaxdiv_t _LIBCPP_USING_IF_EXISTS;
 
   using ::imaxabs _LIBCPP_USING_IF_EXISTS;
@@ -22,4 +22,4 @@ export {
 
   // div is conditionally here, but always present in cstdlib.cppm. To avoid
   // conflicing declarations omit the using here.
-} // export
+} // _LIBCPP_MODULE_EXPORT

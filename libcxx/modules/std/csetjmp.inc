@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::jmp_buf _LIBCPP_USING_IF_EXISTS;
   using std::longjmp _LIBCPP_USING_IF_EXISTS;
 } // namespace std

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::isalnum _LIBCPP_USING_IF_EXISTS;
   using std::isalpha _LIBCPP_USING_IF_EXISTS;
   using std::isblank _LIBCPP_USING_IF_EXISTS;

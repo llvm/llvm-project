@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   namespace chrono {
     using std::chrono::duration;
     using std::chrono::time_point;
@@ -284,7 +283,7 @@ export namespace std {
   } // namespace chrono
 
 } // namespace std
-export namespace std::inline literals::inline chrono_literals {
+_LIBCPP_MODULE_EXPORT namespace std::inline literals::inline chrono_literals {
   // [time.duration.literals], suffixes for duration literals
   using std::literals::chrono_literals::operator""h;
   using std::literals::chrono_literals::operator""min;

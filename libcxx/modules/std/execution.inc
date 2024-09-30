@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef _LIBCPP_ENABLE_EXPERIMENTAL
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [execpol.type], execution policy type trait
   using std::is_execution_policy;
   using std::is_execution_policy_v;
 } // namespace std
 
-export namespace std::execution {
+_LIBCPP_MODULE_EXPORT namespace std::execution {
   // [execpol.seq], sequenced execution policy
   using std::execution::sequenced_policy;
 
