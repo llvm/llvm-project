@@ -6114,5 +6114,5 @@ define void @foo() {
 TEST_F(SandboxIRTest, CheckClassof) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 }
