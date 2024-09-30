@@ -3661,7 +3661,7 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
 
   // Note: OneUse check for `Cmp` is necessary because it makes sure that other
   // InstCombine folds don't undo this transformation and cause an infinite
-  // loop.
+  // loop. Furthermore, it could also increase the operation count.
   if (match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
                           m_OneUse(m_Instruction(FAdd)), m_Constant(C))) ||
       match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
@@ -3669,31 +3669,19 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
     if (!match(Z, m_AnyZeroFP()))
       return nullptr;
 
-    // Only these Predicates can be transformed into fmaxnum/fminnum intrinsic.
-    switch (Pred) {
-    default:
+    // Only these relational predicates can be transformed into maxnum/minnum
+    // intrinsic.
+    if (!CmpInst::isRelational(Pred))
       return nullptr;
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_OGE:
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_OLE:
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_ULE:
-      break;
-    }
 
     if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
       return nullptr;
 
-    Value *NewSelect = Builder.CreateSelect(SI.getCondition(), X, Z,
-                                            SI.getName() + ".new", &SI);
+    Value *NewSelect =
+        Builder.CreateSelect(SI.getCondition(), X, Z, SI.getName(), &SI);
     cast<Instruction>(NewSelect)->setFastMathFlags(SI.getFastMathFlags());
 
-    Value *NewFAdd =
-        Builder.CreateFAddFMF(NewSelect, C, FAdd, FAdd->getName() + ".new");
-    return NewFAdd;
+    return Builder.CreateFAddFMF(NewSelect, C, FAdd, FAdd->getName());
   }
 
   return nullptr;
