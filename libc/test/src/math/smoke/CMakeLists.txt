@@ -328,6 +328,45 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  iscanonical_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonical_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonical
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  iscanonicalf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicalf_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicalf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  iscanonicall_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicall_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicall
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   ceil_test
   SUITE
     libc-math-smoke-tests
