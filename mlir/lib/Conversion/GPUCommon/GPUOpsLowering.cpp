@@ -642,11 +642,10 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp
-getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
-                             Operation *moduleOp, gpu::DynamicSharedMemoryOp op,
-                             const LLVMTypeConverter *typeConverter,
-                             MemRefType memrefType, unsigned alignmentBit) {
+LLVM::GlobalOp getDynamicSharedMemorySymbol(
+    ConversionPatternRewriter &rewriter, gpu::GPUModuleOp moduleOp,
+    gpu::DynamicSharedMemoryOp op, const LLVMTypeConverter *typeConverter,
+    MemRefType memrefType, unsigned alignmentBit) {
   uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
 
   FailureOr<unsigned> addressSpace =
@@ -661,8 +660,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
   // LLVM::GlobalOp is suitable for shared memory, return it.
   llvm::StringSet<> existingGlobalNames;
-  for (auto globalOp :
-       moduleOp->getRegion(0).front().getOps<LLVM::GlobalOp>()) {
+  for (auto globalOp : moduleOp.getBody()->getOps<LLVM::GlobalOp>()) {
     existingGlobalNames.insert(globalOp.getSymName());
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
       if (globalOp.getAddrSpace() == addressSpace.value() &&
@@ -684,7 +682,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
 
   // Step 3. Generate a global op
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(&moduleOp->getRegion(0).front().front());
+  rewriter.setInsertionPointToStart(moduleOp.getBody());
 
   auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
       typeConverter->convertType(memrefType.getElementType()), 0);
@@ -709,10 +707,8 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
 
   // Step 2: Generate a global symbol or existing for the dynamic shared
   // memory with memref<0xi8> type
-  LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
-  LLVM::GlobalOp shmemOp = {};
-  Operation *moduleOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
-  shmemOp = getDynamicSharedMemorySymbol(
+  auto moduleOp = op->getParentOfType<gpu::GPUModuleOp>();
+  LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
       rewriter, moduleOp, op, getTypeConverter(), memrefType0sz, alignmentBit);
 
   // Step 3. Get address of the global symbol
