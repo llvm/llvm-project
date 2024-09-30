@@ -274,7 +274,7 @@ void ProcessMinidump::RefreshStateAfterStop() {
         return;
       }
       const char * description = nullptr;
-      if ((exception_stream.ExceptionRecord.ExceptionFlags & llvm::minidump::Exception::LLDB_FLAG) == llvm::minidump::Exception::LLDB_FLAG)
+      if (exception_stream.ExceptionRecord.ExceptionFlags == llvm::minidump::Exception::LLDB_FLAG)
         description = reinterpret_cast<const char *>(exception_stream.ExceptionRecord.ExceptionInformation);
 
       stop_info = StopInfo::CreateStopReasonWithSignal(*stop_thread, signo, description);

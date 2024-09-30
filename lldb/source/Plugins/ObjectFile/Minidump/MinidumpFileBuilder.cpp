@@ -695,7 +695,6 @@ Status MinidumpFileBuilder::AddExceptions() {
 
     RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
     Exception exp_record = {};
-    exp_record.ExceptionCode = static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
     exp_record.ExceptionCode =
         static_cast<llvm::support::ulittle32_t>(stop_info_sp->GetValue());
     exp_record.ExceptionFlags = static_cast<llvm::support::ulittle32_t>(Exception::LLDB_FLAG);
