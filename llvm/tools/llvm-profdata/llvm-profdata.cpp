@@ -3415,8 +3415,9 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
-    errs() << ProgName
-           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+    errs()
+        << ProgName
+        << ": No subcommand specified! Run llvm-profdata --help for usage.\n";
     return 1;
   }
 
