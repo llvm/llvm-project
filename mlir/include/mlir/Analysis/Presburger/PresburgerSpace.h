@@ -75,7 +75,7 @@ public:
   template <typename T>
   explicit Identifier(T value)
       : value(llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(value)) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     idType = llvm::getTypeName<T>();
 #endif
   }
@@ -84,7 +84,7 @@ public:
   /// the type of the identifier used to create it.
   template <typename T>
   T getValue() const {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(llvm::getTypeName<T>() == idType &&
            "Identifier was initialized with a different type than the one used "
            "to retrieve it.");
@@ -108,7 +108,7 @@ private:
   /// The value of the identifier.
   void *value = nullptr;
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// TypeID of the identifiers in space. This should be used in asserts only.
   llvm::StringRef idType;
 #endif
