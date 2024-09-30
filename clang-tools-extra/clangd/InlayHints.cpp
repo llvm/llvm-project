@@ -738,7 +738,7 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  void processCall(Callee Callee, SourceRange LParenOrBraceRange,
+  void processCall(Callee Callee, SourceRange RParenOrBraceRange,
                    llvm::ArrayRef<const Expr *> Args) {
     assert(Callee.Decl || Callee.Loc);
 
@@ -795,7 +795,7 @@ private:
             CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
             AST.getSourceManager(), AST.getLangOpts());
         FormattedDefaultArgs.emplace_back(llvm::formatv(
-            "{0}: {1}", Name,
+            "{0}: {1}", Name.empty() ? "/*unused*/" : Name,
             SourceText.size() > Cfg.InlayHints.TypeNameLimit ? "..."
                                                              : SourceText));
       }
@@ -811,7 +811,7 @@ private:
       std::string Hint =
           joinAndTruncate(FormattedDefaultArgs, Cfg.InlayHints.TypeNameLimit,
                           [](const auto &E) { return E; });
-      addInlayHint(LParenOrBraceRange, HintSide::Left,
+      addInlayHint(RParenOrBraceRange, HintSide::Left,
                    InlayHintKind::DefaultArgument,
                    HasNonDefaultArgs ? ", " : "", Hint, "");
     }
