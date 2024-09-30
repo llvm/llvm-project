@@ -8,6 +8,8 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr null to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    switch i32 0, label %[[NEWFUNCROOT994:.*]] [
@@ -18,7 +20,6 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[NEWFUNCROOT994]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[TMP5]], i64 [[TMP6]]
 ; CHECK-NEXT:    ret void
 ;

@@ -11563,6 +11563,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
+  SmallPtrSet<Value *, 4> ScalarOpsFromCasts;
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
@@ -11698,7 +11699,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       // Can use original instruction, if no operands vectorized or they are
       // marked as externally used already.
       auto *Inst = cast<Instruction>(EU.Scalar);
-      bool CanBeUsedAsScalar = all_of(Inst->operands(), [&](Value *V) {
+      InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
+      auto OperandIsScalar = [&](Value *V) {
         if (!getTreeEntry(V)) {
           // Some extractelements might be not vectorized, but
           // transformed into shuffle and removed from the function,
@@ -11708,9 +11710,20 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           return true;
         }
         return ValueToExtUses->contains(V);
-      });
+      };
+      bool CanBeUsedAsScalar = all_of(Inst->operands(), OperandIsScalar);
+      bool CanBeUsedAsScalarCast = false;
+      if (auto *CI = dyn_cast<CastInst>(Inst); CI && !CanBeUsedAsScalar) {
+        if (auto *Op = dyn_cast<Instruction>(CI->getOperand(0));
+            Op && all_of(Op->operands(), OperandIsScalar)) {
+          InstructionCost OpCost = TTI->getInstructionCost(Op, CostKind);
+          if (ScalarCost + OpCost <= ExtraCost) {
+            CanBeUsedAsScalar = CanBeUsedAsScalarCast = true;
+            ScalarCost += OpCost;
+          }
+        }
+      }
       if (CanBeUsedAsScalar) {
-        InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
         bool KeepScalar = ScalarCost <= ExtraCost;
         // Try to keep original scalar if the user is the phi node from the same
         // block as the root phis, currently vectorized. It allows to keep
@@ -11766,11 +11779,19 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           ExtraCost = ScalarCost;
           if (!IsPhiInLoop(EU))
             ExtractsCount[Entry].insert(Inst);
+          if (CanBeUsedAsScalarCast)
+            ScalarOpsFromCasts.insert(Inst->getOperand(0));
         }
       }
     }
 
     ExtractCost += ExtraCost;
+  }
+  // Insert externals for extract of operands of casts to be emitted as scalars
+  // instead of extractelement.
+  for (Value *V : ScalarOpsFromCasts) {
+    ExternalUsesAsOriginalScalar.insert(V);
+    ExternalUses.emplace_back(V, nullptr, getTreeEntry(V)->findLaneForValue(V));
   }
   // Add reduced value cost, if resized.
   if (!VectorizedVals.empty()) {
