@@ -59,7 +59,8 @@ bool DWARFIndex::ProcessFunctionDIE(
     return true;
 
   // In case of a full match, we just insert everything we find.
-  if (name_type_mask & eFunctionNameTypeFull && die.GetMangledName() == name)
+  if (name_type_mask & eFunctionNameTypeFull &&
+      (die.GetMangledName() == name || die.GetName() == name))
     return callback(die);
 
   // If looking for ObjC selectors, we need to also check if the name is a

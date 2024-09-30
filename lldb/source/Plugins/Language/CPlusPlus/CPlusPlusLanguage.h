@@ -121,6 +121,9 @@ public:
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }
 
+  bool SymbolLookupHookShouldPruneResult(
+      const SymbolContext &sc, const Module::LookupInfo &lookup_info) override;
+
   // Static Functions
   static void Initialize();
 

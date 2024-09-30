@@ -1759,3 +1759,41 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
 
   return false;
 }
+
+bool CPlusPlusLanguage::SymbolLookupHookShouldPruneResult(
+    const SymbolContext &sc, const Module::LookupInfo &lookup_info) {
+  // If we have only full name matches we might have tried to set breakpoint on
+  // "func" and specified eFunctionNameTypeFull, but we might have found
+  // "a::func()", "a::b::func()", "c::func()", "func()" and "func". Only
+  // "func()" and "func" should end up matching.
+  // Make sure the mangled and demangled names don't match before we try to
+  // pull anything out
+
+  if (lookup_info.GetNameTypeMask() != eFunctionNameTypeFull)
+    return false;
+
+  ConstString mangled_name(sc.GetFunctionName(Mangled::ePreferMangled));
+  ConstString full_name(sc.GetFunctionName());
+  ConstString lookup_name = lookup_info.GetName();
+  if (mangled_name != lookup_name && full_name != lookup_name) {
+    CPlusPlusLanguage::MethodName cpp_method(full_name);
+    if (cpp_method.IsValid()) {
+      if (cpp_method.GetContext().empty()) {
+        if (cpp_method.GetBasename().compare(lookup_name) != 0) {
+          return true;
+        }
+      } else {
+        std::string qualified_name;
+        llvm::StringRef anon_prefix("(anonymous namespace)");
+        if (cpp_method.GetContext() == anon_prefix)
+          qualified_name = cpp_method.GetBasename().str();
+        else
+          qualified_name = cpp_method.GetScopeQualifiedName();
+        if (qualified_name != lookup_name.GetCString()) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -378,6 +379,21 @@ public:
   /// Returns the keyword used for catch statements in this language, e.g.
   /// Python uses \b except. Defaults to \b catch.
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
+  /// Method invoked by \a Module::LookupInfo::Prune used to filter out symbol
+  /// search results.
+  ///
+  /// \param[in] sc A symbol that passed the common symbol search lookup
+  ///   process.
+  /// \param[in] lookup_info The full lookup info.
+  ///
+  /// \return whether the given symbol should be discarded from the search
+  /// results.
+  virtual bool
+  SymbolLookupHookShouldPruneResult(const SymbolContext &sc,
+                                    const Module::LookupInfo &lookup_info) {
+    return false;
+  }
 
 protected:
   // Classes that inherit from Language can see and modify these
