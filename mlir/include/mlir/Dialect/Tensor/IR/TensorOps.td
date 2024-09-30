@@ -344,6 +344,43 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ExtractStaticOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_ExtractStaticOp : Tensor_Op<"extract_static", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    Pure,
+    TypesMatchWith<"result type matches element type of tensor",
+                   "tensor", "result",
+                   "::llvm::cast<TensorType>($_self).getElementType()">]> {
+  let summary = "element extraction operation with static indices";
+  let description = [{
+    The same as `tensor.extract` op except that `tensor.extract_static` op only
+    takes static indices.
+
+    Example:
+
+    ```mlir
+    %4 = tensor.extract_static %t[1, 2] : tensor<4x4xi32>
+    %5 = tensor.extract_static %rt[1, 2] : tensor<?x?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$tensor,
+    DenseI64ArrayAttr:$static_indices
+  );
+
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{$tensor `` $static_indices attr-dict `:` type($tensor)}];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // ExtractSliceOp
@@ -821,6 +858,50 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
   let hasFolder = 1;
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// InsertStaticOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_InsertStaticOp : Tensor_Op<"insert_static", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DestinationStyleOpInterface,
+    Pure,
+    TypesMatchWith<"result type matches type of dest",
+                   "dest", "result",
+                   "$_self">,
+    TypesMatchWith<"scalar type matches element type of dest",
+                   "dest", "scalar",
+                   "::llvm::cast<TensorType>($_self).getElementType()">]> {
+  let summary = "element insertion operation with static indices";
+  let description = [{
+    The same as `tensor.insert` op except that `tensor.insert_static` op only
+    takes static indices.
+
+    Example:
+
+    ```mlir
+    %4 = tensor.insert_static %t into %dest[1, 2] : tensor<4x4xi32>
+    %5 = tensor.insert_static %rt into %dest[1, 2] : tensor<?x?xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$scalar,
+                       AnyRankedTensor:$dest,
+                       DenseI64ArrayAttr:$static_indices);
+  let results = (outs AnyRankedTensor:$result);
+  let assemblyFormat = [{
+    $scalar `into` $dest `` $static_indices attr-dict `:` type($dest)
+  }];
+
+  let extraClassDeclaration = [{
+    MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // InsertSliceOp

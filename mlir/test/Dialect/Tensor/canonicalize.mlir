@@ -173,6 +173,40 @@ func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
 
 // -----
 
+// CHECK-LABEL: func @fold_extract_static
+func.func @fold_extract_static() -> (f32, f16, f16, i32, complex<f32>) {
+  // CHECK-DAG: [[C64:%.+]] = arith.constant 64 : i32
+  // CHECK-DAG: [[C0:%.+]] = arith.constant 0.{{0*}}e+00 : f16
+  // CHECK-DAG: [[CM2:%.+]] = arith.constant -2.{{0*}}e+00 : f16
+
+  // Fold an extract into a splat.
+  // CHECK-DAG: [[C4:%.+]] = arith.constant 4.{{0*}}e+00 : f32
+  %0 = arith.constant dense<4.0> : tensor<4xf32>
+  %ext_1 = tensor.extract_static %0[1] : tensor<4xf32>
+
+  // Fold an extract into a sparse with a sparse index.
+  %1 = arith.constant sparse<[[0, 0, 0], [1, 1, 1]],  [-5.0, -2.0]> : tensor<4x4x4xf16>
+  %ext_2 = tensor.extract_static %1[1, 1, 1] : tensor<4x4x4xf16>
+
+  // Fold an extract into a sparse with a non sparse index.
+  %2 = arith.constant sparse<[[1, 1, 1]],  [-2.0]> : tensor<2x2x2xf16>
+  %ext_3 = tensor.extract_static %2[0, 0, 0] : tensor<2x2x2xf16>
+
+  // Fold an extract into a dense tensor.
+  %3 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]> : tensor<2x1x4xi32>
+  %ext_4 = tensor.extract_static %3[1, 0, 3] : tensor<2x1x4xi32>
+
+  // Fold an extract into a complex constant.
+  // CHECK-DAG: [[C5:%.+]] = complex.constant [1.200000e+00 : f32, 2.300000e+00 : f32] : complex<f32>
+  %4 = arith.constant dense<(1.2, 2.3)> : tensor<complex<f32>>
+  %ext_5 = tensor.extract_static %4[] : tensor<complex<f32>>
+
+  // CHECK-NEXT: return [[C4]], [[CM2]], [[C0]], [[C64]], [[C5]]
+  return %ext_1, %ext_2, %ext_3, %ext_4, %ext_5 : f32, f16, f16, i32, complex<f32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_insert
 func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
   // Fold an insert into a splat.
@@ -180,6 +214,19 @@ func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
   %0 = arith.constant dense<4.0> : tensor<4xf32>
   %1 = arith.constant 4.0 : f32
   %ins_1 = tensor.insert %1 into %0[%arg0] : tensor<4xf32>
+  // CHECK-NEXT: return %[[C4]]
+  return %ins_1 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_insert_static
+func.func @fold_insert_static() -> (tensor<4xf32>) {
+  // Fold an insert into a splat.
+  // CHECK-DAG: %[[C4:.+]] = arith.constant dense<4.{{0*}}e+00> : tensor<4xf32>
+  %0 = arith.constant dense<4.0> : tensor<4xf32>
+  %1 = arith.constant 4.0 : f32
+  %ins_1 = tensor.insert_static %1 into %0[3] : tensor<4xf32>
   // CHECK-NEXT: return %[[C4]]
   return %ins_1 : tensor<4xf32>
 }
@@ -200,6 +247,18 @@ func.func @extract_from_tensor.cast(%tensor: tensor<9xf32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @extract_static_from_tensor.cast
+// CHECK-SAME: %[[TENSOR:.*]]: tensor<9xf32>
+func.func @extract_static_from_tensor.cast(%tensor: tensor<9xf32>) -> f32 {
+  // CHECK-NOT: tensor.cast
+  %casted = tensor.cast %tensor : tensor<9xf32> to tensor<?xf32>
+  // CHECK-NEXT: tensor.extract_static %[[TENSOR]][0]
+  %result = tensor.extract_static %casted[0] : tensor<?xf32>
+  return %result : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_from_tensor.from_elements
 func.func @extract_from_tensor.from_elements(%element : index) -> index {
   // CHECK-SAME: ([[ARG:%.*]]: index)
@@ -212,12 +271,34 @@ func.func @extract_from_tensor.from_elements(%element : index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @extract_static_from_tensor.from_elements
+func.func @extract_static_from_tensor.from_elements(%element : index) -> index {
+  // CHECK-SAME: ([[ARG:%.*]]: index)
+  %tensor = tensor.from_elements %element : tensor<1xindex>
+  %extracted_element = tensor.extract_static %tensor[0] : tensor<1xindex>
+  // CHECK: [[ARG]] : index
+  return %extracted_element : index
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_from_tensor.from_elements_0d
 func.func @extract_from_tensor.from_elements_0d(%element : index) -> index {
   // CHECK-SAME: ([[ARG:%.*]]: index)
   %c0 = arith.constant 0 : index
   %tensor = tensor.from_elements %element : tensor<index>
   %extracted_element = tensor.extract %tensor[] : tensor<index>
+  // CHECK: [[ARG]] : index
+  return %extracted_element : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_static_from_tensor.from_elements_0d
+func.func @extract_static_from_tensor.from_elements_0d(%element : index) -> index {
+  // CHECK-SAME: ([[ARG:%.*]]: index)
+  %tensor = tensor.from_elements %element : tensor<index>
+  %extracted_element = tensor.extract_static %tensor[] : tensor<index>
   // CHECK: [[ARG]] : index
   return %extracted_element : index
 }
@@ -261,6 +342,61 @@ func.func @extract_from_tensor.from_elements_3d()
   return %r0,%r1,%r2,%r3,%r4,%r5,%r6,%r7,%r8,%r9,%r10,%r11
          : f32,f32,f32,f32,f32,f32,f32,f32,f32,f32,f32,f32
 }
+
+// CHECK-DAG: %[[F0:.*]] = arith.constant 0.0
+// CHECK-DAG: %[[F1:.*]] = arith.constant 1.0{{0+}}e+00
+// CHECK-DAG: %[[F2:.*]] = arith.constant 2.0
+// CHECK-DAG: %[[F3:.*]] = arith.constant 3.0
+// CHECK-DAG: %[[F4:.*]] = arith.constant 4.0
+// CHECK-DAG: %[[F5:.*]] = arith.constant 5.0
+// CHECK-DAG: %[[F6:.*]] = arith.constant 6.0
+// CHECK-DAG: %[[F7:.*]] = arith.constant 7.0
+// CHECK-DAG: %[[F8:.*]] = arith.constant 8.0
+// CHECK-DAG: %[[F9:.*]] = arith.constant 9.0
+// CHECK-DAG: %[[F10:.*]] = arith.constant 1.0{{0+}}e+01
+// CHECK-DAG: %[[F11:.*]] = arith.constant 1.1{{0+}}e+01
+
+// CHECK: return %[[F0]], %[[F1]], %[[F2]], %[[F3]], %[[F4]], %[[F5]],
+// CHECK-SAME:   %[[F6]], %[[F7]], %[[F8]], %[[F9]], %[[F10]], %[[F11]]
+
+
+// -----
+
+// CHECK-LABEL: func @extract_static_from_tensor.from_elements_3d
+func.func @extract_static_from_tensor.from_elements_3d()
+    -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) {
+  %f0 = arith.constant 0.0 : f32
+  %f1 = arith.constant 1.0 : f32
+  %f2 = arith.constant 2.0 : f32
+  %f3 = arith.constant 3.0 : f32
+  %f4 = arith.constant 4.0 : f32
+  %f5 = arith.constant 5.0 : f32
+  %f6 = arith.constant 6.0 : f32
+  %f7 = arith.constant 7.0 : f32
+  %f8 = arith.constant 8.0 : f32
+  %f9 = arith.constant 9.0 : f32
+  %f10 = arith.constant 10.0 : f32
+  %f11 = arith.constant 11.0 : f32
+
+  %tensor = tensor.from_elements %f0,%f1,%f2,%f3,%f4,%f5,%f6,%f7,%f8,%f9,%f10,%f11
+         : tensor<3x2x2xf32>
+
+  %r0 = tensor.extract_static %tensor[0, 0, 0] : tensor<3x2x2xf32>
+  %r1 = tensor.extract_static %tensor[0, 0, 1] : tensor<3x2x2xf32>
+  %r2 = tensor.extract_static %tensor[0, 1, 0] : tensor<3x2x2xf32>
+  %r3 = tensor.extract_static %tensor[0, 1, 1] : tensor<3x2x2xf32>
+  %r4 = tensor.extract_static %tensor[1, 0, 0] : tensor<3x2x2xf32>
+  %r5 = tensor.extract_static %tensor[1, 0, 1] : tensor<3x2x2xf32>
+  %r6 = tensor.extract_static %tensor[1, 1, 0] : tensor<3x2x2xf32>
+  %r7 = tensor.extract_static %tensor[1, 1, 1] : tensor<3x2x2xf32>
+  %r8 = tensor.extract_static %tensor[2, 0, 0] : tensor<3x2x2xf32>
+  %r9 = tensor.extract_static %tensor[2, 0, 1] : tensor<3x2x2xf32>
+  %r10 = tensor.extract_static %tensor[2, 1, 0] : tensor<3x2x2xf32>
+  %r11 = tensor.extract_static %tensor[2, 1, 1] : tensor<3x2x2xf32>
+  return %r0,%r1,%r2,%r3,%r4,%r5,%r6,%r7,%r8,%r9,%r10,%r11
+         : f32,f32,f32,f32,f32,f32,f32,f32,f32,f32,f32,f32
+}
+
 // CHECK-DAG: %[[F0:.*]] = arith.constant 0.0
 // CHECK-DAG: %[[F1:.*]] = arith.constant 1.0{{0+}}e+00
 // CHECK-DAG: %[[F2:.*]] = arith.constant 2.0
