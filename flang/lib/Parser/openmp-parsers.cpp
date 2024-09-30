@@ -235,7 +235,7 @@ TYPE_PARSER(
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
     maybe("CONDITIONAL" >>
-          pure(OmpLastprivateClause::LastprivateModifier::Conditional) / ":"),
+        pure(OmpLastprivateClause::LastprivateModifier::Conditional) / ":"),
     Parser<OmpObjectList>{}))
 
 TYPE_PARSER(
