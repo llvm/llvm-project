@@ -410,8 +410,7 @@ public:
     }
 
     int ArgIdx, Kind, TypeArgIdx;
-    std::vector<Record *> ImmCheckList = R->getValueAsListOfDefs("ImmChecks");
-    for (const auto *I : ImmCheckList) {
+    for (const Record *I : R->getValueAsListOfDefs("ImmChecks")) {
       unsigned EltSizeInBits = 0, VecSizeInBits = 0;
 
       ArgIdx = I->getValueAsInt("ImmArgIdx");
