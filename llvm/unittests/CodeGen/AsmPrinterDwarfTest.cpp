@@ -451,7 +451,7 @@ protected:
     AP->addDebugHandler(std::make_unique<TestDebugHandler>(*this, AP));
     LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
     legacy::PassManager PM;
-    MachineModuleInfo MMI;
+    MachineModuleInfo MMI(LLVMTM);
     PM.add(new MachineModuleInfoWrapperPass(MMI));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
