@@ -55,7 +55,7 @@ static llvm::cl::opt<std::string>
     OOPExecutor("oop-executor",
                 llvm::cl::desc("Launch an out-of-process executor to run code"),
                 llvm::cl::ValueOptional, llvm::cl::cat(OOPCategory));
-static llvm::cl::opt<std::string> OOPExecutorConnectTCP(
+static llvm::cl::opt<std::string> OOPExecutorConnect(
     "oop-executor-connect",
     llvm::cl::desc(
         "Connect to an out-of-process executor through a TCP socket"),
@@ -79,16 +79,29 @@ static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
 static llvm::Error sanitizeOopArguments(const char *ArgV0) {
   // Only one of -oop-executor and -oop-executor-connect can be used.
   if (!!OOPExecutor.getNumOccurrences() &&
-      !!OOPExecutorConnectTCP.getNumOccurrences())
+      !!OOPExecutorConnect.getNumOccurrences())
     return llvm::make_error<llvm::StringError>(
         "Only one of -" + OOPExecutor.ArgStr + " and -" +
-            OOPExecutorConnectTCP.ArgStr + " can be specified",
+            OOPExecutorConnect.ArgStr + " can be specified",
         llvm::inconvertibleErrorCode());
+
+  // If -slab-allocate is passed, check that we're not trying to use it in
+  // -oop-executor or -oop-executor-connect mode.
+  //
+  // FIXME: Remove once we enable remote slab allocation.
+  if (SlabAllocateSizeString != "") {
+    if (OOPExecutor.getNumOccurrences() ||
+        OOPExecutorConnect.getNumOccurrences())
+      return llvm::make_error<llvm::StringError>(
+          "-slab-allocate cannot be used with -oop-executor or "
+          "-oop-executor-connect",
+          llvm::inconvertibleErrorCode());
+  }
 
   // Out-of-process executors must run with the ORC runtime for destructor
   // support.
   if (OrcRuntimePath.empty() && (OOPExecutor.getNumOccurrences() ||
-                                 OOPExecutorConnectTCP.getNumOccurrences())) {
+                                 OOPExecutorConnect.getNumOccurrences())) {
     llvm::SmallString<256> OrcPath(llvm::sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeOopArguments)));
     llvm::sys::path::remove_filename(OrcPath); // Remove clang-repl filename.
@@ -257,8 +270,8 @@ int main(int argc, const char **argv) {
     // Launch an out-of-process executor locally in a child process.
     EPC = ExitOnErr(
         launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
-  } else if (OOPExecutorConnectTCP.getNumOccurrences()) {
-    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP, UseSharedMemory,
+  } else if (OOPExecutorConnect.getNumOccurrences()) {
+    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnect, UseSharedMemory,
                                      SlabAllocateSizeString));
   }
 
