@@ -181,7 +181,7 @@ static void addUseDeviceClause(
 
 static void convertLoopBounds(lower::AbstractConverter &converter,
                               mlir::Location loc,
-                              mlir::omp::LoopRelatedOps &result,
+                              mlir::omp::LoopRelatedClauseOps &result,
                               std::size_t loopVarTypeSize) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   // The types of lower bound, upper bound, and step are converted into the
@@ -203,7 +203,7 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
 
 bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
-    mlir::omp::LoopRelatedOps &result,
+    mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -619,9 +619,7 @@ bool ClauseProcessor::processCopyin() const {
               checkAndCopyHostAssociateVar(&*mem, &insPt);
             break;
           }
-          if (semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate()))
-            TODO(converter.getCurrentLocation(),
-                 "pointer or allocatable variables in Copyin clause");
+
           assert(sym->has<semantics::HostAssocDetails>() &&
                  "No host-association found");
           checkAndCopyHostAssociateVar(sym);
@@ -857,7 +855,7 @@ bool ClauseProcessor::processIf(
     // Assume that, at most, a single 'if' clause will be applicable to the
     // given directive.
     if (operand) {
-      result.ifVar = operand;
+      result.ifExpr = operand;
       found = true;
     }
   });
@@ -1009,6 +1007,49 @@ bool ClauseProcessor::processMap(
                                *ptrMapSyms, mapSymTypes, mapSymLocs);
 
   return clauseFound;
+}
+
+bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
+                                           mlir::omp::MapClauseOps &result) {
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+
+  auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
+    mlir::Location clauseLocation = converter.genLocation(source);
+
+    // TODO Support motion modifiers: present, mapper, iterator.
+    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+        std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
+                      mapTypeBits, parentMemberIndices, result.mapVars,
+                      &mapSymbols);
+  };
+
+  bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
+  clauseFound =
+      findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  return clauseFound;
+}
+
+bool ClauseProcessor::processNontemporal(
+    mlir::omp::NontemporalClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Nontemporal>(
+      [&](const omp::clause::Nontemporal &clause, const parser::CharBlock &) {
+        for (const Object &object : clause.v) {
+          semantics::Symbol *sym = object.sym();
+          mlir::Value symVal = converter.getSymbolAddress(*sym);
+          result.nontemporalVars.push_back(symVal);
+        }
+      });
 }
 
 bool ClauseProcessor::processReduction(

@@ -966,5 +966,13 @@ namespace shufflevector {
 namespace FunctionStart {
   void a(void) {}
   static_assert(__builtin_function_start(a) == a, ""); // both-error {{not an integral constant expression}} \
-                                                       // both-note {{comparison of addresses of literals has unspecified value}}
+                                                       // ref-note {{comparison against opaque constant address '&__builtin_function_start(a)'}} \
+                                                       // expected-note {{comparison of addresses of literals has unspecified value}}
+}
+
+namespace BuiltinInImplicitCtor {
+  constexpr struct {
+    int a = __builtin_isnan(1.0);
+  } Foo;
+  static_assert(Foo.a == 0, "");
 }

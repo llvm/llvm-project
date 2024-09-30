@@ -8,7 +8,7 @@
 
 // <cwchar>
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 #include <cwchar>
 #include <ctime>

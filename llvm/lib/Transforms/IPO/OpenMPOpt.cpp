@@ -2364,8 +2364,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
       /// TODO: Figure out a way to avoid adding entry in
       /// ICVReplacementValuesMap
       Instruction *Entry = &F->getEntryBlock().front();
-      if (HasChanged == ChangeStatus::CHANGED && !ValuesMap.count(Entry))
-        ValuesMap.insert(std::make_pair(Entry, nullptr));
+      if (HasChanged == ChangeStatus::CHANGED)
+        ValuesMap.try_emplace(Entry);
     }
 
     return HasChanged;
@@ -3536,8 +3536,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
           PoisonValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
-      auto *NewBuffer =
-          ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
+      auto *NewBuffer = ConstantExpr::getPointerCast(
+          SharedMem, PointerType::getUnqual(M->getContext()));
 
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Replaced globalized variable with "

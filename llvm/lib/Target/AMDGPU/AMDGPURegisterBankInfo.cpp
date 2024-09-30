@@ -3076,11 +3076,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
-  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
-    applyDefaultMapping(OpdMapper);
-    executeInWaterfallLoop(B, MI, {2, 5});
-    return;
-  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
@@ -3101,6 +3097,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingSBufferLoad(B, OpdMapper);
     return;
   }
+  case AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH:
+    constrainOpWithReadfirstlane(B, MI, 0);
+    constrainOpWithReadfirstlane(B, MI, 2);
+    return;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -4464,6 +4464,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(ResultBank, Size0);
     break;
   }
+  case AMDGPU::G_AMDGPU_S_BUFFER_PREFETCH:
+    OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    break;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
@@ -4989,6 +4993,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, WaveSize);
       break;
     }
+    case Intrinsic::amdgcn_init_whole_wave:
     case Intrinsic::amdgcn_live_mask: {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
       break;

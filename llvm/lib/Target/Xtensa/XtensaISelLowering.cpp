@@ -143,6 +143,74 @@ bool XtensaTargetLowering::isOffsetFoldingLegal(
 }
 
 //===----------------------------------------------------------------------===//
+// Inline asm support
+//===----------------------------------------------------------------------===//
+TargetLowering::ConstraintType
+XtensaTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    switch (Constraint[0]) {
+    case 'r':
+      return C_RegisterClass;
+    default:
+      break;
+    }
+  }
+  return TargetLowering::getConstraintType(Constraint);
+}
+
+TargetLowering::ConstraintWeight
+XtensaTargetLowering::getSingleConstraintMatchWeight(
+    AsmOperandInfo &Info, const char *Constraint) const {
+  ConstraintWeight Weight = CW_Invalid;
+  Value *CallOperandVal = Info.CallOperandVal;
+  // If we don't have a value, we can't do a match,
+  // but allow it at the lowest weight.
+  if (!CallOperandVal)
+    return CW_Default;
+
+  Type *Ty = CallOperandVal->getType();
+
+  // Look at the constraint type.
+  switch (*Constraint) {
+  default:
+    Weight = TargetLowering::getSingleConstraintMatchWeight(Info, Constraint);
+    break;
+  case 'r':
+    if (Ty->isIntegerTy())
+      Weight = CW_Register;
+    break;
+  }
+  return Weight;
+}
+
+std::pair<unsigned, const TargetRegisterClass *>
+XtensaTargetLowering::getRegForInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+  if (Constraint.size() == 1) {
+    // GCC Constraint Letters
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'r': // General-purpose register
+      return std::make_pair(0U, &Xtensa::ARRegClass);
+    }
+  }
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+}
+
+void XtensaTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  // Only support length 1 constraints for now.
+  if (Constraint.size() > 1)
+    return;
+
+  TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+}
+
+//===----------------------------------------------------------------------===//
 // Calling conventions
 //===----------------------------------------------------------------------===//
 
@@ -594,6 +662,27 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
                      FalseValue, TargetCC);
 }
 
+SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  // This nodes represent llvm.returnaddress on the DAG.
+  // It takes one operand, the index of the return address to return.
+  // An index of zero corresponds to the current function's return address.
+  // An index of one to the parent's return address, and so on.
+  // Depths > 0 not supported yet!
+  if (Op.getConstantOperandVal(0) != 0)
+    return SDValue();
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  EVT VT = Op.getValueType();
+  MFI.setReturnAddressIsTaken(true);
+
+  // Return RA, which contains the return address. Mark it an implicit
+  // live-in.
+  Register RA = MF.addLiveIn(Xtensa::A0, getRegClassFor(MVT::i32));
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), RA, VT);
+}
+
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
                                              SelectionDAG &DAG) const {
   const ConstantSDNode *CN = cast<ConstantSDNode>(Op);
@@ -720,6 +809,28 @@ SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                 SelectionDAG &DAG) const {
   return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
                           Op.getOperand(1));
+}
+
+SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  // This nodes represent llvm.frameaddress on the DAG.
+  // It takes one operand, the index of the frame address to return.
+  // An index of zero corresponds to the current function's frame address.
+  // An index of one to the parent's frame address, and so on.
+  // Depths > 0 not supported yet!
+  if (Op.getConstantOperandVal(0) != 0)
+    return SDValue();
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+
+  Register FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  SDValue FrameAddr =
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameRegister, VT);
+  return FrameAddr;
 }
 
 SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
@@ -867,6 +978,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerBR_JT(Op, DAG);
   case ISD::Constant:
     return LowerImmediate(Op, DAG);
+  case ISD::RETURNADDR:
+    return LowerRETURNADDR(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:
@@ -883,6 +996,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerSTACKSAVE(Op, DAG);
   case ISD::STACKRESTORE:
     return LowerSTACKRESTORE(Op, DAG);
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::SHL_PARTS:

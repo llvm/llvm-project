@@ -606,6 +606,10 @@ function(llvm_add_library name)
         endif()
       endforeach()
     endif()
+
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
+    endif()
   endif()
 
   if(ARG_SHARED AND ARG_STATIC)
@@ -641,8 +645,36 @@ function(llvm_add_library name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
+  ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline 
+  ## class members from being dllexport'ed to reduce compile time.
+  ## This will also keep us below the 64k exported symbol limit
+  ## https://blog.llvm.org/2018/11/30-faster-windows-builds-with-clang-cl_14.html
+  if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND 
+     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+    target_compile_options(${name} PUBLIC /Zc:dllexportInlines-)
+    if(TARGET ${obj_name})
+      target_compile_options(${obj_name} PUBLIC /Zc:dllexportInlines-)
+    endif()
+  endif()
+
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
+    if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
+      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS)
+    endif()
+
+    # When building shared objects for each target there are some internal APIs
+    # that are used across shared objects which we can't hide.
+    if (LLVM_BUILD_LLVM_DYLIB_VIS AND NOT BUILD_SHARED_LIBS AND NOT APPLE AND
+        (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")) AND
+        NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND
+        NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
+
+      set_target_properties(${name} PROPERTIES
+                            C_VISIBILITY_PRESET hidden
+                            CXX_VISIBILITY_PRESET hidden
+                            VISIBILITY_INLINES_HIDDEN YES)
+    endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_COMPONENT_LIBS ${name})
   endif()
 
@@ -741,6 +773,9 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
+      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+        target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+      endif()
       llvm_map_components_to_libnames(llvm_libs
        ${ARG_LINK_COMPONENTS}
        ${LLVM_LINK_COMPONENTS}
@@ -1115,6 +1150,16 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
+  endif()
+
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+  endif()
+
+  if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND
+     MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+    # This has to match how the libraries the executable is linked to are built or there be linker errors.
+    target_compile_options(${name} PRIVATE /Zc:dllexportInlines-)
   endif()
 endmacro(add_llvm_executable name)
 

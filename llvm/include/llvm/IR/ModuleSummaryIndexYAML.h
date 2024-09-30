@@ -216,7 +216,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
     }
     auto &Elem = V.try_emplace(KeyInt, /*IsAnalysis=*/false).first->second;
     for (auto &FSum : FSums) {
-      std::vector<ValueInfo> Refs;
+      SmallVector<ValueInfo, 0> Refs;
       Refs.reserve(FSum.Refs.size());
       for (auto &RefGUID : FSum.Refs) {
         auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
@@ -229,8 +229,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               FSum.NotEligibleToImport, FSum.Live, FSum.IsLocal,
               FSum.CanAutoHide,
               static_cast<GlobalValueSummary::ImportKind>(FSum.ImportType)),
-          /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0, Refs,
-          ArrayRef<FunctionSummary::EdgeTy>{}, std::move(FSum.TypeTests),
+          /*NumInsts=*/0, FunctionSummary::FFlags{}, std::move(Refs),
+          SmallVector<FunctionSummary::EdgeTy, 0>{}, std::move(FSum.TypeTests),
           std::move(FSum.TypeTestAssumeVCalls),
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),

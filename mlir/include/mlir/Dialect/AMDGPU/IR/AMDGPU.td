@@ -214,7 +214,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
       AttrSizedOperandSegments,
       AllTypesMatch<["src", "cmp", "value"]>,
       AllElementTypesMatch<["value", "memref"]>]>,
-    Arguments<(ins AnyTypeOf<[I32, I64, F32, F64]>:$src,
+    Arguments<(ins AnyType:$src,
                    AnyType:$cmp,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
@@ -254,7 +254,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 def AMDGPU_RawBufferAtomicFaddOp :
     AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins F32:$value,
+    Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -405,7 +405,7 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
     "The possible permutations for a DPP operation",
-    [  
+    [
       I32EnumAttrCase<"quad_perm",  0>,
       I32EnumAttrCase<"row_shl",    1>,
       I32EnumAttrCase<"row_shr",    2>,
@@ -419,7 +419,7 @@ def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
       I32EnumAttrCase<"row_bcast_15", 10>,
       I32EnumAttrCase<"row_bcast_31", 11>
     ]> {
-  let genSpecializedAttr = 0;  
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::amdgpu";
 }
 

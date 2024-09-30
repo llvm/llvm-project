@@ -100,6 +100,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+  if (Style.InsertNewlineAtEOF) {
+    auto &TokEOF = *Tokens.back();
+    if (TokEOF.NewlinesBefore == 0) {
+      TokEOF.NewlinesBefore = 1;
+      TokEOF.OriginalColumn = 0;
+    }
+  }
   return Tokens;
 }
 

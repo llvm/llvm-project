@@ -330,3 +330,72 @@ define double @fmvp_d_x(i64 %a) {
   %or = bitcast i64 %a to double
   ret double %or
 }
+
+define double @fadd_neg_0p5(double %x) {
+; CHECK-LABEL: fadd_neg_0p5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fsub.d fa0, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = fadd double %x, -0.5
+  ret double %a
+}
+
+define double @fma_neg_addend(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_addend:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fmsub.d fa0, fa0, fa1, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double %y, double -0.5)
+  ret double %a
+}
+
+define double @fma_neg_multiplicand(double %x, double %y) nounwind {
+; CHECK-LABEL: fma_neg_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.125
+; CHECK-NEXT:    fnmsub.d fa0, fa5, fa0, fa1
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.125, double %y)
+  ret double %a
+}
+
+define double @fma_neg_addend_multiplicand(double %x) nounwind {
+; CHECK-LABEL: fma_neg_addend_multiplicand:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.25
+; CHECK-NEXT:    fli.d fa4, 0.5
+; CHECK-NEXT:    fnmadd.d fa0, fa4, fa0, fa5
+; CHECK-NEXT:    ret
+  %a = call double @llvm.fma.f32(double %x, double -0.5, double -0.25)
+  ret double %a
+}
+
+define double @select_loadfpimm(double %x) nounwind {
+; RV32IDZFA-LABEL: select_loadfpimm:
+; RV32IDZFA:       # %bb.0: # %entry
+; RV32IDZFA-NEXT:    fcvt.d.w fa5, zero
+; RV32IDZFA-NEXT:    fle.d a0, fa5, fa0
+; RV32IDZFA-NEXT:    fli.d fa0, 0.5
+; RV32IDZFA-NEXT:    bnez a0, .LBB35_2
+; RV32IDZFA-NEXT:  # %bb.1:
+; RV32IDZFA-NEXT:    fneg.d fa0, fa0
+; RV32IDZFA-NEXT:  .LBB35_2: # %entry
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: select_loadfpimm:
+; RV64DZFA:       # %bb.0: # %entry
+; RV64DZFA-NEXT:    fmv.d.x fa5, zero
+; RV64DZFA-NEXT:    fle.d a0, fa5, fa0
+; RV64DZFA-NEXT:    fli.d fa0, 0.5
+; RV64DZFA-NEXT:    bnez a0, .LBB35_2
+; RV64DZFA-NEXT:  # %bb.1:
+; RV64DZFA-NEXT:    fneg.d fa0, fa0
+; RV64DZFA-NEXT:  .LBB35_2: # %entry
+; RV64DZFA-NEXT:    ret
+entry:
+  %cmp = fcmp ult double %x, 0.000000e+00
+  %sel = select i1 %cmp, double -5.000000e-01, double 5.000000e-01
+  ret double %sel
+}

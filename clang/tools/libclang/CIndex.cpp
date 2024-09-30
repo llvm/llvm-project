@@ -1557,6 +1557,9 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
     return Visit(MakeCursorTemplateRef(
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), Loc,
         TU));
+
+  case TemplateName::DeducedTemplate:
+    llvm_unreachable("DeducedTemplate shouldn't appear in source");
   }
 
   llvm_unreachable("Invalid TemplateName::Kind!");

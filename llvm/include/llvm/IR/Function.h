@@ -60,8 +60,7 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
-                                          public ilist_node<Function> {
+class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -73,6 +72,8 @@ public:
   using const_arg_iterator = const Argument *;
 
 private:
+  constexpr static HungOffOperandsAllocMarker AllocMarker{};
+
   // Important things that make up a function!
   BasicBlockListType BasicBlocks;         ///< The basic blocks
 
@@ -172,13 +173,14 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           unsigned AddrSpace, const Twine &N = "",
                           Module *M = nullptr) {
-    return new Function(Ty, Linkage, AddrSpace, N, M);
+    return new (AllocMarker) Function(Ty, Linkage, AddrSpace, N, M);
   }
 
   // TODO: remove this once all users have been updated to pass an AddrSpace
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N = "", Module *M = nullptr) {
-    return new Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
+    return new (AllocMarker)
+        Function(Ty, Linkage, static_cast<unsigned>(-1), N, M);
   }
 
   /// Creates a new function and attaches it to a module.
@@ -442,6 +444,9 @@ public:
 
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
+
+  /// Check if attribute of the given kind is set at the given index.
+  bool hasAttributeAtIndex(unsigned Idx, Attribute::AttrKind Kind) const;
 
   /// Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const;

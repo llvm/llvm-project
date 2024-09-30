@@ -17,6 +17,9 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace LIBC_NAMESPACE_DECL {
 
+// FIXME: Factor this out into common logic so we don't need to stub it here.
+void teardown_main_tls() {}
+
 DataEnvironment app;
 
 extern "C" uintptr_t __init_array_start[];

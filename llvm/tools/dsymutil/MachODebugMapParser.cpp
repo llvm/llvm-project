@@ -383,7 +383,7 @@ MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
     llvm::raw_string_ostream OS(Buffer);
     OS << sys::TimePoint<std::chrono::seconds>(sys::toTimePoint(OSO.second));
     Warning("skipping debug map object with duplicate name and timestamp: " +
-            OS.str() + Twine(" ") + Twine(OSO.first));
+            Buffer + Twine(" ") + Twine(OSO.first));
   }
 
   // Build the debug map by iterating over the STABS again but ignore the

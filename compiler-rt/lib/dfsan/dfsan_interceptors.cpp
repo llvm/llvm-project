@@ -39,10 +39,7 @@ INTERCEPTOR(void *, reallocarray, void *ptr, SIZE_T nmemb, SIZE_T size) {
 }
 
 INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
-  void *ptr = dfsan_memalign(alignment, size);
-  if (ptr)
-    DTLS_on_libc_memalign(ptr, size);
-  return ptr;
+  return dfsan_memalign(alignment, size);
 }
 
 INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {

@@ -253,7 +253,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
-  llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
+  mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -265,6 +265,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<SubstTemplateTemplateParmPackStorage,
                                      ASTContext&>
     SubstTemplateTemplateParmPacks;
+  mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
+      DeducedTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -321,6 +323,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
   ///
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
+
+  /// The next string literal "version" to allocate during constant evaluation.
+  /// This is used to distinguish between repeated evaluations of the same
+  /// string literal.
+  ///
+  /// We don't need to serialize this because constants get re-evaluated in the
+  /// current file before they are compared locally.
+  unsigned NextStringLiteralVersion = 0;
 
   /// MD5 hash of CUID. It is calculated when first used and cached by this
   /// data member.
@@ -400,6 +410,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// The identifier '__type_pack_element'.
   mutable IdentifierInfo *TypePackElementName = nullptr;
+
+  /// The identifier '__builtin_common_type'.
+  mutable IdentifierInfo *BuiltinCommonTypeName = nullptr;
 
   QualType ObjCConstantStringType;
   mutable RecordDecl *CFConstantStringTagDecl = nullptr;
@@ -608,6 +621,7 @@ private:
   mutable ExternCContextDecl *ExternCContext = nullptr;
   mutable BuiltinTemplateDecl *MakeIntegerSeqDecl = nullptr;
   mutable BuiltinTemplateDecl *TypePackElementDecl = nullptr;
+  mutable BuiltinTemplateDecl *BuiltinCommonTypeDecl = nullptr;
 
   /// The associated SourceManager object.
   SourceManager &SourceMgr;
@@ -779,6 +793,23 @@ public:
 
   const TargetInfo &getTargetInfo() const { return *Target; }
   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }
+
+  const QualType GetHigherPrecisionFPType(QualType ElementType) const {
+    const auto *CurrentBT = cast<BuiltinType>(ElementType);
+    switch (CurrentBT->getKind()) {
+    case BuiltinType::Kind::Half:
+    case BuiltinType::Kind::Float16:
+      return FloatTy;
+    case BuiltinType::Kind::Float:
+    case BuiltinType::Kind::BFloat16:
+      return DoubleTy;
+    case BuiltinType::Kind::Double:
+      return LongDoubleTy;
+    default:
+      return ElementType;
+    }
+    return ElementType;
+  }
 
   /// getIntTypeForBitwidth -
   /// sets integer QualTy according to specified details:
@@ -1115,6 +1146,7 @@ public:
   ExternCContextDecl *getExternCContextDecl() const;
   BuiltinTemplateDecl *getMakeIntegerSeqDecl() const;
   BuiltinTemplateDecl *getTypePackElementDecl() const;
+  BuiltinTemplateDecl *getBuiltinCommonTypeDecl() const;
 
   // Builtin Types.
   CanQualType VoidTy;
@@ -1345,9 +1377,20 @@ public:
   /// calling T.withConst().
   QualType getConstType(QualType T) const { return T.withConst(); }
 
+  /// Rebuild a type, preserving any existing type sugar. For function types,
+  /// you probably want to just use \c adjustFunctionResultType and friends
+  /// instead.
+  QualType adjustType(QualType OldType,
+                      llvm::function_ref<QualType(QualType)> Adjust) const;
+
   /// Change the ExtInfo on a function type.
   const FunctionType *adjustFunctionType(const FunctionType *Fn,
                                          FunctionType::ExtInfo EInfo);
+
+  /// Change the result type of a function type, preserving sugar such as
+  /// attributed types.
+  QualType adjustFunctionResultType(QualType FunctionType,
+                                    QualType NewResultType);
 
   /// Adjust the given function result type.
   CanQualType getCanonicalFunctionResultType(QualType ResultType) const;
@@ -1678,7 +1721,7 @@ public:
                              QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
-                                   QualType Wrapped);
+                                   QualType Wrapped) const;
 
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
@@ -2006,6 +2049,12 @@ public:
     return TypePackElementName;
   }
 
+  IdentifierInfo *getBuiltinCommonTypeName() const {
+    if (!BuiltinCommonTypeName)
+      BuiltinCommonTypeName = &Idents.get("__builtin_common_type");
+    return BuiltinCommonTypeName;
+  }
+
   /// Retrieve the Objective-C "instancetype" type, if already known;
   /// otherwise, returns a NULL type;
   QualType getObjCInstanceType() {
@@ -2303,6 +2352,15 @@ public:
                                                 Decl *AssociatedDecl,
                                                 unsigned Index,
                                                 bool Final) const;
+
+  /// Represents a TemplateName which had some of its default arguments
+  /// deduced. This both represents this default argument deduction as sugar,
+  /// and provides the support for it's equivalences through canonicalization.
+  /// For example DeducedTemplateNames which have the same set of default
+  /// arguments are equivalent, and are also equivalent to the underlying
+  /// template when the deduced template arguments are the same.
+  TemplateName getDeducedTemplateName(TemplateName Underlying,
+                                      DefaultArguments DefaultArgs) const;
 
   enum GetBuiltinTypeError {
     /// No error
@@ -2787,11 +2845,13 @@ public:
   /// template name uses the shortest form of the dependent
   /// nested-name-specifier, which itself contains all canonical
   /// types, values, and templates.
-  TemplateName getCanonicalTemplateName(const TemplateName &Name) const;
+  TemplateName getCanonicalTemplateName(TemplateName Name,
+                                        bool IgnoreDeduced = false) const;
 
   /// Determine whether the given template names refer to the same
   /// template.
-  bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y) const;
+  bool hasSameTemplateName(const TemplateName &X, const TemplateName &Y,
+                           bool IgnoreDeduced = false) const;
 
   /// Determine whether the two declarations refer to the same entity.
   bool isSameEntity(const NamedDecl *X, const NamedDecl *Y) const;
@@ -3247,6 +3307,10 @@ public:
   /// function declaration or file name. Used by SourceLocExpr and
   /// PredefinedExpr to cache evaluated results.
   StringLiteral *getPredefinedStringLiteralFromCache(StringRef Key) const;
+
+  /// Return the next version number to be used for a string literal evaluated
+  /// as part of constant evaluation.
+  unsigned getNextStringLiteralVersion() { return NextStringLiteralVersion++; }
 
   /// Return a declaration for the global GUID object representing the given
   /// GUID value.

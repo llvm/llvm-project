@@ -492,9 +492,9 @@ public:
     return VectorType::get(EltTy, VTy->getElementCount());
   }
 
-  // This static method returns a VectorType with a smaller number of elements
-  // of a larger type than the input element type. For example, a <16 x i8>
-  // subdivided twice would return <4 x i32>
+  // This static method returns a VectorType with a larger number of elements
+  // of a smaller type than the input element type. For example, a <4 x i64>
+  // subdivided twice would return <16 x i16>
   static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs) {
     for (int i = 0; i < NumSubdivs; ++i) {
       VTy = VectorType::getDoubleElementsVectorType(VTy);
@@ -733,16 +733,16 @@ public:
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters.
   static TargetExtType *get(LLVMContext &Context, StringRef Name,
-                            ArrayRef<Type *> Types = std::nullopt,
-                            ArrayRef<unsigned> Ints = std::nullopt);
+                            ArrayRef<Type *> Types = {},
+                            ArrayRef<unsigned> Ints = {});
 
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters, or an appropriate Error if it fails the
   /// parameters check.
-  static Expected<TargetExtType *>
-  getOrError(LLVMContext &Context, StringRef Name,
-             ArrayRef<Type *> Types = std::nullopt,
-             ArrayRef<unsigned> Ints = std::nullopt);
+  static Expected<TargetExtType *> getOrError(LLVMContext &Context,
+                                              StringRef Name,
+                                              ArrayRef<Type *> Types = {},
+                                              ArrayRef<unsigned> Ints = {});
 
   /// Check that a newly created target extension type has the expected number
   /// of type parameters and integer parameters, returning the type itself if OK
