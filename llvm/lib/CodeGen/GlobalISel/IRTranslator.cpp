@@ -3192,16 +3192,14 @@ bool IRTranslator::translateInsertVector(const User &U,
       // in LLT.
       return translateCopy(U, *U.getOperand(0), MIRBuilder);
     }
-    if (auto *InputType =
-            dyn_cast<FixedVectorType>(U.getOperand(0)->getType())) {
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a fixed vector, use the
       // scalar as it is not a legal vector type in LLT.
       Register Idx = getOrCreateVReg(*CI);
       MIRBuilder.buildInsertVectorElement(Dst, Vec, Elt, Idx);
       return true;
     }
-    if (auto *InputType =
-            dyn_cast<ScalableVectorType>(U.getOperand(0)->getType())) {
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a scalable vector, use
       // a scalar element insert.
       LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
@@ -3269,16 +3267,14 @@ bool IRTranslator::translateExtractVector(const User &U,
       // use the scalar as it is not a legal vector type in LLT.
       return translateCopy(U, *U.getOperand(0), MIRBuilder);
     }
-    if (auto *InputType =
-            dyn_cast<FixedVectorType>(U.getOperand(0)->getType())) {
+    if (isa<FixedVectorType>(U.getOperand(0)->getType())) {
       // We are extracting a fixed vector from a fixed vector, use the
       // scalar as it is not a legal vector type in LLT.
       Register Idx = getOrCreateVReg(*CI);
       MIRBuilder.buildExtractVectorElement(Res, Vec, Idx);
       return true;
     }
-    if (auto *InputType =
-            dyn_cast<ScalableVectorType>(U.getOperand(0)->getType())) {
+    if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are extracting a fixed vector from a scalable vector, use
       // a scalar element extract.
       LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
