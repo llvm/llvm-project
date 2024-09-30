@@ -598,7 +598,7 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     // immediate fields, the relocation range is [-128G - 0x20000, +128G -
     // 0x20000) (of course must be 4-byte aligned).
     if (((int64_t)val + 0x20000) != llvm::SignExtend64(val + 0x20000, 38))
-      reportRangeError(loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
+      reportRangeError(ctx, loc, rel, Twine(val), llvm::minIntN(38) - 0x20000,
                        llvm::maxIntN(38) - 0x20000);
     checkAlignment(loc, val, 4, rel);
     // Since jirl performs sign extension on the offset immediate, adds (1<<17)

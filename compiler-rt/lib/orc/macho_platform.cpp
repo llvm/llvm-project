@@ -17,7 +17,7 @@
 #include "error.h"
 #include "interval_map.h"
 #include "jit_dispatch.h"
-#include "sections_tracker.h"
+#include "record_section_tracker.h"
 #include "wrapper_function_utils.h"
 
 #include <algorithm>

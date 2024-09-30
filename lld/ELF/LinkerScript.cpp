@@ -1343,7 +1343,7 @@ void LinkerScript::adjustOutputSections() {
     if (isEmpty) {
       sec->flags =
           flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) | SHF_WRITE);
-      sec->sortRank = getSectionRank(*sec);
+      sec->sortRank = getSectionRank(ctx, *sec);
     }
 
     // The code below may remove empty output sections. We should save the

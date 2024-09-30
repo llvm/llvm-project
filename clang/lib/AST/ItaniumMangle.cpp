@@ -693,7 +693,7 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     if (VD->isExternC())
       return getASTContext().getTranslationUnitDecl();
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+  if (const auto *FD = D->getAsFunction()) {
     if (FD->isExternC())
       return getASTContext().getTranslationUnitDecl();
     // Member-like constrained friends are mangled as if they were members of

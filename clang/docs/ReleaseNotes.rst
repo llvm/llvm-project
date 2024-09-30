@@ -447,6 +447,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure in debug mode, and potential crashes in release mode, when
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
+- Mangle friend function templates with a constraint that depends on a template parameter from an enclosing template as members of the enclosing class. (#GH110247)
 - Fixed an assertion failure when invoking recovery call expressions with explicit attributes
   and undeclared templates. (#GH107047, #GH49093)
 
