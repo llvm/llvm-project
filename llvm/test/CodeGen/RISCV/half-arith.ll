@@ -466,20 +466,26 @@ define half @fsgnj_h(half %a, half %b) nounwind {
 ;
 ; RV32IZHINXMIN-LABEL: fsgnj_h:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV32IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: fsgnj_h:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    lui a2, 1048568
 ; RV64IZHINXMIN-NEXT:    and a1, a1, a2
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)
   ret half %1
@@ -725,6 +731,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ;
 ; RV32IZHINXMIN-LABEL: fsgnjn_h:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV32IZHINXMIN-NEXT:    fcvt.s.h a2, a0
 ; RV32IZHINXMIN-NEXT:    fadd.s a1, a2, a1
@@ -735,10 +742,12 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: fsgnjn_h:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; RV64IZHINXMIN-NEXT:    fcvt.s.h a2, a0
 ; RV64IZHINXMIN-NEXT:    fadd.s a1, a2, a1
@@ -749,6 +758,7 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
   %2 = fneg half %1
@@ -1702,8 +1712,7 @@ define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINX-LABEL: fnmadd_h_3:
 ; CHECKIZHINX:       # %bb.0:
 ; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
-; CHECKIZHINX-NEXT:    lui a1, 1048568
-; CHECKIZHINX-NEXT:    xor a0, a0, a1
+; CHECKIZHINX-NEXT:    fneg.h a0, a0
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_h_3:
@@ -1798,6 +1807,7 @@ define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call half @llvm.fma.f16(half %a, half %b, half %c)
   %neg = fneg half %1
@@ -1823,9 +1833,7 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ;
 ; CHECKIZHINX-LABEL: fnmadd_nsz:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    fmadd.h a0, a0, a1, a2
-; CHECKIZHINX-NEXT:    lui a1, 1048568
-; CHECKIZHINX-NEXT:    xor a0, a0, a1
+; CHECKIZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fnmadd_nsz:
@@ -1920,6 +1928,7 @@ define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, 1048568
 ; CHECKIZHINXMIN-NEXT:    xor a0, a0, a1
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = call nsz half @llvm.fma.f16(half %a, half %b, half %c)
   %neg = fneg nsz half %1
@@ -2910,6 +2919,7 @@ define half @fsgnjx_f16(half %x, half %y) nounwind {
 ;
 ; CHECKIZHINXMIN-LABEL: fsgnjx_f16:
 ; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; CHECKIZHINXMIN-NEXT:    lui a2, 1048568
 ; CHECKIZHINXMIN-NEXT:    and a0, a0, a2
 ; CHECKIZHINXMIN-NEXT:    li a2, 15
