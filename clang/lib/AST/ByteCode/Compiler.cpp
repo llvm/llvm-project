@@ -3699,7 +3699,10 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitNullMemberPtr(nullptr, E);
   case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
-  case PT_FixedPoint:
+  case PT_FixedPoint: {
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    return this->emitConstFixedPoint(FixedPoint::Zero(Sem), E);
+  }
     llvm_unreachable("Implement");
   }
   llvm_unreachable("unknown primitive type");
