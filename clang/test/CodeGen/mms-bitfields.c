@@ -61,5 +61,5 @@ union HEADER {
 struct Inner variable = { 1,0,1, 21 };
 union HEADER hdr = {{1,2,3,4}};
 
-// CHECK: @variable ={{.*}} global { i8, [3 x i8], i8, i8, i8, i8 } { i8 5, [3 x i8] zeroinitializer, i8 21, i8 0, i8 0, i8 0 }, align 1
-// CHECK: @hdr ={{.*}} global { { i8, i8, [2 x i8], i8, i8, i8, i8, i8, [3 x i8] } } { { i8, i8, [2 x i8], i8, i8, i8, i8, i8, [3 x i8] } { i8 8, i8 0, [2 x i8] zeroinitializer, i8 2, i8 0, i8 0, i8 3, i8 4, [3 x i8] zeroinitializer } }, align 1
+// CHECK: @variable ={{.*}} global { i8, [3 x i8], i8, i8, i8, i8 } { i8 5, [3 x i8] undef, i8 21, i8 0, i8 0, i8 0 }, align 1
+// CHECK: @hdr ={{.*}} global { { i8, i8, [2 x i8], i8, i8, i8, i8, i8, [3 x i8] } } { { i8, i8, [2 x i8], i8, i8, i8, i8, i8, [3 x i8] } { i8 8, i8 0, [2 x i8] undef, i8 2, i8 0, i8 0, i8 3, i8 4, [3 x i8] undef } }, align 1
