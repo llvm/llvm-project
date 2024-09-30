@@ -581,10 +581,10 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
   CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
 }
 
-LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
-    : Backend(Backend), CombinedIndex(/*HaveGVs*/ false) {
-  if (!Backend)
-    this->Backend =
+LTO::ThinLTOState::ThinLTOState(ThinBackend BackendParam)
+    : Backend(std::move(BackendParam)), CombinedIndex(/*HaveGVs*/ false) {
+  if (!Backend.isValid())
+    Backend =
         createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 }
 
@@ -1371,64 +1371,6 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   return LibcallSymbols;
 }
 
-/// This class defines the interface to the ThinLTO backend.
-class lto::ThinBackendProc {
-protected:
-  const Config &Conf;
-  ModuleSummaryIndex &CombinedIndex;
-  const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
-  lto::IndexWriteCallback OnWrite;
-  bool ShouldEmitImportsFiles;
-
-public:
-  ThinBackendProc(
-      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
-      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles)
-      : Conf(Conf), CombinedIndex(CombinedIndex),
-        ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
-        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles) {}
-
-  virtual ~ThinBackendProc() = default;
-  virtual Error start(
-      unsigned Task, BitcodeModule BM,
-      const FunctionImporter::ImportMapTy &ImportList,
-      const FunctionImporter::ExportSetTy &ExportList,
-      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
-  virtual Error wait() = 0;
-  virtual unsigned getThreadCount() = 0;
-
-  // Write sharded indices and (optionally) imports to disk
-  Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
-                  llvm::StringRef ModulePath,
-                  const std::string &NewModulePath) {
-    ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
-    GVSummaryPtrSet DeclarationSummaries;
-
-    std::error_code EC;
-    gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex,
-                                     DeclarationSummaries);
-
-    raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
-                      sys::fs::OpenFlags::OF_None);
-    if (EC)
-      return errorCodeToError(EC);
-
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
-
-    if (ShouldEmitImportsFiles) {
-      EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
-                            ModuleToSummariesForIndex);
-      if (EC)
-        return errorCodeToError(EC);
-    }
-    return Error::success();
-  }
-};
-
 namespace {
 class InProcessThinBackend : public ThinBackendProc {
   DefaultThreadPool BackendThreadPool;
@@ -1631,7 +1573,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
                                             lto::IndexWriteCallback OnWrite,
                                             bool ShouldEmitIndexFiles,
                                             bool ShouldEmitImportsFiles) {
-  return
+  auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
@@ -1640,6 +1582,7 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
             ShouldEmitImportsFiles);
       };
+  return ThinBackend(Func, Parallelism);
 }
 
 StringLiteral lto::getThinLTODefaultCPU(const Triple &TheTriple) {
@@ -1732,7 +1675,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
     std::string OldPrefix, std::string NewPrefix,
     std::string NativeObjectPrefix, bool ShouldEmitImportsFiles,
     raw_fd_ostream *LinkedObjectsFile, IndexWriteCallback OnWrite) {
-  return
+  auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
           AddStreamFn AddStream, FileCache Cache) {
@@ -1741,6 +1684,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
             NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
             LinkedObjectsFile, OnWrite);
       };
+  return ThinBackend(Func);
 }
 
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
@@ -2040,4 +1984,32 @@ std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
     return LSize > RSize;
   });
   return ModulesOrdering;
+}
+
+Error ThinBackendProc::emitFiles(
+    const FunctionImporter::ImportMapTy &ImportList, llvm::StringRef ModulePath,
+    const std::string &NewModulePath) {
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
+  GVSummaryPtrSet DeclarationSummaries;
+
+  std::error_code EC;
+  gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
+                                   ImportList, ModuleToSummariesForIndex,
+                                   DeclarationSummaries);
+
+  raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
+                    sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return errorCodeToError(EC);
+
+  writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
+                   &DeclarationSummaries);
+
+  if (ShouldEmitImportsFiles) {
+    EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
+                          ModuleToSummariesForIndex);
+    if (EC)
+      return errorCodeToError(EC);
+  }
+  return Error::success();
 }
