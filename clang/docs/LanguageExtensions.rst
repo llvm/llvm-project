@@ -700,6 +700,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
                                              of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
+ T __builtin_elementwise_fmod(T x, T y)      return The floating-point remainder of (x/y) whose sign          floating point types
+                                             matches the sign of x.
  T __builtin_elementwise_max(T x, T y)       return x or y, whichever is larger                               integer and floating point types
  T __builtin_elementwise_min(T x, T y)       return x or y, whichever is smaller                              integer and floating point types
  T __builtin_elementwise_add_sat(T x, T y)   return the sum of x and y, clamped to the range of               integer types
@@ -1515,6 +1517,46 @@ Array & element qualification (N2607)                                         C2
 Attributes (N2335)                                                            C23           C89
 ``#embed`` (N3017)                                                            C23           C89, C++
 ============================================ ================================ ============= =============
+
+Builtin type aliases
+====================
+
+Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
+
+__builtin_common_type
+---------------------
+
+.. code-block:: c++
+
+  template <template <class... Args> class BaseTemplate,
+            template <class TypeMember> class HasTypeMember,
+            class HasNoTypeMember,
+            class... Ts>
+  using __builtin_common_type = ...;
+
+This alias is used for implementing ``std::common_type``. If ``std::common_type`` should contain a ``type`` member,
+it is an alias to ``HasTypeMember<TheCommonType>``. Otherwise it is an alias to ``HasNoTypeMember``. The
+``BaseTemplate`` is usually ``std::common_type``. ``Ts`` are the arguments to ``std::common_type``.
+
+__type_pack_element
+-------------------
+
+.. code-block:: c++
+
+  template <std::size_t Index, class... Ts>
+  using __type_pack_element = ...;
+
+This alias returns the type at ``Index`` in the parameter pack ``Ts``.
+
+__make_integer_seq
+------------------
+
+.. code-block:: c++
+
+  template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, T N>
+  using __make_integer_seq = ...;
+
+This alias returns ``IntSeq`` instantiated with ``IntSeqT = T``and ``Ints`` being the pack ``0, ..., N - 1``.
 
 Type Trait Primitives
 =====================

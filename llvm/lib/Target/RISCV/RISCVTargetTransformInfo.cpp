@@ -635,8 +635,17 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
   InstructionCost Cost = BaseT::getScalarizationOverhead(
       Ty, DemandedElts, Insert, Extract, CostKind);
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
-  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector() &&
-      Ty->getScalarSizeInBits() != 1) {
+  if (Insert && !Extract && LT.first.isValid() && LT.second.isVector()) {
+    if (Ty->getScalarSizeInBits() == 1) {
+      auto *WideVecTy = cast<VectorType>(Ty->getWithNewBitWidth(8));
+      // Note: Implicit scalar anyextend is assumed to be free since the i1
+      // must be stored in a GPR.
+      return getScalarizationOverhead(WideVecTy, DemandedElts, Insert, Extract,
+                                      CostKind) +
+             getCastInstrCost(Instruction::Trunc, Ty, WideVecTy,
+                              TTI::CastContextHint::None, CostKind, nullptr);
+    }
+
     assert(LT.second.isFixedLengthVector());
     MVT ContainerVT = TLI->getContainerForFixedLengthVector(LT.second);
     if (isM1OrSmaller(ContainerVT)) {
@@ -1116,6 +1125,13 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         *FOp, ICA.getArgTypes()[0], UI->getPointerAlignment(),
         UI->getOperand(1)->getType()->getPointerAddressSpace(), CostKind);
   }
+  case Intrinsic::vp_select: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    assert(FOp.has_value());
+    return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
+                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1147,8 +1163,46 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       Dst->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  assert(ISD && "Invalid opcode");
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+
+  // Handle i1 source and dest cases *before* calling logic in BasicTTI.
+  // The shared implementation doesn't model vector widening during legalization
+  // and instead assumes scalarization.  In order to scalarize an <N x i1>
+  // vector, we need to extend/trunc to/from i8.  If we don't special case
+  // this, we can get an infinite recursion cycle.
+  switch (ISD) {
+  default:
+    break;
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+    if (Src->getScalarSizeInBits() == 1) {
+      // We do not use vsext/vzext to extend from mask vector.
+      // Instead we use the following instructions to extend from mask vector:
+      // vmv.v.i v8, 0
+      // vmerge.vim v8, v8, -1, v0 (repeated per split)
+      return getRISCVInstructionCost(RISCV::VMV_V_I, DstLT.second, CostKind) +
+             DstLT.first * getRISCVInstructionCost(RISCV::VMERGE_VIM,
+                                                   DstLT.second, CostKind) +
+             DstLT.first - 1;
+    }
+    break;
+  case ISD::TRUNCATE:
+    if (Dst->getScalarSizeInBits() == 1) {
+      // We do not use several vncvt to truncate to mask vector. So we could
+      // not use PowDiff to calculate it.
+      // Instead we use the following instructions to truncate to mask vector:
+      // vand.vi v8, v8, 1
+      // vmsne.vi v0, v8, 0
+      return SrcLT.first *
+                 getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
+                                         SrcLT.second, CostKind) +
+             SrcLT.first - 1;
+    }
+    break;
+  };
 
   // Our actual lowering for the case where a wider legal type is available
   // uses promotion to the wider type.  This is reflected in the result of
@@ -1165,22 +1219,11 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The split cost is handled by the base getCastInstrCost
   assert((SrcLT.first == 1) && (DstLT.first == 1) && "Illegal type");
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  assert(ISD && "Invalid opcode");
-
   int PowDiff = (int)Log2_32(DstLT.second.getScalarSizeInBits()) -
                 (int)Log2_32(SrcLT.second.getScalarSizeInBits());
   switch (ISD) {
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
-    if (Src->getScalarSizeInBits() == 1) {
-      // We do not use vsext/vzext to extend from mask vector.
-      // Instead we use the following instructions to extend from mask vector:
-      // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      return getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                     DstLT.second, CostKind);
-    }
     if ((PowDiff < 1) || (PowDiff > 3))
       return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
     unsigned SExtOp[] = {RISCV::VSEXT_VF2, RISCV::VSEXT_VF4, RISCV::VSEXT_VF8};
@@ -1190,16 +1233,6 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return getRISCVInstructionCost(Op, DstLT.second, CostKind);
   }
   case ISD::TRUNCATE:
-    if (Dst->getScalarSizeInBits() == 1) {
-      // We do not use several vncvt to truncate to mask vector. So we could
-      // not use PowDiff to calculate it.
-      // Instead we use the following instructions to truncate to mask vector:
-      // vand.vi v8, v8, 1
-      // vmsne.vi v0, v8, 0
-      return getRISCVInstructionCost({RISCV::VAND_VI, RISCV::VMSNE_VI},
-                                     SrcLT.second, CostKind);
-    }
-    [[fallthrough]];
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     // Counts of narrow/widen instructions.
@@ -1602,23 +1635,38 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
 }
 
-InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                                 Type *CondTy,
-                                                 CmpInst::Predicate VecPred,
-                                                 TTI::TargetCostKind CostKind,
-                                                 const Instruction *I) {
+InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   // Skip if scalar size of ValTy is bigger than ELEN.
   if (ValTy->isVectorTy() && ValTy->getScalarSizeInBits() > ST->getELen())
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
+
+  auto GetConstantMatCost =
+      [&](TTI::OperandValueInfo OpInfo) -> InstructionCost {
+    if (OpInfo.isUniform())
+      // We return 0 we currently ignore the cost of materializing scalar
+      // constants in GPRs.
+      return 0;
+
+    return getConstantPoolLoadCost(ValTy, CostKind);
+  };
+
+  InstructionCost ConstantMatCost;
+  if (Op1Info.isConstant())
+    ConstantMatCost += GetConstantMatCost(Op1Info);
+  if (Op2Info.isConstant())
+    ConstantMatCost += GetConstantMatCost(Op2Info);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
   if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
@@ -1627,14 +1675,16 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // vmandn.mm v8, v8, v9
         // vmand.mm v9, v0, v9
         // vmor.mm v0, v9, v8
-        return LT.first *
-               getRISCVInstructionCost(
-                   {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
-                   LT.second, CostKind);
+        return ConstantMatCost +
+               LT.first *
+                   getRISCVInstructionCost(
+                       {RISCV::VMANDN_MM, RISCV::VMAND_MM, RISCV::VMOR_MM},
+                       LT.second, CostKind);
       }
       // vselect and max/min are supported natively.
-      return LT.first *
-             getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second, CostKind);
+      return ConstantMatCost +
+             LT.first * getRISCVInstructionCost(RISCV::VMERGE_VVM, LT.second,
+                                                CostKind);
     }
 
     if (ValTy->getScalarSizeInBits() == 1) {
@@ -1644,7 +1694,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       //  vmand.mm v9, v0, v9
       //  vmor.mm v0, v9, v8
       MVT InterimVT = LT.second.changeVectorElementType(MVT::i8);
-      return LT.first *
+      return ConstantMatCost +
+             LT.first *
                  getRISCVInstructionCost({RISCV::VMV_V_X, RISCV::VMSNE_VI},
                                          InterimVT, CostKind) +
              LT.first * getRISCVInstructionCost(
@@ -1655,7 +1706,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     // vmv.v.x v10, a0
     // vmsne.vi v0, v10, 0
     // vmerge.vvm v8, v9, v8, v0
-    return LT.first * getRISCVInstructionCost(
+    return ConstantMatCost +
+           LT.first * getRISCVInstructionCost(
                           {RISCV::VMV_V_X, RISCV::VMSNE_VI, RISCV::VMERGE_VVM},
                           LT.second, CostKind);
   }
@@ -1664,8 +1716,9 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       CmpInst::isIntPredicate(VecPred)) {
     // Use VMSLT_VV to represent VMSEQ, VMSNE, VMSLTU, VMSLEU, VMSLT, VMSLE
     // provided they incur the same cost across all implementations
-    return LT.first *
-           getRISCVInstructionCost(RISCV::VMSLT_VV, LT.second, CostKind);
+    return ConstantMatCost + LT.first * getRISCVInstructionCost(RISCV::VMSLT_VV,
+                                                                LT.second,
+                                                                CostKind);
   }
 
   if ((Opcode == Instruction::FCmp) && ValTy->isVectorTy() &&
@@ -1673,7 +1726,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
     // Use VMXOR_MM and VMXNOR_MM to generate all true/false mask
     if ((VecPred == CmpInst::FCMP_FALSE) || (VecPred == CmpInst::FCMP_TRUE))
-      return getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind);
+      return ConstantMatCost +
+             getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind);
 
     // If we do not support the input floating point vector type, use the base
     // one which will calculate as:
@@ -1683,7 +1737,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         (ValTy->getScalarSizeInBits() == 32 && !ST->hasVInstructionsF32()) ||
         (ValTy->getScalarSizeInBits() == 64 && !ST->hasVInstructionsF64()))
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                       I);
+                                       Op1Info, Op2Info, I);
 
     // Assuming vector fp compare and mask instructions are all the same cost
     // until a need arises to differentiate them.
@@ -1692,7 +1746,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case CmpInst::FCMP_ORD: // vmfeq.vv + vmfeq.vv + vmand.mm
     case CmpInst::FCMP_UNO: // vmfne.vv + vmfne.vv + vmor.mm
     case CmpInst::FCMP_UEQ: // vmflt.vv + vmflt.vv + vmnor.mm
-      return LT.first * getRISCVInstructionCost(
+      return ConstantMatCost +
+             LT.first * getRISCVInstructionCost(
                             {RISCV::VMFLT_VV, RISCV::VMFLT_VV, RISCV::VMOR_MM},
                             LT.second, CostKind);
 
@@ -1700,9 +1755,10 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case CmpInst::FCMP_UGE: // vmflt.vv + vmnot.m
     case CmpInst::FCMP_ULT: // vmfle.vv + vmnot.m
     case CmpInst::FCMP_ULE: // vmflt.vv + vmnot.m
-      return LT.first *
-             getRISCVInstructionCost({RISCV::VMFLT_VV, RISCV::VMNAND_MM},
-                                     LT.second, CostKind);
+      return ConstantMatCost +
+             LT.first *
+                 getRISCVInstructionCost({RISCV::VMFLT_VV, RISCV::VMNAND_MM},
+                                         LT.second, CostKind);
 
     case CmpInst::FCMP_OEQ: // vmfeq.vv
     case CmpInst::FCMP_OGT: // vmflt.vv
@@ -1710,8 +1766,9 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case CmpInst::FCMP_OLT: // vmflt.vv
     case CmpInst::FCMP_OLE: // vmfle.vv
     case CmpInst::FCMP_UNE: // vmfne.vv
-      return LT.first *
-             getRISCVInstructionCost(RISCV::VMFLT_VV, LT.second, CostKind);
+      return ConstantMatCost +
+             LT.first *
+                 getRISCVInstructionCost(RISCV::VMFLT_VV, LT.second, CostKind);
     default:
       break;
     }
@@ -1734,7 +1791,8 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   // TODO: Add cost for scalar type.
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
@@ -1892,6 +1950,29 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
 
+  // f16 with zvfhmin and bf16 will be promoted to f32.
+  // FIXME: nxv32[b]f16 will be custom lowered and split.
+  unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
+  InstructionCost CastCost = 0;
+  if ((LT.second.getVectorElementType() == MVT::f16 ||
+       LT.second.getVectorElementType() == MVT::bf16) &&
+      TLI->getOperationAction(ISDOpcode, LT.second) ==
+          TargetLoweringBase::LegalizeAction::Promote) {
+    MVT PromotedVT = TLI->getTypeToPromoteTo(ISDOpcode, LT.second);
+    Type *PromotedTy = EVT(PromotedVT).getTypeForEVT(Ty->getContext());
+    Type *LegalTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
+    // Add cost of extending arguments
+    CastCost += LT.first * Args.size() *
+                getCastInstrCost(Instruction::FPExt, PromotedTy, LegalTy,
+                                 TTI::CastContextHint::None, CostKind);
+    // Add cost of truncating result
+    CastCost +=
+        LT.first * getCastInstrCost(Instruction::FPTrunc, LegalTy, PromotedTy,
+                                    TTI::CastContextHint::None, CostKind);
+    // Compute cost of op in promoted type
+    LT.second = PromotedVT;
+  }
+
   auto getConstantMatCost =
     [&](unsigned Operand, TTI::OperandValueInfo OpInfo) -> InstructionCost {
     if (OpInfo.isUniform() && TLI->canSplatOperand(Opcode, Operand))
@@ -1913,7 +1994,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
   unsigned Op;
-  switch (TLI->InstructionOpcodeToISD(Opcode)) {
+  switch (ISDOpcode) {
   case ISD::ADD:
   case ISD::SUB:
     Op = RISCV::VADD_VV;
@@ -1943,11 +2024,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     break;
   case ISD::FADD:
   case ISD::FSUB:
-    // TODO: Address FP16 with VFHMIN
     Op = RISCV::VFADD_VV;
     break;
   case ISD::FMUL:
-    // TODO: Address FP16 with VFHMIN
     Op = RISCV::VFMUL_VV;
     break;
   case ISD::FDIV:
@@ -1959,9 +2038,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   default:
     // Assuming all other instructions have the same cost until a need arises to
     // differentiate them.
-    return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                                           Op1Info, Op2Info,
-                                                           Args, CxtI);
+    return CastCost + ConstantMatCost +
+           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Args, CxtI);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
@@ -1970,7 +2049,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   // scalar floating point ops aren't cheaper than their vector equivalents.
   if (Ty->isFPOrFPVectorTy())
     InstrCost *= 2;
-  return ConstantMatCost + LT.first * InstrCost;
+  return CastCost + ConstantMatCost + LT.first * InstrCost;
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
