@@ -283,7 +283,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // If LazyObjFile has not been added to link, emit empty index files.
 // This is needed because this is what GNU gold plugin does and we have a
 // distributed build system that depends on that behavior.
-static void thinLTOCreateEmptyIndexFiles() {
+static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
   DenseSet<StringRef> linkedBitCodeFiles;
   for (BitcodeFile *f : ctx.bitcodeFiles)
     linkedBitCodeFiles.insert(f->getName());
@@ -347,7 +347,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (ctx.arg.thinLTOEmitIndexFiles)
-    thinLTOCreateEmptyIndexFiles();
+    thinLTOCreateEmptyIndexFiles(ctx);
 
   if (ctx.arg.thinLTOIndexOnly) {
     if (!ctx.arg.ltoObjPath.empty())
