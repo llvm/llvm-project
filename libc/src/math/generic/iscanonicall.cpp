@@ -14,9 +14,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, iscanonicall, (long double x)) {
-    long double temp;
-    if (fputil::canonicalize(temp, x) == 0) return 1;
-    return 0;
+  long double temp;
+  if (fputil::canonicalize(temp, x) == 0)
+    return 1;
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
