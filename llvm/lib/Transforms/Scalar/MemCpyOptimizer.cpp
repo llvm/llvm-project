@@ -2024,7 +2024,7 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
     return false;
 
   // 4. The memcpy src must not be modified during the call.
-  if (isModSet(AA->getModRefInfo(&CB, MemoryLocation::getForSource(MDep))))
+  if (isModSet(BAA.getModRefInfo(&CB, MemoryLocation::getForSource(MDep))))
     return false;
 
   LLVM_DEBUG(dbgs() << "MemCpyOptPass: Forwarding memcpy to Immut src:\n"

@@ -619,6 +619,16 @@ private:
     return static_cast<const DerivedCCG *>(this)->getLabel(Func, Call, CloneNo);
   }
 
+  // Create and return a new ContextNode.
+  ContextNode *createNewNode(bool IsAllocation, const FuncTy *F = nullptr,
+                             CallInfo C = CallInfo()) {
+    NodeOwner.push_back(std::make_unique<ContextNode>(IsAllocation, C));
+    auto *NewNode = NodeOwner.back().get();
+    if (F)
+      NodeToCallingFunc[NewNode] = F;
+    return NewNode;
+  }
+
   /// Helpers to find the node corresponding to the given call or stackid.
   ContextNode *getNodeForInst(const CallInfo &C);
   ContextNode *getNodeForAlloc(const CallInfo &C);
@@ -1082,11 +1092,8 @@ typename CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode *
 CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addAllocNode(
     CallInfo Call, const FuncTy *F) {
   assert(!getNodeForAlloc(Call));
-  NodeOwner.push_back(
-      std::make_unique<ContextNode>(/*IsAllocation=*/true, Call));
-  ContextNode *AllocNode = NodeOwner.back().get();
+  ContextNode *AllocNode = createNewNode(/*IsAllocation=*/true, F, Call);
   AllocationCallToContextNodeMap[Call] = AllocNode;
-  NodeToCallingFunc[AllocNode] = F;
   // Use LastContextId as a uniq id for MIB allocation nodes.
   AllocNode->OrigStackOrAllocId = LastContextId;
   // Alloc type should be updated as we add in the MIBs. We should assert
@@ -1143,9 +1150,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     auto StackId = getStackId(*ContextIter);
     ContextNode *StackNode = getNodeForStackId(StackId);
     if (!StackNode) {
-      NodeOwner.push_back(
-          std::make_unique<ContextNode>(/*IsAllocation=*/false));
-      StackNode = NodeOwner.back().get();
+      StackNode = createNewNode(/*IsAllocation=*/false);
       StackEntryIdToContextNodeMap[StackId] = StackNode;
       StackNode->OrigStackOrAllocId = StackId;
     }
@@ -1448,10 +1453,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       continue;
 
     // Create new context node.
-    NodeOwner.push_back(
-        std::make_unique<ContextNode>(/*IsAllocation=*/false, Call));
-    ContextNode *NewNode = NodeOwner.back().get();
-    NodeToCallingFunc[NewNode] = Func;
+    ContextNode *NewNode = createNewNode(/*IsAllocation=*/false, Func, Call);
     NonAllocationCallToContextNodeMap[Call] = NewNode;
     CreatedNode = true;
     NewNode->AllocTypes = computeAllocType(SavedContextIds);
@@ -2164,10 +2166,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
     } else {
       FuncToCallsWithMetadata[Func].push_back({NewCall});
       // Create Node and record node info.
-      NodeOwner.push_back(
-          std::make_unique<ContextNode>(/*IsAllocation=*/false, NewCall));
-      NewNode = NodeOwner.back().get();
-      NodeToCallingFunc[NewNode] = Func;
+      NewNode = createNewNode(/*IsAllocation=*/false, Func, NewCall);
       TailCallToContextNodeMap[NewCall] = NewNode;
       NewNode->AllocTypes = Edge->AllocTypes;
     }
@@ -2740,13 +2739,11 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::moveEdgeToNewCalleeClone(
     const std::shared_ptr<ContextEdge> &Edge, EdgeIter *CallerEdgeI,
     DenseSet<uint32_t> ContextIdsToMove) {
   ContextNode *Node = Edge->Callee;
-  NodeOwner.push_back(
-      std::make_unique<ContextNode>(Node->IsAllocation, Node->Call));
-  ContextNode *Clone = NodeOwner.back().get();
+  assert(NodeToCallingFunc.count(Node));
+  ContextNode *Clone =
+      createNewNode(Node->IsAllocation, NodeToCallingFunc[Node], Node->Call);
   Node->addClone(Clone);
   Clone->MatchingCalls = Node->MatchingCalls;
-  assert(NodeToCallingFunc.count(Node));
-  NodeToCallingFunc[Clone] = NodeToCallingFunc[Node];
   moveEdgeToExistingCalleeClone(Edge, Clone, CallerEdgeI, /*NewClone=*/true,
                                 ContextIdsToMove);
   return Clone;

@@ -43,7 +43,7 @@ using namespace lld::elf;
 namespace {
 class AVR final : public TargetInfo {
 public:
-  AVR() { needsThunks = true; }
+  AVR(Ctx &ctx) : TargetInfo(ctx) { needsThunks = true; }
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -267,8 +267,8 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getAVRTargetInfo() {
-  static AVR target;
+TargetInfo *elf::getAVRTargetInfo(Ctx &ctx) {
+  static AVR target(ctx);
   return &target;
 }
 
