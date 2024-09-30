@@ -387,8 +387,7 @@ bool GCNTTIImpl::isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
   // them later if they may access private memory. We don't have enough context
   // here, and legalization can handle it.
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS) {
-    return (Alignment >= 4 || ST->hasUnalignedScratchAccessEnabled() ||
-            ST->enableFlatScratch()) &&
+    return (Alignment >= 4 || ST->hasUnalignedScratchAccessEnabled()) &&
            ChainSizeInBytes <= ST->getMaxPrivateElementSize();
   }
   return true;
