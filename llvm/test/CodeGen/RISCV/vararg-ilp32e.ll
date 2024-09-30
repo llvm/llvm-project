@@ -70,6 +70,7 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-NEXT:    .cfi_def_cfa_offset 32
 ; ILP32E-NEXT:    sw ra, 4(sp) # 4-byte Folded Spill
 ; ILP32E-NEXT:    .cfi_offset ra, -28
+; ILP32E-NEXT:    .cfi_remember_state
 ; ILP32E-NEXT:    sw a5, 28(sp)
 ; ILP32E-NEXT:    sw a4, 24(sp)
 ; ILP32E-NEXT:    sw a3, 20(sp)
@@ -94,6 +95,7 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-NEXT:    ret
 ; ILP32E-NEXT:  .LBB1_2: # %if.then
+; ILP32E-NEXT:    .cfi_restore_state
 ; ILP32E-NEXT:    call abort
 ;
 ; ILP32E-WITHFP-LABEL: va_double:
@@ -106,6 +108,7 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -32
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 12
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 24
+; ILP32E-WITHFP-NEXT:    .cfi_remember_state
 ; ILP32E-WITHFP-NEXT:    sw a5, 20(s0)
 ; ILP32E-WITHFP-NEXT:    sw a4, 16(s0)
 ; ILP32E-WITHFP-NEXT:    sw a3, 12(s0)
@@ -132,6 +135,7 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa_offset 0
 ; ILP32E-WITHFP-NEXT:    ret
 ; ILP32E-WITHFP-NEXT:  .LBB1_2: # %if.then
+; ILP32E-WITHFP-NEXT:    .cfi_restore_state
 ; ILP32E-WITHFP-NEXT:    call abort
 entry:
   %args = alloca ptr, align 4
