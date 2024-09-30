@@ -9,7 +9,7 @@
 ; CHECK-DAG: %[[#LongTy:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#PtrLongTy:]] = OpTypePointer CrossWorkgroup %[[#LongTy]]
 ; CHECK-DAG: %[[#IntTy:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Scope:]] = OpConstant %[[#IntTy]] 1
+; CHECK-DAG: %[[#Scope:]] = OpConstantNull %[[#IntTy]]
 ; CHECK-DAG: %[[#MemSem:]] = OpConstant %[[#IntTy]] 8
 ; CHECK-DAG: %[[#PtrPtrLongTy:]] = OpTypePointer CrossWorkgroup %[[#PtrLongTy]]
 

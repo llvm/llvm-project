@@ -508,6 +508,7 @@ namespace {
     SDValue visitFSQRT(SDNode *N);
     SDValue visitFCOPYSIGN(SDNode *N);
     SDValue visitFPOW(SDNode *N);
+    SDValue visitFCANONICALIZE(SDNode *N);
     SDValue visitSINT_TO_FP(SDNode *N);
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
@@ -1980,6 +1981,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FREEZE:             return visitFREEZE(N);
   case ISD::GET_FPENV_MEM:      return visitGET_FPENV_MEM(N);
   case ISD::SET_FPENV_MEM:      return visitSET_FPENV_MEM(N);
+  case ISD::FCANONICALIZE:      return visitFCANONICALIZE(N);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
@@ -2086,6 +2088,19 @@ static SDValue getInputChainForNode(SDNode *N) {
     for (unsigned i = 1; i < NumOps-1; ++i)
       if (N->getOperand(i).getValueType() == MVT::Other)
         return N->getOperand(i);
+  }
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFCANONICALIZE(SDNode *N) {
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDLoc dl(N);
+
+  // Canonicalize undef to quiet NaN.
+  if (Operand.isUndef()) {
+    APFloat CanonicalQNaN = APFloat::getQNaN(VT.getFltSemantics());
+    return DAG.getConstantFP(CanonicalQNaN, dl, VT);
   }
   return SDValue();
 }
@@ -7132,7 +7147,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (N1C->getAPIntValue().countLeadingZeros() >= (BitWidth - SrcBitWidth) &&
         TLI.isTruncateFree(VT, SrcVT) && TLI.isZExtFree(SrcVT, VT) &&
         TLI.isTypeDesirableForOp(ISD::AND, SrcVT) &&
-        TLI.isNarrowingProfitable(VT, SrcVT))
+        TLI.isNarrowingProfitable(N, VT, SrcVT))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT,
                          DAG.getNode(ISD::AND, DL, SrcVT, N0Op0,
                                      DAG.getZExtOrTrunc(N1, DL, SrcVT)));
@@ -14704,7 +14719,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   // ShLeftAmt will indicate how much a narrowed load should be shifted left.
   unsigned ShLeftAmt = 0;
   if (ShAmt == 0 && N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
-      ExtVT == VT && TLI.isNarrowingProfitable(N0.getValueType(), VT)) {
+      ExtVT == VT && TLI.isNarrowingProfitable(N, N0.getValueType(), VT)) {
     if (ConstantSDNode *N01 = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
       ShLeftAmt = N01->getZExtValue();
       N0 = N0.getOperand(0);
@@ -15264,9 +15279,11 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   }
 
   // trunc (select c, a, b) -> select c, (trunc a), (trunc b)
-  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse()) {
-    if ((!LegalOperations || TLI.isOperationLegal(ISD::SELECT, SrcVT)) &&
-        TLI.isTruncateFree(SrcVT, VT)) {
+  if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse() &&
+      TLI.isTruncateFree(SrcVT, VT)) {
+    if (!LegalOperations ||
+        (TLI.isOperationLegal(ISD::SELECT, SrcVT) &&
+         TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))) {
       SDLoc SL(N0);
       SDValue Cond = N0.getOperand(0);
       SDValue TruncOp0 = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(1));
@@ -20207,10 +20224,9 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     // The narrowing should be profitable, the load/store operation should be
     // legal (or custom) and the store size should be equal to the NewVT width.
-    while (NewBW < BitWidth &&
-           (NewVT.getStoreSizeInBits() != NewBW ||
-            !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
-            !TLI.isNarrowingProfitable(VT, NewVT))) {
+    while (NewBW < BitWidth && (NewVT.getStoreSizeInBits() != NewBW ||
+                                !TLI.isOperationLegalOrCustom(Opc, NewVT) ||
+                                !TLI.isNarrowingProfitable(N, VT, NewVT))) {
       NewBW = NextPowerOf2(NewBW);
       NewVT = EVT::getIntegerVT(*DAG.getContext(), NewBW);
     }

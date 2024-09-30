@@ -31,7 +31,7 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
 namespace {
 class AArch64 : public TargetInfo {
 public:
-  AArch64();
+  AArch64(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -76,7 +76,7 @@ static uint64_t getBits(uint64_t val, int start, int end) {
   return (val >> start) & mask;
 }
 
-AArch64::AArch64() {
+AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
@@ -326,7 +326,7 @@ void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
 }
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64(buf, s.getVA());
 }
 
@@ -719,7 +719,7 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
 }
 
 AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
-  if (!config->relax)
+  if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // always appear in pairs.
@@ -749,7 +749,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   // to
   // NOP
   // ADR xn, sym
-  if (!config->relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
+  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
       addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
     return false;
   // Check if the relocations apply to consecutive instructions.
@@ -836,7 +836,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
   // position-independent code because these instructions produce a relative
   // address.
-  if (config->isPic && !cast<Defined>(sym).section)
+  if (ctx.arg.isPic && !cast<Defined>(sym).section)
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
@@ -960,7 +960,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 namespace {
 class AArch64BtiPac final : public AArch64 {
 public:
-  AArch64BtiPac();
+  AArch64BtiPac(Ctx &);
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -971,8 +971,8 @@ private:
 };
 } // namespace
 
-AArch64BtiPac::AArch64BtiPac() {
-  btiHeader = (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
+AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
+  btiHeader = (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
   // A BTI (Branch Target Indicator) Plt Entry is only required if the
   // address of the PLT entry can be taken by the program, which permits an
   // indirect jump to the PLT entry. This can happen when the address
@@ -982,7 +982,7 @@ AArch64BtiPac::AArch64BtiPac() {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = config->zPacPlt;
+  pacEntry = ctx.arg.zPacPlt;
 
   if (btiHeader || pacEntry) {
     pltEntrySize = 24;
@@ -1072,18 +1072,6 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     // We didn't add the BTI c instruction so round out size with NOP.
     memcpy(buf + sizeof(addrInst) + sizeof(stdBr), nopData, sizeof(nopData));
 }
-
-static TargetInfo *getTargetInfo() {
-  if ((config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      config->zPacPlt) {
-    static AArch64BtiPac t;
-    return &t;
-  }
-  static AArch64 t;
-  return &t;
-}
-
-TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }
 
 template <class ELFT>
 static void
@@ -1175,7 +1163,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // `addTaggedSymbolReferences` has already checked that we have RELA
   // relocations, the only other way to get written addends is with
   // --apply-dynamic-relocs.
-  if (!taggedSymbolReferenceCount.empty() && config->writeAddends)
+  if (!taggedSymbolReferenceCount.empty() && ctx.arg.writeAddends)
     error("--apply-dynamic-relocs cannot be used with MTE globals");
 
   // Now, `taggedSymbolReferenceCount` should only contain symbols that are
@@ -1186,4 +1174,14 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
             "Symbol is defined as tagged more times than it's used");
     symbol->setIsTagged(true);
   }
+}
+
+TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      ctx.arg.zPacPlt) {
+    static AArch64BtiPac t(ctx);
+    return &t;
+  }
+  static AArch64 t(ctx);
+  return &t;
 }

@@ -600,6 +600,9 @@ public:
   bool matchRotateOutOfRange(MachineInstr &MI);
   void applyRotateOutOfRange(MachineInstr &MI);
 
+  bool matchUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+  void applyUseVectorTruncate(MachineInstr &MI, Register &MatchInfo);
+
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   bool matchICmpToTrueFalseKnownBits(MachineInstr &MI, int64_t &MatchInfo);
@@ -845,7 +848,8 @@ public:
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
-  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithBuildVector(const MachineInstr &MI,
+                                                const MachineInstr &MI2,
                                                 BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector trunc on the vector
@@ -855,7 +859,8 @@ public:
 
   /// Combine extract vector element with a shuffle vector on the vector
   /// register.
-  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+  bool matchExtractVectorElementWithShuffleVector(const MachineInstr &MI,
+                                                  const MachineInstr &MI2,
                                                   BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a insert vector element on the vector

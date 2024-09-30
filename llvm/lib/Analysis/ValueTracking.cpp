@@ -528,7 +528,8 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   if (DT) {
     if (DT->dominates(Inv, CxtI))
       return true;
-  } else if (Inv->getParent() == CxtI->getParent()->getSinglePredecessor()) {
+  } else if (Inv->getParent() == CxtI->getParent()->getSinglePredecessor() ||
+             Inv->getParent()->isEntryBlock()) {
     // We don't have a DT, but this trivially dominates.
     return true;
   }

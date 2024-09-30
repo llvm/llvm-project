@@ -10,18 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTARGET_OMPTINTERFACE_H
-#define _OMPTARGET_OMPTINTERFACE_H
+#ifndef OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
+#define OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
 
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
-#include <functional>
-#include <tuple>
-
 #include "Callback.h"
 #include "omp-tools.h"
 
 #include "llvm/Support/ErrorHandling.h"
+
+#include <functional>
+#include <tuple>
 
 #define OMPT_IF_BUILT(stmt) stmt
 
@@ -326,4 +326,4 @@ private:
 #define OMPT_IF_BUILT(stmt)
 #endif
 
-#endif // _OMPTARGET_OMPTINTERFACE_H
+#endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

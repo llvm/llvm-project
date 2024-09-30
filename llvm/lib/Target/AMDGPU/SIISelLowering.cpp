@@ -894,6 +894,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
+                       ISD::MUL,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FDIV,
@@ -909,9 +910,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UMIN,
                        ISD::UMAX,
                        ISD::SETCC,
+                       ISD::SELECT,
+                       ISD::SMIN,
+                       ISD::SMAX,
+                       ISD::UMIN,
+                       ISD::UMAX,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
+                       ISD::SHL,
+                       ISD::SRL,
+                       ISD::SRA,
                        ISD::FSHR,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
@@ -1942,13 +1951,6 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
     switch (Op) {
     case ISD::LOAD:
     case ISD::STORE:
-
-    // These operations are done with 32-bit instructions anyway.
-    case ISD::AND:
-    case ISD::OR:
-    case ISD::XOR:
-    case ISD::SELECT:
-      // TODO: Extensions?
       return true;
     default:
       return false;
@@ -6731,6 +6733,92 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::FLDEXP, DL, VT, Op.getOperand(0), TruncExp);
 }
 
+static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
+  switch (Op->getOpcode()) {
+  case ISD::SRA:
+  case ISD::SMIN:
+  case ISD::SMAX:
+    return ISD::SIGN_EXTEND;
+  case ISD::SRL:
+  case ISD::UMIN:
+  case ISD::UMAX:
+    return ISD::ZERO_EXTEND;
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::SHL:
+  case ISD::SELECT:
+  case ISD::MUL:
+    // operation result won't be influenced by garbage high bits.
+    // TODO: are all of those cases correct, and are there more?
+    return ISD::ANY_EXTEND;
+  case ISD::SETCC: {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    return ISD::isSignedIntSetCC(CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+  }
+  default:
+    llvm_unreachable("unexpected opcode!");
+  }
+}
+
+SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
+                                                DAGCombinerInfo &DCI) const {
+  const unsigned Opc = Op.getOpcode();
+  assert(Opc == ISD::ADD || Opc == ISD::SUB || Opc == ISD::SHL ||
+         Opc == ISD::SRL || Opc == ISD::SRA || Opc == ISD::AND ||
+         Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
+         Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
+         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX);
+
+  EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
+                                 : Op->getOperand(0).getValueType();
+  auto ExtTy = OpTy.changeElementType(MVT::i32);
+
+  if (DCI.isBeforeLegalizeOps() ||
+      isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  auto &DAG = DCI.DAG;
+
+  SDLoc DL(Op);
+  SDValue LHS;
+  SDValue RHS;
+  if (Opc == ISD::SELECT) {
+    LHS = Op->getOperand(1);
+    RHS = Op->getOperand(2);
+  } else {
+    LHS = Op->getOperand(0);
+    RHS = Op->getOperand(1);
+  }
+
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
+
+  // Special case: for shifts, the RHS always needs a zext.
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
+    RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
+  else
+    RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
+
+  // setcc always return i1/i1 vec so no need to truncate after.
+  if (Opc == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+    return DAG.getSetCC(DL, Op.getValueType(), LHS, RHS, CC);
+  }
+
+  // For other ops, we extend the operation's return type as well so we need to
+  // truncate back to the original type.
+  SDValue NewVal;
+  if (Opc == ISD::SELECT)
+    NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
+  else
+    NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
+
+  return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
+}
+
 // Custom lowering for vector multiplications and s_mul_u64.
 SDValue SITargetLowering::lowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -8121,9 +8209,17 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);
-  Ops.push_back(Op.getOperand(ArgOffset + Intr->RsrcIndex));
-  if (BaseOpcode->Sampler)
-    Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
+  SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
+  EVT RsrcVT = Rsrc.getValueType();
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+    return Op;
+  Ops.push_back(Rsrc);
+  if (BaseOpcode->Sampler) {
+    SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
+    if (Samp.getValueType() != MVT::v4i32)
+      return Op;
+    Ops.push_back(Samp);
+  }
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
@@ -9276,6 +9372,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
+      Ops.push_back(Chain);
     } else {
       Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
       SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
@@ -9878,7 +9975,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                         0);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
-    } else if (!IsInlinableBarID) {
+    } else if (IsInlinableBarID) {
+      Ops.push_back(Chain);
+    } else {
       Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 
@@ -14623,8 +14722,32 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::MUL:
+  case ISD::SETCC:
+  case ISD::SELECT:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+    if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
+      return Res;
+    break;
+  default:
+    break;
+  }
+
   if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
+
   switch (N->getOpcode()) {
   case ISD::ADD:
     return performAddCombine(N, DCI);
@@ -16029,11 +16152,8 @@ static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
 
 static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
   LLVMContext &Ctx = RMW->getContext();
-  SmallVector<StringRef> SSNs;
-  Ctx.getSyncScopeNames(SSNs);
-  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                           ? "system"
-                           : SSNs[RMW->getSyncScopeID()];
+  StringRef SS = Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("");
+  StringRef MemScope = SS.empty() ? StringRef("system") : SS;
 
   return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
          << "Hardware instruction generated for atomic "

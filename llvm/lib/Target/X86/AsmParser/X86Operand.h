@@ -451,10 +451,11 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isDstIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
-      (getMemSegReg() == 0 || getMemSegReg() == X86::ES) &&
-      (getMemBaseReg() == X86::RDI || getMemBaseReg() == X86::EDI ||
-       getMemBaseReg() == X86::DI) && isa<MCConstantExpr>(getMemDisp()) &&
-      cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
+           (!getMemSegReg() || getMemSegReg() == X86::ES) &&
+           (getMemBaseReg() == X86::RDI || getMemBaseReg() == X86::EDI ||
+            getMemBaseReg() == X86::DI) &&
+           isa<MCConstantExpr>(getMemDisp()) &&
+           cast<MCConstantExpr>(getMemDisp())->getValue() == 0;
   }
   bool isDstIdx8() const {
     return isMem8() && isDstIdx();

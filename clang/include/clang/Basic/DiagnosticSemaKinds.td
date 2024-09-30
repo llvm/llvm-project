@@ -2933,15 +2933,9 @@ def ext_constexpr_function_never_constant_expr : ExtWarn<
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
 def err_attr_cond_never_constant_expr : Error<
   "%0 attribute expression never produces a constant expression">;
-def err_diagnose_if_unknown_warning : Error<"unknown warning group '%0'">;
 def err_diagnose_if_invalid_diagnostic_type : Error<
   "invalid diagnostic type for 'diagnose_if'; use \"error\" or \"warning\" "
   "instead">;
-def err_diagnose_if_unknown_option : Error<"unknown diagnostic option">;
-def err_diagnose_if_expected_equals : Error<
-  "expected '=' after diagnostic option">;
-def err_diagnose_if_unexpected_value : Error<
-  "unexpected value; use 'true' or 'false'">;
 def err_constexpr_body_no_return : Error<
   "no return statement in %select{constexpr|consteval}0 function">;
 def err_constexpr_return_missing_expr : Error<
@@ -10101,10 +10095,14 @@ def err_lifetimebound_ctor_dtor : Error<
 // CHECK: returning address/reference of stack memory
 def warn_ret_stack_addr_ref : Warning<
   "%select{address of|reference to}0 stack memory associated with "
-  "%select{local variable|parameter|compound literal}2 %1 returned">,
+  "%select{local variable|parameter|compound literal}2 %1 "
+  "%select{returned|passed to musttail function}3">,
   InGroup<ReturnStackAddress>;
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
+  InGroup<ReturnStackAddress>;
+def warn_musttail_local_temp_addr_ref : Warning<
+  "passing %select{address of|reference to}0 local temporary object to musttail function">,
   InGroup<ReturnStackAddress>;
 def err_ret_local_temp_ref : Error<
   "returning reference to local temporary object">;
@@ -12390,12 +12388,16 @@ def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match 
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 def err_hlsl_missing_resource_class : Error<"HLSL resource needs to have [[hlsl::resource_class()]] attribute">;
+def err_hlsl_attribute_needs_intangible_type: Error<"attribute %0 can be used only on HLSL intangible type %1">;
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
+def err_hlsl_vector_compound_assignment_truncation : Error<
+  "left hand operand of type %0 to compound assignment cannot be truncated "
+  "when used with right hand operand of type %1">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;

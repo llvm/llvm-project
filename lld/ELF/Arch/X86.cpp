@@ -22,7 +22,7 @@ using namespace lld::elf;
 namespace {
 class X86 : public TargetInfo {
 public:
-  X86();
+  X86(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -42,7 +42,7 @@ public:
 };
 } // namespace
 
-X86::X86() {
+X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_386_COPY;
   gotRel = R_386_GLOB_DAT;
   pltRel = R_386_JUMP_SLOT;
@@ -187,7 +187,7 @@ RelType X86::getDynRel(RelType type) const {
 }
 
 void X86::writePltHeader(uint8_t *buf) const {
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t v[] = {
         0xff, 0xb3, 0x04, 0x00, 0x00, 0x00, // pushl 4(%ebx)
         0xff, 0xa3, 0x08, 0x00, 0x00, 0x00, // jmp *8(%ebx)
@@ -211,7 +211,7 @@ void X86::writePltHeader(uint8_t *buf) const {
 void X86::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
   unsigned relOff = ctx.in.relaPlt->entsize * sym.getPltIdx();
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t inst[] = {
         0xff, 0xa3, 0, 0, 0, 0, // jmp *foo@GOT(%ebx)
         0x68, 0,    0, 0, 0,    // pushl $reloc_offset
@@ -518,7 +518,7 @@ void X86::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 namespace {
 class IntelIBT : public X86 {
 public:
-  IntelIBT();
+  IntelIBT(Ctx &ctx) : X86(ctx) { pltHeaderSize = 0; }
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -528,8 +528,6 @@ public:
 };
 } // namespace
 
-IntelIBT::IntelIBT() { pltHeaderSize = 0; }
-
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
       ctx.in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
@@ -538,7 +536,7 @@ void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 
 void IntelIBT::writePlt(uint8_t *buf, const Symbol &sym,
                         uint64_t /*pltEntryAddr*/) const {
-  if (config->isPic) {
+  if (ctx.arg.isPic) {
     const uint8_t inst[] = {
         0xf3, 0x0f, 0x1e, 0xfb,       // endbr32
         0xff, 0xa3, 0,    0,    0, 0, // jmp *name@GOT(%ebx)
@@ -580,7 +578,7 @@ void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
 namespace {
 class RetpolinePic : public X86 {
 public:
-  RetpolinePic();
+  RetpolinePic(Ctx &);
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -589,7 +587,7 @@ public:
 
 class RetpolineNoPic : public X86 {
 public:
-  RetpolineNoPic();
+  RetpolineNoPic(Ctx &);
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -597,7 +595,7 @@ public:
 };
 } // namespace
 
-RetpolinePic::RetpolinePic() {
+RetpolinePic::RetpolinePic(Ctx &ctx) : X86(ctx) {
   pltHeaderSize = 48;
   pltEntrySize = 32;
   ipltEntrySize = 32;
@@ -651,7 +649,7 @@ void RetpolinePic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 23, -off - 27);
 }
 
-RetpolineNoPic::RetpolineNoPic() {
+RetpolineNoPic::RetpolineNoPic(Ctx &ctx) : X86(ctx) {
   pltHeaderSize = 48;
   pltEntrySize = 32;
   ipltEntrySize = 32;
@@ -710,21 +708,21 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 22, -off - 26);
 }
 
-TargetInfo *elf::getX86TargetInfo() {
-  if (config->zRetpolineplt) {
-    if (config->isPic) {
-      static RetpolinePic t;
+TargetInfo *elf::getX86TargetInfo(Ctx &ctx) {
+  if (ctx.arg.zRetpolineplt) {
+    if (ctx.arg.isPic) {
+      static RetpolinePic t(ctx);
       return &t;
     }
-    static RetpolineNoPic t;
+    static RetpolineNoPic t(ctx);
     return &t;
   }
 
-  if (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-    static IntelIBT t;
+  if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
+    static IntelIBT t(ctx);
     return &t;
   }
 
-  static X86 t;
+  static X86 t(ctx);
   return &t;
 }
