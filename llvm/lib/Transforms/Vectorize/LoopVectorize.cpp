@@ -8997,7 +8997,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
         auto *Recipe = new VPReplicateRecipe(
             SI, RecipeBuilder.mapToVPValues(Instr->operands()),
             true /* IsUniform */);
-        RecipeBuilder.setRecipe(SI, Recipe);
         Recipe->insertBefore(*MiddleVPBB, MBIP);
         continue;
       }
