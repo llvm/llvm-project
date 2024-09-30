@@ -253,16 +253,16 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    ptrue pn8.b
 ; PAIR-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z22.b, z23.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z20.b, z21.b }, pn8, [sp, #4, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #16, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z18.b, z19.b }, pn8, [sp, #6, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z16.b, z17.b }, pn8, [sp, #8, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #20, mul vl] // 32-byte Folded Spill
-; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #24, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z14.b, z15.b }, pn8, [sp, #10, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z12.b, z13.b }, pn8, [sp, #12, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #28, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #14, mul vl] // 32-byte Folded Spill
 ; PAIR-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
@@ -270,20 +270,22 @@ define void @fhalf(<vscale x 8 x half> %v) #1{
 ; PAIR-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
 ; PAIR-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
-; PAIR-NEXT:    st1b { z8.b, z9.b }, pn8, [sp, #32, mul vl] // 32-byte Folded Spill
+; PAIR-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; PAIR-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; PAIR-NEXT:    smstop sm
 ; PAIR-NEXT:    bl my_func
 ; PAIR-NEXT:    smstart sm
 ; PAIR-NEXT:    ptrue pn8.b
+; PAIR-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #2, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #6, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #10, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
+; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #14, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
-; PAIR-NEXT:    ld1b { z22.b, z23.b }, pn8/z, [sp, #4, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z20.b, z21.b }, pn8/z, [sp, #8, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z18.b, z19.b }, pn8/z, [sp, #12, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z16.b, z17.b }, pn8/z, [sp, #16, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z14.b, z15.b }, pn8/z, [sp, #20, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z12.b, z13.b }, pn8/z, [sp, #24, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z10.b, z11.b }, pn8/z, [sp, #28, mul vl] // 32-byte Folded Reload
-; PAIR-NEXT:    ld1b { z8.b, z9.b }, pn8/z, [sp, #32, mul vl] // 32-byte Folded Reload
 ; PAIR-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
 ; PAIR-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
