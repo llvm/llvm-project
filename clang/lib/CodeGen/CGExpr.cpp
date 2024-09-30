@@ -1169,6 +1169,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     LValue LV = EmitMemberExpr(ME);
     Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
+    Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign());
   } else if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
