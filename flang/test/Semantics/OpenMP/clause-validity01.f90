@@ -390,6 +390,12 @@ use omp_lib
   enddo
   !$omp end parallel
 
+  !ERROR: The `SAFELEN` clause cannot appear in the `SIMD` directive with `ORDER(CONCURRENT)` clause
+  !$omp simd order(concurrent) safelen(1+2)
+  do i = 1, N
+    a = 3.14
+  enddo
+
 ! 2.11.1 parallel-do-clause -> parallel-clause |
 !                              do-clause
 
