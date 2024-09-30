@@ -329,7 +329,7 @@ public:
   unsigned getMinimumJumpTableEntries() const override;
 
   // SX-Aurora VE's s/udiv is 5-9 times slower than multiply.
-  bool isIntDivCheap(EVT, AttributeList) const override { return false; }
+  bool isIntDivCheap(EVT, bool, AttributeList) const override { return false; }
   // VE doesn't have rem.
   bool hasStandaloneRem(EVT) const override { return false; }
   // VE LDZ instruction returns 64 if the input is zero.

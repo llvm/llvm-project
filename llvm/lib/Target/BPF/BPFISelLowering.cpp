@@ -238,6 +238,11 @@ bool BPFTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLoweringBase::isZExtFree(Val, VT2);
 }
 
+bool BPFTargetLowering::isIntDivCheap(EVT VT, bool IsSigned,
+                                      AttributeList Attr) const {
+  return (HasMovsx || !IsSigned) ? true : false;
+}
+
 BPFTargetLowering::ConstraintType
 BPFTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {

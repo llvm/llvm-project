@@ -1606,7 +1606,8 @@ namespace llvm {
         LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
-    bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+    bool isIntDivCheap(EVT VT, bool IsSigned,
+                       AttributeList Attr) const override;
 
     bool supportSwiftError() const override;
 

@@ -5376,7 +5376,7 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
   auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), false, Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually
@@ -5426,7 +5426,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
   const auto &TLI = getTargetLowering();
   LLVMContext &Ctx = MF.getFunction().getContext();
   auto &DL = MF.getDataLayout();
-  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), Attr))
+  if (TLI.isIntDivCheap(getApproximateEVTForLLT(DstTy, DL, Ctx), true, Attr))
     return false;
 
   // Don't do this for minsize because the instruction sequence is usually

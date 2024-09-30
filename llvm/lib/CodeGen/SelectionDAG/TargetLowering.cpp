@@ -5377,11 +5377,13 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       N0.hasOneUse() && (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
     // When division is cheap or optimizing for minimum size,
     // fall through to DIVREM creation by skipping this fold.
-    if (!isIntDivCheap(VT, Attr) && !Attr.hasFnAttr(Attribute::MinSize)) {
-      if (N0.getOpcode() == ISD::UREM) {
+    bool IsSigned = N0.getOpcode() == ISD::SREM;
+    if (!isIntDivCheap(VT, IsSigned, Attr) &&
+        !Attr.hasFnAttr(Attribute::MinSize)) {
+      if (!IsSigned) {
         if (SDValue Folded = buildUREMEqFold(VT, N0, N1, Cond, DCI, dl))
           return Folded;
-      } else if (N0.getOpcode() == ISD::SREM) {
+      } else {
         if (SDValue Folded = buildSREMEqFold(VT, N0, N1, Cond, DCI, dl))
           return Folded;
       }
@@ -6233,7 +6235,7 @@ SDValue TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                               SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N, 0); // Lower SDIV as SDIV
   return SDValue();
 }
@@ -6243,7 +6245,7 @@ TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
                               SelectionDAG &DAG,
                               SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N, 0); // Lower SREM as SREM
   return SDValue();
 }

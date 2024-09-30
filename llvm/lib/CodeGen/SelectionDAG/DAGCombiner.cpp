@@ -4844,7 +4844,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
   // true.  Otherwise, we break the simplification logic in visitREM().
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
+  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), true, Attr))
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
 
@@ -4929,7 +4929,7 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // trade-offs.
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isConstantOrConstantVector(N1) &&
-      !TLI.isIntDivCheap(N->getValueType(0), Attr))
+      !TLI.isIntDivCheap(N->getValueType(0), true, Attr))
     if (SDValue Op = BuildSDIV(N))
       return Op;
 
@@ -4984,7 +4984,7 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
   // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
   // true.  Otherwise, we break the simplification logic in visitREM().
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
+  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), false, Attr))
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
 
@@ -5033,7 +5033,7 @@ SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   // fold (udiv x, c) -> alternate
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isConstantOrConstantVector(N1) &&
-      !TLI.isIntDivCheap(N->getValueType(0), Attr))
+      !TLI.isIntDivCheap(N->getValueType(0), false, Attr))
     if (SDValue Op = BuildUDIV(N))
       return Op;
 
@@ -5115,7 +5115,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // by skipping the simplification if isIntDivCheap().  When div is not cheap,
   // combine will not return a DIVREM.  Regardless, checking cheapness here
   // makes sense since the simplification results in fatter code.
-  if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, Attr)) {
+  if (DAG.isKnownNeverZero(N1) && !TLI.isIntDivCheap(VT, isSigned, Attr)) {
     if (isSigned) {
       // check if we can build faster implementation for srem
       if (SDValue OptimizedRem = buildOptimizedSREM(N0, N1, N))

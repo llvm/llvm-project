@@ -18544,7 +18544,7 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SelectionDAG &DAG,
                                      SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N, 0); // Lower SDIV as SDIV
 
   EVT VT = N->getValueType(0);
@@ -18574,7 +18574,7 @@ AArch64TargetLowering::BuildSREMPow2(SDNode *N, const APInt &Divisor,
                                      SelectionDAG &DAG,
                                      SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N, 0); // Lower SREM as SREM
 
   EVT VT = N->getValueType(0);
@@ -27816,7 +27816,8 @@ void AArch64TargetLowering::insertCopiesSplitCSR(
   }
 }
 
-bool AArch64TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
+bool AArch64TargetLowering::isIntDivCheap(EVT VT, bool IsSigned,
+                                          AttributeList Attr) const {
   // Integer division on AArch64 is expensive. However, when aggressively
   // optimizing for code size, we prefer to use a div instruction, as it is
   // usually smaller than the alternative sequence.

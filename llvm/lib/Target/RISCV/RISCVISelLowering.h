@@ -536,7 +536,7 @@ public:
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
 
-  bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+  bool isIntDivCheap(EVT VT, bool IsSigned, AttributeList Attr) const override;
 
   bool preferScalarizeSplat(SDNode *N) const override;
 

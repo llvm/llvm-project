@@ -12680,7 +12680,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // to multiply by magic constant.
     AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
     if (N->getOperand(1).getOpcode() == ISD::Constant &&
-        !isIntDivCheap(N->getValueType(0), Attr))
+        !isIntDivCheap(N->getValueType(0), N->getOpcode() == ISD::SDIV, Attr))
       return;
 
     // If the input is i32, use ANY_EXTEND since the W instructions don't read
@@ -21275,7 +21275,8 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
   return SDValue();
 }
 
-bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
+bool RISCVTargetLowering::isIntDivCheap(EVT VT, bool IsSigned,
+                                        AttributeList Attr) const {
   // When aggressively optimizing for code size, we prefer to use a div
   // instruction, as it is usually smaller than the alternative sequence.
   // TODO: Add vector division?
@@ -21745,7 +21746,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                    SelectionDAG &DAG,
                                    SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N, 0); // Lower SDIV as SDIV
 
   // Only perform this transform if short forward branch opt is supported.

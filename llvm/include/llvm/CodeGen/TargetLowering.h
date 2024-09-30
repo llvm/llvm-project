@@ -549,7 +549,9 @@ public:
   /// several shifts, adds, and multiplies for this target.
   /// The definition of "cheaper" may depend on whether we're optimizing
   /// for speed or for size.
-  virtual bool isIntDivCheap(EVT VT, AttributeList Attr) const { return false; }
+  virtual bool isIntDivCheap(EVT VT, bool IsSigned, AttributeList Attr) const {
+    return false;
+  }
 
   /// Return true if the target can handle a standalone remainder operation.
   virtual bool hasStandaloneRem(EVT VT) const {

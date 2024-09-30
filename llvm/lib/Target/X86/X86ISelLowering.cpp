@@ -23094,7 +23094,7 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                  SelectionDAG &DAG,
                                  SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
-  if (isIntDivCheap(N->getValueType(0), Attr))
+  if (isIntDivCheap(N->getValueType(0), true, Attr))
     return SDValue(N,0); // Lower SDIV as SDIV
 
   assert((Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()) &&
@@ -60048,7 +60048,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return Res;
 }
 
-bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
+bool X86TargetLowering::isIntDivCheap(EVT VT, bool IsSigned,
+                                      AttributeList Attr) const {
   // Integer division on x86 is expensive. However, when aggressively optimizing
   // for code size, we prefer to use a div instruction, as it is usually smaller
   // than the alternative sequence.

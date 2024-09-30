@@ -565,7 +565,12 @@ public:
       if (!isa<ConstantInt>(Inst.getOperand(1)))
         return false;
       EVT VT = getTLI()->getValueType(DL, Inst.getType());
-      return !getTLI()->isIntDivCheap(VT, Fn.getAttributes());
+
+      bool IsSigned = true;
+      if (Inst.getOpcode() == Instruction::SDiv ||
+          Inst.getOpcode() == Instruction::SRem)
+        IsSigned = false;
+      return !getTLI()->isIntDivCheap(VT, IsSigned, Fn.getAttributes());
     }
     };
 

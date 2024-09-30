@@ -73,7 +73,7 @@ private:
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
-  bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+  bool isIntDivCheap(EVT VT, bool IsSigned, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   bool shouldSinkOperands(Instruction *I,

@@ -845,7 +845,7 @@ public:
     return AArch64::X1;
   }
 
-  bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
+  bool isIntDivCheap(EVT VT, bool IsSigned, AttributeList Attr) const override;
 
   bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                         const MachineFunction &MF) const override {
