@@ -1483,12 +1483,12 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
                                                   Block *containingOpBlock) {
   // Check that the value has exactly one use which isn't a scf.yield or a
   // tensor.parallel_insert_slice op.
-  Operation *visitedConsumerOp = nullptr;
+  OpOperand *operand = nullptr;
   for (OpOperand &opOperand : val.getUses()) {
     Operation *consumerOp = opOperand.getOwner();
     if (isa<scf::YieldOp, tensor::ParallelInsertSliceOp>(consumerOp))
       continue;
-    if (visitedConsumerOp && visitedConsumerOp != consumerOp)
+    if (operand && *operand != opOperand)
       return failure();
     // TODO: We have to init result of consumer before scf.for, use
     //       DestinationStyleOpInterface to get result shape from init for now.
@@ -1498,16 +1498,10 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
       return failure();
     if (containingOpBlock != consumerOp->getBlock())
       return failure();
-    visitedConsumerOp = consumerOp;
+    operand = &opOperand;
   }
 
-  for (OpOperand &opOperand : val.getUses()) {
-    Operation *consumerOp = opOperand.getOwner();
-    if (isa<scf::YieldOp, tensor::ParallelInsertSliceOp>(consumerOp))
-      continue;
-    return &opOperand;
-  }
-  return failure();
+  return operand;
 }
 
 /// Find the perfectly nested loops outside of given loop(included) sorted from
