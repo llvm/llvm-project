@@ -105,7 +105,7 @@ public:
 
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
-  int dlupdate(void *DSOHandle, int Mode);
+  int dlupdate(void *DSOHandle);
   int dlclose(void *DSOHandle);
   void *dlsym(void *DSOHandle, std::string_view Symbol);
 
@@ -137,7 +137,7 @@ private:
   Error dlopenInitialize(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                          PerJITDylibState &JDS,
                          ELFNixJITDylibDepInfoMap &DepInfo);
-  Error dlupdateImpl(void *DSOHandle, int Mode);
+  Error dlupdateImpl(void *DSOHandle);
   Error dlupdateFull(std::unique_lock<std::recursive_mutex> &JDStatesLock,
                      PerJITDylibState &JDS);
 
@@ -314,8 +314,8 @@ void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   }
 }
 
-int ELFNixPlatformRuntimeState::dlupdate(void *DSOHandle, int Mode) {
-  if (auto Err = dlupdateImpl(DSOHandle, Mode)) {
+int ELFNixPlatformRuntimeState::dlupdate(void *DSOHandle) {
+  if (auto Err = dlupdateImpl(DSOHandle)) {
     // FIXME: Make dlerror thread safe.
     DLFcnError = toString(std::move(Err));
     return -1;
@@ -537,7 +537,7 @@ Error ELFNixPlatformRuntimeState::dlopenInitialize(
   return Error::success();
 }
 
-Error ELFNixPlatformRuntimeState::dlupdateImpl(void *DSOHandle, int Mode) {
+Error ELFNixPlatformRuntimeState::dlupdateImpl(void *DSOHandle) {
   std::unique_lock<std::recursive_mutex> Lock(JDStatesMutex);
 
   // Try to find JITDylib state by name.
@@ -823,8 +823,8 @@ void *__orc_rt_elfnix_jit_dlopen(const char *path, int mode) {
   return ELFNixPlatformRuntimeState::get().dlopen(path, mode);
 }
 
-int __orc_rt_elfnix_jit_dlupdate(void *dso_handle, int mode) {
-  return ELFNixPlatformRuntimeState::get().dlupdate(dso_handle, mode);
+int __orc_rt_elfnix_jit_dlupdate(void *dso_handle) {
+  return ELFNixPlatformRuntimeState::get().dlupdate(dso_handle);
 }
 
 int __orc_rt_elfnix_jit_dlclose(void *dso_handle) {

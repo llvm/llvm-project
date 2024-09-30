@@ -636,9 +636,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
       int32_t result;
       auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
                                                  result, DSOHandles[&JD]);
-      if (E)
-        return E;
-      else if (result)
+      if (result)
         return make_error<StringError>("dlupdate failed",
                                        inconvertibleErrorCode());
       return E;
