@@ -1,5 +1,5 @@
 # This testing configuration handles running the test suite against LLVM's libunwind
-# using either a DLL or a static library, with MinGW/Clang on Windows.
+# using a static library with MinGW/Clang on Windows.
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
