@@ -156,9 +156,9 @@ add_entrypoint_object(
 add_entrypoint_object(
   remap_file_pages
   SRCS
-    remap_file_pages.cpp.cpp
+    remap_file_pages.cpp
   HDRS
-    ../remap_file_pages.h.h
+    ../remap_file_pages.h
   DEPENDS
     libc.include.sys_mman
     libc.include.sys_syscall
