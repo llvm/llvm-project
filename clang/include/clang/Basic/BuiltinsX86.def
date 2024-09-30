@@ -560,7 +560,7 @@ TARGET_BUILTIN(__builtin_ia32_tzcnt_u16, "UsUs", "ncE", "")
 TARGET_BUILTIN(__builtin_ia32_tzcnt_u32, "UiUi", "ncE", "")
 
 // BMI2
-TARGET_BUILTIN(__builtin_ia32_bzhi_si, "UiUiUi", "nc", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_bzhi_si, "UiUiUi", "ncE", "bmi2")
 TARGET_BUILTIN(__builtin_ia32_pdep_si, "UiUiUi", "nc", "bmi2")
 TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "nc", "bmi2")
 
