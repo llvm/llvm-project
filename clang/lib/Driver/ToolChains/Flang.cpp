@@ -290,11 +290,7 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
-  // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
-  }
+
   unsigned RTOptionID = options::OPT__SLASH_MT;
   if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
     RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())

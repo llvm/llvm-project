@@ -10,7 +10,7 @@
 #include "fold-matmul.h"
 #include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
-#include "flang/Runtime/magic-numbers.h"
+#include "flang/Common/magic-numbers.h"
 
 namespace Fortran::evaluate {
 

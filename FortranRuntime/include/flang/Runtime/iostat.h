@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_IOSTAT_H_
 #define FORTRAN_RUNTIME_IOSTAT_H_
 #include "flang/Common/api-attrs.h"
-#include "flang/Runtime/magic-numbers.h"
+#include "flang/Common/magic-numbers.h"
 namespace Fortran::runtime::io {
 
 // The value of IOSTAT= is zero when no error, end-of-record,

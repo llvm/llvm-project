@@ -41,17 +41,16 @@ if (TARGET FortranRuntimeUnitTests)
   )
 endif ()
 
-set(FORTRANRUNTIME_TEST_DEPENDS "")
-if (FORTRANRUNTIME_INCLUDE_TESTS)
-  if (TARGET FortranRuntimeUnitTests)
-    list(APPEND FORTRANRUNTIME_TEST_DEPENDS FortranRuntimeUnitTests)
-  endif()
-endif()
+set(FORTRANRUNTIME_TEST_DEPENDS
+    FortranRuntimeUnitTests
+    FortranRuntime.static
+  )
 
 add_custom_target(FortranRuntime-test-depends)
 set_target_properties(FortranRuntime-test-depends PROPERTIES FOLDER "Fortran Runtime/Meta")
+add_dependencies(FortranRuntime-test-depends ${FORTRANRUNTIME_TEST_DEPENDS})
 
-add_lit_testsuite(check-FortranRuntime "Running the Flang regression tests"
+add_lit_testsuite(check-FortranRuntime "Running the FortranRuntime regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${FORTRANRUNTIME_TEST_DEPENDS}
 )

@@ -63,6 +63,7 @@ set(FLANG_TEST_DEPENDS
   FileCheck
   count
   not
+  module_files
   fir-opt
   tco
   bbc

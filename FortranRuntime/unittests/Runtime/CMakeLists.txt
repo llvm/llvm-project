@@ -38,5 +38,5 @@ add_fortranruntime_unittest(FlangRuntimeTests
   TemporaryStack.cpp
   Transformational.cpp
 LINK_LIBS
-  FortranRuntime.static
+  FortranRuntime.unittest
 )

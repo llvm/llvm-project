@@ -8,7 +8,7 @@
 
 #include "io-error.h"
 #include "config.h"
-#include "flang/Runtime/magic-numbers.h"
+#include "flang/Common/magic-numbers.h"
 #include "tools.h"
 #include <cerrno>
 #include <cstdarg>

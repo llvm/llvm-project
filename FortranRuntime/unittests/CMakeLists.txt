@@ -21,6 +21,9 @@ endif ()
 add_custom_target(FortranRuntimeUnitTests)
 set_target_properties(FortranRuntimeUnitTests PROPERTIES FOLDER "Fortran Runtime/Tests")
 
+# Required because LLVMSupport is compiled with this option (by default).
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+
 function(add_fortranruntime_unittest test_dirname)
   cmake_parse_arguments(ARG
     ""
@@ -29,7 +32,9 @@ function(add_fortranruntime_unittest test_dirname)
     ${ARGN})
 
   add_unittest(FortranRuntimeUnitTests ${test_dirname} ${ARG_UNPARSED_ARGUMENTS})
+
   target_include_directories(${test_dirname} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
+  target_include_directories(${test_dirname} PRIVATE "${FLANG_SOURCE_DIR}/include")
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
@@ -47,9 +52,11 @@ function(add_fortranruntime_nongtest_unittest test_name)
   endif()
 
   add_executable(${test_name}${suffix} ${ARG_UNPARSED_ARGUMENTS})
-  target_link_libraries(${test_name}${suffix} PRIVATE NonGTestTesting ${ARG_LINK_LIBS})
-  target_include_directories(${test_name}${suffix} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Fortran Runtime/Tests/Unit")
+
+  target_include_directories(${test_name}${suffix} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
+  target_include_directories(${test_name}${suffix} PRIVATE "${FLANG_SOURCE_DIR}/include")
+  target_link_libraries(${test_name}${suffix} PRIVATE NonGTestTesting ${ARG_LINK_LIBS})
 
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FortranRuntimeUnitTests ${test_name}${suffix})

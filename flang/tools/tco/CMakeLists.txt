@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   Passes
 )
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../FortranRuntime/include")
 add_flang_tool(tco tco.cpp)
 llvm_update_compile_flags(tco)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
@@ -18,7 +17,6 @@ target_link_libraries(tco PRIVATE
   FIRBuilder
   HLFIRDialect
   HLFIRTransforms
-  FortranCommon
   FlangOpenMPTransforms
   ${dialect_libs}
   ${extension_libs}

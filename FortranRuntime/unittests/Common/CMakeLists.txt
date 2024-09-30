@@ -9,5 +9,5 @@
 add_fortranruntime_unittest(FlangCommonTests
   FastIntSetTest.cpp
   LINK_LIBS
-    FortranRuntime.static
+    FortranRuntime.unittest
 )

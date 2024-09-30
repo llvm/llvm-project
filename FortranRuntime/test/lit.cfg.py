@@ -3,7 +3,7 @@
 import lit.util
 
 from lit.llvm import llvm_config
-from lit.llvm.subst import ToolSubst
+from lit.llvm.subst import ToolSubst, FindTool
 
 # Configuration file for the 'lit' test runner.
 
@@ -61,11 +61,19 @@ isysroot_flag = []
 if config.osx_sysroot:
     isysroot_flag = ["-isysroot", config.osx_sysroot]
 
+tools = [
+      ToolSubst(
+        "%flang",
+        command=FindTool("flang-new"),
+        extra_args=isysroot_flag,
+        unresolved="fatal",
+      )
+    ]
+
 # Define some variables to help us test that the flang runtime doesn't depend on
 # the C++ runtime libraries. For this we need a C compiler.
 libruntime = os.path.join(config.fortranruntime_build_lib_dir, "libFortranRuntime.a")
 include = os.path.join(config.fortranruntime_source_dir, "include")
-tools = []
 tools.append(
             ToolSubst(
                 "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
@@ -74,5 +82,7 @@ tools.append(
 tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
 tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
 
-llvm_config.add_tool_substitutions(tools)
+# Lwt tests find LLVM's standard tools (FileCheck, split-file, not, ...)
+llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
+llvm_config.add_tool_substitutions(tools)

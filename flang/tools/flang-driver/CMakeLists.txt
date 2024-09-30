@@ -1,9 +1,6 @@
 # Infrastructure to build flang driver entry point. Flang driver depends on
 # LLVM libraries.
 
-message("include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../FortranRuntime/include)")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../FortranRuntime/include")
-
 # Set your project compile flags.
 link_directories(${LLVM_LIBRARY_DIR})
 

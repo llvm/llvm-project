@@ -53,7 +53,8 @@ function (add_fortranruntime_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
-  add_library(${name} ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS}   )
+  add_library(${name} ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+
   if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name} PROPERTIES FOLDER "Fortran Runtime/Toolchain Libraries")
   elseif (ARG_OBJECT)
@@ -63,20 +64,28 @@ function (add_fortranruntime_library name)
   endif ()
 
   target_compile_features(${name} PRIVATE cxx_std_17)
-     if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-       target_compile_options (${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>)
-    elseif(MSVC)
-      target_compile_options(${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->)
-    endif()
+  if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
+    target_compile_options (${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>)
+  elseif (MSVC)
+    target_compile_options (${name} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->)
+  endif ()
 
-  target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_BINARY_DIR}")   # For configured config.h for be found
+  # FortranRuntime's public headers
   target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
 
-set_target_properties(${name}
-  PROPERTIES
-    Fortran_MODULE_DIRECTORY "${FORTRANRUNTIME_BUILD_INCLUDE_DIR}/flang"
-)
+  # For ISO_Fortran_binding.h to be found (Accessed as #include "flang/ISO_Fortran_binding.h")
+  target_include_directories(${name} PRIVATE "${FLANG_SOURCE_DIR}/include")
 
+  # For configured config.h for be found
+  target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_BINARY_DIR}")
+
+  # Clang/Flang, targeting the MSVC ABI, including clang-cl, should only depends on msv(u)crt. LLVM still emits libgcc/compiler-rt functions for 128-bit integer math (__udivti3, __modti3, __fixsfti, __floattidf, ...) that msvc does not support.
+  # We are injecting a dependency to Compiler-RT where these are implemented.
+  if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FORTRANRUNTIME_LIBCALL)
+    target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "--dependent-lib=${FORTRANRUNTIME_LIBCALL}")
+  endif ()
+
+  # Non-GTest unittests depend on LLVMSupport
   if (ARG_LINK_TO_LLVM)
     if (LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
@@ -84,26 +93,24 @@ set_target_properties(${name}
       llvm_map_components_to_libnames(llvm_libs Support)
     endif()
     target_link_libraries(${name} PUBLIC  ${llvm_libs})
-     target_include_directories(${name} PRIVATE  ${LLVM_INCLUDE_DIRS})
+    target_include_directories(${name} PRIVATE  ${LLVM_INCLUDE_DIRS})
   endif ()
 
   # If this is part of the toolchain, put it into the compiler's resource directory.
   # Otherwise it is part of testing and is not installed at all.
   # TODO: Consider multi-configuration builds
-  if (INSTALL_WITH_TOOLCHAIN)
+  if (ARG_INSTALL_WITH_TOOLCHAIN)
     set_target_properties(${name}
-      PROPERTIES 
+      PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${FORTRANRUNTIME_BUILD_LIB_DIR}"
         ARCHIVE_OUTPUT_DIRECTORY "${FORTRANRUNTIME_BUILD_LIB_DIR}"
         RUNTIME_OUTPUT_DIRECTORY "${FORTRANRUNTIME_BUILD_LIB_DIR}"
-    )
+      )
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-      install(TARGETS ${name}
+    install(TARGETS ${name}
         LIBRARY DESTINATION "${FORTRANRUNTIME_INSTALL_LIB_DIR}"
         ARCHIVE DESTINATION "${FORTRANRUNTIME_INSTALL_LIB_DIR}"
         RUNTIME DESTINATION "${FORTRANRUNTIME_INSTALL_LIB_DIR}"
       )
-    endif ()
   endif ()
 endfunction (add_fortranruntime_library)

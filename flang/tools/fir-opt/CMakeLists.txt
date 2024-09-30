@@ -1,4 +1,3 @@
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../FortranRuntime/include")
 add_flang_tool(fir-opt fir-opt.cpp)
 llvm_update_compile_flags(fir-opt)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
@@ -20,7 +19,6 @@ target_link_libraries(fir-opt PRIVATE
   FIRCodeGen
   HLFIRDialect
   HLFIRTransforms
-  FortranCommon # FIXME: Dependency of something else
   FlangOpenMPTransforms
   FIRAnalysis
   ${test_libs}

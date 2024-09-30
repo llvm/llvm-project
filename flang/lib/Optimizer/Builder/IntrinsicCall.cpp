@@ -68,11 +68,6 @@
 /// a call is generated for it. LLVM intrinsics are handled as a math
 /// runtime library here.
 
-static llvm::cl::opt<bool> ignoreModuleOnlyBuiltins(
-    "ignore-module-only-builtins",
-    llvm::cl::desc("ignore failures from __builtin_numeric_storage_size when compiling FortranRuntime"),
-    llvm::cl::init(false), llvm::cl::Hidden);
-
 namespace fir {
 
 fir::ExtendedValue getAbsentIntrinsicArgument() { return fir::UnboxedValue{}; }
@@ -507,7 +502,6 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
-    {"numeric_storage_size", &I::genNumericStorageSize},
     {"pack",
      &I::genPack,
      {{{"array", asBox},
@@ -7223,17 +7217,6 @@ IntrinsicLibrary::genVerify(mlir::Type resultType,
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "VERIFY");
 }
-
-fir::ExtendedValue IntrinsicLibrary:: genNumericStorageSize(mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
-      assert(args.empty() );
-     
-      if (!ignoreModuleOnlyBuiltins) {
-   fir::emitFatalError(loc, "__builtin_numeric_storage_size is for internal use only. Use NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV module instead.");
-  return {};
-      }
-
-      return builder.createIntegerConstant(loc, resultType  , 32 );
-    }
 
 /// Process calls to Minloc, Maxloc intrinsic functions
 template <typename FN, typename FD>

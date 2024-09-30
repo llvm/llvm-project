@@ -15,12 +15,14 @@
 set(LLVM_SUBPROJECT_TITLE "Fortran Runtime")
 set(FORTRANRUNTIME_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FORTRANRUNTIME_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
+
+enable_language(Fortran)
 
 list(APPEND CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 include(AddFortranRuntime)
-
 
 
 ############################
@@ -38,28 +40,21 @@ endif()
 if (LLVM_TREE_AVAILABLE)
   # Despite Clang in the name, get_clang_resource_dir does not depend on Clang being added to the build
   # flang-new uses the same resource dir as clang.
-  include(GetClangResourceDir) 
+  include(GetClangResourceDir)
   get_clang_resource_dir(FORTRANRUNTIME_BUILD_LIB_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "lib${LLVM_LIBDIR_SUFFIX}")
   get_clang_resource_dir(FORTRANRUNTIME_INSTALL_LIB_DIR SUBDIR "lib${LLVM_LIBDIR_SUFFIX}") # No prefix, CMake's install command find the install prefix itself
-
-  # FIXME: If compiling multiple triples, include dirs overwrite each other
-  get_clang_resource_dir(FORTRANRUNTIME_BUILD_INCLUDE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.." SUBDIR "include")
-  get_clang_resource_dir(FORTRANRUNTIME_INSTALL_INCLUDE_DIR SUBDIR "include") 
 else ()
   set(FORTRANRUNTIME_BUILD_LIB_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
   set(FORTRANRUNTIME_INSTALL_LIB_DIR "lib${LLVM_LIBDIR_SUFFIX}")
-
-  set(FORTRANRUNTIME_BUILD_INCLUDE_DIR "${LLVM_INCLUDE_DIR}")
-  set(FORTRANRUNTIME_INSTALL_INCLUDE_DIR "include")
 endif ()
 
-
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+if (DEFINED WIN32)
+  set(FORTRANRUNTIME_BUILD_LIB_DIR "${FORTRANRUNTIME_BUILD_LIB_DIR}/windows")
+  set(FORTRANRUNTIME_INSTALL_LIB_DIR "${FORTRANRUNTIME_INSTALL_LIB_DIR}/windows")
+elseif (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   set(FORTRANRUNTIME_BUILD_LIB_DIR "${FORTRANRUNTIME_BUILD_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
   set(FORTRANRUNTIME_INSTALL_LIB_DIR "${FORTRANRUNTIME_INSTALL_LIB_DIR}/${LLVM_TARGET_TRIPLE}")
-endif()
-
-
+endif ()
 
 
 #################
@@ -139,16 +134,26 @@ check_cxx_source_compiles(
   "
   HAVE_LDBL_MANT_DIG_113)
 
+# Search for clang_rt.builtins
+execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" "-print-libgcc-file-name" "-rtlib=compiler-rt"
+    RESULT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE
+    OUTPUT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT
+  )
+if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
+  string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FORTRANRUNTIME_LIBCALL)
+else ()
+  set(FORTRANRUNTIME_LIBCALL "")
+endif ()
+
 
 #####################
 # Build Preparation #
 #####################
 
-enable_language(Fortran)
-
 # C++17 required for FortranRuntime, user or other runtimes may override this.
 # GTest included later also requires C++17.
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to") 
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
@@ -156,18 +161,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
-
 configure_file(cmake/config.h.cmake.in config.h)
-
-configure_file(
-  "${FORTRANRUNTIME_SOURCE_DIR}/include/flang/Common/ISO_Fortran_binding.h"
-  "${FORTRANRUNTIME_BUILD_INCLUDE_DIR}/ISO_Fortran_binding.h"
-)
-install(
-  FILES   "${FORTRANRUNTIME_BUILD_INCLUDE_DIR}/ISO_Fortran_binding.h"
-  DESTINATION "${FORTRANRUNTIME_BUILD_INCLUDE_DIR}"
-)
-
 
 
 ###################
@@ -175,10 +169,8 @@ install(
 ###################
 
 add_subdirectory(lib)
-add_subdirectory(module)
 
 if (FORTRANRUNTIME_INCLUDE_TESTS)
   add_subdirectory(unittests)
   add_subdirectory(test)
 endif()
-
