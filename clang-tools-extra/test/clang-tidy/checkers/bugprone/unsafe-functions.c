@@ -162,10 +162,10 @@ typedef int errno_t;
 typedef size_t rsize_t;
 errno_t asctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t ctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t localtime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
+errno_t localtime_s(struct tm *TimePtr, time_t *Timep);
 errno_t strcat_s(char *S1, rsize_t S1Max, const char *S2);
 
-void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
+void fUsingSafeFunctions(const struct tm *Time, FILE *F, time_t *Timep) {
   char Buf[BUFSIZ] = {0};
 
   // no-warning, safe function from annex K is used
@@ -177,7 +177,7 @@ void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
     return;
 
   // no-warning, safe function from annex K is used
-  if (localtime_s(Buf, BUFSIZ, Time) != 0)
+  if (localtime_s(Time, Timep) != 0)
     return;
 
   // no-warning, safe function from annex K is used
