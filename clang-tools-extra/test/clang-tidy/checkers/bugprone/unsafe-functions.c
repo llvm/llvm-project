@@ -173,11 +173,11 @@ void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
     return;
 
   // no-warning, safe function from annex K is used
-  if (ctime_s(Buf, BUFSIZ, Time) != 0)
+  if (ctime_r(Buf, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used
-  if (localtime_s(Buf, BUFSIZ, Time) != 0)
+  if (localtime_r(Buf, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used
