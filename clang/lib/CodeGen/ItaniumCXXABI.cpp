@@ -4098,7 +4098,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass) {
   // Add the vtable pointer.
   BuildVTablePointer(cast<Type>(Ty));
-  size_t VTablePointerIdx = Fields.size() - 1;
+  assert(Fields.size() == 1);
+  size_t VTablePointerIdx = 0;
 
   // And the name.
   llvm::GlobalVariable *TypeName = GetAddrOfTypeName(Ty, Linkage);
@@ -4213,15 +4214,14 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     break;
   }
 
-  llvm::Constant *Init = llvm::ConstantStruct::getAnon(Fields);
   SmallString<256> Name;
   llvm::raw_svector_ostream Out(Name);
   CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty, Out);
   llvm::Module &M = CGM.getModule();
   llvm::GlobalVariable *OldGV = M.getNamedGlobal(Name);
-  llvm::GlobalVariable *GV =
-      new llvm::GlobalVariable(M, Init->getType(),
-                               /*isConstant=*/true, Linkage, Init, Name);
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      M, llvm::ConstantStruct::getTypeForElements(Fields),
+      /*isConstant=*/true, Linkage, /*Initializer=*/nullptr, Name);
   if (const auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
     if (Schema.isAddressDiscriminated()) {
@@ -4229,25 +4229,16 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
       // enabled, we need to place actual storage address (which was unknown
       // during construction in ItaniumRTTIBuilder::BuildVTablePointer) in the
       // corresponding field.
-      ConstantInitBuilder Builder(CGM);
-      auto InitBuilder = Builder.beginStruct();
-      for (size_t I = 0; I < Fields.size(); ++I) {
-        if (I != VTablePointerIdx) {
-          InitBuilder.add(Fields[I]);
-          continue;
-        }
-        auto *SignedVTablePointer = cast<llvm::ConstantPtrAuth>(Fields[I]);
-        llvm::Constant *UnsignedVtablePointer =
-            SignedVTablePointer->getPointer();
-        llvm::Constant *StorageAddress =
-            InitBuilder.getAddrOfCurrentPosition(CGM.UnqualPtrTy);
-        InitBuilder.add(CGM.getConstantSignedPointer(
-            UnsignedVtablePointer, Schema, StorageAddress, GlobalDecl(),
-            QualType(cast<Type>(Ty), 0)));
-      }
-      InitBuilder.finishAndSetAsInitializer(GV);
+      llvm::Constant *UnsignedVtablePointer =
+          cast<llvm::ConstantPtrAuth>(Fields[VTablePointerIdx])->getPointer();
+      assert(VTablePointerIdx == 0 && "Expected 0 offset for StorageAddress");
+      llvm::Constant *StorageAddress = GV;
+      Fields[VTablePointerIdx] = CGM.getConstantSignedPointer(
+          UnsignedVtablePointer, Schema, StorageAddress, GlobalDecl(),
+          QualType(cast<Type>(Ty), 0));
     }
   }
+  GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;
