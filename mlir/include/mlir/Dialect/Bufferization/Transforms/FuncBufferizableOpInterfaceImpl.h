@@ -50,24 +50,24 @@ struct FuncAnalysisState : public OneShotAnalysisState::Extension {
 
   /// A mapping of ReturnOp OpOperand indices to equivalent FuncOp BBArg
   /// indices.
-  DenseMap<FunctionOpInterface, IndexMapping> equivalentFuncArgs;
+  DenseMap<FuncOp, IndexMapping> equivalentFuncArgs;
 
   /// A mapping of FuncOp BBArg indices to aliasing ReturnOp OpOperand indices.
-  DenseMap<FunctionOpInterface, IndexToIndexListMapping> aliasingReturnVals;
+  DenseMap<FuncOp, IndexToIndexListMapping> aliasingReturnVals;
 
   /// A set of all read BlockArguments of FuncOps.
-  DenseMap<FunctionOpInterface, BbArgIndexSet> readBbArgs;
+  DenseMap<FuncOp, BbArgIndexSet> readBbArgs;
 
   /// A set of all written-to BlockArguments of FuncOps.
-  DenseMap<FunctionOpInterface, BbArgIndexSet> writtenBbArgs;
+  DenseMap<FuncOp, BbArgIndexSet> writtenBbArgs;
 
   /// Keep track of which FuncOps are fully analyzed or currently being
   /// analyzed.
-  DenseMap<FunctionOpInterface, FuncOpAnalysisState> analyzedFuncOps;
+  DenseMap<FuncOp, FuncOpAnalysisState> analyzedFuncOps;
 
   /// This function is called right before analyzing the given FuncOp. It
   /// initializes the data structures for the FuncOp in this state object.
-  void startFunctionAnalysis(FunctionOpInterface funcOp);
+  void startFunctionAnalysis(FuncOp funcOp);
 };
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
