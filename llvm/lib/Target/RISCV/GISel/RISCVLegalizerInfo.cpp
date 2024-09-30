@@ -616,9 +616,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                 Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
             return std::pair(0, CastTy);
           })
-      .customIf(
-          LegalityPredicates::any(typeIsLegalBoolVec(0, BoolVecTys, ST),
-                                  typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST)));
+      .customIf(LegalityPredicates::any(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST)),
+          all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+              typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST))));
 
   getLegacyLegalizerInfo().computeTables();
 }
