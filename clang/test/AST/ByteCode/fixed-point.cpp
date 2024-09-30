@@ -25,3 +25,10 @@ namespace IntToFixedPointCast {
   static_assert(sf == -1.0k);
   static_assert(sf == -1);
 }
+
+namespace FloatToFixedPointCast {
+  constexpr _Fract sf = 1.0; // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{outside the range of representable values of type 'const _Fract'}}
+
+  constexpr _Fract sf2 = 0.5;
+}
