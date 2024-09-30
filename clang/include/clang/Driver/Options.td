@@ -2979,7 +2979,7 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
   MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
-                      open_cl.KeyPath #
+                      !strconcat("(", open_cl.KeyPath, " || ", hlsl.KeyPath, ")") #
                           " ? LangOptions::LaxVectorConversionKind::None" #
                           " : LangOptions::LaxVectorConversionKind::All">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
