@@ -44,7 +44,7 @@ Variants:
   Flags:
   - --target=thumbv8.1m.main-unknown-none-eabi
 
-- FatalError: mve-softfloat is not supported
+- Error: mve-softfloat is not supported
   Flags: 
   - --target=thumbv8.1m.main-unknown-none-eabi
   - -march=thumbv8.1m.main+mve
