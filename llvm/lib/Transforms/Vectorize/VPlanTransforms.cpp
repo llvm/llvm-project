@@ -1456,9 +1456,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   EVLPhi->insertAfter(CanonicalIVPHI);
   // TODO: Add support for MaxSafeDist for correct loop emission.
   // Compute original TC - IV as the AVL (application vector length).
-  auto *AVL = new VPInstruction(
-      Instruction::Sub, {Plan.getTripCount(), EVLPhi},
-      DebugLoc(), "avl");
+  auto *AVL = new VPInstruction(Instruction::Sub, {Plan.getTripCount(), EVLPhi},
+                                DebugLoc(), "avl");
   AVL->insertBefore(*Header, Header->getFirstNonPhi());
   auto *VPEVL =
       new VPInstruction(VPInstruction::ExplicitVectorLength, AVL, DebugLoc());
