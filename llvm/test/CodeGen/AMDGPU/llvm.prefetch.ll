@@ -551,12 +551,12 @@ entry:
 define amdgpu_ps void @prefetch_data_vgpr_flat_cu(ptr %ptr) {
 ; GFX1210-LABEL: prefetch_data_vgpr_flat_cu:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    flat_prefetch_b8 v[0:1]
+; GFX1210-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GFX1210-NEXT:    s_endpgm
 ;
 ; GFX1210-SPREFETCH-LABEL: prefetch_data_vgpr_flat_cu:
 ; GFX1210-SPREFETCH:       ; %bb.0: ; %entry
-; GFX1210-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1]
+; GFX1210-SPREFETCH-NEXT:    flat_prefetch_b8 v[0:1] scope:SCOPE_SE
 ; GFX1210-SPREFETCH-NEXT:    s_endpgm
 ;
 ; NOSPREFETCH-LABEL: prefetch_data_vgpr_flat_cu:
