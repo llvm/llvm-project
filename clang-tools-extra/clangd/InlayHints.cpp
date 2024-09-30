@@ -791,21 +791,21 @@ private:
 
       const bool IsDefault = isa<CXXDefaultArgExpr>(Args[I]);
       HasNonDefaultArgs |= !IsDefault;
-      if (Cfg.InlayHints.DefaultArguments && IsDefault) {
-        const auto SourceText = Lexer::getSourceText(
-            CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
-            AST.getSourceManager(), AST.getLangOpts());
-        const auto Abbrev = SourceText.size() > Cfg.InlayHints.TypeNameLimit
-                                ? "..."
-                                : SourceText;
-        if (NameHint)
-          FormattedDefaultArgs.emplace_back(
-              llvm::formatv("{0}: {1}", Name, Abbrev));
-        else
-          FormattedDefaultArgs.emplace_back(llvm::formatv("{0}", Abbrev));
-      }
-
-      if (NameHint || ReferenceHint) {
+      if (IsDefault) {
+        if (Cfg.InlayHints.DefaultArguments) {
+          const auto SourceText = Lexer::getSourceText(
+              CharSourceRange::getTokenRange(Params[I]->getDefaultArgRange()),
+              AST.getSourceManager(), AST.getLangOpts());
+          const auto Abbrev = SourceText.size() > Cfg.InlayHints.TypeNameLimit
+                                  ? "..."
+                                  : SourceText;
+          if (NameHint)
+            FormattedDefaultArgs.emplace_back(
+                llvm::formatv("{0}: {1}", Name, Abbrev));
+          else
+            FormattedDefaultArgs.emplace_back(llvm::formatv("{0}", Abbrev));
+        }
+      } else if (NameHint || ReferenceHint) {
         addInlayHint(Args[I]->getSourceRange(), HintSide::Left,
                      InlayHintKind::Parameter, ReferenceHint ? "&" : "",
                      NameHint ? Name : "", ": ");
