@@ -1491,8 +1491,6 @@ add_instruction:
   if (uint64_t Offset = getFirstInstructionOffset())
     Labels[Offset] = BC.Ctx->createNamedTempSymbol();
 
-  clearList(Relocations);
-
   if (!IsSimple) {
     clearList(Instructions);
     return createNonFatalBOLTError("");
@@ -2283,6 +2281,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   clearList(Instructions);
   clearList(OffsetToCFI);
   clearList(TakenBranches);
+  clearList(Relocations);
 
   // Update the state.
   CurrentState = State::CFG;
