@@ -84,6 +84,29 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
 }
 
+SourceLocation findNextTokenKind(SourceLocation Start, const SourceManager &SM,
+                                 const LangOptions &LangOpts,
+                                 tok::TokenKind TK) {
+  while (true) {
+    std::optional<Token> CurrentToken =
+        Lexer::findNextToken(Start, SM, LangOpts);
+
+    if (!CurrentToken)
+      return {};
+
+    Token PotentialMatch = *CurrentToken;
+    if (PotentialMatch.is(TK))
+      return PotentialMatch.getLocation();
+
+    // If we reach the end of the file, and eof is not the target token, we stop
+    // the loop, otherwise we will get infinite loop (findNextToken will return
+    // eof on eof).
+    if (PotentialMatch.is(tok::eof))
+      return {};
+    Start = PotentialMatch.getLastLoc();
+  }
+}
+
 std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
                                const LangOptions &LangOpts) {
