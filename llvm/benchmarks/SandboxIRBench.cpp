@@ -18,7 +18,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include <memory>
 #include <sstream>

@@ -1322,7 +1322,8 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   const auto *NewExpr = cast<CXXNewExpr>(E);
   QualType StorageType = Ptr.getType();
 
-  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr())) {
+  if (isa_and_nonnull<CXXNewExpr>(Ptr.getFieldDesc()->asExpr()) &&
+      StorageType->isPointerType()) {
     // FIXME: Are there other cases where this is a problem?
     StorageType = StorageType->getPointeeType();
   }
@@ -1390,6 +1391,19 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   }
 
   return false;
+}
+
+bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
+                              const FixedPoint &FP) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.checkingForUndefinedBehavior()) {
+    S.getASTContext().getDiagnostics().Report(
+        E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
+        << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  }
+  S.CCEDiag(E, diag::note_constexpr_overflow)
+      << FP.toDiagnosticString(S.getASTContext()) << E->getType();
+  return S.noteUndefinedBehavior();
 }
 
 bool Interpret(InterpState &S, APValue &Result) {

@@ -3359,8 +3359,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
   llvm::Value *v = builder.CreateAlloca(arg.getType(), allocaAS);
 
   if (allocaAS != defaultAS && arg.getType()->isPointerTy())
-    v = builder.CreatePointerBitCastOrAddrSpaceCast(
-        v, arg.getType()->getPointerTo(defaultAS));
+    v = builder.CreateAddrSpaceCast(v, builder.getPtrTy(defaultAS));
 
   builder.CreateStore(&arg, v);
 
