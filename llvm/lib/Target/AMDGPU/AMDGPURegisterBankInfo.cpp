@@ -3500,7 +3500,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingMAD_64_32(B, OpdMapper);
     return;
   case AMDGPU::G_PREFETCH: {
-    if (!Subtarget.hasPrefetch() || !Subtarget.hasSafeSmemPrefetch()) {
+    if (!Subtarget.hasSafeSmemPrefetch() && !Subtarget.hasVectorPrefetch()) {
       MI.eraseFromParent();
       return;
     }
@@ -3513,8 +3513,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     unsigned AS = MRI.getType(PtrReg).getAddressSpace();
-    if (!AMDGPU::isFlatGlobalAddrSpace(AS) &&
-        AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) {
+    if ((!AMDGPU::isFlatGlobalAddrSpace(AS) &&
+         AS != AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
+        (!Subtarget.hasSafeSmemPrefetch() &&
+         (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+          !MI.getOperand(3).getImm() /* I$ prefetch */))) {
       MI.eraseFromParent();
       return;
     }

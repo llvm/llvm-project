@@ -2116,9 +2116,13 @@ def prefetch_flat : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
 
 def prefetch_global : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                                (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS; }]> {
+                               [{ return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+                                         (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+                                          !Subtarget->hasSafeSmemPrefetch()); }]> {
   let GISelPredicateCode = [{
-    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+    return (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+            ((*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+             !Subtarget->hasSafeSmemPrefetch());
   }];
 }
 
