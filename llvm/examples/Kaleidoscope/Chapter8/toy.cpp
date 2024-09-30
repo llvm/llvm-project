@@ -1,5 +1,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1257,9 +1258,12 @@ int main() {
   }
 
   legacy::PassManager pass;
+  llvm::MachineModuleInfo MMI(
+      static_cast<LLVMTargetMachine *>(TheTargetMachine));
   auto FileType = CodeGenFileType::ObjectFile;
 
-  if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+  if (TheTargetMachine->addPassesToEmitFile(pass, MMI, dest, nullptr,
+                                            FileType)) {
     errs() << "TheTargetMachine can't emit a file of this type";
     return 1;
   }

@@ -34,7 +34,7 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineModuleInfoWrapperPass;
+class MachineModuleInfo;
 class Mangler;
 class MCAsmInfo;
 class MCContext;

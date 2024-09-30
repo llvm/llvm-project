@@ -209,7 +209,7 @@ static void doTest(StringRef MIRFunc,
     return;
 
   legacy::PassManager PM;
-  MachineModuleInfo MMI(TM->get());
+  MachineModuleInfo MMI(TM.get());
   std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<Module> M = parseMIR(Context, MMI, MIR, *TM, MIRFunc);
   ASSERT_TRUE(M);
