@@ -18,7 +18,8 @@
    instruction behaves as BSF on non-BMI targets, there is code that expects
    to use it as a potentially faster version of BSF. */
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-#define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__)) constexpr
+#define __RELAXED_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__)) constexpr
 #else
 #define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 #endif
