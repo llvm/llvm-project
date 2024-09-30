@@ -3705,8 +3705,8 @@ LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
   if (DstTy.getSizeInBits() != CastTy.getSizeInBits())
     return UnableToLegalize;
 
-  unsigned CastEltSize = CastTy.getScalarType().getSizeInBits();
-  unsigned DstEltSize = DstTy.getScalarType().getSizeInBits();
+  unsigned CastEltSize = CastTy.getElementType().getSizeInBits();
+  unsigned DstEltSize = DstTy.getElementType().getSizeInBits();
   if (CastEltSize < DstEltSize)
     return UnableToLegalize;
 
