@@ -516,7 +516,7 @@ X86 Support
   all bextr intrinsics in bmiintrin.h
   all tzcnt intrinsics in bmiintrin.h
   all bzhi intrinsics in bmi2intrin.h
-  all bextr intrinsics in tbmintrin.h
+  all intrinsics in tbmintrin.h
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
