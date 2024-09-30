@@ -97,7 +97,7 @@ static void emitPassOptionsStruct(const Pass &pass, raw_ostream &os) {
     std::string type = opt.getType().str();
 
     if (opt.isListOption())
-      type = "::llvm::ArrayRef<" + type + ">";
+      type = "::llvm::SmallVector<" + type + ">";
 
     os.indent(2) << llvm::formatv("{0} {1}", type, opt.getCppVariableName());
 
