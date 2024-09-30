@@ -1073,7 +1073,7 @@ static ParseResult parseMembersIndex(OpAsmParser &parser,
     if (parser.parseInteger(value))
       return failure();
     shapeTmp++;
-    values.push_back(APInt(32, value));
+    values.push_back(APInt(32, value, /*isSigned=*/true));
     return success();
   };
 
