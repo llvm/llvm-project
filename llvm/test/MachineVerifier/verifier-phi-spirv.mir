@@ -1,0 +1,31 @@
+# RUN: llc -o - %s -mtriple=spirv-unknown-vulkan-compute -verify-machineinstrs -run-pass=none | FileCheck %s
+# REQUIRES: spirv-registered-target
+
+# This should cleanly pass the machine verifier
+---
+# CHECK-LABEL: name: func0
+# CHECK: %7:id = OpPhi %1, %5, %bb.1, %6, %bb.2
+name: func0
+tracksRegLiveness: true
+noPhis: false
+body: |
+  bb.0:
+    %0:type = OpTypeBool
+    %1:type = OpTypeInt 32, 0
+    %2:iid = OpFunctionParameter %1
+    %3:iid = OpFunctionParameter %1
+    %4:iid = OpIEqual %0, %2, %3
+    OpBranchConditional %4, %bb.1, %bb.2
+
+  bb.1:
+    %5:iid = OpLoad %1, %2
+    OpBranch %bb.3
+
+  bb.2:
+    %6:iid = OpLoad %1, %3
+    OpBranch %bb.3
+
+  bb.3:
+    %7:id = OpPhi %1, %5, %bb.1, %6, %bb.2
+...
+---
