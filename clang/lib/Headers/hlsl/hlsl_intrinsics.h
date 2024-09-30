@@ -379,6 +379,22 @@ template <typename T> constexpr float asfloat(T F) {
 }
 
 //===----------------------------------------------------------------------===//
+// asint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
+
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 
