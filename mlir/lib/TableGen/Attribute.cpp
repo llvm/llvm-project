@@ -229,6 +229,8 @@ bool EnumAttr::genSpecializedAttr() const {
   return def->getValueAsBit("genSpecializedAttr");
 }
 
+bool EnumAttr::genParser() const { return def->getValueAsBit("genParser"); }
+
 llvm::Record *EnumAttr::getBaseAttrClass() const {
   return def->getValueAsDef("baseAttrClass");
 }

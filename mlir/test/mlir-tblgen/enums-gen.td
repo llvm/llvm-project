@@ -101,3 +101,11 @@ def MyNonKeywordBitEnum: I32BitEnumAttr<"MyNonKeywordBitEnum", "An example bit e
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonKeywordBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
 // DECL:   return p << '"' << valueStr << '"';
+
+def NoParserEnum: I32BitEnumAttr<"NoParserEnum", "An example enum with no parser emitted",
+                           [None, Bit0, Bit1, Bit2, Bit3, BitGroup]> {
+  let genParser = 0;
+}
+
+// DECL-NOT: struct FieldParser<::NoParserEnum, ::NoParserEnum>
+// DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::NoParserEnum value)
