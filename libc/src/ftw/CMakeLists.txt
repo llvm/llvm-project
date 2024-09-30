@@ -5,7 +5,10 @@ add_entrypoint_object(
   HDRS
     ftw.h
   DEPENDS
+    libc.include.ftw
     libc.src.__support.FPUtil.fenv_impl
-  COMPILE_OPTIONS
-    -O2
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+
 )

@@ -11,7 +11,10 @@
 #include "src/__support/common.h"
 #include "src/__support/CPP/string.h"
 #include "src/errno/libc_errno.h"
+#include "src/fcntl/open.h"
+#include "src/unistd/close.h"
 
+#include <ftw.h>
 #include <stddef.h>
 #include <sys/stat.h>
 
@@ -73,7 +76,7 @@ int doMergedFtw(const cpp::string& dirPath, Func& fn, int fdLimit, int flags,
     if (stat(dirPath.c_str(), &statBuf) < 0) {
       if (!lstat(dirPath.c_str(), &statBuf)) {
         typeFlag = FTW_SLN; /* Symbolic link pointing to a nonexistent file. */
-      } else if (errno != EACCES) {
+      } else if (libc_errno != EACCES) {
         /* stat failed with an errror that is not Permission denied */
         return -1;
       } else {
@@ -125,7 +128,7 @@ int doMergedFtw(const cpp::string& dirPath, Func& fn, int fdLimit, int flags,
   if (!(flags & FTW_DEPTH)) {
     // Call the function on the directory.
     int directory_fd = open(dirPath.c_str(), O_RDONLY);
-    if (directory_fd < 0 && errno == EACCES) {
+    if (directory_fd < 0 && libc_errno == EACCES) {
       typeFlag = FTW_DNR; /* Directory can't be read. */
     }
     close(directory_fd);
