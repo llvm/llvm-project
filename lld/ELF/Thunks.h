@@ -13,6 +13,7 @@
 #include "Relocations.h"
 
 namespace lld::elf {
+struct Ctx;
 class Defined;
 class InputFile;
 class Symbol;
@@ -67,7 +68,7 @@ public:
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic
 // ThunkSection.
-Thunk *addThunk(const InputSection &isec, Relocation &rel);
+Thunk *addThunk(Ctx &, const InputSection &isec, Relocation &rel);
 
 void writePPC32PltCallStub(uint8_t *buf, uint64_t gotPltVA,
                            const InputFile *file, int64_t addend);
