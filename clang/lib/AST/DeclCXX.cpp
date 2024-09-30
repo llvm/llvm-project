@@ -1633,6 +1633,11 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   DeclarationName Name =
       RD.getASTContext().DeclarationNames.getCXXOperatorName(OO_Call);
 
+  DeclContext::lookup_result Calls = RD.lookup(Name);
+  assert(!Calls.empty() && "Missing lambda call operator!");
+  assert(allLookupResultsAreTheSame(Calls) &&
+         "More than one lambda call operator!");
+
   // If we have multiple call operators, we might be in a situation
   // where we merged this lambda with one from another module; in that
   // case, return our method (instead of that of the other lambda).
@@ -1646,21 +1651,19 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   //   template <typename>
   //   void f() {
   //     using T = int;      // We only instantiate B's version of this.
-  //     auto L = [](T) { }; // But A's call operator wants A's here.
+  //     auto L = [](T) { }; // But A's call operator would want A's here.
   //   }
   //
-  // To mitigate this, search our own decls first.
-  // FIXME: This feels like a hack; is there a better way of doing this?
-  for (CXXMethodDecl *M : RD.methods())
-    if (M->getDeclName() == Name)
-      return M;
+  // Walk the call operator’s redecl chain to find the one that belongs
+  // to this module.
+  Module *M = RD.getOwningModule();
+  for (Decl *D : Calls.front()->redecls()) {
+    auto *MD = cast<NamedDecl>(D);
+    if (MD->getOwningModule() == M)
+      return MD;
+  }
 
-  // Otherwise, do a full lookup to find external decls too.
-  DeclContext::lookup_result Calls = RD.lookup(Name);
-  assert(!Calls.empty() && "Missing lambda call operator!");
-  assert(allLookupResultsAreTheSame(Calls) &&
-         "More than one lambda call operator!");
-  return Calls.front();
+  llvm_unreachable("Couldn't find our call operator!");
 }
 
 FunctionTemplateDecl* CXXRecordDecl::getDependentLambdaCallOperator() const {
