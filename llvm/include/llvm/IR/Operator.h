@@ -15,7 +15,6 @@
 #define LLVM_IR_OPERATOR_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
@@ -352,17 +351,15 @@ public:
     case Instruction::Select:
     case Instruction::Call: {
       Type *Ty = V->getType();
-      TypeSwitch<Type *>(Ty)
-          .Case([&](StructType *StructTy) {
-            if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
-              return;
-            Ty = StructTy->elements().front();
-          })
-          .Case([&](ArrayType *ArrTy) {
-            do {
-              Ty = ArrTy->getElementType();
-            } while ((ArrTy = dyn_cast<ArrayType>(Ty)));
-          });
+      if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
+        if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
+          return false;
+        Ty = StructTy->elements().front();
+      } else if (ArrayType *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+        do {
+          Ty = ArrayTy->getElementType();
+        } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
+      }
       return Ty->isFPOrFPVectorTy();
     }
     default:
