@@ -11,7 +11,7 @@
 ; ASM-LABEL: amdhsa_kernarg_preload_4_implicit_6:
 ; ASM: .amdhsa_user_sgpr_count 10
 ; ASM: .amdhsa_next_free_sgpr 10
-; ASM: ; NumSgprs: 16
+; ASM: ; TotalNumSgprs: 16
 ; ASM: ; NumSGPRsForWavesPerEU: 16
 
 ; Test that we include preloaded SGPRs in the GRANULATED_WAVEFRONT_SGPR_COUNT
@@ -31,7 +31,7 @@ define amdgpu_kernel void @amdhsa_kernarg_preload_4_implicit_6(i128 inreg) { ret
 ; ASM-LABEL: amdhsa_kernarg_preload_8_implicit_2:
 ; ASM: .amdhsa_user_sgpr_count 10
 ; ASM: .amdhsa_next_free_sgpr 10
-; ASM: ; NumSgprs: 16
+; ASM: ; TotalNumSgprs: 16
 ; ASM: ; NumSGPRsForWavesPerEU: 16
 
 ; Only the kernarg_ptr is enabled so we should have 8 preload kernarg SGPRs, 2
@@ -47,7 +47,7 @@ define amdgpu_kernel void @amdhsa_kernarg_preload_8_implicit_2(i256 inreg) #0 { 
 ; ASM-LABEL: amdhsa_kernarg_preload_1_implicit_2:
 ; ASM: .amdhsa_user_sgpr_count 3
 ; ASM: .amdhsa_next_free_sgpr 3
-; ASM: ; NumSgprs: 9
+; ASM: ; TotalNumSgprs: 9
 ; ASM: ; NumSGPRsForWavesPerEU: 9
 
 ; 1 preload, 2 implicit, 6 extra. Rounds up to 16 SGPRs in the KD.
@@ -62,7 +62,7 @@ define amdgpu_kernel void @amdhsa_kernarg_preload_1_implicit_2(i32 inreg) #0 { r
 ; ASM-LABEL: amdhsa_kernarg_preload_0_implicit_2:
 ; ASM: .amdhsa_user_sgpr_count 2
 ; ASM: .amdhsa_next_free_sgpr 0
-; ASM: ; NumSgprs: 6
+; ASM: ; TotalNumSgprs: 6
 ; ASM: ; NumSGPRsForWavesPerEU: 6
 
 ; 0 preload kernarg SGPRs, 2 implicit, 6 extra. Rounds up to 8 SGPRs in the KD.
