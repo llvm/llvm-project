@@ -12371,6 +12371,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
     deps = [
         ":Analysis",
+        ":BytecodeOpInterface",
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
