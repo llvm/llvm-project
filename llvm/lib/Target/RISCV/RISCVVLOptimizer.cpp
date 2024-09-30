@@ -24,8 +24,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
 
-#include <algorithm>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-vl-optimizer"
@@ -91,18 +89,12 @@ struct OperandInfo {
 
   unsigned Log2EEW;
 
-  // true if this is a vector register that only uses element 0 of the register.
-  bool IsScalar;
-
   OperandInfo(RISCVII::VLMUL EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW),
-        IsScalar(false) {}
+      : S(State::Known), EMUL(RISCVVType::decodeVLMUL(EMUL)), Log2EEW(Log2EEW) {
+  }
 
   OperandInfo(std::pair<unsigned, bool> EMUL, unsigned Log2EEW)
-      : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW), IsScalar(false) {}
-
-  OperandInfo(unsigned Log2EEW)
-      : S(State::Known), EMUL(std::nullopt), Log2EEW(Log2EEW), IsScalar(true) {}
+      : S(State::Known), EMUL(EMUL), Log2EEW(Log2EEW) {}
 
   OperandInfo() : S(State::Unknown) {}
 
@@ -112,11 +104,6 @@ struct OperandInfo {
   static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
     assert(A.isKnown() && B.isKnown() && "Both operands must be known");
 
-    if (A.IsScalar != B.IsScalar)
-      return false;
-    if (A.IsScalar && B.IsScalar)
-      return A.Log2EEW == B.Log2EEW;
-
     return A.Log2EEW == B.Log2EEW && A.EMUL->first == B.EMUL->first &&
            A.EMUL->second == B.EMUL->second;
   }
@@ -124,10 +111,6 @@ struct OperandInfo {
   void print(raw_ostream &OS) const {
     if (isUnknown()) {
       OS << "Unknown";
-      return;
-    }
-    if (IsScalar) {
-      OS << "EEW:" << (1 << Log2EEW);
       return;
     }
     assert(EMUL && "Expected EMUL to have value");
@@ -191,16 +174,6 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
 } // end namespace RISCVVType
 } // end namespace llvm
 
-static bool isOpN(const MachineOperand &MO, unsigned OpN) {
-  const MachineInstr &MI = *MO.getParent();
-  bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
-
-  if (HasPassthru)
-    return MO.getOperandNo() == OpN + 1;
-
-  return MO.getOperandNo() == OpN;
-}
-
 /// Dest has EEW=SEW and EMUL=LMUL. Source EEW=SEW/Factor (i.e. F2 => EEW/2).
 /// Source has EMUL=(EEW/SEW)*LMUL. LMUL and SEW comes from TSFlags of MI.
 static OperandInfo getIntegerExtensionOperandInfo(unsigned Factor,
@@ -257,7 +230,6 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     return {};
 
   bool IsMODef = MO.getOperandNo() == 0;
-  bool IsOp1 = isOpN(MO, 1);
 
   // All mask operands have EEW=1, EMUL=(EEW/SEW)*LMUL
   if (isMaskOperand(MI, MO, MRI))
@@ -500,6 +472,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWADD_WX:
   case RISCV::VWSUB_WV:
   case RISCV::VWSUB_WX: {
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -549,6 +523,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNSRA_WI:
   case RISCV::VNSRA_WV:
   case RISCV::VNSRA_WX: {
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
     bool TwoTimes = IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -630,6 +606,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VWMACCUS_VX: {
     // Operand 0 is destination as a def and Operand 1 is destination as a use
     // due to SSA.
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
     bool TwoTimes = IsMODef || IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -701,6 +679,8 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VNCLIP_WI:
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX: {
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
+    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 1 : MO.getOperandNo() == 2;
     bool TwoTimes = !IsMODef && IsOp1;
     unsigned Log2EEW = TwoTimes ? MILog2SEW + 1 : MILog2SEW;
     RISCVII::VLMUL EMUL =
@@ -864,7 +844,8 @@ static bool isVectorOpUsedAsScalarOp(MachineOperand &MO) {
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
-    return isOpN(MO, 2);
+    bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI->getDesc());
+    return HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 3;
   }
   default:
     return false;
