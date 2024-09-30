@@ -46,7 +46,7 @@ struct PhdrEntry {
 
 void addReservedSymbols(Ctx &ctx);
 bool includeInSymtab(const Symbol &b);
-unsigned getSectionRank(OutputSection &osec);
+unsigned getSectionRank(Ctx &, OutputSection &osec);
 
 template <class ELFT> uint32_t calcMipsEFlags();
 

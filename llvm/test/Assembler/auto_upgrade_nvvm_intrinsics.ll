@@ -35,6 +35,15 @@ declare i32 @llvm.nvvm.rotate.b32(i32, i32)
 declare i64 @llvm.nvvm.rotate.right.b64(i64, i32)
 declare i64 @llvm.nvvm.rotate.b64(i64, i32)
 
+declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
+declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
+declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
+declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
+declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
+declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
+declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
+declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
+
 ; CHECK-LABEL: @simple_upgrade
 define void @simple_upgrade(i32 %a, i64 %b, i16 %c) {
 ; CHECK: call i32 @llvm.bitreverse.i32(i32 %a)
@@ -154,5 +163,31 @@ define void @rotate(i32 %a, i64 %b) {
   %r1 = call i32 @llvm.nvvm.rotate.b32(i32 %a, i32 6)
   %r2 = call i64 @llvm.nvvm.rotate.right.b64(i64 %b, i32 7)
   %r3 = call i64 @llvm.nvvm.rotate.b64(i64 %b, i32 8)
+  ret void
+}
+
+; CHECK-LABEL: @addrspacecast
+define void @addrspacecast(ptr %p0) {
+; CHECK: %1 = addrspacecast ptr %p0 to ptr addrspace(1)
+; CHECK: %2 = addrspacecast ptr addrspace(1) %1 to ptr
+; CHECK: %3 = addrspacecast ptr %2 to ptr addrspace(3)
+; CHECK: %4 = addrspacecast ptr addrspace(3) %3 to ptr
+; CHECK: %5 = addrspacecast ptr %4 to ptr addrspace(4)
+; CHECK: %6 = addrspacecast ptr addrspace(4) %5 to ptr
+; CHECK: %7 = addrspacecast ptr %6 to ptr addrspace(5)
+; CHECK: %8 = addrspacecast ptr addrspace(5) %7 to ptr
+;
+  %p1 = call ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr %p0)
+  %p2 = call ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1) %p1)
+
+  %p3 = call ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr %p2)
+  %p4 = call ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3) %p3)
+
+  %p5 = call ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr %p4)
+  %p6 = call ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4) %p5)
+
+  %p7 = call ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr %p6)
+  %p8 = call ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5) %p7)
+
   ret void
 }

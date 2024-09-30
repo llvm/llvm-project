@@ -938,6 +938,41 @@ define <16 x i32> @zext_mulhuw_v16i16_lshr(<16 x i16> %a, <16 x i16> %b) {
 }
 
 ; PR109790
+define void @PR109790(ptr sret([32 x i8]) %ret, ptr %a) {
+; SSE-LABEL: PR109790:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; SSE-NEXT:    movdqa (%rsi), %xmm1
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    pand 16(%rsi), %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [64536,64536,64536,64536,64536,64536,64536,64536]
+; SSE-NEXT:    pmulhw %xmm2, %xmm0
+; SSE-NEXT:    pmulhw %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, (%rdi)
+; SSE-NEXT:    movdqa %xmm0, 16(%rdi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR109790:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq %rdi, %rax
+; AVX-NEXT:    vmovdqa (%rsi), %ymm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536,64536]
+; AVX-NEXT:    vmovdqa %ymm0, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %load = load <16 x i16>, ptr %a, align 32
+  %and = and <16 x i16> %load, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>
+  %ext = zext nneg <16 x i16> %and to <16 x i32>
+  %mul = mul nsw <16 x i32> %ext, <i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000, i32 -1000>
+  %srl = lshr <16 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %res = trunc nuw <16 x i32> %srl to <16 x i16>
+  store <16 x i16> %res, ptr %ret, align 32
+  ret void
+}
+
+; PR109790
 define <16 x i16> @zext_mulhuw_v16i16_negative_constant(<16 x i16> %a) {
 ; SSE-LABEL: zext_mulhuw_v16i16_negative_constant:
 ; SSE:       # %bb.0:
