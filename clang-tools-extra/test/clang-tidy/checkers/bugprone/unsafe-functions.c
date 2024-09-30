@@ -109,13 +109,13 @@ struct tm *localtime(const struct tm *tm);
 
 void f4(const time_t *Timer) {
   ctime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_r' should be used instead
   // no-warning WITHOUT-ANNEX-K
 
   localtime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_r' should be used instead
   // no-warning WITHOUT-ANNEX-K
 }
 
