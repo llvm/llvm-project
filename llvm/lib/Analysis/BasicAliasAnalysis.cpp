@@ -117,7 +117,8 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size. The underlying object is expected to be passed as the first argument.
+/// Size. Bails out early unless the root object is passed as the first
+/// parameter.
 static bool isObjectSmallerThan(const Value *V, TypeSize Size,
                                 const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
@@ -139,8 +140,9 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   //
   // In the context of c3, the "object" refers to the chunk of memory being
   // allocated. So, the "object" has 100 bytes, and q points to the middle the
-  // "object". However, getUnderlyingObject() is first called on q to get p, and
-  // p is passed to isObjectSmallerThan() as the 1st parameter.
+  // "object". However, unless p, the root object, is passed as the first
+  // parameter, the call to isIdentifiedObject() makes isObjectSmallerThan()
+  // bail out early.
   if (!isIdentifiedObject(V))
     return false;
 
