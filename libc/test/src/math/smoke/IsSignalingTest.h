@@ -16,7 +16,7 @@
 #include "hdr/math_macros.h"
 
 template <typename T>
-class IssignalingTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+class IsSignalingTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -51,7 +51,7 @@ public:
 };
 
 #define LIST_ISSIGNALING_TESTS(T, func)                                        \
-  using LlvmLibcIsSignalingTest = IssignalingTest<T>;                          \
+  using LlvmLibcIsSignalingTest = IsSignalingTest<T>;                          \
   TEST_F(LlvmLibcIsSignalingTest, SpecialNumbers) {                            \
     testSpecialNumbers(&func);                                                 \
   }                                                                            \
