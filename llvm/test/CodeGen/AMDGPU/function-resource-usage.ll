@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 < %s | FileCheck -check-prefix=GCN %s
-; XFAIL: *
 
 ; Functions that don't make calls should have constants as its resource usage as no resource information has to be propagated.
 

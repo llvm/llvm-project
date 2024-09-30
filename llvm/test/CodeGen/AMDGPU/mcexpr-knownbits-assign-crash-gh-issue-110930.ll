@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck %s
 
-; XFAIL: *
-
 ; Previously, this would hit an assertion on incompatible comparison between
 ; APInts due to BitWidth differences. This was due to assignment of DenseMap
 ; value using another value within that same DenseMap which results in a

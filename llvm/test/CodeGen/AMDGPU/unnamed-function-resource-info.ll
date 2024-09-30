@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck %s
-; XFAIL: *
+
 ; CHECK-LABEL: __unnamed_1:
 ; CHECK: .set __unnamed_1.num_vgpr, 0
 ; CHECK: .set __unnamed_1.num_agpr, 0

@@ -152,13 +152,7 @@
 ; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
-; GCN-O0-NEXT:    Function register usage analysis
-; GCN-O0-NEXT:    CallGraph Construction
-; GCN-O0-NEXT:    Call Graph SCC Pass Manager
-; GCN-O0-NEXT:      DummyCGSCCPass
-; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
-; GCN-O0-NEXT:        Machine Optimization Remark Emitter
+; GCN-O0-NEXT:        Function register usage analysis
 ; GCN-O0-NEXT:        AMDGPU Assembly Printer
 ; GCN-O0-NEXT:        Free MachineFunction
 
@@ -438,6 +432,7 @@
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
+<<<<<<< HEAD
 ; GCN-O1-NEXT:    Function register usage analysis
 ; GCN-O1-NEXT:    CallGraph Construction
 ; GCN-O1-NEXT:    Call Graph SCC Pass Manager
@@ -445,16 +440,9 @@
 ; GCN-O1-NEXT:      FunctionPass Manager
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
-; GCN-O1-NEXT:        AMDGPU Assembly Printer
-; GCN-O1-NEXT:        Free MachineFunction
-
-; GCN-O1-OPTS:Target Library Information
-; GCN-O1-OPTS-NEXT:Target Pass Configuration
-; GCN-O1-OPTS-NEXT:Machine Module Information
-; GCN-O1-OPTS-NEXT:Target Transform Information
-; GCN-O1-OPTS-NEXT:Assumption Cache Tracker
+=======
+; GCN-O1-NEXT:        Function register usage analysis
 ; GCN-O1-OPTS-NEXT:Profile summary info
-; GCN-O1-OPTS-NEXT:AMDGPU Address space based Alias Analysis
 ; GCN-O1-OPTS-NEXT:External Alias Analysis
 ; GCN-O1-OPTS-NEXT:Type-Based Alias Analysis
 ; GCN-O1-OPTS-NEXT:Scoped NoAlias Alias Analysis
@@ -752,6 +740,7 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
+<<<<<<< HEAD
 ; GCN-O1-OPTS-NEXT:    Function register usage analysis
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
 ; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
@@ -759,6 +748,9 @@
 ; GCN-O1-OPTS-NEXT:      FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
+=======
+; GCN-O1-OPTS-NEXT:        Function register usage analysis
+>>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:        Free MachineFunction
 
@@ -1072,6 +1064,7 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
+<<<<<<< HEAD
 ; GCN-O2-NEXT:    Function register usage analysis
 ; GCN-O2-NEXT:    CallGraph Construction
 ; GCN-O2-NEXT:    Call Graph SCC Pass Manager
@@ -1079,6 +1072,9 @@
 ; GCN-O2-NEXT:      FunctionPass Manager
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
+=======
+; GCN-O2-NEXT:        Function register usage analysis
+>>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O2-NEXT:        AMDGPU Assembly Printer
 ; GCN-O2-NEXT:        Free MachineFunction
 
@@ -1405,6 +1401,7 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
+<<<<<<< HEAD
 ; GCN-O3-NEXT:    Function register usage analysis
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
@@ -1412,6 +1409,9 @@
 ; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
+=======
+; GCN-O3-NEXT:        Function register usage analysis
+>>>>>>> c897c13dde3b ([AMDGPU] Convert AMDGPUResourceUsageAnalysis pass from Module to MF pass (#102913))
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
 

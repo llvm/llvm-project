@@ -14,7 +14,7 @@
 ; GCN-DAG: v_mov_b32_e32 [[TREE:v[0-9]+]], 3
 ; GCN:     ds_write_b8 [[NULL]], [[TREE]]
 define void @f0() {
-; OPT-LABEL: @f0(
+; OPT-LABEL: @f0() {
 ; OPT-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.module.lds, align 1
 ; OPT-NEXT:    ret void
 ;
