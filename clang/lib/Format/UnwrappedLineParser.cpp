@@ -2557,7 +2557,6 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       break;
     case tok::r_paren: {
       auto *Prev = LeftParen->Previous;
-      const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
       if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Next = Tokens->peekNextToken();
@@ -2566,6 +2565,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         const bool CommaSeparated =
             !DoubleParens && Prev && Prev->isOneOf(tok::l_paren, tok::comma) &&
             Next && Next->isOneOf(tok::comma, tok::r_paren);
+        const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
         const bool Excluded =
             PrevPrev &&
             (PrevPrev->isOneOf(tok::kw___attribute, tok::kw_decltype) ||
@@ -2589,8 +2589,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         if (Prev->is(TT_TypenameMacro)) {
           LeftParen->setFinalizedType(TT_TypeDeclarationParen);
           FormatTok->setFinalizedType(TT_TypeDeclarationParen);
-        } else if (Prev->is(tok::greater) && FormatTok->Previous == LeftParen &&
-                   PrevPrev && PrevPrev->isNot(tok::kw_operator)) {
+        } else if (Prev->is(tok::greater) && FormatTok->Previous == LeftParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
         }
       }
