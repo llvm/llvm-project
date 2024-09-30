@@ -428,25 +428,63 @@ AST_MATCHER(ArraySubscriptExpr, isSafeArraySubscript) {
   //    already duplicated
   //  - call both from Sema and from here
 
-  const auto *BaseDRE =
-      dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts());
-  if (!BaseDRE)
+  if (const auto *BaseDRE =
+          dyn_cast<DeclRefExpr>(Node.getBase()->IgnoreParenImpCasts())) {
+    if (!BaseDRE->getDecl())
+      return false;
+    if (const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
+            BaseDRE->getDecl()->getType())) {
+      if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
+        const APInt ArrIdx = IdxLit->getValue();
+        // FIXME: ArrIdx.isNegative() we could immediately emit an error as
+        // that's a bug
+        if (ArrIdx.isNonNegative() &&
+            ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+          return true;
+      }
+    }
+  }
+
+  if (const auto *BaseSL =
+          dyn_cast<StringLiteral>(Node.getBase()->IgnoreParenImpCasts())) {
+    if (const auto *CATy =
+            Finder->getASTContext().getAsConstantArrayType(BaseSL->getType())) {
+      if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
+        const APInt ArrIdx = IdxLit->getValue();
+        // FIXME: ArrIdx.isNegative() we could immediately emit an error as
+        // that's a bug
+        if (ArrIdx.isNonNegative() &&
+            ArrIdx.getLimitedValue() < CATy->getLimitedSize())
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+AST_MATCHER(BinaryOperator, isSafePtrArithmetic) {
+  if (Node.getOpcode() != BinaryOperatorKind::BO_Add)
     return false;
-  if (!BaseDRE->getDecl())
+
+  const auto *LHSDRE = dyn_cast<DeclRefExpr>(Node.getLHS()->IgnoreImpCasts());
+  if (!LHSDRE)
     return false;
+
   const auto *CATy = Finder->getASTContext().getAsConstantArrayType(
-      BaseDRE->getDecl()->getType());
+      LHSDRE->getDecl()->getType());
   if (!CATy)
     return false;
 
-  if (const auto *IdxLit = dyn_cast<IntegerLiteral>(Node.getIdx())) {
-    const APInt ArrIdx = IdxLit->getValue();
-    // FIXME: ArrIdx.isNegative() we could immediately emit an error as that's a
-    // bug
-    if (ArrIdx.isNonNegative() &&
-        ArrIdx.getLimitedValue() < CATy->getLimitedSize())
-      return true;
-  }
+  const auto *RHSIntLit = dyn_cast<IntegerLiteral>(Node.getRHS());
+  if (!RHSIntLit)
+    return false;
+
+  const APInt BufferOffset = RHSIntLit->getValue();
+
+  if (BufferOffset.isNonNegative() &&
+      BufferOffset.getLimitedValue() < CATy->getLimitedSize())
+    return true;
 
   return false;
 }
@@ -1195,7 +1233,8 @@ public:
               hasLHS(expr(hasPointerType()).bind(PointerArithmeticPointerTag)),
               hasRHS(HasIntegerType));
 
-    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight))
+    return stmt(binaryOperator(anyOf(PtrAtLeft, PtrAtRight),
+                               unless(isSafePtrArithmetic()))
                     .bind(PointerArithmeticTag));
   }
 
