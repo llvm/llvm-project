@@ -745,8 +745,8 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
   case Intrinsic::canonicalize: {
-    InstRate =
-        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
+    assert(SLT != MVT::f64);
+    InstRate = getFullRateInstrCost();
     break;
   }
   case Intrinsic::uadd_sat:
@@ -1045,7 +1045,6 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   switch (IID) {
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
@@ -1107,7 +1106,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
                              {NewV, MaskOp});
   }
-  case Intrinsic::amdgcn_flat_atomic_fadd:
   case Intrinsic::amdgcn_flat_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fmin:
   case Intrinsic::amdgcn_flat_atomic_fmax_num:

@@ -433,6 +433,15 @@ static void ProcessAPINotes(Sema &S, VarDecl *D,
                   metadata);
 }
 
+/// Process API notes for a C field.
+static void ProcessAPINotes(Sema &S, FieldDecl *D,
+                            const api_notes::FieldInfo &Info,
+                            VersionedInfoMetadata metadata) {
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info),
+                  metadata);
+}
+
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                             const api_notes::ObjCPropertyInfo &Info,
@@ -1057,6 +1066,17 @@ void Sema::ProcessAPINotes(Decl *D) {
             auto Info =
                 Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
+          }
+        }
+      }
+    }
+
+    if (auto Field = dyn_cast<FieldDecl>(D)) {
+      if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
+        for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+          if (auto Context = UnwindTagContext(TagContext, APINotes)) {
+            auto Info = Reader->lookupField(Context->id, Field->getName());
+            ProcessVersionedAPINotes(*this, Field, Info);
           }
         }
       }

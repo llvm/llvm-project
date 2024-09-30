@@ -1,0 +1,83 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Merge a binary file (e.g., a linked executable) having concatenated cgdata (__llvm_outline)
+
+RUN: split-file %s %t
+
+# Synthesize two sets of raw cgdata without the header (24 byte) from the indexed cgdata.
+# Concatenate them in merge-concat.ll
+RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
+RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat-template.ll > %t/merge-concat-template-2.ll
+RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
+RUN: od -t x1 -j 24 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
+RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat-template-2.ll > %t/merge-concat.ll
+
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
+RUN: llvm-cgdata --merge %t/merge-concat.o -o %t/merge-concat.cgdata
+RUN: llvm-cgdata --show %t/merge-concat.cgdata | FileCheck %s
+CHECK: Outlined hash tree:
+CHECK-NEXT:  Total Node Count: 4
+CHECK-NEXT:  Terminal Node Count: 2
+CHECK-NEXT:  Depth: 2
+
+RUN: llvm-cgdata --convert %t/merge-concat.cgdata | FileCheck %s --check-prefix=TREE
+TREE: # Outlined stable hash tree
+TREE-NEXT: :outlined_hash_tree
+TREE-NEXT: ---
+TREE-NEXT: 0:
+TREE-NEXT:   Hash:            0x0
+TREE-NEXT:   Terminals:       0
+TREE-NEXT:   SuccessorIds:    [ 1 ]
+TREE-NEXT: 1:
+TREE-NEXT:   Hash:            0x1
+TREE-NEXT:   Terminals:       0
+TREE-NEXT:   SuccessorIds:    [ 2, 3 ]
+TREE-NEXT: 2:
+TREE-NEXT:   Hash:            0x3
+TREE-NEXT:   Terminals:       5
+TREE-NEXT:   SuccessorIds:    [  ]
+TREE-NEXT: 3:
+TREE-NEXT:   Hash:            0x2
+TREE-NEXT:   Terminals:       4
+TREE-NEXT:   SuccessorIds:    [  ]
+TREE-NEXT: ...
+
+;--- raw-1.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x2
+  Terminals:       4
+  SuccessorIds:    [  ]
+...
+
+;--- raw-2.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x3
+  Terminals:       5
+  SuccessorIds:    [  ]
+...
+
+;--- merge-concat-template.ll
+
+; In an linked executable (as opposed to an object file), cgdata in __llvm_outline might be concatenated. Although this is not a typical workflow, we simply support this case to parse cgdata that is concatenated. In other words, the following two trees are encoded back-to-back in a binary format.
+@.data1 = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"
+@.data2 = private unnamed_addr constant [72 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_outline"

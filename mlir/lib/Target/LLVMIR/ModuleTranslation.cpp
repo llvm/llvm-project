@@ -195,7 +195,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
@@ -205,7 +204,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-P" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutGlobalMemorySpaceKey) {
@@ -215,7 +213,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-G" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
@@ -225,7 +222,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (space == 0)
         continue;
       layoutStream << "-A" << space;
-      layoutStream.flush();
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutStackAlignmentKey) {
@@ -235,7 +231,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (alignment == 0)
         continue;
       layoutStream << "-S" << alignment;
-      layoutStream.flush();
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;
@@ -293,7 +288,6 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     if (failed(result))
       return failure();
   }
-  layoutStream.flush();
   StringRef layoutSpec(llvmDataLayout);
   if (layoutSpec.starts_with("-"))
     layoutSpec = layoutSpec.drop_front();
@@ -557,20 +551,21 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return llvm::UndefValue::get(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
-    if (!arrayAttr || arrayAttr.size() != 2) {
-      emitError(loc, "expected struct type to be a complex number");
+    if (!arrayAttr) {
+      emitError(loc, "expected an array attribute for a struct constant");
       return nullptr;
     }
-    llvm::Type *elementType = structType->getElementType(0);
-    llvm::Constant *real =
-        getLLVMConstant(elementType, arrayAttr[0], loc, moduleTranslation);
-    if (!real)
-      return nullptr;
-    llvm::Constant *imag =
-        getLLVMConstant(elementType, arrayAttr[1], loc, moduleTranslation);
-    if (!imag)
-      return nullptr;
-    return llvm::ConstantStruct::get(structType, {real, imag});
+    SmallVector<llvm::Constant *> structElements;
+    structElements.reserve(structType->getNumElements());
+    for (auto [elemType, elemAttr] :
+         zip_equal(structType->elements(), arrayAttr)) {
+      llvm::Constant *element =
+          getLLVMConstant(elemType, elemAttr, loc, moduleTranslation);
+      if (!element)
+        return nullptr;
+      structElements.push_back(element);
+    }
+    return llvm::ConstantStruct::get(structType, structElements);
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
@@ -947,6 +942,8 @@ LogicalResult ModuleTranslation::convertBlockImpl(Block &bb,
       if (!isCompatibleType(wrappedType))
         return emitError(bb.front().getLoc(),
                          "block argument does not have an LLVM type");
+      builder.SetCurrentDebugLocation(
+          debugTranslation->translateLoc(arg.getLoc(), subprogram));
       llvm::Type *type = convertType(wrappedType);
       llvm::PHINode *phi = builder.CreatePHI(type, numPredecessors);
       mapValue(arg, phi);
@@ -1018,7 +1015,6 @@ LogicalResult ModuleTranslation::convertGlobals() {
     }
 
     auto linkage = convertLinkageToLLVM(op.getLinkage());
-    auto addrSpace = op.getAddrSpace();
 
     // LLVM IR requires constant with linkage other than external or weak
     // external to have initializers. If MLIR does not provide an initializer,
@@ -1034,7 +1030,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
         /*InsertBefore=*/nullptr,
         op.getThreadLocal_() ? llvm::GlobalValue::GeneralDynamicTLSModel
                              : llvm::GlobalValue::NotThreadLocal,
-        addrSpace);
+        op.getAddrSpace(), op.getExternallyInitialized());
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
       auto selectorOp = cast<ComdatSelectorOp>(

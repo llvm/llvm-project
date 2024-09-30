@@ -902,9 +902,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vmseq.vv v0, v12, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, tu, mu
 ; CHECK-NEXT:    vle16.v v8, (zero), v0.t
-; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
@@ -1073,9 +1072,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_same_passthru(<vscale x 2 x i32> %pa
 define <vscale x 2 x i32> @vmerge_smaller_vl_different_passthru(<vscale x 2 x i32> %pt1, <vscale x 2 x i32> %pt2, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_different_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vadd.vv v8, v10, v11
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

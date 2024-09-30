@@ -1014,10 +1014,8 @@ void DWARFVerifier::verifyDebugLineRows() {
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FullPath);
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
-      auto It = FullPathMap.find(FullPath);
-      if (It == FullPathMap.end())
-        FullPathMap[FullPath] = FileIndex;
-      else if (It->second != FileIndex && DumpOpts.Verbose) {
+      auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
+      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
         warn() << ".debug_line["
                << format("0x%08" PRIx64,
                          *toSectionOffset(Die.find(DW_AT_stmt_list)))
@@ -1518,8 +1516,7 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
         error() << formatv("NameIndex @ {0:x}: Indexing multiple compile units "
                            "and abbreviation {1:x} has no DW_IDX_compile_unit "
                            "or DW_IDX_type_unit attribute.\n",
-                           NI.getUnitOffset(), Abbrev.Code,
-                           dwarf::DW_IDX_compile_unit);
+                           NI.getUnitOffset(), Abbrev.Code);
       });
       ++NumErrors;
     }

@@ -319,7 +319,6 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
       OS << "\n\n";
       printDiag(OS, Note);
     }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 
@@ -335,7 +334,6 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
     OS << "\n\n";
     printDiag(OS, Main);
   }
-  OS.flush();
   return capitalize(std::move(Result));
 }
 

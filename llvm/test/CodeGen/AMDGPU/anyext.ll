@@ -152,7 +152,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 0x8000, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x8001, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -164,7 +164,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
-; GFX8-NEXT:    v_mov_b32_e32 v1, 0x8000
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x8001
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
@@ -179,7 +179,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x80018001, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, v1, 0, v0
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -188,7 +188,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 bb:
   %tmp = load i16, ptr addrspace(1) undef, align 2
   %tmp2 = insertelement <2 x i16> undef, i16 %tmp, i32 1
-  %tmp4 = and <2 x i16> %tmp2, <i16 -32768, i16 -32768>
+  %tmp4 = and <2 x i16> %tmp2, <i16 -32767, i16 -32767>
   %tmp5 = zext <2 x i16> %tmp4 to <2 x i32>
   %tmp6 = shl nuw <2 x i32> %tmp5, <i32 16, i32 16>
   %tmp7 = or <2 x i32> zeroinitializer, %tmp6

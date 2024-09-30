@@ -932,3 +932,119 @@ define i1 @usub_uge_fail(i8 %x, i8 %y) {
   %cmp = icmp uge i8 %sat, %x
   ret i1 %cmp
 }
+
+define i1 @icmp_ult_uaddsat_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ult_uaddsat_add(
+; CHECK-NEXT:    ret i1 false
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  %add = add i32 %x, %y
+  %cmp = icmp ult i32 %uaddsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_uge_uaddsat_add(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_uge_uaddsat_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  %add = add i32 %x, %y
+  %cmp = icmp uge i32 %uaddsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_uaddsat_add_commuted1(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ugt_uaddsat_add_commuted1(
+; CHECK-NEXT:    ret i1 false
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  %add = add i32 %x, %y
+  %cmp = icmp ugt i32 %add, %uaddsat
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_uaddsat_add_commuted2(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ult_uaddsat_add_commuted2(
+; CHECK-NEXT:    ret i1 false
+;
+  %xx = mul i32 %x, 998244353
+  %yy = mul i32 %y, 998244353
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %xx, i32 %yy)
+  %add = add i32 %yy, %xx ; thwart complexity-based canonicalization
+  %cmp = icmp ult i32 %uaddsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_ule_usubsat_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ule_usubsat_sub(
+; CHECK-NEXT:    ret i1 true
+;
+  %usubsat = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
+  %add = sub i32 %x, %y
+  %cmp = icmp ule i32 %usubsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_usubsat_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ugt_usubsat_sub(
+; CHECK-NEXT:    ret i1 false
+;
+  %usubsat = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
+  %add = sub i32 %x, %y
+  %cmp = icmp ugt i32 %usubsat, %add
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @icmp_ult_uaddsat_add_mismatch(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @icmp_ult_uaddsat_add_mismatch(
+; CHECK-NEXT:    [[UADDSAT:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Z:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UADDSAT]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %z)
+  %add = add i32 %x, %y
+  %cmp = icmp ult i32 %uaddsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_uaddsat_add_wrong_pred(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ult_uaddsat_add_wrong_pred(
+; CHECK-NEXT:    [[UADDSAT:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[UADDSAT]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  %add = add i32 %x, %y
+  %cmp = icmp ule i32 %uaddsat, %add
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_uaddsat_add_wrong_op(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ult_uaddsat_add_wrong_op(
+; CHECK-NEXT:    [[UADDSAT:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UADDSAT]], [[SUB]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %uaddsat = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %y)
+  %sub = sub i32 %x, %y
+  %cmp = icmp ult i32 %uaddsat, %sub
+  ret i1 %cmp
+}
+
+define i1 @icmp_ule_usubsat_sub_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @icmp_ule_usubsat_sub_commuted(
+; CHECK-NEXT:    [[USUBSAT:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[USUBSAT]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %usubsat = call i32 @llvm.usub.sat.i32(i32 %x, i32 %y)
+  %add = sub i32 %y, %x
+  %cmp = icmp ule i32 %usubsat, %add
+  ret i1 %cmp
+}

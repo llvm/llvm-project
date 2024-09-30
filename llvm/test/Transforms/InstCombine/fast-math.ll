@@ -65,7 +65,7 @@ define double @fold3_reassoc_nsz(double %f1) {
 define double @fold3_reassoc(double %f1) {
 ; CHECK-LABEL: @fold3_reassoc(
 ; CHECK-NEXT:    [[T1:%.*]] = fmul reassoc double [[F1:%.*]], 5.000000e+00
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc double [[T1]], [[F1]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc double [[F1]], [[T1]]
 ; CHECK-NEXT:    ret double [[T2]]
 ;
   %t1 = fmul reassoc double 5.000000e+00, %f1
@@ -175,7 +175,7 @@ define float @fold6_reassoc_nsz(float %f1) {
 define float @fold6_reassoc(float %f1) {
 ; CHECK-LABEL: @fold6_reassoc(
 ; CHECK-NEXT:    [[T1:%.*]] = fadd reassoc float [[F1:%.*]], [[F1]]
-; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[T1]], [[F1]]
+; CHECK-NEXT:    [[T2:%.*]] = fadd reassoc float [[F1]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc float [[T2]], [[F1]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
@@ -506,7 +506,7 @@ define float @fold16(float %x, float %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y]]
 ; CHECK-NEXT:    [[R_P:%.*]] = select i1 [[CMP]], float [[Y]], float [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_P]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[X]], [[R_P]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp = fcmp ogt float %x, %y
@@ -709,13 +709,15 @@ define double @sqrt_intrinsic_three_args5(double %x, double %y) {
   ret double %sqrt
 }
 
-define double @sqrt_intrinsic_three_args6(double %x, double %y) {
+define double @sqrt_intrinsic_three_args6(double %x, ptr %yp) {
 ; CHECK-LABEL: @sqrt_intrinsic_three_args6(
+; CHECK-NEXT:    [[Y:%.*]] = load double, ptr [[YP:%.*]], align 8
 ; CHECK-NEXT:    [[FABS:%.*]] = call fast double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y:%.*]])
+; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[Y]])
 ; CHECK-NEXT:    [[SQRT:%.*]] = fmul fast double [[FABS]], [[SQRT1]]
 ; CHECK-NEXT:    ret double [[SQRT]]
 ;
+  %y = load double, ptr %yp ; thwart complexity-based canonicalization
   %mul = fmul fast double %x, %x
   %mul2 = fmul fast double %y, %mul
   %sqrt = call fast double @llvm.sqrt.f64(double %mul2)

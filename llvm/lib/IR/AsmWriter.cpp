@@ -3488,9 +3488,9 @@ void AssemblyWriter::printTypeIdInfo(
         continue;
       }
       // Print all type id that correspond to this GUID.
-      for (auto It = TidIter.first; It != TidIter.second; ++It) {
+      for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
         Out << FS;
-        auto Slot = Machine.getTypeIdSlot(It->second.first);
+        auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
         assert(Slot != -1);
         Out << "^" << Slot;
       }
@@ -3529,10 +3529,10 @@ void AssemblyWriter::printVFuncId(const FunctionSummary::VFuncId VFId) {
   }
   // Print all type id that correspond to this GUID.
   FieldSeparator FS;
-  for (auto It = TidIter.first; It != TidIter.second; ++It) {
+  for (const auto &[GUID, TypeIdPair] : make_range(TidIter)) {
     Out << FS;
     Out << "vFuncId: (";
-    auto Slot = Machine.getTypeIdSlot(It->second.first);
+    auto Slot = Machine.getTypeIdSlot(TypeIdPair.first);
     assert(Slot != -1);
     Out << "^" << Slot;
     Out << ", offset: " << VFId.Offset;

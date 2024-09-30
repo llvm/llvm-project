@@ -807,7 +807,7 @@ def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 ////////////////////////////////////////////////////////////////////////////////
 
 def JWriteVecExtractF128: SchedWriteRes<[JFPU01, JFPX]>;
-def : InstRW<[JWriteVecExtractF128], (instrs VEXTRACTF128rr)>;
+def : InstRW<[JWriteVecExtractF128], (instrs VEXTRACTF128rri)>;
 
 def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let Latency = 6;
@@ -930,7 +930,7 @@ def JWriteVPERM2F128 : SchedWriteVariant<[
   SchedVar<MCSchedPredicate<ZeroIdiomVPERMPredicate>, [JWriteZeroIdiomYmm]>,
   SchedVar<NoSchedPred,                               [WriteFShuffle256]>
 ]>;
-def : InstRW<[JWriteVPERM2F128], (instrs VPERM2F128rr)>;
+def : InstRW<[JWriteVPERM2F128], (instrs VPERM2F128rri)>;
 
 // This write is used for slow LEA instructions.
 def JWrite3OpsLEA : SchedWriteRes<[JALU1, JSAGU]> {
@@ -1008,7 +1008,7 @@ def : IsZeroIdiomFunction<[
     VXORPSYrr, VXORPDYrr, VANDNPSYrr, VANDNPDYrr
   ], ZeroIdiomPredicate>,
 
-  DepBreakingClass<[ VPERM2F128rr ], ZeroIdiomVPERMPredicate>
+  DepBreakingClass<[ VPERM2F128rri ], ZeroIdiomVPERMPredicate>
 ]>;
 
 def : IsDepBreakingFunction<[

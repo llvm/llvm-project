@@ -2804,6 +2804,10 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitHLSLOutArgExpr(HLSLOutArgExpr *Node) {
+  PrintExpr(Node->getArgLValue());
+}
+
 //===----------------------------------------------------------------------===//
 // Stmt method implementations
 //===----------------------------------------------------------------------===//

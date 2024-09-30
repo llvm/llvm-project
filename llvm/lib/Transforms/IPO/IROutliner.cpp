@@ -678,11 +678,9 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
     Mg.getNameWithPrefix(MangledNameStream, F, false);
 
     DISubprogram *OutlinedSP = DB.createFunction(
-        Unit /* Context */, F->getName(), Dummy,
-        Unit /* File */,
+        Unit /* Context */, F->getName(), Dummy, Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
-        DB.createSubroutineType(
-            DB.getOrCreateTypeArray(std::nullopt)), /* void type */
+        DB.createSubroutineType(DB.getOrCreateTypeArray({})), /* void type */
         0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
         /* Outlined code is optimized code by definition. */
@@ -789,10 +787,8 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
       // global value numbering.
       unsigned GVN = *C.getGVN(V);
       if (isa<Constant>(V))
-        if (NotSame.contains(GVN) && !Seen.contains(GVN)) {
+        if (NotSame.contains(GVN) && Seen.insert(GVN).second)
           Inputs.push_back(GVN);
-          Seen.insert(GVN);
-        }
     }
   }
 }
@@ -816,8 +812,9 @@ static void mapInputsToGVNs(IRSimilarityCandidate &C,
   // replacement.
   for (Value *Input : CurrentInputs) {
     assert(Input && "Have a nullptr as an input");
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     assert(C.getGVN(Input) && "Could not find a numbering for the given input");
     EndInputNumbers.push_back(*C.getGVN(Input));
   }
@@ -838,8 +835,9 @@ remapExtractedInputs(const ArrayRef<Value *> ArgInputs,
   // Get the global value number for each input that will be extracted as an
   // argument by the code extractor, remapping if needed for reloaded values.
   for (Value *Input : ArgInputs) {
-    if (OutputMappings.contains(Input))
-      Input = OutputMappings.find(Input)->second;
+    auto It = OutputMappings.find(Input);
+    if (It != OutputMappings.end())
+      Input = It->second;
     RemappedArgInputs.insert(Input);
   }
 }
@@ -1333,11 +1331,10 @@ findExtractedOutputToOverallOutputMapping(Module &M, OutlinableRegion &Region,
       if (!isa<PointerType>(Group.ArgumentTypes[Jdx]))
         continue;
 
-      if (AggArgsUsed.contains(Jdx))
+      if (!AggArgsUsed.insert(Jdx).second)
         continue;
 
       TypeFound = true;
-      AggArgsUsed.insert(Jdx);
       Region.ExtractedArgToAgg.insert(std::make_pair(OriginalIndex, Jdx));
       Region.AggArgToExtracted.insert(std::make_pair(Jdx, OriginalIndex));
       AggArgIdx = Jdx;

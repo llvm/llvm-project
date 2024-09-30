@@ -8,6 +8,7 @@
 
 #include "memory_check_utils.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -294,7 +295,7 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
 #endif // LIBC_TARGET_ARCH_IS_X86_64
 
 using MemcmpImplementations = testing::TypeList<
-#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #ifdef __SSE2__
     generic::Memcmp<__m128i>, //
 #endif

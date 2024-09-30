@@ -1128,6 +1128,7 @@ void ASTStmtReader::VisitBinaryOperator(BinaryOperator *E) {
       (BinaryOperator::Opcode)CurrentUnpackingBits->getNextBits(/*Width=*/6));
   bool hasFP_Features = CurrentUnpackingBits->getNextBit();
   E->setHasStoredFPFeatures(hasFP_Features);
+  E->setExcludedOverflowPattern(CurrentUnpackingBits->getNextBit());
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setOperatorLoc(readSourceLocation());
@@ -2838,6 +2839,18 @@ void ASTStmtReader::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSL Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
+  VisitExpr(S);
+  S->SubExprs[HLSLOutArgExpr::BaseLValue] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::CastedTemporary] = Record.readSubExpr();
+  S->SubExprs[HLSLOutArgExpr::WritebackCast] = Record.readSubExpr();
+  S->IsInOut = Record.readBool();
+}
+
+//===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4291,11 +4304,15 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OpenACCLoopConstruct::CreateEmpty(Context, NumClauses);
       break;
     }
-    case EXPR_REQUIRES:
+    case EXPR_REQUIRES: {
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
       unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];
       S = RequiresExpr::Create(Context, Empty, numLocalParameters,
                                numRequirement);
+      break;
+    }
+    case EXPR_HLSL_OUT_ARG:
+      S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
     }
 

@@ -334,10 +334,11 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                         const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType, Address This,
-                                         DeleteOrMemberCallExpr E) override;
+  llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) override;
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
@@ -901,7 +902,8 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE);
+  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                                                  /*CallOrInvoke=*/nullptr);
   if (UseGlobalDelete)
     CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
 }
@@ -1111,7 +1113,7 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
   if (CGM.getTarget().getTriple().isAArch64() &&
-      CGM.getTypes().getABIInfo().isHomogeneousAggregate(Ty, Base, NumElts) &&
+      CGM.getABIInfo().isHomogeneousAggregate(Ty, Base, NumElts) &&
       isa<VectorType>(Base)) {
     return true;
   }
@@ -1685,7 +1687,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
                             ThisTy,
                             /*ImplicitParam=*/Implicit,
-                            /*ImplicitParamTy=*/QualType(), nullptr);
+                            /*ImplicitParamTy=*/QualType(), /*E=*/nullptr);
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
@@ -2001,7 +2003,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
   auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
   auto *D = E.dyn_cast<const CXXDeleteExpr *>();
   assert((CE != nullptr) ^ (D != nullptr));
@@ -2031,7 +2033,7 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
   RValue RV =
       CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                                ImplicitParam, Context.IntTy, CE);
+                                ImplicitParam, Context.IntTy, CE, CallOrInvoke);
   return RV.getScalarVal();
 }
 

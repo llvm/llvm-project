@@ -39,6 +39,7 @@
 ; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:    Lower OpenCL enqueued blocks
+; GCN-O0-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand Atomic instructions
@@ -66,8 +67,9 @@
 ; GCN-O0-NEXT:        Uniformity Analysis
 ; GCN-O0-NEXT:        Unify divergent function exit nodes
 ; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Natural Loop Information
+; GCN-O0-NEXT:        Cycle Info Analysis
 ; GCN-O0-NEXT:        Convert irreducible control-flow into natural loops
+; GCN-O0-NEXT:        Natural Loop Information
 ; GCN-O0-NEXT:        Fixup each natural loop to have a single exit block
 ; GCN-O0-NEXT:        Post-Dominator Tree Construction
 ; GCN-O0-NEXT:        Dominance Frontier Construction
@@ -141,17 +143,15 @@
 ; GCN-O0-NEXT:        Post RA hazard recognizer
 ; GCN-O0-NEXT:        Branch relaxation pass
 ; GCN-O0-NEXT:        Register Usage Information Collector Pass
+; GCN-O0-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O0-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O0-NEXT:        Machine Sanitizer Binary Metadata
 ; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
-; GCN-O0-NEXT:    Function register usage analysis
-; GCN-O0-NEXT:    FunctionPass Manager
-; GCN-O0-NEXT:      Lazy Machine Block Frequency Analysis
-; GCN-O0-NEXT:      Machine Optimization Remark Emitter
-; GCN-O0-NEXT:      AMDGPU Assembly Printer
-; GCN-O0-NEXT:      Free MachineFunction
+; GCN-O0-NEXT:        Function register usage analysis
+; GCN-O0-NEXT:        AMDGPU Assembly Printer
+; GCN-O0-NEXT:        Free MachineFunction
 
 ; GCN-O1:Target Library Information
 ; GCN-O1-NEXT:Target Pass Configuration
@@ -185,6 +185,7 @@
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:    Lower OpenCL enqueued blocks
+; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Infer address spaces
@@ -258,8 +259,9 @@
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-NEXT:        Dominator Tree Construction
-; GCN-O1-NEXT:        Natural Loop Information
+; GCN-O1-NEXT:        Cycle Info Analysis
 ; GCN-O1-NEXT:        Convert irreducible control-flow into natural loops
+; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Fixup each natural loop to have a single exit block
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-NEXT:        Dominance Frontier Construction
@@ -416,17 +418,15 @@
 ; GCN-O1-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-NEXT:        Branch relaxation pass
 ; GCN-O1-NEXT:        Register Usage Information Collector Pass
+; GCN-O1-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O1-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O1-NEXT:        Machine Sanitizer Binary Metadata
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
-; GCN-O1-NEXT:    Function register usage analysis
-; GCN-O1-NEXT:    FunctionPass Manager
-; GCN-O1-NEXT:      Lazy Machine Block Frequency Analysis
-; GCN-O1-NEXT:      Machine Optimization Remark Emitter
-; GCN-O1-NEXT:      AMDGPU Assembly Printer
-; GCN-O1-NEXT:      Free MachineFunction
+; GCN-O1-NEXT:        Function register usage analysis
+; GCN-O1-NEXT:        AMDGPU Assembly Printer
+; GCN-O1-NEXT:        Free MachineFunction
 
 ; GCN-O1-OPTS:Target Library Information
 ; GCN-O1-OPTS-NEXT:Target Pass Configuration
@@ -460,6 +460,7 @@
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:    Lower OpenCL enqueued blocks
+; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Infer address spaces
@@ -553,8 +554,9 @@
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Natural Loop Information
+; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Convert irreducible control-flow into natural loops
+; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Fixup each natural loop to have a single exit block
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Dominance Frontier Construction
@@ -719,17 +721,15 @@
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O1-OPTS-NEXT:        Branch relaxation pass
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Collector Pass
+; GCN-O1-OPTS-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O1-OPTS-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O1-OPTS-NEXT:        Machine Sanitizer Binary Metadata
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
-; GCN-O1-OPTS-NEXT:    Function register usage analysis
-; GCN-O1-OPTS-NEXT:    FunctionPass Manager
-; GCN-O1-OPTS-NEXT:      Lazy Machine Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:      Machine Optimization Remark Emitter
-; GCN-O1-OPTS-NEXT:      AMDGPU Assembly Printer
-; GCN-O1-OPTS-NEXT:      Free MachineFunction
+; GCN-O1-OPTS-NEXT:        Function register usage analysis
+; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
+; GCN-O1-OPTS-NEXT:        Free MachineFunction
 
 ; GCN-O2:Target Library Information
 ; GCN-O2-NEXT:Target Pass Configuration
@@ -765,6 +765,7 @@
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:    Lower OpenCL enqueued blocks
+; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Infer address spaces
@@ -860,8 +861,9 @@
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Unify divergent function exit nodes
 ; GCN-O2-NEXT:        Dominator Tree Construction
-; GCN-O2-NEXT:        Natural Loop Information
+; GCN-O2-NEXT:        Cycle Info Analysis
 ; GCN-O2-NEXT:        Convert irreducible control-flow into natural loops
+; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Fixup each natural loop to have a single exit block
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
 ; GCN-O2-NEXT:        Dominance Frontier Construction
@@ -1028,17 +1030,15 @@
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O2-NEXT:        Branch relaxation pass
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
+; GCN-O2-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O2-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O2-NEXT:        Machine Sanitizer Binary Metadata
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
-; GCN-O2-NEXT:    Function register usage analysis
-; GCN-O2-NEXT:    FunctionPass Manager
-; GCN-O2-NEXT:      Lazy Machine Block Frequency Analysis
-; GCN-O2-NEXT:      Machine Optimization Remark Emitter
-; GCN-O2-NEXT:      AMDGPU Assembly Printer
-; GCN-O2-NEXT:      Free MachineFunction
+; GCN-O2-NEXT:        Function register usage analysis
+; GCN-O2-NEXT:        AMDGPU Assembly Printer
+; GCN-O2-NEXT:        Free MachineFunction
 
 ; GCN-O3:Target Library Information
 ; GCN-O3-NEXT:Target Pass Configuration
@@ -1074,6 +1074,7 @@
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:    Lower OpenCL enqueued blocks
+; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Infer address spaces
@@ -1181,8 +1182,9 @@
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Natural Loop Information
+; GCN-O3-NEXT:        Cycle Info Analysis
 ; GCN-O3-NEXT:        Convert irreducible control-flow into natural loops
+; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Fixup each natural loop to have a single exit block
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
 ; GCN-O3-NEXT:        Dominance Frontier Construction
@@ -1349,17 +1351,15 @@
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass
+; GCN-O3-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O3-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O3-NEXT:        Machine Sanitizer Binary Metadata
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
-; GCN-O3-NEXT:    Function register usage analysis
-; GCN-O3-NEXT:    FunctionPass Manager
-; GCN-O3-NEXT:      Lazy Machine Block Frequency Analysis
-; GCN-O3-NEXT:      Machine Optimization Remark Emitter
-; GCN-O3-NEXT:      AMDGPU Assembly Printer
-; GCN-O3-NEXT:      Free MachineFunction
+; GCN-O3-NEXT:        Function register usage analysis
+; GCN-O3-NEXT:        AMDGPU Assembly Printer
+; GCN-O3-NEXT:        Free MachineFunction
 
 define void @empty() {
   ret void

@@ -56,7 +56,7 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot", []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformBallot "SubGroup" %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     ```
   }];
 
@@ -78,6 +78,118 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot", []> {
 
   let assemblyFormat = [{
     $execution_scope $predicate attr-dict `:` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformBallotFindLSBOp : SPIRV_Op<"GroupNonUniformBallotFindLSB", []> {
+  let summary = [{
+    Find the least significant bit set to 1 in Value, considering only the
+    bits in Value required to represent all bits of the group's invocations.
+    If none of the considered bits is set to 1, the resulting value is
+    undefined.
+  }];
+
+  let description = [{
+    Result Type must be a scalar of integer type, whose Signedness operand
+    is 0.
+
+    Execution is a Scope that identifies the group of invocations affected
+    by this command. It must be Subgroup.
+
+    Value must be a vector of four components of integer type scalar, whose
+    Width operand is 32 and whose Signedness operand is 0.
+
+    Value is a set of bitfields where the first invocation is represented in
+    the lowest bit of the first vector component and the last (up to the
+    size of the group) is the higher bit number of the last bitmask needed
+    to represent all bits of the group invocations.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %vector = ... : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallotFindLSB <Subgroup> %vector : vector<4xi32>, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_IOrUIVec4:$value
+  );
+
+  let results = (outs
+    SPIRV_SignlessOrUnsignedInt:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $value attr-dict `:` type($value) `,` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformBallotFindMSBOp : SPIRV_Op<"GroupNonUniformBallotFindMSB", []> {
+  let summary = [{
+    Find the most significant bit set to 1 in Value, considering only the
+    bits in Value required to represent all bits of the group's invocations.
+    If none of the considered bits is set to 1, the resulting value is
+    undefined.
+  }];
+
+  let description = [{
+    Result Type must be a scalar of integer type, whose Signedness operand
+    is 0.
+
+    Execution is a Scope that identifies the group of invocations affected
+    by this command. It must be Subgroup.
+
+    Value must be a vector of four components of integer type scalar, whose
+    Width operand is 32 and whose Signedness operand is 0.
+
+    Value is a set of bitfields where the first invocation is represented in
+    the lowest bit of the first vector component and the last (up to the
+    size of the group) is the higher bit number of the last bitmask needed
+    to represent all bits of the group invocations.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %vector = ... : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallotFindMSB <Subgroup> %vector : vector<4xi32>, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_IOrUIVec4:$value
+  );
+
+  let results = (outs
+    SPIRV_SignlessOrUnsignedInt:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $value attr-dict `:` type($value) `,` type($result)
   }];
 }
 

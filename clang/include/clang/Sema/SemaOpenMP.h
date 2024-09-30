@@ -14,17 +14,12 @@
 #ifndef LLVM_CLANG_SEMA_SEMAOPENMP_H
 #define LLVM_CLANG_SEMA_SEMAOPENMP_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -32,17 +27,23 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
-#include "clang/Sema/Scope.h"
-#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <optional>
 #include <string>
 #include <utility>
 
 namespace clang {
+namespace sema {
+class FunctionScopeInfo;
+} // namespace sema
+
+class DeclContext;
+class DeclGroupRef;
 class ParsedAttr;
+class Scope;
 
 class SemaOpenMP : public SemaBase {
 public:

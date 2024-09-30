@@ -54,6 +54,8 @@ FEATURE(memtag_globals,
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(realtime_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Realtime))
 FEATURE(coverage_sanitizer, LangOpts.SanitizeCoverage)
 FEATURE(assume_nonnull, true)
 FEATURE(attribute_analyzer_noreturn, true)

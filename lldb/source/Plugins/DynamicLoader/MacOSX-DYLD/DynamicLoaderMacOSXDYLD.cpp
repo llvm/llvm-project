@@ -259,10 +259,13 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
       ModuleSP dyld_module_sp;
       if (ParseLoadCommands(data, m_dyld, &m_dyld.file_spec)) {
         if (m_dyld.file_spec) {
-          UpdateDYLDImageInfoFromNewImageInfo(m_dyld);
+          if (!UpdateDYLDImageInfoFromNewImageInfo(m_dyld))
+            return false;
         }
       }
       dyld_module_sp = GetDYLDModule();
+      if (!dyld_module_sp)
+        return false;
 
       Target &target = m_process->GetTarget();
 
@@ -1060,7 +1063,7 @@ Status DynamicLoaderMacOSXDYLD::CanLoadImage() {
       return error; // Success
   }
 
-  error.SetErrorString("unsafe to load or unload shared libraries");
+  error = Status::FromErrorString("unsafe to load or unload shared libraries");
   return error;
 }
 

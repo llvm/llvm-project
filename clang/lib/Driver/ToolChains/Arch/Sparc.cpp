@@ -125,7 +125,8 @@ std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
     return std::string(CPUName);
   }
 
-  if (Triple.getArch() == llvm::Triple::sparc && Triple.isOSSolaris())
+  if (Triple.getArch() == llvm::Triple::sparc &&
+      (Triple.isOSSolaris() || Triple.isOSLinux()))
     return "v9";
   return "";
 }
@@ -264,4 +265,17 @@ void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
 
   if (Args.hasArg(options::OPT_ffixed_i5))
     Features.push_back("+reserve-i5");
+
+  if (Args.hasArg(options::OPT_mfix_gr712rc)) {
+    Features.push_back("+fix-tn0009");
+    Features.push_back("+fix-tn0011");
+    Features.push_back("+fix-tn0012");
+    Features.push_back("+fix-tn0013");
+  }
+
+  if (Args.hasArg(options::OPT_mfix_ut700)) {
+    Features.push_back("+fix-tn0009");
+    Features.push_back("+fix-tn0010");
+    Features.push_back("+fix-tn0013");
+  }
 }

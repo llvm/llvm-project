@@ -33,8 +33,6 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-LLVM_LIBRARY_VISIBILITY extern std::vector<Partition> partitions;
-
 // Returned by InputSectionBase::relsOrRelas. At most one member is empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
@@ -177,6 +175,10 @@ public:
   uint32_t bytesDropped = 0;
 
   mutable bool compressed = false;
+
+  // Whether this section is SHT_CREL and has been decoded to RELA by
+  // relsOrRelas.
+  bool decodedCrel = false;
 
   // Whether the section needs to be padded with a NOP filler due to
   // deleteFallThruJmpInsn.
@@ -498,12 +500,6 @@ inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.starts_with(".debug");
 }
-
-// The set of TOC entries (.toc + addend) for which we should not apply
-// toc-indirect to toc-relative relaxation. const Symbol * refers to the
-// STT_SECTION symbol associated to the .toc input section.
-extern llvm::DenseSet<std::pair<const Symbol *, uint64_t>> ppc64noTocRelax;
-
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

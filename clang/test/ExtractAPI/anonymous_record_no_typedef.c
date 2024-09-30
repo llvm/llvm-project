@@ -163,4 +163,16 @@ enum {
 // GLOBALOTHERCASE-NEXT:   "GlobalOtherCase"
 // GLOBALOTHERCASE-NEXT: ]
 
+// RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix VEC
+union Vector {
+  struct {
+    float X;
+    float Y;
+  };
+  float Data[2];
+};
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@FI@Data $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@X $ c:@U@Vector"
+// VEC-DAG: "!testRelLabel": "memberOf $ c:@U@Vector@Sa@FI@Y $ c:@U@Vector"
+
 // expected-no-diagnostics

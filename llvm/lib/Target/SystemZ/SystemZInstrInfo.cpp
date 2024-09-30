@@ -857,7 +857,9 @@ bool SystemZInstrInfo::PredicateInstruction(
 void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   MCRegister SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
   // super register in case one of the subregs is undefined.
   // This handles ADDR128 too.

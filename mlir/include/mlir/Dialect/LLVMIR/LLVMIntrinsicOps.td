@@ -842,22 +842,27 @@ def LLVM_GetActiveLaneMaskOp
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
-                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment);
+                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment,
+                   UnitAttr:$nontemporal);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
 
   string llvmBuilder = [{
-    $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
+    auto *inst = $pass_thru.empty() ? builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
-  }];
+    $res = inst;
+  }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $res = $_builder.create<LLVM::MaskedLoadOp>($_location,
-      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment));
+      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
+        nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1];
+  list<int> llvmArgIndices = [0, 2, 3, 1, -1];
 }
 
 /// Create a call to Masked Store intrinsic.
@@ -993,7 +998,7 @@ def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
 /// Create a call to stepvector intrinsic.
 def LLVM_StepVectorOp
-    : LLVM_IntrOp<"experimental.stepvector", [0], [], [Pure], 1> {
+    : LLVM_IntrOp<"stepvector", [0], [], [Pure], 1> {
   let arguments = (ins);
   let results = (outs LLVM_VectorOf<AnySignlessInteger>:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -1151,6 +1156,10 @@ def LLVM_VPShlOp  : LLVM_VPBinaryI<"shl">;
 def LLVM_VPOrOp   : LLVM_VPBinaryI<"or">;
 def LLVM_VPAndOp  : LLVM_VPBinaryI<"and">;
 def LLVM_VPXorOp  : LLVM_VPBinaryI<"xor">;
+def LLVM_VPSMaxOp : LLVM_VPBinaryI<"smax">;
+def LLVM_VPSMinOp : LLVM_VPBinaryI<"smin">;
+def LLVM_VPUMaxOp : LLVM_VPBinaryI<"umax">;
+def LLVM_VPUMinOp : LLVM_VPBinaryI<"umin">;
 
 // Float Binary
 def LLVM_VPFAddOp : LLVM_VPBinaryF<"fadd">;

@@ -343,7 +343,6 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
     writeResponseFile(SS);
     buildArgvForResponseFile(Argv);
     Argv.push_back(nullptr);
-    SS.flush();
 
     // Save the response file in the appropriate encoding
     if (std::error_code EC = writeFileWithEncoding(

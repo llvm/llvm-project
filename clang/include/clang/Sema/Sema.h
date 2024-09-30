@@ -15,36 +15,42 @@
 #define LLVM_CLANG_SEMA_SEMA_H
 
 #include "clang/APINotes/APINotesManager.h"
-#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Availability.h"
-#include "clang/AST/ComparisonCategories.h"
+#include "clang/AST/AttrIterator.h"
+#include "clang/AST/CharUnits.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
-#include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/LocInfoType.h"
-#include "clang/AST/MangleNumberingContext.h"
-#include "clang/AST/NSAPI.h"
-#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/AST/TypeOrdering.h"
-#include "clang/Basic/BitmaskEnum.h"
+#include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/Cuda.h"
-#include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/ExpressionTraits.h"
-#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Lambda.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TemplateKinds.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
@@ -52,124 +58,100 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/IdentifierResolver.h"
-#include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Redeclaration.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
-#include "clang/Sema/SemaConcept.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <deque>
+#include <functional>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
-class APSInt;
-template <typename ValueT, typename ValueInfoT> class DenseSet;
-class SmallBitVector;
 struct InlineAsmIdentifierInfo;
 } // namespace llvm
 
 namespace clang {
 class ADLResult;
+class APValue;
+struct ASTConstraintSatisfaction;
 class ASTConsumer;
 class ASTContext;
+class ASTDeclReader;
 class ASTMutationListener;
 class ASTReader;
 class ASTWriter;
-class ArrayType;
-class ParsedAttr;
-class BindingDecl;
-class BlockDecl;
-class CapturedDecl;
 class CXXBasePath;
 class CXXBasePaths;
-class CXXBindTemporaryExpr;
-typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
-class CXXConstructorDecl;
-class CXXConversionDecl;
-class CXXDeleteExpr;
-class CXXDestructorDecl;
 class CXXFieldCollector;
-class CXXMemberCallExpr;
-class CXXMethodDecl;
-class CXXScopeSpec;
-class CXXTemporary;
-class CXXTryStmt;
-class CallExpr;
-class ClassTemplateDecl;
-class ClassTemplatePartialSpecializationDecl;
-class ClassTemplateSpecializationDecl;
-class VarTemplatePartialSpecializationDecl;
 class CodeCompleteConsumer;
-class CodeCompletionAllocator;
-class CodeCompletionTUInfo;
-class CodeCompletionResult;
-class CoroutineBodyStmt;
-class Decl;
-class DeclAccessPair;
-class DeclContext;
-class DeclRefExpr;
-class DeclaratorDecl;
+enum class ComparisonCategoryType : unsigned char;
+class ConstraintSatisfaction;
+class DarwinSDKInfo;
+class DeclGroupRef;
 class DeducedTemplateArgument;
+struct DeductionFailureInfo;
 class DependentDiagnostic;
-class DesignatedInitExpr;
 class Designation;
-class EnableIfAttr;
-class EnumConstantDecl;
-class Expr;
-class ExtVectorType;
-class FormatAttr;
-class FriendDecl;
-class FunctionDecl;
-class FunctionProtoType;
-class FunctionTemplateDecl;
+class IdentifierInfo;
 class ImplicitConversionSequence;
 typedef MutableArrayRef<ImplicitConversionSequence> ConversionSequenceList;
-class InitListExpr;
 class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
-class IntegerLiteral;
-class LabelStmt;
-class LambdaExpr;
-class LangOptions;
+enum class LangAS : unsigned int;
 class LocalInstantiationScope;
 class LookupResult;
-class MacroInfo;
+class MangleNumberingContext;
 typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
-class NamedDecl;
-class ObjCImplementationDecl;
+struct NormalizedConstraint;
 class ObjCInterfaceDecl;
 class ObjCMethodDecl;
-class ObjCProtocolDecl;
 struct OverloadCandidate;
 enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
-class OverloadExpr;
-class ParenListExpr;
-class ParmVarDecl;
 class Preprocessor;
-class PseudoDestructorTypeStorage;
-class PseudoObjectExpr;
-class QualType;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -196,41 +178,19 @@ class SemaSystemZ;
 class SemaWasm;
 class SemaX86;
 class StandardConversionSequence;
-class Stmt;
-class StringLiteral;
-class SwitchStmt;
 class TemplateArgument;
-class TemplateArgumentList;
 class TemplateArgumentLoc;
-class TemplateDecl;
 class TemplateInstantiationCallback;
-class TemplateParameterList;
 class TemplatePartialOrderingContext;
-class TemplateTemplateParmDecl;
+class TemplateSpecCandidateSet;
 class Token;
-class TypeAliasDecl;
-class TypedefDecl;
-class TypedefNameDecl;
-class TypeLoc;
+class TypeConstraint;
 class TypoCorrectionConsumer;
-class UnqualifiedId;
-class UnresolvedLookupExpr;
-class UnresolvedMemberExpr;
 class UnresolvedSetImpl;
 class UnresolvedSetIterator;
-class UsingDecl;
-class UsingShadowDecl;
-class ValueDecl;
-class VarDecl;
-class VarTemplateSpecializationDecl;
-class VisibilityAttr;
 class VisibleDeclConsumer;
-class IndirectFieldDecl;
-struct DeductionFailureInfo;
-class TemplateSpecCandidateSet;
 
 namespace sema {
-class AccessedEntity;
 class BlockScopeInfo;
 class Capture;
 class CapturedRegionScopeInfo;
@@ -240,11 +200,27 @@ class DelayedDiagnostic;
 class DelayedDiagnosticPool;
 class FunctionScopeInfo;
 class LambdaScopeInfo;
-class PossiblyUnreachableDiag;
-class RISCVIntrinsicManager;
 class SemaPPCallbacks;
 class TemplateDeductionInfo;
 } // namespace sema
+
+// AssignmentAction - This is used by all the assignment diagnostic functions
+// to represent what is actually causing the operation
+enum class AssignmentAction {
+  Assigning,
+  Passing,
+  Returning,
+  Converting,
+  Initializing,
+  Sending,
+  Casting,
+  Passing_CFAudited
+};
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AssignmentAction &AA) {
+  DB << llvm::to_underlying(AA);
+  return DB;
+}
 
 namespace threadSafety {
 class BeforeSet;
@@ -650,10 +626,10 @@ public:
   const llvm::MapVector<FieldDecl *, DeleteLocs> &
   getMismatchingDeleteExpressions() const;
 
-  /// Cause the active diagnostic on the DiagosticsEngine to be
-  /// emitted. This is closely coupled to the SemaDiagnosticBuilder class and
+  /// Cause the built diagnostic to be emitted on the DiagosticsEngine.
+  /// This is closely coupled to the SemaDiagnosticBuilder class and
   /// should not be used elsewhere.
-  void EmitCurrentDiagnostic(unsigned DiagID);
+  void EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB);
 
   void addImplicitTypedef(StringRef Name, QualType T);
 
@@ -1847,6 +1823,9 @@ public:
 
   /// Add [[gsl::Owner]] and [[gsl::Pointer]] attributes for std:: types.
   void inferGslOwnerPointerAttribute(CXXRecordDecl *Record);
+
+  /// Add [[clang:::lifetimebound]] attr for std:: functions and methods.
+  void inferLifetimeBoundAttribute(FunctionDecl *FD);
 
   /// Add [[gsl::Pointer]] attributes for std:: types.
   void inferGslPointerAttribute(TypedefNameDecl *TD);
@@ -6424,6 +6403,9 @@ public:
     /// example, in a for-range initializer).
     bool InLifetimeExtendingContext = false;
 
+    /// Whether we should rebuild CXXDefaultArgExpr and CXXDefaultInitExpr.
+    bool RebuildDefaultArgOrDefaultInit = false;
+
     // When evaluating immediate functions in the initializer of a default
     // argument or default member initializer, this is the declaration whose
     // default initializer is being evaluated and the location of the call
@@ -6531,19 +6513,6 @@ public:
   /// ExprCleanupObjects - This is the stack of objects requiring
   /// cleanup that are created by the current full expression.
   SmallVector<ExprWithCleanups::CleanupObject, 8> ExprCleanupObjects;
-
-  // AssignmentAction - This is used by all the assignment diagnostic functions
-  // to represent what is actually causing the operation
-  enum AssignmentAction {
-    AA_Assigning,
-    AA_Passing,
-    AA_Returning,
-    AA_Converting,
-    AA_Initializing,
-    AA_Sending,
-    AA_Casting,
-    AA_Passing_CFAudited
-  };
 
   /// Determine whether the use of this declaration is valid, without
   /// emitting diagnostics.
@@ -7454,7 +7423,8 @@ public:
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                      SourceLocation Loc);
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
 
   /// Context in which we're performing a usual arithmetic conversion.
   enum ArithConvKind {
@@ -7844,9 +7814,11 @@ public:
   }
 
   bool isInLifetimeExtendingContext() const {
-    assert(!ExprEvalContexts.empty() &&
-           "Must be in an expression evaluation context");
-    return ExprEvalContexts.back().InLifetimeExtendingContext;
+    return currentEvaluationContext().InLifetimeExtendingContext;
+  }
+
+  bool needsRebuildOfDefaultArgOrInit() const {
+    return currentEvaluationContext().RebuildDefaultArgOrDefaultInit;
   }
 
   bool isCheckingDefaultArgumentOrInitializer() const {
@@ -7886,18 +7858,6 @@ public:
       Res = Ctx.DelayedDefaultInitializationContext;
     }
     return Res;
-  }
-
-  /// keepInLifetimeExtendingContext - Pull down InLifetimeExtendingContext
-  /// flag from previous context.
-  void keepInLifetimeExtendingContext() {
-    if (ExprEvalContexts.size() > 2 &&
-        parentEvaluationContext().InLifetimeExtendingContext) {
-      auto &LastRecord = ExprEvalContexts.back();
-      auto &PrevRecord = parentEvaluationContext();
-      LastRecord.InLifetimeExtendingContext =
-          PrevRecord.InLifetimeExtendingContext;
-    }
   }
 
   DefaultedComparisonKind getDefaultedComparisonKind(const FunctionDecl *FD) {
@@ -7997,6 +7957,10 @@ public:
 
   /// Do an explicit extend of the given block pointer if we're in ARC.
   void maybeExtendBlockObject(ExprResult &E);
+
+  std::vector<std::pair<QualType, unsigned>> ExcessPrecisionNotSatisfied;
+  SourceLocation LocationOfExcessPrecisionNotSatisfied;
+  void DiagnosePrecisionLossInComplexDivision();
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
@@ -11767,6 +11731,9 @@ public:
   /// receive true if the cause for the error is the associated constraints of
   /// the template not being satisfied by the template arguments.
   ///
+  /// \param DefaultArgs any default arguments from template specialization
+  /// deduction.
+  ///
   /// \param PartialOrderingTTP If true, assume these template arguments are
   /// the injected template arguments for a template template parameter.
   /// This will relax the requirement that all its possible uses are valid:
@@ -11776,7 +11743,8 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool CheckTemplateArgumentList(
       TemplateDecl *Template, SourceLocation TemplateLoc,
-      TemplateArgumentListInfo &TemplateArgs, bool PartialTemplateArgs,
+      TemplateArgumentListInfo &TemplateArgs,
+      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
       SmallVectorImpl<TemplateArgument> &CanonicalConverted,
       bool UpdateArgsWithConversions = true,
@@ -12513,8 +12481,8 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *AArg, SourceLocation Loc,
-      bool IsDeduced);
+      TemplateParameterList *PParam, TemplateDecl *AArg,
+      const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -13113,12 +13081,19 @@ public:
   /// ForConstraintInstantiation indicates we should continue looking when
   /// encountering a lambda generic call operator, and continue looking for
   /// arguments on an enclosing class template.
+  ///
+  /// \param SkipForSpecialization when specified, any template specializations
+  /// in a traversal would be ignored.
+  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
+  /// when encountering a specialized member function template, rather than
+  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
       bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false);
+      bool SkipForSpecialization = false,
+      bool ForDefaultArgumentSubstitution = false);
 
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
@@ -13315,6 +13290,10 @@ public:
   /// \param AllowDeducedTST Whether a DeducedTemplateSpecializationType is
   /// acceptable as the top level type of the result.
   ///
+  /// \param IsIncompleteSubstitution If provided, the pointee will be set
+  /// whenever substitution would perform a replacement with a null or
+  /// non-existent template argument.
+  ///
   /// \returns If the instantiation succeeds, the instantiated
   /// type. Otherwise, produces diagnostics and returns a NULL type.
   TypeSourceInfo *SubstType(TypeSourceInfo *T,
@@ -13324,7 +13303,8 @@ public:
 
   QualType SubstType(QualType T,
                      const MultiLevelTemplateArgumentList &TemplateArgs,
-                     SourceLocation Loc, DeclarationName Entity);
+                     SourceLocation Loc, DeclarationName Entity,
+                     bool *IsIncompleteSubstitution = nullptr);
 
   TypeSourceInfo *SubstType(TypeLoc TL,
                             const MultiLevelTemplateArgumentList &TemplateArgs,

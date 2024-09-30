@@ -290,7 +290,7 @@ class LinkerScript final {
   // that must be reinitialized for each call to the above functions, and must
   // not be used outside of the scope of a call to the above functions.
   struct AddressState {
-    AddressState();
+    AddressState(const LinkerScript &);
     OutputSection *outSec = nullptr;
     MemoryRegion *memRegion = nullptr;
     MemoryRegion *lmaRegion = nullptr;
@@ -298,8 +298,10 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
+  Ctx &ctx;
   llvm::DenseMap<llvm::CachedHashStringRef, OutputDesc *> nameToOutputSection;
 
+  StringRef getOutputSectionName(const InputSectionBase *s) const;
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);
   void setDot(Expr e, const Twine &loc, bool inSec);
@@ -331,9 +333,10 @@ class LinkerScript final {
 
   OutputSection *aether;
 
-  uint64_t dot;
+  uint64_t dot = 0;
 
 public:
+  LinkerScript(Ctx &ctx) : ctx(ctx) {}
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
 
@@ -444,13 +447,6 @@ public:
   // one output section to another.
   llvm::DenseMap<llvm::CachedHashStringRef, SectionClassDesc *> sectionClasses;
 };
-
-struct ScriptWrapper {
-  LinkerScript s;
-  LinkerScript *operator->() { return &s; }
-};
-
-LLVM_LIBRARY_VISIBILITY extern ScriptWrapper script;
 
 } // end namespace lld::elf
 

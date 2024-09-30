@@ -4,7 +4,7 @@
 // RUN: %clangxx_asan -g -O0 -DSHARED_LIB -DSIZE=1 %s -fPIC -shared -o %t-so-1.so
 // RUN: %clangxx_asan -g -O0 -DSHARED_LIB -DSIZE=2 %s -fPIC -shared -o %t-so-2.so
 // RUN: %clangxx_asan -g -O0 %s %libdl -Wl,--export-dynamic -o %t
-// RUN: %env_asan_opts=report_globals=1:detect_odr_violation=1:verbosity=3 %run %t 2>&1 | FileCheck %s
+// RUN: %env_asan_opts=report_globals=2:detect_odr_violation=1 %run %t 2>&1 | FileCheck %s
 
 // FIXME: Checks do not match on Android.
 // UNSUPPORTED: android

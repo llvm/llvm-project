@@ -3,13 +3,13 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS %s
-; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+a,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zacas -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS %s
 
 define signext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
@@ -5562,6 +5562,7 @@ define signext i32 @cmpxchg_i32_monotonic_crossbb(ptr %ptr, i32 signext %cmp, i3
 ; RV32IA-ZACAS:       # %bb.0:
 ; RV32IA-ZACAS-NEXT:    beqz a3, .LBB64_2
 ; RV32IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV32IA-ZACAS-NEXT:    fence rw, rw
 ; RV32IA-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV32IA-ZACAS-NEXT:    mv a0, a1
 ; RV32IA-ZACAS-NEXT:    ret
@@ -5612,6 +5613,7 @@ define signext i32 @cmpxchg_i32_monotonic_crossbb(ptr %ptr, i32 signext %cmp, i3
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    beqz a3, .LBB64_2
 ; RV64IA-ZACAS-NEXT:  # %bb.1: # %then
+; RV64IA-ZACAS-NEXT:    fence rw, rw
 ; RV64IA-ZACAS-NEXT:    amocas.w.aqrl a1, a2, (a0)
 ; RV64IA-ZACAS-NEXT:    mv a0, a1
 ; RV64IA-ZACAS-NEXT:    ret

@@ -448,6 +448,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-errorlimit:" + s);
   }
 
+  if (auto *a = args.getLastArg(OPT_rpath))
+    warn("parameter " + a->getSpelling() + " has no effect on PE/COFF targets");
+
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
@@ -511,6 +514,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   for (auto *a : args.filtered(OPT_require_defined))
     add("-include:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_undefined_glob))
+    add("-includeglob:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_undefined))
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))

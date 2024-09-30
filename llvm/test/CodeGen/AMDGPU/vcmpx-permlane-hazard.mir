@@ -1,11 +1,12 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16
@@ -128,6 +129,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: dead $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_undef_src
@@ -150,6 +152,7 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e64
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GFX12-NEXT: S_WAITCNT_DEPCTR
 # GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_e64_permlane16

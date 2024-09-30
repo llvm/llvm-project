@@ -7,9 +7,7 @@ define void @vls3i8(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -25,9 +23,7 @@ define void @vls3(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -43,9 +39,7 @@ define void @vls5(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 5, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -61,9 +55,7 @@ define void @vls6(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -79,9 +71,7 @@ define void @vls7(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -98,9 +88,7 @@ define void @vls9(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 9, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 9, e32, m4, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -117,9 +105,7 @@ define void @vls10(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -135,9 +121,7 @@ define void @vls11(ptr align 8 %array) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 11, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 11, e32, m4, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:

@@ -381,3 +381,42 @@ loop:
 exit:
   ret void
 }
+
+define void @hoist_previous_value_and_operands(ptr %dst, i64 %mask) {
+; CHECK-LABEL: @hoist_previous_value_and_operands(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[ADD:%.*]], [[LOOP]] ], [ 1, [[BB:%.*]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[TRUNC:%.*]], [[LOOP]] ], [ 1, [[BB]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[OR:%.*]], [[LOOP]] ], [ 0, [[BB]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 0
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    [[A:%.*]] = and i64 [[IV]], [[MASK:%.*]]
+; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[A]] to i32
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %add, %loop ], [ 1, %bb ]
+  %for.1 = phi i32 [ %trunc, %loop ], [ 1, %bb ]
+  %for.2 = phi i32 [ %or, %loop ], [ 0, %bb ]
+  %or = or i32 %for.1, 0
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %for.2, ptr %gep, align 4
+  %icmp = icmp ult i64 %iv, 337
+  %a = and i64 %iv, %mask
+  %trunc = trunc i64 %a to i32
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}

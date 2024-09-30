@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef AMDGPU_OPAQUE_PTR_TYPE
-#define AMDGPU_OPAQUE_PTR_TYPE(Name, MangledName, AS, Width, Align, Id, SingletonId) \
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, AS, Width, Align, Id, SingletonId) \
   AMDGPU_TYPE(Name, Id, SingletonId)
 #endif
 
-AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", "__amdgpu_buffer_rsrc_t", 8, 128, 128, AMDGPUBufferRsrc, AMDGPUBufferRsrcTy)
+AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", 8, 128, 128, AMDGPUBufferRsrc, AMDGPUBufferRsrcTy)
 
 #undef AMDGPU_TYPE
 #undef AMDGPU_OPAQUE_PTR_TYPE

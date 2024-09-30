@@ -36,8 +36,8 @@ public:
   /// Lattices can only be created for values.
   AbstractSparseLattice(Value value) : AnalysisState(value) {}
 
-  /// Return the program point this lattice is located at.
-  Value getPoint() const { return AnalysisState::getPoint().get<Value>(); }
+  /// Return the value this lattice is located at.
+  Value getAnchor() const { return AnalysisState::getAnchor().get<Value>(); }
 
   /// Join the information contained in 'rhs' into this lattice. Returns
   /// if the value of the lattice changed.
@@ -86,8 +86,8 @@ class Lattice : public AbstractSparseLattice {
 public:
   using AbstractSparseLattice::AbstractSparseLattice;
 
-  /// Return the program point this lattice is located at.
-  Value getPoint() const { return point.get<Value>(); }
+  /// Return the value this lattice is located at.
+  Value getAnchor() const { return anchor.get<Value>(); }
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.
@@ -197,7 +197,7 @@ protected:
 
   /// The operation transfer function. Given the operand lattices, this
   /// function is expected to set the result lattices.
-  virtual void
+  virtual LogicalResult
   visitOperationImpl(Operation *op,
                      ArrayRef<const AbstractSparseLattice *> operandLattices,
                      ArrayRef<AbstractSparseLattice *> resultLattices) = 0;
@@ -238,7 +238,7 @@ private:
   /// Visit an operation. If this is a call operation or an operation with
   /// region control-flow, then its result lattices are set accordingly.
   /// Otherwise, the operation transfer function is invoked.
-  void visitOperation(Operation *op);
+  LogicalResult visitOperation(Operation *op);
 
   /// Visit a block to compute the lattice values of its arguments. If this is
   /// an entry block, then the argument values are determined from the block's
@@ -277,8 +277,9 @@ public:
 
   /// Visit an operation with the lattices of its operands. This function is
   /// expected to set the lattices of the operation's results.
-  virtual void visitOperation(Operation *op, ArrayRef<const StateT *> operands,
-                              ArrayRef<StateT *> results) = 0;
+  virtual LogicalResult visitOperation(Operation *op,
+                                       ArrayRef<const StateT *> operands,
+                                       ArrayRef<StateT *> results) = 0;
 
   /// Visit a call operation to an externally defined function given the
   /// lattices of its arguments.
@@ -328,10 +329,10 @@ protected:
 private:
   /// Type-erased wrappers that convert the abstract lattice operands to derived
   /// lattices and invoke the virtual hooks operating on the derived lattices.
-  void visitOperationImpl(
+  LogicalResult visitOperationImpl(
       Operation *op, ArrayRef<const AbstractSparseLattice *> operandLattices,
       ArrayRef<AbstractSparseLattice *> resultLattices) override {
-    visitOperation(
+    return visitOperation(
         op,
         {reinterpret_cast<const StateT *const *>(operandLattices.begin()),
          operandLattices.size()},
@@ -387,7 +388,7 @@ protected:
 
   /// The operation transfer function. Given the result lattices, this
   /// function is expected to set the operand lattices.
-  virtual void visitOperationImpl(
+  virtual LogicalResult visitOperationImpl(
       Operation *op, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) = 0;
 
@@ -424,7 +425,7 @@ private:
   /// Visit an operation. If this is a call operation or an operation with
   /// region control-flow, then its operand lattices are set accordingly.
   /// Otherwise, the operation transfer function is invoked.
-  void visitOperation(Operation *op);
+  LogicalResult visitOperation(Operation *op);
 
   /// Visit a block.
   void visitBlock(Block *block);
@@ -474,8 +475,9 @@ public:
 
   /// Visit an operation with the lattices of its results. This function is
   /// expected to set the lattices of the operation's operands.
-  virtual void visitOperation(Operation *op, ArrayRef<StateT *> operands,
-                              ArrayRef<const StateT *> results) = 0;
+  virtual LogicalResult visitOperation(Operation *op,
+                                       ArrayRef<StateT *> operands,
+                                       ArrayRef<const StateT *> results) = 0;
 
   /// Visit a call to an external function. This function is expected to set
   /// lattice values of the call operands. By default, calls `visitCallOperand`
@@ -510,10 +512,10 @@ protected:
 private:
   /// Type-erased wrappers that convert the abstract lattice operands to derived
   /// lattices and invoke the virtual hooks operating on the derived lattices.
-  void visitOperationImpl(
+  LogicalResult visitOperationImpl(
       Operation *op, ArrayRef<AbstractSparseLattice *> operandLattices,
       ArrayRef<const AbstractSparseLattice *> resultLattices) override {
-    visitOperation(
+    return visitOperation(
         op,
         {reinterpret_cast<StateT *const *>(operandLattices.begin()),
          operandLattices.size()},

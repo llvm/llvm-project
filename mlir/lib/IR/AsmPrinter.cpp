@@ -545,6 +545,10 @@ private:
   bool isType : 1;
   /// A flag indicating whether this alias may be deferred or not.
   bool isDeferrable : 1;
+
+public:
+  /// Used to avoid printing incomplete aliases for recursive types.
+  bool isPrinted = false;
 };
 
 /// This class represents a utility that initializes the set of attribute and
@@ -584,9 +588,8 @@ private:
   struct InProgressAliasInfo {
     InProgressAliasInfo()
         : aliasDepth(0), isType(false), canBeDeferred(false) {}
-    InProgressAliasInfo(StringRef alias, bool isType, bool canBeDeferred)
-        : alias(alias), aliasDepth(1), isType(isType),
-          canBeDeferred(canBeDeferred) {}
+    InProgressAliasInfo(StringRef alias)
+        : alias(alias), aliasDepth(1), isType(false), canBeDeferred(false) {}
 
     bool operator<(const InProgressAliasInfo &rhs) const {
       // Order first by depth, then by attr/type kind, and then by name.
@@ -1096,6 +1099,8 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 
   // Try to generate an alias for this value.
   generateAlias(value, it->second, canBeDeferred);
+  it->second.isType = std::is_base_of_v<Type, T>;
+  it->second.canBeDeferred = canBeDeferred;
 
   // Print the value, capturing any nested elements that require aliases.
   SmallVector<size_t> childAliases;
@@ -1153,8 +1158,7 @@ void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
       sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-",
                          /*allowTrailingDigit=*/false);
   name = name.copy(aliasAllocator);
-  alias = InProgressAliasInfo(name, /*isType=*/std::is_base_of_v<Type, T>,
-                              canBeDeferred);
+  alias = InProgressAliasInfo(name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1222,6 +1226,8 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
+  if (!it->second.isPrinted)
+    return failure();
 
   it->second.print(os);
   return success();
@@ -1238,12 +1244,9 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
     p.getStream() << " = ";
 
     if (alias.isTypeAlias()) {
-      // TODO: Support nested aliases in mutable types.
       Type type = Type::getFromOpaquePointer(opaqueSymbol);
-      if (type.hasTrait<TypeTrait::IsMutable>())
-        p.getStream() << type;
-      else
-        p.printTypeImpl(type);
+      p.printTypeImpl(type);
+      alias.isPrinted = true;
     } else {
       // TODO: Support nested aliases in mutable attributes.
       Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
@@ -2575,6 +2578,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
                            opaqueTy.getTypeData());
       })
       .Case<IndexType>([&](Type) { os << "index"; })
+      .Case<Float4E2M1FNType>([&](Type) { os << "f4E2M1FN"; })
+      .Case<Float6E2M3FNType>([&](Type) { os << "f6E2M3FN"; })
+      .Case<Float6E3M2FNType>([&](Type) { os << "f6E3M2FN"; })
       .Case<Float8E5M2Type>([&](Type) { os << "f8E5M2"; })
       .Case<Float8E4M3Type>([&](Type) { os << "f8E4M3"; })
       .Case<Float8E4M3FNType>([&](Type) { os << "f8E4M3FN"; })

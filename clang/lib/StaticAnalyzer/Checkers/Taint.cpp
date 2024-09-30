@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include <optional>
 
@@ -255,6 +256,12 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
   std::vector<SymbolRef> TaintedSymbols;
   if (!Sym)
     return TaintedSymbols;
+
+  // HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
+  if (const auto &Opts = State->getAnalysisManager().getAnalyzerOptions();
+      Sym->computeComplexity() > Opts.MaxTaintedSymbolComplexity) {
+    return {};
+  }
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
   for (SymbolRef SubSym : Sym->symbols()) {

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -emit-llvm -o %t.ms.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
-// RUN: %clang_cc1 %s -triple=spirv64-unknown-unknown -fsycl-is-device -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
+// RUN: %clang_cc1 %s -triple=spirv64-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
 // FIXME: Assume load should not require -fstrict-vtable-pointers
 
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t.ll %s
@@ -29,7 +29,7 @@ void g(A *a) { a->foo(); }
 // CHECK1: call{{.*}} void @_ZN5test11AC1Ev(ptr {{((addrspace(4)){0,1})}}
 // CHECK1: %[[VTABLE:.*]] = load ptr addrspace(1), ptr {{((addrspace(4)){0,1})}}{{.*}}%{{.*}}
 // CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11AE, i32 0, i32 0, i32 2)
-// CHECK1: call void @llvm.assume(i1 %[[CMP]])
+// CHECK1: call{{.*}} void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
 void fooA() {
@@ -41,7 +41,7 @@ void fooA() {
 // CHECK1: call{{.*}} void @_ZN5test11BC1Ev(ptr {{[^,]*}} %{{.*}})
 // CHECK1: %[[VTABLE:.*]] = load ptr addrspace(1), ptr {{((addrspace(4)){0,1})}}{{.*}}%{{.*}}
 // CHECK1: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test11BE, i32 0, i32 0, i32 2)
-// CHECK1: call void @llvm.assume(i1 %[[CMP]])
+// CHECK1: call{{.*}} void @llvm.assume(i1 %[[CMP]])
 // CHECK1-LABEL: {{^}}}
 
 void fooB() {
@@ -75,12 +75,12 @@ void h(B *b) { b->bar(); }
 // CHECK2: call{{.*}} void @_ZN5test21CC1Ev(ptr
 // CHECK2: %[[VTABLE:.*]] = load ptr addrspace(1), ptr {{.*}}
 // CHECK2: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, i32 0, i32 2)
-// CHECK2: call void @llvm.assume(i1 %[[CMP]])
+// CHECK2: call{{.*}} void @llvm.assume(i1 %[[CMP]])
 
 // CHECK2: %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr {{((addrspace(4)){0,1})}}{{.*}}%{{.*}}, i64 8
 // CHECK2: %[[VTABLE2:.*]] = load ptr addrspace(1), ptr {{((addrspace(4)){0,1})}}{{.*}}%[[ADD_PTR]]
 // CHECK2: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds inrange(-16, 8) ({ [3 x ptr addrspace(1)], [3 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test21CE, i32 0, i32 1, i32 2)
-// CHECK2: call void @llvm.assume(i1 %[[CMP2]])
+// CHECK2: call{{.*}} void @llvm.assume(i1 %[[CMP2]])
 
 // CHECK2: call{{.*}} void @_ZN5test21gEPNS_1AE(
 // CHECK2-LABEL: {{^}}}
@@ -111,7 +111,7 @@ void g(B *a) { a->foo(); }
 // CHECK3-LABEL: define{{.*}} void @_ZN5test34testEv()
 // CHECK3: call{{.*}} void @_ZN5test31CC1Ev(ptr
 // CHECK3: %[[CMP:.*]] = icmp eq ptr addrspace(1) %{{.*}}, getelementptr inbounds inrange(-24, 8) ({ [4 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test31CE, i32 0, i32 0, i32 3)
-// CHECK3: call void @llvm.assume(i1 %[[CMP]])
+// CHECK3: call{{.*}} void @llvm.assume(i1 %[[CMP]])
 // CHECK3-LABLEL: }
 void test() {
   C c;
@@ -140,11 +140,11 @@ void g(C *c) { c->foo(); }
 // CHECK4: call{{.*}} void @_ZN5test41CC1Ev(ptr
 // CHECK4: %[[VTABLE:.*]] = load ptr addrspace(1), ptr {{((addrspace(4)){0,1})}}{{.*}}%{{.*}}
 // CHECK4: %[[CMP:.*]] = icmp eq ptr addrspace(1) %[[VTABLE]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, i32 0, i32 4)
-// CHECK4: call void @llvm.assume(i1 %[[CMP]]
+// CHECK4: call{{.*}} void @llvm.assume(i1 %[[CMP]]
 
 // CHECK4: %[[VTABLE2:.*]] = load ptr addrspace(1), ptr {{((addrspace(4)){0,1})}}{{.*}}%{{.*}}
 // CHECK4: %[[CMP2:.*]] = icmp eq ptr addrspace(1) %[[VTABLE2]], getelementptr inbounds inrange(-32, 8) ({ [5 x ptr addrspace(1)] }, ptr addrspace(1) @_ZTVN5test41CE, i32 0, i32 0, i32 4)
-// CHECK4: call void @llvm.assume(i1 %[[CMP2]])
+// CHECK4: call{{.*}} void @llvm.assume(i1 %[[CMP2]])
 // CHECK4-LABEL: {{^}}}
 
 void test() {
@@ -214,7 +214,7 @@ void A::foo() {}
 
 // CHECK7-LABEL: define{{.*}} void @_ZN5test71gEv()
 // CHECK7: call{{.*}} void @_ZN5test71AC1Ev(
-// CHECK7: call void @llvm.assume(
+// CHECK7: call{{.*}} void @llvm.assume(
 // CHECK7-LABEL: {{^}}}
 void g() {
   A *a = new A();
@@ -257,7 +257,7 @@ struct E : A {
 };
 
 // CHECK8-LABEL: define{{.*}} void @_ZN5test81bEv()
-// CHECK8: call void @llvm.assume(
+// CHECK8: call{{.*}} void @llvm.assume(
 // CHECK8-LABEL: {{^}}}
 void b() {
   B b;
@@ -285,7 +285,7 @@ void d() {
 }
 
 // CHECK8-LABEL: define{{.*}} void @_ZN5test81eEv()
-// CHECK8: call void @llvm.assume(
+// CHECK8: call{{.*}} void @llvm.assume(
 // CHECK8-LABEL: {{^}}}
 void e() {
   E e;
