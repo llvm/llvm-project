@@ -234,7 +234,7 @@ public:
   getOrCreateStaticVarDecl(const VarDecl &D,
                            mlir::cir::GlobalLinkageKind Linkage);
 
-  mlir::cir::GlobalOp buildGlobal(const VarDecl *D, mlir::Type Ty,
+  mlir::cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *D, mlir::Type Ty,
                                   ForDefinition_t IsForDefinition);
 
   /// TODO(cir): once we have cir.module, add this as a convenience method
