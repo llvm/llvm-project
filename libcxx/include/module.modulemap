@@ -1550,7 +1550,6 @@ module std_private_memory_unique_temporary_buffer         [system] {
 }
 module std_private_memory_uses_allocator                  [system] { header "__memory/uses_allocator.h" }
 module std_private_memory_uses_allocator_construction     [system] { header "__memory/uses_allocator_construction.h" }
-module std_private_memory_voidify                         [system] { header "__memory/voidify.h" }
 
 module std_private_memory_resource_memory_resource              [system] { header "__memory_resource/memory_resource.h" }
 module std_private_memory_resource_memory_resource_fwd          [system] { header "__fwd/memory_resource.h" }
