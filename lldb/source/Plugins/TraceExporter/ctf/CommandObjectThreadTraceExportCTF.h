@@ -48,7 +48,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  void DoExecute(Args &args, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
   CommandOptions m_options;
 };
