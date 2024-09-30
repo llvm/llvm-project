@@ -42,6 +42,10 @@ domain_port (const char *domain_b, const char *domain_e,
 void f4(void) {
   int *p;
   p = (int*) 0x10000; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
+
+  int *p1;
+  p1 = p; // no warning
+
   long x = 0x10100;
   x += 10;
   p = (int*) x; // expected-warning{{Using a fixed address is not portable because that address will probably not be valid in all environments or platforms}}
