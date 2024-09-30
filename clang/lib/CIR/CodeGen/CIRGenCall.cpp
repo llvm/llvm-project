@@ -433,7 +433,22 @@ void CIRGenModule::constructAttributeList(StringRef Name,
       auto cirKernelAttr =
           mlir::cir::OpenCLKernelAttr::get(builder.getContext());
       funcAttrs.set(cirKernelAttr.getMnemonic(), cirKernelAttr);
-      assert(!MissingFeatures::openCL());
+
+      auto uniformAttr = mlir::cir::OpenCLKernelUniformWorkGroupSizeAttr::get(
+          builder.getContext());
+      if (getLangOpts().OpenCLVersion <= 120) {
+        // OpenCL v1.2 Work groups are always uniform
+        funcAttrs.set(uniformAttr.getMnemonic(), uniformAttr);
+      } else {
+        // OpenCL v2.0 Work groups may be whether uniform or not.
+        // '-cl-uniform-work-group-size' compile option gets a hint
+        // to the compiler that the global work-size be a multiple of
+        // the work-group size specified to clEnqueueNDRangeKernel
+        // (i.e. work groups are uniform).
+        if (getLangOpts().OffloadUniformBlock) {
+          funcAttrs.set(uniformAttr.getMnemonic(), uniformAttr);
+        }
+      }
     }
 
     if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&

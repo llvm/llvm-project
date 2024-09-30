@@ -185,4 +185,25 @@ def OpenCLKernelAttr : CIRUnitAttr<
   let storageType = [{ OpenCLKernelAttr }];
 }
 
+//===----------------------------------------------------------------------===//
+// OpenCLKernelUniformWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def OpenCLKernelUniformWorkGroupSizeAttr : CIRUnitAttr<
+    "OpenCLKernelUniformWorkGroupSize", "cl.uniform_work_group_size"> {
+  let summary = "OpenCL kernel work-group uniformity";
+  let description = [{
+    In OpenCL v2.0, work groups can either be uniform or non-uniform.
+    This attribute is associated with kernels to represent the work group type.
+    Non-kernel entities should not interact with this attribute.
+
+    Clang's `-cl-uniform-work-group-size` compilation option provides a hint to
+    the compiler, indicating that the global work size should be a multiple of
+    the work-group size specified in the `clEnqueueNDRangeKernel` function,
+    thereby ensuring that the work groups are uniform.
+  }];
+
+  let storageType = [{ OpenCLKernelUniformWorkGroupSizeAttr }];
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_OPENCL_ATTRS

@@ -91,6 +91,7 @@ private:
                      mlir::NamedAttribute attribute,
                      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
     llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+    llvm::LLVMContext &llvmCtx = moduleTranslation.getLLVMContext();
     if (auto extraAttr = mlir::dyn_cast<mlir::cir::ExtraFuncAttributesAttr>(
             attribute.getValue())) {
       for (auto attr : extraAttr.getElements()) {
@@ -110,6 +111,15 @@ private:
           llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
         } else if (mlir::dyn_cast<mlir::cir::ConvergentAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+        } else if (mlir::dyn_cast<mlir::cir::OpenCLKernelAttr>(
+                       attr.getValue())) {
+          const auto uniformAttrName =
+              mlir::cir::OpenCLKernelUniformWorkGroupSizeAttr::getMnemonic();
+          const bool isUniform =
+              extraAttr.getElements().getNamed(uniformAttrName).has_value();
+          auto attrs = llvmFunc->getAttributes().addFnAttribute(
+              llvmCtx, "uniform-work-group-size", isUniform ? "true" : "false");
+          llvmFunc->setAttributes(attrs);
         } else if (auto clKernelMetadata =
                        mlir::dyn_cast<mlir::cir::OpenCLKernelMetadataAttr>(
                            attr.getValue())) {
