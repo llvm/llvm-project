@@ -536,6 +536,7 @@ set(files
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
+  __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
@@ -687,6 +688,7 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
