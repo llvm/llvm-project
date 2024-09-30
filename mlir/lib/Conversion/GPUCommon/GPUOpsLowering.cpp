@@ -13,6 +13,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -642,21 +643,11 @@ static IntegerAttr wrapNumericMemorySpace(MLIRContext *ctx, unsigned space) {
 
 /// Generates a symbol with 0-sized array type for dynamic shared memory usage,
 /// or uses existing symbol.
-LLVM::GlobalOp
-getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
-                             Operation *moduleOp, gpu::DynamicSharedMemoryOp op,
-                             const LLVMTypeConverter *typeConverter,
-                             MemRefType memrefType, unsigned alignmentBit) {
-  uint64_t alignmentByte = alignmentBit / memrefType.getElementTypeBitWidth();
-
-  FailureOr<unsigned> addressSpace =
-      typeConverter->getMemRefAddressSpace(memrefType);
-  if (failed(addressSpace)) {
-    op->emitError() << "conversion of memref memory space "
-                    << memrefType.getMemorySpace()
-                    << " to integer address space "
-                       "failed. Consider adding memory space conversions.";
-  }
+LLVM::GlobalOp getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
+                                            Location loc, Operation *moduleOp,
+                                            unsigned addressSpace,
+                                            uint64_t alignmentByte,
+                                            Type elemType) {
 
   // Step 1. Collect symbol names of LLVM::GlobalOp Ops. Also if any of
   // LLVM::GlobalOp is suitable for shared memory, return it.
@@ -665,7 +656,7 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
        moduleOp->getRegion(0).front().getOps<LLVM::GlobalOp>()) {
     existingGlobalNames.insert(globalOp.getSymName());
     if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(globalOp.getType())) {
-      if (globalOp.getAddrSpace() == addressSpace.value() &&
+      if (globalOp.getAddrSpace() == addressSpace &&
           arrayType.getNumElements() == 0 &&
           globalOp.getAlignment().value_or(0) == alignmentByte) {
         return globalOp;
@@ -686,34 +677,54 @@ getDynamicSharedMemorySymbol(ConversionPatternRewriter &rewriter,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(&moduleOp->getRegion(0).front().front());
 
-  auto zeroSizedArrayType = LLVM::LLVMArrayType::get(
-      typeConverter->convertType(memrefType.getElementType()), 0);
+  auto zeroSizedArrayType = LLVM::LLVMArrayType::get(elemType, 0);
 
   return rewriter.create<LLVM::GlobalOp>(
-      op->getLoc(), zeroSizedArrayType, /*isConstant=*/false,
-      LLVM::Linkage::Internal, symName, /*value=*/Attribute(), alignmentByte,
-      addressSpace.value());
+      loc, zeroSizedArrayType, /*isConstant=*/false, LLVM::Linkage::Internal,
+      symName, /*value=*/Attribute(), alignmentByte, addressSpace);
 }
 
 LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
     gpu::DynamicSharedMemoryOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  MemRefType memrefType = op.getResultMemref().getType();
-  Type elementType = typeConverter->convertType(memrefType.getElementType());
 
-  // Step 1: Generate a memref<0xi8> type
-  MemRefLayoutAttrInterface layout = {};
-  auto memrefType0sz =
-      MemRefType::get({0}, elementType, layout, memrefType.getMemorySpace());
+  unsigned addressSpace;
+  Type elementType;
+  uint64_t alignmentByte;
+  MemRefType memrefType0sz;
+
+  // Step 1. Find out the element type, alignment and address space
+  if (MemRefType memrefType =
+          llvm::dyn_cast<MemRefType>(op.getResult().getType())) {
+    elementType = typeConverter->convertType(memrefType.getElementType());
+    MemRefLayoutAttrInterface layout = {};
+    memrefType0sz =
+        MemRefType::get({0}, elementType, layout, memrefType.getMemorySpace());
+
+    alignmentByte = alignmentBit / memrefType0sz.getElementTypeBitWidth();
+    FailureOr<unsigned> maybeAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(memrefType0sz);
+    if (failed(maybeAddressSpace)) {
+      op->emitError() << "conversion of memref memory space "
+                      << memrefType0sz.getMemorySpace()
+                      << " to integer address space "
+                         "failed. Consider adding memory space conversions.";
+    }
+    addressSpace = maybeAddressSpace.value();
+  } else {
+    auto ptr = cast<LLVM::LLVMPointerType>(op.getResult().getType());
+    addressSpace = ptr.getAddressSpace();
+    elementType = IntegerType::get(op->getContext(), 8);
+    alignmentByte = alignmentBit / elementType.getIntOrFloatBitWidth();
+  }
 
   // Step 2: Generate a global symbol or existing for the dynamic shared
   // memory with memref<0xi8> type
   LLVM::LLVMFuncOp funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
-  LLVM::GlobalOp shmemOp = {};
   Operation *moduleOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
-  shmemOp = getDynamicSharedMemorySymbol(
-      rewriter, moduleOp, op, getTypeConverter(), memrefType0sz, alignmentBit);
+  LLVM::GlobalOp shmemOp = getDynamicSharedMemorySymbol(
+      rewriter, loc, moduleOp, addressSpace, alignmentByte, elementType);
 
   // Step 3. Get address of the global symbol
   OpBuilder::InsertionGuard guard(rewriter);
@@ -726,15 +737,17 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
   Value shmemPtr = rewriter.create<LLVM::GEPOp>(loc, baseType, elementType,
                                                 basePtr, gepArgs);
   // Step 5. Create a memref descriptor
-  SmallVector<Value> shape, strides;
-  Value sizeBytes;
-  getMemRefDescriptorSizes(loc, memrefType0sz, {}, rewriter, shape, strides,
-                           sizeBytes);
-  auto memRefDescriptor = this->createMemRefDescriptor(
-      loc, memrefType0sz, shmemPtr, shmemPtr, shape, strides, rewriter);
-
+  Value result = shmemPtr;
+  if (llvm::isa<MemRefType>(op.getResult().getType())) {
+    SmallVector<Value> shape, strides;
+    Value sizeBytes;
+    getMemRefDescriptorSizes(loc, memrefType0sz, {}, rewriter, shape, strides,
+                             sizeBytes);
+    result = this->createMemRefDescriptor(loc, memrefType0sz, shmemPtr,
+                                          shmemPtr, shape, strides, rewriter);
+  }
   // Step 5. Replace the op with memref descriptor
-  rewriter.replaceOp(op, {memRefDescriptor});
+  rewriter.replaceOp(op, {result});
   return success();
 }
 
