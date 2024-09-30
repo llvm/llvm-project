@@ -44,16 +44,9 @@ from __future__ import annotations
 
 import abc
 import collections
-import io
-from typing import (
-    Any,
-    ClassVar,
-    Type as _Type,
-    TypeVar,
-)
 from collections.abc import Callable, Sequence
-
-from typing import overload
+import io
+from typing import Any, ClassVar, TypeVar, overload
 
 __all__ = [
     "AffineAddExpr",
@@ -2253,7 +2246,7 @@ class OpView(_OperationBase):
     def __init__(self, operation: _OperationBase) -> None: ...
     @classmethod
     def build_generic(
-        cls: _Type[_TOperation],
+        cls: type[_TOperation],
         results: Sequence[Type] | None = None,
         operands: Sequence[Value] | None = None,
         attributes: dict[str, Attribute] | None = None,
@@ -2267,7 +2260,7 @@ class OpView(_OperationBase):
         """
     @classmethod
     def parse(
-        cls: _Type[_TOperation],
+        cls: type[_TOperation],
         source: str | bytes,
         *,
         source_name: str = "",
