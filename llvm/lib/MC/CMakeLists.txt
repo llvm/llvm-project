@@ -79,7 +79,6 @@ add_llvm_component_library(LLVMMC
   Support
   TargetParser
   BinaryFormat
-  DebugInfoCodeView
 
   DEPENDS
   intrinsics_gen
