@@ -53,8 +53,8 @@ struct CodeCompleteOptions {
   bool IncludeIneligibleResults = false;
 
   /// Force sema to load decls from preamble even if an index is provided.
-  /// This is helpful for cases the index can't provide symbols, e.g., the
-  /// unsupported yet modules.
+  /// This is helpful for cases the index can't provide symbols, e.g. with
+  /// experimental c++20 modules
   bool ForceLoadPreamble = false;
 
   /// Combine overloads into a single completion item where possible.
