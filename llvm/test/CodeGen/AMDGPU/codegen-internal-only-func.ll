@@ -7,6 +7,11 @@
 ; AMDGPUAttributor deletes the function "by accident" so it's never
 ; codegened with optimizations.
 
+; Note: Added .text / .section (gpr_maximums) checks.
+; In order to accomodate upstream landing of PR #102913.
+
+; OPT:	  .text
+; OPT-NEXT: .section .AMDGPU.gpr_maximums
 ; OPT:	  .text
 ; OPT-NEXT: .section	".note.GNU-stack"
 ; OPT-NEXT: .amdgcn_target "amdgcn-amd-amdhsa--gfx900"
