@@ -63,7 +63,7 @@ const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(*MF);
+      STI.getPushPopSplitVariation(*MF);
   const Function &F = MF->getFunction();
 
   if (F.getCallingConv() == CallingConv::GHC) {

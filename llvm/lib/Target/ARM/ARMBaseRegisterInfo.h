@@ -41,7 +41,6 @@ namespace ARMRI {
 
 } // end namespace ARMRI
 
-
 static inline bool isCalleeSavedRegister(unsigned Reg,
                                          const MCPhysReg *CSRegs) {
   for (unsigned i = 0; CSRegs[i]; ++i)

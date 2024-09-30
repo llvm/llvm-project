@@ -215,11 +215,19 @@ SpillArea getSpillArea(Register Reg,
   case ARM::FPCXTNS:
     return SpillArea::FPCXT;
 
-  case ARM::R0: case ARM::R1: case ARM::R2: case ARM::R3:
-  case ARM::R4: case ARM::R5: case ARM::R6: case ARM::R7:
+  case ARM::R0:
+  case ARM::R1:
+  case ARM::R2:
+  case ARM::R3:
+  case ARM::R4:
+  case ARM::R5:
+  case ARM::R6:
+  case ARM::R7:
     return SpillArea::GPRCS1;
 
-  case ARM::R8: case ARM::R9: case ARM::R10:
+  case ARM::R8:
+  case ARM::R9:
+  case ARM::R10:
     if (Variation == ARMSubtarget::SplitR7)
       return SpillArea::GPRCS2;
     else
@@ -243,21 +251,45 @@ SpillArea getSpillArea(Register Reg,
     else
       return SpillArea::GPRCS1;
 
-  case ARM::D0: case ARM::D1: case ARM::D2: case ARM::D3:
-  case ARM::D4: case ARM::D5: case ARM::D6: case ARM::D7:
+  case ARM::D0:
+  case ARM::D1:
+  case ARM::D2:
+  case ARM::D3:
+  case ARM::D4:
+  case ARM::D5:
+  case ARM::D6:
+  case ARM::D7:
     return SpillArea::DPRCS1;
 
-  case ARM::D8:  case ARM::D9:  case ARM::D10: case ARM::D11:
-  case ARM::D12: case ARM::D13: case ARM::D14: case ARM::D15:
+  case ARM::D8:
+  case ARM::D9:
+  case ARM::D10:
+  case ARM::D11:
+  case ARM::D12:
+  case ARM::D13:
+  case ARM::D14:
+  case ARM::D15:
     if (Reg >= ARM::D8 && Reg < ARM::D8 + NumAlignedDPRCS2Regs)
       return SpillArea::DPRCS2;
     else
       return SpillArea::DPRCS1;
 
-  case ARM::D16: case ARM::D17: case ARM::D18: case ARM::D19:
-  case ARM::D20: case ARM::D21: case ARM::D22: case ARM::D23:
-  case ARM::D24: case ARM::D25: case ARM::D26: case ARM::D27:
-  case ARM::D28: case ARM::D29: case ARM::D30: case ARM::D31:
+  case ARM::D16:
+  case ARM::D17:
+  case ARM::D18:
+  case ARM::D19:
+  case ARM::D20:
+  case ARM::D21:
+  case ARM::D22:
+  case ARM::D23:
+  case ARM::D24:
+  case ARM::D25:
+  case ARM::D26:
+  case ARM::D27:
+  case ARM::D28:
+  case ARM::D29:
+  case ARM::D30:
+  case ARM::D31:
     return SpillArea::DPRCS1;
   }
 }
@@ -819,7 +851,7 @@ static void emitAligningInstructions(MachineFunction &MF, ARMFunctionInfo *AFI,
 static int getMaxFPOffset(const ARMSubtarget &STI, const ARMFunctionInfo &AFI,
                           const MachineFunction &MF) {
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
   // For Thumb1, push.w isn't available, so the first push will always push
   // r7 and lr onto the stack first.
   if (AFI.isThumb1OnlyFunction())
@@ -856,7 +888,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   int FPCXTSaveSize = 0;
   bool NeedsWinCFI = needsWinCFI(MF);
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
 
   LLVM_DEBUG(dbgs() << "Emitting prologue for " << MF.getName() << "\n");
 
@@ -1218,7 +1250,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
       if (CFIPos.isValid()) {
         int CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
             nullptr,
-            MRI->getDwarfRegNum(Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg, true),
+            MRI->getDwarfRegNum(Reg == ARM::R12 ? ARM::RA_AUTH_CODE : Reg,
+                                true),
             MFI.getObjectOffset(FI)));
         BuildMI(MBB, CFIPos, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex)
@@ -1312,7 +1345,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
          "This emitEpilogue does not support Thumb1!");
   bool isARM = !AFI->isThumbFunction();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
 
   LLVM_DEBUG(dbgs() << "Emitting epilogue for " << MF.getName() << "\n");
 
@@ -1646,7 +1679,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
   bool isTrap = false;
   bool isCmseEntry = false;
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
   if (MBB.end() != MI) {
     DL = MI->getDebugLoc();
     unsigned RetOpcode = MI->getOpcode();
@@ -2016,7 +2049,7 @@ bool ARMFrameLowering::spillCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
   const ARMBaseRegisterInfo *RegInfo = STI.getRegisterInfo();
 
   unsigned PushOpc = AFI->isThumbFunction() ? ARM::t2STMDB_UPD : ARM::STMDB_UPD;
@@ -2090,7 +2123,7 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(
   bool isVarArg = AFI->getArgRegsSaveSize() > 0;
   unsigned NumAlignedDPRCS2Regs = AFI->getNumAlignedDPRCS2Regs();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
 
   // The emitPopInst calls below do not insert reloads for the aligned DPRCS2
   // registers. Do that here instead.
@@ -2350,7 +2383,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   (void)TRI;  // Silence unused warning in non-assert builds.
   Register FramePtr = RegInfo->getFrameRegister(MF);
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
-                                      STI.getPushPopSplitVariation(MF);
+      STI.getPushPopSplitVariation(MF);
 
   // Spill R4 if Thumb2 function requires stack realignment - it will be used as
   // scratch register. Also spill R4 if Thumb2 function has varsized objects,
