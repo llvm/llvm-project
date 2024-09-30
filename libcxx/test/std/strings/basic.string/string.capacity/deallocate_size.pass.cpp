@@ -61,6 +61,6 @@ int main(int, char**) {
   test<uint32_t>();
   test<uint64_t>();
   test<size_t>();
-  
+
   return 0;
 }
