@@ -162,7 +162,7 @@ typedef int errno_t;
 typedef size_t rsize_t;
 errno_t asctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t ctime_r(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t localtime_r(char *S, rsize_t Maxsize, const struct tm *tm);
+errno_t localtime_r(char *S, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t strcat_s(char *S1, rsize_t S1Max, const char *S2);
 
 void fUsingSafeFunctions(const struct tm *Time, FILE *F) {
