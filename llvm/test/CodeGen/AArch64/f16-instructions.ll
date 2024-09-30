@@ -1392,26 +1392,19 @@ define half @test_fma(half %a, half %b, half %c) #0 {
 }
 
 define half @test_fabs(half %a) #0 {
-; CHECK-CVT-SD-LABEL: test_fabs:
-; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-CVT-SD-NEXT:    fmov w8, s0
-; CHECK-CVT-SD-NEXT:    and w8, w8, #0x7fff
-; CHECK-CVT-SD-NEXT:    fmov s0, w8
-; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: test_fabs:
+; CHECK-CVT:       // %bb.0:
+; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-CVT-NEXT:    fmov w8, s0
+; CHECK-CVT-NEXT:    and w8, w8, #0x7fff
+; CHECK-CVT-NEXT:    fmov s0, w8
+; CHECK-CVT-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_fabs:
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fabs h0, h0
 ; CHECK-FP16-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: test_fabs:
-; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    fcvt s0, h0
-; CHECK-CVT-GI-NEXT:    fabs s0, s0
-; CHECK-CVT-GI-NEXT:    fcvt h0, s0
-; CHECK-CVT-GI-NEXT:    ret
   %r = call half @llvm.fabs.f16(half %a)
   ret half %r
 }
