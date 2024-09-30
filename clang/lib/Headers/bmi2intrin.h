@@ -257,5 +257,6 @@ _mulx_u64 (unsigned long long __X, unsigned long long __Y,
 #endif /* __x86_64__  */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* __BMI2INTRIN_H */
