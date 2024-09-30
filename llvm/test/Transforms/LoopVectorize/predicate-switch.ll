@@ -346,8 +346,6 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
 ; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC1-NEXT:    ]
-; IC1:       [[LOOP_HEADER_BACKEDGE]]:
-; IC1-NEXT:    br label %[[LOOP_HEADER]]
 ; IC1:       [[IF_THEN:.*:]]
 ; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC1-NEXT:    store i64 42, ptr [[GEP]], align 1
@@ -355,6 +353,8 @@ define void @switch_to_header(ptr %start) {
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC1:       [[LOOP_HEADER_BACKEDGE]]:
+; IC1-NEXT:    br label %[[LOOP_HEADER]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -369,8 +369,6 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
 ; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC2-NEXT:    ]
-; IC2:       [[LOOP_HEADER_BACKEDGE]]:
-; IC2-NEXT:    br label %[[LOOP_HEADER]]
 ; IC2:       [[IF_THEN:.*:]]
 ; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC2-NEXT:    store i64 42, ptr [[GEP]], align 1
@@ -378,6 +376,8 @@ define void @switch_to_header(ptr %start) {
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
 ; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC2:       [[LOOP_HEADER_BACKEDGE]]:
+; IC2-NEXT:    br label %[[LOOP_HEADER]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;

@@ -30,11 +30,11 @@ while.end:                                        ; preds = %while.cond
 ; CHECK: if.then
 ; CHECK-NOT: br {{.*}}!llvm.loop{{.*}}
 
-; CHECK: while.cond.backedge:
-; CHECK: br label %while.cond, !llvm.loop !0
-
 ; CHECK: if.else
 ; CHECK-NOT: br {{.*}}!llvm.loop{{.*}}
+
+; CHECK: while.cond.backedge:
+; CHECK: br label %while.cond, !llvm.loop !0
 
 ; CHECK-LABEL: @test2
 ; CHECK: for.body:

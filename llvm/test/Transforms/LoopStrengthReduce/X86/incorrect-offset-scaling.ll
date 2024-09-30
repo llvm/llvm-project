@@ -11,10 +11,10 @@ define void @incorrect_offset_scaling(i1 %c, i1 %c2, i1 %c3, ptr %p, i64, ptr) {
 ; CHECK-NEXT:    br label [[L:%.*]]
 ; CHECK:       L.loopexit:
 ; CHECK-NEXT:    br label [[L_BACKEDGE:%.*]]
-; CHECK:       L:
-; CHECK-NEXT:    br i1 [[C]], label [[L_BACKEDGE]], label [[L1_PREHEADER:%.*]]
 ; CHECK:       L.backedge:
 ; CHECK-NEXT:    br label [[L]]
+; CHECK:       L:
+; CHECK-NEXT:    br i1 [[C]], label [[L_BACKEDGE]], label [[L1_PREHEADER:%.*]]
 ; CHECK:       L1.preheader:
 ; CHECK-NEXT:    br label [[L1:%.*]]
 ; CHECK:       L1:

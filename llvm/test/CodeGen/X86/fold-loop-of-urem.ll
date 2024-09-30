@@ -914,7 +914,7 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    jmp .LBB15_2
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB15_3: # %for.body.backedge
+; CHECK-NEXT:  .LBB15_4: # %for.body.backedge
 ; CHECK-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; CHECK-NEXT:    incl %r14d
 ; CHECK-NEXT:    cmpl %ebx, %r14d
@@ -928,12 +928,12 @@ define void @simple_urem_multi_latch_non_canonical(i32 %N, i32 %rem_amt) nounwin
 ; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    callq do_stuff0@PLT
 ; CHECK-NEXT:    testb $1, %r15b
-; CHECK-NEXT:    je .LBB15_3
-; CHECK-NEXT:  # %bb.4: # %for.body0
+; CHECK-NEXT:    je .LBB15_4
+; CHECK-NEXT:  # %bb.3: # %for.body0
 ; CHECK-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; CHECK-NEXT:    callq do_stuff1@PLT
 ; CHECK-NEXT:    cmpl %r13d, %ebp
-; CHECK-NEXT:    jne .LBB15_3
+; CHECK-NEXT:    jne .LBB15_4
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx

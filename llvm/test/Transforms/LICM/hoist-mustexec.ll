@@ -501,11 +501,11 @@ define i32 @test-multiple-latch(ptr noalias nocapture readonly %a) nounwind uwta
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ADD]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CONTINUE2:%.*]], label [[FOR_BODY_BACKEDGE]]
-; CHECK:       for.body.backedge:
-; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       continue2:
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_BACKEDGE]]
+; CHECK:       for.body.backedge:
+; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[CONTINUE2]] ]
 ; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]

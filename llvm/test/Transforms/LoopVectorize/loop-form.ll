@@ -1023,14 +1023,14 @@ define i32 @multiple_latch2(ptr %p) {
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_02]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 16
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_BACKEDGE]], label [[FOR_SECOND:%.*]]
-; CHECK:       for.body.backedge:
-; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.second:
 ; CHECK-NEXT:    [[IPROM:%.*]] = sext i32 [[I_02]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 [[IPROM]]
 ; CHECK-NEXT:    store i16 0, ptr [[B]], align 4
 ; CHECK-NEXT:    [[CMPS:%.*]] = icmp sgt i32 [[INC]], 16
 ; CHECK-NEXT:    br i1 [[CMPS]], label [[FOR_BODY_BACKEDGE]], label [[FOR_END:%.*]]
+; CHECK:       for.body.backedge:
+; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -1042,14 +1042,14 @@ define i32 @multiple_latch2(ptr %p) {
 ; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I_02]], 1
 ; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 16
 ; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_BODY_BACKEDGE]], label [[FOR_SECOND:%.*]]
-; TAILFOLD:       for.body.backedge:
-; TAILFOLD-NEXT:    br label [[FOR_BODY]]
 ; TAILFOLD:       for.second:
 ; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I_02]] to i64
 ; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 [[IPROM]]
 ; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
 ; TAILFOLD-NEXT:    [[CMPS:%.*]] = icmp sgt i32 [[INC]], 16
 ; TAILFOLD-NEXT:    br i1 [[CMPS]], label [[FOR_BODY_BACKEDGE]], label [[FOR_END:%.*]]
+; TAILFOLD:       for.body.backedge:
+; TAILFOLD-NEXT:    br label [[FOR_BODY]]
 ; TAILFOLD:       for.end:
 ; TAILFOLD-NEXT:    ret i32 0
 ;

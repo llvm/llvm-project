@@ -70,10 +70,10 @@ define i32 @test3(ptr %var) {
 ; CHECK-NEXT:    [[INDVAR]] = add i32 [[PHI_INDVAR]], 1
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[INDVAR]], 10
 ; CHECK-NEXT:    br i1 [[COND2]], label [[HEADER_BACKEDGE]], label [[BODY:%.*]]
-; CHECK:       header.backedge:
-; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       body:
 ; CHECK-NEXT:    br i1 [[COND1]], label [[HEADER_BACKEDGE]], label [[EXIT:%.*]]
+; CHECK:       header.backedge:
+; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[PHI_INDVAR]]
 ;

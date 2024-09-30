@@ -16,12 +16,12 @@ define i32 @dead_backedge_test_branch_loop(i32 %end) {
 ; CHECK-NEXT:    [[I_1:%.*]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I_1]], 100
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[HEADER_BACKEDGE]], label [[DEAD_BACKEDGE:%.*]]
-; CHECK:       header.backedge:
-; CHECK-NEXT:    [[I_BE]] = phi i32 [ [[I_1]], [[HEADER]] ], [ [[I_2:%.*]], [[DEAD_BACKEDGE]] ]
-; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       dead_backedge:
-; CHECK-NEXT:    [[I_2]] = add i32 [[I_1]], 10
+; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I_1]], 10
 ; CHECK-NEXT:    br i1 false, label [[HEADER_BACKEDGE]], label [[EXIT:%.*]]
+; CHECK:       header.backedge:
+; CHECK-NEXT:    [[I_BE]] = phi i32 [ [[I_1]], [[HEADER]] ], [ [[I_2]], [[DEAD_BACKEDGE]] ]
+; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I_2_LCSSA:%.*]] = phi i32 [ [[I_2]], [[DEAD_BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[I_2_LCSSA]]
@@ -53,14 +53,14 @@ define i32 @dead_backedge_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:    [[I_1:%.*]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I_1]], 100
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[HEADER_BACKEDGE]], label [[DEAD_BACKEDGE:%.*]]
-; CHECK:       header.backedge:
-; CHECK-NEXT:    [[I_BE]] = phi i32 [ [[I_1]], [[HEADER]] ], [ [[I_2:%.*]], [[DEAD_BACKEDGE]] ]
-; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       dead_backedge:
-; CHECK-NEXT:    [[I_2]] = add i32 [[I_1]], 10
+; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I_1]], 10
 ; CHECK-NEXT:    switch i32 1, label [[EXIT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[HEADER_BACKEDGE]]
 ; CHECK-NEXT:    ]
+; CHECK:       header.backedge:
+; CHECK-NEXT:    [[I_BE]] = phi i32 [ [[I_1]], [[HEADER]] ], [ [[I_2]], [[DEAD_BACKEDGE]] ]
+; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I_2_LCSSA:%.*]] = phi i32 [ [[I_2]], [[DEAD_BACKEDGE]] ]
 ; CHECK-NEXT:    ret i32 [[I_2_LCSSA]]
@@ -2178,10 +2178,10 @@ define i32 @intermediate_complex_subloop_branch_from_inner_to_parent(i1 %cond1, 
 ; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP:%.*]]
 ; CHECK:       intermediate_loop:
 ; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE:%.*]], label [[INTERMEDIATE_BLOCK:%.*]]
-; CHECK:       intermediate_loop.backedge:
-; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_block:
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE]], label [[INTERMEDIATE_EXIT:%.*]]
+; CHECK:       intermediate_loop.backedge:
+; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_exit:
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_BACKEDGE]], label [[LOOP_2_BACKEDGE]]
 ; CHECK:       loop_3_backedge:
@@ -2261,10 +2261,10 @@ define i32 @intermediate_complex_subloop_switch_from_inner_to_parent(i1 %cond1, 
 ; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP:%.*]]
 ; CHECK:       intermediate_loop:
 ; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE:%.*]], label [[INTERMEDIATE_BLOCK:%.*]]
-; CHECK:       intermediate_loop.backedge:
-; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_block:
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE]], label [[INTERMEDIATE_EXIT:%.*]]
+; CHECK:       intermediate_loop.backedge:
+; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_exit:
 ; CHECK-NEXT:    switch i32 1, label [[LOOP_2_BACKEDGE]] [
 ; CHECK-NEXT:    i32 0, label [[LOOP_3_BACKEDGE]]
@@ -2347,10 +2347,10 @@ define i32 @intermediate_complex_subloop_branch_from_inner_to_grandparent(i1 %co
 ; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP:%.*]]
 ; CHECK:       intermediate_loop:
 ; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE:%.*]], label [[INTERMEDIATE_BLOCK:%.*]]
-; CHECK:       intermediate_loop.backedge:
-; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_block:
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE]], label [[INTERMEDIATE_EXIT:%.*]]
+; CHECK:       intermediate_loop.backedge:
+; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_exit:
 ; CHECK-NEXT:    br i1 false, label [[LOOP_3_BACKEDGE]], label [[LOOP_1_BACKEDGE_LOOPEXIT:%.*]]
 ; CHECK:       loop_3_backedge:
@@ -2434,10 +2434,10 @@ define i32 @intermediate_complex_subloop_switch_from_inner_to_grandparent(i1 %co
 ; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP:%.*]]
 ; CHECK:       intermediate_loop:
 ; CHECK-NEXT:    br i1 [[COND3:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE:%.*]], label [[INTERMEDIATE_BLOCK:%.*]]
-; CHECK:       intermediate_loop.backedge:
-; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_block:
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[INTERMEDIATE_LOOP_BACKEDGE]], label [[INTERMEDIATE_EXIT:%.*]]
+; CHECK:       intermediate_loop.backedge:
+; CHECK-NEXT:    br label [[INTERMEDIATE_LOOP]]
 ; CHECK:       intermediate_exit:
 ; CHECK-NEXT:    switch i32 1, label [[LOOP_1_BACKEDGE_LOOPEXIT:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[LOOP_3_BACKEDGE]]
