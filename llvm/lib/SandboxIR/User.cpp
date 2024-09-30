@@ -82,7 +82,7 @@ bool User::classof(const Value *From) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return true;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   default:
     return false;
   }
