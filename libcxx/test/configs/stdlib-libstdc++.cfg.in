@@ -1,0 +1,57 @@
+#
+# This testing configuration runs the test suite using the libstdc++ Standard library.
+#
+# The additional '--param libstdcxx-install-prefix=<PATH>' must be provided when invoking
+# lit for the configuration to find the appropriate headers and library.
+#
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
+
+# Basic configuration of the test suite
+config.name = 'libstdc++'
+config.test_source_root = os.path.join('@LIBCXX_SOURCE_DIR@', 'test')
+config.test_format = libcxx.test.format.CxxStandardLibraryTest()
+config.recursiveExpansionLimit = 10
+config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
+
+# Additional parameters for libstdc++
+LIBSTDCXX_PARAMETERS = [
+    libcxx.test.dsl.Parameter(name='libstdcxx-install-prefix', type=str,
+        actions=lambda path: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-install-prefix}', path)],
+        help="""
+        The installation prefix where libstdc++ was installed. This is used to find the libstdc++ headers,
+        link against its built library, etc.
+        """),
+]
+
+config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))
+
+# Configure the compiler and flags
+config.compiler = "@CMAKE_CXX_COMPILER@"
+config.target_triple = "@LLVM_DEFAULT_TARGET_TRIPLE@"
+config.stdlib = 'libstdc++'
+
+config.substitutions.append(('%{flags}',
+    '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem %{libstdcxx-install-prefix}/include/c++/14 -isystem %{libstdcxx-install-prefix}/include/c++/14/aarch64-apple-darwin23 -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{libstdcxx-install-prefix}/lib/gcc/14 -Wl,-rpath,%{libstdcxx-install-prefix}/lib/gcc/14 -lstdc++'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %T -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS + LIBSTDCXX_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
