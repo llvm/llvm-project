@@ -103,6 +103,7 @@ ABI Changes in This Version
 ---------------------------
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
+- Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------

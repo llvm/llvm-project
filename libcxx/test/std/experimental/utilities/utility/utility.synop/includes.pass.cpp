@@ -1,4 +1,4 @@
-//===- ICF.h --------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_ELF_ICF_H
-#define LLD_ELF_ICF_H
+// <experimental/utility>
 
-namespace lld::elf {
-struct Ctx;
+#include <experimental/utility>
 
-template <class ELFT> void doIcf(Ctx &);
-}
+#include "test_macros.h"
 
+#ifndef _LIBCPP_UTILITY
+#   error "<experimental/utility> must include <utility>"
 #endif
+
+int main(int, char**)
+{
+
+  return 0;
+}
