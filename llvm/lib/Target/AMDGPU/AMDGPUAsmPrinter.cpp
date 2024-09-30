@@ -18,6 +18,7 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
 #include "AMDGPUHSAMetadataStreamer.h"
+#include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
@@ -33,6 +34,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -359,6 +361,127 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   return AsmPrinter::doInitialization(M);
 }
 
+void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
+  if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
+    return;
+
+  using RIK = MCResourceInfo::ResourceInfoKind;
+  const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
+
+  auto TryGetMCExprValue = [](const MCExpr *Value, uint64_t &Res) -> bool {
+    int64_t Val;
+    if (Value->evaluateAsAbsolute(Val)) {
+      Res = Val;
+      return true;
+    }
+    return false;
+  };
+
+  const uint64_t MaxScratchPerWorkitem =
+      STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
+  MCSymbol *ScratchSizeSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_PrivateSegSize, OutContext);
+  uint64_t ScratchSize;
+  if (ScratchSizeSymbol->isVariable() &&
+      TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
+      ScratchSize > MaxScratchPerWorkitem) {
+    DiagnosticInfoStackSize DiagStackSize(F, ScratchSize, MaxScratchPerWorkitem,
+                                          DS_Error);
+    F.getContext().diagnose(DiagStackSize);
+  }
+
+  // Validate addressable scalar registers (i.e., prior to added implicit
+  // SGPRs).
+  MCSymbol *NumSGPRSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_NumSGPR, OutContext);
+  if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
+      !STM.hasSGPRInitBug()) {
+    unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
+    uint64_t NumSgpr;
+    if (NumSGPRSymbol->isVariable() &&
+        TryGetMCExprValue(NumSGPRSymbol->getVariableValue(), NumSgpr) &&
+        NumSgpr > MaxAddressableNumSGPRs) {
+      DiagnosticInfoResourceLimit Diag(F, "addressable scalar registers",
+                                       NumSgpr, MaxAddressableNumSGPRs,
+                                       DS_Error, DK_ResourceLimit);
+      F.getContext().diagnose(Diag);
+      return;
+    }
+  }
+
+  MCSymbol *VCCUsedSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_UsesVCC, OutContext);
+  MCSymbol *FlatUsedSymbol =
+      RI.getSymbol(F.getName(), RIK::RIK_UsesFlatScratch, OutContext);
+  uint64_t VCCUsed, FlatUsed, NumSgpr;
+
+  if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
+      FlatUsedSymbol->isVariable() &&
+      TryGetMCExprValue(NumSGPRSymbol->getVariableValue(), NumSgpr) &&
+      TryGetMCExprValue(VCCUsedSymbol->getVariableValue(), VCCUsed) &&
+      TryGetMCExprValue(FlatUsedSymbol->getVariableValue(), FlatUsed)) {
+
+    // Recomputes NumSgprs + implicit SGPRs but all symbols should now be
+    // resolvable.
+    NumSgpr += IsaInfo::getNumExtraSGPRs(
+        &STM, VCCUsed, FlatUsed,
+        getTargetStreamer()->getTargetID()->isXnackOnOrAny());
+    if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
+        STM.hasSGPRInitBug()) {
+      unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
+      if (NumSgpr > MaxAddressableNumSGPRs) {
+        DiagnosticInfoResourceLimit Diag(F, "scalar registers", NumSgpr,
+                                         MaxAddressableNumSGPRs, DS_Error,
+                                         DK_ResourceLimit);
+        F.getContext().diagnose(Diag);
+        return;
+      }
+    }
+
+    MCSymbol *NumVgprSymbol =
+        RI.getSymbol(F.getName(), RIK::RIK_NumVGPR, OutContext);
+    MCSymbol *NumAgprSymbol =
+        RI.getSymbol(F.getName(), RIK::RIK_NumAGPR, OutContext);
+    uint64_t NumVgpr, NumAgpr;
+
+    MachineModuleInfo &MMI =
+        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+    MachineFunction *MF = MMI.getMachineFunction(F);
+    if (MF && NumVgprSymbol->isVariable() && NumAgprSymbol->isVariable() &&
+        TryGetMCExprValue(NumVgprSymbol->getVariableValue(), NumVgpr) &&
+        TryGetMCExprValue(NumAgprSymbol->getVariableValue(), NumAgpr)) {
+      const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
+      unsigned MaxWaves = MFI.getMaxWavesPerEU();
+      uint64_t TotalNumVgpr =
+          getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
+      uint64_t NumVGPRsForWavesPerEU = std::max(
+          {TotalNumVgpr, (uint64_t)1, (uint64_t)STM.getMinNumVGPRs(MaxWaves)});
+      uint64_t NumSGPRsForWavesPerEU = std::max(
+          {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
+      const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
+          STM.computeOccupancy(F, MFI.getLDSSize()),
+          MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
+          MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext), STM,
+          OutContext);
+      uint64_t Occupancy;
+
+      const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
+          F, "amdgpu-waves-per-eu", {0, 0}, true);
+
+      if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
+        DiagnosticInfoOptimizationFailure Diag(
+            F, F.getSubprogram(),
+            "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
+            "'" +
+                F.getName() + "': desired occupancy was " + Twine(MinWEU) +
+                ", final occupancy is " + Twine(Occupancy));
+        F.getContext().diagnose(Diag);
+        return;
+      }
+    }
+  }
+}
+
 bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
@@ -371,25 +494,24 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
     getTargetStreamer()->EmitCodeEnd(STI);
   }
 
-  return AsmPrinter::doFinalization(M);
-}
+  // Assign expressions which can only be resolved when all other functions are
+  // known.
+  RI.finalize(OutContext);
 
-// Print comments that apply to both callable functions and entry points.
-void AMDGPUAsmPrinter::emitCommonFunctionComments(
-    uint32_t NumVGPR, std::optional<uint32_t> NumAGPR, uint32_t TotalNumVGPR,
-    uint32_t NumSGPR, uint64_t ScratchSize, uint64_t CodeSize,
-    const AMDGPUMachineFunction *MFI) {
-  OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
-  OutStreamer->emitRawComment(" NumSgprs: " + Twine(NumSGPR), false);
-  OutStreamer->emitRawComment(" NumVgprs: " + Twine(NumVGPR), false);
-  if (NumAGPR) {
-    OutStreamer->emitRawComment(" NumAgprs: " + Twine(*NumAGPR), false);
-    OutStreamer->emitRawComment(" TotalNumVgprs: " + Twine(TotalNumVGPR),
-                                false);
-  }
-  OutStreamer->emitRawComment(" ScratchSize: " + Twine(ScratchSize), false);
-  OutStreamer->emitRawComment(" MemoryBound: " + Twine(MFI->isMemoryBound()),
-                              false);
+  // Switch section and emit all GPR maximums within the processed module.
+  OutStreamer->pushSection();
+  MCSectionELF *MaxGPRSection =
+      OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
+  OutStreamer->switchSection(MaxGPRSection);
+  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
+                                              RI.getMaxAGPRSymbol(OutContext),
+                                              RI.getMaxSGPRSymbol(OutContext));
+  OutStreamer->popSection();
+
+  for (Function &F : M.functions())
+    validateMCResourceInfo(F);
+
+  return AsmPrinter::doFinalization(M);
 }
 
 SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
@@ -402,12 +524,14 @@ SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   return Str;
 }
 
+// Print comments that apply to both callable functions and entry points.
 void AMDGPUAsmPrinter::emitCommonFunctionComments(
     const MCExpr *NumVGPR, const MCExpr *NumAGPR, const MCExpr *TotalNumVGPR,
     const MCExpr *NumSGPR, const MCExpr *ScratchSize, uint64_t CodeSize,
     const AMDGPUMachineFunction *MFI) {
   OutStreamer->emitRawComment(" codeLenInByte = " + Twine(CodeSize), false);
-  OutStreamer->emitRawComment(" NumSgprs: " + getMCExprStr(NumSGPR), false);
+  OutStreamer->emitRawComment(" TotalNumSgprs: " + getMCExprStr(NumSGPR),
+                              false);
   OutStreamer->emitRawComment(" NumVgprs: " + getMCExprStr(NumVGPR), false);
   if (NumAGPR && TotalNumVGPR) {
     OutStreamer->emitRawComment(" NumAgprs: " + getMCExprStr(NumAGPR), false);
@@ -540,6 +664,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
+  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
+      ResourceUsage->getResourceInfo();
+  RI.gatherResourceInfo(MF, Info, OutContext);
+
   if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
   }
@@ -571,21 +699,44 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitResourceUsageRemarks(MF, CurrentProgramInfo, MFI->isModuleEntryFunction(),
                            STM.hasMAIInsts());
 
+  {
+    using RIK = MCResourceInfo::ResourceInfoKind;
+    getTargetStreamer()->EmitMCResourceInfo(
+        RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_NumSGPR, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_UsesVCC, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_UsesFlatScratch, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasDynSizedStack, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasRecursion, OutContext),
+        RI.getSymbol(MF.getName(), RIK::RIK_HasIndirectCall, OutContext));
+  }
+
   if (isVerbose()) {
     MCSectionELF *CommentSection =
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
     OutStreamer->switchSection(CommentSection);
 
     if (!MFI->isEntryFunction()) {
+      using RIK = MCResourceInfo::ResourceInfoKind;
       OutStreamer->emitRawComment(" Function info:", false);
-      const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-          ResourceUsage->getResourceInfo(&MF.getFunction());
+
       emitCommonFunctionComments(
-          Info.NumVGPR,
-          STM.hasMAIInsts() ? Info.NumAGPR : std::optional<uint32_t>(),
-          Info.getTotalNumVGPRs(STM),
-          Info.getTotalNumSGPRs(MF.getSubtarget<GCNSubtarget>()),
-          Info.PrivateSegmentSize, getFunctionCodeSize(MF), MFI);
+          RI.getSymbol(MF.getName(), RIK::RIK_NumVGPR, OutContext)
+              ->getVariableValue(),
+          STM.hasMAIInsts()
+              ? RI.getSymbol(MF.getName(), RIK::RIK_NumAGPR, OutContext)
+                    ->getVariableValue()
+              : nullptr,
+          RI.createTotalNumVGPRs(MF, Ctx),
+          RI.createTotalNumSGPRs(
+              MF,
+              MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
+              Ctx),
+          RI.getSymbol(MF.getName(), RIK::RIK_PrivateSegSize, OutContext)
+              ->getVariableValue(),
+          getFunctionCodeSize(MF), MFI);
       return false;
     }
 
@@ -751,10 +902,26 @@ uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const 
   return CodeSize;
 }
 
+// AccumOffset computed for the MCExpr equivalent of:
+// alignTo(std::max(1, NumVGPR), 4) / 4 - 1;
+static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
+  const MCExpr *ConstFour = MCConstantExpr::create(4, Ctx);
+  const MCExpr *ConstOne = MCConstantExpr::create(1, Ctx);
+
+  // Can't be lower than 1 for subsequent alignTo.
+  const MCExpr *MaximumTaken =
+      AMDGPUMCExpr::createMax({ConstOne, NumVGPR}, Ctx);
+
+  // Practically, it's computing divideCeil(MaximumTaken, 4).
+  const MCExpr *DivCeil = MCBinaryExpr::createDiv(
+      AMDGPUMCExpr::createAlignTo(MaximumTaken, ConstFour, Ctx), ConstFour,
+      Ctx);
+
+  return MCBinaryExpr::createSub(DivCeil, ConstOne, Ctx);
+}
+
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                         const MachineFunction &MF) {
-  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-      ResourceUsage->getResourceInfo(&MF.getFunction());
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
@@ -771,28 +938,27 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     return false;
   };
 
-  ProgInfo.NumArchVGPR = CreateExpr(Info.NumVGPR);
-  ProgInfo.NumAccVGPR = CreateExpr(Info.NumAGPR);
-  ProgInfo.NumVGPR = CreateExpr(Info.getTotalNumVGPRs(STM));
-  ProgInfo.AccumOffset =
-      CreateExpr(alignTo(std::max(1, Info.NumVGPR), 4) / 4 - 1);
-  ProgInfo.TgSplit = STM.isTgSplitEnabled();
-  ProgInfo.NumSGPR = CreateExpr(Info.NumExplicitSGPR);
-  ProgInfo.ScratchSize = CreateExpr(Info.PrivateSegmentSize);
-  ProgInfo.VCCUsed = CreateExpr(Info.UsesVCC);
-  ProgInfo.FlatUsed = CreateExpr(Info.UsesFlatScratch);
-  ProgInfo.DynamicCallStack =
-      CreateExpr(Info.HasDynamicallySizedStack || Info.HasRecursion);
+  auto GetSymRefExpr =
+      [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
+    MCSymbol *Sym = RI.getSymbol(MF.getName(), RIK, OutContext);
+    return MCSymbolRefExpr::create(Sym, Ctx);
+  };
 
-  const uint64_t MaxScratchPerWorkitem =
-      STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
-  uint64_t ScratchSize;
-  if (TryGetMCExprValue(ProgInfo.ScratchSize, ScratchSize) &&
-      ScratchSize > MaxScratchPerWorkitem) {
-    DiagnosticInfoStackSize DiagStackSize(MF.getFunction(), ScratchSize,
-                                          MaxScratchPerWorkitem, DS_Error);
-    MF.getFunction().getContext().diagnose(DiagStackSize);
-  }
+  using RIK = MCResourceInfo::ResourceInfoKind;
+  ProgInfo.NumArchVGPR = GetSymRefExpr(RIK::RIK_NumVGPR);
+  ProgInfo.NumAccVGPR = GetSymRefExpr(RIK::RIK_NumAGPR);
+  ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
+      ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
+
+  ProgInfo.AccumOffset = computeAccumOffset(ProgInfo.NumArchVGPR, Ctx);
+  ProgInfo.TgSplit = STM.isTgSplitEnabled();
+  ProgInfo.NumSGPR = GetSymRefExpr(RIK::RIK_NumSGPR);
+  ProgInfo.ScratchSize = GetSymRefExpr(RIK::RIK_PrivateSegSize);
+  ProgInfo.VCCUsed = GetSymRefExpr(RIK::RIK_UsesVCC);
+  ProgInfo.FlatUsed = GetSymRefExpr(RIK::RIK_UsesFlatScratch);
+  ProgInfo.DynamicCallStack =
+      MCBinaryExpr::createOr(GetSymRefExpr(RIK::RIK_HasDynSizedStack),
+                             GetSymRefExpr(RIK::RIK_HasRecursion), Ctx);
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -1477,6 +1643,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AMDGPUResourceUsageAnalysis>();
   AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+  AU.addRequired<MachineModuleInfoWrapperPass>();
+  AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
 }
 
@@ -1522,7 +1690,7 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   // printing multiple diagnostic location and diag opts.
   EmitResourceUsageRemark("FunctionName", "Function Name",
                           MF.getFunction().getName());
-  EmitResourceUsageRemark("NumSGPR", "SGPRs",
+  EmitResourceUsageRemark("NumSGPR", "TotalSGPRs",
                           getMCExprStr(CurrentProgramInfo.NumSGPR));
   EmitResourceUsageRemark("NumVGPR", "VGPRs",
                           getMCExprStr(CurrentProgramInfo.NumArchVGPR));
