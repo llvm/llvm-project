@@ -26,6 +26,7 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
@@ -105,7 +106,6 @@ void updateMemProfAttributes(Module &Mod, const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
-class ThinBackendProc;
 
 /// An input file. This is a symbol table wrapper that only exposes the
 /// information that an LTO client should need in order to do symbol resolution.
@@ -194,13 +194,80 @@ private:
   }
 };
 
+using IndexWriteCallback = std::function<void(const std::string &)>;
+
+/// This class defines the interface to the ThinLTO backend.
+class ThinBackendProc {
+protected:
+  const Config &Conf;
+  ModuleSummaryIndex &CombinedIndex;
+  const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
+  IndexWriteCallback OnWrite;
+  bool ShouldEmitImportsFiles;
+  DefaultThreadPool BackendThreadPool;
+  std::optional<Error> Err;
+  std::mutex ErrMu;
+
+public:
+  ThinBackendProc(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles,
+      ThreadPoolStrategy ThinLTOParallelism)
+      : Conf(Conf), CombinedIndex(CombinedIndex),
+        ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
+        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles),
+        BackendThreadPool(ThinLTOParallelism) {}
+
+  virtual ~ThinBackendProc() = default;
+  virtual Error start(
+      unsigned Task, BitcodeModule BM,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
+  Error wait() {
+    BackendThreadPool.wait();
+    if (Err)
+      return std::move(*Err);
+    return Error::success();
+  }
+  unsigned getThreadCount() { return BackendThreadPool.getMaxConcurrency(); }
+  virtual bool isSensitiveToInputOrder() { return false; }
+
+  // Write sharded indices and (optionally) imports to disk
+  Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                  llvm::StringRef ModulePath,
+                  const std::string &NewModulePath) const;
+};
+
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
 /// The details of this type definition aren't important; clients can only
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
-using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
+using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
-    DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache)>;
+struct ThinBackend {
+  ThinBackend(ThinBackendFunction Func, ThreadPoolStrategy Parallelism)
+      : Func(std::move(Func)), Parallelism(std::move(Parallelism)) {}
+  ThinBackend() = default;
+
+  std::unique_ptr<ThinBackendProc> operator()(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream, FileCache Cache) {
+    assert(isValid() && "Invalid backend function");
+    return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+                std::move(AddStream), std::move(Cache));
+  }
+  ThreadPoolStrategy getParallelism() const { return Parallelism; }
+  bool isValid() const { return static_cast<bool>(Func); }
+
+private:
+  ThinBackendFunction Func = nullptr;
+  ThreadPoolStrategy Parallelism;
+};
 
 /// This ThinBackend runs the individual backend jobs in-process.
 /// The default value means to use one job per hardware core (not hyper-thread).
@@ -210,7 +277,6 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
 /// to the same path as the input module, with suffix ".thinlto.bc"
 /// ShouldEmitImportsFiles is true it also writes a list of imported files to a
 /// similar path with ".imports" appended instead.
-using IndexWriteCallback = std::function<void(const std::string &)>;
 ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
                                        IndexWriteCallback OnWrite = nullptr,
                                        bool ShouldEmitIndexFiles = false,
@@ -276,7 +342,7 @@ public:
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
-  LTO(Config Conf, ThinBackend Backend = nullptr,
+  LTO(Config Conf, ThinBackend Backend = {},
       unsigned ParallelCodeGenParallelismLevel = 1,
       LTOKind LTOMode = LTOK_Default);
   ~LTO();
