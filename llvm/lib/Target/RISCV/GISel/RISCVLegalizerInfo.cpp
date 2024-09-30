@@ -609,8 +609,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       // i1 elements; the smallest we can do is i8. Often we are able to bitcast
       // to equivalent i8 vectors.
       .bitcastIf(
-          all(typeIsLegalBoolVec(0, BoolVecTys, ST), ExtractSubvecBitcastPred),
-          /*Mutation=*/nullptr)
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
+          [=](const LegalityQuery &Query) {
+            LLT CastTy = LLT::vector(
+                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
+            return std::pair(0, CastTy);
+          })
       .customIf(
           LegalityPredicates::any(typeIsLegalBoolVec(0, BoolVecTys, ST),
                                   typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST)));

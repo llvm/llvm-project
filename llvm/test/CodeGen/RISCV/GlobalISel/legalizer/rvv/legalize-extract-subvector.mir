@@ -230,8 +230,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: extract_subvector_nxv32i1_nxv64i1_zero
     ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 64 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 32 x s1>) = G_EXTRACT_SUBVECTOR [[DEF]](<vscale x 64 x s1>), 0
-    ; CHECK-NEXT: $v8 = COPY [[EXTRACT_SUBVECTOR]](<vscale x 32 x s1>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[DEF]](<vscale x 64 x s1>)
+    ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_EXTRACT_SUBVECTOR [[BITCAST]](<vscale x 8 x s8>), 0
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 32 x s1>) = G_BITCAST [[EXTRACT_SUBVECTOR]](<vscale x 4 x s8>)
+    ; CHECK-NEXT: $v8 = COPY [[BITCAST1]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:_(<vscale x 64 x s1>) = G_IMPLICIT_DEF
     %1:_(<vscale x 32 x s1>) = G_EXTRACT_SUBVECTOR %0(<vscale x 64 x s1>), 0
