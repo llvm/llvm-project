@@ -1598,6 +1598,45 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  issignaling_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignaling_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignaling
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  issignalingf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignalingf_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignalingf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  issignalingl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignalingl_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignalingl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   llogb_test
   SUITE
     libc-math-smoke-tests
