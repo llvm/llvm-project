@@ -326,3 +326,27 @@ entry:
   store <1 x ptr> %vector, ptr %p, align 16
   ret i32 1
 }
+
+define i32 @extract_v4iptr_vector_insert_const_fixed_legal(<4 x ptr> %a, <4 x ptr> %b, ptr %c, ptr %p) {
+  ; CHECK-LABEL: name: extract_v4iptr_vector_insert_const_fixed_legal
+  ; CHECK: bb.1.entry:
+  ; CHECK-NEXT:   liveins: $q0, $q1, $q2, $q3, $x0, $x1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[COPY2]](<2 x s64>), [[COPY3]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK-NEXT:   [[INSERT_SUBVECTOR:%[0-9]+]]:_(<4 x p0>) = G_INSERT_SUBVECTOR [[CONCAT_VECTORS]], [[CONCAT_VECTORS1]](<4 x p0>), 0
+  ; CHECK-NEXT:   G_STORE [[INSERT_SUBVECTOR]](<4 x p0>), [[COPY5]](p0) :: (store (<4 x p0>) into %ir.p, align 16)
+  ; CHECK-NEXT:   $w0 = COPY [[C]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+entry:
+  %vector = call <4  x ptr> @llvm.vector.insert.v4ptr.v4ptr(<4 x ptr> %a, <4 x ptr> %b, i64 0)
+  store <4 x ptr> %vector, ptr %p, align 16
+  ret i32 1
+}
