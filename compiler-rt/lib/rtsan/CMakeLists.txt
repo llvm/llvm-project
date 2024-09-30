@@ -5,7 +5,9 @@ set(RTSAN_CXX_SOURCES
   rtsan_context.cpp
   rtsan_diagnostics.cpp
   rtsan_flags.cpp
-  rtsan_interceptors.cpp)
+  rtsan_interceptors.cpp
+  rtsan_stats.cpp
+  )
 
 set(RTSAN_PREINIT_SOURCES
   rtsan_preinit.cpp)
@@ -16,7 +18,9 @@ set(RTSAN_HEADERS
   rtsan_context.h
   rtsan_diagnostics.h
   rtsan_flags.h
-  rtsan_flags.inc)
+  rtsan_flags.inc
+  rtsan_stats.h
+  )
 
 set(RTSAN_DEPS)
 
