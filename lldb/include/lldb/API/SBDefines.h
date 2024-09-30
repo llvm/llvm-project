@@ -12,6 +12,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
 #include "lldb/lldb-versioning.h"
 
@@ -141,9 +142,14 @@ typedef bool (*SBBreakpointHitCallback)(void *baton, SBProcess &process,
 typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                           void *baton);
 
-typedef SBError (*SBPlatformLocateModuleCallback)(
+typedef lldb::SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const SBModuleSpec &module_spec, SBFileSpec &module_file_spec,
     SBFileSpec &symbol_file_spec);
+
+typedef lldb::SBError (*SBPlatformResolveSourceFileCallback)(
+    void *baton, const char *buildId,
+    const SBFileSpec &original_source_file_spec,
+    SBFileSpec &resolved_source_file_spec);
 }
 
 #endif // LLDB_API_SBDEFINES_H

@@ -734,3 +734,39 @@ SBError SBPlatform::SetLocateModuleCallback(
       });
   return SBError();
 }
+
+SBError SBPlatform::SetResolveSourceFileCallback(
+    lldb::SBPlatformResolveSourceFileCallback callback, void *callback_baton) {
+  LLDB_INSTRUMENT_VA(this, callback, callback_baton);
+  PlatformSP platform_sp(GetSP());
+  if (!platform_sp) {
+    return SBError("invalid platform");
+  }
+
+  if (!callback) {
+    // Clear the callback.
+    platform_sp->SetResolveSourceFileCallback(nullptr);
+    return SBError("invalid callback");
+  }
+
+  // Platform.h does not accept lldb::SBPlatformFetchSourceFileCallback
+  // directly because of the SBFileSpec dependencies. Use a lambda to convert
+  // FileSpec <--> SBFileSpec for the callback arguments.
+  platform_sp->SetResolveSourceFileCallback(
+      [callback, callback_baton](const char *build_id,
+                                 const FileSpec &original_source_file_spec,
+                                 FileSpec &resolved_source_file_spec) {
+        SBFileSpec resolved_source_file_spec_sb(resolved_source_file_spec);
+
+        SBError error =
+            callback(callback_baton, build_id, original_source_file_spec,
+                     resolved_source_file_spec_sb);
+
+        if (error.Success()) {
+          resolved_source_file_spec = resolved_source_file_spec_sb.ref();
+        }
+
+        return error.ref();
+      });
+  return SBError();
+}

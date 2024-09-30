@@ -329,6 +329,10 @@ public:
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
 
+  void CallResolveSourceFileCallbackIfSet(
+      const char *build_id, const FileSpec &original_source_file_spec,
+      FileSpec &resolved_source_file_spec, bool *did_create_ptr);
+
   virtual Status ConnectRemote(Args &args);
 
   virtual Status DisconnectRemote();
@@ -921,6 +925,11 @@ public:
                                FileSpec &symbol_file_spec)>
       LocateModuleCallback;
 
+  typedef std::function<Status(const char *buildId,
+                               const FileSpec &original_fileSpec,
+                               FileSpec &newFileSpec)>
+      ResolveSourceFileCallback;
+
   /// Set locate module callback. This allows users to implement their own
   /// module cache system. For example, to leverage artifacts of build system,
   /// to bypass pulling files from remote platform, or to search symbol files
@@ -928,6 +937,10 @@ public:
   void SetLocateModuleCallback(LocateModuleCallback callback);
 
   LocateModuleCallback GetLocateModuleCallback() const;
+
+  void SetResolveSourceFileCallback(ResolveSourceFileCallback callback);
+
+  ResolveSourceFileCallback GetResolveSourceFileCallback() const;
 
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
@@ -977,6 +990,7 @@ protected:
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
   LocateModuleCallback m_locate_module_callback;
+  ResolveSourceFileCallback m_resolve_source_file_callback;
 
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///

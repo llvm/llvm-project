@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
@@ -240,8 +243,47 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   return complete_line_range;
 }
 
-void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
+void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp,
+                                  const Address &address) {
   if (target_sp) {
+
+    SymbolContext sc;
+    target_sp->GetImages().ResolveSymbolContextForAddress(
+        address, lldb::eSymbolContextModule, sc);
+    lldb::ModuleSP module_sp = sc.module_sp;
+
+    auto spec = original_file_sp->GetSpecOnly();
+    std::string path = spec.GetPath();
+
+    if (module_sp) {
+      ObjectFile *obj_file = module_sp->GetObjectFile();
+      module_sp->GetFileSpec();
+      if (obj_file) {
+
+        UUID build_id = obj_file->GetUUID();
+        auto buildId_string = new std::string(build_id.GetAsString());
+
+        const char *build_id_ptr = buildId_string->c_str();
+
+        FileSpec newSpec;
+        // Fetches the new spec file
+        bool *didFetchSourceFile = new bool(false);
+
+        lldb::PlatformSP platform_sp = target_sp->GetPlatform();
+        if (!platform_sp)
+          return;
+
+        FileSpec resolved_source_file_spec;
+        platform_sp->CallResolveSourceFileCallbackIfSet(
+            build_id_ptr, spec, resolved_source_file_spec, didFetchSourceFile);
+        if (didFetchSourceFile) {
+          original_file_sp =
+              std::make_shared<SupportFile>(resolved_source_file_spec);
+          file_sp = std::make_shared<SupportFile>(resolved_source_file_spec);
+        }
+      }
+    }
+
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
             original_file_sp->GetSpecOnly()))

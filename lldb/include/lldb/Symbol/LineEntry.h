@@ -128,7 +128,7 @@ struct LineEntry {
   ///
   /// \param[in] target_sp
   ///     Shared pointer to the target this LineEntry belongs to.
-  void ApplyFileMappings(lldb::TargetSP target_sp);
+  void ApplyFileMappings(lldb::TargetSP target_sp, const Address &address);
 
   /// Helper to access the file.
   const FileSpec &GetFile() const { return file_sp->GetSpecOnly(); }
@@ -181,6 +181,7 @@ struct LineEntry {
 ///     Returns \b true if lhs < rhs, false otherwise.
 bool operator<(const LineEntry &lhs, const LineEntry &rhs);
 
+// Add signature for CallFetchSourceFileCallBack
 } // namespace lldb_private
 
 #endif // LLDB_SYMBOL_LINEENTRY_H

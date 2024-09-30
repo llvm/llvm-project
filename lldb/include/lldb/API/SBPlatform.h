@@ -190,6 +190,9 @@ public:
   SBError SetLocateModuleCallback(lldb::SBPlatformLocateModuleCallback callback,
                                   void *callback_baton);
 
+  SBError SetResolveSourceFileCallback(
+      lldb::SBPlatformResolveSourceFileCallback callback, void *callback_baton);
+
 protected:
   friend class SBDebugger;
   friend class SBTarget;

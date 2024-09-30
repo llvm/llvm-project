@@ -844,7 +844,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
   auto pfunc = self.ResolveName<PythonCallable>("__call__");
 
   if (!pfunc.IsAllocated()) {
-    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class");
     return false;
   }
 
@@ -1144,6 +1144,52 @@ static SBError LLDBSwigPythonCallLocateModuleCallback(
 
     module_file_spec_sb = *sb_module_file_spec_ptr;
     symbol_file_spec_sb = *sb_symbol_file_spec_ptr;
+  }
+
+  return *sb_error_ptr;
+}
+
+static SBError LLDBSwigPythonCallResolveSourceFileCallback(
+    void *callback_baton,
+    const char* build_id,
+    const SBFileSpec &original_source_file_spec_sb,
+    SBFileSpec &resolved_source_file_spec_sb) {
+  SWIG_Python_Thread_Block swig_thread_block;
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PyObject *py_build_id = PyUnicode_FromString(build_id);
+  PythonObject build_id_arg(PyRefType::Borrowed,py_build_id);
+  PythonObject original_source_file_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBFileSpec>(original_source_file_spec_sb));
+  PythonObject resolved_source_file_spec_arg = SWIGBridge::ToSWIGWrapper(
+      std::make_unique<SBFileSpec>(resolved_source_file_spec_sb));
+
+  PythonCallable callable =
+      Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
+  if (!callable.IsValid()) {
+    return SBError("The callback callable is not valid.");
+  }
+
+  PythonObject result = callable(build_id_arg, original_source_file_spec_arg,
+                                 resolved_source_file_spec_arg);
+
+  if (!result.IsAllocated())
+    return SBError("No result.");
+  lldb::SBError *sb_error_ptr = nullptr;
+  if (SWIG_ConvertPtr(result.get(), (void **)&sb_error_ptr,
+                      SWIGTYPE_p_lldb__SBError, 0) == -1) {
+    return SBError("Result is not SBError.");
+  }
+
+  if (sb_error_ptr->Success()) {
+    lldb::SBFileSpec *sb_resolved_source_file_spec_ptr = nullptr;
+    if (SWIG_ConvertPtr(resolved_source_file_spec_arg.get(),
+                        (void **)&sb_resolved_source_file_spec_ptr,
+                        SWIGTYPE_p_lldb__SBFileSpec, 0) == -1)
+      return SBError("resolved_source_file_spec is not SBFileSpec.");
+
+    resolved_source_file_spec_sb = *sb_resolved_source_file_spec_ptr;
   }
 
   return *sb_error_ptr;
