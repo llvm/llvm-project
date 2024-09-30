@@ -35,7 +35,7 @@ public:
   enum All_t { All };
 
   RequiredArgs(All_t _) : NumRequired(~0U) {}
-  explicit RequiredArgs(unsigned n) : NumRequired(n) { cir_tl_assert(n != ~0U); }
+  explicit RequiredArgs(unsigned n) : NumRequired(n) { assert(n != ~0U); }
 
   /// Compute the arguments required by the given formal prototype,
   /// given that there may be some additional, non-formal arguments
@@ -47,8 +47,7 @@ public:
     if (!prototype.isVarArg())
       return All;
 
-    cir_assert_or_abort(!::cir::MissingFeatures::variadicFunctions(), "NYI");
-    return All; // FIXME(cir): Temporary workaround for the assertion above.
+    llvm_unreachable("Variadic function is NYI");
   }
 
   bool allowsOptionalArgs() const { return NumRequired != ~0U; }
@@ -106,7 +105,7 @@ public:
                                    ArrayRef<mlir::Type> argTypes,
                                    RequiredArgs required) {
     // TODO(cir): Add assertions?
-    cir_tl_assert(!::cir::MissingFeatures::extParamInfo());
+    assert(!::cir::MissingFeatures::extParamInfo());
     void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
 
     LowerFunctionInfo *FI = new (buffer) LowerFunctionInfo();
@@ -147,7 +146,7 @@ public:
   unsigned arg_size() const { return NumArgs; }
 
   bool isVariadic() const {
-    cir_tl_assert(!::cir::MissingFeatures::variadicFunctions());
+    assert(!::cir::MissingFeatures::variadicFunctions());
     return false;
   }
   unsigned getNumRequiredArgs() const {

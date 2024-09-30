@@ -60,7 +60,7 @@ class AArch64TargetLoweringInfo : public TargetLoweringInfo {
 public:
   AArch64TargetLoweringInfo(LowerTypes &LT, AArch64ABIKind Kind)
       : TargetLoweringInfo(std::make_unique<AArch64ABIInfo>(LT, Kind)) {
-    cir_tl_assert(!MissingFeature::swift());
+    assert(!MissingFeature::swift());
   }
 
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
@@ -87,7 +87,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(Type RetTy,
     return ABIArgInfo::getIgnore();
 
   if (const auto _ = dyn_cast<VectorType>(RetTy)) {
-    cir_assert_or_abort(!::cir::MissingFeatures::vectorType(), "NYI");
+    llvm_unreachable("NYI");
   }
 
   // Large vector types should be returned via memory.
@@ -128,9 +128,7 @@ AArch64ABIInfo::classifyArgumentType(Type Ty, bool IsVariadic,
                 : ABIArgInfo::getDirect());
   }
 
-  cir_assert_or_abort(!::cir::MissingFeatures::AArch64TypeClassification(),
-                      "NYI");
-  return {};
+  llvm_unreachable("NYI");
 }
 
 std::unique_ptr<TargetLoweringInfo>

@@ -55,10 +55,7 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   } else if (isa<StructType>(T)) {
     typeKind = clang::Type::Record;
   } else {
-    cir_assert_or_abort(!::cir::MissingFeatures::ABIClangTypeKind(),
-                        "Unhandled type class");
-    // FIXME(cir): Completely wrong. Just here to make it non-blocking.
-    typeKind = clang::Type::Builtin;
+    llvm_unreachable("Unhandled type class");
   }
 
   // FIXME(cir): Here we fetch the width and alignment of a type considering the
@@ -99,10 +96,10 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
   }
   case clang::Type::Record: {
     const auto RT = dyn_cast<StructType>(T);
-    cir_tl_assert(!::cir::MissingFeatures::tagTypeClassAbstraction());
+    assert(!::cir::MissingFeatures::tagTypeClassAbstraction());
 
     // Only handle TagTypes (names types) for now.
-    cir_tl_assert(RT.getName() && "Anonymous record is NYI");
+    assert(RT.getName() && "Anonymous record is NYI");
 
     // NOTE(cir): Clang does some hanlding of invalid tagged declarations here.
     // Not sure if this is necessary in CIR.
@@ -114,14 +111,14 @@ clang::TypeInfo CIRLowerContext::getTypeInfoImpl(const Type T) const {
     const CIRRecordLayout &Layout = getCIRRecordLayout(RT);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    cir_tl_assert(!::cir::MissingFeatures::recordDeclHasAlignmentAttr());
+    assert(!::cir::MissingFeatures::recordDeclHasAlignmentAttr());
     break;
   }
   default:
     llvm_unreachable("Unhandled type class");
   }
 
-  cir_tl_assert(llvm::isPowerOf2_32(Align) && "Alignment must be power of 2");
+  assert(llvm::isPowerOf2_32(Align) && "Alignment must be power of 2");
   return clang::TypeInfo(Width, Align, AlignRequirement);
 }
 
@@ -129,7 +126,7 @@ Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind K) {
   Type Ty;
 
   // NOTE(cir): Clang does more stuff here. Not sure if we need to do the same.
-  cir_tl_assert(!::cir::MissingFeatures::qualifiedTypes());
+  assert(!::cir::MissingFeatures::qualifiedTypes());
   switch (K) {
   case clang::BuiltinType::Char_S:
     Ty = IntType::get(getMLIRContext(), 8, true);
@@ -144,7 +141,7 @@ Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind K) {
 
 void CIRLowerContext::initBuiltinTypes(const clang::TargetInfo &Target,
                                        const clang::TargetInfo *AuxTarget) {
-  cir_tl_assert((!this->Target || this->Target == &Target) &&
+  assert((!this->Target || this->Target == &Target) &&
          "Incorrect target reinitialization");
   this->Target = &Target;
   this->AuxTarget = AuxTarget;

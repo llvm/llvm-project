@@ -95,8 +95,7 @@ Type getFPTypeAtOffset(Type IRType, unsigned IROffset,
   if (IROffset == 0 && isa<SingleType, DoubleType>(IRType))
     return IRType;
 
-  cir_assert_or_abort(!::cir::MissingFeatures::X86GetFPTypeAtOffset(), "NYI");
-  return IRType; // FIXME(cir): Temporary workaround for the assertion above.
+  llvm_unreachable("NYI");
 }
 
 } // namespace
@@ -194,7 +193,7 @@ class X86_64TargetLoweringInfo : public TargetLoweringInfo {
 public:
   X86_64TargetLoweringInfo(LowerTypes &LM, X86AVXABILevel AVXLevel)
       : TargetLoweringInfo(std::make_unique<X86_64ABIInfo>(LM, AVXLevel)) {
-    cir_tl_assert(!::cir::MissingFeatures::swift());
+    assert(!::cir::MissingFeatures::swift());
   }
 
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
@@ -274,7 +273,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       Current = Class::NoClass;
 
       // If this is a C++ record, classify the bases first.
-      cir_tl_assert(!::cir::MissingFeatures::isCXXRecordDecl() &&
+      assert(!::cir::MissingFeatures::isCXXRecordDecl() &&
              !::cir::MissingFeatures::getCXXRecordBases());
 
       // Classify the fields one at a time, merging the results.
@@ -284,10 +283,10 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       bool IsUnion = RT.isUnion() && !UseClang11Compat;
 
       // FIXME(cir): An interface to handle field declaration might be needed.
-      cir_tl_assert(!::cir::MissingFeatures::fieldDeclAbstraction());
+      assert(!::cir::MissingFeatures::fieldDeclAbstraction());
       for (auto [idx, FT] : llvm::enumerate(RT.getMembers())) {
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
-        cir_tl_assert(!::cir::MissingFeatures::fieldDeclIsBitfield());
+        assert(!::cir::MissingFeatures::fieldDeclIsBitfield());
         bool BitField = false;
 
         // Ignore padding bit-fields.
@@ -338,8 +337,7 @@ void X86_64ABIInfo::classify(Type Ty, uint64_t OffsetBase, Class &Lo, Class &Hi,
       postMerge(Size, Lo, Hi);
     } else {
       llvm::outs() << "Missing X86 classification for type " << Ty << "\n";
-      cir_assert_or_abort(!::cir::MissingFeatures::X86TypeClassification(),
-                          "NYI");
+      llvm_unreachable("NYI");
     }
     // FIXME: _Decimal32 and _Decimal64 are SSE.
     // FIXME: _float128 and _Decimal128 are (SSE, SSEUp).
@@ -402,7 +400,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   // returning an 8-byte unit starting with it. See if we can safely use it.
   if (IROffset == 0) {
     // Pointers and int64's always fill the 8-byte unit.
-    cir_tl_assert(!isa<PointerType>(DestTy) && "Ptrs are NYI");
+    assert(!isa<PointerType>(DestTy) && "Ptrs are NYI");
 
     // If we have a 1/2/4-byte integer, we can use it only if the rest of the
     // goodness in the source type is just tail padding.  This is allowed to
@@ -438,9 +436,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   unsigned TySizeInBytes =
       (unsigned)getContext().getTypeSizeInChars(SourceTy).getQuantity();
 
-  // FIXME(cir): Temporary workaround to make things non-blocking.
-  if (!cirMissingFeatureAssertionMode)
-    cir_tl_assert(TySizeInBytes != SourceOffset && "Empty field?");
+  assert(TySizeInBytes != SourceOffset && "Empty field?");
 
   // It is always safe to classify this as an integer type up to i64 that
   // isn't larger than the structure.
@@ -462,9 +458,9 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
   classify(RetTy, 0, Lo, Hi, true);
 
   // Check some invariants.
-  cir_tl_assert((Hi != Class::Memory || Lo == Class::Memory) &&
+  assert((Hi != Class::Memory || Lo == Class::Memory) &&
          "Invalid memory classification.");
-  cir_tl_assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
+  assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
          "Invalid SSEUp classification.");
 
   Type resType = {};
@@ -496,8 +492,7 @@ Type X86_64ABIInfo::GetINTEGERTypeAtOffset(Type DestTy, unsigned IROffset,
     break;
 
   default:
-    cir_assert_or_abort(!::cir::MissingFeatures::X86RetTypeClassification(),
-                        "NYI");
+    llvm_unreachable("NYI");
   }
 
   Type HighPart = {};
@@ -531,9 +526,9 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
 
   // Check some invariants.
   // FIXME: Enforce these by construction.
-  cir_tl_assert((Hi != Class::Memory || Lo == Class::Memory) &&
+  assert((Hi != Class::Memory || Lo == Class::Memory) &&
          "Invalid memory classification.");
-  cir_tl_assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
+  assert((Hi != Class::SSEUp || Lo == Class::SSE) &&
          "Invalid SSEUp classification.");
 
   neededInt = 0;
@@ -571,8 +566,7 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(Type Ty, unsigned freeIntRegs,
     break;
   }
   default:
-    cir_assert_or_abort(!::cir::MissingFeatures::X86ArgTypeClassification(),
-                        "NYI");
+    llvm_unreachable("NYI");
   }
 
   Type HighPart = {};
@@ -676,7 +670,7 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
 
   // Accum should never be memory (we should have returned) or
   // ComplexX87 (because this cannot be passed in a structure).
-  cir_tl_assert((Accum != Class::Memory && Accum != Class::ComplexX87) &&
+  assert((Accum != Class::Memory && Accum != Class::ComplexX87) &&
          "Invalid accumulated classification during merge.");
   if (Accum == Field || Field == Class::NoClass)
     return Accum;

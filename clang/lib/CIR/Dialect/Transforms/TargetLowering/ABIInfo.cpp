@@ -37,7 +37,7 @@ bool ABIInfo::isPromotableIntegerTypeForABI(Type Ty) const {
   if (getContext().isPromotableIntegerType(Ty))
     return true;
 
-  cir_tl_assert(!::cir::MissingFeatures::fixedWidthIntegers());
+  assert(!::cir::MissingFeatures::fixedWidthIntegers());
 
   return false;
 }

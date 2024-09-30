@@ -449,7 +449,7 @@ public:
   unsigned ClangIRLibOpt : 1;
 
   // Enable Clang IR call conv lowering pass.
-  unsigned ClangIRCallConvLowering : 1;
+  unsigned ClangIREnableCallConvLowering : 1;
 
   // Enable Clang IR mem2reg pass on the flat CIR.
   unsigned ClangIREnableMem2Reg : 1;

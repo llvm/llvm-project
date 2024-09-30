@@ -42,7 +42,7 @@ std::unique_ptr<Pass> createGotoSolverPass();
 /// Create a pass to lower ABI-independent function definitions/calls.
 std::unique_ptr<Pass> createCallConvLoweringPass();
 
-void populateCIRPreLoweringPasses(mlir::OpPassManager &pm, bool useCCLowering);
+void populateCIRPreLoweringPasses(mlir::OpPassManager &pm);
 
 //===----------------------------------------------------------------------===//
 // Registration

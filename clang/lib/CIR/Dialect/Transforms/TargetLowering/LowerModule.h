@@ -68,7 +68,7 @@ public:
   // FIXME(cir): This would be in ASTContext, not CodeGenModule.
   clang::TargetCXXABI::Kind getCXXABIKind() const {
     auto kind = getTarget().getCXXABI().getKind();
-    cir_tl_assert(!::cir::MissingFeatures::langOpts());
+    assert(!::cir::MissingFeatures::langOpts());
     return kind;
   }
 

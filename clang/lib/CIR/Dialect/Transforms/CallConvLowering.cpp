@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 #include "TargetLowering/LowerModule.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -13,7 +14,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/MissingFeatures.h"
 
 #define GEN_PASS_DEF_CALLCONVLOWERING
 #include "clang/CIR/Dialect/Passes.h.inc"
@@ -44,12 +44,6 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
     auto calls = op.getSymbolUses(module);
     if (calls.has_value()) {
       for (auto call : calls.value()) {
-        // FIXME(cir): Function pointers are ignored.
-        if (isa<GetGlobalOp>(call.getUser())) {
-          cir_assert_or_abort(!::cir::MissingFeatures::ABIFuncPtr(), "NYI");
-          continue;
-        }
-
         auto callOp = cast<CallOp>(call.getUser());
         if (lowerModule->rewriteFunctionCall(callOp, op).failed())
           return failure();

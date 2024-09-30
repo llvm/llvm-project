@@ -15,27 +15,6 @@
 #ifndef CLANG_CIR_MISSINGFEATURES_H
 #define CLANG_CIR_MISSINGFEATURES_H
 
-constexpr bool cirMissingFeatureAssertionMode =
-    true; // Change to `false` to use llvm_unreachable
-
-#define NOTE                                                                   \
-  " Target lowering is now required. Disable it with "                         \
-  "-fno-clangir-call-conv-lowering."
-
-// Special assertion to be used in the target lowering library.
-#define cir_tl_assert(cond) assert((cond) && NOTE);
-
-// Some assertions knowingly generate incorrect code. This macro allows us to
-// switch between using `assert` and `llvm_unreachable` for these cases.
-#define cir_assert_or_abort(cond, msg)                                         \
-  do {                                                                         \
-    if (cirMissingFeatureAssertionMode) {                                      \
-      assert((cond) && msg NOTE);                                              \
-    } else {                                                                   \
-      llvm_unreachable(msg NOTE);                                              \
-    }                                                                          \
-  } while (0)
-
 namespace cir {
 
 struct MissingFeatures {
@@ -232,26 +211,6 @@ struct MissingFeatures {
   static bool supportisAggregateTypeForABIAArch64() { return false; }
 
   //===--- ABI lowering --===//
-
-  static bool SPIRVABI() { return false; }
-
-  static bool AArch64TypeClassification() { return false; }
-
-  static bool X86ArgTypeClassification() { return false; }
-  static bool X86DefaultABITypeConvertion() { return false; }
-  static bool X86GetFPTypeAtOffset() { return false; }
-  static bool X86RetTypeClassification() { return false; }
-  static bool X86TypeClassification() { return false; }
-
-  static bool ABIClangTypeKind() { return false; }
-  static bool ABIEnterStructForCoercedAccess() { return false; }
-  static bool ABIFuncPtr() { return false; }
-  static bool ABIInRegAttribute() { return false; }
-  static bool ABINestedRecordLayout() { return false; }
-  static bool ABINoProtoFunctions() { return false; }
-  static bool ABIParameterCoercion() { return false; }
-  static bool ABIPointerParameterAttrs() { return false; }
-  static bool ABITransparentUnionHandling() { return false; }
 
   //-- Missing AST queries
 

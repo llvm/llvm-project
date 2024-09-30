@@ -4,7 +4,7 @@
 // RUN: FileCheck %s -check-prefix=LLVM --input-file=%t.ll
 // RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir -fexceptions -fcxx-exceptions %s -o %t.eh.cir
 // RUN: FileCheck %s -check-prefix=CIR_EH --input-file=%t.eh.cir
-// RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -fno-clangir-call-conv-lowering -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir
+// RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-cir-flat -fexceptions -fcxx-exceptions %s -o %t.eh.flat.cir
 // RUN: FileCheck %s -check-prefix=CIR_FLAT_EH --input-file=%t.eh.flat.cir
 // RUN: %clang_cc1 -std=c++20 -triple aarch64-none-linux-android21 -fclangir -emit-llvm -fexceptions -fcxx-exceptions %s -o %t.eh.ll
 // RUN: FileCheck %s -check-prefix=LLVM_EH --input-file=%t.eh.ll
