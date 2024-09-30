@@ -2177,7 +2177,8 @@ inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
           E->getExprLoc(), diag::warn_fixedpoint_constant_overflow)
           << Result.toDiagnosticString(S.getASTContext()) << E->getType();
     }
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Result << E->getType();
+    S.CCEDiag(E, diag::note_constexpr_overflow)
+        << Result.toDiagnosticString(S.getASTContext()) << E->getType();
     if (!S.noteUndefinedBehavior())
       return false;
   }
