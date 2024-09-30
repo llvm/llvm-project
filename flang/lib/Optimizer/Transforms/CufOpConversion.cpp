@@ -370,18 +370,20 @@ struct CufDataTransferOpConversion
     mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
     mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
 
-    unsigned mode;
+    mlir::Location loc = op.getLoc();
+    unsigned mode = 0;
     if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
       mode = kHostToDevice;
     } else if (op.getTransferKind() == cuf::DataTransferKind::DeviceHost) {
       mode = kDeviceToHost;
     } else if (op.getTransferKind() == cuf::DataTransferKind::DeviceDevice) {
       mode = kDeviceToDevice;
+    } else {
+      mlir::emitError(loc, "unsupported transfer kind\n");
     }
 
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
-    mlir::Location loc = op.getLoc();
     fir::KindMapping kindMap{fir::getKindMapping(mod)};
     mlir::Value modeValue =
         builder.createIntegerConstant(loc, builder.getI32Type(), mode);
