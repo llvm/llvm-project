@@ -137,7 +137,6 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
       Result = AnnotateAttr::Create(S.Context, "example", ArgsBuf.data(),
                                     ArgsBuf.size(), Attr.getRange());
     } else {
-      // Attach an annotate attribute to the Decl.
       Result = AnnotateAttr::Create(S.Context, "example", nullptr, 0,
                                     Attr.getRange());
     }
