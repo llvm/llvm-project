@@ -62,6 +62,8 @@ static StringRef getReplacementFor(StringRef FunctionName,
   // should be matched and suggested.
   return StringSwitch<StringRef>(FunctionName)
       .Cases("asctime", "asctime_r", "strftime")
+      .Case("ctime", "ctime_r")
+      .Case("localtime", "localtime_r")
       .Case("gets", "fgets")
       .Case("rewind", "fseek")
       .Case("setbuf", "setvbuf");
