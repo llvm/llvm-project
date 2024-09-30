@@ -55,8 +55,8 @@ namespace vendor_code {
 
 // Generate unique (but deterministic "uuid" for testing purposes).
 static std::string nextUuid() {
-  static std::atomic<int> seed = 1111;
-  return std::to_string(seed.fetch_add(1, std::memory_order_acquire));
+  static int seed = 1111;
+  return std::to_string(seed++);
 }
 
 struct VendorEntryKind {
