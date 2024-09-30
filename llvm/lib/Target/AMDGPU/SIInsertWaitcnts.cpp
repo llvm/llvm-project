@@ -859,7 +859,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     } else if (TII->isMIMG(Inst)) {
       if (Inst.mayStore()) {
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT, CurrScore);
+        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
+                          CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setScoreByOperand(&Inst, TRI, MRI,
                           *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
@@ -867,10 +868,12 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     } else if (TII->isMTBUF(Inst)) {
       if (Inst.mayStore())
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT, CurrScore);
+        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
+                          CurrScore);
     } else if (TII->isMUBUF(Inst)) {
       if (Inst.mayStore()) {
-        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT, CurrScore);
+        setScoreByOperand(&Inst, TRI, MRI, Inst.getOperand(0), EXP_CNT,
+                          CurrScore);
       } else if (SIInstrInfo::isAtomicRet(Inst)) {
         setScoreByOperand(&Inst, TRI, MRI,
                           *TII->getNamedOperand(Inst, AMDGPU::OpName::data),
