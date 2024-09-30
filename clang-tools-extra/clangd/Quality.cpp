@@ -555,7 +555,6 @@ std::string sortText(float Score, llvm::StringRef Name) {
   llvm::write_hex(OS, encodeFloat(-Score), llvm::HexPrintStyle::Lower,
                   /*Width=*/2 * sizeof(Score));
   OS << Name;
-  OS.flush();
   return S;
 }
 
