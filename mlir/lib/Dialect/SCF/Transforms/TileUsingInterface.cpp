@@ -1488,7 +1488,8 @@ static FailureOr<OpOperand *> getConsumerFromUses(Value val,
     Operation *consumerOp = opOperand.getOwner();
     if (isa<scf::YieldOp, tensor::ParallelInsertSliceOp>(consumerOp))
       continue;
-    if (operand) return failure();
+    if (operand)
+      return failure();
     // TODO: We have to init result of consumer before scf.for, use
     //       DestinationStyleOpInterface to get result shape from init for now.
     //       Add support for other op such as op has InferTypeOpInterface.
