@@ -49,14 +49,11 @@ add_mlir_dialect_library(MLIRLinalgTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
-  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRArithDialect
   MLIRArithTransforms
   MLIRArithUtils
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRComplexDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
@@ -67,20 +64,15 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRMeshDialect
   MLIRMeshTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRSCFUtils
   MLIRPass
-  MLIRShardingInterface
   MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
-  MLIRTensorTilingInterfaceImpl
-  MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRValueBoundsOpInterface

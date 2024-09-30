@@ -12,8 +12,6 @@ add_mlir_dialect_library(MLIRFuncTransforms
   MLIRFuncTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRFuncDialect
   MLIRIR
   MLIRMemRefDialect
