@@ -863,10 +863,10 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-static VPIRBasicBlock *createVPIRBasicBlockFor(BasicBlock *BB) {
-  auto *VPIRBB = new VPIRBasicBlock(BB);
+VPIRBasicBlock *VPIRBasicBlock::fromBasicBlock(BasicBlock *IRBB) {
+  auto *VPIRBB = new VPIRBasicBlock(IRBB);
   for (Instruction &I :
-       make_range(BB->begin(), BB->getTerminator()->getIterator()))
+       make_range(IRBB->begin(), IRBB->getTerminator()->getIterator()))
     VPIRBB->appendRecipe(new VPIRInstruction(I));
   return VPIRBB;
 }
@@ -875,7 +875,8 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
                                    PredicatedScalarEvolution &PSE,
                                    bool RequiresScalarEpilogueCheck,
                                    bool TailFolded, Loop *TheLoop) {
-  VPIRBasicBlock *Entry = createVPIRBasicBlockFor(TheLoop->getLoopPreheader());
+  VPIRBasicBlock *Entry =
+      VPIRBasicBlock::fromBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
 
@@ -915,7 +916,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
   BasicBlock *IRExitBlock = TheLoop->getUniqueExitBlock();
-  auto *VPExitBlock = createVPIRBasicBlockFor(IRExitBlock);
+  auto *VPExitBlock = VPIRBasicBlock::fromBasicBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
   VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
@@ -991,7 +992,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = createVPIRBasicBlockFor(IRBB);
+  VPIRBasicBlock *IRVPBB = VPIRBasicBlock::fromBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
     assert(!R.isPhi() && "Tried to move phi recipe to end of block");
     R.moveBefore(*IRVPBB, IRVPBB->end());
