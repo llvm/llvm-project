@@ -227,10 +227,9 @@ void UnsafeFunctionsCheck::registerMatchers(MatchFinder *Finder) {
     }
 
     // Matching functions with replacements without Annex K.
-    auto FunctionNamesMatcher =
-        hasAnyName("::asctime", "asctime_r", "::ctime", "ctime_r",
-                   "::localtime", "localtime_r", "::gets", "::rewind",
-                   "::setbuf");
+    auto FunctionNamesMatcher = hasAnyName(
+        "::asctime", "asctime_r", "::ctime", "ctime_r", "::localtime",
+        "localtime_r", "::gets", "::rewind", "::setbuf");
     Finder->addMatcher(
         declRefExpr(
             to(functionDecl(FunctionNamesMatcher).bind(FunctionNamesId)))
