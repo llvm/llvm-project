@@ -4054,9 +4054,10 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     unsigned MaxVFtimesIC =
         UserIC ? *MaxPowerOf2RuntimeVF * UserIC : *MaxPowerOf2RuntimeVF;
     ScalarEvolution *SE = PSE.getSE();
-    // Currently only loops with countable exits are vectorized so it's safe to
-    // use getSymbolicMaxBackedgeTakenCount as it should give the same result
-    // as getBackedgeTakenCount.
+    // Currently only loops with countable exits are vectorized, but calling
+    // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
+    // uncountable exits whilst also ensuring the symbolic maximum and known
+    // back-edge taken count remain identical for loops with countable exits.
     const SCEV *BackedgeTakenCount = PSE.getSymbolicMaxBackedgeTakenCount();
     assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
            "Invalid loop count");

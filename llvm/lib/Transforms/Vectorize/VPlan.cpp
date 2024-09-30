@@ -881,9 +881,10 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
 
   // Create SCEV and VPValue for the trip count.
 
-  // Using getSymbolicMaxBackedgeTakenCount instead of getBackedgeTakenCount,
-  // since they should be identical as we currently only vectorize loops when
-  // all exits are countable.
+  // Currently only loops with countable exits are vectorized, but calling
+  // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
+  // uncountable exits whilst also ensuring the symbolic maximum and known
+  // back-edge taken count remain identical for loops with countable exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
          "Invalid loop count");
