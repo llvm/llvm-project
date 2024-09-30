@@ -4495,18 +4495,19 @@ void CXXNameMangler::mangleType(const ArrayParameterType *T) {
 void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
   mangleType(T->getWrappedType());
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
+  // map resource class to HLSL virtual register letter
   switch (Attrs.ResourceClass) {
   case llvm::dxil::ResourceClass::UAV:
-    Out << 'U';
+    Out << 'u';
     break;
   case llvm::dxil::ResourceClass::SRV:
-    Out << 'T';
+    Out << 't';
     break;
   case llvm::dxil::ResourceClass::CBuffer:
-    Out << 'C';
+    Out << 'b';
     break;
   case llvm::dxil::ResourceClass::Sampler:
-    Out << 'S';
+    Out << 's';
     break;
   }
   mangleNumber(Attrs.IsROV);

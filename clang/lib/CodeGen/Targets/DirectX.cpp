@@ -38,31 +38,23 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
   switch (ResAttrs.ResourceClass) {
   case llvm::dxil::ResourceClass::UAV:
   case llvm::dxil::ResourceClass::SRV: {
-    // convert element type
+    // TypedBuffer and RawBuffer both need element type
     QualType ContainedTy = ResType->getContainedType();
-    llvm::Type *ElemType = nullptr;
-    if (!ContainedTy.isNull())
-      ElemType = CGM.getTypes().ConvertType(ContainedTy);
-
-    if (ResAttrs.RawBuffer) {
-      // RawBuffer needs element type
-      if (ContainedTy.isNull())
-        return nullptr;
-      return llvm::TargetExtType::get(Ctx, "dx.RawBuffer", {ElemType},
-                                      {/*IsWriteable*/ ResAttrs.ResourceClass ==
-                                           llvm::dxil::ResourceClass::UAV,
-                                       /*IsROV*/ ResAttrs.IsROV});
-    }
-
-    // TypedBuffer needs element type
     if (ContainedTy.isNull())
       return nullptr;
-    return llvm::TargetExtType::get(
-        Ctx, "dx.TypedBuffer", {ElemType},
-        {/*IsWriteable*/ ResAttrs.ResourceClass ==
-             llvm::dxil::ResourceClass::UAV,
-         /*IsROV*/ ResAttrs.IsROV,
-         /*IsSigned*/ ContainedTy->isSignedIntegerType()});
+
+    // convert element type
+    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+
+    const char* TypeName = ResAttrs.RawBuffer ? "dx.RawBuffer" : "dx.TypedBuffer";
+    SmallVector<unsigned, 3> Ints = {
+      /*IsWriteable*/ ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV,
+      /*IsROV*/ ResAttrs.IsROV
+    };
+    if (!ResAttrs.RawBuffer)
+      Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
+    
+    return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
   case llvm::dxil::ResourceClass::CBuffer:
     llvm_unreachable("dx.CBuffer handles are not implemented yet");
