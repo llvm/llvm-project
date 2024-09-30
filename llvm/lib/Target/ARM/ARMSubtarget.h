@@ -97,7 +97,7 @@ public:
     /// vpush {d8-d15}
     SplitR7,
 
-    /// When the stack frame size if now known (because of variable-sized
+    /// When the stack frame size if not known (because of variable-sized
     /// objects or realignment), Windows SEH requires the callee-saved registers
     /// to be stored in three regions, with R11 and LR below the floating-point
     /// registers.
