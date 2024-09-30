@@ -1221,8 +1221,15 @@ AliasResult BasicAAResult::aliasGEP(
     if (!Overflow && Off.uge(UpperRange))
       return AliasResult::NoAlias;
     APInt LowerRange = CR.getUnsignedMin().umul_ov(LSizeMin, Overflow);
-    if (!Overflow && Off.ult(LowerRange))
-      return AliasResult::PartialAlias;
+    if (!Overflow && Off.ult(LowerRange)) {
+      AliasResult AR = AliasResult::PartialAlias;
+      if (VRightSize.hasValue() && !VRightSize.isScalable() &&
+          Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSizeMin)) {
+        AR.setOffset(-Off.getSExtValue());
+        AR.swap(Swapped);
+      }
+      return AR;
+    }
   }
 
   // VScale Alias Analysis - Given one scalable offset between accesses and a
