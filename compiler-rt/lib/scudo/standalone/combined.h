@@ -1254,9 +1254,10 @@ private:
 
     if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options)))
       Header->OriginOrWasZeroed = 0U;
-    else
+    else {
       Header->OriginOrWasZeroed =
           Header->ClassId && !TSDRegistry.getDisableMemInit();
+    }
 
     Chunk::storeHeader(Cookie, Ptr, Header);
 
