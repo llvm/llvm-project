@@ -112,8 +112,8 @@ static std::string computeBaseSysRoot(const Driver &D, bool IncludeTriple) {
 
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
-    : ToolChain(D, Triple, Args)
-    , SysRoot(computeBaseSysRoot(D, /*IncludeTriple=*/true)) {
+    : ToolChain(D, Triple, Args),
+      SysRoot(computeBaseSysRoot(D, /*IncludeTriple=*/true)) {
   getProgramPaths().push_back(getDriver().Dir);
 
   findMultilibs(D, Triple, Args);
@@ -262,9 +262,7 @@ Tool *BareMetal::buildStaticLibTool() const {
   return new tools::baremetal::StaticLibTool(*this);
 }
 
-std::string BareMetal::computeSysRoot() const {
-  return SysRoot;
-}
+std::string BareMetal::computeSysRoot() const { return SysRoot; }
 
 BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   // Get multilibs in reverse order because they're ordered most-specific last.
