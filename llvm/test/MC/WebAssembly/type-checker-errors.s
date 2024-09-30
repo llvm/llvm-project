@@ -139,15 +139,14 @@ table_set_missing_tabletype:
 
 table_set_empty_stack_while_popping_1:
   .functype table_set_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref] but got []
   table.set valid_table
   end_function
 
 table_set_empty_stack_while_popping_2:
   .functype table_set_empty_stack_while_popping_2 (externref) -> ()
   local.get 0
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref] but got [externref]
   table.set valid_table
   end_function
 
@@ -155,7 +154,7 @@ table_set_type_mismatch_1:
   .functype table_set_type_mismatch_1 () -> ()
   i32.const 0
   ref.null_func
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [externref] but got [funcref]
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref] but got [i32, funcref]
   table.set valid_table
   end_function
 
@@ -163,7 +162,7 @@ table_set_type_mismatch_2:
   .functype table_set_type_mismatch_2 () -> ()
   f32.const 1.0
   ref.null_extern
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref] but got [f32, externref]
   table.set valid_table
   end_function
 
@@ -187,17 +186,14 @@ table_fill_missing_tabletype:
 
 table_fill_empty_stack_while_popping_1:
   .functype table_fill_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+3]]:3: error: type mismatch, expected [i32] but got []
-# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got []
   table.fill valid_table
   end_function
 
 table_fill_empty_stack_while_popping_2:
   .functype table_fill_empty_stack_while_popping_2 (i32) -> ()
   local.get 0
-# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [i32]
   table.fill valid_table
   end_function
 
@@ -205,7 +201,7 @@ table_fill_empty_stack_while_popping_3:
   .functype table_fill_empty_stack_while_popping_3 (i32, externref) -> ()
   local.get 1
   local.get 0
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [externref, i32]
   table.fill valid_table
   end_function
 
@@ -214,7 +210,7 @@ table_fill_type_mismatch_1:
   i32.const 0
   ref.null_extern
   ref.null_func
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [funcref]
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [i32, externref, funcref]
   table.fill valid_table
   end_function
 
@@ -223,7 +219,7 @@ table_fill_type_mismatch_2:
   i32.const 0
   ref.null_func
   i32.const 1
-# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got [funcref]
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [i32, funcref, i32]
   table.fill valid_table
   end_function
 
@@ -232,7 +228,7 @@ table_fill_type_mismatch_3:
   f32.const 2.0
   ref.null_extern
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [f32, externref, i32]
   table.fill valid_table
   end_function
 
@@ -241,7 +237,7 @@ table_fill_type_mismatch_4:
   i32.const 1
   ref.null_exn
   i32.const 1
-# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got [exnref]
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [i32, exnref, i32]
   table.fill valid_table
   end_function
 
@@ -256,7 +252,7 @@ table_grow_non_exist_table:
 table_grow_type_mismatch_1:
   .functype table_grow_type_mismatch_1 (externref, i32) -> (i32)
   local.get 1
-# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got []
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref, i32] but got [i32]
   table.grow valid_table
   end_function
 
@@ -264,7 +260,7 @@ table_grow_type_mismatch_2:
   .functype table_grow_type_mismatch_2 (externref, i32) -> (i32)
   local.get 0
   local.get 0
-# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got [externref]
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref, i32] but got [externref, externref]
   table.grow valid_table
   end_function
 
@@ -883,9 +879,7 @@ multiple_errors_in_function:
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
 
-# CHECK: :[[@LINE+3]]:3: error: type mismatch, expected [i32] but got []
-# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
-# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, externref, i32] but got [any]
   table.fill valid_table
 
   f32.const 0.0
@@ -904,4 +898,30 @@ call_with_multi_param_and_return:
 # CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, i64, f32, f64] but got [externref, f32]
   call take_and_return_multi
 # CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [i32, i64, f32, f64]
+  end_function
+
+.functype callee (f32, i32) -> ()
+
+any_value_on_stack:
+  .functype any_value_on_stack () -> ()
+  # This local does not exist so it should error out, but it should put an 'any'
+  # value on the stack so 'call callee' should not error out again
+# CHECK: :[[@LINE+1]]:13: error: no local type specified for index 0
+  local.get 0
+  i32.const 0
+# CHECK-NOT: :[[@LINE+1]]:3: error: type mismatch
+  call callee
+
+  # But this time 'call callee' should error out
+  i32.const 0
+# CHECK: :[[@LINE+1]]:13: error: no local type specified for index 0
+  local.get 0
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32, i32] but got [i32, any]
+  call callee
+
+# CHECK: :[[@LINE+2]]:13: error: no local type specified for index 0
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
+  local.set 0
+  drop
+
   end_function
