@@ -504,8 +504,9 @@ public:
   InlineResult analyze();
 
   std::optional<Constant *> getSimplifiedValue(Instruction *I) {
-    if (SimplifiedValues.contains(I))
-      return SimplifiedValues[I];
+    auto It = SimplifiedValues.find(I);
+    if (It != SimplifiedValues.end())
+      return It->second;
     return std::nullopt;
   }
 
@@ -1129,8 +1130,9 @@ public:
   void print(raw_ostream &OS);
 
   std::optional<InstructionCostDetail> getCostDetails(const Instruction *I) {
-    if (InstructionCostDetailMap.contains(I))
-      return InstructionCostDetailMap[I];
+    auto It = InstructionCostDetailMap.find(I);
+    if (It != InstructionCostDetailMap.end())
+      return It->second;
     return std::nullopt;
   }
 

@@ -173,9 +173,9 @@ private:
 
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<InputFile *> files;
-  InputFile *armCmseImpLib = nullptr;
 
 public:
+  InputFile *armCmseImpLib = nullptr;
   SmallVector<std::pair<StringRef, unsigned>, 0> archiveFiles;
 };
 
