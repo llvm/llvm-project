@@ -10,114 +10,43 @@
 
 // unique_ptr
 
-// pointer unique_ptr<T>::get() const noexcept;
-// pointer unique_ptr<T[]>::get() const noexcept;
+// test get
 
 #include <memory>
 #include <cassert>
-#include <cstddef>
 
 #include "test_macros.h"
+#include "unique_ptr_test_helper.h"
 
-template <class T>
+template <bool IsArray>
 TEST_CONSTEXPR_CXX23 void test_basic() {
-  // non-const element type
+  typedef typename std::conditional<IsArray, int[], int>::type VT;
+  typedef const VT CVT;
   {
-    // non-const access
-    {
-      T* x = new T;
-      std::unique_ptr<T> ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T*);
-      ASSERT_NOEXCEPT(ptr.get());
-      assert(ptr.get() == x);
-    }
-
-    // const access
-    {
-      T* x = new T;
-      std::unique_ptr<T> const ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T*);
-      ASSERT_NOEXCEPT(ptr.get());
-      assert(ptr.get() == x);
-    }
+    typedef std::unique_ptr<VT> U;
+    int* p = newValue<VT>(1);
+    U s(p);
+    U const& sc = s;
+    ASSERT_SAME_TYPE(decltype(s.get()), int*);
+    ASSERT_SAME_TYPE(decltype(sc.get()), int*);
+    assert(s.get() == p);
+    assert(sc.get() == s.get());
   }
-
-  // const element type
   {
-    // non-const access
-    {
-      T* x = new T;
-      std::unique_ptr<T const> ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T const*);
-      assert(ptr.get() == x);
-    }
-
-    // const access
-    {
-      T* x = new T;
-      std::unique_ptr<T const> const ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T const*);
-      assert(ptr.get() == x);
-    }
-  }
-
-  // Same thing but for unique_ptr<T[]>
-  // non-const element type
-  {
-    // non-const access
-    {
-      T* x = new T[3];
-      std::unique_ptr<T[]> ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T*);
-      ASSERT_NOEXCEPT(ptr.get());
-      assert(ptr.get() == x);
-    }
-
-    // const access
-    {
-      T* x = new T[3];
-      std::unique_ptr<T[]> const ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T*);
-      ASSERT_NOEXCEPT(ptr.get());
-      assert(ptr.get() == x);
-    }
-  }
-
-  // const element type
-  {
-    // non-const access
-    {
-      T* x = new T[3];
-      std::unique_ptr<T const[]> ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T const*);
-      assert(ptr.get() == x);
-    }
-
-    // const access
-    {
-      T* x = new T[3];
-      std::unique_ptr<T const[]> const ptr(x);
-      ASSERT_SAME_TYPE(decltype(ptr.get()), T const*);
-      assert(ptr.get() == x);
-    }
+    typedef std::unique_ptr<CVT> U;
+    const int* p = newValue<VT>(1);
+    U s(p);
+    U const& sc = s;
+    ASSERT_SAME_TYPE(decltype(s.get()), const int*);
+    ASSERT_SAME_TYPE(decltype(sc.get()), const int*);
+    assert(s.get() == p);
+    assert(sc.get() == s.get());
   }
 }
 
-template <std::size_t Size>
-struct WithSize {
-  char padding[Size];
-};
-
 TEST_CONSTEXPR_CXX23 bool test() {
-  test_basic<char>();
-  test_basic<int>();
-  test_basic<WithSize<1> >();
-  test_basic<WithSize<2> >();
-  test_basic<WithSize<3> >();
-  test_basic<WithSize<4> >();
-  test_basic<WithSize<8> >();
-  test_basic<WithSize<16> >();
-  test_basic<WithSize<256> >();
+  test_basic</*IsArray*/ false>();
+  test_basic<true>();
 
   return true;
 }

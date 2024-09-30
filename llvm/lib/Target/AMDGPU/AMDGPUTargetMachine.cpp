@@ -799,12 +799,11 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   const auto *LD = dyn_cast<LoadInst>(V);
-  if (!LD)
+  if (!LD) // TODO: Handle invariant load like constant.
     return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
 
   // It must be a generic pointer loaded.
-  assert(V->getType()->isPointerTy() &&
-         V->getType()->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS);
+  assert(V->getType()->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS);
 
   const auto *Ptr = LD->getPointerOperand();
   if (Ptr->getType()->getPointerAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
