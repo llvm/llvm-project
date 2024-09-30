@@ -45,6 +45,7 @@ COFF Improvements
 
 MinGW Improvements
 ------------------
+* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------

@@ -343,8 +343,9 @@ static void GenerateGetKindClauseVal(const DirectiveLanguage &DirLang,
     if (ClauseVals.size() <= 0)
       continue;
 
-    auto DefaultIt = find_if(
-        ClauseVals, [](Record *CV) { return CV->getValueAsBit("isDefault"); });
+    auto DefaultIt = find_if(ClauseVals, [](const Record *CV) {
+      return CV->getValueAsBit("isDefault");
+    });
 
     if (DefaultIt == ClauseVals.end()) {
       PrintError("At least one val in Clause " + C.getFormattedName() +
@@ -505,7 +506,7 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
   std::vector<LeafList> LeafTable(Directives.size());
   for (auto [Idx, Rec] : enumerate(Directives)) {
     Directive Dir(Rec);
-    std::vector<Record *> Leaves = Dir.getLeafConstructs();
+    std::vector<const Record *> Leaves = Dir.getLeafConstructs();
 
     auto &List = LeafTable[Idx];
     List.resize(MaxLeafCount + 2);
@@ -680,7 +681,7 @@ static void GenerateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
       return AS;
     }
     // Compute the association from leaf constructs.
-    std::vector<Record *> leaves = D.getLeafConstructs();
+    std::vector<const Record *> leaves = D.getLeafConstructs();
     if (leaves.empty()) {
       errs() << D.getName() << '\n';
       PrintFatalError(errorPrefixFor(D) +

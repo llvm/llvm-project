@@ -295,23 +295,24 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     // variable that will contain that length. This variable is used as
     // 'stringLength' in DIStringTypeAttr.
     if (declOp && !declOp.getTypeparams().empty()) {
-      mlir::Operation *op = declOp.getTypeparams()[0].getDefiningOp();
-      if (auto unbox = mlir::dyn_cast_or_null<fir::UnboxCharOp>(op)) {
-        auto name =
-            mlir::StringAttr::get(context, "." + declOp.getUniqName().str());
-        mlir::OpBuilder builder(context);
-        builder.setInsertionPoint(declOp);
-        mlir::Type i64Ty = builder.getIntegerType(64);
-        auto convOp = builder.create<fir::ConvertOp>(unbox.getLoc(), i64Ty,
-                                                     unbox.getResult(1));
-        mlir::LLVM::DITypeAttr Ty = convertType(i64Ty, fileAttr, scope, declOp);
-        auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
-            context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
-            /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-        builder.create<mlir::LLVM::DbgValueOp>(convOp.getLoc(), convOp, lvAttr,
-                                               nullptr);
-        varAttr = mlir::cast<mlir::LLVM::DIVariableAttr>(lvAttr);
+      auto name =
+          mlir::StringAttr::get(context, "." + declOp.getUniqName().str());
+      mlir::OpBuilder builder(context);
+      builder.setInsertionPoint(declOp);
+      mlir::Value sizeVal = declOp.getTypeparams()[0];
+      mlir::Type type = sizeVal.getType();
+      if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
+        type = builder.getIntegerType(64);
+        sizeVal =
+            builder.create<fir::ConvertOp>(declOp.getLoc(), type, sizeVal);
       }
+      mlir::LLVM::DITypeAttr Ty = convertType(type, fileAttr, scope, declOp);
+      auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
+          context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
+          /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
+      builder.create<mlir::LLVM::DbgValueOp>(declOp.getLoc(), sizeVal, lvAttr,
+                                             nullptr);
+      varAttr = mlir::cast<mlir::LLVM::DIVariableAttr>(lvAttr);
     }
   }
 

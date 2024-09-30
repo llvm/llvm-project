@@ -154,7 +154,7 @@ on support follow.
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zaamo``         Assembly Support
      ``Zabha``         Supported
-     ``Zacas``         Supported (`See note<#riscv-zacas-note>`__)
+     ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support

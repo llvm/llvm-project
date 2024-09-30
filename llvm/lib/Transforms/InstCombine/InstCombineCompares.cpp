@@ -5282,6 +5282,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))))) {
       bool NonZero;
       if (ICmpInst::isEquality(Pred)) {
+        // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
+        if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
+            isKnownNonEqual(X, Y, DL, &AC, &I, &DT))
+          return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
+
         KnownBits ZKnown = computeKnownBits(Z, 0, &I);
         // if Z % 2 != 0
         //    X * Z eq/ne Y * Z -> X eq/ne Y
@@ -5905,11 +5910,10 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
   // This matches patterns corresponding to tests of the signbit as well as:
   // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
   // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
-  APInt Mask;
-  if (decomposeBitTestICmp(Op0, Op1, Pred, X, Mask, true /* WithTrunc */)) {
-    Value *And = Builder.CreateAnd(X, Mask);
-    Constant *Zero = ConstantInt::getNullValue(X->getType());
-    return new ICmpInst(Pred, And, Zero);
+  if (auto Res = decomposeBitTestICmp(Op0, Op1, Pred, /*WithTrunc=*/true)) {
+    Value *And = Builder.CreateAnd(Res->X, Res->Mask);
+    Constant *Zero = ConstantInt::getNullValue(Res->X->getType());
+    return new ICmpInst(Res->Pred, And, Zero);
   }
 
   unsigned SrcBits = X->getType()->getScalarSizeInBits();

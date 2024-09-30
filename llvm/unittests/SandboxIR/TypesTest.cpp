@@ -14,7 +14,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Constant.h"
+#include "llvm/SandboxIR/Context.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 

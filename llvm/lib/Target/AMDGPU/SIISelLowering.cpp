@@ -6797,8 +6797,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
 
   // Special case: for shifts, the RHS always needs a zext.
-  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
-      Op.getOpcode() == ISD::SRA)
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
   else
     RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
@@ -8210,9 +8209,17 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);
-  Ops.push_back(Op.getOperand(ArgOffset + Intr->RsrcIndex));
-  if (BaseOpcode->Sampler)
-    Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
+  SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
+  EVT RsrcVT = Rsrc.getValueType();
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+    return Op;
+  Ops.push_back(Rsrc);
+  if (BaseOpcode->Sampler) {
+    SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
+    if (Samp.getValueType() != MVT::v4i32)
+      return Op;
+    Ops.push_back(Samp);
+  }
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
@@ -16145,11 +16152,8 @@ static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
 
 static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
   LLVMContext &Ctx = RMW->getContext();
-  SmallVector<StringRef> SSNs;
-  Ctx.getSyncScopeNames(SSNs);
-  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                           ? "system"
-                           : SSNs[RMW->getSyncScopeID()];
+  StringRef SS = Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("");
+  StringRef MemScope = SS.empty() ? StringRef("system") : SS;
 
   return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
          << "Hardware instruction generated for atomic "
