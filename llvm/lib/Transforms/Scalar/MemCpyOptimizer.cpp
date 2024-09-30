@@ -1054,11 +1054,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   // the use analysis, we also need to know that it does not sneakily
   // access dest.  We rely on AA to figure this out for us.
   MemoryLocation DestWithSrcSize(cpyDest, LocationSize::precise(srcSize));
-  ModRefInfo MR = BAA.getModRefInfo(C, DestWithSrcSize);
-  // If necessary, perform additional analysis.
-  if (isModOrRefSet(MR))
-    MR = BAA.callCapturesBefore(C, DestWithSrcSize, DT);
-  if (isModOrRefSet(MR))
+  if (isModOrRefSet(BAA.getModRefInfo(C, DestWithSrcSize)))
     return false;
 
   // We can't create address space casts here because we don't know if they're
