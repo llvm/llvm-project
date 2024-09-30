@@ -153,6 +153,9 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
   std::copy(Requirements.begin(), Requirements.end(),
             getTrailingObjects<concepts::Requirement *>());
   RequiresExprBits.IsSatisfied |= Dependent;
+  RequiresExprBits.IsSatisfied &=
+      llvm::none_of(LocalParameters,
+                    [](ParmVarDecl *Param) { return Param->isInvalidDecl(); });
   // FIXME: move the computing dependency logic to ComputeDependence.h
   if (ContainsUnexpandedParameterPack)
     setDependence(getDependence() | ExprDependence::UnexpandedPack);
