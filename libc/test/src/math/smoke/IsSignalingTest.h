@@ -52,7 +52,9 @@ public:
 
 #define LIST_ISSIGNALING_TESTS(T, func)                                        \
   using LlvmLibcIsSignalingTest = IssignalingTest<T>;                          \
-  TEST_F(LlvmLibcIsSignalingTest, SpecialNumbers) { testSpecialNumbers(&func); }\
+  TEST_F(LlvmLibcIsSignalingTest, SpecialNumbers) {                            \
+    testSpecialNumbers(&func);                                                 \
+  }                                                                            \
   TEST_F(LlvmLibcIsSignalingTest, RoundedNubmers) { testRoundedNumbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ISSIGNALINGTEST_H
