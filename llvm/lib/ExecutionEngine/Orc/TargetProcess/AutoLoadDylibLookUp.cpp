@@ -169,10 +169,10 @@ bool SplitPaths(StringRef PathStr, SmallVectorImpl<StringRef> &Paths,
 
 AutoLoadDynamicLibraryLookup ::AutoLoadDynamicLibraryLookup() {
   const SmallVector<const char *, 10> kSysLibraryEnv = {
-    "LD_LIBRARY_PATH",
+      "LD_LIBRARY_PATH",
 #if __APPLE__
-    "DYLD_LIBRARY_PATH",
-    "DYLD_FALLBACK_LIBRARY_PATH",
+      "DYLD_LIBRARY_PATH",
+      "DYLD_FALLBACK_LIBRARY_PATH",
   /*
   "DYLD_VERSIONED_LIBRARY_PATH",
   "DYLD_FRAMEWORK_PATH",
@@ -180,7 +180,7 @@ AutoLoadDynamicLibraryLookup ::AutoLoadDynamicLibraryLookup() {
   "DYLD_VERSIONED_FRAMEWORK_PATH",
   */
 #elif defined(_WIN32)
-    "PATH",
+      "PATH",
 #endif
   };
 

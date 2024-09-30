@@ -83,8 +83,7 @@ public:
   BloomFilter(const BloomFilter &other) noexcept
       : Initialized(other.Initialized), SymbolsCount(other.SymbolsCount),
         BloomSize(other.BloomSize), BloomShift(other.BloomShift),
-        BloomTable(other.BloomTable) {
-  }
+        BloomTable(other.BloomTable) {}
   BloomFilter &operator=(const BloomFilter &other) = delete;
 
   BloomFilter(BloomFilter &&other) noexcept

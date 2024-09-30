@@ -11,8 +11,6 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <dlfcn.h>
-#include <string>
-#include <unordered_map>
 
 #define DEBUG_TYPE "orc"
 
