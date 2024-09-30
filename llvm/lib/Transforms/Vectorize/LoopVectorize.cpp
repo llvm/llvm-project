@@ -384,6 +384,13 @@ static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
     cl::Hidden,
     cl::desc("Try wider VFs if they enable the use of vector variants"));
 
+// Bypass the assertion when the VF selected by vplan-based cost model is
+// different from the VF selected by legacy cost model.
+static cl::opt<bool>
+    BypassVFComparison("bypass-vf-comparison", cl::init(false), cl::Hidden,
+                       cl::desc("Bypass VF comparison between legacy cost "
+                                "model and the vplan-base cost model."));
+
 // Likelyhood of bypassing the vectorized loop because assumptions about SCEV
 // variables not overflowing do not hold. See `emitSCEVChecks`.
 static constexpr uint32_t SCEVCheckBypassWeights[] = {1, 127};
@@ -7383,10 +7390,13 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // different VF to be picked by the VPlan-based cost model.
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  assert((BestFactor.Width == LegacyVF.Width ||
+  assert(BypassVFComparison ||
+         (BestFactor.Width == LegacyVF.Width ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop)) &&
-         " VPlan cost model and legacy cost model disagreed");
+             " VPlan cost model and legacy cost model disagreed. Please report "
+             "the issue and you can bypass "
+             "this assertion by `-bypass-vf-comparison=true`.");
   assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
          "when vectorizing, the scalar cost must be computed.");
 #endif
