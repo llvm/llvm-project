@@ -65,7 +65,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-static std::optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
+static std::optional<std::string> getLinkerScriptLocation(Ctx &ctx,
+                                                          const Symbol &sym) {
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *assign = dyn_cast<SymbolAssignment>(cmd))
       if (assign->sym == &sym)
@@ -73,11 +74,11 @@ static std::optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   return std::nullopt;
 }
 
-static std::string getDefinedLocation(const Symbol &sym) {
+static std::string getDefinedLocation(Ctx &ctx, const Symbol &sym) {
   const char msg[] = "\n>>> defined in ";
   if (sym.file)
     return msg + toString(sym.file);
-  if (std::optional<std::string> loc = getLinkerScriptLocation(sym))
+  if (std::optional<std::string> loc = getLinkerScriptLocation(ctx, sym))
     return msg + *loc;
   return "";
 }
@@ -87,9 +88,9 @@ static std::string getDefinedLocation(const Symbol &sym) {
 // >>> defined in /home/alice/src/foo.o
 // >>> referenced by bar.c:12 (/home/alice/src/bar.c:12)
 // >>>               /home/alice/src/bar.o:(.text+0x1)
-static std::string getLocation(InputSectionBase &s, const Symbol &sym,
+static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
                                uint64_t off) {
-  std::string msg = getDefinedLocation(sym) + "\n>>> referenced by ";
+  std::string msg = getDefinedLocation(ctx, sym) + "\n>>> referenced by ";
   std::string src = s.getSrcMsg(sym, off);
   if (!src.empty())
     msg += src + "\n>>>               ";
@@ -116,7 +117,7 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
   if (!errPlace.srcLoc.empty())
     hint += "\n>>> referenced by " + errPlace.srcLoc;
   if (rel.sym && !rel.sym->isSection())
-    hint += getDefinedLocation(*rel.sym);
+    hint += getDefinedLocation(ctx, *rel.sym);
 
   if (errPlace.isec && errPlace.isec->name.starts_with(".debug"))
     hint += "; consider recompiling with -fdebug-types-section to reduce size "
@@ -127,13 +128,13 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
               ", " + Twine(max).str() + "]" + hint);
 }
 
-void elf::reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
-                           const Twine &msg) {
+void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                           const Symbol &sym, const Twine &msg) {
   ErrorPlace errPlace = getErrorPlace(loc);
   std::string hint;
   if (!sym.getName().empty())
-    hint =
-        "; references '" + lld::toString(sym) + '\'' + getDefinedLocation(sym);
+    hint = "; references '" + lld::toString(sym) + '\'' +
+           getDefinedLocation(ctx, sym);
   errorOrWarn(errPlace.loc + msg + " is out of range: " + Twine(v) +
               " is not in [" + Twine(llvm::minIntN(n)) + ", " +
               Twine(llvm::maxIntN(n)) + "]" + hint);
@@ -926,7 +927,7 @@ static void addPltEntry(PltSection &plt, GotPltSection &gotPlt,
                 sym, 0, R_ABS});
 }
 
-void elf::addGotEntry(Symbol &sym) {
+void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
   ctx.in.got->addEntry(sym);
   uint64_t off = sym.getGotOffset();
 
@@ -960,7 +961,7 @@ static void addTpOffsetGotEntry(Symbol &sym) {
 // Return true if we can define a symbol in the executable that
 // contains the value/function of a symbol defined in a shared
 // library.
-static bool canDefineSymbolInExecutable(Symbol &sym) {
+static bool canDefineSymbolInExecutable(Ctx &ctx, Symbol &sym) {
   // If the symbol has default visibility the symbol defined in the
   // executable will preempt it.
   // Note that we want the visibility of the shared symbol itself, not
@@ -1041,7 +1042,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
       return true;
 
   error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(*sec, sym, relOff));
+        toString(sym) + getLocation(ctx, *sec, sym, relOff));
   return true;
 }
 
@@ -1206,9 +1207,9 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // R_AARCH64_AUTH_ABS64.
   if (!ctx.arg.shared && sym.isShared() &&
       !(ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) {
-    if (!canDefineSymbolInExecutable(sym)) {
+    if (!canDefineSymbolInExecutable(ctx, sym)) {
       errorOrWarn("cannot preempt symbol: " + toString(sym) +
-                  getLocation(*sec, sym, offset));
+                  getLocation(ctx, *sec, sym, offset));
       return;
     }
 
@@ -1219,7 +1220,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
           error("unresolvable relocation " + toString(type) +
                 " against symbol '" + toString(*ss) +
                 "'; recompile with -fPIC or remove '-z nocopyreloc'" +
-                getLocation(*sec, sym, offset));
+                getLocation(ctx, *sec, sym, offset));
         sym.setFlags(NEEDS_COPY);
       }
       sec->addReloc({expr, type, offset, addend, &sym});
@@ -1257,7 +1258,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       if (ctx.arg.pie && ctx.arg.emachine == EM_386)
         errorOrWarn("symbol '" + toString(sym) +
                     "' cannot be preempted; recompile with -fPIE" +
-                    getLocation(*sec, sym, offset));
+                    getLocation(ctx, *sec, sym, offset));
       sym.setFlags(NEEDS_COPY | NEEDS_PLT);
       sec->addReloc({expr, type, offset, addend, &sym});
       return;
@@ -1267,7 +1268,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   errorOrWarn("relocation " + toString(type) + " cannot be used against " +
               (sym.getName().empty() ? "local symbol"
                                      : "symbol '" + toString(sym) + "'") +
-              "; recompile with -fPIC" + getLocation(*sec, sym, offset));
+              "; recompile with -fPIC" + getLocation(ctx, *sec, sym, offset));
 }
 
 // This function is similar to the `handleTlsRelocation`. MIPS does not
@@ -1306,7 +1307,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     if (ctx.arg.shared) {
       errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
                   " cannot be used with -shared" +
-                  getLocation(*sec, sym, offset));
+                  getLocation(ctx, *sec, sym, offset));
       return 1;
     }
     return 0;
@@ -1515,7 +1516,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
         if (i == end) {
           errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
                       "relocation" +
-                      getLocation(*sec, sym, offset));
+                      getLocation(ctx, *sec, sym, offset));
           return;
         }
       }
@@ -1694,7 +1695,7 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
     outerFn();
 }
 
-static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
+static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // Handle a reference to a non-preemptible ifunc. These are special in a
   // few ways:
   //
@@ -1770,7 +1771,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
     d.type = STT_FUNC;
 
     if (flags & NEEDS_GOT)
-      addGotEntry(sym);
+      addGotEntry(ctx, sym);
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
@@ -1781,7 +1782,7 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
 void elf::postScanRelocations(Ctx &ctx) {
   auto fn = [&](Symbol &sym) {
     auto flags = sym.flags.load(std::memory_order_relaxed);
-    if (handleNonPreemptibleIfunc(sym, flags))
+    if (handleNonPreemptibleIfunc(ctx, sym, flags))
       return;
 
     if (sym.isTagged() && sym.isDefined())
@@ -1792,7 +1793,7 @@ void elf::postScanRelocations(Ctx &ctx) {
     sym.allocateAux();
 
     if (flags & NEEDS_GOT)
-      addGotEntry(sym);
+      addGotEntry(ctx, sym);
     if (flags & NEEDS_PLT)
       addPltEntry(*ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
                   ctx.target->pltRel, sym);
@@ -2052,7 +2053,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
-static int64_t getPCBias(RelType type) {
+static int64_t getPCBias(Ctx &ctx, RelType type) {
   if (ctx.arg.emachine != EM_ARM)
     return 0;
   switch (type) {
@@ -2074,7 +2075,7 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
                                            const Relocation &rel,
                                            uint64_t src) {
   // See the comment in getThunk for -pcBias below.
-  const int64_t pcBias = getPCBias(rel.type);
+  const int64_t pcBias = getPCBias(ctx, rel.type);
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
     uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
@@ -2235,7 +2236,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   // out in the relocation addend. We compensate for the PC bias so that
   // an Arm and Thumb relocation to the same destination get the same keyAddend,
   // which is usually 0.
-  const int64_t pcBias = getPCBias(rel.type);
+  const int64_t pcBias = getPCBias(ctx, rel.type);
   const int64_t keyAddend = rel.addend + pcBias;
 
   // We use a ((section, offset), addend) pair to find the thunk position if
@@ -2357,7 +2358,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
             // STT_SECTION + non-zero addend, clear the addend after
             // redirection.
             if (ctx.arg.emachine != EM_MIPS)
-              rel.addend = -getPCBias(rel.type);
+              rel.addend = -getPCBias(ctx, rel.type);
           }
 
         for (auto &p : isd->thunkSections)
@@ -2390,13 +2391,13 @@ bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
   return needTlsSymbol;
 }
 
-void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
+void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
   Symbol *sym = ctx.symtab->find("__tls_get_addr");
   if (!sym)
     return;
   bool needEntry = true;
   forEachInputSectionDescription(
-      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+      ctx.outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
         for (InputSection *isec : isd->sections)
           for (Relocation &rel : isec->relocs())
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
@@ -2418,8 +2419,8 @@ static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {
 }
 
 template <class ELFT, class Rels>
-static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
-                          InputSection *sec, Rels rels) {
+static void scanCrossRefs(Ctx &ctx, const NoCrossRefCommand &cmd,
+                          OutputSection *osec, InputSection *sec, Rels rels) {
   for (const auto &r : rels) {
     Symbol &sym = sec->file->getSymbol(r.getSymbol(ctx.arg.isMips64EL));
     // A legal cross-reference is when the destination output section is
@@ -2442,7 +2443,7 @@ static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
 
 // For each output section described by at least one NOCROSSREFS(_TO) command,
 // scan relocations from its input sections for prohibited cross references.
-template <class ELFT> void elf::checkNoCrossRefs() {
+template <class ELFT> void elf::checkNoCrossRefs(Ctx &ctx) {
   for (OutputSection *osec : ctx.outputSections) {
     for (const NoCrossRefCommand &noxref : ctx.script->noCrossRefs) {
       if (!llvm::is_contained(noxref.outputSections, osec->name) ||
@@ -2453,7 +2454,7 @@ template <class ELFT> void elf::checkNoCrossRefs() {
         if (!isd)
           continue;
         parallelForEach(isd->sections, [&](InputSection *sec) {
-          invokeOnRelocs(*sec, scanCrossRefs<ELFT>, noxref, osec, sec);
+          invokeOnRelocs(*sec, scanCrossRefs<ELFT>, ctx, noxref, osec, sec);
         });
       }
     }
@@ -2465,7 +2466,7 @@ template void elf::scanRelocations<ELF32BE>(Ctx &);
 template void elf::scanRelocations<ELF64LE>(Ctx &);
 template void elf::scanRelocations<ELF64BE>(Ctx &);
 
-template void elf::checkNoCrossRefs<ELF32LE>();
-template void elf::checkNoCrossRefs<ELF32BE>();
-template void elf::checkNoCrossRefs<ELF64LE>();
-template void elf::checkNoCrossRefs<ELF64BE>();
+template void elf::checkNoCrossRefs<ELF32LE>(Ctx &);
+template void elf::checkNoCrossRefs<ELF32BE>(Ctx &);
+template void elf::checkNoCrossRefs<ELF64LE>(Ctx &);
+template void elf::checkNoCrossRefs<ELF64BE>(Ctx &);

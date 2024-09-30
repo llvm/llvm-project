@@ -247,8 +247,8 @@ template <class ELFT> bool isMipsPIC(const Defined *sym);
 
 void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                       int64_t min, uint64_t max);
-void reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
-                      const Twine &msg);
+void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                      const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
