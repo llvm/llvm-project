@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.PointerSub -analyzer-output=text-minimal -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=security.PointerSub -analyzer-output=text-minimal -verify %s
 
 void f1(void) {
   int x, y, z[10];

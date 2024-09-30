@@ -1275,6 +1275,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("rotate."))
         // nvvm.rotate.{b32,b64,right.b64}
         Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
+      else if (Name.consume_front("ptr.gen.to."))
+        // nvvm.ptr.gen.to.{local,shared,global,constant}
+        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
+                 Name.starts_with("global") || Name.starts_with("constant");
+      else if (Name.consume_front("ptr."))
+        // nvvm.ptr.{local,shared,global,constant}.to.gen
+        Expand =
+            (Name.consume_front("local") || Name.consume_front("shared") ||
+             Name.consume_front("global") || Name.consume_front("constant")) &&
+            Name.starts_with(".to.gen");
       else
         Expand = false;
 
@@ -2338,6 +2348,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if ((Name.consume_front("ptr.gen.to.") &&
+              (Name.starts_with("local") || Name.starts_with("shared") ||
+               Name.starts_with("global") || Name.starts_with("constant"))) ||
+             (Name.consume_front("ptr.") &&
+              (Name.consume_front("local") || Name.consume_front("shared") ||
+               Name.consume_front("global") ||
+               Name.consume_front("constant")) &&
+              Name.starts_with(".to.gen"))) {
+    Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -5495,6 +5514,18 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // Add "-Fn32"
     if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
+    return Res;
+  }
+
+  if (T.isSPARC()) {
+    // Add "-i128:128"
+    std::string I64 = "-i64:64";
+    std::string I128 = "-i128:128";
+    if (!StringRef(Res).contains(I128)) {
+      size_t Pos = Res.find(I64);
+      assert(Pos != size_t(-1) && "no i64 data layout found!");
+      Res.insert(Pos + I64.size(), I128);
+    }
     return Res;
   }
 
