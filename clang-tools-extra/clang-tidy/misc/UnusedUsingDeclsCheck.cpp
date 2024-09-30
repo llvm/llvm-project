@@ -25,7 +25,7 @@ AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
   return false;
 }
 
-AST_MATCHER_P(Type, getTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
+AST_MATCHER_P(Type, asTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
               DeclMatcher) {
   if (const TagDecl *ND = Node.getAsTagDecl())
     return DeclMatcher.matches(*ND, Finder, Builder);
@@ -69,7 +69,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       loc(elaboratedType(unless(hasQualifier(nestedNameSpecifier())),
                          hasUnqualifiedDesugaredType(
-                             type(getTagDecl(tagDecl().bind("used")))))),
+                             type(asTagDecl(tagDecl().bind("used")))))),
       this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
