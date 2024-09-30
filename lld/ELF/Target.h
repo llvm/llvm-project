@@ -29,6 +29,7 @@ class Symbol;
 
 class TargetInfo {
 public:
+  TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
@@ -113,6 +114,7 @@ public:
     return false;
   }
 
+  Ctx &ctx;
   unsigned defaultCommonPageSize = 4096;
   unsigned defaultMaxPageSize = 4096;
 
@@ -177,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo();
-TargetInfo *getAMDGPUTargetInfo();
-TargetInfo *getARMTargetInfo();
-TargetInfo *getAVRTargetInfo();
-TargetInfo *getHexagonTargetInfo();
-TargetInfo *getLoongArchTargetInfo();
-TargetInfo *getMSP430TargetInfo();
-TargetInfo *getPPC64TargetInfo();
-TargetInfo *getPPCTargetInfo();
-TargetInfo *getRISCVTargetInfo();
-TargetInfo *getSPARCV9TargetInfo();
-TargetInfo *getSystemZTargetInfo();
-TargetInfo *getX86TargetInfo();
-TargetInfo *getX86_64TargetInfo();
-template <class ELFT> TargetInfo *getMipsTargetInfo();
+TargetInfo *getAArch64TargetInfo(Ctx &);
+TargetInfo *getAMDGPUTargetInfo(Ctx &);
+TargetInfo *getARMTargetInfo(Ctx &);
+TargetInfo *getAVRTargetInfo(Ctx &);
+TargetInfo *getHexagonTargetInfo(Ctx &);
+TargetInfo *getLoongArchTargetInfo(Ctx &);
+TargetInfo *getMSP430TargetInfo(Ctx &);
+TargetInfo *getMipsTargetInfo(Ctx &);
+TargetInfo *getPPC64TargetInfo(Ctx &);
+TargetInfo *getPPCTargetInfo(Ctx &);
+TargetInfo *getRISCVTargetInfo(Ctx &);
+TargetInfo *getSPARCV9TargetInfo(Ctx &);
+TargetInfo *getSystemZTargetInfo(Ctx &);
+TargetInfo *getX86TargetInfo(Ctx &);
+TargetInfo *getX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -241,7 +243,7 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
 void initSymbolAnchors();
 
-TargetInfo *getTarget(Ctx &ctx);
+TargetInfo *getTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
