@@ -255,11 +255,9 @@ static void equivalenceAnalysis(FunctionOpInterface funcOp,
                                 OneShotAnalysisState &state,
                                 FuncAnalysisState &funcState) {
   funcOp->walk([&](CallOpInterface callOp) {
-    if (isa<func::CallIndirectOp>(callOp))
-      return WalkResult::skip();
-
     FunctionOpInterface calledFunction = getCalledFunction(callOp);
-    assert(calledFunction && "could not retrieved called FunctionOpInterface");
+    if (!calledFunction)
+      return WalkResult::skip();
 
     // No equivalence info available for the called function.
     if (!funcState.equivalentFuncArgs.count(calledFunction))
