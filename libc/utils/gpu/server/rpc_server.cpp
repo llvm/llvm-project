@@ -285,6 +285,7 @@ rpc_status_t handle_server_impl(
       FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
                          reinterpret_cast<char *>(buffer->data));
       buffer->data[0] = reinterpret_cast<uintptr_t>(file);
+      delete[] reinterpret_cast<uint8_t *>(paths[id]);
     });
     break;
   }
