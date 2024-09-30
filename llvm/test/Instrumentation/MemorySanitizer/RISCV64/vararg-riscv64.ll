@@ -1,15 +1,15 @@
 ; RUN: opt < %s -S -passes=msan 2>&1 -msan-origin-base=0x40000000 -msan-and-mask=0x80000000 | FileCheck %s
 
-target datalayout = "E-m:m-i8:8:32-i16:16:32-i32:32-n32-S64"
-target triple = "mips--linux"
+target datalayout = "E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S64"
+target triple = "riscv64--linux"
 
-define i32 @foo(i32 %guard, ...) {
+define i64 @foo(i64 %guard, ...) {
   %vl = alloca ptr, align 4
   call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
   call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
-  ret i32 0
+  ret i64 0
 }
 
 ; First, check allocation of the save area.
@@ -29,25 +29,25 @@ declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
-define i32 @bar() {
-  %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)
-  ret i32 %1
+define i64 @bar() {
+  %1 = call i64 (i64, ...) @foo(i64 0, i64 1, i64 2, double 3.000000e+00)
+  ret i64 %1
 }
 
 ; Save the incoming shadow value from the arguments in the __msan_va_arg_tls
 ; array.  The first argument is stored at position 4, since it's right
 ; justified.
 ; CHECK-LABEL: @bar
-; CHECK: store i32 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 4) to ptr), align 8
+; CHECK: store i64 0, ptr @__msan_va_arg_tls, align 8
 ; CHECK: store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 8) to ptr), align 8
 ; CHECK: store i64 0, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 16) to ptr), align 8
 ; CHECK: store {{.*}} 24, {{.*}} @__msan_va_arg_overflow_size_tls
 
 ; Check multiple fixed arguments.
-declare i32 @foo2(i32 %g1, i32 %g2, ...)
-define i32 @bar2() {
-  %1 = call i32 (i32, i32, ...) @foo2(i32 0, i32 1, i64 2, double 3.000000e+00)
-  ret i32 %1
+declare i64 @foo2(i64 %g1, i64 %g2, ...)
+define i64 @bar2() {
+  %1 = call i64 (i64, i64, ...) @foo2(i64 0, i64 1, i64 2, double 3.000000e+00)
+  ret i64 %1
 }
 
 ; CHECK-LABEL: @bar2
@@ -57,29 +57,29 @@ define i32 @bar2() {
 
 ; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are
 ; passed to a variadic function.
-define dso_local i32 @many_args() {
+define dso_local i64 @many_args() {
 ; CHECK-LABEL: @many_args
-; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 796)
+; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
 ; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
 entry:
-  %ret = call i32 (i32, ...) @sum(i32 120,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-  i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1
+  %ret = call i64 (i64, ...) @sum(i64 120,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+  i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1
   )
-  ret i32 %ret
+  ret i64 %ret
 }
 
-declare i32 @sum(i32 %n, ...)
+declare i64 @sum(i64 %n, ...)
 
 ; CHECK: declare void @__msan_maybe_warning_1(i8 signext, i32 signext)
 ; CHECK: declare void @__msan_maybe_store_origin_1(i8 signext, ptr, i32 signext)
