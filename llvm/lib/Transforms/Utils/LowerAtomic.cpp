@@ -26,7 +26,7 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   Value *Val = CXI->getNewValOperand();
 
   auto [Orig, Equal] =
-      buildAtomicCmpXchgValue(Builder, Ptr, Cmp, Val, CXI->getAlign());
+      buildCmpXchgValue(Builder, Ptr, Cmp, Val, CXI->getAlign());
 
   Value *Res =
       Builder.CreateInsertValue(PoisonValue::get(CXI->getType()), Orig, 0);
@@ -37,9 +37,10 @@ bool llvm::lowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   return true;
 }
 
-std::pair<Value *, Value *>
-llvm::buildAtomicCmpXchgValue(IRBuilderBase &Builder, Value *Ptr, Value *Cmp,
-                              Value *Val, Align Alignment) {
+std::pair<Value *, Value *> llvm::buildCmpXchgValue(IRBuilderBase &Builder,
+                                                    Value *Ptr, Value *Cmp,
+                                                    Value *Val,
+                                                    Align Alignment) {
   LoadInst *Orig = Builder.CreateAlignedLoad(Val->getType(), Ptr, Alignment);
   Value *Equal = Builder.CreateICmpEQ(Orig, Cmp);
   Value *Res = Builder.CreateSelect(Equal, Val, Orig);
