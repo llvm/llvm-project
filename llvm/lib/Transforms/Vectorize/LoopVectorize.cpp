@@ -1472,9 +1472,7 @@ public:
   /// (application vector length) as min(remaining AVL, MaxSafeElements).
   /// TODO: need to consider adjusting cost model to use this value as a
   /// vectorization factor for EVL-based vectorization.
-  std::optional<unsigned> getMaxSafeElements() const {
-    return MaxSafeElements;
-  }
+  std::optional<unsigned> getMaxSafeElements() const { return MaxSafeElements; }
 
   /// Returns true if the instructions in this block requires predication
   /// for any reason, e.g. because tail folding now requires a predicate
