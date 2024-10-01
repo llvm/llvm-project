@@ -169,6 +169,7 @@ typedef struct {1} {{
 }
 
 void EmitOffloadAPI(RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
   OS << FileHeader;
   // Generate main API definitions
   for (auto *R : Records.getAllDerivedDefinitions("APIObject")) {
