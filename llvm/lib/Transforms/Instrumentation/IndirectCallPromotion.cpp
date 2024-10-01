@@ -138,8 +138,7 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "A list of mangled vtable names. Classes specified by the vtables "
         "and their derived ones will not be vtable-ICP'ed. Useful when the "
         "profiled types and actual types in the optimized binary could be "
-        "different due to profiling "
-        "limitations."));
+        "different due to profiling limitations."));
 
 namespace {
 
