@@ -401,26 +401,12 @@ constexpr TypeBuilderFunc getModel<bool &>() {
   };
 }
 
-// Note about getModel<std::complex<T>>
+// getModel<std::complex<T>> are not implemented on purpose.
 // Prefer passing/returning the complex by reference in the runtime to
 // avoid ABI issues.
 // C++ std::complex is not an intrinsic type, and it while it is storage
 // compatible with C/Fortran complex type, it follows the struct value passing
 // ABI rule, which may differ from how C complex are passed on some platforms.
-template <>
-constexpr TypeBuilderFunc getModel<std::complex<float>>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    mlir::Type floatTy = getModel<float>()(context);
-    return mlir::TupleType::get(context, {floatTy, floatTy});
-  };
-}
-template <>
-constexpr TypeBuilderFunc getModel<std::complex<double>>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    mlir::Type floatTy = getModel<double>()(context);
-    return mlir::TupleType::get(context, {floatTy, floatTy});
-  };
-}
 
 template <>
 constexpr TypeBuilderFunc getModel<std::complex<float> &>() {
@@ -531,10 +517,45 @@ REDUCTION_VALUE_OPERATION_MODEL(double)
 REDUCTION_REF_OPERATION_MODEL(long double)
 REDUCTION_VALUE_OPERATION_MODEL(long double)
 
-REDUCTION_REF_OPERATION_MODEL(std::complex<float>)
-REDUCTION_VALUE_OPERATION_MODEL(std::complex<float>)
-REDUCTION_REF_OPERATION_MODEL(std::complex<double>)
-REDUCTION_VALUE_OPERATION_MODEL(std::complex<double>)
+// FIXME: the runtime is not using the correct ABIs when calling complex
+// callbacks. lowering either need to create wrappers or just have an inline
+// implementation for it. https://github.com/llvm/llvm-project/issues/110674
+template <>
+constexpr TypeBuilderFunc
+getModel<Fortran::runtime::ValueReductionOperation<std::complex<float>>>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    mlir::Type cplx = mlir::ComplexType::get(getModel<float>()(context));
+    auto refTy = fir::ReferenceType::get(cplx);
+    return mlir::FunctionType::get(context, {cplx, cplx}, refTy);
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<Fortran::runtime::ValueReductionOperation<std::complex<double>>>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    mlir::Type cplx = mlir::ComplexType::get(getModel<double>()(context));
+    auto refTy = fir::ReferenceType::get(cplx);
+    return mlir::FunctionType::get(context, {cplx, cplx}, refTy);
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<Fortran::runtime::ReferenceReductionOperation<std::complex<float>>>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    mlir::Type cplx = mlir::ComplexType::get(getModel<float>()(context));
+    auto refTy = fir::ReferenceType::get(cplx);
+    return mlir::FunctionType::get(context, {refTy, refTy}, refTy);
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<
+    Fortran::runtime::ReferenceReductionOperation<std::complex<double>>>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    mlir::Type cplx = mlir::ComplexType::get(getModel<double>()(context));
+    auto refTy = fir::ReferenceType::get(cplx);
+    return mlir::FunctionType::get(context, {refTy, refTy}, refTy);
+  };
+}
 
 REDUCTION_CHAR_OPERATION_MODEL(char)
 REDUCTION_CHAR_OPERATION_MODEL(char16_t)
