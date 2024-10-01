@@ -107,7 +107,7 @@ test_mulx_u64(unsigned long long X, unsigned long long Y)
 }
 
 void mulxu64() {
-  constexpr unsigned long long X = 0x0123456789ABCDEFULL, Y = 0xfEDCBA9876543210ULL;
+  constexpr unsigned long long X = 0x0123456789ABCDEFULL, Y = 0xFEDCBA9876543210ULL;
   static_assert(test_mulx_u64(X,Y) == ((unsigned __int128)X * Y));
 }
 #endif
