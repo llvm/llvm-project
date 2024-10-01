@@ -1295,8 +1295,8 @@ optin.taint.TaintedDiv (C, C++, ObjC)
 This checker warns when the denominator in a division
 operation is a tainted (potentially attacker controlled) value.
 If the attacker can set the denominator to 0, a runtime error can
-be triggered. The checker warns when the denominator is a  tainted
-value  and the analyzer cannot prove that it is not 0. This warning
+be triggered. The checker warns when the denominator is a tainted
+value and the analyzer cannot prove that it is not 0. This warning
 is more pessimistic than the :ref:`core-DivideZero` checker
 which warns only when it can prove that the denominator is 0.
 

@@ -19,8 +19,7 @@
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 \
-// RUN:   -verify %s \
+// RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=justguessit \
@@ -31,8 +30,7 @@
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
-// RUN: not %clang_analyze_cc1 \
-// RUN:   -verify %s \
+// RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint  \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
@@ -42,8 +40,7 @@
 // CHECK-ILL-FORMED-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
-// RUN: not %clang_analyze_cc1 \
-// RUN:   -verify %s \
+// RUN: not %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
