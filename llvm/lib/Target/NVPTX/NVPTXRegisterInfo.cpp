@@ -160,11 +160,8 @@ static uint64_t encodeRegisterForDwarf(std::string registerName) {
   // number, which is stored in ULEB128, but in practice must be no more than 8
   // bytes (excluding null terminator, which is not included).
   uint64_t result = 0;
-  for (int i = 0; i < registerName.length(); ++i) {
-    result = result << 8;
-    unsigned char c = registerName[i];
-    result |= c;
-  }
+  for (unsigned char c : registerName)
+    result = (result << 8) | c;
   return result;
 }
 
