@@ -66,7 +66,6 @@ template class basic_parser<double>;
 template class basic_parser<float>;
 template class basic_parser<std::string>;
 template class basic_parser<char>;
-template class basic_parser<DenseSet<StringRef>>;
 
 template class opt<unsigned>;
 template class opt<int>;
@@ -94,7 +93,6 @@ void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<char>::anchor() {}
-void parser<DenseSet<StringRef>>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 
@@ -2059,24 +2057,6 @@ bool parser<float>::parse(Option &O, StringRef ArgName, StringRef Arg,
   if (parseDouble(O, Arg, dVal))
     return true;
   Val = (float)dVal;
-  return false;
-}
-
-// parser<DenseSet<StringRef> implementation
-//
-void parser<DenseSet<StringRef>>::printOptionDiff(
-    const Option &O, const DenseSet<StringRef> &V,
-    OptionValue<DenseSet<StringRef>> D, size_t GlobalWidth) const {}
-
-bool parser<DenseSet<StringRef>>::parse(Option &O, StringRef ArgName,
-                                        StringRef Arg,
-                                        DenseSet<StringRef> &Val) {
-  SmallVector<StringRef> StrRefs;
-  llvm::SplitString(Arg, StrRefs, ",");
-  for (const StringRef StrRef : StrRefs)
-    if (!Val.insert(StrRef).second)
-      return O.error(Arg + " has duplicated strings!");
-
   return false;
 }
 

@@ -1209,26 +1209,6 @@ public:
 };
 
 //--------------------------------------------------
-
-extern template class basic_parser<DenseSet<StringRef>>;
-
-template <>
-class parser<DenseSet<StringRef>> : public basic_parser<DenseSet<StringRef>> {
-public:
-  parser(Option &O) : basic_parser(O) {}
-
-  // Return true on error.
-  bool parse(Option &, StringRef, StringRef Arg, DenseSet<StringRef> &Val);
-
-  StringRef getValueName() const override { return "DenseSet<StringRef>"; }
-
-  void printOptionDiff(const Option &O, const DenseSet<StringRef> &V,
-                       OptVal Default, size_t GlobalWidth) const;
-
-  void anchor() override;
-};
-
-//--------------------------------------------------
 // This collection of wrappers is the intermediary between class opt and class
 // parser to handle all the template nastiness.
 
