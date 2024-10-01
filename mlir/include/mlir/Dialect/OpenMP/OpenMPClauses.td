@@ -460,12 +460,6 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
-  let optAssemblyFormat = [{
-    `in_reduction` `(`
-      custom<ReductionVarList>($in_reduction_vars, type($in_reduction_vars),
-                               $in_reduction_byref, $in_reduction_syms) `)`
-  }];
-
   let extraClassDeclaration = [{
     /// Returns the reduction variables.
     SmallVector<Value> getReductionVars() {
@@ -476,7 +470,9 @@ class OpenMP_InReductionClauseSkip<
     unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
   }];
 
-  // Description varies depending on the operation.
+  // Description varies depending on the operation. Assembly format not defined
+  // because this clause must be processed together with the first region of the
+  // operation, as it defines entry block arguments.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;
@@ -587,7 +583,7 @@ class OpenMP_MapClauseSkip<
   );
 
   let optAssemblyFormat = [{
-    `map_entries` `(` custom<MapEntries>($map_vars, type($map_vars)) `)`
+    `map_entries` `(` $map_vars `:` type($map_vars) `)`
   }];
 
   let description = [{
@@ -936,16 +932,14 @@ class OpenMP_PrivateClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$private_syms
   );
 
-  let optAssemblyFormat = [{
-    `private` `(`
-      custom<PrivateList>($private_vars, type($private_vars), $private_syms) `)`
-  }];
-
   let extraClassDeclaration = [{
     unsigned numPrivateBlockArgs() { return getPrivateVars().size(); }
   }];
 
   // TODO: Add description.
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_PrivateClause : OpenMP_PrivateClauseSkip<>;
@@ -994,12 +988,6 @@ class OpenMP_ReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
   );
 
-  let optAssemblyFormat = [{
-    `reduction` `(`
-      custom<ReductionVarList>($reduction_vars, type($reduction_vars),
-                               $reduction_byref, $reduction_syms) `)`
-  }];
-
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
@@ -1020,6 +1008,10 @@ class OpenMP_ReductionClauseSkip<
     thread or simd lane defined by the operation's region into the final value,
     which is available in the accumulator after they all complete.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_ReductionClause : OpenMP_ReductionClauseSkip<>;
@@ -1126,12 +1118,6 @@ class OpenMP_TaskReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
 
-  let optAssemblyFormat = [{
-    `task_reduction` `(`
-      custom<ReductionVarList>($task_reduction_vars, type($task_reduction_vars),
-                               $task_reduction_byref, $task_reduction_syms) `)`
-  }];
-
   let extraClassDeclaration = [{
     /// Returns the reduction variables.
     SmallVector<Value> getReductionVars() {
@@ -1155,6 +1141,10 @@ class OpenMP_TaskReductionClauseSkip<
     attribute, and whether the reduction variable should be passed into the
     reduction region by value or by reference in `task_reduction_byref`.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_TaskReductionClause : OpenMP_TaskReductionClauseSkip<>;

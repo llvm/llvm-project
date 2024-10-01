@@ -14,7 +14,6 @@ llvm.func @target_map_single_private() attributes {fir.internal_name = "_QPtarge
   llvm.store %4, %3 : i32, !llvm.ptr
   %5 = omp.map.info var_ptr(%3 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
   omp.target map_entries(%5 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1 : !llvm.ptr) {
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     %6 = llvm.mlir.constant(10 : i32) : i32
     %7 = llvm.load %arg0 : !llvm.ptr -> i32
     %8 = llvm.add %7, %6 : i32
@@ -43,8 +42,7 @@ llvm.func @target_map_2_privates() attributes {fir.internal_name = "_QPtarget_ma
   %6 = llvm.mlir.constant(2 : i32) : i32
   llvm.store %6, %5 : i32, !llvm.ptr
   %7 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "a"}
-  omp.target map_entries(%7 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1 : !llvm.ptr, @n.privatizer %3 -> %arg2 : !llvm.ptr) {
-  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr):
+  omp.target map_entries(%7 -> %arg0 : !llvm.ptr) private(@simple_var.privatizer %1 -> %arg1, @n.privatizer %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
     %8 = llvm.mlir.constant(1.100000e+01 : f32) : f32
     %9 = llvm.mlir.constant(10 : i32) : i32
     %10 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -86,7 +84,6 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 
 llvm.func @target_op_private_multi_block(%arg0: !llvm.ptr) {
   omp.target private(@multi_block.privatizer %arg0 -> %arg2 : !llvm.ptr) {
-  ^bb0(%arg2: !llvm.ptr):
     %0 = llvm.load %arg2 : !llvm.ptr -> f32
     omp.terminator
   }
