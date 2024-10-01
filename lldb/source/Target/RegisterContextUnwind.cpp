@@ -2090,7 +2090,8 @@ bool RegisterContextUnwind::ReadFrameAddress(
   }
   case UnwindPlan::Row::FAValue::isConstant: {
     address = fa.GetConstant();
-    address = abi_sp->FixCodeAddress(address);
+    if (abi_sp)
+      address = abi_sp->FixCodeAddress(address);
     UnwindLogMsg("CFA value set by constant is 0x%" PRIx64, address);
     return true;
   }
