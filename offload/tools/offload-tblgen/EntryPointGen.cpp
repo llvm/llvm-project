@@ -103,6 +103,7 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 }
 
 void EmitOffloadEntryPoints(RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     EmitValidationFunc(FunctionRec{R}, OS);
     EmitEntryPointFunc(FunctionRec{R}, OS);
