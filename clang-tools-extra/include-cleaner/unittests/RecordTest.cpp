@@ -546,7 +546,6 @@ TEST_F(PragmaIncludeTest, IWYUExportBlock) {
     for (auto &FE : FEs) {
       OS << FE.getName() << " ";
     }
-    OS.flush();
     return Result;
   };
   auto Exporters = PI.getExporters(FM.getFile("private1.h").get(), FM);

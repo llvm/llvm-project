@@ -182,7 +182,6 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
     OS << (Method->isInstanceMethod() ? '-' : '+');
     Method->getSelector().print(OS);
 
-    OS.flush();
     return Name;
   }
   return printName(Ctx, ND);
