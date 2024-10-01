@@ -1,5 +1,6 @@
 add_lldb_unittest(InterpreterTests
   TestCommandPaths.cpp
+  TestCommandObjectExpression.cpp
   TestCompletion.cpp
   TestOptionArgParser.cpp
   TestOptions.cpp
