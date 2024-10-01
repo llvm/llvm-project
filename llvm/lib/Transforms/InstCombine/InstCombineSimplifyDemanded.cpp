@@ -104,14 +104,14 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return true;
   }
 
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
   Instruction *VInst = dyn_cast<Instruction>(V);
   if (!VInst) {
     llvm::computeKnownBits(V, Known, Depth, Q);
     return false;
   }
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return false;
 
   Value *NewVal;
   if (VInst->hasOneUse()) {
