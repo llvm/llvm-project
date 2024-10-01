@@ -1096,6 +1096,7 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   // CHECK: omp.teams reduction(@add_f32 -> %{{.+}} : !llvm.ptr) {
   omp.teams reduction(@add_f32 -> %0 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     %1 = arith.constant 2.0 : f32
     // CHECK: omp.terminator
     omp.terminator
@@ -1104,6 +1105,7 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
   // Test reduction byref
   // CHECK: omp.teams reduction(byref @add_f32 -> %{{.+}} : !llvm.ptr) {
   omp.teams reduction(byref @add_f32 -> %0 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     %1 = arith.constant 2.0 : f32
     // CHECK: omp.terminator
     omp.terminator
@@ -1125,6 +1127,7 @@ func.func @sections_reduction() {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   // CHECK: omp.sections reduction(@add_f32 -> {{.+}} : !llvm.ptr)
   omp.sections reduction(@add_f32 -> %0 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     // CHECK: omp.section
     omp.section {
       %1 = arith.constant 2.0 : f32
@@ -1146,6 +1149,7 @@ func.func @sections_reduction_byref() {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   // CHECK: omp.sections reduction(byref @add_f32 -> {{.+}} : !llvm.ptr)
   omp.sections reduction(byref @add_f32 -> %0 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     // CHECK: omp.section
     omp.section {
       %1 = arith.constant 2.0 : f32
@@ -1245,6 +1249,7 @@ func.func @sections_reduction2() {
   %0 = memref.alloca() : memref<1xf32>
   // CHECK: omp.sections reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
   omp.sections reduction(@add2_f32 -> %0 : memref<1xf32>) {
+  ^bb0(%arg0: !llvm.ptr):
     omp.section {
       %1 = arith.constant 2.0 : f32
       omp.terminator
@@ -1901,6 +1906,7 @@ func.func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
 
     // CHECK: omp.sections reduction(@add_f32 -> %{{.*}} : !llvm.ptr)
   "omp.sections" (%redn_var) ({
+  ^bb0(%arg0: !llvm.ptr):
     // CHECK: omp.terminator
     omp.terminator
   }) {operandSegmentSizes = array<i32: 0,0,0,1>, reduction_byref = array<i1: false>, reduction_syms=[@add_f32]} : (!llvm.ptr) -> ()
@@ -1913,6 +1919,7 @@ func.func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
 
   // CHECK: omp.sections reduction(@add_f32 -> %{{.*}} : !llvm.ptr) {
   omp.sections reduction(@add_f32 -> %redn_var : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -2087,6 +2094,7 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   %1 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
   // CHECK: omp.task in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr, @add_f32 -> %[[redn_var2]] : !llvm.ptr) {
   omp.task in_reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %1 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -2096,6 +2104,7 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   // Checking `in_reduction` clause (mixed) byref
   // CHECK: omp.task in_reduction(byref @add_f32 -> %[[redn_var1]] : !llvm.ptr, @add_f32 -> %[[redn_var2]] : !llvm.ptr) {
   omp.task in_reduction(byref @add_f32 -> %0 : !llvm.ptr, @add_f32 -> %1 : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -2129,6 +2138,7 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
       in_reduction(@add_f32 -> %0 : !llvm.ptr, byref @add_f32 -> %1 : !llvm.ptr)
       // CHECK-SAME: priority(%[[i32_var]] : i32) untied
       priority(%i32_var : i32) untied {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -2306,6 +2316,7 @@ func.func @omp_taskgroup_clauses() -> () {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   // CHECK: omp.taskgroup allocate(%{{.+}}: memref<i32> -> %{{.+}}: memref<i32>) task_reduction(@add_f32 -> %{{.+}}: !llvm.ptr)
   omp.taskgroup allocate(%testmemref : memref<i32> -> %testmemref : memref<i32>) task_reduction(@add_f32 -> %testf32 : !llvm.ptr) {
+  ^bb0(%arg0 : !llvm.ptr):
     // CHECK: omp.task
     omp.task {
       "test.foo"() : () -> ()
@@ -2783,15 +2794,15 @@ omp.private {type = firstprivate} @y.privatizer : !llvm.ptr alloc {
 // CHECK-LABEL: parallel_op_reduction_and_private
 func.func @parallel_op_reduction_and_private(%priv_var: !llvm.ptr, %priv_var2: !llvm.ptr, %reduc_var: !llvm.ptr, %reduc_var2: !llvm.ptr) {
   // CHECK: omp.parallel
-  // CHECK-SAME: reduction(
-  // CHECK-SAME: @add_f32 %[[REDUC_VAR:[^[:space:]]+]] -> %[[REDUC_ARG:[^[:space:]]+]] : !llvm.ptr,
-  // CHECK-SAME: @add_f32 %[[REDUC_VAR2:[^[:space:]]+]] -> %[[REDUC_ARG2:[^[:space:]]+]] : !llvm.ptr)
-  //
   // CHECK-SAME: private(
   // CHECK-SAME: @x.privatizer %[[PRIV_VAR:[^[:space:]]+]] -> %[[PRIV_ARG:[^[:space:]]+]] : !llvm.ptr,
   // CHECK-SAME: @y.privatizer %[[PRIV_VAR2:[^[:space:]]+]] -> %[[PRIV_ARG2:[^[:space:]]+]] : !llvm.ptr)
-  omp.parallel reduction(@add_f32 %reduc_var -> %reduc_arg : !llvm.ptr, @add_f32 %reduc_var2 -> %reduc_arg2 : !llvm.ptr)
-               private(@x.privatizer %priv_var -> %priv_arg : !llvm.ptr, @y.privatizer %priv_var2 -> %priv_arg2 : !llvm.ptr) {
+  //
+  // CHECK-SAME: reduction(
+  // CHECK-SAME: @add_f32 %[[REDUC_VAR:[^[:space:]]+]] -> %[[REDUC_ARG:[^[:space:]]+]] : !llvm.ptr,
+  // CHECK-SAME: @add_f32 %[[REDUC_VAR2:[^[:space:]]+]] -> %[[REDUC_ARG2:[^[:space:]]+]] : !llvm.ptr)
+  omp.parallel private(@x.privatizer %priv_var -> %priv_arg : !llvm.ptr, @y.privatizer %priv_var2 -> %priv_arg2 : !llvm.ptr)
+               reduction(@add_f32 %reduc_var -> %reduc_arg : !llvm.ptr, @add_f32 %reduc_var2 -> %reduc_arg2 : !llvm.ptr) {
     // CHECK: llvm.load %[[PRIV_ARG]]
     %0 = llvm.load %priv_arg : !llvm.ptr -> f32
     // CHECK: llvm.load %[[PRIV_ARG2]]

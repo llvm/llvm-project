@@ -536,13 +536,6 @@ static ParseResult parseParallelRegion(
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms) {
   llvm::SmallVector<OpAsmParser::Argument> regionPrivateArgs;
 
-  if (succeeded(parser.parseOptionalKeyword("reduction"))) {
-    if (failed(parseClauseWithRegionArgs(parser, region, reductionVars,
-                                         reductionTypes, reductionByref,
-                                         reductionSyms, regionPrivateArgs)))
-      return failure();
-  }
-
   if (succeeded(parser.parseOptionalKeyword("private"))) {
     auto privateByref = DenseBoolArrayAttr::get(parser.getContext(), {});
     if (failed(parseClauseWithRegionArgs(parser, region, privateVars,
@@ -557,6 +550,13 @@ static ParseResult parseParallelRegion(
     }
   }
 
+  if (succeeded(parser.parseOptionalKeyword("reduction"))) {
+    if (failed(parseClauseWithRegionArgs(parser, region, reductionVars,
+                                         reductionTypes, reductionByref,
+                                         reductionSyms, regionPrivateArgs)))
+      return failure();
+  }
+
   return parser.parseRegion(region, regionPrivateArgs);
 }
 
@@ -566,18 +566,9 @@ static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
                                 DenseBoolArrayAttr reductionByref,
                                 ArrayAttr reductionSyms, ValueRange privateVars,
                                 TypeRange privateTypes, ArrayAttr privateSyms) {
-  if (reductionSyms) {
-    auto *argsBegin = region.front().getArguments().begin();
-    MutableArrayRef argsSubrange(argsBegin, argsBegin + reductionTypes.size());
-    printClauseWithRegionArgs(p, op, argsSubrange, "reduction", reductionVars,
-                              reductionTypes, reductionByref, reductionSyms);
-  }
-
   if (privateSyms) {
     auto *argsBegin = region.front().getArguments().begin();
-    MutableArrayRef argsSubrange(argsBegin + reductionVars.size(),
-                                 argsBegin + reductionVars.size() +
-                                     privateTypes.size());
+    MutableArrayRef argsSubrange(argsBegin, argsBegin + privateTypes.size());
     mlir::SmallVector<bool> isByRefVec;
     isByRefVec.resize(privateTypes.size(), false);
     DenseBoolArrayAttr isByRef =
@@ -585,6 +576,15 @@ static void printParallelRegion(OpAsmPrinter &p, Operation *op, Region &region,
 
     printClauseWithRegionArgs(p, op, argsSubrange, "private", privateVars,
                               privateTypes, isByRef, privateSyms);
+  }
+
+  if (reductionSyms) {
+    auto *argsBegin = region.front().getArguments().begin();
+    MutableArrayRef argsSubrange(argsBegin + privateVars.size(),
+                                 argsBegin + privateVars.size() +
+                                     reductionTypes.size());
+    printClauseWithRegionArgs(p, op, argsSubrange, "reduction", reductionVars,
+                              reductionTypes, reductionByref, reductionSyms);
   }
 
   p.printRegion(region, /*printEntryBlockArgs=*/false);

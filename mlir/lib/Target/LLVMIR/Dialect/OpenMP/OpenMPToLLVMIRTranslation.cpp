@@ -920,7 +920,7 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   DenseMap<Value, llvm::Value *> reductionVariableMap;
 
   MutableArrayRef<BlockArgument> reductionArgs =
-      sectionsOp.getRegion().getArguments();
+      cast<omp::BlockArgOpenMPOpInterface>(opInst).getReductionBlockArgs();
 
   if (failed(allocAndInitializeReductionVars(
           sectionsOp, reductionArgs, builder, moduleTranslation, allocaIP,
@@ -1216,7 +1216,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   DenseMap<Value, llvm::Value *> reductionVariableMap;
 
   MutableArrayRef<BlockArgument> reductionArgs =
-      wsloopOp.getRegion().getArguments();
+      cast<omp::BlockArgOpenMPOpInterface>(opInst).getReductionBlockArgs();
 
   if (failed(allocAndInitializeReductionVars(
           wsloopOp, reductionArgs, builder, moduleTranslation, allocaIP,
@@ -1329,31 +1329,23 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 class OmpParallelOpConversionManager {
 public:
   OmpParallelOpConversionManager(omp::ParallelOp opInst)
-      : region(opInst.getRegion()), privateVars(opInst.getPrivateVars()),
-        privateArgBeginIdx(opInst.getNumReductionVars()),
-        privateArgEndIdx(privateArgBeginIdx + privateVars.size()) {
-    auto privateVarsIt = privateVars.begin();
-
-    for (size_t argIdx = privateArgBeginIdx; argIdx < privateArgEndIdx;
-         ++argIdx, ++privateVarsIt)
-      mlir::replaceAllUsesInRegionWith(region.getArgument(argIdx),
-                                       *privateVarsIt, region);
+      : region(opInst.getRegion()),
+        privateBlockArgs(cast<omp::BlockArgOpenMPOpInterface>(*opInst)
+                             .getPrivateBlockArgs()),
+        privateVars(opInst.getPrivateVars()) {
+    for (auto [blockArg, var] : llvm::zip_equal(privateBlockArgs, privateVars))
+      mlir::replaceAllUsesInRegionWith(blockArg, var, region);
   }
 
   ~OmpParallelOpConversionManager() {
-    auto privateVarsIt = privateVars.begin();
-
-    for (size_t argIdx = privateArgBeginIdx; argIdx < privateArgEndIdx;
-         ++argIdx, ++privateVarsIt)
-      mlir::replaceAllUsesInRegionWith(*privateVarsIt,
-                                       region.getArgument(argIdx), region);
+    for (auto [blockArg, var] : llvm::zip_equal(privateBlockArgs, privateVars))
+      mlir::replaceAllUsesInRegionWith(var, blockArg, region);
   }
 
 private:
   Region &region;
+  llvm::MutableArrayRef<BlockArgument> privateBlockArgs;
   OperandRange privateVars;
-  unsigned privateArgBeginIdx;
-  unsigned privateArgEndIdx;
 };
 
 // Looks up from the operation from and returns the PrivateClauseOp with
@@ -1417,9 +1409,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     DenseMap<Value, llvm::Value *> reductionVariableMap;
 
     MutableArrayRef<BlockArgument> reductionArgs =
-        opInst.getRegion().getArguments().slice(
-            opInst.getNumAllocateVars() + opInst.getNumAllocatorsVars(),
-            opInst.getNumReductionVars());
+        cast<omp::BlockArgOpenMPOpInterface>(*opInst).getReductionBlockArgs();
 
     allocaIP =
         InsertPointTy(allocaIP.getBlock(),
@@ -3414,6 +3404,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   auto &targetRegion = targetOp.getRegion();
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapVars = targetOp.getMapVars();
+  ArrayRef<BlockArgument> mapBlockArgs =
+      cast<omp::BlockArgOpenMPOpInterface>(opInst).getMapBlockArgs();
   llvm::Function *llvmOutlinedFn = nullptr;
 
   // TODO: It can also be false if a compile-time constant `false` IF clause is
@@ -3442,11 +3434,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       llvmOutlinedFn->addFnAttr(attr);
 
     builder.restoreIP(codeGenIP);
-    for (auto [argIndex, mapOp] : llvm::enumerate(mapVars)) {
+    for (auto [arg, mapOp] : llvm::zip_equal(mapBlockArgs, mapVars)) {
       auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
       llvm::Value *mapOpValue =
           moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
-      const auto &arg = targetRegion.front().getArgument(argIndex);
       moduleTranslation.mapValue(arg, mapOpValue);
     }
 
@@ -3457,18 +3448,13 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
       OperandRange privateVars = targetOp.getPrivateVars();
       std::optional<ArrayAttr> privateSyms = targetOp.getPrivateSyms();
-      unsigned numMapVars = targetOp.getMapVars().size();
-      Block &firstTargetBlock = targetRegion.front();
-      BlockArgument *blockArgsStart = firstTargetBlock.getArguments().begin();
-      BlockArgument *privArgsStart = blockArgsStart + numMapVars;
-      BlockArgument *privArgsEnd =
-          privArgsStart + targetOp.getPrivateVars().size();
-      MutableArrayRef privateBlockArgs(privArgsStart, privArgsEnd);
+      MutableArrayRef<BlockArgument> privateBlockArgs =
+          cast<omp::BlockArgOpenMPOpInterface>(opInst).getPrivateBlockArgs();
 
       for (auto [privVar, privatizerNameAttr, privBlockArg] :
            llvm::zip_equal(privateVars, *privateSyms, privateBlockArgs)) {
 
-        SymbolRefAttr privSym = llvm::cast<SymbolRefAttr>(privatizerNameAttr);
+        SymbolRefAttr privSym = cast<SymbolRefAttr>(privatizerNameAttr);
         omp::PrivateClauseOp privatizer = findPrivatizer(&opInst, privSym);
         if (privatizer.getDataSharingType() ==
                 omp::DataSharingClauseType::FirstPrivate ||

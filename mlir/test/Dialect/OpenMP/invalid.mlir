@@ -1471,6 +1471,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
+  ^bb0(%arg0: memref<i32>):
     omp.terminator
   }) {operandSegmentSizes = array<i32: 0,0,0,1>} : (memref<i32>) -> ()
   return
@@ -1662,6 +1663,7 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
 func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
   omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1686,6 +1688,7 @@ combiner {
 func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op accumulator variable used more than once}}
   omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr, @add_f32 -> %ptr : !llvm.ptr) {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1716,6 +1719,7 @@ atomic {
 func.func @omp_task(%mem: memref<1xf32>) {
   // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
   omp.task in_reduction(@add_i32 -> %mem : memref<1xf32>) {
+  ^bb0(%arg0: memref<1xf32>):
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
