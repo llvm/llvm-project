@@ -21,8 +21,7 @@ class TemplateFunctionsTestCase(TestBase):
                 "expr b1 <=> b2",
                 error=True,
                 substrs=[
-                    "warning:",
-                    "'<=>' is a single token in C++20; add a space to avoid a change in behavior",
+                    "warning: <user expression 0>:1:4: '<=>' is a single token in C++20; add a space to avoid a change in behavior"
                 ],
             )
 

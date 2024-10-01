@@ -304,8 +304,6 @@ public:
 
   bool GetUseColor() const;
 
-  bool SetShowInlineDiagnostics(bool);
-
   bool SetUseSourceCache(bool use_source_cache);
 
   bool GetUseSourceCache() const;
