@@ -64,7 +64,8 @@ void thinLTOInternalizeAndPromoteInIndex(
         isPrevailing);
 
 /// Computes a unique hash for the Module considering the current list of
-/// export/import and other global analysis results.
+/// export/import and other global analysis results. Optionally, \p ExtraID
+/// can be used to add an extra identifier to the hash.
 std::string computeLTOCacheKey(
     const lto::Config &Conf, const ModuleSummaryIndex &Index,
     StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
@@ -72,7 +73,8 @@ std::string computeLTOCacheKey(
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {},
+    StringRef ExtraID = {});
 
 namespace lto {
 
@@ -105,7 +107,41 @@ void updateMemProfAttributes(Module &Mod, const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
-class ThinBackendProc;
+
+using IndexWriteCallback = std::function<void(const std::string &)>;
+
+/// This class defines the interface to the ThinLTO backend.
+class ThinBackendProc {
+protected:
+  const Config &Conf;
+  ModuleSummaryIndex &CombinedIndex;
+  const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries;
+  lto::IndexWriteCallback OnWrite;
+  bool ShouldEmitImportsFiles;
+
+public:
+  ThinBackendProc(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      lto::IndexWriteCallback OnWrite, bool ShouldEmitImportsFiles)
+      : Conf(Conf), CombinedIndex(CombinedIndex),
+        ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries),
+        OnWrite(OnWrite), ShouldEmitImportsFiles(ShouldEmitImportsFiles) {}
+
+  virtual ~ThinBackendProc() = default;
+  virtual Error start(
+      unsigned Task, BitcodeModule BM,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
+  virtual Error wait() = 0;
+  virtual unsigned getThreadCount() = 0;
+
+  // Write sharded indices and (optionally) imports to disk
+  Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                  llvm::StringRef ModulePath, const std::string &NewModulePath);
+};
 
 /// An input file. This is a symbol table wrapper that only exposes the
 /// information that an LTO client should need in order to do symbol resolution.
@@ -197,10 +233,30 @@ private:
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
 /// The details of this type definition aren't important; clients can only
 /// create a ThinBackend using one of the create*ThinBackend() functions below.
-using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
+using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
-    DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     AddStreamFn AddStream, FileCache Cache)>;
+struct ThinBackend {
+  ThinBackend(ThinBackendFunction Func, ThreadPoolStrategy Parallelism = {})
+      : Func(std::move(Func)), Parallelism(std::move(Parallelism)) {}
+  ThinBackend() = default;
+
+  std::unique_ptr<ThinBackendProc> operator()(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream, FileCache Cache) {
+    assert(isValid() && "Invalid backend function");
+    return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
+                std::move(AddStream), std::move(Cache));
+  }
+  ThreadPoolStrategy getParallelism() const { return Parallelism; }
+  bool isValid() const { return static_cast<bool>(Func); }
+
+private:
+  ThinBackendFunction Func = nullptr;
+  ThreadPoolStrategy Parallelism;
+};
 
 /// This ThinBackend runs the individual backend jobs in-process.
 /// The default value means to use one job per hardware core (not hyper-thread).
@@ -210,7 +266,6 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
 /// to the same path as the input module, with suffix ".thinlto.bc"
 /// ShouldEmitImportsFiles is true it also writes a list of imported files to a
 /// similar path with ".imports" appended instead.
-using IndexWriteCallback = std::function<void(const std::string &)>;
 ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
                                        IndexWriteCallback OnWrite = nullptr,
                                        bool ShouldEmitIndexFiles = false,
@@ -275,7 +330,7 @@ public:
   /// this constructor.
   /// FIXME: We do currently require the DiagHandler field to be set in Conf.
   /// Until that is fixed, a Config argument is required.
-  LTO(Config Conf, ThinBackend Backend = nullptr,
+  LTO(Config Conf, ThinBackend Backend = {},
       unsigned ParallelCodeGenParallelismLevel = 1,
       LTOKind LTOMode = LTOK_Default);
   ~LTO();
@@ -298,7 +353,7 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  Error run(AddStreamFn AddStream, FileCache Cache = nullptr);
+  Error run(AddStreamFn AddStream, FileCache Cache = {});
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
