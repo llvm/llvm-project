@@ -108,25 +108,6 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
   // if we dont have a load address we cant re-base
   bool rebase_exec = load_offset != LLDB_INVALID_ADDRESS;
 
-<<<<<<< HEAD
-=======
-  // if we have a valid executable
-  if (executable_sp.get()) {
-    lldb_private::ObjectFile *obj = executable_sp->GetObjectFile();
-    if (obj) {
-      // don't rebase if the module already has a load address
-      Target &target = m_process->GetTarget();
-      Address addr = obj->GetImageInfoAddress(&target);
-      addr_t load_addr = addr.GetLoadAddress(&target);
-      if (load_addr != LLDB_INVALID_ADDRESS)
-        rebase_exec = false;
-    }
-  } else {
-    // no executable, nothing to re-base
-    rebase_exec = false;
-  }
-
->>>>>>> 7aae643a0970 (Get TLS variables to work for minidump, add a test that the value is accessable correctly)
   // if the target executable should be re-based
   if (rebase_exec || IsCoreFile()) {
     ModuleList module_list;
