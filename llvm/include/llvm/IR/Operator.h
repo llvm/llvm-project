@@ -329,11 +329,11 @@ public:
   /// Returns true if `Ty` is a supported floating-point type for phi, select,
   /// or call FPMathOperators.
   static bool isSupportedFloatingPointType(Type *Ty) {
-    if (StructType *StructTy = dyn_cast<StructType>(Ty)) {
+    if (auto *StructTy = dyn_cast<StructType>(Ty)) {
       if (!StructTy->isLiteral() || !StructTy->containsHomogeneousTypes())
         return false;
       Ty = StructTy->elements().front();
-    } else if (ArrayType *ArrayTy = dyn_cast<ArrayType>(Ty)) {
+    } else if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
       do {
         Ty = ArrayTy->getElementType();
       } while ((ArrayTy = dyn_cast<ArrayType>(Ty)));
