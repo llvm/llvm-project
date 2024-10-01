@@ -303,7 +303,7 @@ gpu.module @shuffles {
 // Check `gpu.shuffle` conversion with explicit subgroup size.
 
 gpu.module @shuffles attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Kernel, Addresses, GroupNonUniformShuffle, Int64], []>, #spirv.resource_limits<subgroup_size = 16>>
+  gpu.known_subgroup_size = 16 : i32
 } {
   // CHECK:           llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {
   // CHECK-SAME-DAG:  no_unwind

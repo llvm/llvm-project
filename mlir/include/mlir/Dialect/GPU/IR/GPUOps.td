@@ -388,6 +388,12 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     by using `gpu.known_block_size` or `gpu.known_grid_size`, but this carries
     the risk that they will de discarded.
 
+    A function may optionally be annotated with the subgroup size that will be
+    used when it is launched using the `known_subgroup_size` attribute. If set,
+    this attribute is a single positive integer (i.e. > 0). Launching a function
+    with this annotation, using a subgroup size other than specified is
+    undefined behaviour.
+
     Syntax:
 
     ```
@@ -431,7 +437,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size,
+                       OptionalAttr<I32Attr>:$known_subgroup_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
