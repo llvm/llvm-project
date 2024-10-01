@@ -3318,6 +3318,10 @@ public:
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
 
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
+
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;

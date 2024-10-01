@@ -165,6 +165,9 @@ public:
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
+  void EmitToStreamer(const MCInst &Inst) {
+    EmitToStreamer(*OutStreamer, Inst);
+  }
 
   void emitInstruction(const MachineInstr *MI) override;
 
@@ -648,12 +651,11 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
     OutStreamer->emitLabel(Sym);
 
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::SBFMXri)
-                                     .addReg(AArch64::X16)
-                                     .addReg(Reg)
-                                     .addImm(4)
-                                     .addImm(55),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::SBFMXri)
+                       .addReg(AArch64::X16)
+                       .addReg(Reg)
+                       .addImm(4)
+                       .addImm(55));
 
     if (IsFixedShadow) {
       // Aarch64 makes it difficult to embed large constants in the code.
@@ -661,143 +663,118 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // left-shift option in the MOV instruction. Combined with the 16-bit
       // immediate, this is enough to represent any offset up to 2**48.
       emitMOVZ(AArch64::X17, FixedShadowOffset >> 32, 32);
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRBBroX)
-                                       .addReg(AArch64::W16)
-                                       .addReg(AArch64::X17)
-                                       .addReg(AArch64::X16)
-                                       .addImm(0)
-                                       .addImm(0),
-                                   *STI);
+      EmitToStreamer(MCInstBuilder(AArch64::LDRBBroX)
+                         .addReg(AArch64::W16)
+                         .addReg(AArch64::X17)
+                         .addReg(AArch64::X16)
+                         .addImm(0)
+                         .addImm(0));
     } else {
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::LDRBBroX)
-              .addReg(AArch64::W16)
-              .addReg(IsShort ? AArch64::X20 : AArch64::X9)
-              .addReg(AArch64::X16)
-              .addImm(0)
-              .addImm(0),
-          *STI);
+      EmitToStreamer(MCInstBuilder(AArch64::LDRBBroX)
+                         .addReg(AArch64::W16)
+                         .addReg(IsShort ? AArch64::X20 : AArch64::X9)
+                         .addReg(AArch64::X16)
+                         .addImm(0)
+                         .addImm(0));
     }
 
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::SUBSXrs)
-            .addReg(AArch64::XZR)
-            .addReg(AArch64::X16)
-            .addReg(Reg)
-            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)),
-        *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::SUBSXrs)
+                       .addReg(AArch64::XZR)
+                       .addReg(AArch64::X16)
+                       .addReg(Reg)
+                       .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)));
     MCSymbol *HandleMismatchOrPartialSym = OutContext.createTempSymbol();
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::Bcc)
-            .addImm(AArch64CC::NE)
-            .addExpr(MCSymbolRefExpr::create(HandleMismatchOrPartialSym,
-                                             OutContext)),
-        *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::Bcc)
+                       .addImm(AArch64CC::NE)
+                       .addExpr(MCSymbolRefExpr::create(
+                           HandleMismatchOrPartialSym, OutContext)));
     MCSymbol *ReturnSym = OutContext.createTempSymbol();
     OutStreamer->emitLabel(ReturnSym);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::RET).addReg(AArch64::LR));
     OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
     if (HasMatchAllTag) {
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
-                                       .addReg(AArch64::X17)
-                                       .addReg(Reg)
-                                       .addImm(56)
-                                       .addImm(63),
-                                   *STI);
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSXri)
-                                       .addReg(AArch64::XZR)
-                                       .addReg(AArch64::X17)
-                                       .addImm(MatchAllTag)
-                                       .addImm(0),
-                                   *STI);
-      OutStreamer->emitInstruction(
+      EmitToStreamer(MCInstBuilder(AArch64::UBFMXri)
+                         .addReg(AArch64::X17)
+                         .addReg(Reg)
+                         .addImm(56)
+                         .addImm(63));
+      EmitToStreamer(MCInstBuilder(AArch64::SUBSXri)
+                         .addReg(AArch64::XZR)
+                         .addReg(AArch64::X17)
+                         .addImm(MatchAllTag)
+                         .addImm(0));
+      EmitToStreamer(
           MCInstBuilder(AArch64::Bcc)
               .addImm(AArch64CC::EQ)
-              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
-          *STI);
+              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)));
     }
 
     if (IsShort) {
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSWri)
-                                       .addReg(AArch64::WZR)
-                                       .addReg(AArch64::W16)
-                                       .addImm(15)
-                                       .addImm(0),
-                                   *STI);
+      EmitToStreamer(MCInstBuilder(AArch64::SUBSWri)
+                         .addReg(AArch64::WZR)
+                         .addReg(AArch64::W16)
+                         .addImm(15)
+                         .addImm(0));
       MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
-      OutStreamer->emitInstruction(
+      EmitToStreamer(
           MCInstBuilder(AArch64::Bcc)
               .addImm(AArch64CC::HI)
-              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
-          *STI);
+              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)));
 
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::ANDXri)
-              .addReg(AArch64::X17)
-              .addReg(Reg)
-              .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
-          *STI);
+      EmitToStreamer(MCInstBuilder(AArch64::ANDXri)
+                         .addReg(AArch64::X17)
+                         .addReg(Reg)
+                         .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)));
       if (Size != 1)
-        OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
-                                         .addReg(AArch64::X17)
-                                         .addReg(AArch64::X17)
-                                         .addImm(Size - 1)
-                                         .addImm(0),
-                                     *STI);
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSWrs)
-                                       .addReg(AArch64::WZR)
-                                       .addReg(AArch64::W16)
-                                       .addReg(AArch64::W17)
-                                       .addImm(0),
-                                   *STI);
-      OutStreamer->emitInstruction(
+        EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                           .addReg(AArch64::X17)
+                           .addReg(AArch64::X17)
+                           .addImm(Size - 1)
+                           .addImm(0));
+      EmitToStreamer(MCInstBuilder(AArch64::SUBSWrs)
+                         .addReg(AArch64::WZR)
+                         .addReg(AArch64::W16)
+                         .addReg(AArch64::W17)
+                         .addImm(0));
+      EmitToStreamer(
           MCInstBuilder(AArch64::Bcc)
               .addImm(AArch64CC::LS)
-              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
-          *STI);
+              .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)));
 
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::ORRXri)
-              .addReg(AArch64::X16)
-              .addReg(Reg)
-              .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
-          *STI);
-      OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRBBui)
-                                       .addReg(AArch64::W16)
-                                       .addReg(AArch64::X16)
-                                       .addImm(0),
-                                   *STI);
-      OutStreamer->emitInstruction(
+      EmitToStreamer(MCInstBuilder(AArch64::ORRXri)
+                         .addReg(AArch64::X16)
+                         .addReg(Reg)
+                         .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRBBui)
+                         .addReg(AArch64::W16)
+                         .addReg(AArch64::X16)
+                         .addImm(0));
+      EmitToStreamer(
           MCInstBuilder(AArch64::SUBSXrs)
               .addReg(AArch64::XZR)
               .addReg(AArch64::X16)
               .addReg(Reg)
-              .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)),
-          *STI);
-      OutStreamer->emitInstruction(
+              .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)));
+      EmitToStreamer(
           MCInstBuilder(AArch64::Bcc)
               .addImm(AArch64CC::EQ)
-              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
-          *STI);
+              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)));
 
       OutStreamer->emitLabel(HandleMismatchSym);
     }
 
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::X0)
-                                     .addReg(AArch64::X1)
-                                     .addReg(AArch64::SP)
-                                     .addImm(-32),
-                                 *STI);
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
-                                     .addReg(AArch64::FP)
-                                     .addReg(AArch64::LR)
-                                     .addReg(AArch64::SP)
-                                     .addImm(29),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::STPXpre)
+                       .addReg(AArch64::SP)
+                       .addReg(AArch64::X0)
+                       .addReg(AArch64::X1)
+                       .addReg(AArch64::SP)
+                       .addImm(-32));
+    EmitToStreamer(MCInstBuilder(AArch64::STPXi)
+                       .addReg(AArch64::FP)
+                       .addReg(AArch64::LR)
+                       .addReg(AArch64::SP)
+                       .addImm(29));
 
     if (Reg != AArch64::X0)
       emitMovXReg(AArch64::X0, Reg);
@@ -807,29 +784,25 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // The Linux kernel's dynamic loader doesn't support GOT relative
       // relocations, but it doesn't support late binding either, so just call
       // the function directly.
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::B).addExpr(HwasanTagMismatchRef), *STI);
+      EmitToStreamer(MCInstBuilder(AArch64::B).addExpr(HwasanTagMismatchRef));
     } else {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      OutStreamer->emitInstruction(
+      EmitToStreamer(
           MCInstBuilder(AArch64::ADRP)
               .addReg(AArch64::X16)
               .addExpr(AArch64MCExpr::create(
                   HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)),
-          *STI);
-      OutStreamer->emitInstruction(
+                  OutContext)));
+      EmitToStreamer(
           MCInstBuilder(AArch64::LDRXui)
               .addReg(AArch64::X16)
               .addReg(AArch64::X16)
               .addExpr(AArch64MCExpr::create(
                   HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)),
-          *STI);
-      OutStreamer->emitInstruction(
-          MCInstBuilder(AArch64::BR).addReg(AArch64::X16), *STI);
+                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
   this->STI = nullptr;
@@ -1663,7 +1636,7 @@ void AArch64AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI) {
   }
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
-  OutStreamer->emitInstruction(MI, getSubtargetInfo());
+  EmitToStreamer(MI);
 }
 
 void AArch64AsmPrinter::emitMovXReg(Register Dest, Register Src) {
@@ -2797,7 +2770,7 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                                        AArch64II::MO_GOT | AArch64II::MO_PAGE),
         SymPage);
     Adrp.addOperand(SymPage);
-    OutStreamer->emitInstruction(Adrp, *STI);
+    EmitToStreamer(Adrp);
   }
 
   {
@@ -2812,20 +2785,17 @@ void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
         SymPageOff);
     Ldr.addOperand(SymPageOff);
     Ldr.addOperand(MCOperand::createImm(0));
-    OutStreamer->emitInstruction(Ldr, *STI);
+    EmitToStreamer(Ldr);
   }
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRXui)
-                                   .addReg(AArch64::X16)
-                                   .addReg(AArch64::X16)
-                                   .addImm(0),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                     .addReg(AArch64::X16)
+                     .addReg(AArch64::X16)
+                     .addImm(0));
 
-  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
-                                                 ? AArch64::BRAAZ
-                                                 : AArch64::BR)
-                                   .addReg(AArch64::X16),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(TM.getTargetTriple().isArm64e() ? AArch64::BRAAZ
+                                                               : AArch64::BR)
+                     .addReg(AArch64::X16));
 }
 
 void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
@@ -2862,43 +2832,38 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
   //   ldp	fp, lr, [sp], #16
   //   br	x16
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
-                                   .addReg(AArch64::SP)
-                                   .addReg(AArch64::FP)
-                                   .addReg(AArch64::LR)
-                                   .addReg(AArch64::SP)
-                                   .addImm(-2),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::STPXpre)
+                     .addReg(AArch64::SP)
+                     .addReg(AArch64::FP)
+                     .addReg(AArch64::LR)
+                     .addReg(AArch64::SP)
+                     .addImm(-2));
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
-                                   .addReg(AArch64::FP)
-                                   .addReg(AArch64::SP)
-                                   .addImm(0)
-                                   .addImm(0),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                     .addReg(AArch64::FP)
+                     .addReg(AArch64::SP)
+                     .addImm(0)
+                     .addImm(0));
 
   for (int I = 0; I != 4; ++I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::X1 + 2 * I)
-                                     .addReg(AArch64::X0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(-2),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::STPXpre)
+                       .addReg(AArch64::SP)
+                       .addReg(AArch64::X1 + 2 * I)
+                       .addReg(AArch64::X0 + 2 * I)
+                       .addReg(AArch64::SP)
+                       .addImm(-2));
 
   for (int I = 0; I != 4; ++I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDpre)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::D1 + 2 * I)
-                                     .addReg(AArch64::D0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(-2),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::STPDpre)
+                       .addReg(AArch64::SP)
+                       .addReg(AArch64::D1 + 2 * I)
+                       .addReg(AArch64::D0 + 2 * I)
+                       .addReg(AArch64::SP)
+                       .addImm(-2));
 
-  OutStreamer->emitInstruction(
+  EmitToStreamer(
       MCInstBuilder(AArch64::BL)
-          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
-      *STI);
+          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))));
 
   {
     MCInst Adrp;
@@ -2910,7 +2875,7 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                                  AArch64II::MO_GOT | AArch64II::MO_PAGE),
         SymPage);
     Adrp.addOperand(SymPage);
-    OutStreamer->emitInstruction(Adrp, *STI);
+    EmitToStreamer(Adrp);
   }
 
   {
@@ -2925,53 +2890,46 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
         SymPageOff);
     Ldr.addOperand(SymPageOff);
     Ldr.addOperand(MCOperand::createImm(0));
-    OutStreamer->emitInstruction(Ldr, *STI);
+    EmitToStreamer(Ldr);
   }
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STRXui)
-                                   .addReg(AArch64::X0)
-                                   .addReg(AArch64::X16)
-                                   .addImm(0),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::STRXui)
+                     .addReg(AArch64::X0)
+                     .addReg(AArch64::X16)
+                     .addImm(0));
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
-                                   .addReg(AArch64::X16)
-                                   .addReg(AArch64::X0)
-                                   .addImm(0)
-                                   .addImm(0),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                     .addReg(AArch64::X16)
+                     .addReg(AArch64::X0)
+                     .addImm(0)
+                     .addImm(0));
 
   for (int I = 3; I != -1; --I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDpost)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::D1 + 2 * I)
-                                     .addReg(AArch64::D0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(2),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::LDPDpost)
+                       .addReg(AArch64::SP)
+                       .addReg(AArch64::D1 + 2 * I)
+                       .addReg(AArch64::D0 + 2 * I)
+                       .addReg(AArch64::SP)
+                       .addImm(2));
 
   for (int I = 3; I != -1; --I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::X1 + 2 * I)
-                                     .addReg(AArch64::X0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(2),
-                                 *STI);
+    EmitToStreamer(MCInstBuilder(AArch64::LDPXpost)
+                       .addReg(AArch64::SP)
+                       .addReg(AArch64::X1 + 2 * I)
+                       .addReg(AArch64::X0 + 2 * I)
+                       .addReg(AArch64::SP)
+                       .addImm(2));
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
-                                   .addReg(AArch64::SP)
-                                   .addReg(AArch64::FP)
-                                   .addReg(AArch64::LR)
-                                   .addReg(AArch64::SP)
-                                   .addImm(2),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(AArch64::LDPXpost)
+                     .addReg(AArch64::SP)
+                     .addReg(AArch64::FP)
+                     .addReg(AArch64::LR)
+                     .addReg(AArch64::SP)
+                     .addImm(2));
 
-  OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
-                                                 ? AArch64::BRAAZ
-                                                 : AArch64::BR)
-                                   .addReg(AArch64::X16),
-                               *STI);
+  EmitToStreamer(MCInstBuilder(TM.getTargetTriple().isArm64e() ? AArch64::BRAAZ
+                                                               : AArch64::BR)
+                     .addReg(AArch64::X16));
 }
 
 const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {

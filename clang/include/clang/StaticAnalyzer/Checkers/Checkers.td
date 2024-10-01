@@ -1703,6 +1703,12 @@ def TaintedAllocChecker: Checker<"TaintedAlloc">,
   Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
+def TaintedDivChecker: Checker<"TaintedDiv">,
+  HelpText<"Check for divisions where the denominator is tainted "
+           "(attacker controlled) and might be 0.">,
+  Dependencies<[TaintPropagationChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
