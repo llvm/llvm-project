@@ -15,6 +15,7 @@
 #include <climits>
 #include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <tuple>
 #include <type_traits>
@@ -818,6 +819,26 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
 
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
+// Test to verify that all_equal works with a container that does not
+// model the random access iterator concept.
+TEST(STLExtrasTest, AllEqualNonRandomAccess) {
+  std::list<int> V;
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
   EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);

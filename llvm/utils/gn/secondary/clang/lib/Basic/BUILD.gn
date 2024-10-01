@@ -29,6 +29,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",
+    "//clang/include/clang/Basic:arm_immcheck_types",
     "//clang/include/clang/Basic:arm_mve_builtins",
     "//clang/include/clang/Basic:arm_sme_builtins",
     "//clang/include/clang/Basic:arm_sve_builtins",

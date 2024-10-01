@@ -272,7 +272,7 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
     for (auto &I : *CGN) {
       CallGraphNode *CallerCGN = I.second;
       Function *CalledFunc = CallerCGN->getFunction();
-      if (!CalledFunc)
+      if (!CalledFunc || CalledFunc->isDeclaration())
         continue;
       if (AMDGPU::isKernelLDS(CalledFunc))
         continue;
@@ -300,7 +300,8 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress))
+        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress) &&
+            !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }

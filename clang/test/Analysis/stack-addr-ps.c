@@ -98,13 +98,13 @@ void callTestRegister(void) {
 
 void top_level_leaking(int **out) {
   int local = 42;
-  *out = &local; // no-warning FIXME
+  *out = &local; // expected-warning{{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 'out'}}
 }
 
 void callee_leaking_via_param(int **out) {
   int local = 1;
   *out = &local;
-  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the stack variable 'ptr'}}
+  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 'ptr'}}
 }
 
 void caller_for_leaking_callee() {
@@ -115,7 +115,7 @@ void caller_for_leaking_callee() {
 void callee_nested_leaking(int **out) {
   int local = 1;
   *out = &local;
-  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the stack variable 'ptr'}}
+  // expected-warning@-1{{Address of stack memory associated with local variable 'local' is still referred to by the caller variable 'ptr'}}
 }
 
 void caller_mid_for_nested_leaking(int **mid) {
@@ -126,3 +126,21 @@ void caller_for_nested_leaking() {
   int *ptr = 0;
   caller_mid_for_nested_leaking(&ptr);
 }
+
+// This used to crash StackAddrEscapeChecker because
+// it features a symbol conj_$1{struct c *, LC1, S763, #1}
+// that has no origin region.
+struct a {
+  int member;
+};
+
+struct c {
+  struct a *nested_ptr;
+};
+void opaque(struct c*);
+struct c* get_c(void);
+void no_crash_for_symbol_without_origin_region(void) {
+  struct c *ptr = get_c();
+  opaque(ptr);
+  ptr->nested_ptr->member++;
+} // No crash at the end of the function

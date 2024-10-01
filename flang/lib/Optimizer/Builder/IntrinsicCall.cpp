@@ -265,6 +265,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"free", &I::genFree},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -436,6 +437,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
     {"loc", &I::genLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"malloc", &I::genMalloc},
     {"maskl", &I::genMask<mlir::arith::ShLIOp>},
     {"maskr", &I::genMask<mlir::arith::ShRUIOp>},
     {"matmul",
@@ -750,7 +752,7 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // Generate a call to the Fortran runtime library providing
 // support for 128-bit float math.
-// On 'LDBL_MANT_DIG == 113' targets the implementation
+// On 'HAS_LDBL128' targets the implementation
 // is provided by FortranRuntime, otherwise, it is done via
 // FortranFloat128Math library. In the latter case the compiler
 // has to be built with FLANG_RUNTIME_F128_MATH_LIB to guarantee
@@ -3581,6 +3583,12 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
 }
 
+void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -5305,6 +5313,13 @@ IntrinsicLibrary::genLoc(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, zero);
       })
       .getResults()[0];
+}
+
+mlir::Value IntrinsicLibrary::genMalloc(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genMalloc(builder, loc, args[0]));
 }
 
 // MASKL, MASKR

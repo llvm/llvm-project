@@ -19,7 +19,7 @@ local_set_no_local_type:
 local_set_empty_stack_while_popping:
   .functype local_set_empty_stack_while_popping () -> ()
   .local i32
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   local.set 0
   end_function
 
@@ -27,7 +27,7 @@ local_set_type_mismatch:
   .functype local_set_type_mismatch () -> ()
   .local i32
   f32.const 1.0
-# CHECK: [[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   local.set 0
   end_function
 
@@ -40,7 +40,7 @@ local_tee_no_local_type:
 local_tee_empty_stack_while_popping:
   .functype local_tee_empty_stack_while_popping () -> ()
   .local f32
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got []
   local.tee 0
   end_function
 
@@ -48,13 +48,14 @@ local_tee_type_mismatch:
   .functype local_tee_type_mismatch () -> ()
   .local f32
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   local.tee 0
+  drop
   end_function
 
 global_get_missing_globaltype:
   .functype global_get_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.get foo
   end_function
 
@@ -66,7 +67,7 @@ global_get_expected_expression_operand:
 
 global_set_missing_globaltype:
   .functype global_set_missing_globaltype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .globaltype
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .globaltype
   global.set foo
   end_function
 
@@ -79,7 +80,7 @@ global_set_expected_expression_operand:
 global_set_empty_stack_while_popping:
   .functype global_set_empty_stack_while_popping () -> ()
   .globaltype valid_global, i64
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i64
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i64] but got []
   global.set valid_global
   end_function
 
@@ -87,19 +88,21 @@ global_set_type_mismatch:
   .functype global_set_type_mismatch () -> ()
   .globaltype valid_global, i64
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected i64
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i64] but got [i32]
   global.set valid_global
   end_function
 
 table_get_expected_expression_operand:
   .functype table_get_expected_expression_operand () -> ()
+  i32.const 0
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
   end_function
 
 table_get_missing_tabletype:
   .functype table_get_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+  i32.const 0
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.get foo
   end_function
 
@@ -107,46 +110,52 @@ table_get_missing_tabletype:
 
 table_get_empty_stack_while_popping:
   .functype table_get_empty_stack_while_popping () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.get valid_table
+  drop
   end_function
 
 table_get_type_mismatch:
   .functype table_get_type_mismatch () -> ()
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   table.get valid_table
+  drop
   end_function
 
 table_set_expected_expression_operand:
   .functype table_set_expected_expression_operand () -> ()
+  i32.const 0
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.set 1
   end_function
 
 table_set_missing_tabletype:
   .functype table_set_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:13: error: symbol foo missing .tabletype
+  i32.const 0
+# CHECK: :[[@LINE+1]]:13: error: symbol foo: missing .tabletype
   table.set foo
   end_function
 
 table_set_empty_stack_while_popping_1:
   .functype table_set_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping externref
+# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.set valid_table
   end_function
 
 table_set_empty_stack_while_popping_2:
   .functype table_set_empty_stack_while_popping_2 (externref) -> ()
   local.get 0
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.set valid_table
   end_function
 
 table_set_type_mismatch_1:
   .functype table_set_type_mismatch_1 () -> ()
+  i32.const 0
   ref.null_func
-# CHECK: :[[@LINE+1]]:3: error: popped funcref, expected externref
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [externref] but got [funcref]
   table.set valid_table
   end_function
 
@@ -154,32 +163,41 @@ table_set_type_mismatch_2:
   .functype table_set_type_mismatch_2 () -> ()
   f32.const 1.0
   ref.null_extern
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   table.set valid_table
   end_function
 
 table_fill_expected_expression_operand:
   .functype table_fill_expected_expression_operand () -> ()
+  i32.const 0
+  ref.null_extern
+  i32.const 4
 # CHECK: :[[@LINE+1]]:14: error: expected expression operand
   table.fill 1
   end_function
 
 table_fill_missing_tabletype:
   .functype table_fill_missing_tabletype () -> ()
-# CHECK: :[[@LINE+1]]:14: error: symbol foo missing .tabletype
+  i32.const 0
+  ref.null_extern
+  i32.const 4
+# CHECK: :[[@LINE+1]]:14: error: symbol foo: missing .tabletype
   table.fill foo
   end_function
 
 table_fill_empty_stack_while_popping_1:
   .functype table_fill_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+3]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.fill valid_table
   end_function
 
 table_fill_empty_stack_while_popping_2:
   .functype table_fill_empty_stack_while_popping_2 (i32) -> ()
   local.get 0
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping externref
+# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.fill valid_table
   end_function
 
@@ -187,22 +205,25 @@ table_fill_empty_stack_while_popping_3:
   .functype table_fill_empty_stack_while_popping_3 (i32, externref) -> ()
   local.get 1
   local.get 0
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   table.fill valid_table
   end_function
 
 table_fill_type_mismatch_1:
   .functype table_fill_type_mismatch_1 () -> ()
+  i32.const 0
+  ref.null_extern
   ref.null_func
-# CHECK: :[[@LINE+1]]:3: error: popped funcref, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [funcref]
   table.fill valid_table
   end_function
 
 table_fill_type_mismatch_2:
   .functype table_fill_type_mismatch_2 () -> ()
+  i32.const 0
   ref.null_func
   i32.const 1
-# CHECK: [[@LINE+1]]:3: error: popped funcref, expected externref
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got [funcref]
   table.fill valid_table
   end_function
 
@@ -211,23 +232,16 @@ table_fill_type_mismatch_3:
   f32.const 2.0
   ref.null_extern
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   table.fill valid_table
   end_function
 
 table_fill_type_mismatch_4:
   .functype table_fill_type_mismatch_4 () -> ()
+  i32.const 1
   ref.null_exn
   i32.const 1
-# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
-  table.fill valid_table
-  end_function
-
-table_fill_type_mismatch_5:
-  .functype table_fill_type_mismatch_5 () -> ()
-  ref.null_exn
-  i32.const 1
-# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got [exnref]
   table.fill valid_table
   end_function
 
@@ -235,21 +249,22 @@ table_grow_non_exist_table:
   .functype table_grow_non_exist_table (externref, i32) -> (i32)
   local.get 0
   local.get 1
-# CHECK: [[@LINE+1]]:14: error: symbol invalid_table missing .tabletype
+# CHECK: [[@LINE+1]]:14: error: symbol invalid_table: missing .tabletype
   table.grow invalid_table
   end_function
 
 table_grow_type_mismatch_1:
   .functype table_grow_type_mismatch_1 (externref, i32) -> (i32)
   local.get 1
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping externref
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [externref] but got []
   table.grow valid_table
   end_function
 
 table_grow_type_mismatch_2:
   .functype table_grow_type_mismatch_2 (externref, i32) -> (i32)
   local.get 0
-# CHECK: [[@LINE+1]]:3: error: popped externref, expected i32
+  local.get 0
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got [externref]
   table.grow valid_table
   end_function
 
@@ -258,57 +273,62 @@ table_grow_wrong_result:
   local.get 0
   local.get 1
   table.grow valid_table
-# CHECK: [[@LINE+1]]:3: error: popped i32, expected f32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   end_function
 
 drop_empty_stack_while_popping:
   .functype drop_empty_stack_while_popping () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
 end_block_insufficient_values_on_stack_1:
   .functype end_block_insufficient_values_on_stack_1 () -> ()
   block i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_block
+  drop
   end_function
 
 end_block_insufficient_values_on_stack_2:
   .functype end_block_insufficient_values_on_stack_2 () -> ()
   block () -> (i32)
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_block
+  drop
   end_function
 
 end_block_type_mismatch:
   .functype end_block_type_mismatch () -> ()
   block i32
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   end_block
+  drop
   end_function
 
 end_loop_insufficient_values_on_stack:
   .functype end_loop_insufficient_values_on_stack () -> ()
   loop i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_loop
+  drop
   end_function
 
 end_loop_type_mismatch:
   .functype end_loop_type_mismatch () -> ()
   loop f32
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: end got i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   end_loop
+  drop
   end_function
 
 end_if_insufficient_values_on_stack_1:
   .functype end_if_insufficient_values_on_stack_1 () -> ()
   i32.const 1
   if i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_if
   end_function
 
@@ -317,8 +337,9 @@ end_if_type_mismatch_1:
   i32.const 1
   if f32
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: end got i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   end_if
+  drop
   end_function
 
 end_if_insufficient_values_on_stack_2:
@@ -327,7 +348,7 @@ end_if_insufficient_values_on_stack_2:
   if i32
   i32.const 2
   else
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_if
   drop
   end_function
@@ -339,7 +360,7 @@ end_if_type_mismatch_2:
   i32.const 2
   else
   f32.const 3.0
-# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   end_if
   drop
   end_function
@@ -348,7 +369,7 @@ else_insufficient_values_on_stack:
   .functype else_insufficient_values_on_stack () -> ()
   i32.const 1
   if i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   else
   i32.const 0
   end_if
@@ -360,7 +381,7 @@ else_type_mismatch:
   i32.const 1
   if i32
   f32.const 0.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   else
   i32.const 0
   end_if
@@ -375,7 +396,7 @@ end_try_insufficient_values_on_stack:
   try i32
   i32.const 0
   catch_all
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_try
   drop
   end_function
@@ -385,7 +406,7 @@ end_try_type_mismatch:
   try i32
   i32.const 0
   catch tag_f32
-# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   end_try
   drop
   end_function
@@ -393,7 +414,7 @@ end_try_type_mismatch:
 catch_insufficient_values_on_stack:
   .functype catch_insufficient_values_on_stack () -> ()
   try i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   catch tag_i32
   end_try
   drop
@@ -403,7 +424,7 @@ catch_type_mismatch:
   .functype catch_type_mismatch () -> ()
   try i32
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   catch tag_i32
   end_try
   drop
@@ -412,7 +433,7 @@ catch_type_mismatch:
 catch_all_insufficient_values_on_stack:
   .functype catch_all_insufficient_values_on_stack () -> ()
   try i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   catch_all
   i32.const 0
   end_try
@@ -423,7 +444,7 @@ catch_all_type_mismatch:
   .functype catch_all_type_mismatch () -> ()
   try i32
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   catch_all
   i32.const 0
   end_try
@@ -433,7 +454,7 @@ catch_all_type_mismatch:
 delegate_insufficient_values_on_stack:
   .functype delegate_insufficient_values_on_stack () -> ()
   try i32
-# CHECK: :[[@LINE+1]]:3: error: end: insufficient values on the type stack
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   delegate 0
   drop
   end_function
@@ -442,46 +463,46 @@ delegate_type_mismatch:
   .functype delegate_type_mismatch () -> ()
   try i32
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: end got f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   delegate 0
   drop
   end_function
 
 end_function_empty_stack_while_popping:
   .functype end_function_empty_stack_while_popping () -> (i32)
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   end_function
 
 end_function_type_mismatch:
   .functype end_function_type_mismatch () -> (f32)
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   end_function
 
 end_function_superfluous_end_function_values:
   .functype end_function_superfluous_end_function_values () -> ()
   i32.const 1
   f32.const 2.0
-# CHECK: :[[@LINE+1]]:3: error: 2 superfluous return values
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [i32, f32]
   end_function
 
 return_empty_stack_while_popping:
   .functype return_empty_stack_while_popping () -> (i32)
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   return
   end_function
 
 return_type_mismatch:
   .functype return_type_mismatch () -> (f32)
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   return
   end_function
 
 # Missing index for call_indirect.
 call_indirect_empty_stack_while_popping_1:
   .functype call_indirect_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   call_indirect () -> ()
   end_function
 
@@ -489,7 +510,7 @@ call_indirect_empty_stack_while_popping_1:
 call_indirect_empty_stack_while_popping_2:
   .functype call_indirect_empty_stack_while_popping_1 (f32) -> ()
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got []
   call_indirect (f32) -> ()
   end_function
 
@@ -497,7 +518,7 @@ call_indirect_type_mismatch_for_argument:
   .functype call_indirect_type_mismatch_for_argument () -> ()
   i32.const 1
   i32.const 2
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
   call_indirect (f32) -> ()
   end_function
 
@@ -505,13 +526,13 @@ call_indirect_superfluous_value_at_end:
   .functype call_indirect_superfluous_value_at_end () -> ()
   i32.const 1
   call_indirect () -> (i64)
-# CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [i64]
   end_function
 
 # Missing index for return_call_indirect.
 return_call_indirect_empty_stack_while_popping_1:
   .functype return_call_indirect_empty_stack_while_popping_1 () -> ()
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   return_call_indirect () -> ()
   end_function
 
@@ -519,7 +540,7 @@ return_call_indirect_empty_stack_while_popping_1:
 return_call_indirect_empty_stack_while_popping_2:
   .functype return_call_indirect_empty_stack_while_popping_2 () -> ()
   i32.const 1
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping f32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got []
   return_call_indirect (f32) -> ()
   end_function
 
@@ -533,14 +554,14 @@ call_expected_expression_operand:
 
 call_empty_stack_while_popping:
   .functype call_empty_stack_while_popping () -> ()
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   call fn_i32_to_void
   end_function
 
 call_type_mismatch:
   .functype call_type_mismatch () -> ()
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   call fn_i32_to_void
   end_function
 
@@ -549,12 +570,12 @@ call_type_mismatch:
 call_superfluous_value_at_end:
   .functype call_superfluous_value_at_end () -> ()
   call fn_void_to_i32
-# CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [i32]
   end_function
 
 call_missing_functype:
   .functype call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:8: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:8: error: symbol no_functype: missing .functype
   call no_functype
   end_function
 
@@ -566,20 +587,20 @@ return_call_expected_expression_operand:
 
 return_call_empty_stack_while_popping:
   .functype return_call_empty_stack_while_popping () -> ()
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
   return_call fn_i32_to_void
   end_function
 
 return_call_type_mismatch:
   .functype return_call_type_mismatch () -> ()
   f32.const 1.0
-# CHECK: :[[@LINE+1]]:3: error: popped f32, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
   return_call fn_i32_to_void
   end_function
 
 return_call_missing_functype:
   .functype return_call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:15: error: symbol no_functype missing .functype
+# CHECK: :[[@LINE+1]]:15: error: symbol no_functype: missing .functype
   return_call no_functype
   end_function
 
@@ -594,7 +615,7 @@ catch_expected_expression_operand:
 catch_missing_tagtype:
   .functype catch_missing_tagtype () -> ()
   try
-# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype missing .tagtype
+# CHECK: :[[@LINE+1]]:9: error: symbol no_tagtype: missing .tagtype
   catch no_tagtype
   end_try
   end_function
@@ -605,27 +626,29 @@ catch_superfluous_value_at_end:
   catch tag_i32
   end_try
 # FIXME: Superfluous value should be caught at end_try?
-# CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [i32]
   end_function
 
 ref_is_null_empty_stack_while_popping:
   .functype ref_is_null_empty_stack_while_popping () -> ()
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping reftype
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [ref] but got []
   ref.is_null
+  drop
   end_function
 
 ref_is_null_type_mismatch:
   .functype ref_is_null_type_mismatch () -> ()
   i32.const 1
-# CHECK: [[@LINE+1]]:3: error: popped i32, expected reftype
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [ref] but got [i32]
   ref.is_null
+  drop
   end_function
 
 ref_is_null_pushes_i32:
   .functype ref_is_null_pushes_i32 () -> (i64)
   ref.null_func
   ref.is_null
-# CHECK: :[[@LINE+1]]:3: error: popped i32, expected i64
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i64] but got [i32]
   end_function
 
 # For the other instructions, the type checker checks vs the operands in the
@@ -634,16 +657,18 @@ ref_is_null_pushes_i32:
 
 other_insn_test_1:
   .functype other_insn_test_1 () -> ()
-# CHECK: [[@LINE+1]]:3: error: empty stack while popping i32
+# CHECK: [[@LINE+1]]:3: error: type mismatch, expected [i32, i32] but got []
   i32.add
+  drop
   end_function
 
 other_insn_test_2:
   .functype other_insn_test_2 () -> ()
   i32.const 1
   ref.null_func
-# CHECK: :[[@LINE+1]]:3: error: popped funcref, expected i32
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, i32] but got [i32, funcref]
   i32.add
+  drop
   end_function
 
 other_insn_test_3:
@@ -651,7 +676,7 @@ other_insn_test_3:
   f32.const 1.0
   f32.const 2.0
   f32.add
-# CHECK: :[[@LINE+1]]:3: error: 1 superfluous return values
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [f32]
   end_function
 
 # Unreachable code within 'block' does not affect type checking after
@@ -661,7 +686,7 @@ check_after_unreachable_within_block:
   block
   unreachable
   end_block
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
@@ -671,7 +696,7 @@ check_after_unreachable_within_loop:
   loop
   unreachable
   end_loop
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
@@ -684,7 +709,7 @@ check_after_unreachable_within_if_1:
   else
   unreachable
   end_if
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
@@ -695,7 +720,7 @@ check_after_unreachable_within_if_2:
   if
   unreachable
   else
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_if
   end_function
@@ -708,7 +733,7 @@ check_after_unreachable_within_try_1:
   catch_all
   unreachable
   end_try
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
@@ -719,7 +744,7 @@ check_after_unreachable_within_try_2:
   unreachable
   catch tag_i32
   drop
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_try
   end_function
@@ -730,7 +755,7 @@ check_after_unreachable_within_try_3:
   try
   unreachable
   catch_all
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_try
   end_function
@@ -741,7 +766,7 @@ check_after_unreachable_within_try_4:
   try
   unreachable
   delegate 0
-# CHECK: :[[@LINE+1]]:3: error: empty stack while popping value
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [any] but got []
   drop
   end_function
 
@@ -751,7 +776,7 @@ br_invalid_type_loop:
   loop (i32) -> (f32)
     drop
     f32.const 1.0
-# CHECK: :[[@LINE+1]]:5: error: br got f32, expected i32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [i32] but got [f32]
     br 0
   end_loop
   drop
@@ -761,7 +786,7 @@ br_invalid_type_block:
   .functype br_invalid_type_block () -> ()
   i32.const 1
   block (i32) -> (f32)
-# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [f32] but got [i32]
     br 0
     f32.const 1.0
   end_block
@@ -775,7 +800,7 @@ br_invalid_type_if:
     f32.const 1.0
   else
     i32.const 1
-# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [f32] but got [i32]
     br 0
   end_if
   drop
@@ -785,7 +810,7 @@ br_invalid_type_try:
   .functype br_invalid_type_try () -> ()
   try f32
     i32.const 1
-# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [f32] but got [i32]
     br 0
   catch tag_f32
   end_try
@@ -797,7 +822,7 @@ br_invalid_type_catch:
   try f32
     f32.const 1.0
   catch tag_i32
-# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [f32] but got [i32]
     br 0
   end_try
   drop
@@ -809,7 +834,7 @@ br_invalid_type_catch_all:
     f32.const 1.0
   catch_all
     i32.const 1
-# CHECK: :[[@LINE+1]]:5: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [f32] but got [i32]
     br 0
   end_try
   drop
@@ -832,7 +857,7 @@ br_incorrect_signature:
   block f32
     block i32
       i32.const 1
-# CHECK: :[[@LINE+1]]:7: error: br got i32, expected f32
+# CHECK: :[[@LINE+1]]:7: error: type mismatch, expected [f32] but got [i32]
       br 1
     end_block
     drop
@@ -845,9 +870,38 @@ br_incorrect_func_signature:
   .functype br_incorrect_func_signature () -> (i32)
   block f32
     f32.const 1.0
-# CHECK: :[[@LINE+1]]:5: error: br got f32, expected i32
+# CHECK: :[[@LINE+1]]:5: error: type mismatch, expected [i32] but got [f32]
     br 1
   end_block
   drop
   i32.const 1
+  end_function
+
+multiple_errors_in_function:
+  .functype multiple_errors_in_function () -> ()
+# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+1]]:13: error: expected expression operand
+  table.get 1
+
+# CHECK: :[[@LINE+3]]:3: error: type mismatch, expected [i32] but got []
+# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [externref] but got []
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+  table.fill valid_table
+
+  f32.const 0.0
+  ref.null_extern
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, i32] but got [f32, externref]
+  i32.add
+  drop
+  end_function
+
+.functype take_and_return_multi(i32, i64, f32, f64) -> (i32, i64, f32, f64)
+
+call_with_multi_param_and_return:
+  .functype call_with_multi_param_and_return () -> (i32)
+  ref.null_extern
+  f32.const 0.0
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32, i64, f32, f64] but got [externref, f32]
+  call take_and_return_multi
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [i32, i64, f32, f64]
   end_function

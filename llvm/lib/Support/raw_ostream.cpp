@@ -843,6 +843,10 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   if (IsWindowsConsole)
     return 0;
   return raw_ostream::preferred_buffer_size();
+#elif defined(__MVS__)
+  // The buffer size on z/OS is defined with macro BUFSIZ, which can be
+  // retrieved by invoking function raw_ostream::preferred_buffer_size().
+  return raw_ostream::preferred_buffer_size();
 #else
   assert(FD >= 0 && "File not yet open!");
   struct stat statbuf;
@@ -894,7 +898,7 @@ raw_fd_ostream &llvm::outs() {
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
 #ifdef __MVS__
-  EC = enableAutoConversion(STDOUT_FILENO);
+  EC = enablezOSAutoConversion(STDOUT_FILENO);
   assert(!EC);
 #endif
   static raw_fd_ostream S("-", EC, sys::fs::OF_None);
@@ -905,7 +909,7 @@ raw_fd_ostream &llvm::outs() {
 raw_fd_ostream &llvm::errs() {
   // Set standard error to be unbuffered.
 #ifdef __MVS__
-  std::error_code EC = enableAutoConversion(STDERR_FILENO);
+  std::error_code EC = enablezOSAutoConversion(STDERR_FILENO);
   assert(!EC);
 #endif
   static raw_fd_ostream S(STDERR_FILENO, false, true);

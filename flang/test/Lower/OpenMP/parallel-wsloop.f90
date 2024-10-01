@@ -100,7 +100,7 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   ! CHECK:      %[[PRIVATE_NT_REF:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"}
   ! CHECK:      %[[PRIVATE_NT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_NT_REF]] {uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[NT_VAL:.*]] = fir.load %[[NT_DECL]]#0 : !fir.ref<i32>
-  ! CHECK:      hlfir.assign %[[NT_VAL]] to %[[PRIVATE_NT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK:      hlfir.assign %[[NT_VAL]] to %[[PRIVATE_NT_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! CHECK:      %[[WS_STEP:.*]] = arith.constant 1 : i32
@@ -250,7 +250,7 @@ end subroutine parallel_do_private
 ! CHECK:             %[[NT_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_privateEnt"}
 ! CHECK:             %[[NT_PRIV_DECL:.*]]:2 = hlfir.declare %[[NT_PRIV_ADDR]] {uniq_name = "_QFparallel_do_privateEnt"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[NT_VAL:.*]] = fir.load %[[NT_DECL]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[NT_VAL]] to %[[NT_PRIV_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[NT_VAL]] to %[[NT_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 
 ! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ADDR]] {uniq_name = "_QFparallel_do_privateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -298,12 +298,12 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK:             %[[A_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "a", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"}
 ! CHECK:             %[[A_PRIV_DECL:.*]]:2 = hlfir.declare %[[A_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[A:.*]] = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[A]] to %[[A_PRIV_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[A]] to %[[A_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 
 ! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"}
 ! CHECK:             %[[B_PRIV_DECL:.*]]:2 = hlfir.declare %[[B_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[B:.*]] = fir.load %[[B_DECL]]#0 : !fir.ref<i32>
-! CHECK:             hlfir.assign %[[B]] to %[[B_PRIV_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+! CHECK:             hlfir.assign %[[B]] to %[[B_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 
 ! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

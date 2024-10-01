@@ -723,7 +723,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     llvm::Expected<bool> ret =
         process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
-      return Status(ret.takeError());
+      return Status::FromError(ret.takeError());
     if (ret.get())
       return Status();
   }

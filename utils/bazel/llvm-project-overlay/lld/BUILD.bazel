@@ -227,6 +227,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
+        "//llvm:CGData",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",

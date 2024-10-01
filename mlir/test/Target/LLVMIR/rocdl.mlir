@@ -28,8 +28,10 @@ llvm.func @rocdl_special_regs() -> i32 {
   %12 = rocdl.grid.dim.z : i64
 
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %13 = rocdl.workitem.id.x {range = array<i32: 0, 64>} : i32
+  %13 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
+  // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
+  %14 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
   llvm.return %1 : i32
 }
 
@@ -137,6 +139,27 @@ llvm.func @rocdl.barrier() {
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
   // CHECK-NEXT: fence syncscope("workgroup") acquire
   rocdl.barrier
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.signal() {
+  // CHECK-LABEL: rocdl.s.barrier.signal
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.signal(i32 -1)
+  rocdl.s.barrier.signal -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.barrier.wait() {
+  // CHECK-LABEL: rocdl.s.barrier.wait
+  // CHECK-NEXT: call void @llvm.amdgcn.s.barrier.wait(i16 -1)
+  rocdl.s.barrier.wait -1
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.dscnt() {
+  // CHECK-LABEL: rocdl.s.wait.dscnt
+  // CHECK-NEXT: call void @llvm.amdgcn.s.wait.dscnt(i16 0)
+  rocdl.s.wait.dscnt 0
   llvm.return
 }
 
@@ -375,6 +398,16 @@ llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
   // CHECK: ret ptr addrspace(8) %[[rsrc]]
   %rsrc = rocdl.make.buffer.rsrc %ptr, %stride, %numRecords, %flags : !llvm.ptr to !llvm.ptr<8>
   llvm.return %rsrc : !llvm.ptr<8>
+}
+
+llvm.func @rocdl.wmma.fp8(%arg0 : vector<2 x i32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.fp8.fp8.v8f32.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <8 x float> %{{.*}})
+  %r0 = rocdl.wmma.f32.16x16x16.fp8_fp8 %arg0, %arg0, %arg1: (vector<2xi32>, vector<2xi32>, vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf8.bf8.v8f32.v2i32(<2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <8 x float> %{{.*}})
+  %r1 = rocdl.wmma.f32.16x16x16.bf8_bf8 %arg0, %arg0, %arg1: (vector<2xi32>, vector<2xi32>, vector<8xf32>) -> vector<8xf32>
+
+  llvm.return %r0 : vector<8 x f32>
 }
 
 llvm.func @rocdl.raw.ptr.buffer(%rsrc : !llvm.ptr<8>,

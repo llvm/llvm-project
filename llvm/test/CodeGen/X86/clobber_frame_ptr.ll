@@ -144,3 +144,46 @@ entry:
   call void @llvm.eh.sjlj.longjmp(ptr @buf)
   unreachable
 }
+
+declare ghccc void @tail()
+
+; We should not save/restore fp/bp around terminator.
+define ghccc void @test5() {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    .cfi_def_cfa_register %rbp
+; CHECK-NEXT:    andq $-8, %rsp
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %then
+; CHECK-NEXT:    movq $0, (%rax)
+; CHECK-NEXT:    movq %rbp, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB3_2: # %else
+; CHECK-NEXT:    .cfi_def_cfa %rbp, 16
+; CHECK-NEXT:    movq %rbp, %rsp
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    jmp tail@PLT # TAILCALL
+entry:
+  br i1 undef, label %then, label %else
+
+then:
+  store i64 0, ptr undef
+  br label %exit
+
+else:
+  musttail call ghccc void @tail()
+  ret void
+
+exit:
+  ret void
+}
+

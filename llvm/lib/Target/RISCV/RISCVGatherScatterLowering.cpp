@@ -127,7 +127,7 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return matchStridedConstant(StartC);
 
   // Base case, start is a stepvector
-  if (match(Start, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (match(Start, m_Intrinsic<Intrinsic::stepvector>())) {
     auto *Ty = Start->getType()->getScalarType();
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }

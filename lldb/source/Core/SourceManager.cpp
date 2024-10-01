@@ -61,20 +61,30 @@ static void resolve_tilde(FileSpec &file_spec) {
   }
 }
 
+static std::string toString(const Checksum &checksum) {
+  if (!checksum)
+    return "";
+  return std::string(llvm::formatv("{0}", checksum.digest()));
+}
+
 // SourceManager constructor
 SourceManager::SourceManager(const TargetSP &target_sp)
-    : m_last_line(0), m_last_count(0), m_default_set(false),
-      m_target_wp(target_sp),
+    : m_last_support_file_sp(std::make_shared<SupportFile>()), m_last_line(0),
+      m_last_count(0), m_default_set(false), m_target_wp(target_sp),
       m_debugger_wp(target_sp->GetDebugger().shared_from_this()) {}
 
 SourceManager::SourceManager(const DebuggerSP &debugger_sp)
-    : m_last_line(0), m_last_count(0), m_default_set(false), m_target_wp(),
+    : m_last_support_file_sp(std::make_shared<SupportFile>()), m_last_line(0),
+      m_last_count(0), m_default_set(false), m_target_wp(),
       m_debugger_wp(debugger_sp) {}
 
 // Destructor
 SourceManager::~SourceManager() = default;
 
-SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
+SourceManager::FileSP SourceManager::GetFile(SupportFileSP support_file_sp) {
+  assert(support_file_sp && "SupportFileSP must be valid");
+
+  FileSpec file_spec = support_file_sp->GetSpecOnly();
   if (!file_spec)
     return {};
 
@@ -87,8 +97,8 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
     LLDB_LOG(log, "Source file caching disabled: creating new source file: {0}",
              file_spec);
     if (target_sp)
-      return std::make_shared<File>(file_spec, target_sp);
-    return std::make_shared<File>(file_spec, debugger_sp);
+      return std::make_shared<File>(support_file_sp, target_sp);
+    return std::make_shared<File>(support_file_sp, debugger_sp);
   }
 
   ProcessSP process_sp = target_sp ? target_sp->GetProcessSP() : ProcessSP();
@@ -136,7 +146,8 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   }
 
   // Check if the file exists on disk.
-  if (file_sp && !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
+  if (file_sp && !FileSystem::Instance().Exists(
+                     file_sp->GetSupportFile()->GetSpecOnly())) {
     LLDB_LOG(log, "File doesn't exist on disk: {0}", file_spec);
     file_sp.reset();
   }
@@ -148,9 +159,9 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
 
     // (Re)create the file.
     if (target_sp)
-      file_sp = std::make_shared<File>(file_spec, target_sp);
+      file_sp = std::make_shared<File>(support_file_sp, target_sp);
     else
-      file_sp = std::make_shared<File>(file_spec, debugger_sp);
+      file_sp = std::make_shared<File>(support_file_sp, debugger_sp);
 
     // Add the file to the debugger and process cache. If the file was
     // invalidated, this will overwrite it.
@@ -230,11 +241,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
       start_line = 1;
   }
 
-  if (!m_default_set) {
-    FileSpec tmp_spec;
-    uint32_t tmp_line;
-    GetDefaultFileAndLine(tmp_spec, tmp_line);
-  }
+  if (!m_default_set)
+    GetDefaultFileAndLine();
 
   m_last_line = start_line;
   m_last_count = count;
@@ -300,16 +308,29 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         break;
       }
     }
+
+    Checksum line_table_checksum =
+        last_file_sp->GetSupportFile()->GetChecksum();
+    Checksum on_disk_checksum = last_file_sp->GetChecksum();
+    if (line_table_checksum && line_table_checksum != on_disk_checksum)
+      Debugger::ReportWarning(
+          llvm::formatv(
+              "{0}: source file checksum mismatch between line table "
+              "({1}) and file on disk ({2})",
+              last_file_sp->GetSupportFile()->GetSpecOnly().GetFilename(),
+              toString(line_table_checksum), toString(on_disk_checksum)),
+          std::nullopt, &last_file_sp->GetChecksumWarningOnceFlag());
   }
   return *delta;
 }
 
 size_t SourceManager::DisplaySourceLinesWithLineNumbers(
-    const FileSpec &file_spec, uint32_t line, uint32_t column,
+    lldb::SupportFileSP support_file_sp, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
     const char *current_line_cstr, Stream *s,
     const SymbolContextList *bp_locs) {
-  FileSP file_sp(GetFile(file_spec));
+  assert(support_file_sp && "SupportFile must be valid");
+  FileSP file_sp(GetFile(support_file_sp));
 
   uint32_t start_line;
   uint32_t count = context_before + context_after + 1;
@@ -322,8 +343,9 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbers(
   if (last_file_sp.get() != file_sp.get()) {
     if (line == 0)
       m_last_line = 0;
-    m_last_file_spec = file_spec;
+    m_last_support_file_sp = support_file_sp;
   }
+
   return DisplaySourceLinesWithLineNumbersUsingLastFile(
       start_line, count, line, column, current_line_cstr, s, bp_locs);
 }
@@ -334,11 +356,8 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
   // to figure it out here.
   FileSP last_file_sp(GetLastFile());
   const bool have_default_file_line = last_file_sp && m_last_line > 0;
-  if (!m_default_set) {
-    FileSpec tmp_spec;
-    uint32_t tmp_line;
-    GetDefaultFileAndLine(tmp_spec, tmp_line);
-  }
+  if (!m_default_set)
+    GetDefaultFileAndLine();
 
   if (last_file_sp) {
     if (m_last_line == UINT32_MAX)
@@ -373,26 +392,27 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
   return 0;
 }
 
-bool SourceManager::SetDefaultFileAndLine(const FileSpec &file_spec,
+bool SourceManager::SetDefaultFileAndLine(lldb::SupportFileSP support_file_sp,
                                           uint32_t line) {
-  m_default_set = true;
-  FileSP file_sp(GetFile(file_spec));
+  assert(support_file_sp && "SupportFile must be valid");
 
-  if (file_sp) {
+  m_default_set = true;
+
+  if (FileSP file_sp = GetFile(support_file_sp)) {
     m_last_line = line;
-    m_last_file_spec = file_spec;
+    m_last_support_file_sp = support_file_sp;
     return true;
-  } else {
-    return false;
   }
+
+  return false;
 }
 
-bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
-  if (FileSP last_file_sp = GetLastFile()) {
-    file_spec = m_last_file_spec;
-    line = m_last_line;
-    return true;
-  } else if (!m_default_set) {
+std::optional<SourceManager::SupportFileAndLine>
+SourceManager::GetDefaultFileAndLine() {
+  if (FileSP last_file_sp = GetLastFile())
+    return SupportFileAndLine(m_last_support_file_sp, m_last_line);
+
+  if (!m_default_set) {
     TargetSP target_sp(m_target_wp.lock());
 
     if (target_sp) {
@@ -418,51 +438,51 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
             if (sc.function->GetAddressRange()
                     .GetBaseAddress()
                     .CalculateSymbolContextLineEntry(line_entry)) {
-              SetDefaultFileAndLine(line_entry.GetFile(), line_entry.line);
-              file_spec = m_last_file_spec;
-              line = m_last_line;
-              return true;
+              SetDefaultFileAndLine(line_entry.file_sp, line_entry.line);
+              return SupportFileAndLine(line_entry.file_sp, m_last_line);
             }
           }
         }
       }
     }
   }
-  return false;
+
+  return std::nullopt;
 }
 
-void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
+void SourceManager::FindLinesMatchingRegex(SupportFileSP support_file_sp,
                                            RegularExpression &regex,
                                            uint32_t start_line,
                                            uint32_t end_line,
                                            std::vector<uint32_t> &match_lines) {
   match_lines.clear();
-  FileSP file_sp = GetFile(file_spec);
+  FileSP file_sp = GetFile(support_file_sp);
   if (!file_sp)
     return;
   return file_sp->FindLinesMatchingRegex(regex, start_line, end_line,
                                          match_lines);
 }
 
-SourceManager::File::File(const FileSpec &file_spec,
+SourceManager::File::File(SupportFileSP support_file_sp,
                           lldb::DebuggerSP debugger_sp)
-    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
-      m_debugger_wp(debugger_sp), m_target_wp(TargetSP()) {
-  CommonInitializer(file_spec, {});
+    : m_support_file_sp(std::make_shared<SupportFile>()), m_checksum(),
+      m_mod_time(), m_debugger_wp(debugger_sp), m_target_wp(TargetSP()) {
+  CommonInitializer(support_file_sp, {});
 }
 
-SourceManager::File::File(const FileSpec &file_spec, TargetSP target_sp)
-    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
+SourceManager::File::File(SupportFileSP support_file_sp, TargetSP target_sp)
+    : m_support_file_sp(std::make_shared<SupportFile>()), m_checksum(),
+      m_mod_time(),
       m_debugger_wp(target_sp ? target_sp->GetDebugger().shared_from_this()
                               : DebuggerSP()),
       m_target_wp(target_sp) {
-  CommonInitializer(file_spec, target_sp);
+  CommonInitializer(support_file_sp, target_sp);
 }
 
-void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
+void SourceManager::File::CommonInitializer(SupportFileSP support_file_sp,
                                             TargetSP target_sp) {
   // Set the file and update the modification time.
-  SetFileSpec(file_spec);
+  SetSupportFile(support_file_sp);
 
   // Always update the source map modification ID if we have a target.
   if (target_sp)
@@ -472,65 +492,77 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
   if (m_mod_time == llvm::sys::TimePoint<>()) {
     if (target_sp) {
       // If this is just a file name, try finding it in the target.
-      if (!file_spec.GetDirectory() && file_spec.GetFilename()) {
-        bool check_inlines = false;
-        SymbolContextList sc_list;
-        size_t num_matches =
-            target_sp->GetImages().ResolveSymbolContextForFilePath(
-                file_spec.GetFilename().AsCString(), 0, check_inlines,
-                SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
-                sc_list);
-        bool got_multiple = false;
-        if (num_matches != 0) {
-          if (num_matches > 1) {
-            CompileUnit *test_cu = nullptr;
-            for (const SymbolContext &sc : sc_list) {
-              if (sc.comp_unit) {
-                if (test_cu) {
-                  if (test_cu != sc.comp_unit)
-                    got_multiple = true;
-                  break;
-                } else
-                  test_cu = sc.comp_unit;
+      {
+        FileSpec file_spec = support_file_sp->GetSpecOnly();
+        if (!file_spec.GetDirectory() && file_spec.GetFilename()) {
+          bool check_inlines = false;
+          SymbolContextList sc_list;
+          size_t num_matches =
+              target_sp->GetImages().ResolveSymbolContextForFilePath(
+                  file_spec.GetFilename().AsCString(), 0, check_inlines,
+                  SymbolContextItem(eSymbolContextModule |
+                                    eSymbolContextCompUnit),
+                  sc_list);
+          bool got_multiple = false;
+          if (num_matches != 0) {
+            if (num_matches > 1) {
+              CompileUnit *test_cu = nullptr;
+              for (const SymbolContext &sc : sc_list) {
+                if (sc.comp_unit) {
+                  if (test_cu) {
+                    if (test_cu != sc.comp_unit)
+                      got_multiple = true;
+                    break;
+                  } else
+                    test_cu = sc.comp_unit;
+                }
               }
             }
-          }
-          if (!got_multiple) {
-            SymbolContext sc;
-            sc_list.GetContextAtIndex(0, sc);
-            if (sc.comp_unit)
-              SetFileSpec(sc.comp_unit->GetPrimaryFile());
+            if (!got_multiple) {
+              SymbolContext sc;
+              sc_list.GetContextAtIndex(0, sc);
+              if (sc.comp_unit)
+                SetSupportFile(sc.comp_unit->GetPrimarySupportFile());
+            }
           }
         }
       }
 
       // Try remapping the file if it doesn't exist.
-      if (!FileSystem::Instance().Exists(m_file_spec)) {
-        // Check target specific source remappings (i.e., the
-        // target.source-map setting), then fall back to the module
-        // specific remapping (i.e., the .dSYM remapping dictionary).
-        auto remapped = target_sp->GetSourcePathMap().FindFile(m_file_spec);
-        if (!remapped) {
-          FileSpec new_spec;
-          if (target_sp->GetImages().FindSourceFile(m_file_spec, new_spec))
-            remapped = new_spec;
+      {
+        FileSpec file_spec = support_file_sp->GetSpecOnly();
+        if (!FileSystem::Instance().Exists(file_spec)) {
+          // Check target specific source remappings (i.e., the
+          // target.source-map setting), then fall back to the module
+          // specific remapping (i.e., the .dSYM remapping dictionary).
+          auto remapped = target_sp->GetSourcePathMap().FindFile(file_spec);
+          if (!remapped) {
+            FileSpec new_spec;
+            if (target_sp->GetImages().FindSourceFile(file_spec, new_spec))
+              remapped = new_spec;
+          }
+          if (remapped)
+            SetSupportFile(std::make_shared<SupportFile>(
+                *remapped, support_file_sp->GetChecksum()));
         }
-        if (remapped)
-          SetFileSpec(*remapped);
       }
     }
   }
 
   // If the file exists, read in the data.
-  if (m_mod_time != llvm::sys::TimePoint<>())
-    m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
+  if (m_mod_time != llvm::sys::TimePoint<>()) {
+    m_data_sp = FileSystem::Instance().CreateDataBuffer(
+        m_support_file_sp->GetSpecOnly());
+    m_checksum = llvm::MD5::hash(m_data_sp->GetData());
+  }
 }
 
-void SourceManager::File::SetFileSpec(FileSpec file_spec) {
+void SourceManager::File::SetSupportFile(lldb::SupportFileSP support_file_sp) {
+  FileSpec file_spec = support_file_sp->GetSpecOnly();
   resolve_tilde(file_spec);
-  m_file_spec = std::move(file_spec);
-  m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
+  m_support_file_sp =
+      std::make_shared<SupportFile>(file_spec, support_file_sp->GetChecksum());
+  m_mod_time = FileSystem::Instance().GetModificationTime(file_spec);
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -603,7 +635,8 @@ bool SourceManager::File::ModificationTimeIsStale() const {
   // TODO: use host API to sign up for file modifications to anything in our
   // source cache and only update when we determine a file has been updated.
   // For now we check each time we want to display info for the file.
-  auto curr_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
+  auto curr_mod_time = FileSystem::Instance().GetModificationTime(
+      m_support_file_sp->GetSpecOnly());
   return curr_mod_time != llvm::sys::TimePoint<>() &&
          m_mod_time != curr_mod_time;
 }
@@ -644,7 +677,8 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line,
                        debugger_sp->GetStopShowColumnAnsiSuffix());
 
   HighlighterManager mgr;
-  std::string path = GetFileSpec().GetPath(/*denormalize*/ false);
+  std::string path =
+      GetSupportFile()->GetSpecOnly().GetPath(/*denormalize*/ false);
   // FIXME: Find a way to get the definitive language this file was written in
   // and pass it to the highlighter.
   const auto &h = mgr.getHighlighterFor(lldb::eLanguageTypeUnknown, path);
@@ -698,7 +732,8 @@ void SourceManager::File::FindLinesMatchingRegex(
 
 bool lldb_private::operator==(const SourceManager::File &lhs,
                               const SourceManager::File &rhs) {
-  if (lhs.m_file_spec != rhs.m_file_spec)
+  if (!lhs.GetSupportFile()->Equal(*rhs.GetSupportFile(),
+                                   SupportFile::eEqualChecksumIfSet))
     return false;
   return lhs.m_mod_time == rhs.m_mod_time;
 }
@@ -778,9 +813,9 @@ void SourceManager::SourceFileCache::AddSourceFile(const FileSpec &file_spec,
   assert(file_sp && "invalid FileSP");
 
   AddSourceFileImpl(file_spec, file_sp);
-  const FileSpec &resolved_file_spec = file_sp->GetFileSpec();
+  const FileSpec &resolved_file_spec = file_sp->GetSupportFile()->GetSpecOnly();
   if (file_spec != resolved_file_spec)
-    AddSourceFileImpl(file_sp->GetFileSpec(), file_sp);
+    AddSourceFileImpl(file_sp->GetSupportFile()->GetSpecOnly(), file_sp);
 }
 
 void SourceManager::SourceFileCache::RemoveSourceFile(const FileSP &file_sp) {
@@ -821,13 +856,17 @@ SourceManager::FileSP SourceManager::SourceFileCache::FindSourceFile(
 }
 
 void SourceManager::SourceFileCache::Dump(Stream &stream) const {
-  stream << "Modification time   Lines    Path\n";
-  stream << "------------------- -------- --------------------------------\n";
+  // clang-format off
+  stream << "Modification time   MD5 Checksum (on-disk)           MD5 Checksum (line table)        Lines    Path\n";
+  stream << "------------------- -------------------------------- -------------------------------- -------- --------------------------------\n";
+  // clang-format on
   for (auto &entry : m_file_cache) {
     if (!entry.second)
       continue;
     FileSP file = entry.second;
-    stream.Format("{0:%Y-%m-%d %H:%M:%S} {1,8:d} {2}\n", file->GetTimestamp(),
+    stream.Format("{0:%Y-%m-%d %H:%M:%S} {1,32} {2,32} {3,8:d} {4}\n",
+                  file->GetTimestamp(), toString(file->GetChecksum()),
+                  toString(file->GetSupportFile()->GetChecksum()),
                   file->GetNumLines(), entry.first.GetPath());
   }
 }

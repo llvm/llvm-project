@@ -797,7 +797,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "gdb-remote",
           "Connect to a process via remote GDB server.\n"
-          "If no host is specifed, localhost is assumed.\n"
+          "If no host is specified, localhost is assumed.\n"
           "gdb-remote is an abbreviation for 'process connect --plugin "
           "gdb-remote connect://<hostname>:<port>'\n",
           "gdb-remote [<hostname>:]<portnum>", 0, false));
@@ -1861,7 +1861,7 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
   // But if for some reason we didn't get a value object at all, then we will
   // make up some helpful errors from the expression result.
   if (expr_result_valobj_sp)
-    error = expr_result_valobj_sp->GetError();
+    error = expr_result_valobj_sp->GetError().Clone();
 
   if (error.Success()) {
     std::string result = lldb_private::toString(expr_result) +
@@ -1887,7 +1887,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
   std::string command_string(command_line);
-  std::string original_command_string(command_line);
+  std::string original_command_string(command_string);
+  std::string real_original_command_string(command_string);
 
   Log *log = GetLog(LLDBLog::Commands);
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
@@ -2076,6 +2077,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     }
 
     ElapsedTime elapsed(execute_time);
+    cmd_obj->SetOriginalCommandString(real_original_command_string);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 

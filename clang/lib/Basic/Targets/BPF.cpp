@@ -37,15 +37,19 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   Builder.defineMacro("__BPF_FEATURE_ADDR_SPACE_CAST");
+  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
+  Builder.defineMacro("__BPF_FEATURE_ATOMIC_MEM_ORDERING");
 
-  if (CPU.empty() || CPU == "generic" || CPU == "v1") {
+  if (CPU.empty())
+    CPU = "v3";
+
+  if (CPU == "generic" || CPU == "v1") {
     Builder.defineMacro("__BPF_CPU_VERSION__", "1");
     return;
   }
 
   std::string CpuVerNumStr = CPU.substr(1);
   Builder.defineMacro("__BPF_CPU_VERSION__", CpuVerNumStr);
-  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
 
   int CpuVerNum = std::stoi(CpuVerNumStr);
   if (CpuVerNum >= 2)

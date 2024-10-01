@@ -61,6 +61,16 @@ def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "::mlir:
   }];
 
   let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
+  let options = [
+    Option<"emissionKind", "emission-kind", "mlir::LLVM::DIEmissionKind",
+    /*default=*/"mlir::LLVM::DIEmissionKind::LineTablesOnly", "Emission kind to generate debug info.",
+    [{::llvm::cl::values(
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::None, "None", "None"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::Full, "Full", "Full"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "LineTablesOnly (default)"),
+	     clEnumValN(::mlir::LLVM::DIEmissionKind::DebugDirectivesOnly, "DebugDirectivesOnly", "DebugDirectivesOnly")
+	   )}]>,
+  ];
 }
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES

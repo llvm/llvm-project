@@ -67,6 +67,9 @@ clang_tablegen(arm_neon.inc -gen-arm-neon-sema
 clang_tablegen(arm_fp16.inc -gen-arm-neon-sema
   SOURCE arm_fp16.td
   TARGET ClangARMFP16)
+clang_tablegen(arm_immcheck_types.inc -gen-arm-immcheck-types
+  SOURCE arm_sve.td
+  TARGET ClangARMImmChecks)
 clang_tablegen(arm_mve_builtins.inc -gen-arm-mve-builtin-def
   SOURCE arm_mve.td
   TARGET ClangARMMveBuiltinsDef)

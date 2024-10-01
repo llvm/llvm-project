@@ -21,6 +21,7 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+struct HistogramInfo;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -103,6 +104,13 @@ class VPRecipeBuilder {
   VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                             VPBasicBlock *VPBB);
 
+  /// Makes Histogram count operations safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the
+  /// Load + Add|Sub + Store operations that perform the histogram in the
+  /// original scalar loop.
+  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
+                                         ArrayRef<VPValue *> Operands);
+
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
@@ -174,11 +182,6 @@ public:
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();
     }
-    ScalarEvolution &SE = *PSE.getSE();
-    if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
-      if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
-        return Plan.getOrAddLiveIn(C->getValue());
-
     return Plan.getOrAddLiveIn(V);
   }
 };

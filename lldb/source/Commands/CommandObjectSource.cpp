@@ -777,14 +777,16 @@ protected:
     if (sc.function) {
       Target &target = GetTarget();
 
-      FileSpec start_file;
+      SupportFileSP start_file = std::make_shared<SupportFile>();
       uint32_t start_line;
       uint32_t end_line;
       FileSpec end_file;
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        sc.function->GetStartLineSourceInfo(start_file, start_line);
+        FileSpec function_file_spec;
+        sc.function->GetStartLineSourceInfo(function_file_spec, start_line);
+        start_file = std::make_shared<SupportFile>(function_file_spec);
         if (start_line == 0) {
           result.AppendErrorWithFormat("Could not find line information for "
                                        "start of function: \"%s\".\n",
@@ -794,7 +796,7 @@ protected:
         sc.function->GetEndLineSourceInfo(end_file, end_line);
       } else {
         // We have an inlined function
-        start_file = source_info.line_entry.GetFile();
+        start_file = source_info.line_entry.file_sp;
         start_line = source_info.line_entry.line;
         end_line = start_line + m_options.num_lines;
       }
@@ -825,14 +827,15 @@ protected:
 
       if (m_options.show_bp_locs) {
         const bool show_inlines = true;
-        m_breakpoint_locations.Reset(start_file, 0, show_inlines);
+        m_breakpoint_locations.Reset(start_file->GetSpecOnly(), 0,
+                                     show_inlines);
         SearchFilterForUnconstrainedSearches target_search_filter(
             m_exe_ctx.GetTargetSP());
         target_search_filter.Search(m_breakpoint_locations);
       }
 
-      result.AppendMessageWithFormat("File: %s\n",
-                                     start_file.GetPath().c_str());
+      result.AppendMessageWithFormat(
+          "File: %s\n", start_file->GetSpecOnly().GetPath().c_str());
       // We don't care about the column here.
       const uint32_t column = 0;
       return target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
@@ -1050,8 +1053,9 @@ protected:
                   ? sc.line_entry.column
                   : 0;
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimaryFile(), sc.line_entry.line, column,
-              lines_to_back_up, m_options.num_lines - lines_to_back_up, "->",
+              sc.comp_unit->GetPrimarySupportFile(),
+              sc.line_entry.line, column, lines_to_back_up,
+              m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
         }
@@ -1076,8 +1080,8 @@ protected:
               target.GetSourceManager().GetLastFile());
           if (last_file_sp) {
             const bool show_inlines = true;
-            m_breakpoint_locations.Reset(last_file_sp->GetFileSpec(), 0,
-                                         show_inlines);
+            m_breakpoint_locations.Reset(
+                last_file_sp->GetSupportFile()->GetSpecOnly(), 0, show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
                 target.shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
@@ -1170,9 +1174,9 @@ protected:
             m_options.num_lines = 10;
           const uint32_t column = 0;
           target.GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimaryFile(), m_options.start_line, column, 0,
-              m_options.num_lines, "", &result.GetOutputStream(),
-              GetBreakpointLocations());
+              sc.comp_unit->GetPrimarySupportFile(),
+              m_options.start_line, column, 0, m_options.num_lines, "",
+              &result.GetOutputStream(), GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {

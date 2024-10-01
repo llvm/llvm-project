@@ -1104,7 +1104,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
           m_sc.function->GetFrameBaseExpression().Evaluate(
               &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
       if (!expr_value)
-        m_frame_base_error = expr_value.takeError();
+        m_frame_base_error = Status::FromError(expr_value.takeError());
       else
         m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
@@ -1117,7 +1117,7 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
     frame_base = m_frame_base;
 
   if (error_ptr)
-    *error_ptr = m_frame_base_error;
+    *error_ptr = m_frame_base_error.Clone();
   return m_frame_base_error.Success();
 }
 
@@ -1923,7 +1923,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.GetFile(), start_line, m_sc.line_entry.column,
+                  m_sc.line_entry.file_sp, start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;

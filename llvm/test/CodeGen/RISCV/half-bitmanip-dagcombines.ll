@@ -55,14 +55,12 @@ define half @fneg(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: fneg:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    lui a1, 1048568
-; RV32IZHINX-NEXT:    xor a0, a0, a1
+; RV32IZHINX-NEXT:    fneg.h a0, a0
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fneg:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    lui a1, 1048568
-; RV64IZHINX-NEXT:    xor a0, a0, a1
+; RV64IZHINX-NEXT:    fneg.h a0, a0
 ; RV64IZHINX-NEXT:    ret
 ;
 ; RV32IZFHMIN-LABEL: fneg:
@@ -79,8 +77,10 @@ define half @fneg(half %a) nounwind {
 ;
 ; RVIZHINXMIN-LABEL: fneg:
 ; RVIZHINXMIN:       # %bb.0:
+; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RVIZHINXMIN-NEXT:    lui a1, 1048568
 ; RVIZHINXMIN-NEXT:    xor a0, a0, a1
+; RVIZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RVIZHINXMIN-NEXT:    ret
   %1 = fneg half %a
   ret half %1
@@ -115,14 +115,12 @@ define half @fabs(half %a) nounwind {
 ;
 ; RV32IZHINX-LABEL: fabs:
 ; RV32IZHINX:       # %bb.0:
-; RV32IZHINX-NEXT:    slli a0, a0, 17
-; RV32IZHINX-NEXT:    srli a0, a0, 17
+; RV32IZHINX-NEXT:    fabs.h a0, a0
 ; RV32IZHINX-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fabs:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    slli a0, a0, 49
-; RV64IZHINX-NEXT:    srli a0, a0, 49
+; RV64IZHINX-NEXT:    fabs.h a0, a0
 ; RV64IZHINX-NEXT:    ret
 ;
 ; RV32IZFHMIN-LABEL: fabs:
@@ -139,14 +137,18 @@ define half @fabs(half %a) nounwind {
 ;
 ; RV32IZHINXMIN-LABEL: fabs:
 ; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: fabs:
 ; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
 ; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
@@ -207,80 +209,48 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ;
 ; RV32IZFHMIN-LABEL: fcopysign_fneg:
 ; RV32IZFHMIN:       # %bb.0:
-; RV32IZFHMIN-NEXT:    addi sp, sp, -16
-; RV32IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV32IZFHMIN-NEXT:    fmv.h.x fa4, a1
-; RV32IZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; RV32IZFHMIN-NEXT:    fneg.s fa4, fa4
-; RV32IZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; RV32IZFHMIN-NEXT:    fsh fa5, 8(sp)
-; RV32IZFHMIN-NEXT:    fsh fa4, 12(sp)
-; RV32IZFHMIN-NEXT:    lbu a0, 9(sp)
-; RV32IZFHMIN-NEXT:    lbu a1, 13(sp)
-; RV32IZFHMIN-NEXT:    andi a0, a0, 127
-; RV32IZFHMIN-NEXT:    andi a1, a1, 128
+; RV32IZFHMIN-NEXT:    not a1, a1
+; RV32IZFHMIN-NEXT:    lui a2, 1048568
+; RV32IZFHMIN-NEXT:    and a1, a1, a2
+; RV32IZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IZFHMIN-NEXT:    srli a0, a0, 17
 ; RV32IZFHMIN-NEXT:    or a0, a0, a1
-; RV32IZFHMIN-NEXT:    sb a0, 9(sp)
-; RV32IZFHMIN-NEXT:    flh fa5, 8(sp)
-; RV32IZFHMIN-NEXT:    fmv.x.h a0, fa5
-; RV32IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFHMIN-NEXT:    ret
 ;
 ; RV64IZFHMIN-LABEL: fcopysign_fneg:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    addi sp, sp, -16
-; RV64IZFHMIN-NEXT:    fmv.h.x fa5, a0
-; RV64IZFHMIN-NEXT:    fmv.h.x fa4, a1
-; RV64IZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; RV64IZFHMIN-NEXT:    fneg.s fa4, fa4
-; RV64IZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; RV64IZFHMIN-NEXT:    fsh fa5, 0(sp)
-; RV64IZFHMIN-NEXT:    fsh fa4, 8(sp)
-; RV64IZFHMIN-NEXT:    lbu a0, 1(sp)
-; RV64IZFHMIN-NEXT:    lbu a1, 9(sp)
-; RV64IZFHMIN-NEXT:    andi a0, a0, 127
-; RV64IZFHMIN-NEXT:    andi a1, a1, 128
+; RV64IZFHMIN-NEXT:    not a1, a1
+; RV64IZFHMIN-NEXT:    lui a2, 1048568
+; RV64IZFHMIN-NEXT:    and a1, a1, a2
+; RV64IZFHMIN-NEXT:    slli a0, a0, 49
+; RV64IZFHMIN-NEXT:    srli a0, a0, 49
 ; RV64IZFHMIN-NEXT:    or a0, a0, a1
-; RV64IZFHMIN-NEXT:    sb a0, 1(sp)
-; RV64IZFHMIN-NEXT:    flh fa5, 0(sp)
-; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa5
-; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV32IZHINXMIN-LABEL: fcopysign_fneg:
 ; RV32IZHINXMIN:       # %bb.0:
-; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV32IZHINXMIN-NEXT:    fneg.s a1, a1
-; RV32IZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; RV32IZHINXMIN-NEXT:    sh a0, 8(sp)
-; RV32IZHINXMIN-NEXT:    sh a1, 12(sp)
-; RV32IZHINXMIN-NEXT:    lbu a0, 9(sp)
-; RV32IZHINXMIN-NEXT:    lbu a1, 13(sp)
-; RV32IZHINXMIN-NEXT:    andi a0, a0, 127
-; RV32IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV32IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; RV32IZHINXMIN-NEXT:    not a1, a1
+; RV32IZHINXMIN-NEXT:    lui a2, 1048568
+; RV32IZHINXMIN-NEXT:    and a1, a1, a2
+; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
+; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
 ; RV32IZHINXMIN-NEXT:    or a0, a0, a1
-; RV32IZHINXMIN-NEXT:    sb a0, 9(sp)
-; RV32IZHINXMIN-NEXT:    lh a0, 8(sp)
-; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV32IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV32IZHINXMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: fcopysign_fneg:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
-; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; RV64IZHINXMIN-NEXT:    fneg.s a1, a1
-; RV64IZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; RV64IZHINXMIN-NEXT:    sh a0, 0(sp)
-; RV64IZHINXMIN-NEXT:    sh a1, 8(sp)
-; RV64IZHINXMIN-NEXT:    lbu a0, 1(sp)
-; RV64IZHINXMIN-NEXT:    lbu a1, 9(sp)
-; RV64IZHINXMIN-NEXT:    andi a0, a0, 127
-; RV64IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV64IZHINXMIN-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h def $x10
+; RV64IZHINXMIN-NEXT:    not a1, a1
+; RV64IZHINXMIN-NEXT:    lui a2, 1048568
+; RV64IZHINXMIN-NEXT:    and a1, a1, a2
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
+; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
 ; RV64IZHINXMIN-NEXT:    or a0, a0, a1
-; RV64IZHINXMIN-NEXT:    sb a0, 1(sp)
-; RV64IZHINXMIN-NEXT:    lh a0, 0(sp)
-; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = fneg half %b
   %2 = call half @llvm.copysign.f16(half %a, half %1)

@@ -508,7 +508,7 @@ Status NativeThreadLinux::RequestStop() {
   Status err;
   errno = 0;
   if (::tgkill(pid, tid, SIGSTOP) != 0) {
-    err.SetErrorToErrno();
+    err = Status::FromErrno();
     LLDB_LOGF(log,
               "NativeThreadLinux::%s tgkill(%" PRIu64 ", %" PRIu64
               ", SIGSTOP) failed: %s",

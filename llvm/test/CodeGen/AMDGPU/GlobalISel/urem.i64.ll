@@ -2561,12 +2561,12 @@ define <2 x i64> @v_urem_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; CGP:       ; %bb.0:
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    v_and_b32_e32 v0, 0xffffff, v0
-; CGP-NEXT:    v_and_b32_e32 v1, 0xffffff, v2
-; CGP-NEXT:    v_and_b32_e32 v2, 0xffffff, v4
+; CGP-NEXT:    v_and_b32_e32 v1, 0xffffff, v4
+; CGP-NEXT:    v_and_b32_e32 v2, 0xffffff, v2
 ; CGP-NEXT:    v_and_b32_e32 v3, 0xffffff, v6
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v4, v0
-; CGP-NEXT:    v_cvt_f32_u32_e32 v5, v2
-; CGP-NEXT:    v_cvt_f32_u32_e32 v6, v1
+; CGP-NEXT:    v_cvt_f32_u32_e32 v5, v1
+; CGP-NEXT:    v_cvt_f32_u32_e32 v6, v2
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v7, v3
 ; CGP-NEXT:    v_rcp_f32_e32 v8, v5
 ; CGP-NEXT:    v_rcp_f32_e32 v9, v7
@@ -2584,10 +2584,10 @@ define <2 x i64> @v_urem_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_cndmask_b32_e64 v5, 0, 1, s[4:5]
 ; CGP-NEXT:    v_add_i32_e32 v4, vcc, v8, v4
 ; CGP-NEXT:    v_add_i32_e32 v5, vcc, v9, v5
-; CGP-NEXT:    v_mul_lo_u32 v2, v4, v2
+; CGP-NEXT:    v_mul_lo_u32 v1, v4, v1
 ; CGP-NEXT:    v_mul_lo_u32 v3, v5, v3
-; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
-; CGP-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
+; CGP-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; CGP-NEXT:    v_sub_i32_e32 v1, vcc, v2, v3
 ; CGP-NEXT:    v_and_b32_e32 v0, 0xffffff, v0
 ; CGP-NEXT:    v_and_b32_e32 v2, 0xffffff, v1
 ; CGP-NEXT:    v_mov_b32_e32 v1, 0

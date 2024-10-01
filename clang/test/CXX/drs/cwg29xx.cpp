@@ -6,7 +6,15 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
-namespace cwg2917 { // cwg2917: 20 open 2024-07-30
+namespace cwg2915 { // cwg2915: 20 tentatively ready 2024-08-16
+#if __cplusplus >= 202302L
+struct A {
+  void f(this void); // expected-error {{explicit object parameter cannot have 'void' type}}
+};
+#endif
+}
+
+namespace cwg2917 { // cwg2917: 20 review 2024-07-30
 template <typename>
 class Foo;
 
@@ -33,7 +41,7 @@ void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
 
-namespace cwg2922 { // cwg2922: 20 open 2024-07-10
+namespace cwg2922 { // cwg2922: 20 tentatively ready 2024-07-10
 union U { int a, b; };
 constexpr U nondeterministic(bool i) {
   if(i) {

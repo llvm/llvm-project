@@ -11,6 +11,7 @@ add_lldb_library(lldbTarget
   ABI.cpp
   AssertFrameRecognizer.cpp
   DynamicRegisterInfo.cpp
+  CoreFileMemoryRanges.cpp
   ExecutionContext.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp

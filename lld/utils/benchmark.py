@@ -51,7 +51,7 @@ class Bench:
 def getBenchmarks():
     ret = []
     for i in glob.glob("*/response*.txt"):
-        m = re.match("response-(.*)\.txt", os.path.basename(i))
+        m = re.match(r"response-(.*)\.txt", os.path.basename(i))
         variant = m.groups()[0] if m else None
         ret.append(Bench(os.path.dirname(i), variant))
     return ret

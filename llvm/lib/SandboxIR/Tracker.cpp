@@ -10,7 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include <sstream>
 
 using namespace llvm::sandboxir;
@@ -243,6 +243,16 @@ void ShuffleVectorSetMask::revert(Tracker &Tracker) {
 
 #ifndef NDEBUG
 void ShuffleVectorSetMask::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
+
+void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
+#ifndef NDEBUG
+void CmpSwapOperands::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }

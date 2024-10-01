@@ -28,7 +28,7 @@ def MarkDeclareTargetPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def FunctionFiltering : Pass<"omp-function-filtering"> {
+def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
   let dependentDialects = [

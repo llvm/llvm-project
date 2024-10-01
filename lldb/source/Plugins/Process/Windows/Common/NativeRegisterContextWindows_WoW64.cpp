@@ -65,7 +65,7 @@ GetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
   memset(context_ptr, 0, sizeof(::WOW64_CONTEXT));
   context_ptr->ContextFlags = control_flag;
   if (!::Wow64GetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} Wow64GetThreadContext failed with error {1}",
              __FUNCTION__, error);
     return error;
@@ -78,7 +78,7 @@ static Status SetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
   if (!::Wow64SetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} Wow64SetThreadContext failed with error {1}",
              __FUNCTION__, error);
     return error;

@@ -80,18 +80,8 @@ static void BM_lexicographical_compare_three_way(benchmark::State& state) {
 using IntPtr = int*;
 
 // `lexicographical_compare_three_way` has a fast path for random access iterators.
-BENCHMARK_TEMPLATE(BM_lexicographical_compare_three_way, IntPtr)->RangeMultiplier(4)->Range(1, 1 << 20);
-BENCHMARK_TEMPLATE(BM_lexicographical_compare_three_way, random_access_iterator<IntPtr>)
-    ->RangeMultiplier(4)
-    ->Range(1, 1 << 20);
-BENCHMARK_TEMPLATE(BM_lexicographical_compare_three_way, cpp17_input_iterator<IntPtr>)
-    ->RangeMultiplier(4)
-    ->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<IntPtr>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<random_access_iterator<IntPtr>>)->RangeMultiplier(4)->Range(1, 1 << 20);
+BENCHMARK(BM_lexicographical_compare_three_way<cpp17_input_iterator<IntPtr>>)->RangeMultiplier(4)->Range(1, 1 << 20);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  benchmark::RunSpecifiedBenchmarks();
-}
+BENCHMARK_MAIN();

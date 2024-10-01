@@ -1587,8 +1587,11 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
             } else if (!globalChars->CanBeCalledViaImplicitInterface() &&
                 context_.ShouldWarn(
                     common::UsageWarning::ExternalInterfaceMismatch)) {
-              msg = messages_.Say(
-                  "The global subprogram '%s' may not be referenced via the implicit interface '%s'"_err_en_US,
+              // TODO: This should be a hard error if the procedure has
+              // actually been called (as opposed to just being used as a
+              // procedure pointer target or passed as an actual argument).
+              msg = WarnIfNotInModuleFile(
+                  "The global subprogram '%s' should not be referenced via the implicit interface '%s'"_warn_en_US,
                   global->name(), symbol.name());
             }
           }
@@ -2516,7 +2519,7 @@ void CheckHelper::CheckProcBinding(
                 ? "A NOPASS type-bound procedure may not override a passed-argument procedure"_err_en_US
                 : "A passed-argument type-bound procedure may not override a NOPASS procedure"_err_en_US);
       } else {
-        const auto *bindingChars{Characterize(binding.symbol())};
+        const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
           if (isNopass) {
@@ -3003,17 +3006,17 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
           } else {
             msgs.Annex(std::move(bad));
           }
-        } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())
+        } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+                   !evaluate::IsInteroperableIntrinsicType(
+                       *dyType, &context_.languageFeatures())
                         .value_or(false)) {
-          auto maybeDyType{evaluate::DynamicType::From(*type)};
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
               msgs.Say(component.name(),
                   "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
             }
-          } else if (type->category() == DeclTypeSpec::Character &&
-              maybeDyType && maybeDyType->kind() == 1) {
+          } else if (type->category() == DeclTypeSpec::Character && dyType &&
+              dyType->kind() == 1) {
             if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
               msgs.Say(component.name(),
                   "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
@@ -3106,10 +3109,15 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
-    } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())
-            .value_or(false)) {
+    } else if (derived) { // type has been checked
+    } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
+               evaluate::IsInteroperableIntrinsicType(*dyType,
+                   InModuleFile() ? nullptr : &context_.languageFeatures())
+                   .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
+      // N.B. Language features are not passed to IsInteroperableIntrinsicType
+      // when processing a module file, since the module file might have been
+      // compiled with CUDA while the client is not.
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&
           !InModuleFile()) {

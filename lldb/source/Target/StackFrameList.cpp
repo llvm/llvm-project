@@ -886,7 +886,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
       if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.GetFile(), sc.line_entry.line);
+            sc.line_entry.file_sp, sc.line_entry.line);
     }
   }
 }

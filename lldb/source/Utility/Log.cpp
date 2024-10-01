@@ -374,7 +374,7 @@ void Log::Format(llvm::StringRef file, llvm::StringRef function,
   llvm::raw_string_ostream message(message_string);
   WriteHeader(message, file, function);
   message << payload << "\n";
-  WriteMessage(message.str());
+  WriteMessage(message_string);
 }
 
 StreamLogHandler::StreamLogHandler(int fd, bool should_close,

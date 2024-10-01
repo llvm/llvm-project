@@ -2713,7 +2713,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2721,6 +2721,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     Not all pairs of types have conversions. When types T and U are the same
     type, this instruction is a NOP and may be folded away. This also supports
     integer to pointer conversion and pointer to integer conversion.
+
+    This operation also allows limited interaction between FIR and LLVM
+    dialects by allowing conversion between FIR pointer types and llvm.ptr type.
 
     ```
       %v = ... : i64
@@ -2731,6 +2734,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   }];
 
   let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
 
   let assemblyFormat = [{
     $value attr-dict `:` functional-type($value, results)
