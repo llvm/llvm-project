@@ -778,7 +778,7 @@ KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgComputeU(LHS, RHS, /* IsCeil */ false);
+  return avgComputeU(LHS, RHS, /*IsCeil=*/false);
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
@@ -786,7 +786,7 @@ KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  return avgComputeU(LHS, RHS, /* IsCeil */ true);
+  return avgComputeU(LHS, RHS, /*IsCeil=*/true);
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
