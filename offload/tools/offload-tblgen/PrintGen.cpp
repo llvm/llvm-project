@@ -133,6 +133,7 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
 }
 
 void EmitOffloadPrintHeader(RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
   OS << R"""(
 // Auto-generated file, do not manually edit.
 

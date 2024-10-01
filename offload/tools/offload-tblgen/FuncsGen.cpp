@@ -22,6 +22,7 @@ using namespace offload::tblgen;
 
 // Emit a list of just the API function names
 void EmitOffloadFuncNames(RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
   OS << R"(
 #ifndef OFFLOAD_FUNC
 #error Please define the macro OFFLOAD_FUNC(Function)
@@ -50,6 +51,7 @@ void EmitOffloadExports(RecordKeeper &Records, raw_ostream &OS) {
 
 // Emit declarations for every implementation function
 void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
+  OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     FunctionRec F{R};
     // The error details function does not set error details itself, so don't
