@@ -49,6 +49,7 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   Exact = false;
   Disjoint = false;
   NNeg = false;
+  GEPNW = GEPNoWrapFlags::none();
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
     NUW = OBO->hasNoUnsignedWrap();
     NSW = OBO->hasNoSignedWrap();
@@ -63,6 +64,8 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
     NUW = TI->hasNoUnsignedWrap();
     NSW = TI->hasNoSignedWrap();
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEPNW = GEP->getNoWrapFlags();
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -80,6 +83,8 @@ void PoisonFlags::apply(Instruction *I) {
     I->setHasNoUnsignedWrap(NUW);
     I->setHasNoSignedWrap(NSW);
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEP->setNoWrapFlags(GEPNW);
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -370,11 +375,15 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
       // generated code.
       if (isa<DbgInfoIntrinsic>(IP))
         ScanLimit++;
-      if (IP->getOpcode() == Instruction::GetElementPtr &&
-          IP->getOperand(0) == V && IP->getOperand(1) == Idx &&
-          cast<GEPOperator>(&*IP)->getSourceElementType() ==
-              Builder.getInt8Ty())
-        return &*IP;
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(IP)) {
+        if (GEP->getPointerOperand() == V &&
+            GEP->getSourceElementType() == Builder.getInt8Ty() &&
+            GEP->getOperand(1) == Idx) {
+          rememberFlags(GEP);
+          GEP->setNoWrapFlags(GEPNoWrapFlags::none());
+          return &*IP;
+        }
+      }
       if (IP == BlockBegin) break;
     }
   }
