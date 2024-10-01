@@ -269,3 +269,23 @@ namespace AnonUnionDtor {
 
   void bar() { foo(); }
 }
+
+/// FIXME: The two interpreters disagree about there to diagnose the non-constexpr destructor call.
+namespace NonLiteralDtorInParam {
+  class NonLiteral { // all20-note {{is not an aggregate and has no constexpr constructors other than copy or move constructors}}
+  public:
+    NonLiteral() {}
+    ~NonLiteral() {} // all23-note {{declared here}}
+  };
+  constexpr int F2(NonLiteral N) { // all20-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}} \
+                                   // ref23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+    return 8;
+  }
+
+
+  void test() {
+    NonLiteral L;
+    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
+                              // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+  }
+}
