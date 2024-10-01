@@ -12214,7 +12214,8 @@ def err_builtin_invalid_arg_type: Error <
   "a floating point type|"
   "a vector of integers|"
   "an unsigned integer|"
-  "an 'int'}1 (was %2)">;
+  "an 'int'|"
+  "a vector of floating points}1 (was %2)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;
