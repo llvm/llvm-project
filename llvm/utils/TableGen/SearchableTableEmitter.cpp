@@ -56,7 +56,7 @@ struct GenericEnum {
 
 struct GenericField {
   std::string Name;
-  RecTy *RecType = nullptr;
+  const RecTy *RecType = nullptr;
   bool IsCode = false;
   bool IsIntrinsic = false;
   bool IsInstruction = false;
@@ -675,7 +675,7 @@ void SearchableTableEmitter::collectTableEntries(
       if (!Field.RecType) {
         Field.RecType = TI->getType();
       } else {
-        RecTy *Ty = resolveTypes(Field.RecType, TI->getType());
+        const RecTy *Ty = resolveTypes(Field.RecType, TI->getType());
         if (!Ty)
           PrintFatalError(EntryRec->getValue(Field.Name),
                           Twine("Field '") + Field.Name + "' of table '" +
