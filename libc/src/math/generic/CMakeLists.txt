@@ -81,6 +81,32 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  iscanonicalf16
+  SRCS
+    iscanonicalf16.cpp
+  HDRS
+    ../iscanonicalf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  iscanonicalf128
+  SRCS
+    iscanonicalf128.cpp
+  HDRS
+    ../iscanonicalf128.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   iscanonicall
   SRCS
     iscanonicall.cpp
