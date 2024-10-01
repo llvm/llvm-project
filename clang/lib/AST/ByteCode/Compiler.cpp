@@ -682,6 +682,15 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), I,
                                             CE);
   }
+  case CK_FloatingToFixedPoint: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastFloatingFixedPoint(I, CE);
+  }
 
   case CK_ToVoid:
     return discard(SubExpr);
