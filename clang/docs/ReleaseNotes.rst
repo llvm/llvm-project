@@ -518,14 +518,13 @@ X86 Support
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
 
-- The following bit manipulation intrinsics can now be used in constant expressions:
-  all lzcnt intrinsics in lzcntintrin.h 
-  all bextr intrinsics in bmiintrin.h
-  all tzcnt intrinsics in bmiintrin.h
-  all bzhi intrinsics in bmi2intrin.h
-  all pdep intrinsics in bmi2intrin.h
-  all pext intrinsics in bmi2intrin.h
-  all intrinsics in tbmintrin.h
+- All intrinsics in lzcntintrin.h can now be used in constant expressions.
+
+- All intrinsics in bmiintrin.h can now be used in constant expressions.
+
+- All bzhi/pdep/pext intrinsics in bmi2intrin.h can now be used in constant expressions.
+
+- All intrinsics in tbmintrin.h can now be used in constant expressions.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
