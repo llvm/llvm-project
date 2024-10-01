@@ -45,6 +45,14 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
                     "unsigned", "numTaskReductionBlockArgs", (ins), [{}], [{
       return 0;
     }]>,
+    InterfaceMethod<"Get number of block arguments defined by `use_device_addr`.",
+                    "unsigned", "numUseDeviceAddrBlockArgs", (ins), [{}], [{
+      return 0;
+    }]>,
+    InterfaceMethod<"Get number of block arguments defined by `use_device_ptr`.",
+                    "unsigned", "numUseDevicePtrBlockArgs", (ins), [{}], [{
+      return 0;
+    }]>,
 
     // Unified access methods for clause-associated entry block arguments.
     InterfaceMethod<"Get start index of block arguments defined by `in_reduction`.",
@@ -71,6 +79,16 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
                     "unsigned", "getTaskReductionBlockArgsStart", (ins), [{
       auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
       return iface.getReductionBlockArgsStart() + $_op.numReductionBlockArgs();
+    }]>,
+    InterfaceMethod<"Get start index of block arguments defined by `use_device_addr`.",
+                    "unsigned", "getUseDeviceAddrBlockArgsStart", (ins), [{
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      return iface.getTaskReductionBlockArgsStart() + $_op.numTaskReductionBlockArgs();
+    }]>,
+    InterfaceMethod<"Get start index of block arguments defined by `use_device_ptr`.",
+                    "unsigned", "getUseDevicePtrBlockArgsStart", (ins), [{
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      return iface.getUseDeviceAddrBlockArgsStart() + $_op.numUseDeviceAddrBlockArgs();
     }]>,
 
     InterfaceMethod<"Get block arguments defined by `in_reduction`.",
@@ -109,13 +127,30 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
           iface.getTaskReductionBlockArgsStart(),
           $_op.numTaskReductionBlockArgs());
     }]>,
+    InterfaceMethod<"Get block arguments defined by `use_device_addr`.",
+                    "::llvm::MutableArrayRef<::mlir::BlockArgument>",
+                    "getUseDeviceAddrBlockArgs", (ins), [{
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      return $_op->getRegion(0).getArguments().slice(
+          iface.getUseDeviceAddrBlockArgsStart(),
+          $_op.numUseDeviceAddrBlockArgs());
+    }]>,
+    InterfaceMethod<"Get block arguments defined by `use_device_ptr`.",
+                    "::llvm::MutableArrayRef<::mlir::BlockArgument>",
+                    "getUseDevicePtrBlockArgs", (ins), [{
+      auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+      return $_op->getRegion(0).getArguments().slice(
+          iface.getUseDevicePtrBlockArgsStart(),
+          $_op.numUseDevicePtrBlockArgs());
+    }]>,
   ];
 
   let verify = [{
     auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>($_op);
     unsigned expectedArgs = iface.numInReductionBlockArgs() +
         iface.numMapBlockArgs() + iface.numPrivateBlockArgs() +
-        iface.numReductionBlockArgs() + iface.numTaskReductionBlockArgs();
+        iface.numReductionBlockArgs() + iface.numTaskReductionBlockArgs() +
+        iface.numUseDeviceAddrBlockArgs() + iface.numUseDevicePtrBlockArgs();
     if ($_op->getRegion(0).getNumArguments() < expectedArgs)
       return $_op->emitOpError() << "expected at least " << expectedArgs
                                  << " entry block argument(s)";
