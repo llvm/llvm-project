@@ -2092,8 +2092,6 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
 bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
   return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
