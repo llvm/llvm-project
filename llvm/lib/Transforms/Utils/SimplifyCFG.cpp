@@ -403,9 +403,9 @@ static InstructionCost computeSpeculationCost(const User *I,
 }
 
 /// If we have a merge point of an "if condition" as accepted above,
-/// return true if the specified value dominates the block.  We
-/// don't handle the true generality of domination here, just a special case
-/// which works well enough for us.
+/// return true if the specified value dominates the block.  We don't handle
+/// the true generality of domination here, just a special case which works
+/// well enough for us.
 ///
 /// If AggressiveInsts is non-null, and if V does not dominate BB, we check to
 /// see if V (which must be an instruction) and its recursive operands
