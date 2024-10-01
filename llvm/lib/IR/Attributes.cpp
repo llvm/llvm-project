@@ -969,6 +969,9 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
   auto ItEnd1 = Other.end();
 
   while (ItBegin0 != ItEnd0 || ItBegin1 != ItEnd1) {
+    // Loop through all attributes in both this and Other in sorted order. If
+    // the attribute is only present in one of the sets, it will be set in
+    // Attr0. If it is present in both sets both Attr0 and Attr1 will be set.
     Attribute Attr0, Attr1;
     if (ItBegin1 == ItEnd1)
       Attr0 = *ItBegin0++;
@@ -982,7 +985,7 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
       } else if (Cmp < 0)
         Attr0 = *ItBegin0++;
       else
-        Attr1 = *ItBegin1++;
+        Attr0 = *ItBegin1++;
     }
     assert(Attr0.isValid() ||
            Attr1.isValid() && "Iteration should never yield no valid attrs");
@@ -990,11 +993,10 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     // If we don't have both attributes, then fail if the attribute is
     // must-preserve or drop it otherwise.
     if (!Attr0.isValid() || !Attr1.isValid()) {
-      Attribute Attr = Attr0.isValid() ? Attr0 : Attr1;
       // Non-enum assume we must preserve.
-      if (!Attr.hasKindAsEnum())
+      if (!Attr0.hasKindAsEnum())
         return std::nullopt;
-      Attribute::AttrKind Kind = Attr.getKindAsEnum();
+      Attribute::AttrKind Kind = Attr0.getKindAsEnum();
       if (Attribute::intersectMustPreserve(Kind))
         return std::nullopt;
       continue;
