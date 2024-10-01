@@ -49,11 +49,13 @@ template<>
 constexpr void B<short>::g0(); // since-cxx14-error {{constexpr declaration of 'g0' follows non-constexpr declaration}}
                                // cxx11-error@-1 {{out-of-line declaration of 'g0' does not match any declaration in 'B<short>'}}
                                // cxx11-warning@-2 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
+                               // expected-note@-18 {{defined here}}
 
 template<>
 constexpr void B<short>::g1(); // since-cxx14-error {{out-of-line declaration of 'g1' does not match any declaration in 'B<short>'}}
                                // cxx11-error@-1 {{constexpr declaration of 'g1' follows non-constexpr declaration}}
                                // cxx11-warning@-2 {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const'}}
+                               // expected-note@-24 {{defined here}}
 
 template<>
 template<typename U>

@@ -55,5 +55,6 @@ struct TA {
 template <unsigned N>
 template <template <unsigned> class TT> int TA<N>::A() { return sizeof(TT<N>); }
 // expected-error@-1{{out-of-line definition of 'A' does not match any declaration in 'TA<N>'}}
+// expected-note@-8{{defined here}}
 
 } // end namespace diag

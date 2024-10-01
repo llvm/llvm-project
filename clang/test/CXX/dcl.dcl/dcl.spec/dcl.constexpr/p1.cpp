@@ -170,5 +170,6 @@ namespace ImplicitConstexprDef {
 
   constexpr void A::f() { } // expected-warning {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const' to avoid a change in behavior}}
                             // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'ImplicitConstexprDef::A'}}
+                            // expected-note@-6 {{A defined here}}
 }
 #endif

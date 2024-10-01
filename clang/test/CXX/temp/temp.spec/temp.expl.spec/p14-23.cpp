@@ -56,6 +56,7 @@ namespace N0 {
 
   template<>
   constexpr int A<0>::h() { return 2; } // expected-error {{out-of-line definition of 'h' does not match any declaration in 'N0::A<0>'}}
+                                        // expected-note@-48 {{defined here}}
 
   static_assert(A<5>::h() == 0);
   static_assert(A<4>::h() == 1);

@@ -110,6 +110,7 @@ namespace unconstrained {
   template<typename U>
   constexpr auto S<T>::f2(auto x, U u, T t) -> decltype(x + u + t) { return x + u + t; }
   // expected-error@-1 {{out-of-line definition of 'f2' does not match any declaration in 'S<T>'}}
+  // expected-note@-14 {{S defined here}}
 
   template<typename T>
   template<typename U>

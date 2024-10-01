@@ -103,7 +103,8 @@ class Out {
 };
 int __attribute__((target_version("bti"))) Out::func(void) { return 1; }
 int __attribute__((target_version("ssbs2"))) Out::func(void) { return 2; }
-// expected-error@+3 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
-// expected-note@-3 {{member declaration nearly matches}}
-// expected-note@-3 {{member declaration nearly matches}}
+// expected-error@+4 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
+// expected-note@-2 {{member declaration nearly matches}}
+// expected-note@-4 {{member declaration nearly matches}}
+// expected-note@-9 {{defined here}}
 int __attribute__((target_version("rng"))) Out::func(void) { return 3; }

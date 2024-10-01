@@ -187,7 +187,8 @@ struct BadOutOfLine {
 
 int __attribute__((target("sse4.2"))) BadOutOfLine::foo(int) { return 0; }
 int __attribute__((target("default"))) BadOutOfLine::foo(int) { return 1; }
-// expected-error@+3 {{out-of-line definition of 'foo' does not match any declaration in 'BadOutOfLine'}}
-// expected-note@-3 {{member declaration nearly matches}}
-// expected-note@-3 {{member declaration nearly matches}}
+// expected-error@+4 {{out-of-line definition of 'foo' does not match any declaration in 'BadOutOfLine'}}
+// expected-note@-8 {{defined here}}
+// expected-note@-4 {{member declaration nearly matches}}
+// expected-note@-4 {{member declaration nearly matches}}
 int __attribute__((target("arch=atom"))) BadOutOfLine::foo(int) { return 1; }

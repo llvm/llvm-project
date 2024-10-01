@@ -8,5 +8,7 @@ class Foo {
 
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:15-[[@LINE+1]]:15}:" const"
 int Foo::get() {} // expected-error {{does not match any declaration}}
+                  // expected-note@-7 {{defined here}}
 // CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:20-[[@LINE+1]]:26}:""
 void Foo::set(int) const {} // expected-error {{does not match any declaration}}
+                            // expected-note@-10 {{defined here}}

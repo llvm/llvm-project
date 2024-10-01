@@ -524,7 +524,8 @@ struct X {
 template <class T>
 void X<T>::foo() requires requires { requires something_interesting<T>; } {}
 // expected-error@-1{{definition of 'foo' does not match any declaration}}
-// expected-note@*{{}}
+// expected-note@-8{{defined here}}
+// expected-note@-8{{member declaration nearly matches}}
 
 template <class T>
 void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
@@ -532,6 +533,7 @@ void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
 template <class T>
 void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
 // expected-error@-1{{definition of 'bar' does not match any declaration}}
+// expected-note@-17{{defined here}}
 
 template <class T>
 void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}

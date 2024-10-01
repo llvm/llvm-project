@@ -76,6 +76,7 @@ struct A {
 
 template <class T>
 void A<T>::spam(decltype([] {})) // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@-6{{defined here}}
 {}
 
 struct B {
@@ -85,6 +86,7 @@ struct B {
 
 template <class T>
 void B::spam(decltype([] {})) {} // expected-error{{out-of-line definition of 'spam' does not match}}
+                                 // expected-note@-7{{defined here}}
 
 } // namespace GH51416
 

@@ -30,3 +30,4 @@ struct D : C {
 static_assert(D(123).v == 123, "");
 
 template<typename T> constexpr D::D(T t) : C(t) {} // expected-error {{does not match any declaration in 'D'}}
+                                                   // expected-note@-6 {{defined here}}

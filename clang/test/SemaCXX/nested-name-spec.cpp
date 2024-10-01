@@ -36,8 +36,10 @@ class C2 {
 };
 
 void C2::m() const { } // expected-error{{out-of-line definition of 'm' does not match any declaration in 'C2'}}
+                       // expected-note@-11{{defined here}}
 
 void C2::f(int) { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'C2'}}
+                    // expected-note@-14{{defined here}}
 
 void C2::m() {
   x = 0;
@@ -128,6 +130,7 @@ class Operators {
 };
 
 Operators Operators::operator+(const Operators&) { // expected-error{{out-of-line definition of 'operator+' does not match any declaration in 'Operators'}}
+                                                   // expected-note@-6{{defined here}}
   Operators ops;
   return ops;
 }
@@ -152,6 +155,7 @@ void A::g(const int&) { } // expected-error{{out-of-line definition of 'g' does 
 struct Struct { };
 
 void Struct::f() { } // expected-error{{out-of-line definition of 'f' does not match any declaration in 'Struct'}}
+                     // expected-note@-3{{defined here}}
 
 void global_func(int);
 void global_func2(int);

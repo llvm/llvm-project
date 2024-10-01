@@ -6,3 +6,4 @@ void A::f(enum { e2 }) {} // expected-error{{cannot be defined in a parameter}}
 
 enum { e3 } A::g() { } // expected-error{{cannot be defined in the result type}} \
 // expected-error{{out-of-line definition}}
+// expected-note@-6{{defined here}}

@@ -108,6 +108,7 @@ namespace MultilevelSpecialization {
   template<> template<int a, int b>
     void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {}
     // since-cxx11-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg2233::MultilevelSpecialization::B<int, int>'}}
+    // expected-note@-6 {{defined here}}
   template<> template<>
     void B<int, int>::f<1, 1>(int i, int (&arr1a)[1], int (&arr2a)[1]) {}
 }
