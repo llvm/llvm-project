@@ -276,12 +276,10 @@ using TypeSigTy = SmallVector<unsigned char>;
 static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   TypeSigTy TypeSig;
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
-  const ListInit *OuterList = TypeInfo->getValueAsListInit("TypeSig");
+  const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *Outer : OuterList->getValues()) {
-    for (const auto *Inner : cast<ListInit>(Outer)->getValues())
-      TypeSig.emplace_back(cast<IntInit>(Inner)->getValue());
-  }
+  for (const auto *TypeListEntry : TypeList->getValues())
+    TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
   return TypeSig;
 }
 
