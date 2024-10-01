@@ -2349,12 +2349,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
 /// transform.
 static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
                                               GEPOperator &GEP2) {
-  GEPNoWrapFlags NW = GEP1.getNoWrapFlags() & GEP2.getNoWrapFlags();
-  // Without inbounds, we could only preserve nusw if we know that x + y does
-  // not wrap.
-  if (!NW.isInBounds())
-    NW = NW.withoutNoUnsignedSignedWrap();
-  return NW;
+  return GEP1.getNoWrapFlags().intersectForOffsetAdd(GEP2.getNoWrapFlags());
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
