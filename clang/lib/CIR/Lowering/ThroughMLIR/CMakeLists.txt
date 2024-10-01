@@ -31,6 +31,7 @@ add_clang_library(clangCIRLoweringThroughMLIR
   MLIRAnalysis
   MLIRBuiltinToLLVMIRTranslation
   MLIRIR
+  MLIRLLVMToLLVMIRTranslation
   MLIRParser
   MLIRSideEffectInterfaces
   MLIRTransforms
