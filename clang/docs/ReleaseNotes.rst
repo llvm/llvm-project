@@ -523,6 +523,8 @@ X86 Support
   all bextr intrinsics in bmiintrin.h
   all tzcnt intrinsics in bmiintrin.h
   all bzhi intrinsics in bmi2intrin.h
+  all pdep intrinsics in bmi2intrin.h
+  all pext intrinsics in bmi2intrin.h
   all intrinsics in tbmintrin.h
 
 Arm and AArch64 Support
