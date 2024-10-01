@@ -453,6 +453,8 @@ Bug Fixes to C++ Support
 - Mangle friend function templates with a constraint that depends on a template parameter from an enclosing template as members of the enclosing class. (#GH110247)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
+- Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
+  in certain friend declarations. (#GH93099)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

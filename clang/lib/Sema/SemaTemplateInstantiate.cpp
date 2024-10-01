@@ -371,7 +371,7 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
                   Specialization->getTemplateInstantiationArgs().asArray();
           }
           Result.addOuterTemplateArguments(
-              const_cast<FunctionTemplateDecl *>(FTD), Arguments,
+              TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
               /*Final=*/false);
         }
       }
@@ -1735,6 +1735,33 @@ namespace {
       // p0588r1.
       llvm::SaveAndRestore _(EvaluateConstraints, true);
       return inherited::TransformLambdaBody(E, Body);
+    }
+
+    ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc,
+                                     NamedDecl *Pack, SourceLocation PackLoc,
+                                     SourceLocation RParenLoc,
+                                     std::optional<unsigned> Length,
+                                     ArrayRef<TemplateArgument> PartialArgs) {
+      if (SemaRef.CodeSynthesisContexts.back().Kind !=
+          Sema::CodeSynthesisContext::ConstraintNormalization)
+        return inherited::RebuildSizeOfPackExpr(OperatorLoc, Pack, PackLoc,
+                                                RParenLoc, Length, PartialArgs);
+
+#ifndef NDEBUG
+      for (auto *Iter = TemplateArgs.begin(); Iter != TemplateArgs.end();
+           ++Iter)
+        for (const TemplateArgument &TA : Iter->Args)
+          assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
+#endif
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
+          SemaRef, /*NewSubstitutionIndex=*/0);
+      Decl *NewPack = TransformDecl(PackLoc, Pack);
+      if (!NewPack)
+        return ExprError();
+
+      return inherited::RebuildSizeOfPackExpr(OperatorLoc,
+                                              cast<NamedDecl>(NewPack), PackLoc,
+                                              RParenLoc, Length, PartialArgs);
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
