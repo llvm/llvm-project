@@ -237,6 +237,37 @@ void loop_suppress_in_third_iteration(int len) {
   }
 }
 
+int no_suppression_when_no_assumption_zero_iterations(unsigned len) {
+  if (len != 0) {
+    // This 'if' introduces a state split between len == 0 and len != 0.
+  }
+
+  // On the branch where we assumed that len is zero, this loop will be
+  // skipped. We (intentionally) don't suppress this execution path becasue
+  // here the analyzer doesn't assume anything new when it evaluates the loop
+  // condition.
+  for (unsigned i = 0; i < len; i++)
+    if (GlobalArray[i] > 0)
+      return GlobalArray[i];
+
+  return GlobalArray[len - 1]; // expected-warning{{Out of bound access to memory}}
+}
+
+void no_suppression_when_no_assumption_third_iteration(int len) {
+  if (len < 20) {
+    // This 'if' introduces a state split with len >= 20 on one branch.
+  }
+
+  int buf[2] = {0};
+  for (int i = 0; i < len; i++) {
+    // As in no_suppression_when_no_assumption_zero_iterations, the suppression
+    // only activates when the analyzer assumes something new in the loop
+    // condition. On the branch where `len >= 20` entering the third iteration
+    // doesn't involve a new assumption, so this warning is not suppressed:
+    buf[i] = 1; // expected-warning{{Out of bound access to memory}}
+  }
+}
+
 void loop_suppress_in_third_iteration_cast(int len) {
   int buf[2] = {0};
   for (int i = 0; (unsigned)(i < len); i++) {
