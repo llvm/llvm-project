@@ -172,7 +172,7 @@ typedef struct {
 TEST(struct_2);
 // CHECK-LABEL: define{{.*}} @return_struct_2()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align 4
-// CHECK:   @llvm.memset
+// CHECK:   @llvm.memcpy
 // CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i32, float, float }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align 4
 // CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
@@ -274,7 +274,7 @@ typedef union {
 TEST(union_het_fp)
 // CHECK-LABEL: define{{.*}} @return_union_het_fp()
 // CHECK:   [[RET:%.*]] = alloca [[REC:%.*]], align {{(4|8)}}
-// CHECK:   @llvm.memset
+// CHECK:   @llvm.memcpy
 // CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG:{ i32, i32 }]], ptr [[RET]], i32 0, i32 0
 // CHECK:   [[FIRST:%.*]] = load i32, ptr [[T0]], align {{(4|8)}}
 // CHECK:   [[T0:%.*]] = getelementptr inbounds nuw [[AGG]], ptr [[RET]], i32 0, i32 1
