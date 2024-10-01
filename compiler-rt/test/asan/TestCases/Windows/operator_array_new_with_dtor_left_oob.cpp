@@ -13,7 +13,9 @@ struct C {
 __attribute__((optnone))
 #endif
 int ATTRIBUTE_NOINLINE hide(int x) { return x; }
-
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma optimize("", on)
+#endif
 int main() {
   C *buffer = new C[42];
   buffer[hide(-(1 + (int)sizeof(void*) / 4))].x = 42;
