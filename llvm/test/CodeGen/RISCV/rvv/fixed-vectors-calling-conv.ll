@@ -186,7 +186,9 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_i32(<32 x i32> %x, <32 x i32> %
 ; CHECK-NEXT:    vmv8r.v v16, v24
 ; CHECK-NEXT:    call ext2
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %t = call <32 x i32> @ext2(<32 x i32> %y, <32 x i32> %x, i32 %w, i32 2)
   ret <32 x i32> %t
@@ -214,9 +216,13 @@ define <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x, <32 x
 ; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    call ext3
 ; CHECK-NEXT:    addi sp, s0, -256
+; CHECK-NEXT:    .cfi_def_cfa sp, 256
 ; CHECK-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 256
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %t = call <32 x i32> @ext3(<32 x i32> %z, <32 x i32> %y, <32 x i32> %x, i32 %w, i32 42)
   ret <32 x i32> %t
@@ -269,9 +275,13 @@ define <32 x i32> @call_split_vector_args(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    call split_vector_args
 ; CHECK-NEXT:    addi sp, s0, -256
+; CHECK-NEXT:    .cfi_def_cfa sp, 256
 ; CHECK-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 256
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %pa
   %b = load <32 x i32>, ptr %pb
@@ -318,7 +328,9 @@ define <32 x i32> @pass_vector_arg_via_stack(<32 x i32> %x, <32 x i32> %y, <32 x
 ; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    call vector_arg_via_stack
 ; CHECK-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 144
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %s = call <32 x i32> @vector_arg_via_stack(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8)
   ret <32 x i32> %s
@@ -373,7 +385,9 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    call vector_mask_arg_via_stack
 ; CHECK-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 160
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %r = call <4 x i1> @vector_mask_arg_via_stack(i32 0, i32 0, i32 0, i32 0, i32 0, i32 5, i32 6, i32 7, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, <32 x i32> zeroinitializer, i32 8, <4 x i1> %v, <4 x i1> %v)
   ret <4 x i1> %r

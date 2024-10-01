@@ -34,7 +34,9 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @load_store_m1x5(targe
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %tuple.addr = alloca target("riscv.vector.tuple", <vscale x 8 x i8>, 5), align 1
@@ -67,7 +69,9 @@ define target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @load_store_m2x2(targ
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %tuple.addr = alloca target("riscv.vector.tuple", <vscale x 16 x i8>, 2), align 1
@@ -100,7 +104,9 @@ define target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @load_store_m4x2(targ
 ; CHECK-NEXT:    csrrs a0, vlenb, zero
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    jalr zero, 0(ra)
 entry:
   %tuple.addr = alloca target("riscv.vector.tuple", <vscale x 32 x i8>, 2), align 1

@@ -48,6 +48,20 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x27 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-ZCMP32-NEXT: PseudoRET
     ;
     ; CHECK-LIBCALL32-LABEL: name: push_rvlist15
@@ -81,6 +95,19 @@ body:                   |
     ; CHECK-LIBCALL32-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-LIBCALL32-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-LIBCALL32-NEXT: $x27 = IMPLICIT_DEF
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-LIBCALL32-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-LIBCALL32-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2
     ;
     ; CHECK-ZCMP64-LABEL: name: push_rvlist15
@@ -115,6 +142,20 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x27 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: frame-destroy CM_POP 15, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8, implicit-def $x9, implicit-def $x18, implicit-def $x19, implicit-def $x20, implicit-def $x21, implicit-def $x22, implicit-def $x23, implicit-def $x24, implicit-def $x25, implicit-def $x26, implicit-def $x27
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-ZCMP64-NEXT: PseudoRET
     ;
     ; CHECK-LIBCALL64-LABEL: name: push_rvlist15
@@ -148,6 +189,19 @@ body:                   |
     ; CHECK-LIBCALL64-NEXT: $x25 = IMPLICIT_DEF
     ; CHECK-LIBCALL64-NEXT: $x26 = IMPLICIT_DEF
     ; CHECK-LIBCALL64-NEXT: $x27 = IMPLICIT_DEF
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-LIBCALL64-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-LIBCALL64-NEXT: frame-destroy PseudoTAIL target-flags(riscv-call) &__riscv_restore_12, implicit $x2
     ;
     ; CHECK-NO-ZCMP32-LABEL: name: push_rvlist15
@@ -207,7 +261,21 @@ body:                   |
     ; CHECK-NO-ZCMP32-NEXT: $x25 = LW $x2, 20 :: (load (s32) from %stack.10)
     ; CHECK-NO-ZCMP32-NEXT: $x26 = LW $x2, 16 :: (load (s32) from %stack.11)
     ; CHECK-NO-ZCMP32-NEXT: $x27 = LW $x2, 12 :: (load (s32) from %stack.12)
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-NO-ZCMP32-NEXT: $x2 = frame-destroy ADDI $x2, 64
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP32-NEXT: PseudoRET
     ;
     ; CHECK-NO-ZCMP64-LABEL: name: push_rvlist15
@@ -267,7 +335,21 @@ body:                   |
     ; CHECK-NO-ZCMP64-NEXT: $x25 = LD $x2, 24 :: (load (s64) from %stack.10)
     ; CHECK-NO-ZCMP64-NEXT: $x26 = LD $x2, 16 :: (load (s64) from %stack.11)
     ; CHECK-NO-ZCMP64-NEXT: $x27 = LD $x2, 8 :: (load (s64) from %stack.12)
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x9
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x18
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x19
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x20
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x21
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x22
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x23
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x24
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x25
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x26
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x27
     ; CHECK-NO-ZCMP64-NEXT: $x2 = frame-destroy ADDI $x2, 112
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP64-NEXT: PseudoRET
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF

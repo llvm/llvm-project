@@ -306,7 +306,21 @@ define void @relax_jal_spill_32() {
 ; CHECK-RV32-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    .cfi_restore ra
+; CHECK-RV32-NEXT:    .cfi_restore s0
+; CHECK-RV32-NEXT:    .cfi_restore s1
+; CHECK-RV32-NEXT:    .cfi_restore s2
+; CHECK-RV32-NEXT:    .cfi_restore s3
+; CHECK-RV32-NEXT:    .cfi_restore s4
+; CHECK-RV32-NEXT:    .cfi_restore s5
+; CHECK-RV32-NEXT:    .cfi_restore s6
+; CHECK-RV32-NEXT:    .cfi_restore s7
+; CHECK-RV32-NEXT:    .cfi_restore s8
+; CHECK-RV32-NEXT:    .cfi_restore s9
+; CHECK-RV32-NEXT:    .cfi_restore s10
+; CHECK-RV32-NEXT:    .cfi_restore s11
 ; CHECK-RV32-NEXT:    addi sp, sp, 64
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: relax_jal_spill_32:
@@ -534,7 +548,21 @@ define void @relax_jal_spill_32() {
 ; CHECK-RV64-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    .cfi_restore ra
+; CHECK-RV64-NEXT:    .cfi_restore s0
+; CHECK-RV64-NEXT:    .cfi_restore s1
+; CHECK-RV64-NEXT:    .cfi_restore s2
+; CHECK-RV64-NEXT:    .cfi_restore s3
+; CHECK-RV64-NEXT:    .cfi_restore s4
+; CHECK-RV64-NEXT:    .cfi_restore s5
+; CHECK-RV64-NEXT:    .cfi_restore s6
+; CHECK-RV64-NEXT:    .cfi_restore s7
+; CHECK-RV64-NEXT:    .cfi_restore s8
+; CHECK-RV64-NEXT:    .cfi_restore s9
+; CHECK-RV64-NEXT:    .cfi_restore s10
+; CHECK-RV64-NEXT:    .cfi_restore s11
 ; CHECK-RV64-NEXT:    addi sp, sp, 128
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 
   %ra = call i32 asm sideeffect "addi ra, x0, 1", "={ra}"()
@@ -825,6 +853,7 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    # reg use t6
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    addi sp, s0, -2032
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 2032
 ; CHECK-RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 2020(sp) # 4-byte Folded Reload
@@ -838,7 +867,21 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    lw s9, 1988(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s10, 1984(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s11, 1980(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    .cfi_restore ra
+; CHECK-RV32-NEXT:    .cfi_restore s0
+; CHECK-RV32-NEXT:    .cfi_restore s1
+; CHECK-RV32-NEXT:    .cfi_restore s2
+; CHECK-RV32-NEXT:    .cfi_restore s3
+; CHECK-RV32-NEXT:    .cfi_restore s4
+; CHECK-RV32-NEXT:    .cfi_restore s5
+; CHECK-RV32-NEXT:    .cfi_restore s6
+; CHECK-RV32-NEXT:    .cfi_restore s7
+; CHECK-RV32-NEXT:    .cfi_restore s8
+; CHECK-RV32-NEXT:    .cfi_restore s9
+; CHECK-RV32-NEXT:    .cfi_restore s10
+; CHECK-RV32-NEXT:    .cfi_restore s11
 ; CHECK-RV32-NEXT:    addi sp, sp, 2032
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: relax_jal_spill_32_adjust_spill_slot:
@@ -1071,6 +1114,7 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    # reg use t6
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:    addi sp, s0, -2032
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 2032
 ; CHECK-RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 2008(sp) # 8-byte Folded Reload
@@ -1084,7 +1128,21 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    ld s9, 1944(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s10, 1936(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s11, 1928(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    .cfi_restore ra
+; CHECK-RV64-NEXT:    .cfi_restore s0
+; CHECK-RV64-NEXT:    .cfi_restore s1
+; CHECK-RV64-NEXT:    .cfi_restore s2
+; CHECK-RV64-NEXT:    .cfi_restore s3
+; CHECK-RV64-NEXT:    .cfi_restore s4
+; CHECK-RV64-NEXT:    .cfi_restore s5
+; CHECK-RV64-NEXT:    .cfi_restore s6
+; CHECK-RV64-NEXT:    .cfi_restore s7
+; CHECK-RV64-NEXT:    .cfi_restore s8
+; CHECK-RV64-NEXT:    .cfi_restore s9
+; CHECK-RV64-NEXT:    .cfi_restore s10
+; CHECK-RV64-NEXT:    .cfi_restore s11
 ; CHECK-RV64-NEXT:    addi sp, sp, 2032
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 
   ; If the stack is large and the offset of BranchRelaxationScratchFrameIndex
@@ -1489,7 +1547,21 @@ define void @relax_jal_spill_64() {
 ; CHECK-RV32-NEXT:    lw s9, 228(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s10, 224(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s11, 220(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    .cfi_restore ra
+; CHECK-RV32-NEXT:    .cfi_restore s0
+; CHECK-RV32-NEXT:    .cfi_restore s1
+; CHECK-RV32-NEXT:    .cfi_restore s2
+; CHECK-RV32-NEXT:    .cfi_restore s3
+; CHECK-RV32-NEXT:    .cfi_restore s4
+; CHECK-RV32-NEXT:    .cfi_restore s5
+; CHECK-RV32-NEXT:    .cfi_restore s6
+; CHECK-RV32-NEXT:    .cfi_restore s7
+; CHECK-RV32-NEXT:    .cfi_restore s8
+; CHECK-RV32-NEXT:    .cfi_restore s9
+; CHECK-RV32-NEXT:    .cfi_restore s10
+; CHECK-RV32-NEXT:    .cfi_restore s11
 ; CHECK-RV32-NEXT:    addi sp, sp, 272
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: relax_jal_spill_64:
@@ -1715,7 +1787,21 @@ define void @relax_jal_spill_64() {
 ; CHECK-RV64-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    .cfi_restore ra
+; CHECK-RV64-NEXT:    .cfi_restore s0
+; CHECK-RV64-NEXT:    .cfi_restore s1
+; CHECK-RV64-NEXT:    .cfi_restore s2
+; CHECK-RV64-NEXT:    .cfi_restore s3
+; CHECK-RV64-NEXT:    .cfi_restore s4
+; CHECK-RV64-NEXT:    .cfi_restore s5
+; CHECK-RV64-NEXT:    .cfi_restore s6
+; CHECK-RV64-NEXT:    .cfi_restore s7
+; CHECK-RV64-NEXT:    .cfi_restore s8
+; CHECK-RV64-NEXT:    .cfi_restore s9
+; CHECK-RV64-NEXT:    .cfi_restore s10
+; CHECK-RV64-NEXT:    .cfi_restore s11
 ; CHECK-RV64-NEXT:    addi sp, sp, 112
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 
   %ra = call i64 asm sideeffect "addi ra, x0, 1", "={ra}"()
@@ -2318,6 +2404,7 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    # reg use t6
 ; CHECK-RV32-NEXT:    #NO_APP
 ; CHECK-RV32-NEXT:    addi sp, s0, -2032
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 2032
 ; CHECK-RV32-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s1, 2020(sp) # 4-byte Folded Reload
@@ -2331,7 +2418,21 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV32-NEXT:    lw s9, 1988(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s10, 1984(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s11, 1980(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    .cfi_restore ra
+; CHECK-RV32-NEXT:    .cfi_restore s0
+; CHECK-RV32-NEXT:    .cfi_restore s1
+; CHECK-RV32-NEXT:    .cfi_restore s2
+; CHECK-RV32-NEXT:    .cfi_restore s3
+; CHECK-RV32-NEXT:    .cfi_restore s4
+; CHECK-RV32-NEXT:    .cfi_restore s5
+; CHECK-RV32-NEXT:    .cfi_restore s6
+; CHECK-RV32-NEXT:    .cfi_restore s7
+; CHECK-RV32-NEXT:    .cfi_restore s8
+; CHECK-RV32-NEXT:    .cfi_restore s9
+; CHECK-RV32-NEXT:    .cfi_restore s10
+; CHECK-RV32-NEXT:    .cfi_restore s11
 ; CHECK-RV32-NEXT:    addi sp, sp, 2032
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: relax_jal_spill_64_adjust_spill_slot:
@@ -2552,6 +2653,7 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    # reg use t6
 ; CHECK-RV64-NEXT:    #NO_APP
 ; CHECK-RV64-NEXT:    addi sp, s0, -2032
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 2032
 ; CHECK-RV64-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s1, 2008(sp) # 8-byte Folded Reload
@@ -2565,7 +2667,21 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-RV64-NEXT:    ld s9, 1944(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s10, 1936(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s11, 1928(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    .cfi_restore ra
+; CHECK-RV64-NEXT:    .cfi_restore s0
+; CHECK-RV64-NEXT:    .cfi_restore s1
+; CHECK-RV64-NEXT:    .cfi_restore s2
+; CHECK-RV64-NEXT:    .cfi_restore s3
+; CHECK-RV64-NEXT:    .cfi_restore s4
+; CHECK-RV64-NEXT:    .cfi_restore s5
+; CHECK-RV64-NEXT:    .cfi_restore s6
+; CHECK-RV64-NEXT:    .cfi_restore s7
+; CHECK-RV64-NEXT:    .cfi_restore s8
+; CHECK-RV64-NEXT:    .cfi_restore s9
+; CHECK-RV64-NEXT:    .cfi_restore s10
+; CHECK-RV64-NEXT:    .cfi_restore s11
 ; CHECK-RV64-NEXT:    addi sp, sp, 2032
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 
   ; If the stack is large and the offset of BranchRelaxationScratchFrameIndex
@@ -2873,7 +2989,21 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    lw s9, 20(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s10, 16(sp) # 4-byte Folded Reload
 ; CHECK-RV32-NEXT:    lw s11, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    .cfi_restore ra
+; CHECK-RV32-NEXT:    .cfi_restore s0
+; CHECK-RV32-NEXT:    .cfi_restore s1
+; CHECK-RV32-NEXT:    .cfi_restore s2
+; CHECK-RV32-NEXT:    .cfi_restore s3
+; CHECK-RV32-NEXT:    .cfi_restore s4
+; CHECK-RV32-NEXT:    .cfi_restore s5
+; CHECK-RV32-NEXT:    .cfi_restore s6
+; CHECK-RV32-NEXT:    .cfi_restore s7
+; CHECK-RV32-NEXT:    .cfi_restore s8
+; CHECK-RV32-NEXT:    .cfi_restore s9
+; CHECK-RV32-NEXT:    .cfi_restore s10
+; CHECK-RV32-NEXT:    .cfi_restore s11
 ; CHECK-RV32-NEXT:    addi sp, sp, 64
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ; CHECK-RV32-NEXT:  .LBB6_5: # %cond_3
 ; CHECK-RV32-NEXT:    beq t1, t2, .LBB6_4
@@ -3120,7 +3250,21 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    ld s9, 40(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s10, 32(sp) # 8-byte Folded Reload
 ; CHECK-RV64-NEXT:    ld s11, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-NEXT:    .cfi_restore ra
+; CHECK-RV64-NEXT:    .cfi_restore s0
+; CHECK-RV64-NEXT:    .cfi_restore s1
+; CHECK-RV64-NEXT:    .cfi_restore s2
+; CHECK-RV64-NEXT:    .cfi_restore s3
+; CHECK-RV64-NEXT:    .cfi_restore s4
+; CHECK-RV64-NEXT:    .cfi_restore s5
+; CHECK-RV64-NEXT:    .cfi_restore s6
+; CHECK-RV64-NEXT:    .cfi_restore s7
+; CHECK-RV64-NEXT:    .cfi_restore s8
+; CHECK-RV64-NEXT:    .cfi_restore s9
+; CHECK-RV64-NEXT:    .cfi_restore s10
+; CHECK-RV64-NEXT:    .cfi_restore s11
 ; CHECK-RV64-NEXT:    addi sp, sp, 128
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 ; CHECK-RV64-NEXT:  .LBB6_5: # %cond_3
 ; CHECK-RV64-NEXT:    sext.w t5, t2

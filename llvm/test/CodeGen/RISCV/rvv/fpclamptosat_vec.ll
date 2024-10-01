@@ -392,7 +392,16 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB6_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a4
@@ -486,11 +495,17 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -567,7 +582,16 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB7_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a1
@@ -649,11 +673,17 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
@@ -740,7 +770,16 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB8_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a2
@@ -823,11 +862,17 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -1297,7 +1342,24 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB15_18: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a7
@@ -1494,6 +1556,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -1502,7 +1565,16 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -1635,7 +1707,24 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB16_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
@@ -1807,6 +1896,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -1815,7 +1905,16 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
@@ -1970,7 +2069,24 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB17_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
@@ -2143,6 +2259,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -2151,7 +2268,16 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -2242,7 +2368,12 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f64i64:
@@ -2325,10 +2456,15 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i128>
@@ -2370,7 +2506,12 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utest_f64i64:
@@ -2408,10 +2549,15 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i128>
@@ -2477,7 +2623,12 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f64i64:
@@ -2542,10 +2693,15 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i128>
@@ -2634,7 +2790,12 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f32i64:
@@ -2717,10 +2878,15 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -2762,7 +2928,12 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utest_f32i64:
@@ -2800,10 +2971,15 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x float> %x to <2 x i128>
@@ -2869,7 +3045,12 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f32i64:
@@ -2934,10 +3115,15 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -3029,7 +3215,12 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f16i64:
@@ -3112,7 +3303,12 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x half> %x to <2 x i128>
@@ -3157,7 +3353,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utesth_f16i64:
@@ -3195,7 +3396,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x half> %x to <2 x i128>
@@ -3264,7 +3470,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f16i64:
@@ -3329,7 +3540,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x half> %x to <2 x i128>
@@ -3721,7 +3937,16 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB33_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a4
@@ -3815,11 +4040,17 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -3894,7 +4125,16 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB34_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a1
@@ -3976,11 +4216,17 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <4 x half> %x to <4 x i64>
@@ -4066,7 +4312,16 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
 ; CHECK-NOV-NEXT:    addi sp, sp, 64
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB35_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a2
@@ -4149,11 +4404,17 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    slli a1, a0, 1
 ; CHECK-V-NEXT:    add a0, a1, a0
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-V-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 48
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <4 x half> %x to <4 x i64>
@@ -4611,7 +4872,24 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB42_18: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a7
@@ -4808,6 +5086,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -4816,7 +5095,16 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -4947,7 +5235,24 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB43_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
@@ -5119,6 +5424,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -5127,7 +5433,16 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <8 x half> %x to <8 x i32>
@@ -5281,7 +5596,24 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    fld fs4, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs6, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
+; CHECK-NOV-NEXT:    .cfi_restore s3
+; CHECK-NOV-NEXT:    .cfi_restore s4
+; CHECK-NOV-NEXT:    .cfi_restore s5
+; CHECK-NOV-NEXT:    .cfi_restore s6
+; CHECK-NOV-NEXT:    .cfi_restore s7
+; CHECK-NOV-NEXT:    .cfi_restore fs0
+; CHECK-NOV-NEXT:    .cfi_restore fs1
+; CHECK-NOV-NEXT:    .cfi_restore fs2
+; CHECK-NOV-NEXT:    .cfi_restore fs3
+; CHECK-NOV-NEXT:    .cfi_restore fs4
+; CHECK-NOV-NEXT:    .cfi_restore fs5
+; CHECK-NOV-NEXT:    .cfi_restore fs6
 ; CHECK-NOV-NEXT:    addi sp, sp, 128
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB44_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
@@ -5454,6 +5786,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    slli a0, a0, 2
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 80
 ; CHECK-V-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
@@ -5462,7 +5795,16 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
+; CHECK-V-NEXT:    .cfi_restore s3
+; CHECK-V-NEXT:    .cfi_restore s4
+; CHECK-V-NEXT:    .cfi_restore s5
+; CHECK-V-NEXT:    .cfi_restore s6
 ; CHECK-V-NEXT:    addi sp, sp, 80
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <8 x half> %x to <8 x i32>
@@ -5554,7 +5896,12 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f64i64_mm:
@@ -5640,10 +5987,15 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i128>
@@ -5683,7 +6035,12 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utest_f64i64_mm:
@@ -5724,10 +6081,15 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x double> %x to <2 x i128>
@@ -5781,7 +6143,12 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f64i64_mm:
@@ -5835,10 +6202,15 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x double> %x to <2 x i128>
@@ -5928,7 +6300,12 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f32i64_mm:
@@ -6014,10 +6391,15 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -6057,7 +6439,12 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utest_f32i64_mm:
@@ -6098,10 +6485,15 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x float> %x to <2 x i128>
@@ -6155,7 +6547,12 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore fs0
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f32i64_mm:
@@ -6209,10 +6606,15 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-V-NEXT:    csrr a0, vlenb
 ; CHECK-V-NEXT:    add sp, sp, a0
+; CHECK-V-NEXT:    .cfi_def_cfa sp, 64
 ; CHECK-V-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
 ; CHECK-V-NEXT:    addi sp, sp, 64
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
@@ -6305,7 +6707,12 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: stest_f16i64_mm:
@@ -6391,7 +6798,12 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x half> %x to <2 x i128>
@@ -6433,7 +6845,12 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: utesth_f16i64_mm:
@@ -6471,7 +6888,12 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptoui <2 x half> %x to <2 x i128>
@@ -6528,7 +6950,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NOV-NEXT:    .cfi_restore ra
+; CHECK-NOV-NEXT:    .cfi_restore s0
+; CHECK-NOV-NEXT:    .cfi_restore s1
+; CHECK-NOV-NEXT:    .cfi_restore s2
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
+; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ;
 ; CHECK-V-LABEL: ustest_f16i64_mm:
@@ -6582,7 +7009,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-V-NEXT:    .cfi_restore ra
+; CHECK-V-NEXT:    .cfi_restore s0
+; CHECK-V-NEXT:    .cfi_restore s1
+; CHECK-V-NEXT:    .cfi_restore s2
 ; CHECK-V-NEXT:    addi sp, sp, 32
+; CHECK-V-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-V-NEXT:    ret
 entry:
   %conv = fptosi <2 x half> %x to <2 x i128>

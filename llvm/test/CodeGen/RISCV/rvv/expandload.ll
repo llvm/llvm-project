@@ -317,7 +317,9 @@ define <256 x i8> @test_expandload_v256i8(ptr %base, <256 x i1> %mask, <256 x i8
 ; CHECK-RV32-NEXT:    csrr a0, vlenb
 ; CHECK-RV32-NEXT:    slli a0, a0, 5
 ; CHECK-RV32-NEXT:    add sp, sp, a0
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_expandload_v256i8:
@@ -416,7 +418,9 @@ define <256 x i8> @test_expandload_v256i8(ptr %base, <256 x i1> %mask, <256 x i8
 ; CHECK-RV64-NEXT:    csrr a0, vlenb
 ; CHECK-RV64-NEXT:    slli a0, a0, 5
 ; CHECK-RV64-NEXT:    add sp, sp, a0
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
   %res = call <256 x i8> @llvm.masked.expandload.v256i8(ptr align 1 %base, <256 x i1> %mask, <256 x i8> %passthru)
   ret <256 x i8> %res
@@ -760,7 +764,9 @@ define <128 x i16> @test_expandload_v128i16(ptr %base, <128 x i1> %mask, <128 x 
 ; CHECK-RV32-NEXT:    li a1, 40
 ; CHECK-RV32-NEXT:    mul a0, a0, a1
 ; CHECK-RV32-NEXT:    add sp, sp, a0
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_expandload_v128i16:
@@ -856,7 +862,9 @@ define <128 x i16> @test_expandload_v128i16(ptr %base, <128 x i1> %mask, <128 x 
 ; CHECK-RV64-NEXT:    li a1, 40
 ; CHECK-RV64-NEXT:    mul a0, a0, a1
 ; CHECK-RV64-NEXT:    add sp, sp, a0
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
   %res = call <128 x i16> @llvm.masked.expandload.v128i16(ptr align 2 %base, <128 x i1> %mask, <128 x i16> %passthru)
   ret <128 x i16> %res
@@ -1148,7 +1156,9 @@ define <64 x i32> @test_expandload_v64i32(ptr %base, <64 x i1> %mask, <64 x i32>
 ; CHECK-RV32-NEXT:    li a1, 40
 ; CHECK-RV32-NEXT:    mul a0, a0, a1
 ; CHECK-RV32-NEXT:    add sp, sp, a0
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_expandload_v64i32:
@@ -1243,7 +1253,9 @@ define <64 x i32> @test_expandload_v64i32(ptr %base, <64 x i1> %mask, <64 x i32>
 ; CHECK-RV64-NEXT:    li a1, 40
 ; CHECK-RV64-NEXT:    mul a0, a0, a1
 ; CHECK-RV64-NEXT:    add sp, sp, a0
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
   %res = call <64 x i32> @llvm.masked.expandload.v64i32(ptr align 4 %base, <64 x i1> %mask, <64 x i32> %passthru)
   ret <64 x i32> %res
@@ -1495,7 +1507,9 @@ define <32 x i64> @test_expandload_v32i64(ptr %base, <32 x i1> %mask, <32 x i64>
 ; CHECK-RV32-NEXT:    li a1, 40
 ; CHECK-RV32-NEXT:    mul a0, a0, a1
 ; CHECK-RV32-NEXT:    add sp, sp, a0
+; CHECK-RV32-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_expandload_v32i64:
@@ -1590,7 +1604,9 @@ define <32 x i64> @test_expandload_v32i64(ptr %base, <32 x i1> %mask, <32 x i64>
 ; CHECK-RV64-NEXT:    li a1, 40
 ; CHECK-RV64-NEXT:    mul a0, a0, a1
 ; CHECK-RV64-NEXT:    add sp, sp, a0
+; CHECK-RV64-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-RV64-NEXT:    addi sp, sp, 16
+; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
   %res = call <32 x i64> @llvm.masked.expandload.v32i64(ptr align 8 %base, <32 x i1> %mask, <32 x i64> %passthru)
   ret <32 x i64> %res

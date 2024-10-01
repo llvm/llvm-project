@@ -4004,7 +4004,10 @@ define <8 x i64> @mgather_v8i64(<8 x ptr> %ptrs, <8 x i1> %m, <8 x i64> %passthr
 ; RV32ZVE32F-NEXT:    sw a1, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_v8i64:
@@ -4251,7 +4254,10 @@ define <8 x i64> @mgather_baseidx_v8i8_v8i64(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_v8i8_v8i64:
@@ -4525,7 +4531,10 @@ define <8 x i64> @mgather_baseidx_sext_v8i8_v8i64(ptr %base, <8 x i8> %idxs, <8 
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_sext_v8i8_v8i64:
@@ -4801,7 +4810,10 @@ define <8 x i64> @mgather_baseidx_zext_v8i8_v8i64(ptr %base, <8 x i8> %idxs, <8 
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_zext_v8i8_v8i64:
@@ -5084,7 +5096,10 @@ define <8 x i64> @mgather_baseidx_v8i16_v8i64(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_v8i16_v8i64:
@@ -5359,7 +5374,10 @@ define <8 x i64> @mgather_baseidx_sext_v8i16_v8i64(ptr %base, <8 x i16> %idxs, <
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_sext_v8i16_v8i64:
@@ -5636,7 +5654,10 @@ define <8 x i64> @mgather_baseidx_zext_v8i16_v8i64(ptr %base, <8 x i16> %idxs, <
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_zext_v8i16_v8i64:
@@ -5920,7 +5941,10 @@ define <8 x i64> @mgather_baseidx_v8i32_v8i64(ptr %base, <8 x i32> %idxs, <8 x i
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_v8i32_v8i64:
@@ -6193,7 +6217,10 @@ define <8 x i64> @mgather_baseidx_sext_v8i32_v8i64(ptr %base, <8 x i32> %idxs, <
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_sext_v8i32_v8i64:
@@ -6467,7 +6494,10 @@ define <8 x i64> @mgather_baseidx_zext_v8i32_v8i64(ptr %base, <8 x i32> %idxs, <
 ; RV32ZVE32F-NEXT:    sw a2, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_zext_v8i32_v8i64:
@@ -6765,7 +6795,10 @@ define <8 x i64> @mgather_baseidx_v8i64(ptr %base, <8 x i64> %idxs, <8 x i1> %m,
 ; RV32ZVE32F-NEXT:    sw a3, 60(a0)
 ; RV32ZVE32F-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s1
 ; RV32ZVE32F-NEXT:    addi sp, sp, 16
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_baseidx_v8i64:
@@ -12854,9 +12887,13 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64V-NEXT:    vslide1down.vx v8, v8, a7
 ; RV64V-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV64V-NEXT:    addi sp, s0, -128
+; RV64V-NEXT:    .cfi_def_cfa sp, 128
 ; RV64V-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64V-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
+; RV64V-NEXT:    .cfi_restore ra
+; RV64V-NEXT:    .cfi_restore s0
 ; RV64V-NEXT:    addi sp, sp, 128
+; RV64V-NEXT:    .cfi_def_cfa_offset 0
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_strided_unaligned:
@@ -13738,6 +13775,7 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    lw a1, 224(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    sw a1, 44(a0)
 ; RV32ZVE32F-NEXT:    addi sp, s0, -512
+; RV32ZVE32F-NEXT:    .cfi_def_cfa sp, 512
 ; RV32ZVE32F-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s2, 500(sp) # 4-byte Folded Reload
@@ -13750,7 +13788,20 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV32ZVE32F-NEXT:    lw s9, 472(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s10, 468(sp) # 4-byte Folded Reload
 ; RV32ZVE32F-NEXT:    lw s11, 464(sp) # 4-byte Folded Reload
+; RV32ZVE32F-NEXT:    .cfi_restore ra
+; RV32ZVE32F-NEXT:    .cfi_restore s0
+; RV32ZVE32F-NEXT:    .cfi_restore s2
+; RV32ZVE32F-NEXT:    .cfi_restore s3
+; RV32ZVE32F-NEXT:    .cfi_restore s4
+; RV32ZVE32F-NEXT:    .cfi_restore s5
+; RV32ZVE32F-NEXT:    .cfi_restore s6
+; RV32ZVE32F-NEXT:    .cfi_restore s7
+; RV32ZVE32F-NEXT:    .cfi_restore s8
+; RV32ZVE32F-NEXT:    .cfi_restore s9
+; RV32ZVE32F-NEXT:    .cfi_restore s10
+; RV32ZVE32F-NEXT:    .cfi_restore s11
 ; RV32ZVE32F-NEXT:    addi sp, sp, 512
+; RV32ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV32ZVE32F-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_strided_split:
@@ -13870,7 +13921,21 @@ define <32 x i64> @mgather_strided_split(ptr %base) {
 ; RV64ZVE32F-NEXT:    ld s9, 56(sp) # 8-byte Folded Reload
 ; RV64ZVE32F-NEXT:    ld s10, 48(sp) # 8-byte Folded Reload
 ; RV64ZVE32F-NEXT:    ld s11, 40(sp) # 8-byte Folded Reload
+; RV64ZVE32F-NEXT:    .cfi_restore ra
+; RV64ZVE32F-NEXT:    .cfi_restore s0
+; RV64ZVE32F-NEXT:    .cfi_restore s1
+; RV64ZVE32F-NEXT:    .cfi_restore s2
+; RV64ZVE32F-NEXT:    .cfi_restore s3
+; RV64ZVE32F-NEXT:    .cfi_restore s4
+; RV64ZVE32F-NEXT:    .cfi_restore s5
+; RV64ZVE32F-NEXT:    .cfi_restore s6
+; RV64ZVE32F-NEXT:    .cfi_restore s7
+; RV64ZVE32F-NEXT:    .cfi_restore s8
+; RV64ZVE32F-NEXT:    .cfi_restore s9
+; RV64ZVE32F-NEXT:    .cfi_restore s10
+; RV64ZVE32F-NEXT:    .cfi_restore s11
 ; RV64ZVE32F-NEXT:    addi sp, sp, 144
+; RV64ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i64, ptr %base, <32 x i64> <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14, i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30, i64 32, i64 34, i64 36, i64 38, i64 40, i64 42, i64 44, i64 46, i64 48, i64 50, i64 52, i64 54, i64 56, i64 58, i64 60, i64 62>
   %x = call <32 x i64> @llvm.masked.gather.v32i64.v32p0(<32 x ptr> %ptrs, i32 8, <32 x i1> splat (i1 true), <32 x i64> poison)
