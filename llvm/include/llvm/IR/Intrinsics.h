@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines a set of enums which allow processing of intrinsic
-// functions.  Values of these enum types are returned by
+// functions. Values of these enum types are returned by
 // Function::getIntrinsicID.
 //
 //===----------------------------------------------------------------------===//
