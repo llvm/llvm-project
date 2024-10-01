@@ -418,15 +418,15 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  int getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
-  std::optional<MCRegister> getLLVMRegNum(unsigned RegNum, bool isEH) const;
+  std::optional<MCRegister> getLLVMRegNum(uint64_t RegNum, bool isEH) const;
 
   /// Map a target EH register number to an equivalent DWARF register
   /// number.
-  int getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const;
+  int64_t getDwarfRegNumFromDwarfEHRegNum(uint64_t RegNum) const;
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
