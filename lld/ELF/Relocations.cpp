@@ -2271,7 +2271,7 @@ std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
       {{d.section, d.value}, a}, nullptr);
   if (isNew)
     it->second = addLandingPadThunk(ctx, d, a);
-  return std::make_pair(it->second, isNew);
+  return {it->second, isNew};
 }
 
 // Return true if the relocation target is an in range Thunk.

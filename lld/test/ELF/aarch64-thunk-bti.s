@@ -5,7 +5,7 @@
 // RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s
 // RUN: llvm-objdump -d --no-show-raw-insn out.so | FileCheck %s --check-prefix=CHECK-PADS
 // RUN: llvm-mc -filetype=obj -triple=aarch64 shared -o shared.o
-// RUN: ld.lld --shared -o shared.so shared.o --soname=shared.so
+// RUN: ld.lld --shared -o shared.so shared.o
 // RUN: ld.lld shared.so --script=lds a.o -o exe --defsym absolute=0xf0000000
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-EXE
 // RUN: llvm-objdump -d --no-show-raw-insn exe | FileCheck %s --check-prefix=CHECK-PADS

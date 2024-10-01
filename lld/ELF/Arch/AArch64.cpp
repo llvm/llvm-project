@@ -28,11 +28,10 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
   return expr & ~static_cast<uint64_t>(0xFFF);
 }
 
-// A BTI landing pad is a valid target for an indirect branch
-// when the Branch Target Identification has been enabled.
-// As linker generated branches are via x16 the
-// BTI landing pads are defined as:
-// BTI C, BTI J, BTI JC, PACIASP, PACIBSP.
+// A BTI landing pad is a valid target for an indirect branch when the Branch
+// Target Identification has been enabled.  As linker generated branches are
+// via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
+// PACIBSP.
 bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
   if (s.isInPlt())

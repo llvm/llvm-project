@@ -588,7 +588,7 @@ void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
     0x00, 0x00, 0x00, 0x00, // L0: .xword S
     0x00, 0x00, 0x00, 0x00,
   };
-  // if mayNeedLandingPad is true then destination is an
+  // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
   assert(!mayNeedLandingPad || landingPad != nullptr);
   uint64_t s = mayNeedLandingPad ? landingPad->getVA(0)
