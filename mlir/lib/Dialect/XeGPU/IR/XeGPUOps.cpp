@@ -497,7 +497,8 @@ LogicalResult StoreScatterOp::verify() {
 // XeGPU_UpdateOffsetOp
 //===----------------------------------------------------------------------===//
 void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                         mlir::Value tensorDesc, llvm::ArrayRef<OpFoldResult> offsets) {
+                           mlir::Value tensorDesc,
+                           llvm::ArrayRef<OpFoldResult> offsets) {
   auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
   assert(tdescTy && "Expecting the source is a TensorDescType value.");
   auto loc = tensorDesc.getLoc();
@@ -509,7 +510,7 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                         Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
+                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
   auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
   build(builder, state, tensorDesc, ofrs);
 }
