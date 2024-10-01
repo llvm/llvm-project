@@ -717,3 +717,7 @@ def SSP    : RISCVReg<0, "ssp">;
 
 // Dummy SiFive VCIX state register
 def SF_VCIX_STATE : RISCVReg<0, "sf.vcix_state">;
+def : RISCVRegisterClass<[XLenVT], 32, (add SF_VCIX_STATE)> {
+  let RegInfos = XLenRI;
+  let isAllocatable = 0;
+}

@@ -715,6 +715,12 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }
 
+StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
+  if (Reg == RISCV::SF_VCIX_STATE)
+    return "sf.vcix_state";
+  return TargetRegisterInfo::getRegAsmName(Reg);
+}
+
 const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
                                         CallingConv::ID CC) const {
