@@ -3398,6 +3398,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  issignalingl
+  SRCS
+    issignalingl.cpp
+  HDRS
+    ../issignalingl.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   issignalingf16
   SRCS
     issignalingf16.cpp
@@ -3419,16 +3429,6 @@ add_entrypoint_object(
       -O3
   DEPENDS
     libc.src.__support.macros.properties.types
-)
-
-add_entrypoint_object(
-  issignalingl
-  SRCS
-    issignalingl.cpp
-  HDRS
-    ../issignalingl.h
-  COMPILE_OPTIONS
-    -O3
 )
 
 add_entrypoint_object(
