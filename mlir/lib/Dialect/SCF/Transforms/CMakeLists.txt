@@ -29,8 +29,6 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRArithDialect
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
@@ -40,9 +38,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFUtils
   MLIRSideEffectInterfaces
   MLIRSupport
-  MLIRTensorDialect
   MLIRTensorTransforms
-  MLIRTilingInterface
   MLIRTransforms
   MLIRTransformUtils
 )

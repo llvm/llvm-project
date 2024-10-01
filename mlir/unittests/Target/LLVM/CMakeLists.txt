@@ -19,6 +19,7 @@ target_link_libraries(MLIRTargetLLVMTests
   MLIRNVVMToLLVMIRTranslation
   MLIRROCDLToLLVMIRTranslation
   MLIRGPUToLLVMIRTranslation
+  MLIRParser
   ${llvm_libs}
 )
 
