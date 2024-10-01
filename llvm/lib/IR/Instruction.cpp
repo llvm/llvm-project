@@ -792,7 +792,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
          "Can not compare special state of different instructions");
 
   auto CheckAttrsSame = [IntersectAttrs](const CallBase *CB0,
-                                      const CallBase *CB1) {
+                                         const CallBase *CB1) {
     return IntersectAttrs
                ? CB0->getAttributes()
                      .intersectWith(CB0->getContext(), CB1->getAttributes())
@@ -889,7 +889,8 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
                       otherPHI->block_begin());
   }
 
-  return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false, IntersectAttrs);
+  return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
+                                   IntersectAttrs);
 }
 
 // Keep this in sync with FunctionComparator::cmpOperations in
