@@ -35,6 +35,8 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRAffineAnalysis
   MLIRAffineUtils
   MLIRArithDialect
+  MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRGPUDialect
   MLIRIR
