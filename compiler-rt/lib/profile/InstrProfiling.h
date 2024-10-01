@@ -114,11 +114,11 @@ char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 char *__llvm_profile_begin_bitmap(void);
 char *__llvm_profile_end_bitmap(void);
-ValueProfNode *__llvm_profile_begin_vnodes();
-ValueProfNode *__llvm_profile_end_vnodes();
-const VTableProfData *__llvm_profile_begin_vtables();
-const VTableProfData *__llvm_profile_end_vtables();
-uint32_t *__llvm_profile_begin_orderfile();
+ValueProfNode *__llvm_profile_begin_vnodes(void);
+ValueProfNode *__llvm_profile_end_vnodes(void);
+const VTableProfData *__llvm_profile_begin_vtables(void);
+const VTableProfData *__llvm_profile_end_vtables(void);
+uint32_t *__llvm_profile_begin_orderfile(void);
 
 /*!
  * \brief Merge profile data from buffer.
@@ -216,7 +216,7 @@ void __llvm_profile_initialize(void);
  * merge mode is turned on for instrumented programs with shared libs).
  * Side-effect: this API call will invoke malloc with dynamic memory allocation.
  */
-const char *__llvm_profile_get_path_prefix();
+const char *__llvm_profile_get_path_prefix(void);
 
 /*!
  * \brief Return filename (including path) of the profile data. Note that if the
@@ -229,7 +229,7 @@ const char *__llvm_profile_get_path_prefix();
  * instrumented image/DSO). This API only retrieves the filename from the copy
  * of the runtime available to the calling image.
  */
-const char *__llvm_profile_get_filename();
+const char *__llvm_profile_get_filename(void);
 
 /*! \brief Get the magic token for the file format. */
 uint64_t __llvm_profile_get_magic(void);
@@ -293,7 +293,7 @@ int __llvm_profile_get_padding_sizes_for_counters(
  * certain processes in case the processes don't have permission to write to
  * the disks, and trying to do so would result in side effects such as crashes.
  */
-void __llvm_profile_set_dumped();
+void __llvm_profile_set_dumped(void);
 
 /*!
  * This variable is defined in InstrProfilingRuntime.cpp as a hidden
