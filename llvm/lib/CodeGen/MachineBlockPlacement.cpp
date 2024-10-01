@@ -3513,10 +3513,17 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   const bool OptForSize =
       MF.getFunction().hasOptSize() ||
       llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
-  // Use ext-tsp for size optimization is possible only when the function
-  // contains more than two basic blocks.
-  const bool UseExtTspForSize =
-      OptForSize && ApplyExtTspForSize && MF.size() >= 3;
+  // Determine whether to use ext-tsp for perf/size optimization. The method
+  // is beneficial only for instances with at least 3 basic blocks and it can be
+  // disabled for huge functions (exceeding a certain size).
+  bool UseExtTspForPerf = false;
+  bool UseExtTspForSize = false;
+  if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
+    UseExtTspForPerf =
+        EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
+    UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+  }
 
   // Apply tail duplication.
   if (allowTailDupPlacement()) {
@@ -3562,16 +3569,12 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // Apply a post-processing optimizing block placement:
   // - find a new placement and modify the layout of the blocks in the function;
   // - re-create CFG chains so that we can optimizeBranches and alignBlocks.
-  if (MF.size() >= 3) {
-    if (EnableExtTspBlockPlacement &&
-        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
-        MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-      applyExtTsp(/*OptForSize=*/false);
-      createCFGChainExtTsp();
-    } else if (UseExtTspForSize) {
-      applyExtTsp(/*OptForSize=*/true);
-      createCFGChainExtTsp();
-    }
+  if (UseExtTspForPerf || UseExtTspForSize) {
+    assert(
+        !(UseExtTspForPerf && UseExtTspForSize) &&
+        "UseExtTspForPerf and UseExtTspForSize can not be set simultaneosly");
+    applyExtTsp(/*OptForSize=*/UseExtTspForSize);
+    createCFGChainExtTsp();
   }
 
   optimizeBranches();
