@@ -92,6 +92,10 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << formatv("};\n");
   OS << TAB_2 "std::cout << \"(\" << &Params << \")\";\n";
   OS << TAB_2 "std::cout << \"-> \" << result << \"\\n\";\n";
+  OS << TAB_2 "if (result != OFFLOAD_RESULT_SUCCESS && LastErrorDetails()) {\n";
+  OS << TAB_3 "std::cout << \"     *Error Details* \" << *LastErrorDetails() "
+              "<< \" \\n\";\n";
+  OS << TAB_2 "}\n";
   OS << TAB_1 "}\n";
 
   OS << TAB_1 "return result;\n";
