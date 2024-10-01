@@ -92,7 +92,7 @@ struct Glob {
 } glob;
 
 double *const glob_ptr = &glob.b[1];
-// CHECK: cir.global external @glob_ptr = #cir.global_view<@glob, [2 : i32, 1 : i32]> : !cir.ptr<!cir.double>
+// CHECK: cir.global constant external @glob_ptr = #cir.global_view<@glob, [2 : i32, 1 : i32]> : !cir.ptr<!cir.double>
 
 // TODO: test tentatives with internal linkage.
 

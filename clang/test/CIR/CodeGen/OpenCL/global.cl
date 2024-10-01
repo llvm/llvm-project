@@ -11,6 +11,10 @@ global int b = 15;
 // CIR-DAG: cir.global external addrspace(offload_global) @b = #cir.int<15> : !s32i
 // LLVM-DAG: @b = addrspace(1) global i32 15
 
+constant int c[2] = {18, 21};
+// CIR-DAG: cir.global constant {{.*}}addrspace(offload_constant) {{.*}}@c
+// LLVM-DAG: @c = addrspace(2) constant
+
 kernel void test_get_global() {
   a = b;
   // CIR:      %[[#ADDRB:]] = cir.get_global @b : !cir.ptr<!s32i, addrspace(offload_global)>

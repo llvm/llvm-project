@@ -947,9 +947,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     // FIXME: This code is overly simple and should be merged with other global
     // handling.
     GV.setAlignmentAttr(getSize(astCtx.getDeclAlign(D)));
-    // TODO(cir):
-    //   GV->setConstant(isTypeConstant(D->getType(), false));
-    //   setLinkageForGV(GV, D);
+    GV.setConstant(isTypeConstant(D->getType(), false, false));
+    // TODO(cir): setLinkageForGV(GV, D);
 
     if (D->getTLSKind()) {
       if (D->getTLSKind() == VarDecl::TLS_Dynamic)
@@ -1278,8 +1277,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     emitter->finalize(GV);
 
   // TODO(cir): If it is safe to mark the global 'constant', do so now.
-  // GV->setConstant(!NeedsGlobalCtor && !NeedsGlobalDtor &&
-  //                 isTypeConstant(D->getType(), true));
+  GV.setConstant(!NeedsGlobalCtor && !NeedsGlobalDtor &&
+                 isTypeConstant(D->getType(), true, true));
 
   // If it is in a read-only section, mark it 'constant'.
   if (const SectionAttr *SA = D->getAttr<SectionAttr>())

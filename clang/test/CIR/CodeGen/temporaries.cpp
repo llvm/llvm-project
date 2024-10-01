@@ -32,8 +32,8 @@ const unsigned int n = 1234;
 const int &r = (const int&)n;
 
 //      CHECK: cir.global "private"  constant internal @_ZGR1r_ = #cir.int<1234> : !s32i
-// CHECK-NEXT: cir.global  external @r = #cir.global_view<@_ZGR1r_> : !cir.ptr<!s32i> {alignment = 8 : i64}
+// CHECK-NEXT: cir.global  constant external @r = #cir.global_view<@_ZGR1r_> : !cir.ptr<!s32i> {alignment = 8 : i64}
 
 //      LLVM: @_ZGR1r_ = internal constant i32 1234, align 4
-// LLVM-NEXT: @r = global ptr @_ZGR1r_, align 8
+// LLVM-NEXT: @r = constant ptr @_ZGR1r_, align 8
 
