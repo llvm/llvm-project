@@ -14,7 +14,7 @@ template<> template<> template<class T>
 
 template<> template<> template<class T>
 void A<long>::B<double>::mf1(T t) { } // expected-error{{does not match}}
-                                      // expected-note@-10{{defined here}}
+                                      // expected-note@-7{{defined here}}
 
 // FIXME: This diagnostic could probably be better.
 template<class Y> template<>
