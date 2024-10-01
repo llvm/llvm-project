@@ -388,6 +388,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
   case R_X86_64_GOTTPOFF:
     return R_GOT_PC;
   case R_X86_64_GOTOFF64:
@@ -725,6 +726,7 @@ int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_X86_64_GOTPCREL:
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
   case R_X86_64_PC32:
   case R_X86_64_GOTTPOFF:
   case R_X86_64_PLT32:
@@ -808,6 +810,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     break;
   case R_X86_64_GOTPCRELX:
   case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_REX2_GOTPCRELX:
     if (rel.expr != R_GOT_PC) {
       relaxGot(loc, rel, val);
     } else {
@@ -859,12 +862,13 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
 RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
                                 const uint8_t *loc) const {
-  // Only R_X86_64_[REX_]GOTPCRELX can be relaxed. GNU as may emit GOTPCRELX
-  // with addend != -4. Such an instruction does not load the full GOT entry, so
-  // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
-  // (addend=0) loads the high 32 bits of the GOT entry.
+  // Only R_X86_64_[REX_]|[REX2_]GOTPCRELX can be relaxed. GNU as may emit
+  // GOTPCRELX with addend != -4. Such an instruction does not load the full GOT
+  // entry, so we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip),
+  // %rax (addend=0) loads the high 32 bits of the GOT entry.
   if (!ctx.arg.relax || addend != -4 ||
-      (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX))
+      (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX &&
+       type != R_X86_64_REX2_GOTPCRELX))
     return R_GOT_PC;
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
@@ -880,7 +884,7 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
   if (op == 0xff && (modRm == 0x15 || modRm == 0x25))
     return R_RELAX_GOT_PC;
 
-  // We don't support test/binop instructions without a REX prefix.
+  // We don't support test/binop instructions without a REX/REX2 prefix.
   if (type == R_X86_64_GOTPCRELX)
     return R_GOT_PC;
 
@@ -894,8 +898,8 @@ RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
 // "Intel 64 and IA-32 Architectures Software Developer's Manual V2"
 // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
 //    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
-static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
-                          uint8_t modRm) {
+static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op, uint8_t modRm,
+                          bool isRex2) {
   const uint8_t rex = loc[-3];
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (op == 0x85) {
@@ -921,7 +925,7 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
     // See "TEST-Logical Compare" (4-428 Vol. 2B).
     loc[-2] = 0xf7;
 
-    // Move R bit to the B bit in REX byte.
+    // Move R bit to the B bit in REX/REX2 byte.
     // REX byte is encoded as 0100WRXB, where
     // 0100 is 4bit fixed pattern.
     // REX.W When 1, a 64-bit operand size is used. Otherwise, when 0, the
@@ -932,7 +936,17 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
     // REX.B This 1-bit value is an extension to the MODRM.rm field or the
     // SIB.base field.
     // See "2.2.1.2 More on REX Prefix Fields " (2-8 Vol. 2A).
-    loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
+    //
+    // REX2 prefix is encoded as 0xd5|M|R2|X2|B2|WRXB, where
+    // 0xd5 is 1byte fixed pattern.
+    // REX2's [W,R,X,B] have the same meanings as REX's.
+    // REX2.M encodes the map id.
+    // R2/X2/B2 provides the fifth and most siginicant bits of the R/X/B
+    // register identifiers, each of which can now address all 32 GPRs.
+    if (isRex2)
+      loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
+    else
+      loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
     write32le(loc, val);
     return;
   }
@@ -953,7 +967,10 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
   // "INSTRUCTION SET REFERENCE, N-Z" (Vol. 2B 4-1) for
   // descriptions about each operation.
   loc[-2] = 0x81;
-  loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
+  if (isRex2)
+    loc[-3] = (rex & ~0x44) | (rex & 0x44) >> 2;
+  else
+    loc[-3] = (rex & ~0x4) | (rex & 0x4) >> 2;
   write32le(loc, val);
 }
 
@@ -974,7 +991,7 @@ static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
     // We are relaxing a rip relative to an absolute, so compensate
     // for the old -4 addend.
     assert(!ctx.arg.isPic);
-    relaxGotNoPic(loc, val + 4, op, modRm);
+    relaxGotNoPic(loc, val + 4, op, modRm, rel.type == R_X86_64_REX2_GOTPCRELX);
     return;
   }
 
