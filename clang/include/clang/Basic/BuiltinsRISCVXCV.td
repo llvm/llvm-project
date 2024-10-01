@@ -38,4 +38,42 @@ def alu_subN   : RISCVXCVBuiltin<"int(int, int, unsigned int)", "xcvalu">;
 def alu_subuN  : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", "xcvalu">;
 def alu_subRN  : RISCVXCVBuiltin<"int(int, int, unsigned int)", "xcvalu">;
 def alu_subuRN : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)", "xcvalu">;
+
+//===----------------------------------------------------------------------===//
+// XCVmac extension.
+//===----------------------------------------------------------------------===//
+def mac_mac      : RISCVXCVBuiltin<"int(int, int, int)", "xcvmac">;
+def mac_msu      : RISCVXCVBuiltin<"int(int, int, int)", "xcvmac">;
+def mac_muluN    : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulhhuN  : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulsN    : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulhhsN  : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_muluRN   : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulhhuRN : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulsRN   : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_mulhhsRN : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_macuN    : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_machhuN  : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_macsN    : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_machhsN  : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_macuRN   : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                    "xcvmac">;
+def mac_machhuRN : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_macsRN   : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
+def mac_machhsRN : RISCVXCVBuiltin<"int(unsigned int, unsigned int, unsigned int, unsigned int)",
+                                   "xcvmac">;
 } // Attributes = [NoThrow, Const]
