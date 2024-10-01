@@ -594,7 +594,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
     // Canonicalize sub mask, X -> ~X
     const APInt *LHSC;
-    if (match(I->getOperand(0), m_LowBitMask(LHSC)) && DemandedFromOps.isSubsetOf(*LHSC)) {
+    if (match(I->getOperand(0), m_LowBitMask(LHSC)) &&
+        DemandedFromOps.isSubsetOf(*LHSC)) {
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
       return Builder.CreateNot(I->getOperand(1));
