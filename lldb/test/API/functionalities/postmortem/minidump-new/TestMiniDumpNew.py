@@ -544,4 +544,3 @@ class MiniDumpNewTestCase(TestBase):
         finally:
             if os.path.isfile(core):
                 os.unlink(core)
-        
