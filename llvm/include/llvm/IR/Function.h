@@ -255,10 +255,6 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
-  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
-  /// certain target. If it is a generic intrinsic false is returned.
-  static bool isTargetIntrinsic(Intrinsic::ID IID);
-
   /// isTargetIntrinsic - Returns true if this function is an intrinsic and the
   /// intrinsic is specific to a certain target. If this is not an intrinsic
   /// or a generic intrinsic, false is returned.
@@ -268,8 +264,6 @@ public:
   /// Intrinsics". Returns false if not, and returns false when
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
   bool isConstrainedFPIntrinsic() const;
-
-  static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).

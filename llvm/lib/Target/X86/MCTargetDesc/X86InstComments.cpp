@@ -39,6 +39,11 @@ using namespace llvm;
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
+#define CASE_PTERNLOG(Inst, src)                                               \
+  CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
+  CASE_AVX512_INS_COMMON(Inst, Z256, r##src##i)                                \
+  CASE_AVX512_INS_COMMON(Inst, Z128, r##src##i)
+
 #define CASE_MOVDUP(Inst, src)                    \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
   CASE_AVX512_INS_COMMON(Inst, Z256, r##src)      \
@@ -617,6 +622,90 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
   return true;
 }
 
+static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
+                                  const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+
+  int Src2Idx;
+  int Src3Idx;
+  switch (MI->getOpcode()) {
+    // dest, src1, src2, src3, tbl
+    // dest, src1, mask, src2, src3, tbl
+    CASE_PTERNLOG(PTERNLOGD, r)
+    CASE_PTERNLOG(PTERNLOGQ, r)
+    Src2Idx = NumOperands - 3;
+    Src3Idx = NumOperands - 2;
+    break;
+
+    // dest, src1, src2, memory, tbl
+    // dest, src1, mask, src2, memory, tbl
+    CASE_PTERNLOG(PTERNLOGD, m)
+    CASE_PTERNLOG(PTERNLOGQ, m)
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -1;
+    break;
+
+  default:
+    return false;
+  }
+  const char *DestName = getRegName(MI->getOperand(0).getReg());
+  const char *Src1Name = getRegName(MI->getOperand(1).getReg());
+  const char *Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
+  const char *Src3Name =
+      Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
+  uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  constexpr unsigned kNumVariables = 3;
+  constexpr unsigned kNumTruthTableEntries = 1 << kNumVariables;
+  int NumMinterms = llvm::popcount(TruthTable);
+  if (NumMinterms == 0) {
+    OS << '0';
+  } else if (NumMinterms == kNumTruthTableEntries) {
+    OS << "-1";
+  } else {
+    while (TruthTable != 0) {
+      // Index of the lowest bit set.
+      unsigned I = llvm::countr_zero(TruthTable);
+      // Clear the lowest bit set.
+      TruthTable &= TruthTable - 1;
+      // Our index tells us which sources are and are not complemented. Note
+      // that the indexing goes left-to-right.
+      bool Src1 = I & 0b100;
+      bool Src2 = I & 0b010;
+      bool Src3 = I & 0b001;
+
+      // Group in parenthesis to make the output more obvious but only if there
+      // are multiple terms.
+      if (NumMinterms > 1)
+        OS << '(';
+
+      if (!Src1)
+        OS << '~';
+      OS << Src1Name << " & ";
+      if (!Src2)
+        OS << '~';
+      OS << Src2Name << " & ";
+      if (!Src3)
+        OS << '~';
+      OS << Src3Name;
+
+      if (NumMinterms > 1)
+        OS << ')';
+
+      // Output an OR if there is another term in the table.
+      if (TruthTable != 0)
+        OS << " | ";
+    }
+  }
+  OS << '\n';
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
@@ -634,6 +723,9 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   bool RegForm = false;
 
   if (printFMAComments(MI, OS, MCII))
+    return true;
+
+  if (printPTERNLOGComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {

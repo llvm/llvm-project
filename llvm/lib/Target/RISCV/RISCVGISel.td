@@ -95,10 +95,6 @@ def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
 let Predicates = [IsRV64] in {
 def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
 }
 
 // Ptr type used in patterns with GlobalISelEmitter
@@ -195,9 +191,9 @@ def : PatGprGpr<sub, SUBW, i32, i32>;
 def : PatGprGpr<and, AND, i32, i32>;
 def : PatGprGpr<or, OR, i32, i32>;
 def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
-def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
-def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
+def : PatGprGpr<shl, SLLW, i32, i32>;
+def : PatGprGpr<srl, SRLW, i32, i32>;
+def : PatGprGpr<sra, SRAW, i32, i32>;
 
 def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
