@@ -4227,7 +4227,6 @@ void CombinerHelper::applyExtractVecEltBuildVec(MachineInstr &MI,
 bool CombinerHelper::matchCombineExtractToShuffle(
     MachineInstr &MI, SmallVectorImpl<std::pair<Register, int>> &VecIndexPair,
     std::pair<Register, Register> &VectorRegisters) {
-  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
   const GBuildVector *Build = cast<GBuildVector>(&MI);
   // This combine tries to find all the build vectors whose source elements
   // all originate from a G_EXTRACT_VECTOR_ELT from one or two donor vectors.
