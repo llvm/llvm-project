@@ -161,7 +161,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
         sg_map = attr;
         continue;
       }
-      if (mlir::isa<TensorDescAttr>(attr)) {
+      if (mlir::isa<BlockTensorDescAttr>(attr)) {
         encoding = attr;
         continue;
       }

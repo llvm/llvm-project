@@ -94,16 +94,16 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       "mlir::Type": $elementType,
       CArg<"int", "1">: $array_length,
       CArg<"bool", "true">: $boundary_check,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
       CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_layout,
-      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data)>,
     TypeBuilderWithInferredContext<(ins
       "llvm::ArrayRef<int64_t>": $shape,
       "mlir::Type": $elementType,
       CArg<"int", "1">: $chunk_size,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space)>,
+      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
       CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_layout,
-      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data
+      CArg<"llvm::ArrayRef<uint32_t>", "{}">: $wi_data)>
   ];
 
   let extraClassDeclaration = [{
