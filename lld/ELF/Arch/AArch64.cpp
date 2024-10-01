@@ -1073,18 +1073,6 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     memcpy(buf + sizeof(addrInst) + sizeof(stdBr), nopData, sizeof(nopData));
 }
 
-static TargetInfo *getTargetInfo() {
-  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      ctx.arg.zPacPlt) {
-    static AArch64BtiPac t;
-    return &t;
-  }
-  static AArch64 t;
-  return &t;
-}
-
-TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }
-
 template <class ELFT>
 static void
 addTaggedSymbolReferences(InputSectionBase &sec,
@@ -1186,4 +1174,14 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
             "Symbol is defined as tagged more times than it's used");
     symbol->setIsTagged(true);
   }
+}
+
+TargetInfo *elf::getAArch64TargetInfo() {
+  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      ctx.arg.zPacPlt) {
+    static AArch64BtiPac t;
+    return &t;
+  }
+  static AArch64 t;
+  return &t;
 }
