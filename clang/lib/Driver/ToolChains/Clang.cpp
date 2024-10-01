@@ -1125,8 +1125,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   // When host compiling with OpenMP or HIP offloading include
   // the host overlay definitions.
-  if ((JA.isHostOffloading(Action::OFK_OpenMP)) ||
-      (JA.isHostOffloading(Action::OFK_HIP))) {
+  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include");
     llvm::sys::path::append(P, "openmp_wrappers");
