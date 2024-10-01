@@ -615,6 +615,7 @@ __blsr_u64(unsigned long long __X)
 #endif /* __x86_64__ */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* !defined(__SCE__) || __has_feature(modules) || defined(__BMI__) */
 
