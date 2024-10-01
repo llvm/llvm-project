@@ -1127,11 +1127,13 @@ func.func @sections_reduction() {
   omp.sections reduction(@add_f32 %0 -> %arg0 : !llvm.ptr) {
     // CHECK: omp.section
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 2.0 : f32
       omp.terminator
     }
     // CHECK: omp.section
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 3.0 : f32
       omp.terminator
     }
@@ -1148,11 +1150,13 @@ func.func @sections_reduction_byref() {
   omp.sections reduction(byref @add_f32 %0 -> %arg0 : !llvm.ptr) {
     // CHECK: omp.section
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 2.0 : f32
       omp.terminator
     }
     // CHECK: omp.section
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 3.0 : f32
       omp.terminator
     }
@@ -1246,10 +1250,12 @@ func.func @sections_reduction2() {
   // CHECK: omp.sections reduction(@add2_f32 %{{.+}} -> %{{.+}} : memref<1xf32>)
   omp.sections reduction(@add2_f32 %0 -> %arg0 : memref<1xf32>) {
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 2.0 : f32
       omp.terminator
     }
     omp.section {
+    ^bb0(%arg1 : !llvm.ptr):
       %1 = arith.constant 2.0 : f32
       omp.terminator
     }
