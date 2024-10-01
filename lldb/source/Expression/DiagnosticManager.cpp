@@ -14,22 +14,28 @@
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
+char ExpressionError::ID;
 
-void DiagnosticManager::Dump(Log *log) {
-  if (!log)
-    return;
-
-  std::string str = GetString();
-
-  // GetString() puts a separator after each diagnostic. We want to remove the
-  // last '\n' because log->PutCString will add one for us.
-
-  if (str.size() && str.back() == '\n') {
-    str.pop_back();
+/// A std::error_code category for eErrorTypeExpression.
+class ExpressionCategory : public std::error_category {
+  const char *name() const noexcept override {
+    return "LLDBExpressionCategory";
   }
-
-  log->PutCString(str.c_str());
+  std::string message(int __ev) const override {
+    return ExpressionResultAsCString(
+        static_cast<lldb::ExpressionResults>(__ev));
+  };
+};
+ExpressionCategory &expression_category() {
+  static ExpressionCategory g_expression_category;
+  return g_expression_category;
 }
+
+ExpressionError::ExpressionError(lldb::ExpressionResults result,
+                                 std::string msg,
+                                 std::vector<DiagnosticDetail> details)
+    : ErrorInfo(std::error_code(result, expression_category())), m_message(msg),
+      m_details(details) {}
 
 static const char *StringForSeverity(lldb::Severity severity) {
   switch (severity) {
@@ -44,9 +50,33 @@ static const char *StringForSeverity(lldb::Severity severity) {
   llvm_unreachable("switch needs another case for lldb::Severity enum");
 }
 
+std::string ExpressionError::message() const {
+  std::string str;
+  {
+    llvm::raw_string_ostream os(str);
+    if (!m_message.empty())
+      os << m_message << '\n';
+    for (const auto &detail : m_details)
+      os << StringForSeverity(detail.severity) << detail.rendered << '\n';
+  }
+  return str;
+}
+
+std::error_code ExpressionError::convertToErrorCode() const {
+  return llvm::inconvertibleErrorCode();
+}
+
+void ExpressionError::log(llvm::raw_ostream &OS) const { OS << message(); }
+
+std::unique_ptr<CloneableError> ExpressionError::Clone() const {
+  return std::make_unique<ExpressionError>(
+      (lldb::ExpressionResults)convertToErrorCode().value(), m_message,
+      m_details);
+}
+
 std::string DiagnosticManager::GetString(char separator) {
-  std::string ret;
-  llvm::raw_string_ostream stream(ret);
+  std::string str;
+  llvm::raw_string_ostream stream(str);
 
   for (const auto &diagnostic : Diagnostics()) {
     llvm::StringRef severity = StringForSeverity(diagnostic->GetSeverity());
@@ -61,8 +91,39 @@ std::string DiagnosticManager::GetString(char separator) {
       stream << message.drop_front(severity_pos + severity.size());
     stream << separator;
   }
+  return str;
+}
 
-  return ret;
+void DiagnosticManager::Dump(Log *log) {
+  if (!log)
+    return;
+
+  std::string str = GetString();
+
+  // We want to remove the last '\n' because log->PutCString will add
+  // one for us.
+
+  if (!str.empty() && str.back() == '\n')
+    str.pop_back();
+
+  log->PutString(str);
+}
+
+llvm::Error DiagnosticManager::GetAsError(lldb::ExpressionResults result,
+                                          llvm::Twine message) const {
+  std::vector<DiagnosticDetail> details;
+  for (const auto &diag : m_diagnostics)
+    details.push_back(diag->GetDetail());
+  return llvm::make_error<ExpressionError>(result, message.str(), details);
+}
+
+void DiagnosticManager::AddDiagnostic(llvm::StringRef message,
+                                      lldb::Severity severity,
+                                      DiagnosticOrigin origin,
+                                      uint32_t compiler_id) {
+  m_diagnostics.emplace_back(std::make_unique<Diagnostic>(
+      origin, compiler_id,
+      DiagnosticDetail{{}, severity, message.str(), message.str()}));
 }
 
 size_t DiagnosticManager::Printf(lldb::Severity severity, const char *format,
@@ -84,4 +145,14 @@ void DiagnosticManager::PutString(lldb::Severity severity,
   if (str.empty())
     return;
   AddDiagnostic(str, severity, eDiagnosticOriginLLDB);
+}
+
+void Diagnostic::AppendMessage(llvm::StringRef message,
+                               bool precede_with_newline) {
+  if (precede_with_newline) {
+    m_detail.message.push_back('\n');
+    m_detail.rendered.push_back('\n');
+  }
+  m_detail.message += message;
+  m_detail.rendered += message;
 }

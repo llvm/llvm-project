@@ -26,6 +26,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
@@ -161,7 +162,8 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
-  ClangDiagnosticManagerAdapter(DiagnosticOptions &opts) {
+  ClangDiagnosticManagerAdapter(DiagnosticOptions &opts, StringRef filename)
+      : m_filename(filename) {
     DiagnosticOptions *options = new DiagnosticOptions(opts);
     options->ShowPresumedLoc = true;
     options->ShowLevel = false;
@@ -211,20 +213,20 @@ public:
     m_output.clear();
     m_passthrough->HandleDiagnostic(DiagLevel, Info);
 
-    lldb::Severity severity;
+    DiagnosticDetail detail;
     bool make_new_diagnostic = true;
 
     switch (DiagLevel) {
     case DiagnosticsEngine::Level::Fatal:
     case DiagnosticsEngine::Level::Error:
-      severity = lldb::eSeverityError;
+      detail.severity = lldb::eSeverityError;
       break;
     case DiagnosticsEngine::Level::Warning:
-      severity = lldb::eSeverityWarning;
+      detail.severity = lldb::eSeverityWarning;
       break;
     case DiagnosticsEngine::Level::Remark:
     case DiagnosticsEngine::Level::Ignored:
-      severity = lldb::eSeverityInfo;
+      detail.severity = lldb::eSeverityInfo;
       break;
     case DiagnosticsEngine::Level::Note:
       m_manager->AppendMessageToDiagnostic(m_output);
@@ -253,14 +255,46 @@ public:
       std::string stripped_output =
           std::string(llvm::StringRef(m_output).trim());
 
-      auto new_diagnostic = std::make_unique<ClangDiagnostic>(
-          stripped_output, severity, Info.getID());
+      // Translate the source location.
+      if (Info.hasSourceManager()) {
+        DiagnosticDetail::SourceLocation loc;
+        clang::SourceManager &sm = Info.getSourceManager();
+        const clang::SourceLocation sloc = Info.getLocation();
+        if (sloc.isValid()) {
+          const clang::FullSourceLoc fsloc(sloc, sm);
+          clang::PresumedLoc PLoc = fsloc.getPresumedLoc(true);
+          StringRef filename =
+              PLoc.isValid() ? PLoc.getFilename() : StringRef{};
+          loc.file = FileSpec(filename);
+          loc.line = fsloc.getSpellingLineNumber();
+          loc.column = fsloc.getSpellingColumnNumber();
+          loc.in_user_input = filename == m_filename;
+
+          // Find the range of the primary location.
+          for (const auto &range : Info.getRanges()) {
+            if (range.getBegin() == sloc) {
+              // FIXME: This is probably not handling wide characters correctly.
+              unsigned end_col = sm.getSpellingColumnNumber(range.getEnd());
+              if (end_col > loc.column)
+                loc.length = end_col - loc.column;
+              break;
+            }
+          }
+          detail.source_location = loc;
+        }
+      }
+      llvm::SmallString<0> msg;
+      Info.FormatDiagnostic(msg);
+      detail.message = msg.str();
+      detail.rendered = stripped_output;
+      auto new_diagnostic =
+          std::make_unique<ClangDiagnostic>(detail, Info.getID());
 
       // Don't store away warning fixits, since the compiler doesn't have
       // enough context in an expression for the warning to be useful.
       // FIXME: Should we try to filter out FixIts that apply to our generated
       // code, and not the user's expression?
-      if (severity == lldb::eSeverityError)
+      if (detail.severity == lldb::eSeverityError)
         AddAllFixIts(new_diagnostic.get(), Info);
 
       m_manager->AddDiagnostic(std::move(new_diagnostic));
@@ -280,6 +314,7 @@ private:
   std::shared_ptr<llvm::raw_string_ostream> m_os;
   /// Output string filled by m_os.
   std::string m_output;
+  StringRef m_filename;
 };
 
 /// Returns true if the SDK for the specified triple supports
@@ -710,8 +745,8 @@ ClangExpressionParser::ClangExpressionParser(
 
   // 4. Set language options.
   SetupLangOpts(*m_compiler, *exe_scope, expr);
-  if (auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
-      clang_expr && clang_expr->DidImportCxxModules()) {
+  auto *clang_expr = dyn_cast<ClangUserExpression>(&m_expr);
+  if (clang_expr && clang_expr->DidImportCxxModules()) {
     LLDB_LOG(log, "Adding lang options for importing C++ modules");
     SetupImportStdModuleLangOpts(*m_compiler, *target_sp);
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories, target_sp);
@@ -738,9 +773,9 @@ ClangExpressionParser::ClangExpressionParser(
 		                 m_compiler->getLangOpts());
 
   // 5. Set up the diagnostic buffer for reporting errors
-
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
-      m_compiler->getDiagnostics().getDiagnosticOptions());
+      m_compiler->getDiagnostics().getDiagnosticOptions(),
+      clang_expr ? clang_expr->GetFilename() : StringRef());
   m_compiler->getDiagnostics().setClient(diag_mgr);
 
   // 6. Set up the source management objects inside the compiler
@@ -1502,13 +1537,9 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
               new ClangDynamicCheckerFunctions();
 
           DiagnosticManager install_diags;
-          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx)) {
-            std::string ErrMsg = "couldn't install checkers: " + toString(std::move(Err));
-            if (install_diags.Diagnostics().size())
-              ErrMsg = ErrMsg + "\n" + install_diags.GetString().c_str();
-            err = Status(ErrMsg);
-            return err;
-          }
+          if (Error Err = dynamic_checkers->Install(install_diags, exe_ctx))
+            return Status::FromError(install_diags.GetAsError(
+                lldb::eExpressionSetupError, "couldn't install checkers:"));
 
           process->SetDynamicCheckers(dynamic_checkers);
 
