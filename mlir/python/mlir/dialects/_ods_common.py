@@ -13,7 +13,7 @@ from typing import (
 )
 
 from .._mlir_libs import _mlir as _cext
-from ..ir import ( # type: ignore
+from ..ir import (  # type: ignore
     ArrayAttr,
     Attribute,
     BoolAttr,
