@@ -6542,11 +6542,11 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   //   be inverted between Ps and As. On non-deduced context, matching needs to
   //   happen both ways, according to [temp.arg.template]p3, but this is
   //   currently implemented as a special case elsewhere.
-  switch (TemplateDeductionResult Result = ::DeduceTemplateArguments(
-              *this, A, AArgs, PArgs, Info, Deduced,
-              /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/true,
-              IsDeduced ? PackFold::ArgumentToParameter : PackFold::Both,
-              /*HasDeducedAnyParam=*/nullptr)) {
+  switch (::DeduceTemplateArguments(
+      *this, A, AArgs, PArgs, Info, Deduced,
+      /*NumberOfArgumentsMustMatch=*/false, /*PartialOrdering=*/true,
+      IsDeduced ? PackFold::ArgumentToParameter : PackFold::Both,
+      /*HasDeducedAnyParam=*/nullptr)) {
   case clang::TemplateDeductionResult::Success:
     break;
 
