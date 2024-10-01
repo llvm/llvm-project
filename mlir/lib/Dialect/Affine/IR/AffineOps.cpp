@@ -4612,12 +4612,12 @@ struct DropDelinearizeOfSingleLoop
       return failure();
 
     // Check that the `linear_index` is an induction variable.
-    auto inductionVar = cast<BlockArgument>(delinearizeOp.getLinearIndex());
+    auto inductionVar = dyn_cast<BlockArgument>(delinearizeOp.getLinearIndex());
     if (!inductionVar)
       return failure();
 
     // Check that the parent is a `LoopLikeOpInterface`.
-    auto loopLikeOp = cast<LoopLikeOpInterface>(
+    auto loopLikeOp = dyn_cast<LoopLikeOpInterface>(
         inductionVar.getParentRegion()->getParentOp());
     if (!loopLikeOp)
       return failure();
