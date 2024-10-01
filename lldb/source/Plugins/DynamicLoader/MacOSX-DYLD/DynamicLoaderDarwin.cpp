@@ -530,8 +530,8 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
   return true;
 }
 
-void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
-    ImageInfo::collection &image_infos) {
+void DynamicLoaderDarwin::UpdateSpecialBinariesFromPreloadedModules(
+    std::vector<std::pair<ImageInfo, ModuleSP>> &images) {
   uint32_t exe_idx = UINT32_MAX;
   uint32_t dyld_idx = UINT32_MAX;
   Target &target = m_process->GetTarget();
@@ -539,35 +539,34 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   ConstString g_dyld_sim_filename("dyld_sim");
 
   ArchSpec target_arch = target.GetArchitecture();
-  const size_t image_infos_size = image_infos.size();
-  for (size_t i = 0; i < image_infos_size; i++) {
-    if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
+  const size_t images_size = images.size();
+  for (size_t i = 0; i < images_size; i++) {
+    const auto &image_info = images[i].first;
+    if (image_info.header.filetype == llvm::MachO::MH_DYLINKER) {
       // In a "simulator" process we will have two dyld modules --
       // a "dyld" that we want to keep track of, and a "dyld_sim" which
       // we don't need to keep track of here.  dyld_sim will have a non-macosx
       // OS.
       if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
-          image_infos[i].os_type != llvm::Triple::OSType::MacOSX) {
+          image_info.os_type != llvm::Triple::OSType::MacOSX) {
         continue;
       }
 
       dyld_idx = i;
     }
-    if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
+    if (image_info.header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
   }
 
   // Set the target executable if we haven't found one so far.
   if (exe_idx != UINT32_MAX && !target.GetExecutableModule()) {
-    const bool can_create = true;
-    ModuleSP exe_module_sp(FindTargetModuleForImageInfo(image_infos[exe_idx],
-                                                        can_create, nullptr));
+    ModuleSP exe_module_sp = images[exe_idx].second;
     if (exe_module_sp) {
       LLDB_LOGF(log, "Found executable module: %s",
                 exe_module_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(exe_module_sp);
-      UpdateImageLoadAddress(exe_module_sp.get(), image_infos[exe_idx]);
+      UpdateImageLoadAddress(exe_module_sp.get(), images[exe_idx].first);
       if (exe_module_sp.get() != target.GetExecutableModulePointer())
         target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
 
@@ -594,14 +593,12 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   }
 
   if (dyld_idx != UINT32_MAX) {
-    const bool can_create = true;
-    ModuleSP dyld_sp = FindTargetModuleForImageInfo(image_infos[dyld_idx],
-                                                    can_create, nullptr);
+    ModuleSP dyld_sp = images[dyld_idx].second;
     if (dyld_sp.get()) {
       LLDB_LOGF(log, "Found dyld module: %s",
                 dyld_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(dyld_sp);
-      UpdateImageLoadAddress(dyld_sp.get(), image_infos[dyld_idx]);
+      UpdateImageLoadAddress(dyld_sp.get(), images[dyld_idx].first);
       SetDYLDModule(dyld_sp);
     }
   }
@@ -690,8 +687,35 @@ map(InputIterator first, InputIterator last,
   return results;
 }
 
+std::vector<std::pair<DynamicLoaderDarwin::ImageInfo, ModuleSP>>
+DynamicLoaderDarwin::PreloadModulesFromImageInfos(
+    const ImageInfo::collection &image_infos) {
+  auto ImageLoad = [this](const ImageInfo &image_info) {
+    return std::make_pair(
+        image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
+  };
+  bool is_parallel_load =
+      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  auto images = is_parallel_load
+                    ? parallel_map<ImageInfo::collection::const_iterator,
+                                   std::pair<ImageInfo, ModuleSP>>(
+                          Debugger::GetThreadPool(), image_infos.begin(),
+                          image_infos.end(), ImageLoad)
+                    : map<ImageInfo::collection::const_iterator,
+                          std::pair<ImageInfo, ModuleSP>>(
+                          image_infos.begin(), image_infos.end(), ImageLoad);
+  return images;
+}
+
 bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
     ImageInfo::collection &image_infos) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  auto images = PreloadModulesFromImageInfos(image_infos);
+  return AddModulesUsingPreloadedModules(images);
+}
+
+bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
+    std::vector<std::pair<ImageInfo, ModuleSP>> &images) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Now add these images to the main list.
   ModuleList loaded_module_list;
@@ -699,28 +723,15 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
   Target &target = m_process->GetTarget();
   ModuleList &target_images = target.GetImages();
 
-  auto ImageLoad = [this, log](const ImageInfo &image_info) {
+  for (uint32_t idx = 0; idx < images.size(); ++idx) {
+    auto &image_info = images[idx].first;
+    const auto &image_module_sp = images[idx].second;
     if (log) {
       LLDB_LOGF(log, "Adding new image at address=0x%16.16" PRIx64 ".",
                 image_info.address);
       image_info.PutToLog(log);
     }
-    return FindTargetModuleForImageInfo(image_info, true, nullptr);
-  };
-  bool is_parallel_load =
-      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
-  auto images =
-      is_parallel_load
-          ? parallel_map<ImageInfo::collection::const_iterator, ModuleSP>(
-                Debugger::GetThreadPool(), image_infos.begin(),
-                image_infos.end(), ImageLoad)
-          : map<ImageInfo::collection::const_iterator, ModuleSP>(
-                image_infos.begin(), image_infos.end(), ImageLoad);
-
-  for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
-    m_dyld_image_infos.push_back(image_infos[idx]);
-
-    ModuleSP image_module_sp = images[idx];
+    m_dyld_image_infos.push_back(image_info);
 
     if (image_module_sp) {
       ObjectFile *objfile = image_module_sp->GetObjectFile();
@@ -732,7 +743,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               sections->FindSectionByName(commpage_dbstr).get();
           if (commpage_section) {
             ModuleSpec module_spec(objfile->GetFileSpec(),
-                                   image_infos[idx].GetArchitecture());
+                                   image_info.GetArchitecture());
             module_spec.GetObjectName() = commpage_dbstr;
             ModuleSP commpage_image_module_sp(
                 target_images.FindFirstModule(module_spec));
@@ -745,17 +756,17 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
                 commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_infos[idx].file_spec, image_infos[idx].address);
+                    image_info.file_spec, image_info.address);
                 // Always load a memory image right away in the target in case
                 // we end up trying to read the symbol table from memory... The
                 // __LINKEDIT will need to be mapped so we can figure out where
                 // the symbol table bits are...
                 bool changed = false;
                 UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_infos[idx]);
+                                       image_info);
                 target.GetImages().Append(commpage_image_module_sp);
                 if (changed) {
-                  image_infos[idx].load_stop_id = m_process->GetStopID();
+                  image_info.load_stop_id = m_process->GetStopID();
                   loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
                 }
               }
@@ -768,14 +779,14 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
       // address. We need to check this so we don't mention that all loaded
       // shared libraries are newly loaded each time we hit out dyld breakpoint
       // since dyld will list all shared libraries each time.
-      if (UpdateImageLoadAddress(image_module_sp.get(), image_infos[idx])) {
+      if (UpdateImageLoadAddress(image_module_sp.get(), image_info)) {
         target_images.AppendIfNeeded(image_module_sp);
         loaded_module_list.AppendIfNeeded(image_module_sp);
       }
 
       // To support macCatalyst and legacy iOS simulator,
       // update the module's platform with the DYLD info.
-      ArchSpec dyld_spec = image_infos[idx].GetArchitecture();
+      ArchSpec dyld_spec = image_info.GetArchitecture();
       auto &dyld_triple = dyld_spec.GetTriple();
       if ((dyld_triple.getEnvironment() == llvm::Triple::MacABI &&
            dyld_triple.getOS() == llvm::Triple::IOS) ||
