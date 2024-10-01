@@ -22,6 +22,58 @@
 #include <map>
 
 namespace llvm {
+class PGOContextualProfile;
+class PGOCtxProfContext;
+
+namespace internal {
+// When we traverse the contextual profile, we typically want to visit contexts
+// pertaining to a specific function. To avoid traversing the whole tree, we
+// want to keep a per-function list - which will be in preorder - of that
+// function's contexts. This happens in PGOContextualProfile. For memory use
+// efficiency, we want to make PGOCtxProfContext an intrusive double-linked list
+// node. We need to handle the cases where PGOCtxProfContext nodes are moved and
+// deleted: in both cases, we need to update the index (==list). We can do that
+// directly from the node in the list, without knowing who the "parent" of the
+// list is. That makes the ADT ilist overkill here. Finally, IndexNode is meant
+// to be an implementation detail of PGOCtxProfContext, and the only reason it's
+// factored out is to avoid implementing move semantics for all its members.
+class IndexNode {
+  // This class' members are intentionally private - it's a convenience
+  // implementation detail.
+  friend class ::llvm::PGOCtxProfContext;
+  friend class ::llvm::PGOContextualProfile;
+
+  IndexNode *Previous = nullptr;
+  IndexNode *Next = nullptr;
+
+  ~IndexNode() {
+    if (Next)
+      Next->Previous = Previous;
+    if (Previous)
+      Previous->Next = Next;
+  }
+
+  IndexNode(const IndexNode &Other) = delete;
+
+  IndexNode(IndexNode &&Other) {
+    // Copy the neighbor info
+    Next = Other.Next;
+    Previous = Other.Previous;
+
+    // Update the neighbors to point to this object
+    if (Other.Next)
+      Other.Next->Previous = this;
+    if (Other.Previous)
+      Other.Previous->Next = this;
+
+    // Make sure the dtor is a noop
+    Other.Next = nullptr;
+    Other.Previous = nullptr;
+  }
+  IndexNode() = default;
+};
+} // namespace internal
+
 /// A node (context) in the loaded contextual profile, suitable for mutation
 /// during IPO passes. We generally expect a fraction of counters and
 /// callsites to be populated. We continue to model counters as vectors, but
@@ -29,13 +81,15 @@ namespace llvm {
 /// there is a small number of indirect targets (usually, 1 for direct calls);
 /// but potentially a large number of callsites, and, as inlining progresses,
 /// the callsite count of a caller will grow.
-class PGOCtxProfContext final {
+class PGOCtxProfContext final : public internal::IndexNode {
 public:
   using CallTargetMapTy = std::map<GlobalValue::GUID, PGOCtxProfContext>;
   using CallsiteMapTy = std::map<uint32_t, CallTargetMapTy>;
 
 private:
   friend class PGOCtxProfileReader;
+  friend class PGOContextualProfile;
+
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
   CallsiteMapTy Callsites;
@@ -47,11 +101,15 @@ private:
   getOrEmplace(uint32_t Index, GlobalValue::GUID G,
                SmallVectorImpl<uint64_t> &&Counters);
 
+  // Create a bogus context object, used for anchoring the index double linked
+  // list - see IndexNode
+  PGOCtxProfContext() = default;
+
 public:
   PGOCtxProfContext(const PGOCtxProfContext &) = delete;
   PGOCtxProfContext &operator=(const PGOCtxProfContext &) = delete;
   PGOCtxProfContext(PGOCtxProfContext &&) = default;
-  PGOCtxProfContext &operator=(PGOCtxProfContext &&) = default;
+  PGOCtxProfContext &operator=(PGOCtxProfContext &&) = delete;
 
   GlobalValue::GUID guid() const { return GUID; }
   const SmallVectorImpl<uint64_t> &counters() const { return Counters; }
