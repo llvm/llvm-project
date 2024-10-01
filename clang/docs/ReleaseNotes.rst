@@ -43,7 +43,7 @@ code bases.
   still supporting SPARC V8 CPUs need to specify ``-mcpu=v8`` with a
   `config file
   <https://clang.llvm.org/docs/UsersManual.html#configuration-files>`_.
-  
+
 - The ``clang-rename`` tool has been removed.
 
 C/C++ Language Potentially Breaking Changes
@@ -115,7 +115,7 @@ C++ Language Changes
 - Allow single element access of GCC vector/ext_vector_type object to be
   constant expression. Supports the `V.xyzw` syntax and other tidbits
   as seen in OpenCL. Selecting multiple elements is left as a future work.
-- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension 
+- Implement `CWG1815 <https://wg21.link/CWG1815>`_. Support lifetime extension
   of temporary created by aggregate initialization using a default member
   initializer.
 
@@ -451,6 +451,9 @@ Miscellaneous Clang Crashes Fixed
   Now a diagnostic is emitted. (#GH35741)
 
 - Fixed ``-ast-dump`` crashes on codes involving ``concept`` with ``-ast-dump-decl-types``. (#GH94928)
+
+- Fixed internal assertion firing when a declaration in the implicit global
+  module is found through ADL. (GH#109879)
 
 OpenACC Specific Changes
 ------------------------
