@@ -64,7 +64,8 @@ void thinLTOInternalizeAndPromoteInIndex(
         isPrevailing);
 
 /// Computes a unique hash for the Module considering the current list of
-/// export/import and other global analysis results.
+/// export/import and other global analysis results. Optionally, \p ExtraID
+/// can be used to add an extra identifier to the hash.
 std::string computeLTOCacheKey(
     const lto::Config &Conf, const ModuleSummaryIndex &Index,
     StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
@@ -72,7 +73,8 @@ std::string computeLTOCacheKey(
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs = {},
-    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {});
+    const DenseSet<GlobalValue::GUID> &CfiFunctionDecls = {},
+    StringRef ExtraID = {});
 
 namespace lto {
 
