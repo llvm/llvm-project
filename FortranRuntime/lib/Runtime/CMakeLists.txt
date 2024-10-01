@@ -1,4 +1,4 @@
-#===-- runtime/CMakeLists.txt ----------------------------------------------===#
+#===-- lib/Runtime/CMakeLists.txt ------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
-  set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../flang")
 
   set(LLVM_COMMON_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../cmake")
   set(LLVM_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../llvm/cmake")

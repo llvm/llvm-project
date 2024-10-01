@@ -105,7 +105,7 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(compile_with "-fsyntax-only")
     set(object_output "")
     set(include_in_link FALSE)
-    set(fullpath "${FLANG_SOURCE_DIR}/../FortranRuntime/module/${filename}.f90")
+    set(fullpath "${FLANG_SOURCE_DIR}/module/${filename}.f90")
     if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
       set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
       set(compile_with -c -o ${object_output})
@@ -119,7 +119,7 @@ if (NOT CMAKE_CROSSCOMPILING)
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
       COMMAND flang-new ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${fullpath}
-      DEPENDS flang-new ${fullpath} ${FLANG_SOURCE_DIR}/../FortranRuntime/module/__fortran_builtins.f90 ${depends}
+      DEPENDS flang-new ${fullpath} ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
     install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")

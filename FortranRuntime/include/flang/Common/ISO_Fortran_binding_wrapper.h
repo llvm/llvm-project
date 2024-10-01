@@ -28,7 +28,7 @@ namespace Fortran {
 namespace ISO {
 #define FORTRAN_ISO_NAMESPACE_ ::Fortran::ISO
 #endif /* __cplusplus */
-#include "ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding.h"
 #ifdef __cplusplus
 } // namespace ISO
 } // namespace Fortran

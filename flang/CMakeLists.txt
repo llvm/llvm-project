@@ -538,7 +538,7 @@ endif()
 include(GetClangResourceDir)
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
-  ../FortranRuntime/include/flang/Common/ISO_Fortran_binding.h
+  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
   ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
 
 # And also install it into the install area

@@ -11,10 +11,10 @@
 #ifndef FORTRAN_RUNTIME_IO_API_H_
 #define FORTRAN_RUNTIME_IO_API_H_
 
+#include "flang/Common/magic-numbers.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/iostat.h"
-#include "flang/Runtime/magic-numbers.h"
 #include <cinttypes>
 #include <cstddef>
 
