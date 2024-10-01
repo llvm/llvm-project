@@ -11,9 +11,12 @@ struct {
   char c;
   long double ldb;
 } agggregate_LD = {};
-// GNU32: @agggregate_LD = dso_local global { i8, [3 x i8], x86_fp80 } zeroinitializer, align 4
-// GNU64: @agggregate_LD = dso_local global { i8, [15 x i8], x86_fp80 } zeroinitializer, align 16
-// MSC64: @agggregate_LD = dso_local global { i8, [7 x i8], double } zeroinitializer, align 8
+// GNU32: %struct.anon = type { i8, x86_fp80 }
+// GNU32: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 4
+// GNU64: %struct.anon = type { i8, x86_fp80 }
+// GNU64: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 16
+// MSC64: %struct.anon = type { i8, double }
+// MSC64: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 8
 
 long double dataLD = 1.0L;
 // GNU32: @dataLD = dso_local global x86_fp80 0xK3FFF8000000000000000, align 4

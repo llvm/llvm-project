@@ -8,7 +8,7 @@ struct foo {
 // CHECK: @u ={{.*}} global %union.anon zeroinitializer
 union { int i; float f; } u = { };
 
-// CHECK: @u2 ={{.*}} global { i32, [4 x i8] } zeroinitializer
+// CHECK: @u2 ={{.*}} global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
 union { int i; double f; } u2 = { };
 
 // CHECK: @u3 ={{.*}} global  %union.anon.1 zeroinitializer
@@ -62,22 +62,22 @@ struct overwrite_string_struct2 {
   char L[6];
   int M;
 } overwrite_string2[] = { { { "foo" }, 1 }, [0].L[2] = 'x'};
-// CHECK: [6 x i8] c"fox\00\00\00", [2 x i8] zeroinitializer, i32 1
+// CHECK: [6 x i8] c"fox\00\00\00", i32 1
 struct overwrite_string_struct3 {
   char L[3];
   int M;
 } overwrite_string3[] = { { { "foo" }, 1 }, [0].L[2] = 'x'};
-// CHECK: [3 x i8] c"fox", i8 0, i32 1
+// CHECK: [3 x i8] c"fox", i32 1
 struct overwrite_string_struct4 {
   char L[3];
   int M;
 } overwrite_string4[] = { { { "foobar" }, 1 }, [0].L[2] = 'x'};
-// CHECK: [3 x i8] c"fox", i8 0, i32 1
+// CHECK: [3 x i8] c"fox", i32 1
 struct overwrite_string_struct5 {
   char L[6];
   int M;
 } overwrite_string5[] = { { { "foo" }, 1 }, [0].L[4] = 'y'};
-// CHECK: [6 x i8] c"foo\00y\00", [2 x i8] zeroinitializer, i32 1
+// CHECK: [6 x i8] c"foo\00y\00", i32 1
 
 
 // CHECK: @u1 = {{.*}} { i32 65535 }
@@ -138,7 +138,7 @@ union_16644_t union_16644_instance_4[2] =
   [1].b[1] = 4
 };
 
-// CHECK: @lab ={{.*}} global { [4 x i8], i32 } { [4 x i8] zeroinitializer, i32 123 }
+// CHECK: @lab ={{.*}} global { [4 x i8], i32 } { [4 x i8] undef, i32 123 }
 struct leading_anon_bitfield { int : 32; int n; } lab = { .n = 123 };
 
 struct Base {
