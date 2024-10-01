@@ -1071,8 +1071,7 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
       Result.ScalarizeLoadStore = Enable;
     else if (ParamName == "variable-insert-extract")
       Result.ScalarizeVariableInsertExtract = Enable;
-    else
-    } else {
+    else {
       return make_error<StringError>(
           formatv("invalid Scalarizer pass parameter '{0}' ", ParamName).str(),
           inconvertibleErrorCode());
