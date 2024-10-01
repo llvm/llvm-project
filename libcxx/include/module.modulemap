@@ -2237,3 +2237,5 @@ module std_private_mbstate_t [system] {
   header "__mbstate_t.h"
   export *
 }
+
+module std_private_memory_voidify                         [system] { header "__memory/voidify.h" }
