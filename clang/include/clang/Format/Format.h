@@ -53,10 +53,24 @@ std::error_code make_error_code(ParseError e);
 /// The ``FormatStyle`` is used to configure the formatting to follow
 /// specific guidelines.
 struct FormatStyle {
-  // If the BasedOn: was InheritParentConfig and this style needs the file from
-  // the parent directories. It is not part of the actual style for formatting.
-  // Thus the // instead of ///.
-  bool InheritsParentConfig;
+  // If the BasedOnStyle: was InheritParentConfig, this is the string
+  // "<parent>", indicating to search upwards until a _clang-format or
+  // .clang-format file is found.
+  //
+  // Else, if the BasedOnStyle: was an explicit "file:" reference, this is
+  // that reference, verbatim, including the "file:" prefix. The string
+  // after "file:" may start with $(CLANG_FORMAT_DIR), in which case the value
+  // of the CLANG_FORMAT_DIR environment variable (which must be defined) is
+  // substituted; otherwise, the string after "file:" is interpreted as a
+  // path relative to the current config file. (Absolute paths are not
+  // permitted, for security reasons.)
+  //
+  // Else (i.e., if the BasedOnStyle is omitted or a predefined style), this is
+  // the empty string.
+  //
+  // This field is not part of the actual style for formatting, thus the //
+  // instead of ///.
+  std::string InheritsConfig;
 
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   /// \version 3.3
