@@ -370,11 +370,6 @@ struct CufDataTransferOpConversion
     mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
     mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
 
-    // Only convert cuf.data_transfer with at least one descripor.
-    if (!mlir::isa<fir::BaseBoxType>(srcTy) &&
-        !mlir::isa<fir::BaseBoxType>(dstTy))
-      return failure();
-
     unsigned mode;
     if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
       mode = kHostToDevice;
@@ -387,7 +382,64 @@ struct CufDataTransferOpConversion
     auto mod = op->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
+    fir::KindMapping kindMap{fir::getKindMapping(mod)};
+    mlir::Value modeValue =
+        builder.createIntegerConstant(loc, builder.getI32Type(), mode);
 
+    // Convert data transfer without any descriptor.
+    if (!mlir::isa<fir::BaseBoxType>(srcTy) &&
+        !mlir::isa<fir::BaseBoxType>(dstTy)) {
+
+      if (fir::isa_trivial(srcTy) && !fir::isa_trivial(dstTy)) {
+        // TODO: scalar to array data transfer.
+        mlir::emitError(loc,
+                        "not yet implemented: scalar to array data transfer\n");
+        return mlir::failure();
+      }
+
+      mlir::Type i64Ty = builder.getI64Type();
+      mlir::Value nbElement;
+      if (op.getShape()) {
+        auto shapeOp =
+            mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp());
+        nbElement = rewriter.create<fir::ConvertOp>(loc, i64Ty,
+                                                    shapeOp.getExtents()[0]);
+        for (unsigned i = 1; i < shapeOp.getExtents().size(); ++i) {
+          auto operand = rewriter.create<fir::ConvertOp>(
+              loc, i64Ty, shapeOp.getExtents()[i]);
+          nbElement =
+              rewriter.create<mlir::arith::MulIOp>(loc, nbElement, operand);
+        }
+      } else {
+        if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(dstTy))
+          nbElement = builder.createIntegerConstant(
+              loc, i64Ty, seqTy.getConstantArraySize());
+      }
+      int width = computeWidth(loc, dstTy, kindMap);
+      mlir::Value widthValue = rewriter.create<mlir::arith::ConstantOp>(
+          loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
+      mlir::Value bytes =
+          nbElement
+              ? rewriter.create<mlir::arith::MulIOp>(loc, nbElement, widthValue)
+              : widthValue;
+
+      mlir::func::FuncOp func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferPtrPtr)>(loc,
+                                                                       builder);
+      auto fTy = func.getFunctionType();
+      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      mlir::Value sourceLine =
+          fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+
+      llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
+          builder, loc, fTy, op.getDst(), op.getSrc(), bytes, modeValue,
+          sourceFile, sourceLine)};
+      builder.create<fir::CallOp>(loc, func, args);
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
+    // Conversion of data transfer involving at least one descriptor.
     if (mlir::isa<fir::BaseBoxType>(srcTy) &&
         mlir::isa<fir::BaseBoxType>(dstTy)) {
       // Transfer between two descriptor.
@@ -396,8 +448,6 @@ struct CufDataTransferOpConversion
               loc, builder);
 
       auto fTy = func.getFunctionType();
-      mlir::Value modeValue =
-          builder.createIntegerConstant(loc, builder.getI32Type(), mode);
       mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
@@ -430,8 +480,6 @@ struct CufDataTransferOpConversion
       builder.create<fir::CallOp>(loc, func, args);
       rewriter.eraseOp(op);
     } else {
-      mlir::Value modeValue =
-          builder.createIntegerConstant(loc, builder.getI32Type(), mode);
       // Type used to compute the width.
       mlir::Type computeType = dstTy;
       auto seqTy = mlir::dyn_cast<fir::SequenceType>(dstTy);
@@ -441,7 +489,6 @@ struct CufDataTransferOpConversion
         computeType = srcTy;
         seqTy = mlir::dyn_cast<fir::SequenceType>(srcTy);
       }
-      fir::KindMapping kindMap{fir::getKindMapping(mod)};
       int width = computeWidth(loc, computeType, kindMap);
 
       mlir::Value nbElement;
@@ -509,13 +556,6 @@ public:
         fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    target.addDynamicallyLegalOp<cuf::DataTransferOp>(
-        [](::cuf::DataTransferOp op) {
-          mlir::Type srcTy = fir::unwrapRefType(op.getSrc().getType());
-          mlir::Type dstTy = fir::unwrapRefType(op.getDst().getType());
-          return !mlir::isa<fir::BaseBoxType>(srcTy) &&
-                 !mlir::isa<fir::BaseBoxType>(dstTy);
-        });
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
