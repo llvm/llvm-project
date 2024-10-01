@@ -5759,6 +5759,8 @@ The following builtin intrinsics can be used in constant expressions:
 
 The following x86-specific intrinsics can be used in constant expressions:
 
+* ``_addcarry_u32``
+* ``_addcarry_u64``
 * ``_bit_scan_forward``
 * ``_bit_scan_reverse``
 * ``__bsfd``
@@ -5799,6 +5801,8 @@ The following x86-specific intrinsics can be used in constant expressions:
 * ``_rotwr``
 * ``_lrotl``
 * ``_lrotr``
+* ``_subborrow_u32``
+* ``_subborrow_u64``
 
 Debugging the Compiler
 ======================
