@@ -459,7 +459,7 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
                   Optimal = Optimal.unionWith(ConstantFPRange(V));
               });
 
-          ASSERT_TRUE(Res.contains(Optimal))
+          EXPECT_TRUE(Res.contains(Optimal))
               << "Wrong result for makeAllowedFCmpRegion(" << Pred << ", " << CR
               << "). Expected " << Optimal << ", but got " << Res;
           EXPECT_EQ(Res, Optimal)
