@@ -70,13 +70,13 @@ using r4i = r4<int>;
 namespace GH109538 {
 static_assert(requires(void *t) { t; });
 static_assert(requires(void) { 42; });
-static_assert(!requires(void t) { // expected-error {{argument may not have 'void' type}}
+static_assert(requires(void t) { // expected-error {{argument may not have 'void' type}}
   t;
 });
-static_assert(!requires(void t, int a) {  // expected-error {{'void' must be the first and only parameter if specified}}
+static_assert(requires(void t, int a) {  // expected-error {{'void' must be the first and only parameter if specified}}
   t;
 });
-static_assert(!requires(const void) { // expected-error {{'void' as parameter must not have type qualifiers}}
+static_assert(requires(const void) { // expected-error {{'void' as parameter must not have type qualifiers}}
   42;
 });
 } // namespace GH109538

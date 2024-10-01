@@ -9512,13 +9512,12 @@ Sema::ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
     if (Param->getType()->isVoidType()) {
       if (LocalParameters.size() > 1) {
         Diag(Param->getBeginLoc(), diag::err_void_only_param);
-        Param->setInvalidDecl();
+        Param->setType(Context.IntTy);
       } else if (Param->getIdentifier()) {
         Diag(Param->getBeginLoc(), diag::err_param_with_void_type);
-        Param->setInvalidDecl();
+        Param->setType(Context.IntTy);
       } else if (Param->getType().hasQualifiers()) {
         Diag(Param->getBeginLoc(), diag::err_void_param_qualified);
-        Param->setInvalidDecl();
       }
     }
 
