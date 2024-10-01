@@ -154,7 +154,7 @@ struct MissingFeatures {
   static bool CGFPOptionsRAII() { return false; }
   static bool getFPFeaturesInEffect() { return false; }
   static bool cxxABI() { return false; }
-  static bool openCL() { return false; }
+  static bool openCLCXX() { return false; }
   static bool openCLBuiltinTypes() { return false; }
   static bool CUDA() { return false; }
   static bool openMP() { return false; }

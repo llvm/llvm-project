@@ -253,7 +253,7 @@ static void buildDeclDestroy(CIRGenFunction &CGF, const VarDecl *D) {
   if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
     assert(!D->getTLSKind() && "TLS NYI");
     assert(!Record->hasTrivialDestructor());
-    assert(!MissingFeatures::openCL());
+    assert(!MissingFeatures::openCLCXX());
     CXXDestructorDecl *Dtor = Record->getDestructor();
     // In LLVM OG codegen this is done in registerGlobalDtor, but CIRGen
     // relies on LoweringPrepare for further decoupling, so build the
