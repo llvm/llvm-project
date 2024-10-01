@@ -4926,7 +4926,7 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ;
 ; GFX12-LABEL: sgpr_base_large_offset:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
+; GFX12-NEXT:    scratch_load_b32 v2, off, s0 offset:65512
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_nop 0
@@ -4985,7 +4985,7 @@ define amdgpu_gs void @sgpr_base_large_offset(ptr addrspace(1) %out, ptr addrspa
 ;
 ; GFX12-PAL-LABEL: sgpr_base_large_offset:
 ; GFX12-PAL:       ; %bb.0: ; %entry
-; GFX12-PAL-NEXT:    scratch_load_b32 v2, off, s0 offset:-24
+; GFX12-PAL-NEXT:    scratch_load_b32 v2, off, s0 offset:65512
 ; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-PAL-NEXT:    s_nop 0
@@ -5038,7 +5038,7 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0x1000000
 ; GFX12-NEXT:    s_and_b32 s0, s0, -4
-; GFX12-NEXT:    scratch_load_b32 v2, v2, s0 offset:-24 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_load_b32 v2, v2, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_nop 0
@@ -5103,7 +5103,7 @@ define amdgpu_gs void @sgpr_base_large_offset_split(ptr addrspace(1) %out, ptr a
 ; GFX12-PAL:       ; %bb.0: ; %entry
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v2, 0x1000000
 ; GFX12-PAL-NEXT:    s_and_b32 s0, s0, -4
-; GFX12-PAL-NEXT:    scratch_load_b32 v2, v2, s0 offset:-24 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    scratch_load_b32 v2, v2, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-PAL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-PAL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-PAL-NEXT:    s_nop 0
@@ -5159,7 +5159,7 @@ define amdgpu_gs void @sgpr_base_plus_sgpr_plus_vgpr_plus_large_imm_offset(ptr a
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-NEXT:    scratch_store_b32 v0, v1, s0 offset:-24 scope:SCOPE_SYS
+; GFX12-NEXT:    scratch_store_b32 v0, v1, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -5221,7 +5221,7 @@ define amdgpu_gs void @sgpr_base_plus_sgpr_plus_vgpr_plus_large_imm_offset(ptr a
 ; GFX12-PAL:       ; %bb.0: ; %bb
 ; GFX12-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX12-PAL-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, s0 offset:-24 scope:SCOPE_SYS
+; GFX12-PAL-NEXT:    scratch_store_b32 v0, v1, s0 offset:65512 scope:SCOPE_SYS
 ; GFX12-PAL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-PAL-NEXT:    s_endpgm
 bb:
