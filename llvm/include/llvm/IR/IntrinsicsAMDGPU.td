@@ -2119,38 +2119,13 @@ class AMDGPUWaveReduce<LLVMType data_ty = llvm_any_ty> : Intrinsic<
     ],
     [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]>;
 
-//multiclass AMDGPUWaveReducee {
-//  foreach Opcode = ["umin", "umax", "add", "uadd", "sub", "usub", "and", "or", "xor"] in 
-//   def int_amdgcn_wave_reduce_#Opcode : AMDGPUWaveReduce;
-//}
+multiclass AMDGPUWaveReduceGenerator<list<string> Operations>{
+  foreach Opcode = Operations in
+    def Opcode : AMDGPUWaveReduce; 
+}
 
-//multiclass AMDGPUMFp8MfmaIntrinsic<LLVMType DestTy> {
-//  foreach kind = ["bf8_bf8", "bf8_fp8", "fp8_bf8", "fp8_fp8"] in
-//    def NAME#"_"#kind : AMDGPUMFp8MfmaIntrinsic<DestTy>;
-//}
-
-//WaveReduceDefs<["umin", "umax", "add", "uadd", "sub", "usub", "and", "or", "xor"]>;
-//list<string> Operations
-
-def int_amdgcn_wave_reduce_umin : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_min : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_fmin : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_umax : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_max : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_fmax : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_add : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_uadd : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_fadd : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_sub : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_usub : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_fsub : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_and : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_uand : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_fand : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_or : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_uor : AMDGPUWaveReduce;
-//def int_amdgcn_wave_reduce_for : AMDGPUWaveReduce;
-def int_amdgcn_wave_reduce_xor : AMDGPUWaveReduce;
+defvar Operations = ["umin", "min", "fmin", "umax", "max", "fmax", "add", "fadd", "sub", "fsub", "and", "or", "xor"];
+defm int_amdgcn_wave_reduce_ : AMDGPUWaveReduceGenerator<Operations>;
 
 def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
