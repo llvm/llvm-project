@@ -337,7 +337,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonical
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -350,7 +349,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicalf
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -363,7 +361,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicall
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -376,7 +373,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicalf16
-    lib.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -389,7 +385,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicalf128
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

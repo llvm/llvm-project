@@ -13,8 +13,6 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "hdr/math_macros.h"
-
 template <typename T>
 class IsCanonicalTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
