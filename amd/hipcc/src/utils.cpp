@@ -21,6 +21,7 @@ typedef std::string::size_type TSIZE;
 #endif
 
 #include <iostream>
+#include <sstream>
 
 std::string hipcc::utils::getSelfPath() {
   constexpr size_t MAX_PATH_CHAR = 1024;
