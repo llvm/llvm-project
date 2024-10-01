@@ -144,6 +144,8 @@ class SPIRVEmitIntrinsics
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx,
                                   std::unordered_set<Function *> &FVisited);
+  void replaceWithPtrcasted(Instruction *CI, Type *NewElemTy, Type *KnownElemTy,
+                            CallInst *AssignCI);
 
 public:
   static char ID;
@@ -187,6 +189,13 @@ bool isConvergenceIntrinsic(const Instruction *I) {
   return II->getIntrinsicID() == Intrinsic::experimental_convergence_entry ||
          II->getIntrinsicID() == Intrinsic::experimental_convergence_loop ||
          II->getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+}
+
+bool expectIgnoredInIRTranslation(const Instruction *I) {
+  const auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  return II->getIntrinsicID() == Intrinsic::invariant_start;
 }
 
 bool allowEmitFakeUse(const Value *Arg) {
@@ -502,10 +511,11 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (DemangledName.length() > 0)
         DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName);
       auto AsArgIt = ResTypeByArg.find(DemangledName);
-      if (AsArgIt != ResTypeByArg.end()) {
+      if (AsArgIt != ResTypeByArg.end())
         Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
                                      Visited, UnknownElemTypeI8);
-      }
+      else if (Type *KnownRetTy = GR->findDeducedElementType(CalledF))
+        Ty = KnownRetTy;
     }
   }
 
@@ -835,6 +845,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
       CallInst *PtrCastI =
           B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
       I->setOperand(OpIt.second, PtrCastI);
+      buildAssignPtr(B, KnownElemTy, PtrCastI);
     }
   }
 }
@@ -1563,7 +1574,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       I->setOperand(OpNo, NewOp);
     }
   }
-  if (I->hasName() && !I->getType()->isAggregateType()) {
+  if (I->hasName() && !I->getType()->isAggregateType() &&
+      !expectIgnoredInIRTranslation(I)) {
     reportFatalOnTokenType(I);
     setInsertPointAfterDef(B, I);
     std::vector<Value *> Args = {I};
@@ -1736,6 +1748,26 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   return true;
 }
 
+void SPIRVEmitIntrinsics::replaceWithPtrcasted(Instruction *CI, Type *NewElemTy,
+                                               Type *KnownElemTy,
+                                               CallInst *AssignCI) {
+  updateAssignType(AssignCI, CI, PoisonValue::get(NewElemTy));
+  IRBuilder<> B(CI->getContext());
+  B.SetInsertPoint(*CI->getInsertionPointAfterDef());
+  B.SetCurrentDebugLocation(CI->getDebugLoc());
+  Type *OpTy = CI->getType();
+  SmallVector<Type *, 2> Types = {OpTy, OpTy};
+  SmallVector<Value *, 2> Args = {CI, buildMD(PoisonValue::get(KnownElemTy)),
+                                  B.getInt32(getPointerAddressSpace(OpTy))};
+  CallInst *PtrCasted =
+      B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+  SmallVector<User *> Users(CI->users());
+  for (auto *U : Users)
+    if (U != AssignCI && U != PtrCasted)
+      U->replaceUsesOfWith(CI, PtrCasted);
+  buildAssignPtr(B, KnownElemTy, PtrCasted);
+}
+
 // Try to deduce a better type for pointers to untyped ptr.
 bool SPIRVEmitIntrinsics::postprocessTypes() {
   bool Changed = false;
@@ -1747,6 +1779,18 @@ bool SPIRVEmitIntrinsics::postprocessTypes() {
     Type *KnownTy = GR->findDeducedElementType(*IB);
     if (!KnownTy || !AssignCI || !isa<Instruction>(AssignCI->getArgOperand(0)))
       continue;
+    // Try to improve the type deduced after all Functions are processed.
+    if (auto *CI = dyn_cast<CallInst>(*IB)) {
+      if (Function *CalledF = CI->getCalledFunction()) {
+        Type *RetElemTy = GR->findDeducedElementType(CalledF);
+        // Fix inconsistency between known type and function's return type.
+        if (RetElemTy && RetElemTy != KnownTy) {
+          replaceWithPtrcasted(CI, RetElemTy, KnownTy, AssignCI);
+          Changed = true;
+          continue;
+        }
+      }
+    }
     Instruction *I = cast<Instruction>(AssignCI->getArgOperand(0));
     for (User *U : I->users()) {
       Instruction *Inst = dyn_cast<Instruction>(U);

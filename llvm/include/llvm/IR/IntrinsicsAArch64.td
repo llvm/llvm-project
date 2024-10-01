@@ -2961,6 +2961,15 @@ let TargetPrefix = "aarch64" in {
           [llvm_i32_ty],
           [IntrNoMem, IntrHasSideEffects]>;
 
+  def int_aarch64_sme_write_lane_zt
+       :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_write_zt
+       :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty],
+            [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+
+
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
   class SME_OuterProduct_Intrinsic
