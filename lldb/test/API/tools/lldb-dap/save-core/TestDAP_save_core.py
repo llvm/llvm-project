@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class TestDAP_save_core(lldbdap_testcase.DAPTestCaseBase):
     @skipUnlessArch("x86_64")
     @skipUnlessPlatform(["linux"])
+    @skipIf(bugnumber="rdar://137046468")
     def test_save_core(self):
         """
         Tests saving core minidump from lldb-dap.
