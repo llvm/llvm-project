@@ -1,0 +1,5 @@
+module Aborts {
+  header "aborts.h"
+  requires cplusplus
+}
+

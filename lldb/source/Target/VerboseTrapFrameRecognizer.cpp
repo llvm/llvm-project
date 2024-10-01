@@ -9,6 +9,7 @@
 
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegularExpression.h"
 
 #include "clang/CodeGen/ModuleBuilder.h"
 
@@ -36,10 +37,15 @@ static StackFrameSP FindMostRelevantFrame(Thread &selected_thread) {
     if (!frame_name)
       return nullptr;
 
-    // Found a frame outside of the `std` namespace. That's the
+    // Find a frame outside of the `std` namespace. That's the
     // first frame in user-code that ended up triggering the
     // verbose_trap. Hence that's the one we want to display.
-    if (!frame_name.GetStringRef().starts_with("std::"))
+    //
+    // IsHidden will get us to the first non-implementation detail
+    // frame. But that could still be in the `std` namespace, so
+    // check the namespace prefix too.
+    if (!frame_name.GetStringRef().starts_with("std::") &&
+        !most_relevant_frame_sp->IsHidden())
       return most_relevant_frame_sp;
 
     ++stack_idx;
