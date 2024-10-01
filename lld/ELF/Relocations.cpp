@@ -459,10 +459,12 @@ private:
 // InputSectionBase.
 class RelocationScanner {
 public:
+  RelocationScanner(Ctx &ctx) : ctx(ctx) {}
   template <class ELFT>
   void scanSection(InputSectionBase &s, bool isEH = false);
 
 private:
+  Ctx &ctx;
   InputSectionBase *sec;
   OffsetGetter getter;
 
@@ -476,6 +478,9 @@ private:
                                 uint64_t relOff) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
+  unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
+                               Symbol &sym, int64_t addend);
+
   template <class ELFT, class RelTy>
   void scanOne(typename Relocs<RelTy>::const_iterator &i);
   template <class ELFT, class RelTy> void scan(Relocs<RelTy> rels);
@@ -1294,20 +1299,21 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
 // symbol in TLS block.
 //
 // Returns the number of relocations processed.
-static unsigned handleTlsRelocation(RelType type, Symbol &sym,
-                                    InputSectionBase &c, uint64_t offset,
-                                    int64_t addend, RelExpr expr) {
+unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
+                                                uint64_t offset, Symbol &sym,
+                                                int64_t addend) {
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
       errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
-                  " cannot be used with -shared" + getLocation(c, sym, offset));
+                  " cannot be used with -shared" +
+                  getLocation(*sec, sym, offset));
       return 1;
     }
     return 0;
   }
 
   if (ctx.arg.emachine == EM_MIPS)
-    return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
+    return handleMipsTlsRelocation(type, sym, *sec, offset, addend, expr);
 
   // LoongArch does not yet implement transition from TLSDESC to LE/IE, so
   // generate TLSDESC dynamic relocation for the dynamic linker to handle.
@@ -1316,7 +1322,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
             R_TLSDESC_CALL>(expr)) {
     if (expr != R_TLSDESC_CALL) {
       sym.setFlags(NEEDS_TLSDESC);
-      c.addReloc({expr, type, offset, addend, &sym});
+      sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
@@ -1331,7 +1337,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     if (expr != R_TLSDESC_CALL) {
       if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
         sym.setFlags(NEEDS_TLSDESC);
-      c.addReloc({expr, type, offset, addend, &sym});
+      sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
@@ -1345,10 +1351,11 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
       ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
-      !c.file->ppc64DisableTLSRelax;
+      !sec->file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be optimized to use Local-Exec.
+  // must be defined and the code sequence can be optimized to use
+  // Local-Exesec->
   //
   // ARM and RISC-V do not support any relaxations for TLS relocations, however,
   // we can omit the DTPMOD dynamic relocations and resolve them at link time
@@ -1361,33 +1368,33 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   // module index, with a special value of 0 for the current module. GOT[e1] is
   // unused. There only needs to be one module index entry.
   if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(expr)) {
-    // Local-Dynamic relocs can be optimized to Local-Exec.
+    // Local-Dynamic relocs can be optimized to Local-Exesec->
     if (execOptimize) {
-      c.addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE), type,
-                  offset, addend, &sym});
+      sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
+                     type, offset, addend, &sym});
       return ctx.target->getTlsGdRelaxSkip(type);
     }
     if (expr == R_TLSLD_HINT)
       return 1;
     ctx.needsTlsLd.store(true, std::memory_order_relaxed);
-    c.addReloc({expr, type, offset, addend, &sym});
+    sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
-  // Local-Dynamic relocs can be optimized to Local-Exec.
+  // Local-Dynamic relocs can be optimized to Local-Exesec->
   if (expr == R_DTPREL) {
     if (execOptimize)
       expr = ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
-    c.addReloc({expr, type, offset, addend, &sym});
+    sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
   // thread pointer is stored in the got. This cannot be optimized to
-  // Local-Exec.
+  // Local-Exesec->
   if (expr == R_TLSLD_GOT_OFF) {
     sym.setFlags(NEEDS_GOT_DTPREL);
-    c.addReloc({expr, type, offset, addend, &sym});
+    sec->addReloc({expr, type, offset, addend, &sym});
     return 1;
   }
 
@@ -1396,7 +1403,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
             R_LOONGARCH_TLSGD_PAGE_PC>(expr)) {
     if (!execOptimize) {
       sym.setFlags(NEEDS_TLSGD);
-      c.addReloc({expr, type, offset, addend, &sym});
+      sec->addReloc({expr, type, offset, addend, &sym});
       return 1;
     }
 
@@ -1405,14 +1412,14 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     //
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
     // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
-    // the categorization in RISCV::relocateAlloc.
+    // the categorization in RISCV::relocateAllosec->
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
-      c.addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
-                  offset, addend, &sym});
+      sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),
+                     type, offset, addend, &sym});
     } else {
-      c.addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE), type,
-                  offset, addend, &sym});
+      sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_LE),
+                     type, offset, addend, &sym});
     }
     return ctx.target->getTlsGdRelaxSkip(type);
   }
@@ -1423,15 +1430,15 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
     // locally defined.  This is not supported on SystemZ.
     if (execOptimize && isLocalInExecutable && ctx.arg.emachine != EM_S390) {
-      c.addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
+      sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
       if (expr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
-        addRelativeReloc<true>(c, offset, sym, addend, expr, type);
+        addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       else
-        c.addReloc({expr, type, offset, addend, &sym});
+        sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
@@ -1539,7 +1546,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   // but we need to process them in handleTlsRelocation.
   if (sym.isTls() || oneof<R_TLSDESC_PC, R_TLSDESC_CALL>(expr)) {
     if (unsigned processed =
-            handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
+            handleTlsRelocation(expr, type, offset, sym, addend)) {
       i += processed - 1;
       return;
     }
@@ -1635,7 +1642,7 @@ void RelocationScanner::scanSection(InputSectionBase &s, bool isEH) {
     scan<ELFT>(rels.relas);
 }
 
-template <class ELFT> void elf::scanRelocations() {
+template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
   // Scan all relocations. Each relocation goes through a series of tests to
   // determine if it needs special treatment, such as creating GOT, PLT,
   // copy relocations, etc. Note that relocations for non-alloc sections are
@@ -1649,8 +1656,8 @@ template <class ELFT> void elf::scanRelocations() {
   parallel::TaskGroup tg;
   auto outerFn = [&]() {
     for (ELFFileBase *f : ctx.objectFiles) {
-      auto fn = [f]() {
-        RelocationScanner scanner;
+      auto fn = [f, &ctx]() {
+        RelocationScanner scanner(ctx);
         for (InputSectionBase *s : f->getSections()) {
           if (s && s->kind() == SectionBase::Regular && s->isLive() &&
               (s->flags & SHF_ALLOC) &&
@@ -1663,8 +1670,8 @@ template <class ELFT> void elf::scanRelocations() {
       else
         tg.spawn(fn);
     }
-    auto scanEH = [] {
-      RelocationScanner scanner;
+    auto scanEH = [&] {
+      RelocationScanner scanner(ctx);
       for (Partition &part : ctx.partitions) {
         for (EhInputSection *sec : part.ehFrame->sections)
           scanner.template scanSection<ELFT>(*sec, /*isEH=*/true);
@@ -1771,8 +1778,8 @@ static bool handleNonPreemptibleIfunc(Symbol &sym, uint16_t flags) {
   return true;
 }
 
-void elf::postScanRelocations() {
-  auto fn = [](Symbol &sym) {
+void elf::postScanRelocations(Ctx &ctx) {
+  auto fn = [&](Symbol &sym) {
     auto flags = sym.flags.load(std::memory_order_relaxed);
     if (handleNonPreemptibleIfunc(sym, flags))
       return;
@@ -2453,10 +2460,10 @@ template <class ELFT> void elf::checkNoCrossRefs() {
   }
 }
 
-template void elf::scanRelocations<ELF32LE>();
-template void elf::scanRelocations<ELF32BE>();
-template void elf::scanRelocations<ELF64LE>();
-template void elf::scanRelocations<ELF64BE>();
+template void elf::scanRelocations<ELF32LE>(Ctx &);
+template void elf::scanRelocations<ELF32BE>(Ctx &);
+template void elf::scanRelocations<ELF64LE>(Ctx &);
+template void elf::scanRelocations<ELF64BE>(Ctx &);
 
 template void elf::checkNoCrossRefs<ELF32LE>();
 template void elf::checkNoCrossRefs<ELF32BE>();
