@@ -956,6 +956,9 @@ cc_library(
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
+        "include/llvm/Analysis/ValueTracking.h",
+        "include/llvm/Analysis/SimplifyQuery.h",
+        "include/llvm/Analysis/WithCache.h",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob(["include/llvm/IR/*.def"]),
