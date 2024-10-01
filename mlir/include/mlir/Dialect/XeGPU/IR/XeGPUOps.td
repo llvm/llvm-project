@@ -445,7 +445,8 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
     %off = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
-    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex> -> TensorDesc<4x8xf32, chunk_size = 8>
+    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
+          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
     ```
 
     Example 3. It is similar to Example 2, but there is some overlaps among workitems.
@@ -453,7 +454,8 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     ```mlir
     %0 = memref.alloc() : memref<1024xf32>
     %off = arith.constant dense<[0, 4, 8, 12]> : vector<4xindex>
-    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex> -> TensorDesc<4x8xf32, chunk_size = 8>>
+    %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
+          -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>>
     ```
   }];
 
@@ -551,7 +553,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
     describes the data being loaded at the subgroup level, so its size is
     consistent with the number of work-items in a subgroup. When the chunk size
     is larger than 2, the output vector is a 2D vector, with dim-1 correspoding
-    to work-items, and dim-0 corresponding to the chunk_size loaded by each work-item.
+    to work-items, and dim-0 corresponding to the chunk size loaded by each work-item.
     Specially, there is a transpose effect on the result (as compared to the TensorDesc)
     due to the hardware implementation. Therefore, a transpose attribute is introduced
     on purpose, making sure users are aware of this implicit transformation.
@@ -559,14 +561,23 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [AllRanksMatch<["value", "TensorDesc"]
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. It applies to slots of SIMD lanes.
 
-  Example:
+  Example 1:
+  ```mlir
+    %2 = xegpu.load %1, %0 {l1_hint = #xegpu.cache_hint<cached>,
+                            l2_hint = #xegpu.cache_hint<uncached>,
+                            l3_hint = #xegpu.cache_hint<uncached>}
+          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
+            vector<16xi1> -> vector<16xf32>
+  ```
+
+  Example 2:
   ```mlir
     %2 = xegpu.load %1, %0 {transpose,
                             l1_hint = #xegpu.cache_hint<cached>,
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
-          : !xegpu.tensor_desc<16xf32, #xegpu.scatter_tdesc_attr<memory_space=global>>,
-            vector<16xi1> -> vector<16xf32>
+          : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>>,
+            vector<16xi1> -> vector<8x16xf32>
   ```
 
   }];
@@ -611,17 +622,27 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [AllElementCountsMatch<["value", "T
   let description = [{ It (aka. store) stores data to scattered memory locations. The value is
   typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
   a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
-  and the dim-0 of the value corresponds to the chunk_size stored per lane. So `store_scatter`
+  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
   has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
   introduced on purpose, making sure users are aware of this implicit transformation.
 
-  Example:
+  Example 1:
   ```mlir
     %3 = xegpu.store %0, %1, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
           : vector<16xf32>, !xegpu.tensor_desc<16xf32, #xegpu.scattered_tdesc_attr<>>, vector<16xi1>
   ```
+
+  Example 2:
+  ```mlir
+    %3 = xegpu.store %0, %1, %2 {transpose,
+                                 l1_hint = #xegpu.cache_hint<uncached>,
+                                 l2_hint = #xegpu.cache_hint<write_back>,
+                                 l3_hint = #xegpu.cache_hint<write_through>}
+          : vector<8x16xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>>, vector<16xi1>
+  ```
+
   }];
 
   let arguments = (ins
