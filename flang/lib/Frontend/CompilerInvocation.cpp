@@ -1531,7 +1531,8 @@ CompilerInvocation::getSemanticsCtx(
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
-      getDefaultKinds(), fortranOptions.features, allCookedSources);
+      getDefaultKinds(), fortranOptions.features, getLangOpts(),
+      allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
