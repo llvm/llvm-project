@@ -29,6 +29,8 @@ public:
       mask = hwloc_bitmap_alloc();
       this->zero();
     }
+    Mask(const Mask &other) = delete;
+    Mask &operator=(const Mask &other) = delete;
     ~Mask() { hwloc_bitmap_free(mask); }
     void set(int i) override { hwloc_bitmap_set(mask, i); }
     bool is_set(int i) const override { return hwloc_bitmap_isset(mask, i); }
@@ -322,6 +324,8 @@ public:
 #include <sys/dr.h>
 #include <sys/rset.h>
 #define VMI_MAXRADS 64 // Maximum number of RADs allowed by AIX.
+#define GET_NUMBER_SMT_SETS 0x0004
+extern "C" int syssmt(int flags, int, int, int *);
 #endif
 class KMPNativeAffinity : public KMPAffinity {
   class Mask : public KMPAffinity::Mask {
@@ -844,6 +848,7 @@ public:
   int sub_ids[KMP_HW_LAST];
   bool leader;
   int os_id;
+  int original_idx;
   kmp_hw_attr_t attrs;
 
   void print() const;
@@ -902,9 +907,6 @@ class kmp_topology_t {
 
   // Compact value used during sort_compact()
   int compact;
-
-  // Insert a new topology layer after allocation
-  void _insert_layer(kmp_hw_t type, const int *ids);
 
 #if KMP_GROUP_AFFINITY
   // Insert topology information about Windows Processor groups
@@ -965,6 +967,10 @@ public:
     qsort(hw_threads, num_hw_threads, sizeof(kmp_hw_thread_t),
           kmp_hw_thread_t::compare_ids);
   }
+
+  // Insert a new topology layer after allocation
+  void insert_layer(kmp_hw_t type, const int *ids);
+
   // Check if the hardware ids are unique, if they are
   // return true, otherwise return false
   bool check_ids() const;
@@ -1172,6 +1178,50 @@ public:
     qsort(items, depth, sizeof(item_t), hw_subset_compare);
   }
   bool specified(kmp_hw_t type) const { return ((set & (1ull << type)) > 0); }
+
+  // Canonicalize the KMP_HW_SUBSET value if it is not an absolute subset.
+  // This means putting each of {sockets, cores, threads} in the topology if
+  // they are not specified:
+  // e.g., 1s,2c => 1s,2c,*t | 2c,1t => *s,2c,1t | 1t => *s,*c,1t | etc.
+  // e.g., 3module => *s,3module,*c,*t
+  // By doing this, the runtime assumes users who fiddle with KMP_HW_SUBSET
+  // are expecting the traditional sockets/cores/threads topology. For newer
+  // hardware, there can be intervening layers like dies/tiles/modules
+  // (usually corresponding to a cache level). So when a user asks for
+  // 1s,6c,2t and the topology is really 1s,2modules,4cores,2threads, the user
+  // should get 12 hardware threads across 6 cores and effectively ignore the
+  // module layer.
+  void canonicalize(const kmp_topology_t *top) {
+    // Layers to target for KMP_HW_SUBSET canonicalization
+    kmp_hw_t targeted[] = {KMP_HW_SOCKET, KMP_HW_CORE, KMP_HW_THREAD};
+
+    // Do not target-layer-canonicalize absolute KMP_HW_SUBSETS
+    if (is_absolute())
+      return;
+
+    // Do not target-layer-canonicalize KMP_HW_SUBSETS when the
+    // topology doesn't have these layers
+    for (kmp_hw_t type : targeted)
+      if (top->get_level(type) == KMP_HW_UNKNOWN)
+        return;
+
+    // Put targeted layers in topology if they do not exist
+    for (kmp_hw_t type : targeted) {
+      bool found = false;
+      for (int i = 0; i < get_depth(); ++i) {
+        if (top->get_equivalent_type(items[i].type) == type) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        push_back(USE_ALL, type, 0, kmp_hw_attr_t{});
+      }
+    }
+    sort();
+    // Set as an absolute topology that only targets the targeted layers
+    set_absolute();
+  }
   void dump() const {
     printf("**********************\n");
     printf("*** kmp_hw_subset: ***\n");
@@ -1223,7 +1273,7 @@ public:
       leaf. It corresponds to the number of entries in numPerLevel if we exclude
       all but one trailing 1. */
   kmp_uint32 depth;
-  kmp_uint32 base_num_threads;
+  kmp_uint32 base_num_threads = 0;
   enum init_status { initialized = 0, not_initialized = 1, initializing = 2 };
   volatile kmp_int8 uninitialized; // 0=initialized, 1=not initialized,
   // 2=initialization in progress
@@ -1233,8 +1283,8 @@ public:
       the parent of a node at level i has. For example, if we have a machine
       with 4 packages, 4 cores/package and 2 HT per core, then numPerLevel =
       {2, 4, 4, 1, 1}. All empty levels are set to 1. */
-  kmp_uint32 *numPerLevel;
-  kmp_uint32 *skipPerLevel;
+  kmp_uint32 *numPerLevel = nullptr;
+  kmp_uint32 *skipPerLevel = nullptr;
 
   void deriveLevels() {
     int hier_depth = __kmp_topology->get_depth();

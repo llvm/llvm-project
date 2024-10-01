@@ -1,10 +1,15 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
 void WTFReportAssertionFailure(const char* file, int line, const char* function, const char* assertion);
+void WTFReportBacktrace(void);
+
+void WTFCrash(void);
+void WTFCrashWithSecurityImplication(void);
 
 inline void compilerFenceForCrash()
 {
@@ -57,6 +62,29 @@ void WTFCrashWithInfo(int line, const char* file, const char* function, int coun
 {
     WTFCrashWithInfoImpl(line, file, function, counter, wtfCrashArg(reason));
 }
+
+template<typename ToType, typename FromType>
+ToType bitwise_cast(FromType from);
+
+namespace std {
+
+template<typename T>
+T* addressof(T& arg);
+
+template<typename T>
+T&& forward(T& arg);
+
+template<typename T>
+T&& move( T&& t );
+
+} // namespace std
+
+bool isMainThread();
+bool isMainThreadOrGCThread();
+bool isMainRunLoop();
+bool isWebThread();
+bool isUIThread();
+bool mayBeGCThread();
 
 enum class Flags : unsigned short {
   Flag1 = 1 << 0,
@@ -132,14 +160,68 @@ private:
   StorageType m_storage { 0 };
 };
 
+int atoi(const char* str);
+
 class Number {
 public:
   Number(int v) : v(v) { }
   Number(double);
+  Number(const char* str) : v(atoi(str)) { }
   Number operator+(const Number&);
+  Number& operator++() { ++v; return *this; }
+  Number operator++(int) { Number returnValue(v); ++v; return returnValue; }
   const int& value() const { return v; }
+  void someMethod();
+
 private:
   int v;
+};
+
+class DerivedNumber : public Number {
+public:
+  DerivedNumber(char c) : Number(c - '0') { }
+  DerivedNumber(const char* str) : Number(atoi(str)) { }
+};
+
+class ComplexNumber {
+public:
+  ComplexNumber() : realPart(0), complexPart(0) { }
+  ComplexNumber(int real, const char* str) : realPart(real), complexPart(str) { }
+  ComplexNumber(const ComplexNumber&);
+  ComplexNumber& operator++() { realPart.someMethod(); return *this; }
+  ComplexNumber operator++(int);
+  ComplexNumber& operator<<(int);
+  ComplexNumber& operator+();
+
+  const Number& real() const { return realPart; }
+
+private:
+  Number realPart;
+  Number complexPart;
+};
+
+class ObjectWithNonTrivialDestructor {
+public:
+  ObjectWithNonTrivialDestructor() { }
+  ObjectWithNonTrivialDestructor(unsigned v) : v(v) { }
+  ~ObjectWithNonTrivialDestructor() { }
+
+  unsigned value() const { return v; }
+
+private:
+  unsigned v { 0 };
+};
+
+class ObjectWithMutatingDestructor {
+public:
+  ObjectWithMutatingDestructor() : n(0) { }
+  ObjectWithMutatingDestructor(int n) : n(n) { }
+  ~ObjectWithMutatingDestructor() { n.someMethod(); }
+
+  unsigned value() const { return n.value(); }
+
+private:
+  Number n;
 };
 
 class RefCounted {
@@ -147,8 +229,21 @@ public:
   void ref() const;
   void deref() const;
 
+  void method();
   void someFunction();
   int otherFunction();
+  unsigned recursiveTrivialFunction(int n) { return !n ? 1 : recursiveTrivialFunction(n - 1);  }
+  unsigned recursiveComplexFunction(int n) { return !n ? otherFunction() : recursiveComplexFunction(n - 1);  }
+  unsigned mutuallyRecursiveFunction1(int n) { return n < 0 ? 1 : (n % 2 ? mutuallyRecursiveFunction2(n - 2) : mutuallyRecursiveFunction1(n - 1)); }
+  unsigned mutuallyRecursiveFunction2(int n) { return n < 0 ? 1 : (n % 3 ? mutuallyRecursiveFunction2(n - 3) : mutuallyRecursiveFunction1(n - 2)); }
+  unsigned mutuallyRecursiveFunction3(int n) { return n < 0 ? 1 : (n % 5 ? mutuallyRecursiveFunction3(n - 5) : mutuallyRecursiveFunction4(n - 3)); }
+  unsigned mutuallyRecursiveFunction4(int n) { return n < 0 ? 1 : (n % 7 ? otherFunction() : mutuallyRecursiveFunction3(n - 3)); }
+  unsigned recursiveFunction5(unsigned n) { return n > 100 ? 2 : (n % 2 ? recursiveFunction5(n + 1) : recursiveFunction6(n + 2)); }
+  unsigned recursiveFunction6(unsigned n) { return n > 100 ? 3 : (n % 2 ? recursiveFunction6(n % 7) : recursiveFunction7(n % 5)); }
+  unsigned recursiveFunction7(unsigned n) { return n > 100 ? 5 : recursiveFunction7(n * 5); }
+
+  void mutuallyRecursive8() { mutuallyRecursive9(); someFunction(); }
+  void mutuallyRecursive9() { mutuallyRecursive8(); }
 
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
@@ -201,8 +296,54 @@ public:
   unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
   bool trivial26() { bool hasValue = v; return !hasValue; }
   bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
+  bool trivial28() { return true; }
+  bool trivial29() { return false; }
+  unsigned trivial30(unsigned v) { unsigned r = 0xff; r |= v; return r; }
+  int trivial31(int* v) { return v[0]; }
+  unsigned trivial32() { return sizeof(int); }
+  unsigned trivial33() { return ~0xff; }
+  template <unsigned v> unsigned trivial34() { return v; }
+  void trivial35() { v++; }
+  void trivial36() { ++(*number); }
+  void trivial37() { (*number)++; }
+  void trivial38() { v++; if (__builtin_expect(!!(number), 1)) (*number)++; }
+  int trivial39() { return -v; }
+  int trivial40() { return v << 2; }
+  unsigned trivial41() { v = ++s_v; return v; }
+  unsigned trivial42() { return bitwise_cast<unsigned long>(nullptr); }
+  Number* trivial43() { return std::addressof(*number); }
+  Number* trivial44() { return new Number(1); }
+  ComplexNumber* trivial45() { return new ComplexNumber(); }
+  void trivial46() { ASSERT(isMainThread()); }
+  void trivial47() { ASSERT(isMainThreadOrGCThread()); }
+  void trivial48() { ASSERT(isMainRunLoop()); }
+  void trivial49() { ASSERT(isWebThread()); }
+  void trivial50() { ASSERT(isUIThread()); }
+  void trivial51() { ASSERT(mayBeGCThread()); }
+  void trivial52() { WTFCrash(); }
+  void trivial53() { WTFCrashWithSecurityImplication(); }
+  unsigned trivial54() { return ComplexNumber().real().value(); }
+  Number&& trivial55() { return std::forward(*number); }
+  unsigned trivial56() { Number n { 5 }; return std::move(n).value(); }
+  void trivial57() { do { break; } while (1); }
+  void trivial58() { do { continue; } while (0); }
+  void trivial59() {
+    do { goto label; }
+    while (0);
+  label:
+    return;
+  }
+  unsigned trivial60() { return ObjectWithNonTrivialDestructor { 5 }.value(); }
+  unsigned trivial61() { return DerivedNumber('7').value(); }
+  void trivial62() { WTFReportBacktrace(); }
 
   static RefCounted& singleton() {
+    static RefCounted s_RefCounted;
+    s_RefCounted.ref();
+    return s_RefCounted;
+  }
+
+  static RefCounted& otherSingleton() {
     static RefCounted s_RefCounted;
     s_RefCounted.ref();
     return s_RefCounted;
@@ -273,10 +414,26 @@ public:
     return val;
   }
 
+  int nonTrivial13() { return ~otherFunction(); }
+  int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
+  void nonTrivial15() { ++complex; }
+  void nonTrivial16() { complex++; }
+  ComplexNumber nonTrivial17() { return complex << 2; }
+  ComplexNumber nonTrivial18() { return +complex; }
+  ComplexNumber* nonTrivial19() { return new ComplexNumber(complex); }
+  unsigned nonTrivial20() { return ObjectWithMutatingDestructor { 7 }.value(); }
+  unsigned nonTrivial21() { return Number("123").value(); }
+  unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }
+  unsigned nonTrivial23() { return DerivedNumber("123").value(); }
+
+  static unsigned s_v;
   unsigned v { 0 };
   Number* number { nullptr };
+  ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
 };
+
+unsigned RefCounted::s_v = 0;
 
 RefCounted* refCountedObj();
 
@@ -322,8 +479,65 @@ public:
     getFieldTrivial().trivial25(); // no-warning
     getFieldTrivial().trivial26(); // no-warning
     getFieldTrivial().trivial27(5); // no-warning
+    getFieldTrivial().trivial28(); // no-warning
+    getFieldTrivial().trivial29(); // no-warning
+    getFieldTrivial().trivial30(7); // no-warning
+    int a[] = {1, 2};
+    getFieldTrivial().trivial31(a); // no-warning
+    getFieldTrivial().trivial32(); // no-warning
+    getFieldTrivial().trivial33(); // no-warning
+    getFieldTrivial().trivial34<7>(); // no-warning
+    getFieldTrivial().trivial35(); // no-warning
+    getFieldTrivial().trivial36(); // no-warning
+    getFieldTrivial().trivial37(); // no-warning
+    getFieldTrivial().trivial38(); // no-warning
+    getFieldTrivial().trivial39(); // no-warning
+    getFieldTrivial().trivial40(); // no-warning
+    getFieldTrivial().trivial41(); // no-warning
+    getFieldTrivial().trivial42(); // no-warning
+    getFieldTrivial().trivial43(); // no-warning
+    getFieldTrivial().trivial44(); // no-warning
+    getFieldTrivial().trivial45(); // no-warning
+    getFieldTrivial().trivial46(); // no-warning
+    getFieldTrivial().trivial47(); // no-warning
+    getFieldTrivial().trivial48(); // no-warning
+    getFieldTrivial().trivial49(); // no-warning
+    getFieldTrivial().trivial50(); // no-warning
+    getFieldTrivial().trivial51(); // no-warning
+    getFieldTrivial().trivial52(); // no-warning
+    getFieldTrivial().trivial53(); // no-warning
+    getFieldTrivial().trivial54(); // no-warning
+    getFieldTrivial().trivial55(); // no-warning
+    getFieldTrivial().trivial56(); // no-warning
+    getFieldTrivial().trivial57(); // no-warning
+    getFieldTrivial().trivial58(); // no-warning
+    getFieldTrivial().trivial59(); // no-warning
+    getFieldTrivial().trivial60(); // no-warning
+    getFieldTrivial().trivial61(); // no-warning
+    getFieldTrivial().trivial62(); // no-warning
+
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
+    RefCounted::otherSingleton().trivial18(); // no-warning
+    RefCounted::otherSingleton().someFunction(); // no-warning
+
+    getFieldTrivial().recursiveTrivialFunction(7); // no-warning
+    getFieldTrivial().recursiveComplexFunction(9);
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().mutuallyRecursiveFunction1(11); // no-warning
+    getFieldTrivial().mutuallyRecursiveFunction2(13); // no-warning
+    getFieldTrivial().mutuallyRecursiveFunction3(17);
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().mutuallyRecursiveFunction4(19);
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().recursiveFunction5(23); // no-warning
+    getFieldTrivial().recursiveFunction6(29); // no-warning
+    getFieldTrivial().recursiveFunction7(31); // no-warning
+
+    getFieldTrivial().mutuallyRecursive8();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().mutuallyRecursive9();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
 
     getFieldTrivial().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
@@ -351,6 +565,28 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial12();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial13();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial14();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial15();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial16();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial17();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial18();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial19();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial20();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial21();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial22();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial23();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
 
@@ -375,4 +611,8 @@ void someFunction(const RefCounted&);
 
 void test2() {
     someFunction(*object());
+}
+
+void system_header() {
+  callMethod<RefCountable>(object);
 }

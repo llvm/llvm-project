@@ -30,7 +30,7 @@
 // was not consciously intended, and therefore it might have been unreachable.
 //
 // This checker uses eval::Call for modeling pure functions (functions without
-// side effets), for which their `Summary' is a precise model. This avoids
+// side effects), for which their `Summary' is a precise model. This avoids
 // unnecessary invalidation passes. Conflicts with other checkers are unlikely
 // because if the function has no other effects, other checkers would probably
 // never want to improve upon the modeling done by this checker.
@@ -672,7 +672,7 @@ class StdLibraryFunctionsChecker
     StringRef getNote() const { return Note; }
   };
 
-  using ArgTypes = std::vector<std::optional<QualType>>;
+  using ArgTypes = ArrayRef<std::optional<QualType>>;
   using RetType = std::optional<QualType>;
 
   // A placeholder type, we use it whenever we do not care about the concrete
@@ -1401,7 +1401,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
         ErrnoNote =
             llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
     } else {
-      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+      // Disable formatv() validation as the case note may not always have the
+      // {0} placeholder for function name.
+      CaseNote =
+          llvm::formatv(false, Case.getNote().str().c_str(), FunctionName);
     }
     const SVal RV = Call.getReturnValue();
 
@@ -1746,7 +1749,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     }
     // Add the same summary for different names with the Signature explicitly
     // given.
-    void operator()(std::vector<StringRef> Names, Signature Sign, Summary Sum) {
+    void operator()(ArrayRef<StringRef> Names, Signature Sign, Summary Sum) {
       for (StringRef Name : Names)
         operator()(Name, Sign, Sum);
     }

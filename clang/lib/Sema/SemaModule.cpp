@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTMutationListener.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
@@ -81,7 +82,8 @@ static std::string stringFromPath(ModuleIdPath Path) {
 /// CurrentModule. Since currently it is expensive to decide whether two module
 /// units come from the same module by comparing the module name.
 static bool
-isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
+isImportingModuleUnitFromSameModule(ASTContext &Ctx, Module *Imported,
+                                    Module *CurrentModule,
                                     Module *&FoundPrimaryModuleInterface) {
   if (!Imported->isNamedModule())
     return false;
@@ -108,8 +110,7 @@ isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
   if (!CurrentModule->isModulePartitionImplementation())
     return false;
 
-  if (Imported->getPrimaryModuleInterfaceName() ==
-      CurrentModule->getPrimaryModuleInterfaceName()) {
+  if (Ctx.isInSameModule(Imported, CurrentModule)) {
     assert(!FoundPrimaryModuleInterface ||
            FoundPrimaryModuleInterface == Imported);
     FoundPrimaryModuleInterface = Imported;
@@ -126,8 +127,9 @@ isImportingModuleUnitFromSameModule(Module *Imported, Module *CurrentModule,
 ///   the module unit purview of U. These rules can in turn lead to the
 ///   importation of yet more translation units.
 static void
-makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
-                             Module *CurrentModule, SourceLocation ImportLoc,
+makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
+                             Module *Imported, Module *CurrentModule,
+                             SourceLocation ImportLoc,
                              bool IsImportingPrimaryModuleInterface = false) {
   assert(Imported->isNamedModule() &&
          "'makeTransitiveImportsVisible()' is intended for standard C++ named "
@@ -149,7 +151,7 @@ makeTransitiveImportsVisible(VisibleModuleSet &VisibleModules, Module *Imported,
     // use the sourcelocation loaded from the visible modules.
     VisibleModules.setVisible(Importing, ImportLoc);
 
-    if (isImportingModuleUnitFromSameModule(Importing, CurrentModule,
+    if (isImportingModuleUnitFromSameModule(Ctx, Importing, CurrentModule,
                                             FoundPrimaryModuleInterface))
       for (Module *TransImported : Importing->Imports)
         if (!VisibleModules.isVisible(TransImported))
@@ -475,12 +477,16 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
 
   getASTContext().setCurrentNamedModule(Mod);
 
+  if (auto *Listener = getASTMutationListener())
+    Listener->EnteringModulePurview();
+
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
   if (Interface) {
 
-    makeTransitiveImportsVisible(VisibleModules, Interface, Mod, ModuleLoc,
+    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Interface,
+                                 Mod, ModuleLoc,
                                  /*IsImportingPrimaryModuleInterface=*/true);
 
     // Make the import decl for the interface in the impl module.
@@ -639,10 +645,18 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Diag(ImportLoc, diag::warn_experimental_header_unit);
 
   if (Mod->isNamedModule())
-    makeTransitiveImportsVisible(VisibleModules, Mod, getCurrentModule(),
-                                 ImportLoc);
+    makeTransitiveImportsVisible(getASTContext(), VisibleModules, Mod,
+                                 getCurrentModule(), ImportLoc);
   else
     VisibleModules.setVisible(Mod, ImportLoc);
+
+  assert((!Mod->isModulePartitionImplementation() || getCurrentModule()) &&
+         "We can only import a partition unit in a named module.");
+  if (Mod->isModulePartitionImplementation() &&
+      getCurrentModule()->isModuleInterfaceUnit())
+    Diag(ImportLoc,
+         diag::warn_import_implementation_partition_unit_in_interface_unit)
+        << Mod->Name;
 
   checkModuleImportContext(*this, Mod, ImportLoc, CurContext);
 
@@ -835,8 +849,6 @@ void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
   VisibleModules.setVisible(Mod, Loc);
 }
 
-/// We have parsed the start of an export declaration, including the '{'
-/// (if present).
 Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
                                  SourceLocation LBraceLoc) {
   ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
@@ -851,23 +863,25 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
   //   An export-declaration shall appear only [...] in the purview of a module
   //   interface unit. An export-declaration shall not appear directly or
   //   indirectly within [...] a private-module-fragment.
-  if (!isCurrentModulePurview()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
-    D->setInvalidDecl();
-    return D;
-  } else if (currentModuleIsImplementation()) {
-    Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
-    Diag(ModuleScopes.back().BeginLoc,
-         diag::note_not_module_interface_add_export)
-        << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
-    D->setInvalidDecl();
-    return D;
-  } else if (ModuleScopes.back().Module->Kind ==
-             Module::PrivateModuleFragment) {
-    Diag(ExportLoc, diag::err_export_in_private_module_fragment);
-    Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
-    D->setInvalidDecl();
-    return D;
+  if (!getLangOpts().HLSL) {
+    if (!isCurrentModulePurview()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 0;
+      D->setInvalidDecl();
+      return D;
+    } else if (currentModuleIsImplementation()) {
+      Diag(ExportLoc, diag::err_export_not_in_module_interface) << 1;
+      Diag(ModuleScopes.back().BeginLoc,
+          diag::note_not_module_interface_add_export)
+          << FixItHint::CreateInsertion(ModuleScopes.back().BeginLoc, "export ");
+      D->setInvalidDecl();
+      return D;
+    } else if (ModuleScopes.back().Module->Kind ==
+              Module::PrivateModuleFragment) {
+      Diag(ExportLoc, diag::err_export_in_private_module_fragment);
+      Diag(ModuleScopes.back().BeginLoc, diag::note_private_module_fragment);
+      D->setInvalidDecl();
+      return D;
+    }
   }
 
   for (const DeclContext *DC = CurContext; DC; DC = DC->getLexicalParent()) {
@@ -887,7 +901,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
       //
       // Defer exporting the namespace until after we leave it, in order to
       // avoid marking all subsequent declarations in the namespace as exported.
-      if (!DeferredExportedNamespaces.insert(ND).second)
+      if (!getLangOpts().HLSL && !DeferredExportedNamespaces.insert(ND).second)
         break;
     }
   }
@@ -902,7 +916,9 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
     return D;
   }
 
-  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+  if (!getLangOpts().HLSL)
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
+
   return D;
 }
 
@@ -919,6 +935,16 @@ static bool checkExportedDeclContext(Sema &S, DeclContext *DC,
 
 /// Check that it's valid to export \p D.
 static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
+
+  // HLSL: export declaration is valid only on functions
+  if (S.getLangOpts().HLSL) {
+    // Export-within-export was already diagnosed in ActOnStartExportDecl
+    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+      S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
+      D->setInvalidDecl();
+      return false;
+    }
+  }
 
   //  C++20 [module.interface]p3:
   //   [...] it shall not declare a name with internal linkage.
@@ -972,7 +998,6 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   return true;
 }
 
-/// Complete the definition of an export declaration.
 Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
   auto *ED = cast<ExportDecl>(D);
   if (RBraceLoc.isValid())
@@ -998,6 +1023,10 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
       }
     }
   }
+
+  // Anything exported from a module should never be considered unused.
+  for (auto *Exported : ED->decls())
+    Exported->markUsed(getASTContext());
 
   return D;
 }

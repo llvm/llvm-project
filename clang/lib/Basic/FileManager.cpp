@@ -39,12 +39,6 @@ using namespace clang;
 
 #define DEBUG_TYPE "file-search"
 
-ALWAYS_ENABLED_STATISTIC(NumDirLookups, "Number of directory lookups.");
-ALWAYS_ENABLED_STATISTIC(NumFileLookups, "Number of file lookups.");
-ALWAYS_ENABLED_STATISTIC(NumDirCacheMisses,
-                         "Number of directory cache misses.");
-ALWAYS_ENABLED_STATISTIC(NumFileCacheMisses, "Number of file cache misses.");
-
 //===----------------------------------------------------------------------===//
 // Common logic.
 //===----------------------------------------------------------------------===//
@@ -88,6 +82,22 @@ getDirectoryFromFile(FileManager &FileMgr, StringRef Filename,
   return FileMgr.getDirectoryRef(DirName, CacheFailure);
 }
 
+DirectoryEntry *&FileManager::getRealDirEntry(const llvm::vfs::Status &Status) {
+  assert(Status.isDirectory() && "The directory should exist!");
+  // See if we have already opened a directory with the
+  // same inode (this occurs on Unix-like systems when one dir is
+  // symlinked to another, for example) or the same path (on
+  // Windows).
+  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
+
+  if (!UDE) {
+    // We don't have this directory yet, add it.  We use the string
+    // key from the SeenDirEntries map as the string.
+    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+  }
+  return UDE;
+}
+
 /// Add all ancestors of the given path (pointing to either a file or
 /// a directory) as virtual directories.
 void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
@@ -105,10 +115,21 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   if (NamedDirEnt.second)
     return;
 
-  // Add the virtual directory to the cache.
-  auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  NamedDirEnt.second = *UDE;
-  VirtualDirectoryEntries.push_back(UDE);
+  // Check to see if the directory exists.
+  llvm::vfs::Status Status;
+  auto statError =
+      getStatValue(DirName, Status, false, nullptr /*directory lookup*/);
+  if (statError) {
+    // There's no real directory at the given path.
+    // Add the virtual directory to the cache.
+    auto *UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
+    NamedDirEnt.second = *UDE;
+    VirtualDirectoryEntries.push_back(UDE);
+  } else {
+    // There is the real directory
+    DirectoryEntry *&UDE = getRealDirEntry(Status);
+    NamedDirEnt.second = *UDE;
+  }
 
   // Recursively add the other ancestors.
   addAncestorsAsVirtualDirs(DirName);
@@ -168,17 +189,8 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
     return llvm::errorCodeToError(statError);
   }
 
-  // It exists.  See if we have already opened a directory with the
-  // same inode (this occurs on Unix-like systems when one dir is
-  // symlinked to another, for example) or the same path (on
-  // Windows).
-  DirectoryEntry *&UDE = UniqueRealDirs[Status.getUniqueID()];
-
-  if (!UDE) {
-    // We don't have this directory yet, add it.  We use the string
-    // key from the SeenDirEntries map as the string.
-    UDE = new (DirsAlloc.Allocate()) DirectoryEntry();
-  }
+  // It exists.
+  DirectoryEntry *&UDE = getRealDirEntry(Status);
   NamedDirEnt.second = *UDE;
 
   return DirectoryEntryRef(NamedDirEnt);
@@ -518,13 +530,18 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(FileEntryRef FE, bool isVolatile,
-                              bool RequiresNullTerminator) {
+                              bool RequiresNullTerminator,
+                              std::optional<int64_t> MaybeLimit) {
   const FileEntry *Entry = &FE.getFileEntry();
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
 
   uint64_t FileSize = Entry->getSize();
+
+  if (MaybeLimit)
+    FileSize = *MaybeLimit;
+
   // If there's a high enough chance that the file have changed since we
   // got its size, force a stat before opening it.
   if (isVolatile || Entry->isNamedPipe())
@@ -656,6 +673,14 @@ StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
   return CanonicalName;
 }
 
+void FileManager::AddStats(const FileManager &Other) {
+  assert(&Other != this && "Collecting stats into the same FileManager");
+  NumDirLookups += Other.NumDirLookups;
+  NumFileLookups += Other.NumFileLookups;
+  NumDirCacheMisses += Other.NumDirCacheMisses;
+  NumFileCacheMisses += Other.NumFileCacheMisses;
+}
+
 void FileManager::PrintStats() const {
   llvm::errs() << "\n*** File Manager Stats:\n";
   llvm::errs() << UniqueRealFiles.size() << " real files found, "
@@ -666,6 +691,17 @@ void FileManager::PrintStats() const {
                << NumDirCacheMisses << " dir cache misses.\n";
   llvm::errs() << NumFileLookups << " file lookups, "
                << NumFileCacheMisses << " file cache misses.\n";
+
+  getVirtualFileSystem().visit([](llvm::vfs::FileSystem &VFS) {
+    if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS))
+      llvm::errs() << "\n*** Virtual File System Stats:\n"
+                   << T->NumStatusCalls << " status() calls\n"
+                   << T->NumOpenFileForReadCalls << " openFileForRead() calls\n"
+                   << T->NumDirBeginCalls << " dir_begin() calls\n"
+                   << T->NumGetRealPathCalls << " getRealPath() calls\n"
+                   << T->NumExistsCalls << " exists() calls\n"
+                   << T->NumIsLocalCalls << " isLocal() calls\n";
+  });
 
   //llvm::errs() << PagesMapped << BytesOfPagesMapped << FSLookups;
 }

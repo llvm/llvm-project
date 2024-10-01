@@ -118,3 +118,26 @@ define <4 x float> @concat_of_broadcast_v4f32_v8f32(ptr %a0, ptr %a1, ptr %a2) {
   %shuffle1 = shufflevector <8 x float> %ld2, <8 x float> %shuffle, <4 x i32> <i32 6, i32 15, i32 12, i32 3>
   ret <4 x float> %shuffle1
 }
+
+define <4 x i64> @broadcast_of_shuffle_v2i64_v4i64(<16 x i8> %vecinit.i) {
+; AVX1-LABEL: broadcast_of_shuffle_v2i64_v4i64:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpsllq $56, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: broadcast_of_shuffle_v2i64_v4i64:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vpsllq $56, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-NEXT:    retq
+entry:
+  %vecinit15.i = shufflevector <16 x i8> %vecinit.i, <16 x i8> poison, <16 x i32> zeroinitializer
+  %0 = bitcast <16 x i8> %vecinit15.i to <2 x i64>
+  %1 = extractelement <2 x i64> %0, i64 0
+  %2 = and i64 %1, -72057594037927936 ; 0xFF00 0000 0000 0000
+  %3 = insertelement <4 x i64> poison, i64 %2, i64 0
+  %4 = shufflevector <4 x i64> %3, <4 x i64> poison, <4 x i32> zeroinitializer
+  ret <4 x i64> %4
+}

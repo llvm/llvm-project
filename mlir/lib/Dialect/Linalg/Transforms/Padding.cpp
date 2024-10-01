@@ -72,8 +72,10 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
     // Otherwise, try to compute a constant upper bound for the size value.
     FailureOr<int64_t> upperBound =
         ValueBoundsConstraintSet::computeConstantBound(
-            presburger::BoundType::UB, opOperand->get(),
-            /*dim=*/i, /*stopCondition=*/nullptr, /*closedUB=*/true);
+            presburger::BoundType::UB,
+            {opOperand->get(),
+             /*dim=*/i},
+            /*stopCondition=*/nullptr, /*closedUB=*/true);
     if (failed(upperBound)) {
       LLVM_DEBUG(DBGS() << "----could not compute a bounding box for padding");
       return failure();
@@ -297,7 +299,7 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
     }
 
     tensor::PadOp hoistedOp;
-    SmallVector<GenericOp> transposeOps;
+    SmallVector<TransposeOp> transposeOps;
     SmallVector<int64_t> transposeVector =
         en.index() < options.transposePaddings.size()
             ? options.transposePaddings[en.index()]

@@ -61,7 +61,6 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
     "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
-    "LLDB_TEST_USE_VENDOR_PACKAGES=False",
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
@@ -118,6 +117,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_USE_SANITIZER=",
   ]
 
   if (llvm_enable_zlib) {
@@ -164,8 +164,8 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
-    "//lldb/tools/lldb-dap",
     "//lldb/tools/driver:lldb",
+    "//lldb/tools/lldb-dap",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",

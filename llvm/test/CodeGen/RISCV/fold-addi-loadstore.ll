@@ -7,6 +7,8 @@
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -code-model=medium < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-MEDIUM %s
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs -code-model=large < %s \
+; RUN:   | FileCheck -check-prefix=RV64I-LARGE %s
 
 ; We can often fold an ADDI into the offset of load/store instructions:
 ;   (load (addi base, off1), off2) -> (load base, off1+off2)
@@ -51,6 +53,14 @@ define dso_local i64 @load_g_0() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_0)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_0:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi0:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI0_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_0
   ret i64 %0
@@ -86,6 +96,14 @@ define dso_local i64 @load_g_1() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_1)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_1:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi1:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI1_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_1
   ret i64 %0
@@ -121,6 +139,14 @@ define dso_local i64 @load_g_2() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_2)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_2:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi2:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI2_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi2)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_2
   ret i64 %0
@@ -156,6 +182,14 @@ define dso_local i64 @load_g_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_4:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi3:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI3_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi3)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_4
   ret i64 %0
@@ -190,6 +224,14 @@ define dso_local i64 @load_g_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_8)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_8:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi4:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI4_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi4)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_8
   ret i64 %0
@@ -224,6 +266,14 @@ define dso_local i64 @load_g_16() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_16)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_g_16:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi5:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI5_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi5)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @g_16
   ret i64 %0
@@ -259,6 +309,14 @@ define dso_local void @store_g_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_4)
 ; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi6)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: store_g_4:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi6:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI6_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi6)(a0)
+; RV64I-LARGE-NEXT:    sd zero, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
    store i64 0, ptr @g_4
    ret void
@@ -293,6 +351,14 @@ define dso_local void @store_g_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(g_8)
 ; RV64I-MEDIUM-NEXT:    sd zero, %pcrel_lo(.Lpcrel_hi7)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: store_g_8:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi7:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi7)(a0)
+; RV64I-LARGE-NEXT:    sd zero, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
    store i64 0, ptr @g_8
    ret void
@@ -337,6 +403,16 @@ define dso_local void @inc_g_i32() nounwind {
 ; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
 ; RV64I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: inc_g_i32:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi8:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI8_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi8)(a0)
+; RV64I-LARGE-NEXT:    lw a1, 0(a0)
+; RV64I-LARGE-NEXT:    addi a1, a1, 1
+; RV64I-LARGE-NEXT:    sw a1, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i32, ptr @g_4_i32
   %inc = add i32 %0, 1
@@ -377,6 +453,14 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga+4)
 ; RV64I-MEDIUM-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi9)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_ga:
+; RV64I-LARGE:       # %bb.0:
+; RV64I-LARGE-NEXT:  .Lpcrel_hi9:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI9_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi9)(a0)
+; RV64I-LARGE-NEXT:    lw a0, 4(a0)
+; RV64I-LARGE-NEXT:    ret
   %1 = load i32, ptr getelementptr inbounds ([2 x i32], ptr @ga, i32 0, i32 1), align 4
   ret i32 %1
 }
@@ -389,8 +473,8 @@ define dso_local i32 @load_ga() local_unnamed_addr #0 {
 define dso_local i64 @load_ga_8() nounwind {
 ; RV32I-LABEL: load_ga_8:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a0, %hi(ga_8)
-; RV32I-NEXT:    addi a1, a0, %lo(ga_8)
+; RV32I-NEXT:    lui a1, %hi(ga_8)
+; RV32I-NEXT:    addi a1, a1, %lo(ga_8)
 ; RV32I-NEXT:    lw a0, 8(a1)
 ; RV32I-NEXT:    lw a1, 12(a1)
 ; RV32I-NEXT:    ret
@@ -416,6 +500,14 @@ define dso_local i64 @load_ga_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_8+8)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi10)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_ga_8:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi10:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI10_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi10)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 8(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_8, i32 0, i32 1)
   ret i64 %0
@@ -450,6 +542,14 @@ define dso_local i64 @load_ga_16() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ga_16+8)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi11)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_ga_16:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi11:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI11_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi11)(a0)
+; RV64I-LARGE-NEXT:    ld a0, 8(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr getelementptr inbounds ([2 x i64], ptr @ga_16, i32 0, i32 1)
   ret i64 %0
@@ -490,6 +590,15 @@ define dso_local ptr @load_ba_1() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi12)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_ba_1:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Ltmp0: # Block address taken
+; RV64I-LARGE-NEXT:  # %bb.1: # %label
+; RV64I-LARGE-NEXT:  .Lpcrel_hi12:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi12)(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   br label %label
 label:
@@ -531,6 +640,15 @@ define dso_local ptr @load_ba_2() nounwind {
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp1+8)
 ; RV64I-MEDIUM-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi13)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_ba_2:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Ltmp1: # Block address taken
+; RV64I-LARGE-NEXT:  # %bb.1: # %label
+; RV64I-LARGE-NEXT:  .Lpcrel_hi13:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.Ltmp1+8)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi13)(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   br label %label
 label:
@@ -575,6 +693,13 @@ define dso_local i64 @load_tl_4() nounwind {
 ; RV64I-MEDIUM-NEXT:    add a0, a0, tp, %tprel_add(tl_4)
 ; RV64I-MEDIUM-NEXT:    ld a0, %tprel_lo(tl_4)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_tl_4:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    lui a0, %tprel_hi(tl_4)
+; RV64I-LARGE-NEXT:    add a0, a0, tp, %tprel_add(tl_4)
+; RV64I-LARGE-NEXT:    ld a0, %tprel_lo(tl_4)(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @tl_4
   ret i64 %0
@@ -610,6 +735,13 @@ define dso_local i64 @load_tl_8() nounwind {
 ; RV64I-MEDIUM-NEXT:    add a0, a0, tp, %tprel_add(tl_8)
 ; RV64I-MEDIUM-NEXT:    ld a0, %tprel_lo(tl_8)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_tl_8:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    lui a0, %tprel_hi(tl_8)
+; RV64I-LARGE-NEXT:    add a0, a0, tp, %tprel_add(tl_8)
+; RV64I-LARGE-NEXT:    ld a0, %tprel_lo(tl_8)(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr @tl_8
   ret i64 %0
@@ -637,6 +769,11 @@ define dso_local i64 @load_const_ok() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:    ld a0, 2040(zero)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_const_ok:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    ld a0, 2040(zero)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr inttoptr (i32 2040 to ptr)
   ret i64 %0
@@ -666,6 +803,11 @@ define dso_local i64 @load_cost_overflow() nounwind {
 ; RV64I-MEDIUM:       # %bb.0: # %entry
 ; RV64I-MEDIUM-NEXT:    ld a0, 2044(zero)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_cost_overflow:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    ld a0, 2044(zero)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i64, ptr inttoptr (i64 2044 to ptr)
   ret i64 %0
@@ -695,6 +837,12 @@ define dso_local i32 @load_const_medium() nounwind {
 ; RV64I-MEDIUM-NEXT:    lui a0, 1
 ; RV64I-MEDIUM-NEXT:    lw a0, -16(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_const_medium:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    lui a0, 1
+; RV64I-LARGE-NEXT:    lw a0, -16(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i32, ptr inttoptr (i64 4080 to ptr)
   ret i32 %0
@@ -729,6 +877,13 @@ define dso_local i32 @load_const_large() nounwind {
 ; RV64I-MEDIUM-NEXT:    addiw a0, a0, -2048
 ; RV64I-MEDIUM-NEXT:    lw a0, 0(a0)
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: load_const_large:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    lui a0, 524288
+; RV64I-LARGE-NEXT:    addiw a0, a0, -2048
+; RV64I-LARGE-NEXT:    lw a0, 0(a0)
+; RV64I-LARGE-NEXT:    ret
 entry:
   %0 = load i32, ptr inttoptr (i64 2147481600 to ptr)
   ret i32 %0
@@ -938,6 +1093,47 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-MEDIUM-NEXT:    addi sp, sp, 48
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: fold_addi_from_different_bb:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    addi sp, sp, -48
+; RV64I-LARGE-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    blez a1, .LBB20_3
+; RV64I-LARGE-NEXT:  # %bb.1: # %for.body.lr.ph
+; RV64I-LARGE-NEXT:    mv s0, a2
+; RV64I-LARGE-NEXT:    mv s1, a1
+; RV64I-LARGE-NEXT:  .Lpcrel_hi14:
+; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI20_0)
+; RV64I-LARGE-NEXT:    ld s3, %pcrel_lo(.Lpcrel_hi14)(a1)
+; RV64I-LARGE-NEXT:    li s2, 0
+; RV64I-LARGE-NEXT:    slli a0, a0, 4
+; RV64I-LARGE-NEXT:    add s4, a2, a0
+; RV64I-LARGE-NEXT:  .LBB20_2: # %for.body
+; RV64I-LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-LARGE-NEXT:    mv a0, s0
+; RV64I-LARGE-NEXT:    jalr s3
+; RV64I-LARGE-NEXT:    ld a0, 8(s4)
+; RV64I-LARGE-NEXT:    addi s1, s1, -1
+; RV64I-LARGE-NEXT:    add s2, a0, s2
+; RV64I-LARGE-NEXT:    bnez s1, .LBB20_2
+; RV64I-LARGE-NEXT:    j .LBB20_4
+; RV64I-LARGE-NEXT:  .LBB20_3:
+; RV64I-LARGE-NEXT:    li s2, 0
+; RV64I-LARGE-NEXT:  .LBB20_4: # %for.cond.cleanup
+; RV64I-LARGE-NEXT:    mv a0, s2
+; RV64I-LARGE-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    addi sp, sp, 48
+; RV64I-LARGE-NEXT:    ret
 entry:
   %cmp4 = icmp sgt i64 %n, 0
   br i1 %cmp4, label %for.body.lr.ph, label %for.cond.cleanup
@@ -1006,6 +1202,19 @@ define i32 @crash() {
 ; RV64I-MEDIUM-NEXT:    sw a0, 0(zero)
 ; RV64I-MEDIUM-NEXT:    li a0, 0
 ; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: crash:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:    li a0, 1
+; RV64I-LARGE-NEXT:  .Lpcrel_hi15:
+; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI21_0)
+; RV64I-LARGE-NEXT:    ld a1, %pcrel_lo(.Lpcrel_hi15)(a1)
+; RV64I-LARGE-NEXT:    add a0, a1, a0
+; RV64I-LARGE-NEXT:    lbu a0, 400(a0)
+; RV64I-LARGE-NEXT:    seqz a0, a0
+; RV64I-LARGE-NEXT:    sw a0, 0(zero)
+; RV64I-LARGE-NEXT:    li a0, 0
+; RV64I-LARGE-NEXT:    ret
 entry:
   %idxprom7.peel = sext i32 1 to i64
   br label %for.inc.peel

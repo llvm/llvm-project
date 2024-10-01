@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX
 
-; Partial laod dot product patterns based off PR51075
+; Partial load dot product patterns based off PR51075
 
 ;
 ; dot3(ptr x, ptr y) - ((xptr y[0])+(xptr y[1])+(xptr y[2]))

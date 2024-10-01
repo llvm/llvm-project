@@ -10,6 +10,8 @@
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_M44 sym
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_L44 sym
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_HH22 sym
+        ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_HH22 sym
+        ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_HM10 sym
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_HM10 sym
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_LM22 sym
         ! CHECK-OBJ-NEXT: 0x{{[0-9,A-F]+}} R_SPARC_13 sym
@@ -49,9 +51,17 @@
         ! CHECK-NEXT:                 !   fixup A - offset: 0, value: %hh(sym), kind: fixup_sparc_hh
         sethi %hh(sym), %l0
 
+        ! CHECK: sethi %hh(sym), %l0  ! encoding: [0x21,0b00AAAAAA,A,A]
+        ! CHECK-NEXT:                 !   fixup A - offset: 0, value: %hh(sym), kind: fixup_sparc_hh
+        sethi %uhi(sym), %l0
+
         ! CHECK: or %g1, %hm(sym), %g3 ! encoding: [0x86,0x10,0b011000AA,A]
         ! CHECK-NEXT:                  !   fixup A - offset: 0, value: %hm(sym), kind: fixup_sparc_hm
         or %g1, %hm(sym), %g3
+
+        ! CHECK: or %g1, %hm(sym), %g3 ! encoding: [0x86,0x10,0b011000AA,A]
+        ! CHECK-NEXT:                  !   fixup A - offset: 0, value: %hm(sym), kind: fixup_sparc_hm
+        or %g1, %ulo(sym), %g3
 
         ! CHECK: sethi %lm(sym), %l0  ! encoding: [0x21,0b00AAAAAA,A,A]
         ! CHECK-NEXT:                 !   fixup A - offset: 0, value: %lm(sym), kind: fixup_sparc_lm

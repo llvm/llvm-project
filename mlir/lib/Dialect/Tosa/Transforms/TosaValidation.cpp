@@ -200,7 +200,7 @@ private:
     CHECK_RANKS_FOR(BitwiseAnd);
     CHECK_RANKS_FOR(BitwiseOr);
     CHECK_RANKS_FOR(BitwiseXor);
-    CHECK_RANKS_FOR(Div);
+    CHECK_RANKS_FOR(IntDiv);
     CHECK_RANKS_FOR(LogicalAnd);
     CHECK_RANKS_FOR(LogicalLeftShift);
     CHECK_RANKS_FOR(LogicalRightShift);
@@ -357,7 +357,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              transpose.getFilter().getType().dyn_cast<ShapedType>()) {
+              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW
@@ -506,11 +506,10 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
 }
 
 bool TosaValidation::isValidElementType(Type type) {
-  if ((profile == TosaProfileEnum::BaseInference) && isa<FloatType>(type)) {
-    return false;
-  }
-  if (type.isF64()) {
-    return false;
+  if (isa<FloatType>(type)) {
+    if (profile == TosaProfileEnum::BaseInference)
+      return false;
+    return type.isF32() || type.isF16() || type.isBF16();
   }
   if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isUnsigned()) {

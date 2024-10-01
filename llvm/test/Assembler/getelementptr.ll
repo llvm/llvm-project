@@ -1,18 +1,17 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; Verify that over-indexed getelementptrs are folded.
 @A = external global [2 x [3 x [5 x [7 x i32]]]]
 @B = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 0, i64 0, i64 2, i64 1, i64 7523)
-; CHECK: @B = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 36, i64 0, i64 1, i64 0, i64 5)
+; CHECK: @B = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 0, i64 0, i64 2, i64 1, i64 7523)
 @C = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 3, i64 2, i64 0, i64 0, i64 7523)
-; CHECK: @C = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 39, i64 1, i64 1, i64 4, i64 5)
+; CHECK: @C = global ptr getelementptr ([2 x [3 x [5 x [7 x i32]]]], ptr @A, i64 3, i64 2, i64 0, i64 0, i64 7523)
 
 ; Verify that constant expression GEPs work with i84 indices.
 @D = external global [1 x i32]
 
 @E = global ptr getelementptr inbounds ([1 x i32], ptr @D, i84 0, i64 1)
-; CHECK: @E = global ptr getelementptr inbounds ([1 x i32], ptr @D, i84 1, i64 0)
+; CHECK: @E = global ptr getelementptr inbounds ([1 x i32], ptr @D, i84 0, i64 1)
 
 ; Verify that i16 indices work.
 @x = external global {i32, i32}
@@ -23,16 +22,12 @@
 @PR23753_b = global ptr getelementptr (i8, ptr @PR23753_a, i64 ptrtoint (ptr @PR23753_a to i64))
 ; CHECK: @PR23753_b = global ptr getelementptr (i8, ptr @PR23753_a, i64 ptrtoint (ptr @PR23753_a to i64))
 
-; Verify that inrange doesn't inhibit over-indexed getelementptr folding,
-; but does inhibit combining two GEPs where the inner one has inrange (this
-; will be done when DataLayout is available instead).
-
 @nestedarray = global [2 x [4 x ptr]] zeroinitializer
 
-; CHECK: @nestedarray.1 = alias ptr, getelementptr inbounds inrange(-32, 32) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i64 1, i32 0)
+; CHECK: @nestedarray.1 = alias ptr, getelementptr inbounds inrange(-32, 32) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i32 0, i32 4)
 @nestedarray.1 = alias ptr, getelementptr inbounds inrange(-32, 32) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i32 0, i32 4)
 
-; CHECK: @nestedarray.2 = alias ptr, getelementptr inbounds inrange(0, 1) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i64 1, i32 0)
+; CHECK: @nestedarray.2 = alias ptr, getelementptr inbounds inrange(0, 1) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i32 0, i32 4)
 @nestedarray.2 = alias ptr, getelementptr inbounds inrange(0, 1) ([2 x [4 x ptr]], ptr @nestedarray, i32 0, i32 0, i32 4)
 
 ; CHECK: @nestedarray.3 = alias ptr, getelementptr inbounds inrange(0, 4) ([4 x ptr], ptr @nestedarray, i32 0, i32 0)

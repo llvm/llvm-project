@@ -18,7 +18,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -285,6 +284,7 @@ public:
       return true;
     }
   }
+  bool isNote() const { return isELF() && ELFType == ELF::SHT_NOTE; }
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
   bool isRelro() const { return IsRelro; }

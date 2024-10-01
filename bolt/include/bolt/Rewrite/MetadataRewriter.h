@@ -45,6 +45,10 @@ public:
   /// Return name for the rewriter.
   StringRef getName() const { return Name; }
 
+  /// Run initialization after the binary is read and sections are identified,
+  /// but before functions are discovered.
+  virtual Error sectionInitializer() { return Error::success(); }
+
   /// Interface for modifying/annotating functions in the binary based on the
   /// contents of the section. Functions are in pre-cfg state.
   virtual Error preCFGInitializer() { return Error::success(); }

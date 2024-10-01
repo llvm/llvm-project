@@ -1,4 +1,10 @@
 add_header(
+  error_number_macros
+  HDR
+    error-number-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
@@ -8,6 +14,12 @@ add_header(
   sched_macros
   HDR
     sched-macros.h
+)
+
+add_header(
+  sys_epoll_macros
+  HDR
+    sys-epoll-macros.h
 )
 
 add_header(

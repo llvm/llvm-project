@@ -111,10 +111,15 @@ void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 /// Returns true, if an OpenMP runtime has been added.
-bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
-                      const llvm::opt::ArgList &Args,
+bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
+                      const ToolChain &TC, const llvm::opt::ArgList &Args,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
+
+/// Adds offloading options for OpenMP host compilation to \p CmdArgs.
+void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
+                                 const llvm::opt::ArgList &Args,
+                                 llvm::opt::ArgStringList &CmdArgs);
 
 /// Adds Fortran runtime libraries to \p CmdArgs.
 void addFortranRuntimeLibs(const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -223,6 +228,14 @@ void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::Triple &Triple);
 void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
                             llvm::opt::ArgStringList &CmdArgs);
+void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
+                const llvm::Triple &Triple,
+                const llvm::Reloc::Model &RelocationModel,
+                llvm::opt::ArgStringList &CmdArgs);
+
+/// Handle the -f{no}-color-diagnostics and -f{no}-diagnostics-colors options.
+void handleColorDiagnosticsArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
 
 } // end namespace tools
 } // end namespace driver

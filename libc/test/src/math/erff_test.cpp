@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/erff.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -64,12 +64,12 @@ TEST_F(LlvmLibcErffTest, InFloatRange) {
 
     for (uint32_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       float x = FPBits(v).get_val();
-      if (isnan(x))
+      if (FPBits(v).is_nan())
         continue;
 
       float result = LIBC_NAMESPACE::erff(x);
       ++cc;
-      if (isnan(result))
+      if (FPBits(result).is_nan())
         continue;
 
       ++count;

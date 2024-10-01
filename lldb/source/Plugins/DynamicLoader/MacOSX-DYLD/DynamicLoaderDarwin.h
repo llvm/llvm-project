@@ -56,6 +56,8 @@ public:
 
   virtual bool NeedToDoInitialImageFetch() = 0;
 
+  std::optional<lldb_private::Address> GetStartAddress() override;
+
 protected:
   void PrivateInitialize(lldb_private::Process *process);
 
@@ -206,7 +208,7 @@ protected:
   UpdateSpecialBinariesFromNewImageInfos(ImageInfo::collection &image_infos);
 
   // if image_info is a dyld binary, call this method
-  void UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
+  bool UpdateDYLDImageInfoFromNewImageInfo(ImageInfo &image_info);
 
   // If image_infos contains / may contain executable image, call this method
   // to keep our internal record keeping of the special dyld binary up-to-date.

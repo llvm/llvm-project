@@ -248,3 +248,5 @@ void arraysInBlocks(void) {
   void (^withTypedefBad)(INTS _Nonnull [2]) = // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
       ^(INTS _Nonnull x[2]) {}; // expected-error {{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'INTS' (aka 'int[4]')}}
 }
+
+struct _Nullable NotCplusplusClass {}; // expected-error {{'_Nullable' attribute only applies to classes}}

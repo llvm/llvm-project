@@ -218,6 +218,11 @@ used variables that control features of LLVM and enabled subprojects.
   If you are using an IDE such as Visual Studio or Xcode, you should use
   the IDE settings to set the build type.
 
+  Note: on Windows (building with MSVC or clang-cl), CMake's **RelWithDebInfo**
+  setting does not enable the same optimizations as **Release**. Using the
+  **Release** build type with :ref:`LLVM_ENABLE_PDB <llvm_enable_pdb>` set
+  may be a better option.
+
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed when the "install" target is built.
 
@@ -283,13 +288,13 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
   Defaults to "bin".
 
-**CMAKE_INSTALL_INCLUDEDIR**:PATH
-  The path to install header files, relative to the *CMAKE_INSTALL_PREFIX*.
-  Defaults to "include".
-
 **CMAKE_INSTALL_DOCDIR**:PATH
   The path to install documentation, relative to the *CMAKE_INSTALL_PREFIX*.
   Defaults to "share/doc".
+
+**CMAKE_INSTALL_INCLUDEDIR**:PATH
+  The path to install header files, relative to the *CMAKE_INSTALL_PREFIX*.
+  Defaults to "include".
 
 **CMAKE_INSTALL_MANDIR**:PATH
   The path to install manpage files, relative to the *CMAKE_INSTALL_PREFIX*.
@@ -328,12 +333,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   allows for them to be specified as values in CMAKE_BUILD_TYPE without
   encountering a fatal error during the configuration process.
 
-**LLVM_UNREACHABLE_OPTIMIZE**:BOOL
-  This flag controls the behavior of `llvm_unreachable()` in release build
-  (when assertions are disabled in general). When ON (default) then
-  `llvm_unreachable()` is considered "undefined behavior" and optimized as
-  such. When OFF it is instead replaced with a guaranteed "trap".
-
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (Git revision id).
   The version info is provided by the ``LLVM_REVISION`` macro in
@@ -341,14 +340,14 @@ enabled sub-projects. Nearly all of these variable names begin with
   need revision info can disable this option to avoid re-linking most binaries
   after a branch switch. Defaults to ON.
 
+**LLVM_FORCE_VC_REPOSITORY**:STRING
+  Set the git repository to include in version info rather than calling git to
+  determine it.
+
 **LLVM_FORCE_VC_REVISION**:STRING
   Force a specific Git revision id rather than calling to git to determine it.
   This is useful in environments where git is not available or non-functional
   but the VC revision is available through other means.
-
-**LLVM_FORCE_VC_REPOSITORY**:STRING
-  Set the git repository to include in version info rather than calling git to
-  determine it.
 
 **LLVM_BUILD_32_BITS**:BOOL
   Build 32-bit executables and libraries on 64-bit systems. This option is
@@ -380,22 +379,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   to delete captured profile data. See documentation for
   *LLVM_CODE_COVERAGE_TARGETS* and *LLVM_COVERAGE_SOURCE_DIRS* for more
   information on configuring code coverage reports.
-
-**LLVM_CODE_COVERAGE_TARGETS**:STRING
-  If set to a semicolon separated list of targets, those targets will be used
-  to drive the code coverage reports. If unset, the target list will be
-  constructed using the LLVM build's CMake export list.
-
-**LLVM_COVERAGE_SOURCE_DIRS**:STRING
-  If set to a semicolon separated list of directories, the coverage reports
-  will limit code coverage summaries to just the listed directories. If unset,
-  coverage reports will include all sources identified by the tooling.
-
-**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
-  Enable individual test case coverage. When set to ON, code coverage data for
-  each test case will be generated and stored in a separate directory under the
-  config.test_exec_root path. This feature allows code coverage analysis of each
-  individual test case. Defaults to OFF.
 
 **LLVM_BUILD_LLVM_DYLIB**:BOOL
   If enabled, the target for building the libLLVM shared library is added.
@@ -429,14 +412,21 @@ enabled sub-projects. Nearly all of these variable names begin with
   options, which are passed to the CCACHE_MAXSIZE and CCACHE_DIR environment
   variables, respectively.
 
+**LLVM_CODE_COVERAGE_TARGETS**:STRING
+  If set to a semicolon separated list of targets, those targets will be used
+  to drive the code coverage reports. If unset, the target list will be
+  constructed using the LLVM build's CMake export list.
+
+**LLVM_COVERAGE_SOURCE_DIRS**:STRING
+  If set to a semicolon separated list of directories, the coverage reports
+  will limit code coverage summaries to just the listed directories. If unset,
+  coverage reports will include all sources identified by the tooling.
+
 **LLVM_CREATE_XCODE_TOOLCHAIN**:BOOL
   macOS Only: If enabled CMake will generate a target named
   'install-xcode-toolchain'. This target will create a directory at
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
-
-**LLVM_<target>_LINKER_FLAGS**:STRING
-  Defines the set of linker flags that should be applied to a <target>.
 
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
@@ -514,11 +504,6 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_EXPENSIVE_CHECKS**:BOOL
   Enable additional time/memory expensive checking. Defaults to OFF.
 
-**LLVM_ENABLE_HTTPLIB**:BOOL
-  Enables the optional cpp-httplib dependency which is used by llvm-debuginfod
-  to serve debug info over HTTP. `cpp-httplib <https://github.com/yhirose/cpp-httplib>`_
-  must be installed, or `httplib_ROOT` must be set. Defaults to OFF.
-
 **LLVM_ENABLE_FFI**:BOOL
   Indicates whether the LLVM Interpreter will be linked with the Foreign Function
   Interface library (libffi) in order to enable calling external functions.
@@ -526,6 +511,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   location, you can also set the variables FFI_INCLUDE_DIR and
   FFI_LIBRARY_DIR to the directories where ffi.h and libffi.so can be found,
   respectively. Defaults to OFF.
+
+**LLVM_ENABLE_HTTPLIB**:BOOL
+  Enables the optional cpp-httplib dependency which is used by llvm-debuginfod
+  to serve debug info over HTTP. `cpp-httplib <https://github.com/yhirose/cpp-httplib>`_
+  must be installed, or `httplib_ROOT` must be set. Defaults to OFF.
 
 **LLVM_ENABLE_IDE**:BOOL
   Tell the build system that an IDE is being used. This in turn disables the
@@ -539,11 +529,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   passed to invocations of both so that the project is built using libc++
   instead of stdlibc++. Defaults to OFF.
 
-**LLVM_ENABLE_LLVM_LIBC**: BOOL
-  If the LLVM libc overlay is installed in a location where the host linker
-  can access it, all built executables will be linked against the LLVM libc
-  overlay before linking against the system libc. Defaults to OFF.
-
 **LLVM_ENABLE_LIBPFM**:BOOL
   Enable building with libpfm to support hardware counter measurements in LLVM
   tools.
@@ -554,6 +539,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   build where a dependency is added from the first stage to the second ensuring
   that lld is built before stage2 begins.
 
+**LLVM_ENABLE_LLVM_LIBC**: BOOL
+  If the LLVM libc overlay is installed in a location where the host linker
+  can access it, all built executables will be linked against the LLVM libc
+  overlay before linking against the system libc. Defaults to OFF.
+
 **LLVM_ENABLE_LTO**:STRING
   Add ``-flto`` or ``-flto=`` flags to the compile and link command
   lines, enabling link-time optimization. Possible values are ``Off``,
@@ -562,6 +552,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_MODULES**:BOOL
   Compile with `Clang Header Modules
   <https://clang.llvm.org/docs/Modules.html>`_.
+
+.. _llvm_enable_pdb:
+
+**LLVM_ENABLE_PDB**:BOOL
+  For Windows builds using MSVC or clang-cl, generate PDB files when
+  :ref:`CMAKE_BUILD_TYPE <cmake_build_type>` is set to Release.
 
 **LLVM_ENABLE_PEDANTIC**:BOOL
   Enable pedantic mode. This disables compiler-specific extensions, if
@@ -575,11 +571,21 @@ enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of projects to build, or *all* for building all
   (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
   are checked out side-by-side and not nested, i.e. clang needs to be in
-  parallel of llvm instead of nested in `llvm/tools`. This feature allows
+  parallel of llvm instead of nested in ``llvm/tools``. This feature allows
   to have one build for only LLVM and another for clang+llvm using the same
   source checkout.
+
   The full list is:
-  ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
+
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl``
+
+  .. note::
+    Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
+    should only appear in one of the two lists. If a project is a valid possiblity
+    for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
+
+**LLVM_ENABLE_RTTI**:BOOL
+  Build LLVM with run-time type information. Defaults to OFF.
 
 **LLVM_ENABLE_RUNTIMES**:STRING
   Build libc++, libc++abi, libunwind or compiler-rt using the just-built compiler.
@@ -587,15 +593,17 @@ enabled sub-projects. Nearly all of these variable names begin with
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
-  Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
+
+  .. note::
+    The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
+
   The full list is:
-  ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``
+
+  ``libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+
   To enable all of them, use:
+
   ``LLVM_ENABLE_RUNTIMES=all``
-
-
-**LLVM_ENABLE_RTTI**:BOOL
-  Build LLVM with run-time type information. Defaults to OFF.
 
 **LLVM_ENABLE_SPHINX**:BOOL
   If specified, CMake will search for the ``sphinx-build`` executable and will make
@@ -634,14 +642,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   llvm. This will build the experimental target without needing it to add to the
   list of all the targets available in the LLVM's main CMakeLists.txt.
 
-**LLVM_EXTERNAL_{CLANG,LLD,POLLY}_SOURCE_DIR**:PATH
-  These variables specify the path to the source directory for the external
-  LLVM projects Clang, lld, and Polly, respectively, relative to the top-level
-  source directory.  If the in-tree subdirectory for an external project
-  exists (e.g., llvm/tools/clang for Clang), then the corresponding variable
-  will not be used.  If the variable for an external project does not point
-  to a valid path, then that project will not be built.
-
 **LLVM_EXTERNAL_PROJECTS**:STRING
   Semicolon-separated list of additional external projects to build as part of
   llvm. For each project LLVM_EXTERNAL_<NAME>_SOURCE_DIR have to be specified
@@ -650,9 +650,22 @@ enabled sub-projects. Nearly all of these variable names begin with
   -DLLVM_EXTERNAL_FOO_SOURCE_DIR=/src/foo
   -DLLVM_EXTERNAL_BAR_SOURCE_DIR=/src/bar``.
 
+**LLVM_EXTERNAL_{CLANG,LLD,POLLY}_SOURCE_DIR**:PATH
+  These variables specify the path to the source directory for the external
+  LLVM projects Clang, lld, and Polly, respectively, relative to the top-level
+  source directory.  If the in-tree subdirectory for an external project
+  exists (e.g., llvm/tools/clang for Clang), then the corresponding variable
+  will not be used.  If the variable for an external project does not point
+  to a valid path, then that project will not be built.
+
 **LLVM_EXTERNALIZE_DEBUGINFO**:BOOL
   Generate dSYM files and strip executables and libraries (Darwin Only).
   Defaults to OFF.
+
+**LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES**:BOOL
+  When building executables, preserve symbol exports. Defaults to ON. 
+  You can use this option to disable exported symbols from all 
+  executables (Darwin Only).
 
 **LLVM_FORCE_USE_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler and standard library versions won't be checked. LLVM
@@ -674,6 +687,12 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_INCLUDE_TOOLS**:BOOL
   Generate build targets for the LLVM tools. Defaults to ON. You can use this
   option to disable the generation of build targets for the LLVM tools.
+
+**LLVM_INDIVIDUAL_TEST_COVERAGE**:BOOL
+  Enable individual test case coverage. When set to ON, code coverage data for
+  each test case will be generated and stored in a separate directory under the
+  config.test_exec_root path. This feature allows code coverage analysis of each
+  individual test case. Defaults to OFF.
 
 **LLVM_INSTALL_BINUTILS_SYMLINKS**:BOOL
   Install symlinks from the binutils tool names to the corresponding LLVM tools.
@@ -697,6 +716,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   If enabled, utility binaries like ``FileCheck`` and ``not`` will be installed
   to CMAKE_INSTALL_PREFIX.
 
+**LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
+  The path to install Doxygen-generated HTML documentation to. This path can
+  either be absolute or relative to the *CMAKE_INSTALL_PREFIX*. Defaults to
+  ``${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html``.
+
 **LLVM_INTEGRATED_CRT_ALLOC**:PATH
   On Windows, allows embedding a different C runtime allocator into the LLVM
   tools and libraries. Using a lock-free allocator such as the ones listed below
@@ -710,19 +734,24 @@ enabled sub-projects. Nearly all of these variable names begin with
     $ D:\git> git clone https://github.com/mjansson/rpmalloc
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
-  This flag needs to be used along with the static CRT, ie. if building the
+  This option needs to be used along with the static CRT, ie. if building the
   Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
+  Note that rpmalloc is also supported natively in-tree, see option below.
 
-**LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
-  The path to install Doxygen-generated HTML documentation to. This path can
-  either be absolute or relative to the *CMAKE_INSTALL_PREFIX*. Defaults to
-  ``${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html``.
+**LLVM_ENABLE_RPMALLOC**:BOOL
+  Similar to LLVM_INTEGRATED_CRT_ALLOC, embeds the in-tree rpmalloc into the
+  host toolchain as a C runtime allocator. The version currently used is
+  rpmalloc 1.4.5. This option also implies linking with the static CRT, there's
+  no need to provide CMAKE_MSVC_RUNTIME_LIBRARY.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
   to OFF. Setting LLVM_LINK_LLVM_DYLIB to ON also sets LLVM_BUILD_LLVM_DYLIB
   to ON.
   This option is not available on Windows.
+
+**LLVM_<target>_LINKER_FLAGS**:STRING
+  Defines the set of linker flags that should be applied to a <target>.
 
 **LLVM_LIT_ARGS**:STRING
   Arguments given to lit.  ``make check`` and ``make clang-test`` are affected.
@@ -756,36 +785,28 @@ enabled sub-projects. Nearly all of these variable names begin with
   during the build. Enabling this option can significantly speed up build times
   especially when building LLVM in Debug configurations.
 
-**LLVM_PARALLEL_COMPILE_JOBS**:STRING
-  Define the maximum number of concurrent compilation jobs.
-
-**LLVM_PARALLEL_LINK_JOBS**:STRING
-  Define the maximum number of concurrent link jobs.
-
-**LLVM_PARALLEL_TABLEGEN_JOBS**:STRING
-  Define the maximum number of concurrent tablegen jobs.
-
-**LLVM_RAM_PER_COMPILE_JOB**:STRING
-  Calculates the amount of Ninja compile jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
-  will be between one and amount of logical cores.
-
-**LLVM_RAM_PER_LINK_JOB**:STRING
-  Calculates the amount of Ninja link jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
-  be between one and amount of logical cores. Link jobs will not run 
-  exclusively therefore you should add an offset of one or two compile jobs 
-  to be sure its not terminated in your memory restricted environment. On ELF
-  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
-
-**LLVM_RAM_PER_TABLEGEN_JOB**:STRING
-  Calculates the amount of Ninja tablegen jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_TABLEGEN_JOBS. Tablegen jobs
-  will be between one and amount of logical cores.
+**LLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS**:STRING
+  Limit the maximum number of concurrent compilation, link or
+  tablegen jobs respectively. The default total number of parallel jobs is
+  determined by the number of logical CPUs.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This
   can only be specified if you're building with clang.
+
+**LLVM_RAM_PER_{COMPILE,LINK,TABLEGEN}_JOB**:STRING
+  Limit the number of concurrent compile, link or tablegen jobs
+  respectively, depending on available physical memory. The value
+  specified is in MB. The respective
+  ``LLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS`` variable is
+  overwritten by computing the memory size divided by the
+  specified value. The largest memory user is linking, but remember
+  that jobs in the other categories might run in parallel to the link
+  jobs, and you need to consider their memory requirements when
+  in a memory-limited environment. Using a
+  ``-DLLVM_RAM_PER_LINK_JOB=10000`` is a good approximation. On ELF
+  platforms debug builds can reduce link-time memory pressure by also
+  using ``LLVM_USE_SPLIT_DWARF``.
 
 **LLVM_REVERSE_ITERATION**:BOOL
   If enabled, all supported unordered llvm containers would be iterated in
@@ -823,6 +844,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   Defines the set of compile flags used to enable UBSan. Only used if
   ``LLVM_USE_SANITIZER`` contains ``Undefined``. This can be used to override
   the default set of UBSan flags.
+
+**LLVM_UNREACHABLE_OPTIMIZE**:BOOL
+  This flag controls the behavior of `llvm_unreachable()` in release build
+  (when assertions are disabled in general). When ON (default) then
+  `llvm_unreachable()` is considered "undefined behavior" and optimized as
+  such. When OFF it is instead replaced with a guaranteed "trap".
 
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.
@@ -887,6 +914,11 @@ Advanced variables
 These are niche, and changing them from their defaults is more likely to cause
 things to go wrong.  They are also unstable across LLVM versions.
 
+**LLVM_EXAMPLES_INSTALL_DIR**:STRING
+  The path for examples of using LLVM, relative to the *CMAKE_INSTALL_PREFIX*.
+  Only matters if *LLVM_BUILD_EXAMPLES* is enabled.
+  Defaults to "examples".
+
 **LLVM_TOOLS_INSTALL_DIR**:STRING
   The path to install the main LLVM tools, relative to the *CMAKE_INSTALL_PREFIX*.
   Defaults to *CMAKE_INSTALL_BINDIR*.
@@ -895,11 +927,6 @@ things to go wrong.  They are also unstable across LLVM versions.
   The path to install auxiliary LLVM utilities, relative to the *CMAKE_INSTALL_PREFIX*.
   Only matters if *LLVM_INSTALL_UTILS* is enabled.
   Defaults to *LLVM_TOOLS_INSTALL_DIR*.
-
-**LLVM_EXAMPLES_INSTALL_DIR**:STRING
-  The path for examples of using LLVM, relative to the *CMAKE_INSTALL_PREFIX*.
-  Only matters if *LLVM_BUILD_EXAMPLES* is enabled.
-  Defaults to "examples".
 
 CMake Caches
 ============

@@ -836,7 +836,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_ref8:
   case DW_FORM_ref_udata: {
     // Verify all CU relative references are valid CU offsets.
-    std::optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+    std::optional<uint64_t> RefVal = AttrValue.Value.getAsRelativeReference();
     assert(RefVal);
     if (RefVal) {
       auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
@@ -854,7 +854,8 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       } else {
         // Valid reference, but we will verify it points to an actual
         // DIE later.
-        LocalReferences[*RefVal].insert(Die.getOffset());
+        LocalReferences[AttrValue.Value.getUnit()->getOffset() + *RefVal]
+            .insert(Die.getOffset());
       }
     }
     break;
@@ -862,7 +863,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_ref_addr: {
     // Verify all absolute DIE references have valid offsets in the
     // .debug_info section.
-    std::optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
+    std::optional<uint64_t> RefVal = AttrValue.Value.getAsDebugInfoReference();
     assert(RefVal);
     if (RefVal) {
       if (*RefVal >= DieCU->getInfoSection().Data.size()) {
@@ -1013,10 +1014,8 @@ void DWARFVerifier::verifyDebugLineRows() {
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FullPath);
       assert(HasFullPath && "Invalid index?");
       (void)HasFullPath;
-      auto It = FullPathMap.find(FullPath);
-      if (It == FullPathMap.end())
-        FullPathMap[FullPath] = FileIndex;
-      else if (It->second != FileIndex && DumpOpts.Verbose) {
+      auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
+      if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
         warn() << ".debug_line["
                << format("0x%08" PRIx64,
                          *toSectionOffset(Die.find(DW_AT_stmt_list)))
@@ -1480,9 +1479,9 @@ unsigned DWARFVerifier::verifyNameIndexAttribute(
 
 unsigned
 DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
-  if (NI.getLocalTUCount() + NI.getForeignTUCount() > 0) {
-    warn() << formatv("Name Index @ {0:x}: Verifying indexes of type units is "
-                      "not currently supported.\n",
+  if (NI.getForeignTUCount() > 0) {
+    warn() << formatv("Name Index @ {0:x}: Verifying indexes of foreign type "
+                      "units is not currently supported.\n",
                       NI.getUnitOffset());
     return 0;
   }
@@ -1511,12 +1510,13 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
       NumErrors += verifyNameIndexAttribute(NI, Abbrev, AttrEnc);
     }
 
-    if (NI.getCUCount() > 1 && !Attributes.count(dwarf::DW_IDX_compile_unit)) {
+    if (NI.getCUCount() > 1 && !Attributes.count(dwarf::DW_IDX_compile_unit) &&
+        !Attributes.count(dwarf::DW_IDX_type_unit)) {
       ErrorCategory.Report("Abbreviation contains no attribute", [&]() {
         error() << formatv("NameIndex @ {0:x}: Indexing multiple compile units "
-                           "and abbreviation {1:x} has no {2} attribute.\n",
-                           NI.getUnitOffset(), Abbrev.Code,
-                           dwarf::DW_IDX_compile_unit);
+                           "and abbreviation {1:x} has no DW_IDX_compile_unit "
+                           "or DW_IDX_type_unit attribute.\n",
+                           NI.getUnitOffset(), Abbrev.Code);
       });
       ++NumErrors;
     }
@@ -1573,8 +1573,8 @@ static SmallVector<std::string, 3> getNames(const DWARFDie &DIE,
 unsigned DWARFVerifier::verifyNameIndexEntries(
     const DWARFDebugNames::NameIndex &NI,
     const DWARFDebugNames::NameTableEntry &NTE) {
-  // Verifying type unit indexes not supported.
-  if (NI.getLocalTUCount() + NI.getForeignTUCount() > 0)
+  // Verifying foreign type unit indexes not supported.
+  if (NI.getForeignTUCount() > 0)
     return 0;
 
   const char *CStr = NTE.getString();
@@ -1595,19 +1595,91 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
   Expected<DWARFDebugNames::Entry> EntryOr = NI.getEntry(&NextEntryID);
   for (; EntryOr; ++NumEntries, EntryID = NextEntryID,
                                 EntryOr = NI.getEntry(&NextEntryID)) {
-    uint32_t CUIndex = *EntryOr->getCUIndex();
-    if (CUIndex > NI.getCUCount()) {
+
+    std::optional<uint64_t> CUIndex = EntryOr->getCUIndex();
+    std::optional<uint64_t> TUIndex = EntryOr->getLocalTUIndex();
+    if (CUIndex && *CUIndex >= NI.getCUCount()) {
       ErrorCategory.Report("Name Index entry contains invalid CU index", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
                            "invalid CU index ({2}).\n",
-                           NI.getUnitOffset(), EntryID, CUIndex);
+                           NI.getUnitOffset(), EntryID, *CUIndex);
       });
       ++NumErrors;
       continue;
     }
-    uint64_t CUOffset = NI.getCUOffset(CUIndex);
-    uint64_t DIEOffset = CUOffset + *EntryOr->getDIEUnitOffset();
-    DWARFDie DIE = DCtx.getDIEForOffset(DIEOffset);
+    if (TUIndex && *TUIndex >= NI.getLocalTUCount()) {
+      ErrorCategory.Report("Name Index entry contains invalid TU index", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
+                           "invalid TU index ({2}).\n",
+                           NI.getUnitOffset(), EntryID, *TUIndex);
+      });
+      ++NumErrors;
+      continue;
+    }
+    std::optional<uint64_t> UnitOffset;
+    if (TUIndex)
+      UnitOffset = NI.getLocalTUOffset(*TUIndex);
+    else if (CUIndex)
+      UnitOffset = NI.getCUOffset(*CUIndex);
+    if (!UnitOffset)
+      continue;
+    // For split DWARF entries we need to make sure we find the non skeleton
+    // DWARF unit that is needed and use that's DWARF unit offset as the
+    // DIE offset to add the DW_IDX_die_offset to.
+    DWARFUnit *DU = DCtx.getUnitForOffset(*UnitOffset);
+    if (DU == nullptr || DU->getOffset() != *UnitOffset) {
+      // If we didn't find a DWARF Unit from the UnitOffset, or if the offset
+      // of the unit doesn't match exactly, report an error.
+      ErrorCategory.Report(
+          "Name Index entry contains invalid CU or TU offset", [&]() {
+            error() << formatv("Name Index @ {0:x}: Entry @ {1:x} contains an "
+                               "invalid CU or TU offset {1:x}.\n",
+                               NI.getUnitOffset(), EntryID, *UnitOffset);
+          });
+      ++NumErrors;
+      continue;
+    }
+    // This function will try to get the non skeleton unit DIE, but if it is
+    // unable to load the .dwo file from the .dwo or .dwp, it will return the
+    // unit DIE of the DWARFUnit in "DU". So we need to check if the DWARFUnit
+    // has a .dwo file, but we couldn't load it.
+
+    // FIXME: Need a follow up patch to fix usage of
+    // DWARFUnit::getNonSkeletonUnitDIE() so that it returns an empty DWARFDie
+    // if the .dwo file isn't available and clean up other uses of this function
+    // call to properly deal with it. It isn't clear that getNonSkeletonUnitDIE
+    // will return the unit DIE of DU if we aren't able to get the .dwo file,
+    // but that is what the function currently does.
+    DWARFDie NonSkeletonUnitDie = DU->getNonSkeletonUnitDIE();
+    if (DU->getDWOId() && DU->getUnitDIE() == NonSkeletonUnitDie) {
+      ErrorCategory.Report("Unable to get load .dwo file", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} unable to load "
+                           ".dwo file \"{2}\" for DWARF unit @ {3:x}.\n",
+                           NI.getUnitOffset(), EntryID,
+                           dwarf::toString(DU->getUnitDIE().find(
+                               {DW_AT_dwo_name, DW_AT_GNU_dwo_name})),
+                           *UnitOffset);
+      });
+      ++NumErrors;
+      continue;
+    }
+    DWARFUnit *NonSkeletonUnit = NonSkeletonUnitDie.getDwarfUnit();
+    uint64_t DIEOffset =
+        NonSkeletonUnit->getOffset() + *EntryOr->getDIEUnitOffset();
+    const uint64_t NextUnitOffset = NonSkeletonUnit->getNextUnitOffset();
+    // DIE offsets are relative to the specified CU or TU. Make sure the DIE
+    // offsets is a valid relative offset.
+    if (DIEOffset >= NextUnitOffset) {
+      ErrorCategory.Report("NameIndex relative DIE offset too large", [&]() {
+        error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
+                           "DIE @ {2:x} when CU or TU ends at {3:x}.\n",
+                           NI.getUnitOffset(), EntryID, DIEOffset,
+                           NextUnitOffset);
+      });
+      continue;
+    }
+    DWARFDie DIE = NonSkeletonUnit->getDIEForOffset(DIEOffset);
+
     if (!DIE) {
       ErrorCategory.Report("NameIndex references nonexistent DIE", [&]() {
         error() << formatv("Name Index @ {0:x}: Entry @ {1:x} references a "
@@ -1617,12 +1689,17 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ++NumErrors;
       continue;
     }
-    if (DIE.getDwarfUnit()->getOffset() != CUOffset) {
+    // Only compare the DIE we found's DWARFUnit offset if the DIE lives in
+    // the DWARFUnit from the DW_IDX_comp_unit or DW_IDX_type_unit. If we are
+    // using split DWARF, then the DIE's DWARFUnit doesn't need to match the
+    // skeleton unit.
+    if (DIE.getDwarfUnit() == DU &&
+        DIE.getDwarfUnit()->getOffset() != *UnitOffset) {
       ErrorCategory.Report("Name index contains mismatched CU of DIE", [&]() {
         error() << formatv(
             "Name Index @ {0:x}: Entry @ {1:x}: mismatched CU of "
             "DIE @ {2:x}: index - {3:x}; debug_info - {4:x}.\n",
-            NI.getUnitOffset(), EntryID, DIEOffset, CUOffset,
+            NI.getUnitOffset(), EntryID, DIEOffset, *UnitOffset,
             DIE.getDwarfUnit()->getOffset());
       });
       ++NumErrors;

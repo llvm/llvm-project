@@ -2443,6 +2443,76 @@ csrrs t1, mireg, zero
 # uimm12
 csrrs t2, 0x351, zero
 
+# mireg2
+# name
+# CHECK-INST: csrrs t1, mireg2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x20,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg2
+# uimm12
+# CHECK-INST: csrrs t2, mireg2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg2
+# name
+csrrs t1, mireg2, zero
+# uimm12
+csrrs t2, 0x352, zero
+
+# mireg3
+# name
+# CHECK-INST: csrrs t1, mireg3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg3
+# uimm12
+# CHECK-INST: csrrs t2, mireg3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg3
+# name
+csrrs t1, mireg3, zero
+# uimm12
+csrrs t2, 0x353, zero
+
+# mireg4
+# name
+# CHECK-INST: csrrs t1, mireg4, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg4
+# uimm12
+# CHECK-INST: csrrs t2, mireg4, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg4
+# name
+csrrs t1, mireg4, zero
+# uimm12
+csrrs t2, 0x355, zero
+
+# mireg5
+# name
+# CHECK-INST: csrrs t1, mireg5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg5
+# uimm12
+# CHECK-INST: csrrs t2, mireg5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg5
+# name
+csrrs t1, mireg5, zero
+# uimm12
+csrrs t2, 0x356, zero
+
+# mireg6
+# name
+# CHECK-INST: csrrs t1, mireg6, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x35]
+# CHECK-INST-ALIAS: csrr t1, mireg6
+# uimm12
+# CHECK-INST: csrrs t2, mireg6, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x35]
+# CHECK-INST-ALIAS: csrr t2, mireg6
+# name
+csrrs t1, mireg6, zero
+# uimm12
+csrrs t2, 0x357, zero
+
 # mtopei
 # name
 # CHECK-INST: csrrs t1, mtopei, zero
@@ -2498,3 +2568,20 @@ csrrs t2, 0x308, zero
 csrrs t1, mvip, zero
 # uimm12
 csrrs t2, 0x309, zero
+
+##################################
+# Control Transfer Records
+##################################
+
+# mctrctl
+# name
+# CHECK-INST: csrrs t1, mctrctl, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x34]
+# CHECK-INST-ALIAS: csrr t1, mctrctl
+# uimm12
+# CHECK-INST: csrrs t2, mctrctl, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x34]
+# CHECK-INST-ALIAS: csrr t2, mctrctl
+csrrs t1, mctrctl, zero
+# uimm12
+csrrs t2, 0x34E, zero

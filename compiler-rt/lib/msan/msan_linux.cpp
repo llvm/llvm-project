@@ -42,7 +42,7 @@ namespace __msan {
 void ReportMapRange(const char *descr, uptr beg, uptr size) {
   if (size > 0) {
     uptr end = beg + size - 1;
-    VPrintf(1, "%s : 0x%zx - 0x%zx\n", descr, beg, end);
+    VPrintf(1, "%s : %p-%p\n", descr, (void *)beg, (void *)end);
   }
 }
 
@@ -51,8 +51,8 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size, bool verbose) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
       if (verbose)
-        Printf("FATAL: Memory range 0x%zx - 0x%zx is not available.\n", beg,
-               end);
+        Printf("FATAL: MemorySanitizer: Shadow range %p-%p is not available.\n",
+               (void *)beg, (void *)end);
       return false;
     }
   }
@@ -72,8 +72,9 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range 0x%zx - 0x%zx (%s).\n", beg,
-             end, name);
+      Printf(
+          "FATAL: MemorySanitizer: Cannot protect memory range %p-%p (%s).\n",
+          (void *)beg, (void *)end, name);
       return false;
     }
   }
@@ -175,7 +176,7 @@ bool InitShadowWithReExec(bool init_origins) {
   // Start with dry run: check layout is ok, but don't print warnings because
   // warning messages will cause tests to fail (even if we successfully re-exec
   // after the warning).
-  bool success = InitShadow(__msan_get_track_origins(), true);
+  bool success = InitShadow(init_origins, true);
   if (!success) {
 #  if SANITIZER_LINUX
     // Perhaps ASLR entropy is too high. If ASLR is enabled, re-exec without it.
@@ -197,7 +198,7 @@ bool InitShadowWithReExec(bool init_origins) {
 
   // The earlier dry run didn't actually map or protect anything. Run again in
   // non-dry run mode.
-  return success && InitShadow(__msan_get_track_origins(), false);
+  return success && InitShadow(init_origins, false);
 }
 
 static void MsanAtExit(void) {
@@ -292,6 +293,7 @@ void MsanTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+  ScopedBlockSignals block(nullptr);
   msan_current_thread = nullptr;
   // Make sure that signal handler can not see a stale current thread pointer.
   atomic_signal_fence(memory_order_seq_cst);

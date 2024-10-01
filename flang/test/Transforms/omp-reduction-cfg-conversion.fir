@@ -1,4 +1,4 @@
-// RUN: fir-opt --cfg-conversion-on-reduce-opt %s | FileCheck %s
+// RUN: fir-opt --cfg-conversion %s | FileCheck %s
 
 omp.declare_reduction @add_reduction_i_32_box_3_byref : !fir.ref<!fir.box<!fir.array<3xi32>>> init {
 ^bb0(%arg0: !fir.ref<!fir.box<!fir.array<3xi32>>>):

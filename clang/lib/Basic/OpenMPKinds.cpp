@@ -684,7 +684,8 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_tile || DKind == OMPD_unroll;
+  return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
+         DKind == OMPD_interchange;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -702,139 +703,139 @@ bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
          DKind == OMPD_target_parallel_loop;
 }
 
+bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Executable || Cat == Category::Subsidiary;
+}
+
+bool clang::isOpenMPInformationalDirective(OpenMPDirectiveKind DKind) {
+  if (DKind == OMPD_error)
+    return true;
+  Category Cat = getDirectiveCategory(DKind);
+  return Cat == Category::Informational;
+}
+
+bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
+  if (isOpenMPExecutableDirective(DKind)) {
+    switch (DKind) {
+    case OMPD_atomic:
+    case OMPD_barrier:
+    case OMPD_cancel:
+    case OMPD_cancellation_point:
+    case OMPD_critical:
+    case OMPD_depobj:
+    case OMPD_error:
+    case OMPD_flush:
+    case OMPD_masked:
+    case OMPD_master:
+    case OMPD_section:
+    case OMPD_taskwait:
+    case OMPD_taskyield:
+    case OMPD_assume:
+      return false;
+    default:
+      return !isOpenMPLoopTransformationDirective(DKind);
+    }
+  }
+  // Non-executable directives.
+  switch (DKind) {
+  case OMPD_metadirective:
+  case OMPD_nothing:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
   assert(unsigned(DKind) < llvm::omp::Directive_enumSize);
-  switch (DKind) {
-  case OMPD_metadirective:
-    CaptureRegions.push_back(OMPD_metadirective);
-    break;
-  case OMPD_parallel:
-  case OMPD_parallel_for:
-  case OMPD_parallel_for_simd:
-  case OMPD_parallel_master:
-  case OMPD_parallel_masked:
-  case OMPD_parallel_sections:
-  case OMPD_distribute_parallel_for:
-  case OMPD_distribute_parallel_for_simd:
-  case OMPD_parallel_loop:
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_teams:
-  case OMPD_target_teams_distribute:
-  case OMPD_target_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_teams:
-  case OMPD_teams_distribute:
-  case OMPD_teams_distribute_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_target:
-  case OMPD_target_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    break;
-  case OMPD_teams_loop:
-  case OMPD_teams_distribute_parallel_for:
-  case OMPD_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_target_parallel:
-  case OMPD_target_parallel_for:
-  case OMPD_target_parallel_for_simd:
-  case OMPD_target_parallel_loop:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_task:
-  case OMPD_target_enter_data:
-  case OMPD_target_exit_data:
-  case OMPD_target_update:
-    CaptureRegions.push_back(OMPD_task);
-    break;
-  case OMPD_taskloop:
-  case OMPD_taskloop_simd:
-  case OMPD_master_taskloop:
-  case OMPD_master_taskloop_simd:
-  case OMPD_masked_taskloop:
-  case OMPD_masked_taskloop_simd:
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_parallel_masked_taskloop:
-  case OMPD_parallel_masked_taskloop_simd:
-  case OMPD_parallel_master_taskloop:
-  case OMPD_parallel_master_taskloop_simd:
-    CaptureRegions.push_back(OMPD_parallel);
-    CaptureRegions.push_back(OMPD_taskloop);
-    break;
-  case OMPD_target_teams_loop:
-  case OMPD_target_teams_distribute_parallel_for:
-  case OMPD_target_teams_distribute_parallel_for_simd:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
-    break;
-  case OMPD_nothing:
-    CaptureRegions.push_back(OMPD_nothing);
-    break;
-  case OMPD_loop:
-    // TODO: 'loop' may require different capture regions depending on the bind
-    // clause or the parent directive when there is no bind clause. Use
-    // OMPD_unknown for now.
-  case OMPD_simd:
-  case OMPD_for:
-  case OMPD_for_simd:
-  case OMPD_sections:
-  case OMPD_section:
-  case OMPD_single:
-  case OMPD_master:
-  case OMPD_critical:
-  case OMPD_taskgroup:
-  case OMPD_distribute:
-  case OMPD_ordered:
-  case OMPD_atomic:
-  case OMPD_target_data:
-  case OMPD_distribute_simd:
-  case OMPD_scope:
-  case OMPD_dispatch:
+  assert(isOpenMPCapturingDirective(DKind) && "Expecting capturing directive");
+
+  auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
+    assert(isLeafConstruct(LKind) && "Epecting leaf directive");
+    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    switch (LKind) {
+    case OMPD_metadirective:
+      CaptureRegions.push_back(OMPD_metadirective);
+      break;
+    case OMPD_nothing:
+      CaptureRegions.push_back(OMPD_nothing);
+      break;
+    case OMPD_parallel:
+      CaptureRegions.push_back(OMPD_parallel);
+      break;
+    case OMPD_target:
+      CaptureRegions.push_back(OMPD_task);
+      CaptureRegions.push_back(OMPD_target);
+      break;
+    case OMPD_task:
+    case OMPD_target_enter_data:
+    case OMPD_target_exit_data:
+    case OMPD_target_update:
+      CaptureRegions.push_back(OMPD_task);
+      break;
+    case OMPD_teams:
+      CaptureRegions.push_back(OMPD_teams);
+      break;
+    case OMPD_taskloop:
+      CaptureRegions.push_back(OMPD_taskloop);
+      break;
+    case OMPD_loop:
+      // TODO: 'loop' may require different capture regions depending on the
+      // bind clause or the parent directive when there is no bind clause.
+      // If any of the directives that push regions here are parents of 'loop',
+      // assume 'parallel'. Otherwise do nothing.
+      if (!CaptureRegions.empty() &&
+          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+        CaptureRegions.push_back(OMPD_parallel);
+      else
+        return true;
+      break;
+    case OMPD_dispatch:
+    case OMPD_distribute:
+    case OMPD_for:
+    case OMPD_ordered:
+    case OMPD_scope:
+    case OMPD_sections:
+    case OMPD_simd:
+    case OMPD_single:
+    case OMPD_target_data:
+    case OMPD_taskgroup:
+      // These directives (when standalone) use OMPD_unknown as the region,
+      // but when they're constituents of a compound directive, and other
+      // leafs from that directive have specific regions, then these directives
+      // add no additional regions.
+      return true;
+    case OMPD_masked:
+    case OMPD_master:
+      return false;
+    default:
+      llvm::errs() << getOpenMPDirectiveName(LKind) << '\n';
+      llvm_unreachable("Unexpected directive");
+    }
+    return false;
+  };
+
+  bool MayNeedUnknownRegion = false;
+  for (OpenMPDirectiveKind L : getLeafConstructsOrSelf(DKind))
+    MayNeedUnknownRegion |= GetRegionsForLeaf(L);
+
+  // We need OMPD_unknown when no regions were added, and specific leaf
+  // constructs were present. Push a single OMPD_unknown as the capture
+  /// region.
+  if (CaptureRegions.empty() && MayNeedUnknownRegion)
     CaptureRegions.push_back(OMPD_unknown);
-    break;
-  case OMPD_tile:
-  case OMPD_unroll:
-    // loop transformations do not introduce captures.
-    break;
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_taskyield:
-  case OMPD_barrier:
-  case OMPD_error:
-  case OMPD_taskwait:
-  case OMPD_cancellation_point:
-  case OMPD_cancel:
-  case OMPD_flush:
-  case OMPD_depobj:
-  case OMPD_scan:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_declare_simd:
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_requires:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-    llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_unknown:
-  default:
-    llvm_unreachable("Unknown OpenMP directive");
-  }
+
+  // OMPD_unknown is only expected as the only region. If other regions
+  // are present OMPD_unknown should not be present.
+  assert((CaptureRegions[0] == OMPD_unknown ||
+          !llvm::is_contained(CaptureRegions, OMPD_unknown)) &&
+         "Misplaced OMPD_unknown");
 }
 
 bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {

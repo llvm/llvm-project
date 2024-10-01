@@ -111,6 +111,7 @@ class GlobalModuleCacheTestCase(TestBase):
         else:
             if one_target:
                 new_debugger = lldb.SBDebugger().Create()
+                new_debugger.SetAsync(False)
                 self.old_debugger = self.dbg
                 self.dbg = new_debugger
 

@@ -622,7 +622,7 @@ define i1 @PR60818_eq_multi_use(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], [[SUB]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -637,7 +637,7 @@ define i1 @PR60818_sgt(i32 %a) {
 ; CHECK-LABEL: @PR60818_sgt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[SUB]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

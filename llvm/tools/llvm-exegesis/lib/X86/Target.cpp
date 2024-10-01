@@ -747,8 +747,8 @@ private:
   std::vector<MCInst> generateExitSyscall(unsigned ExitCode) const override;
 
   std::vector<MCInst>
-  generateMmap(intptr_t Address, size_t Length,
-               intptr_t FileDescriptorAddress) const override;
+  generateMmap(uintptr_t Address, size_t Length,
+               uintptr_t FileDescriptorAddress) const override;
 
   void generateMmapAuxMem(std::vector<MCInst> &GeneratedCode) const override;
 
@@ -758,7 +758,7 @@ private:
 
   std::vector<MCInst> setStackRegisterToAuxMem() const override;
 
-  intptr_t getAuxiliaryMemoryStartAddress() const override;
+  uintptr_t getAuxiliaryMemoryStartAddress() const override;
 
   std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
 
@@ -769,11 +769,9 @@ private:
 
   ArrayRef<unsigned> getUnavailableRegisters() const override {
     if (DisableUpperSSERegisters)
-      return ArrayRef(kUnavailableRegistersSSE,
-                      sizeof(kUnavailableRegistersSSE) /
-                          sizeof(kUnavailableRegistersSSE[0]));
+      return ArrayRef(kUnavailableRegistersSSE);
 
-    return ArrayRef(kUnavailableRegisters, std::size(kUnavailableRegisters));
+    return ArrayRef(kUnavailableRegisters);
   }
 
   bool allowAsBackToBack(const Instruction &Instr) const override {
@@ -1093,9 +1091,9 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
 #ifdef __linux__
 
 #ifdef __arm__
-static constexpr const intptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const intptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 void generateRoundToNearestPage(unsigned int Register,
@@ -1182,8 +1180,8 @@ ExegesisX86Target::generateExitSyscall(unsigned ExitCode) const {
 }
 
 std::vector<MCInst>
-ExegesisX86Target::generateMmap(intptr_t Address, size_t Length,
-                                intptr_t FileDescriptorAddress) const {
+ExegesisX86Target::generateMmap(uintptr_t Address, size_t Length,
+                                uintptr_t FileDescriptorAddress) const {
   std::vector<MCInst> MmapCode;
   MmapCode.push_back(loadImmediate(X86::RDI, 64, APInt(64, Address)));
   MmapCode.push_back(loadImmediate(X86::RSI, 64, APInt(64, Length)));
@@ -1251,7 +1249,7 @@ std::vector<MCInst> ExegesisX86Target::setStackRegisterToAuxMem() const {
                       SubprocessMemory::AuxiliaryMemorySize)};
 }
 
-intptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
+uintptr_t ExegesisX86Target::getAuxiliaryMemoryStartAddress() const {
   // Return the second to last page in the virtual address space to try and
   // prevent interference with memory annotations in the snippet
   return VAddressSpaceCeiling - 2 * getpagesize();

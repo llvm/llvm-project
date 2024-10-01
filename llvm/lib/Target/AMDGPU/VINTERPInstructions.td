@@ -77,7 +77,7 @@ def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                   clampmod:$clamp,
+                   Clamp:$clamp,
                    WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$waitexp";
@@ -95,7 +95,7 @@ class VOP3_VINTERP_F16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Src1Mod:$src1_modifiers, VRegSrc_32:$src1,
                    Src2Mod:$src2_modifiers, VRegSrc_32:$src2,
-                   clampmod:$clamp, op_sel0:$op_sel,
+                   Clamp:$clamp, op_sel0:$op_sel,
                    WaitEXP:$waitexp);
 
   let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$op_sel$waitexp";
@@ -172,6 +172,12 @@ defm : VInterpF16Pat<int_amdgcn_interp_inreg_p10_f16,
                      [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
 defm : VInterpF16Pat<int_amdgcn_interp_inreg_p2_f16,
                      V_INTERP_P2_F16_F32_inreg, f16,
+                     [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p10_rtz_f16,
+                     V_INTERP_P10_RTZ_F16_F32_inreg, f32,
+                     [VINTERPModsHi, VINTERPMods, VINTERPModsHi]>;
+defm : VInterpF16Pat<int_amdgcn_interp_p2_rtz_f16,
+                     V_INTERP_P2_RTZ_F16_F32_inreg, f16,
                      [VINTERPModsHi, VINTERPMods, VINTERPMods]>;
 
 //===----------------------------------------------------------------------===//

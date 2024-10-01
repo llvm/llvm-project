@@ -112,7 +112,7 @@ Availability::Availability(const llvm::Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<Record *, 1> parentClass;
+  SmallVector<const Record *, 1> parentClass;
   def->getDirectSuperClasses(parentClass);
   if (parentClass.size() != 1) {
     PrintFatalError(def->getLoc(),
@@ -203,7 +203,7 @@ static bool emitInterfaceDefs(const RecordKeeper &recordKeeper,
   auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<Record *, 1> parent;
+    SmallVector<const Record *, 1> parent;
     def->getDirectSuperClasses(parent);
     if (parent.size() != 1) {
       PrintFatalError(def->getLoc(),
@@ -293,7 +293,7 @@ static bool emitInterfaceDecls(const RecordKeeper &recordKeeper,
   auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<Record *, 1> parent;
+    SmallVector<const Record *, 1> parent;
     def->getDirectSuperClasses(parent);
     if (parent.size() != 1) {
       PrintFatalError(def->getLoc(),
@@ -780,8 +780,7 @@ static void emitSerializationFunction(const Record *attrClass,
     os << formatv("  (void)emitDebugLine(functionBody, {0}.getLoc());\n",
                   opVar);
     os << formatv("  (void)encodeInstructionInto("
-                  "functionBody, spirv::Opcode::{1}, {2});\n",
-                  op.getQualCppClassName(),
+                  "functionBody, spirv::Opcode::{0}, {1});\n",
                   record->getValueAsString("spirvOpName"), operands);
   }
 

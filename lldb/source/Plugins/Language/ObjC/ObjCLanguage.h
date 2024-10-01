@@ -194,6 +194,8 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
+  bool SupportsExceptionBreakpointsOnThrow() const override { return true; }
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };

@@ -54,9 +54,9 @@ for.end:                                 ; preds = %for.body, %entry
 
 define void @vec_ptr(i64 %N, ptr noalias %a, ptr readnone %b) {
 ; CHECK-LABEL: @vec_ptr
-; CHECK: vector.body:
-; CHECK: %[[LOAD:.*]] = load <vscale x 2 x ptr>, ptr
-; CHECK: call <vscale x 2 x i64> @bar_vec(<vscale x 2 x ptr> %[[LOAD]])
+; CHECK: for.body:
+; CHECK: %[[LOAD:.*]] = load ptr, ptr
+; CHECK: call i64 @bar(ptr %[[LOAD]])
 entry:
   %cmp7 = icmp sgt i64 %N, 0
   br i1 %cmp7, label %for.body, label %for.end
@@ -101,9 +101,9 @@ for.end:
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_no_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32
@@ -127,10 +127,11 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:40: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): fadd
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:40: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_no_mapping_ite(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_no_mapping_ite
 ; CHECK-NOT: <vscale x
@@ -148,7 +149,8 @@ if.then:
   %1 = tail call fast float @llvm.sin.f32(float %0), !dbg !12
   br label %if.end
 if.else:
-  %2 = tail call fast float @llvm.sin.f32(float 0.0), !dbg !13
+  %add = fadd float %0, 12.0, !dbg !13
+  %2 = tail call fast float @llvm.sin.f32(float %add), !dbg !13
   br label %if.end
 if.end:
   %3 = phi float [%1, %if.then], [%2, %if.else]
@@ -163,9 +165,9 @@ for.cond.cleanup:                                 ; preds = %for.body
 }
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
-; CHECK-REMARKS-NEXT: t.c:3:10: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): load
-; CHECK-REMARKS-NEXT: t.c:3:20: Instruction with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
-; CHECK-REMARKS-NEXT: t.c:3:30: Instruction with invalid costs prevented vectorization at VF=(vscale x 1): store
+; CHECK-REMARKS-NEXT: t.c:3:10: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): load
+; CHECK-REMARKS-NEXT: t.c:3:20: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): call to llvm.sin.f32
+; CHECK-REMARKS-NEXT: t.c:3:30: Recipe with invalid costs prevented vectorization at VF=(vscale x 1): store
 define void @vec_sin_fixed_mapping(ptr noalias nocapture %dst, ptr noalias nocapture readonly %src, i64 %n) {
 ; CHECK: @vec_sin_fixed_mapping
 ; CHECK: call fast <2 x float> @llvm.sin.v2f32

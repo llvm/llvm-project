@@ -7,9 +7,19 @@ module m
     do k=1,10
     end do
   end
+  attributes(device) subroutine devsub2
+    real, device :: x(10)
+    print*,'from device'
+    print '(f10.5)', (x(ivar), ivar = 1, 10)
+    write(*,*), "Hello world from device!"
+    !WARNING: I/O statement might not be supported on device
+    write(12,'(10F4.1)'), x
+  end
 end
 
 program main
+  integer, device :: a_d(10 ,10)
+  integer :: b(10, 10)
   !$cuf kernel do <<< *, * >>> ! ok
   do j = 1, 0
   end do
@@ -82,4 +92,12 @@ program main
     else if (ifunc() /= 1) then
     end if
   end do
+
+  !$cuf kernel do (2) <<<*, *>>>
+  do j = 1, 10
+     do i = 1, 10
+        !ERROR: Host array 'b' cannot be present in CUF kernel
+        a_d(i,j) = b(i,j)
+     enddo
+  enddo
 end

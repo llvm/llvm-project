@@ -63,8 +63,49 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+#if TEST_STD_VER >= 23
+std::size_t min_bytes = 1000;
+
+template <typename T>
+struct increasing_allocator {
+  using value_type       = T;
+  increasing_allocator() = default;
+  template <typename U>
+  increasing_allocator(const increasing_allocator<U>&) noexcept {}
+  std::allocation_result<T*> allocate_at_least(std::size_t n) {
+    std::size_t allocation_amount = n * sizeof(T);
+    if (allocation_amount < min_bytes)
+      allocation_amount = min_bytes;
+    min_bytes += 1000;
+    return {static_cast<T*>(::operator new(allocation_amount)), allocation_amount / sizeof(T)};
+  }
+  T* allocate(std::size_t n) { return allocate_at_least(n).ptr; }
+  void deallocate(T* p, std::size_t) noexcept { ::operator delete(static_cast<void*>(p)); }
+};
+
+template <typename T, typename U>
+bool operator==(increasing_allocator<T>, increasing_allocator<U>) {
+  return true;
+}
+
+// https://github.com/llvm/llvm-project/issues/95161
+void test_increasing_allocator() {
+  std::basic_string<char, std::char_traits<char>, increasing_allocator<char>> s{
+      "String does not fit in the internal buffer"};
+  std::size_t capacity = s.capacity();
+  std::size_t size     = s.size();
+  s.shrink_to_fit();
+  assert(s.capacity() <= capacity);
+  assert(s.size() == size);
+  LIBCPP_ASSERT(is_string_asan_correct(s));
+}
+#endif // TEST_STD_VER >= 23
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 23
+  test_increasing_allocator();
+#endif
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif

@@ -11,18 +11,18 @@
 define amdgpu_kernel void @sgpr_if_else_salu_br(ptr addrspace(1) %out, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_salu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
-; SI-NEXT:    s_load_dword s2, s[0:1], 0xf
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0xb
+; SI-NEXT:    s_load_dword s0, s[2:3], 0xf
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB0_4
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_add_i32 s7, s7, s2
+; SI-NEXT:    s_add_i32 s7, s7, s0
 ; SI-NEXT:    s_cbranch_execnz .LBB0_3
 ; SI-NEXT:  .LBB0_2: ; %if
 ; SI-NEXT:    s_sub_i32 s7, s5, s6
 ; SI-NEXT:  .LBB0_3: ; %endif
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_add_i32 s4, s7, s4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -56,23 +56,23 @@ endif:
 define amdgpu_kernel void @sgpr_if_else_salu_br_opt(ptr addrspace(1) %out, [8 x i32], i32 %a, [8 x i32], i32 %b, [8 x i32], i32 %c, [8 x i32], i32 %d, [8 x i32], i32 %e) {
 ; SI-LABEL: sgpr_if_else_salu_br_opt:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s4, s[0:1], 0x13
+; SI-NEXT:    s_load_dword s4, s[2:3], 0x13
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB1_4
 ; SI-NEXT:  ; %bb.1: ; %else
-; SI-NEXT:    s_load_dword s2, s[0:1], 0x2e
-; SI-NEXT:    s_load_dword s3, s[0:1], 0x37
+; SI-NEXT:    s_load_dword s0, s[2:3], 0x2e
+; SI-NEXT:    s_load_dword s1, s[2:3], 0x37
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_add_i32 s5, s2, s3
+; SI-NEXT:    s_add_i32 s5, s0, s1
 ; SI-NEXT:    s_cbranch_execnz .LBB1_3
 ; SI-NEXT:  .LBB1_2: ; %if
-; SI-NEXT:    s_load_dword s2, s[0:1], 0x1c
-; SI-NEXT:    s_load_dword s3, s[0:1], 0x25
+; SI-NEXT:    s_load_dword s0, s[2:3], 0x1c
+; SI-NEXT:    s_load_dword s1, s[2:3], 0x25
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_add_i32 s5, s2, s3
+; SI-NEXT:    s_add_i32 s5, s0, s1
 ; SI-NEXT:  .LBB1_3: ; %endif
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_add_i32 s4, s5, s4
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -108,28 +108,28 @@ endif:
 define amdgpu_kernel void @sgpr_if_else_valu_br(ptr addrspace(1) %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; SI-LABEL: sgpr_if_else_valu_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xc
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0xc
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:    v_cmp_lg_f32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; SI-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
+; SI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; SI-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; SI-NEXT:    s_cbranch_execz .LBB2_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_i32 s8, s6, s7
 ; SI-NEXT:  .LBB2_2: ; %Flow
-; SI-NEXT:    s_or_saveexec_b64 s[2:3], s[2:3]
+; SI-NEXT:    s_or_saveexec_b64 s[0:1], s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
-; SI-NEXT:    s_xor_b64 exec, exec, s[2:3]
+; SI-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; SI-NEXT:    s_cbranch_execz .LBB2_4
 ; SI-NEXT:  ; %bb.3: ; %if
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_i32 s4, s4, s5
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:  .LBB2_4: ; %endif
-; SI-NEXT:    s_or_b64 exec, exec, s[2:3]
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -158,8 +158,8 @@ endif:
 define amdgpu_kernel void @sgpr_if_else_valu_cmp_phi_br(ptr addrspace(1) %out, ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SI-LABEL: sgpr_if_else_valu_cmp_phi_br:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0xd
 ; SI-NEXT:    s_mov_b32 s2, 0
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0

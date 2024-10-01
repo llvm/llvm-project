@@ -350,7 +350,6 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
 
 void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,
                                            Register &Reg) const {
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(AMDGPU::G_AMDGPU_CLAMP, {MI.getOperand(0)}, {Reg},
                MI.getFlags());
   MI.eraseFromParent();
@@ -358,7 +357,6 @@ void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,
 
 void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
                                           Med3MatchInfo &MatchInfo) const {
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
                {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
                 getAsVgpr(MatchInfo.Val2)},
@@ -423,8 +421,8 @@ void AMDGPURegBankCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -451,10 +449,17 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   const auto *LI = ST.getLegalizerInfo();
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // RegBankSelect seems not to leave dead instructions, so a full DCE pass is
+  // unnecessary.
+  CInfo.EnableFullDCE = false;
   AMDGPURegBankCombinerImpl Impl(MF, CInfo, TPC, *KB, /*CSEInfo*/ nullptr,
                                  RuleConfig, ST, MDT, LI);
   return Impl.combineMachineInstrs();

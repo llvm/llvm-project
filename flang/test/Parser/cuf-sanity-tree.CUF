@@ -199,8 +199,6 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | AllocateShapeSpec
 !CHECK: | | | | | | | Scalar -> Integer -> Expr = '32_4'
 !CHECK: | | | | | | | | LiteralConstant -> IntLiteralConstant = '32'
-!CHECK: | | | | | AllocOpt -> Stream -> Scalar -> Integer -> Expr = '1_4'
-!CHECK: | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !CHECK: | | | | | AllocOpt -> Pinned -> Scalar -> Logical -> Variable = 'ispinned'
 !CHECK: | | | | | | Designator -> DataRef -> Name = 'ispinned'
 !CHECK: | | | EndSubroutineStmt -> 

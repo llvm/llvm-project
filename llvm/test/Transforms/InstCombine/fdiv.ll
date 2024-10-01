@@ -141,12 +141,12 @@ define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-define <2 x float> @not_exact_inverse_vec_arcp_with_undef_elt(<2 x float> %x) {
-; CHECK-LABEL: @not_exact_inverse_vec_arcp_with_undef_elt(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp <2 x float> [[X:%.*]], <float undef, float 3.000000e+00>
+define <2 x float> @not_exact_inverse_vec_arcp_with_poison_elt(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_inverse_vec_arcp_with_poison_elt(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp <2 x float> [[X:%.*]], <float poison, float 3.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %div = fdiv arcp <2 x float> %x, <float undef, float 3.0>
+  %div = fdiv arcp <2 x float> %x, <float poison, float 3.0>
   ret <2 x float> %div
 }
 
@@ -333,13 +333,13 @@ define <2 x float> @unary_fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %div
 }
 
-define <2 x float> @fneg_fneg_vec_undef_elts(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @fneg_fneg_vec_undef_elts(
+define <2 x float> @fneg_fneg_vec_poison_elts(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_fneg_vec_poison_elts(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %xneg = fsub <2 x float> <float undef, float -0.0>, %x
-  %yneg = fsub <2 x float> <float -0.0, float undef>, %y
+  %xneg = fsub <2 x float> <float poison, float -0.0>, %x
+  %yneg = fsub <2 x float> <float -0.0, float poison>, %y
   %div = fdiv <2 x float> %xneg, %yneg
   ret <2 x float> %div
 }
@@ -404,12 +404,12 @@ define <2 x float> @unary_fneg_dividend_constant_divisor_vec(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-define <2 x float> @fneg_dividend_constant_divisor_vec_undef_elt(<2 x float> %x) {
-; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_undef_elt(
+define <2 x float> @fneg_dividend_constant_divisor_vec_poison_elt(<2 x float> %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_poison_elt(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[X:%.*]], <float -3.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %neg = fsub <2 x float> <float undef, float -0.0>, %x
+  %neg = fsub <2 x float> <float poison, float -0.0>, %x
   %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
   ret <2 x float> %div
 }
@@ -678,7 +678,7 @@ define float @pow_divisor(float %x, float %y, float %z) {
 ; CHECK-LABEL: @pow_divisor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.pow.f32(float [[X:%.*]], float [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.pow.f32(float %x, float %y)
@@ -744,7 +744,7 @@ define float @exp_divisor(float %y, float %z) {
 ; CHECK-LABEL: @exp_divisor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.exp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.exp.f32(float %y)
@@ -810,7 +810,7 @@ define float @exp2_divisor(float %y, float %z) {
 ; CHECK-LABEL: @exp2_divisor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg reassoc arcp float [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc arcp float @llvm.exp2.f32(float [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[TMP2]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.exp2.f32(float %y)
@@ -876,7 +876,7 @@ define float @powi_divisor(float %x, i32 %y, float %z) {
 ; CHECK-LABEL: @powi_divisor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf arcp float [[TMP2]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf arcp float [[Z:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %p = call float @llvm.powi.f32.i32(float %x, i32 %y)

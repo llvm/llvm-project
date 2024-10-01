@@ -168,7 +168,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimple64bitFrameFunction) {
               eLazyBoolYes);
   EXPECT_TRUE(unwind_plan.GetSourcedFromCompiler() == eLazyBoolNo);
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // 0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
   UnwindPlan::RowSP row_sp = unwind_plan.GetRowForFunctionOffset(0);
@@ -244,7 +244,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimple32bitFrameFunction) {
               eLazyBoolYes);
   EXPECT_TRUE(unwind_plan.GetSourcedFromCompiler() == eLazyBoolNo);
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // offset 0 -- pushl %ebp
   UnwindPlan::RowSP row_sp = unwind_plan.GetRowForFunctionOffset(0);
@@ -381,7 +381,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessBigStackFrame) {
   // 33: CFA=rsp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
   // 34: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // grab the Row for when the prologue has finished executing:
   // 17: CFA=rsp+14496 => rbx=[CFA-56] rbp=[CFA-16] rsp=CFA+0 r12=[CFA-48]
@@ -650,7 +650,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessBigStackFrame) {
   //  48: CFA=esp+14480 => ebx=[CFA-12] edi=[CFA-16] esi=[CFA-20] ebp=[CFA-8]
   //  esp=CFA+0 eip=[CFA-4]
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   // Check that we get the CFA correct for the pic base setup sequence
@@ -802,7 +802,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test64bitFramelessSmallStackFrame) {
   //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8]
   //    22: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // grab the Row for when the prologue has finished executing:
   //     1: CFA=rsp+16 => rsp=CFA+0 rip=[CFA-8]
@@ -911,7 +911,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
   // row[3]:    9: CFA=esp+16 => esp=CFA+0 eip=[CFA-4]
   // row[4]:   34: CFA=esp +4 => esp=CFA+0 eip=[CFA-4]
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // Check unwind state before we set up the picbase register
   //      3: CFA=esp+16 => esp=CFA+0 eip=[CFA-4]
@@ -962,7 +962,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32bitFramelessSmallStackFrame) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushRBP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1005,7 +1005,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushRBP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushImm) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1054,7 +1054,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushImm) {
 // in the first function called in a new thread and it needs to
 // put a 0 as the saved pc.  We pretend it didn't change the CFA.
 TEST_F(Testx86AssemblyInspectionEngine, TestPush0) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1085,7 +1085,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPush0) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushExtended) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1133,7 +1133,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushExtended) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushR15) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1161,7 +1161,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushR15) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushR14) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1189,7 +1189,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushR14) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushR13) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1217,7 +1217,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushR13) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushR12) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1245,7 +1245,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushR12) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushRBX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1276,7 +1276,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushRBX) {
 // eax, ecx, edx are all considered volatile and push/pops of them are
 // not tracked (except to keep track of stack pointer movement)
 TEST_F(Testx86AssemblyInspectionEngine, TestPushEAX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1305,7 +1305,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEAX) {
 // eax, ecx, edx are all considered volatile and push/pops of them are
 // not tracked (except to keep track of stack pointer movement)
 TEST_F(Testx86AssemblyInspectionEngine, TestPushECX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1334,7 +1334,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushECX) {
 // eax, ecx, edx are all considered volatile and push/pops of them are
 // not tracked (except to keep track of stack pointer movement)
 TEST_F(Testx86AssemblyInspectionEngine, TestPushEDX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1360,7 +1360,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEDX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushEBX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1388,7 +1388,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEBX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushEBP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1416,7 +1416,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEBP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushRBPWithREX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data[] = {
@@ -1444,7 +1444,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushRBPWithREX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushESI) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1472,7 +1472,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushESI) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPushEDI) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1500,7 +1500,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEDI) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestMovRSPtoRBP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
 
   uint8_t data64_1[] = {
@@ -1572,7 +1572,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestMovRSPtoRBP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSubRSP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1612,7 +1612,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSubRSP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSubESP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1652,7 +1652,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSubESP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestAddRSP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1692,7 +1692,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestAddRSP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestAddESP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1731,10 +1731,32 @@ TEST_F(Testx86AssemblyInspectionEngine, TestAddESP) {
   EXPECT_EQ(4 - 16, row_sp->GetCFAValue().GetOffset());
 }
 
-// FIXME add test for lea_rsp_pattern_p
+TEST_F(Testx86AssemblyInspectionEngine, TestLEA_RSP_Pattern) {
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x8d, 0x64, 0x24, 0x10, // lea rsp, [rsp + 0x10]
+      0x90                    // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(0);
+  EXPECT_EQ(0ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+}
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopRBX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1760,7 +1782,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopRBX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopRBP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1786,7 +1808,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopRBP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopR12) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1812,7 +1834,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopR12) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopR13) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1838,7 +1860,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopR13) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopR14) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1864,7 +1886,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopR14) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopR15) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1890,7 +1912,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopR15) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopEBX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1916,7 +1938,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopEBX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopEBP) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1942,7 +1964,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopEBP) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopRBPWithREX) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1968,7 +1990,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopRBPWithREX) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopESI) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -1994,7 +2016,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopESI) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestPopEDI) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2022,7 +2044,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopEDI) {
 // We don't track these registers, but make sure the CFA address is updated
 // if we're defining the CFA in term of esp.
 TEST_F(Testx86AssemblyInspectionEngine, Testi386IgnoredRegisters) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2060,7 +2082,7 @@ TEST_F(Testx86AssemblyInspectionEngine, Testi386IgnoredRegisters) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestLEAVE) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2101,7 +2123,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestLEAVE) {
 // pushes the addr of the next insn on the stack, and then pop that value
 // into a register (the "pic base" register).
 TEST_F(Testx86AssemblyInspectionEngine, TestCALLNextInsn) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2126,7 +2148,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestCALLNextInsn) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVx86_64) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2165,7 +2187,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVx86_64) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2199,7 +2221,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2290,7 +2312,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2368,7 +2390,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
 }
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2450,7 +2472,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
 // stops
 // disassembling at that point (long-mode).
 TEST_F(Testx86AssemblyInspectionEngine, Test32BitOnlyInstruction) {
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
@@ -2612,7 +2634,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestStackRealignMSVC_i386) {
   EXPECT_EQ(esp_minus_4, plan.GetRowForFunctionOffset(30)->GetAFAValue());
 
   // Test saved register
-  UnwindPlan::Row::RegisterLocation reg_loc;
+  UnwindPlan::Row::AbstractRegisterLocation reg_loc;
   EXPECT_TRUE(
       plan.GetRowForFunctionOffset(27)->GetRegisterInfo(k_edi, reg_loc));
   EXPECT_TRUE(reg_loc.IsAtAFAPlusOffset());
@@ -2690,7 +2712,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestReturnDetect) {
               eLazyBoolYes);
   EXPECT_TRUE(unwind_plan.GetSourcedFromCompiler() == eLazyBoolNo);
 
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   //  0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
   UnwindPlan::RowSP row_sp = unwind_plan.GetRowForFunctionOffset(0);

@@ -15,6 +15,7 @@
 #include <climits>
 #include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <list>
 #include <tuple>
 #include <type_traits>
@@ -405,6 +406,14 @@ std::vector<int>::const_iterator end(const some_struct &s) {
   return s.data.end();
 }
 
+std::vector<int>::const_reverse_iterator rbegin(const some_struct &s) {
+  return s.data.rbegin();
+}
+
+std::vector<int>::const_reverse_iterator rend(const some_struct &s) {
+  return s.data.rend();
+}
+
 void swap(some_struct &lhs, some_struct &rhs) {
   // make swap visible as non-adl swap would even seem to
   // work with std::swap which defaults to moving
@@ -573,6 +582,8 @@ TEST(STLExtrasTest, ADLTest) {
 
   EXPECT_EQ(*adl_begin(s), 1);
   EXPECT_EQ(*(adl_end(s) - 1), 5);
+  EXPECT_EQ(*adl_rbegin(s), 5);
+  EXPECT_EQ(*(adl_rend(s) - 1), 1);
 
   adl_swap(s, s2);
   EXPECT_EQ(s.swap_val, "lhs");
@@ -808,6 +819,26 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
 
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
+// Test to verify that all_equal works with a container that does not
+// model the random access iterator concept.
+TEST(STLExtrasTest, AllEqualNonRandomAccess) {
+  std::list<int> V;
+  static_assert(!std::is_convertible_v<
+                std::iterator_traits<decltype(V)::iterator>::iterator_category,
+                std::random_access_iterator_tag>);
   EXPECT_TRUE(all_equal(V));
 
   V.push_back(1);
@@ -1336,6 +1367,33 @@ TEST(STLExtrasTest, LessSecond) {
     std::tuple<int, int> B(1, 0);
     EXPECT_FALSE(less_second()(A, B));
     EXPECT_TRUE(less_second()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, Mismatch) {
+  {
+    const int MMIndex = 5;
+    StringRef First = "FooBar";
+    StringRef Second = "FooBaz";
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.begin() + MMIndex);
+    EXPECT_EQ(MMSecond, Second.begin() + MMIndex);
+  }
+
+  {
+    SmallVector<int> First = {0, 1, 2};
+    SmallVector<int> Second = {0, 1, 2, 3};
+    auto [MMFirst, MMSecond] = mismatch(First, Second);
+    EXPECT_EQ(MMFirst, First.end());
+    EXPECT_EQ(MMSecond, Second.begin() + 3);
+  }
+
+  {
+    SmallVector<int> First = {0, 1};
+    SmallVector<int> Empty;
+    auto [MMFirst, MMEmpty] = mismatch(First, Empty);
+    EXPECT_EQ(MMFirst, First.begin());
+    EXPECT_EQ(MMEmpty, Empty.begin());
   }
 }
 

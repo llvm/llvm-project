@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -116,7 +117,8 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
 }
 
 /// Returns true if we can prove that the object specified by V is smaller than
-/// Size.
+/// Size. Bails out early unless the root object is passed as the first
+/// parameter.
 static bool isObjectSmallerThan(const Value *V, TypeSize Size,
                                 const DataLayout &DL,
                                 const TargetLibraryInfo &TLI,
@@ -133,20 +135,14 @@ static bool isObjectSmallerThan(const Value *V, TypeSize Size,
   //     char *p = (char*)malloc(100)
   //     char *q = p+80;
   //
-  //  In the context of c1 and c2, the "object" pointed by q refers to the
+  // In the context of c1 and c2, the "object" pointed by q refers to the
   // stretch of memory of q[0:19]. So, getObjectSize(q) should return 20.
   //
-  //  However, in the context of c3, the "object" refers to the chunk of memory
-  // being allocated. So, the "object" has 100 bytes, and q points to the middle
-  // the "object". In case q is passed to isObjectSmallerThan() as the 1st
-  // parameter, before the llvm::getObjectSize() is called to get the size of
-  // entire object, we should:
-  //    - either rewind the pointer q to the base-address of the object in
-  //      question (in this case rewind to p), or
-  //    - just give up. It is up to caller to make sure the pointer is pointing
-  //      to the base address the object.
-  //
-  // We go for 2nd option for simplicity.
+  // In the context of c3, the "object" refers to the chunk of memory being
+  // allocated. So, the "object" has 100 bytes, and q points to the middle the
+  // "object". However, unless p, the root object, is passed as the first
+  // parameter, the call to isIdentifiedObject() makes isObjectSmallerThan()
+  // bail out early.
   if (!isIdentifiedObject(V))
     return false;
 
@@ -267,31 +263,43 @@ struct CastedValue {
   unsigned ZExtBits = 0;
   unsigned SExtBits = 0;
   unsigned TruncBits = 0;
+  /// Whether trunc(V) is non-negative.
+  bool IsNonNegative = false;
 
   explicit CastedValue(const Value *V) : V(V) {}
   explicit CastedValue(const Value *V, unsigned ZExtBits, unsigned SExtBits,
-                       unsigned TruncBits)
-      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits) {}
+                       unsigned TruncBits, bool IsNonNegative)
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits), TruncBits(TruncBits),
+        IsNonNegative(IsNonNegative) {}
 
   unsigned getBitWidth() const {
     return V->getType()->getPrimitiveSizeInBits() - TruncBits + ZExtBits +
            SExtBits;
   }
 
-  CastedValue withValue(const Value *NewV) const {
-    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits);
+  CastedValue withValue(const Value *NewV, bool PreserveNonNeg) const {
+    return CastedValue(NewV, ZExtBits, SExtBits, TruncBits,
+                       IsNonNegative && PreserveNonNeg);
   }
 
   /// Replace V with zext(NewV)
-  CastedValue withZExtOfValue(const Value *NewV) const {
+  CastedValue withZExtOfValue(const Value *NewV, bool ZExtNonNegative) const {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(zext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here.
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0);
+    // zext<nneg>(zext(NewV)) == zext(NewV)
+    // zext(zext<nneg>(NewV)) == zext<nneg>(NewV)
+    // The nneg can be preserved from the inner zext here but must be dropped
+    // from the outer.
+    return CastedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0, 0,
+                       ZExtNonNegative);
   }
 
   /// Replace V with sext(NewV)
@@ -299,11 +307,16 @@ struct CastedValue {
     unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
                         NewV->getType()->getPrimitiveSizeInBits();
     if (ExtendBy <= TruncBits)
-      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy);
+      // zext<nneg>(trunc(sext(NewV))) == zext<nneg>(trunc(NewV))
+      // The nneg can be preserved on the outer zext here
+      return CastedValue(NewV, ZExtBits, SExtBits, TruncBits - ExtendBy,
+                         IsNonNegative);
 
     // zext(sext(sext(NewV)))
     ExtendBy -= TruncBits;
-    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0);
+    // zext<nneg>(sext(sext(NewV))) = zext<nneg>(sext(NewV))
+    // The nneg can be preserved on the outer zext here
+    return CastedValue(NewV, ZExtBits, SExtBits + ExtendBy, 0, IsNonNegative);
   }
 
   APInt evaluateWith(APInt N) const {
@@ -319,6 +332,10 @@ struct CastedValue {
     assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
            "Incompatible bit width");
     if (TruncBits) N = N.truncate(N.getBitWidth() - TruncBits);
+    if (IsNonNegative && !N.isAllNonNegative())
+      N = N.intersectWith(
+          ConstantRange(APInt::getZero(N.getBitWidth()),
+                        APInt::getSignedMinValue(N.getBitWidth())));
     if (SExtBits) N = N.signExtend(N.getBitWidth() + SExtBits);
     if (ZExtBits) N = N.zeroExtend(N.getBitWidth() + ZExtBits);
     return N;
@@ -332,8 +349,18 @@ struct CastedValue {
   }
 
   bool hasSameCastsAs(const CastedValue &Other) const {
-    return ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
-           TruncBits == Other.TruncBits;
+    if (V->getType() != Other.V->getType())
+      return false;
+
+    if (ZExtBits == Other.ZExtBits && SExtBits == Other.SExtBits &&
+        TruncBits == Other.TruncBits)
+      return true;
+    // If either CastedValue has a nneg zext then the sext/zext bits are
+    // interchangable for that value.
+    if (IsNonNegative || Other.IsNonNegative)
+      return (ZExtBits + SExtBits == Other.ZExtBits + Other.SExtBits &&
+              TruncBits == Other.TruncBits);
+    return false;
   }
 };
 
@@ -343,24 +370,28 @@ struct LinearExpression {
   APInt Scale;
   APInt Offset;
 
+  /// True if all operations in this expression are NUW.
+  bool IsNUW;
   /// True if all operations in this expression are NSW.
   bool IsNSW;
 
   LinearExpression(const CastedValue &Val, const APInt &Scale,
-                   const APInt &Offset, bool IsNSW)
-      : Val(Val), Scale(Scale), Offset(Offset), IsNSW(IsNSW) {}
+                   const APInt &Offset, bool IsNUW, bool IsNSW)
+      : Val(Val), Scale(Scale), Offset(Offset), IsNUW(IsNUW), IsNSW(IsNSW) {}
 
-  LinearExpression(const CastedValue &Val) : Val(Val), IsNSW(true) {
+  LinearExpression(const CastedValue &Val)
+      : Val(Val), IsNUW(true), IsNSW(true) {
     unsigned BitWidth = Val.getBitWidth();
     Scale = APInt(BitWidth, 1);
     Offset = APInt(BitWidth, 0);
   }
 
-  LinearExpression mul(const APInt &Other, bool MulIsNSW) const {
+  LinearExpression mul(const APInt &Other, bool MulIsNUW, bool MulIsNSW) const {
     // The check for zero offset is necessary, because generally
     // (X +nsw Y) *nsw Z does not imply (X *nsw Z) +nsw (Y *nsw Z).
     bool NSW = IsNSW && (Other.isOne() || (MulIsNSW && Offset.isZero()));
-    return LinearExpression(Val, Scale * Other, Offset * Other, NSW);
+    bool NUW = IsNUW && (Other.isOne() || MulIsNUW);
+    return LinearExpression(Val, Scale * Other, Offset * Other, NUW, NSW);
   }
 };
 }
@@ -376,7 +407,7 @@ static LinearExpression GetLinearExpression(
 
   if (const ConstantInt *Const = dyn_cast<ConstantInt>(Val.V))
     return LinearExpression(Val, APInt(Val.getBitWidth(), 0),
-                            Val.evaluateWith(Const->getValue()), true);
+                            Val.evaluateWith(Const->getValue()), true, true);
 
   if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(Val.V)) {
     if (ConstantInt *RHSC = dyn_cast<ConstantInt>(BOp->getOperand(1))) {
@@ -409,23 +440,25 @@ static LinearExpression GetLinearExpression(
 
         [[fallthrough]];
       case Instruction::Add: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset += RHS;
+        E.IsNUW &= NUW;
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Sub: {
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
         E.Offset -= RHS;
+        E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
         E.IsNSW &= NSW;
         break;
       }
       case Instruction::Mul:
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT)
-                .mul(RHS, NSW);
+                .mul(RHS, NUW, NSW);
         break;
       case Instruction::Shl:
         // We're trying to linearize an expression of the kind:
@@ -436,10 +469,11 @@ static LinearExpression GetLinearExpression(
         if (RHS.getLimitedValue() > Val.getBitWidth())
           return Val;
 
-        E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
+        E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
                                 Depth + 1, AC, DT);
         E.Offset <<= RHS.getLimitedValue();
         E.Scale <<= RHS.getLimitedValue();
+        E.IsNUW &= NUW;
         E.IsNSW &= NSW;
         break;
       }
@@ -447,10 +481,10 @@ static LinearExpression GetLinearExpression(
     }
   }
 
-  if (isa<ZExtInst>(Val.V))
+  if (const auto *ZExt = dyn_cast<ZExtInst>(Val.V))
     return GetLinearExpression(
-        Val.withZExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
-        DL, Depth + 1, AC, DT);
+        Val.withZExtOfValue(ZExt->getOperand(0), ZExt->hasNonNeg()), DL,
+        Depth + 1, AC, DT);
 
   if (isa<SExtInst>(Val.V))
     return GetLinearExpression(
@@ -523,17 +557,17 @@ struct BasicAAResult::DecomposedGEP {
   APInt Offset;
   // Scaled variable (non-constant) indices.
   SmallVector<VariableGEPIndex, 4> VarIndices;
-  // Are all operations inbounds GEPs or non-indexing operations?
-  // (std::nullopt iff expression doesn't involve any geps)
-  std::optional<bool> InBounds;
+  // Nowrap flags common to all GEP operations involved in expression.
+  GEPNoWrapFlags NWFlags = GEPNoWrapFlags::all();
 
   void dump() const {
     print(dbgs());
     dbgs() << "\n";
   }
   void print(raw_ostream &OS) const {
-    OS << "(DecomposedGEP Base=" << Base->getName()
-       << ", Offset=" << Offset
+    OS << ", inbounds=" << (NWFlags.isInBounds() ? "1" : "0")
+       << ", nuw=" << (NWFlags.hasNoUnsignedWrap() ? "1" : "0")
+       << "(DecomposedGEP Base=" << Base->getName() << ", Offset=" << Offset
        << ", VarIndices=[";
     for (size_t i = 0; i < VarIndices.size(); i++) {
       if (i != 0)
@@ -612,12 +646,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       return Decomposed;
     }
 
-    // Track whether we've seen at least one in bounds gep, and if so, whether
-    // all geps parsed were in bounds.
-    if (Decomposed.InBounds == std::nullopt)
-      Decomposed.InBounds = GEPOp->isInBounds();
-    else if (!GEPOp->isInBounds())
-      Decomposed.InBounds = false;
+    // Track the common nowrap flags for all GEPs we see.
+    Decomposed.NWFlags &= GEPOp->getNoWrapFlags();
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
@@ -668,17 +698,22 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // If the integer type is smaller than the index size, it is implicitly
       // sign extended or truncated to index size.
+      bool NUSW = GEPOp->hasNoUnsignedSignedWrap();
+      bool NUW = GEPOp->hasNoUnsignedWrap();
+      bool NonNeg = NUSW && NUW;
       unsigned Width = Index->getType()->getIntegerBitWidth();
       unsigned SExtBits = IndexSize > Width ? IndexSize - Width : 0;
       unsigned TruncBits = IndexSize < Width ? Width - IndexSize : 0;
       LinearExpression LE = GetLinearExpression(
-          CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
+          CastedValue(Index, 0, SExtBits, TruncBits, NonNeg), DL, 0, AC, DT);
 
       // Scale by the type size.
       unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
+      LE = LE.mul(APInt(IndexSize, TypeSize), NUW, NUSW);
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
+      if (!LE.IsNUW)
+        Decomposed.NWFlags = Decomposed.NWFlags.withoutNoUnsignedWrap();
 
       // If we already had an occurrence of this index variable, merge this
       // scale into it.  For example, we want to handle:
@@ -689,7 +724,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
              areBothVScale(Decomposed.VarIndices[i].Val.V, LE.Val.V)) &&
             Decomposed.VarIndices[i].Val.hasSameCastsAs(LE.Val)) {
           Scale += Decomposed.VarIndices[i].Scale;
-          LE.IsNSW = false; // We cannot guarantee nsw for the merge.
+          // We cannot guarantee no-wrap for the merge.
+          LE.IsNSW = LE.IsNUW = false;
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
         }
@@ -1078,6 +1114,13 @@ AliasResult BasicAAResult::aliasGEP(
   if (DecompGEP1.Base == GEP1 && DecompGEP2.Base == V2)
     return AliasResult::MayAlias;
 
+  // Swap GEP1 and GEP2 if GEP2 has more variable indices.
+  if (DecompGEP1.VarIndices.size() < DecompGEP2.VarIndices.size()) {
+    std::swap(DecompGEP1, DecompGEP2);
+    std::swap(V1Size, V2Size);
+    std::swap(UnderlyingV1, UnderlyingV2);
+  }
+
   // Subtract the GEP2 pointer from the GEP1 pointer to find out their
   // symbolic difference.
   subtractDecomposedGEPs(DecompGEP1, DecompGEP2, AAQI);
@@ -1086,20 +1129,19 @@ AliasResult BasicAAResult::aliasGEP(
   // for the two to alias, then we can assume noalias.
   // TODO: Remove !isScalable() once BasicAA fully support scalable location
   // size
-  if (*DecompGEP1.InBounds && DecompGEP1.VarIndices.empty() &&
+
+  if (DecompGEP1.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
       V2Size.hasValue() && !V2Size.isScalable() &&
       DecompGEP1.Offset.sge(V2Size.getValue()) &&
       isBaseOfObject(DecompGEP2.Base))
     return AliasResult::NoAlias;
 
-  if (isa<GEPOperator>(V2)) {
-    // Symmetric case to above.
-    if (*DecompGEP2.InBounds && DecompGEP1.VarIndices.empty() &&
-        V1Size.hasValue() && !V1Size.isScalable() &&
-        DecompGEP1.Offset.sle(-V1Size.getValue()) &&
-        isBaseOfObject(DecompGEP1.Base))
-      return AliasResult::NoAlias;
-  }
+  // Symmetric case to above.
+  if (DecompGEP2.NWFlags.isInBounds() && DecompGEP1.VarIndices.empty() &&
+      V1Size.hasValue() && !V1Size.isScalable() &&
+      DecompGEP1.Offset.sle(-V1Size.getValue()) &&
+      isBaseOfObject(DecompGEP1.Base))
+    return AliasResult::NoAlias;
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
@@ -1128,8 +1170,6 @@ AliasResult BasicAAResult::aliasGEP(
     APInt &Off = DecompGEP1.Offset;
 
     // Initialize for Off >= 0 (V2 <= GEP1) case.
-    const Value *LeftPtr = V2;
-    const Value *RightPtr = GEP1;
     LocationSize VLeftSize = V2Size;
     LocationSize VRightSize = V1Size;
     const bool Swapped = Off.isNegative();
@@ -1141,7 +1181,6 @@ AliasResult BasicAAResult::aliasGEP(
       // ---------------->|
       // |-->V1Size       |-------> V2Size
       // GEP1             V2
-      std::swap(LeftPtr, RightPtr);
       std::swap(VLeftSize, VRightSize);
       Off = -Off;
     }
@@ -1207,6 +1246,20 @@ AliasResult BasicAAResult::aliasGEP(
         return AliasResult::NoAlias;
     }
   }
+
+  // If the difference between pointers is Offset +<nuw> Indices then we know
+  // that the addition does not wrap the pointer index type (add nuw) and the
+  // constant Offset is a lower bound on the distance between the pointers. We
+  // can then prove NoAlias via Offset u>= VLeftSize.
+  //    +                +                     +
+  //    | BaseOffset     |   +<nuw> Indices    |
+  //    ---------------->|-------------------->|
+  //    |-->V2Size       |                     |-------> V1Size
+  //   LHS                                    RHS
+  if (!DecompGEP1.VarIndices.empty() &&
+      DecompGEP1.NWFlags.hasNoUnsignedWrap() && V2Size.hasValue() &&
+      !V2Size.isScalable() && DecompGEP1.Offset.uge(V2Size.getValue()))
+    return AliasResult::NoAlias;
 
   // Bail on analysing scalable LocationSize
   if (V1Size.isScalable() || V2Size.isScalable())
@@ -1283,7 +1336,7 @@ AliasResult BasicAAResult::aliasGEP(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
@@ -1667,9 +1720,12 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (!Pair.second) {
     auto &Entry = Pair.first->second;
     if (!Entry.isDefinitive()) {
-      // Remember that we used an assumption.
-      ++Entry.NumAssumptionUses;
+      // Remember that we used an assumption. This may either be a direct use
+      // of an assumption, or a use of an entry that may itself be based on an
+      // assumption.
       ++AAQI.NumAssumptionUses;
+      if (Entry.isAssumption())
+        ++Entry.NumAssumptionUses;
     }
     // Cache contains sorted {V1,V2} pairs but we should return original order.
     auto Result = Entry.Result;
@@ -1697,7 +1753,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   Entry.Result = Result;
   // Cache contains sorted {V1,V2} pairs.
   Entry.Result.swap(Swapped);
-  Entry.NumAssumptionUses = -1;
 
   // If the assumption has been disproven, remove any results that may have
   // been based on this assumption. Do this after the Entry updates above to
@@ -1709,8 +1764,26 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // The result may still be based on assumptions higher up in the chain.
   // Remember it, so it can be purged from the cache later.
   if (OrigNumAssumptionUses != AAQI.NumAssumptionUses &&
-      Result != AliasResult::MayAlias)
+      Result != AliasResult::MayAlias) {
     AAQI.AssumptionBasedResults.push_back(Locs);
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::AssumptionBased;
+  } else {
+    Entry.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+  }
+
+  // Depth is incremented before this function is called, so Depth==1 indicates
+  // a root query.
+  if (AAQI.Depth == 1) {
+    // Any remaining assumption based results must be based on proven
+    // assumptions, so convert them to definitive results.
+    for (const auto &Loc : AAQI.AssumptionBasedResults) {
+      auto It = AAQI.AliasCache.find(Loc);
+      if (It != AAQI.AliasCache.end())
+        It->second.NumAssumptionUses = AAQueryInfo::CacheEntry::Definitive;
+    }
+    AAQI.AssumptionBasedResults.clear();
+    AAQI.NumAssumptionUses = 0;
+  }
   return Result;
 }
 
@@ -1792,6 +1865,11 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
 void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
                                            const DecomposedGEP &SrcGEP,
                                            const AAQueryInfo &AAQI) {
+  // Drop nuw flag from GEP if subtraction of constant offsets overflows in an
+  // unsigned sense.
+  if (DestGEP.Offset.ult(SrcGEP.Offset))
+    DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
+
   DestGEP.Offset -= SrcGEP.Offset;
   for (const VariableGEPIndex &Src : SrcGEP.VarIndices) {
     // Find V in Dest.  This is N^2, but pointer indices almost never have more
@@ -1814,6 +1892,11 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       // If we found it, subtract off Scale V's from the entry in Dest.  If it
       // goes to zero, remove the entry.
       if (Dest.Scale != Src.Scale) {
+        // Drop nuw flag from GEP if subtraction of V's Scale overflows in an
+        // unsigned sense.
+        if (Dest.Scale.ult(Src.Scale))
+          DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
+
         Dest.Scale -= Src.Scale;
         Dest.IsNSW = false;
       } else {
@@ -1828,6 +1911,9 @@ void BasicAAResult::subtractDecomposedGEPs(DecomposedGEP &DestGEP,
       VariableGEPIndex Entry = {Src.Val, Src.Scale, Src.CxtI, Src.IsNSW,
                                 /* IsNegated */ true};
       DestGEP.VarIndices.push_back(Entry);
+
+      // Drop nuw flag when we have unconsumed variable indices from SrcGEP.
+      DestGEP.NWFlags = DestGEP.NWFlags.withoutNoUnsignedWrap();
     }
   }
 }
@@ -1894,7 +1980,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT);
+  return BasicAAResult(F.getDataLayout(), F, TLI, AC, DT);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1922,7 +2008,7 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
 
-  Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F,
+  Result.reset(new BasicAAResult(F.getDataLayout(), F,
                                  TLIWP.getTLI(F), ACT.getAssumptionCache(F),
                                  &DTWP.getDomTree()));
 

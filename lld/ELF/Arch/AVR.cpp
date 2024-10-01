@@ -43,7 +43,7 @@ using namespace lld::elf;
 namespace {
 class AVR final : public TargetInfo {
 public:
-  AVR() { needsThunks = true; }
+  AVR(Ctx &ctx) : TargetInfo(ctx) { needsThunks = true; }
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -231,14 +231,13 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   // Since every jump destination is word aligned we gain an extra bit
   case R_AVR_7_PCREL: {
-    checkInt(loc, val - 2, 7, rel);
+    checkInt(loc, val - 2, 8, rel);
     checkAlignment(loc, val, 2, rel);
     const uint16_t target = (val - 2) >> 1;
     write16le(loc, (read16le(loc) & 0xfc07) | ((target & 0x7f) << 3));
     break;
   }
   case R_AVR_13_PCREL: {
-    checkInt(loc, val - 2, 13, rel);
     checkAlignment(loc, val, 2, rel);
     const uint16_t target = (val - 2) >> 1;
     write16le(loc, (read16le(loc) & 0xf000) | (target & 0xfff));
@@ -268,8 +267,8 @@ void AVR::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getAVRTargetInfo() {
-  static AVR target;
+TargetInfo *elf::getAVRTargetInfo(Ctx &ctx) {
+  static AVR target(ctx);
   return &target;
 }
 

@@ -15,6 +15,8 @@
 
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -222,9 +224,9 @@ bool promoteLoopAccessesToScalars(
     bool AllowSpeculation, bool HasReadsOutsideSet);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
-                                                     const Loop *CurLoop);
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16>
+collectChildrenInLoop(DominatorTree *DT, DomTreeNode *N, const Loop *CurLoop);
 
 /// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
@@ -357,6 +359,10 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
+/// kind.
+constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
+
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
 
@@ -372,14 +378,13 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
-/// See RecurrenceDescriptor::isAnyOfPattern for a description of the pattern we
-/// are trying to match. In this pattern, we are only ever selecting between two
-/// values: 1) an initial start value \p StartVal of the reduction PHI, and 2) a
-/// loop invariant value. If any of lane value in \p Left, \p Right is not equal
-/// to \p StartVal, select the loop invariant value. This is done by selecting
-/// \p Right iff \p Left is equal to \p StartVal.
-Value *createAnyOfOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
-                     Value *Left, Value *Right);
+/// Given information about an @llvm.vector.reduce.* intrinsic, return
+/// the identity value for the reduction.
+Value *getReductionIdentity(Intrinsic::ID RdxID, Type *Ty, FastMathFlags FMF);
+
+/// Given information about an recurrence kind, return the identity
+/// for the @llvm.vector.reduce.* used to generate it.
+Value *getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
@@ -393,34 +398,40 @@ Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc, Value *Src,
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
+                           TargetTransformInfo::ReductionShuffle RS,
                            RecurKind MinMaxKind = RecurKind::None);
 
-/// Create a target reduction of the given vector. The reduction operation
+/// Create a reduction of the given vector. The reduction operation
 /// is described by the \p Opcode parameter. min/max reductions require
 /// additional information supplied in \p RdxKind.
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
-Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
-                                   RecurKind RdxKind);
+Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
+                             RecurKind RdxKind);
+/// Overloaded function to generate vector-predication intrinsics for
+/// reduction.
+Value *createSimpleReduction(VectorBuilder &VB, Value *Src,
+                             const RecurrenceDescriptor &Desc);
 
-/// Create a target reduction of the given vector \p Src for a reduction of the
+/// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
 /// described by \p Desc.
-Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
-                                  const RecurrenceDescriptor &Desc,
-                                  PHINode *OrigPhi);
+Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
+                            const RecurrenceDescriptor &Desc,
+                            PHINode *OrigPhi);
 
-/// Create a generic target reduction using a recurrence descriptor \p Desc
-/// The target is queried to determine if intrinsics or shuffle sequences are
-/// required to implement the reduction.
+/// Create a generic reduction using a recurrence descriptor \p Desc
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                             Value *Src, PHINode *OrigPhi = nullptr);
+Value *createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
+                       Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
 Value *createOrderedReduction(IRBuilderBase &B,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start);
+/// Overloaded function to generate vector-predication intrinsics for ordered
+/// reduction.
+Value *createOrderedReduction(VectorBuilder &VB,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);
 

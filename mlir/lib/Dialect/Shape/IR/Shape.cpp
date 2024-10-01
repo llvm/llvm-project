@@ -65,9 +65,8 @@ LogicalResult shape::getShapeVec(Value input,
 }
 
 static bool isErrorPropagationPossible(TypeRange operandTypes) {
-  return llvm::any_of(operandTypes, [](Type ty) {
-    return llvm::isa<SizeType, ShapeType, ValueShapeType>(ty);
-  });
+  return llvm::any_of(operandTypes,
+                      llvm::IsaPred<SizeType, ShapeType, ValueShapeType>);
 }
 
 static LogicalResult verifySizeOrIndexOp(Operation *op) {
@@ -1703,18 +1702,36 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
   }
 };
 
-struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
+// Canonicalize
+//
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<?xindex>
+//
+// to
+//
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %1 = %shape
+//
+struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
   using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(shape::ShapeOfOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!llvm::isa<ShapedType>(op.getArg().getType()))
-      return failure();
-    if (llvm::isa<ShapedType>(op.getType()))
-      return failure();
+    auto tensorReshapeOp = op.getArg().getDefiningOp<tensor::ReshapeOp>();
+    if (!tensorReshapeOp)
+      return rewriter.notifyMatchFailure(op, "producer is not tensor.reshape");
+    if (!isa<TensorType>(op.getType()))
+      return rewriter.notifyMatchFailure(op, "result is not a tensor");
 
-    rewriter.replaceOpWithNewOp<shape::ShapeOfOp>(op.getOperation(),
-                                                  op.getArg());
+    // Operand 'shape' of 'tensor.reshape' may now be used as the result of
+    // 'shape.shape_of'. While its type is guaranteed to be compatible in well-
+    // formed IR, it may not be identical (dynamically vs statically shaped),
+    // in which case it needs to be cast first.
+    Value shape = tensorReshapeOp.getShape();
+    if (op.getType() != shape.getType())
+      shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);
+
+    rewriter.replaceOp(op, shape);
     return success();
   }
 };
@@ -1754,7 +1771,7 @@ struct ShapeOfCastExtentTensor : public OpRewritePattern<tensor::CastOp> {
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfCastExtentTensor, ShapeOfWithTensor,
+  patterns.add<ShapeOfCastExtentTensor, ShapeOfFromReshape,
                ExtractFromShapeOfExtentTensor, ShapeOfOpToConstShapeOp>(
       context);
 }

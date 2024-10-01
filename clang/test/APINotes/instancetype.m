@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers -verify %s
 
 @import InstancetypeModule;

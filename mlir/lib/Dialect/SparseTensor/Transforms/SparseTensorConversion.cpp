@@ -767,6 +767,12 @@ public:
 };
 
 /// Sparse conversion rule for the sparse_tensor.disassemble operator.
+/// Note that the current implementation simply exposes the buffers to
+/// the external client. This assumes the client only reads the buffers
+/// (usually copying it to the external data structures, such as numpy
+/// arrays). The semantics of the disassemble operation technically
+/// require that the copying is done here already using the out-levels
+/// and out-values clause.
 class SparseTensorDisassembleConverter
     : public OpConversionPattern<DisassembleOp> {
 public:
@@ -774,9 +780,6 @@ public:
   LogicalResult
   matchAndRewrite(DisassembleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // We simply expose the buffers to the external client. This
-    // assumes the client only reads the buffers (usually copying it
-    // to the external data structures, such as numpy arrays).
     Location loc = op->getLoc();
     auto stt = getSparseTensorType(op.getTensor());
     SmallVector<Value> retVal;

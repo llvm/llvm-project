@@ -41,9 +41,9 @@ llvm::StringRef Attributes::getIntExtensionAttrName() const {
 static const llvm::fltSemantics &floatToSemantics(const KindMapping &kindMap,
                                                   mlir::Type type) {
   assert(isa_real(type));
-  if (auto ty = type.dyn_cast<fir::RealType>())
+  if (auto ty = mlir::dyn_cast<fir::RealType>(type))
     return kindMap.getFloatSemantics(ty.getFKind());
-  return type.cast<mlir::FloatType>().getFloatSemantics();
+  return mlir::cast<mlir::FloatType>(type).getFloatSemantics();
 }
 
 static void typeTodo(const llvm::fltSemantics *sem, mlir::Location loc,
@@ -431,8 +431,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
         return byteOffset;
       }
       mlir::Type compType = component.second;
-      auto [compSize, compAlign] =
-          fir::getTypeSizeAndAlignment(loc, compType, getDataLayout(), kindMap);
+      auto [compSize, compAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+          loc, compType, getDataLayout(), kindMap);
       byteOffset = llvm::alignTo(byteOffset, compAlign);
       ArgClass LoComp, HiComp;
       classify(loc, compType, byteOffset, LoComp, HiComp);
@@ -452,8 +452,8 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                      ArgClass &Hi) const {
     mlir::Type eleTy = seqTy.getEleTy();
     const std::uint64_t arraySize = seqTy.getConstantArraySize();
-    auto [eleSize, eleAlign] =
-        fir::getTypeSizeAndAlignment(loc, eleTy, getDataLayout(), kindMap);
+    auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+        loc, eleTy, getDataLayout(), kindMap);
     std::uint64_t eleStorageSize = llvm::alignTo(eleSize, eleAlign);
     for (std::uint64_t i = 0; i < arraySize; ++i) {
       byteOffset = llvm::alignTo(byteOffset, eleAlign);
@@ -641,7 +641,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
                                                mlir::Type ty) const {
     CodeGenSpecifics::Marshalling marshal;
     auto sizeAndAlign =
-        fir::getTypeSizeAndAlignment(loc, ty, getDataLayout(), kindMap);
+        fir::getTypeSizeAndAlignmentOrCrash(loc, ty, getDataLayout(), kindMap);
     // The stack is always 8 byte aligned (note 14 in 3.2.3).
     unsigned short align =
         std::max(sizeAndAlign.second, static_cast<unsigned short>(8));
@@ -1112,4 +1112,15 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
         ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
+}
+
+std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
+    mlir::MLIRContext *ctx, llvm::Triple &&trp, KindMapping &&kindMap,
+    llvm::StringRef targetCPU, mlir::LLVM::TargetFeaturesAttr targetFeatures,
+    const mlir::DataLayout &dl, llvm::StringRef tuneCPU) {
+  std::unique_ptr<fir::CodeGenSpecifics> CGS = fir::CodeGenSpecifics::get(
+      ctx, std::move(trp), std::move(kindMap), targetCPU, targetFeatures, dl);
+
+  CGS->tuneCPU = tuneCPU;
+  return CGS;
 }

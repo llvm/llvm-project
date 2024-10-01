@@ -170,11 +170,10 @@ struct FunctionOutliningMultiRegionInfo {
 
   // Container for outline regions
   struct OutlineRegionInfo {
-    OutlineRegionInfo(ArrayRef<BasicBlock *> Region,
-                      BasicBlock *EntryBlock, BasicBlock *ExitBlock,
-                      BasicBlock *ReturnBlock)
-        : Region(Region.begin(), Region.end()), EntryBlock(EntryBlock),
-          ExitBlock(ExitBlock), ReturnBlock(ReturnBlock) {}
+    OutlineRegionInfo(ArrayRef<BasicBlock *> Region, BasicBlock *EntryBlock,
+                      BasicBlock *ExitBlock, BasicBlock *ReturnBlock)
+        : Region(Region), EntryBlock(EntryBlock), ExitBlock(ExitBlock),
+          ReturnBlock(ReturnBlock) {}
     SmallVector<BasicBlock *, 8> Region;
     BasicBlock *EntryBlock;
     BasicBlock *ExitBlock;
@@ -764,7 +763,7 @@ bool PartialInlinerImpl::shouldPartialInline(
     });
     return false;
   }
-  const DataLayout &DL = Caller->getParent()->getDataLayout();
+  const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
   int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
@@ -804,7 +803,7 @@ InstructionCost
 PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
                                         TargetTransformInfo *TTI) {
   InstructionCost InlineCost = 0;
-  const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
   int InstrCost = InlineConstants::getInstrCost();
   for (Instruction &I : BB->instructionsWithoutDebug()) {
     // Skip free instructions.

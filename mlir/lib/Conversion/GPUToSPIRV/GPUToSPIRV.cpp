@@ -21,7 +21,6 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
 
@@ -91,19 +90,6 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-class GPUModuleEndConversion final
-    : public OpConversionPattern<gpu::ModuleEndOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(gpu::ModuleEndOp endOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(endOp);
-    return success();
-  }
-};
-
 /// Pattern to convert a gpu.return into a SPIR-V return.
 // TODO: This can go to DRR when GPU return has operands.
 class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
@@ -132,6 +118,15 @@ public:
 
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -593,6 +588,10 @@ public:
   LogicalResult
   matchAndRewrite(gpu::SubgroupReduceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (op.getClusterSize())
+      return rewriter.notifyMatchFailure(
+          op, "lowering for clustered reduce not implemented");
+
     if (!isa<spirv::ScalarType>(adaptor.getValue().getType()))
       return rewriter.notifyMatchFailure(op, "reduction type is not a scalar");
 
@@ -607,6 +606,124 @@ public:
   }
 };
 
+// Formulate a unique variable/constant name after
+// searching in the module for existing variable/constant names.
+// This is to avoid name collision with existing variables.
+// Example: printfMsg0, printfMsg1, printfMsg2, ...
+static std::string makeVarName(spirv::ModuleOp moduleOp, llvm::Twine prefix) {
+  std::string name;
+  unsigned number = 0;
+
+  do {
+    name.clear();
+    name = (prefix + llvm::Twine(number++)).str();
+  } while (moduleOp.lookupSymbol(name));
+
+  return name;
+}
+
+/// Pattern to convert a gpu.printf op into a SPIR-V CLPrintf op.
+
+LogicalResult GPUPrintfConversion::matchAndRewrite(
+    gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+
+  Location loc = gpuPrintfOp.getLoc();
+
+  auto moduleOp = gpuPrintfOp->getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp)
+    return failure();
+
+  // SPIR-V global variable is used to initialize printf
+  // format string value, if there are multiple printf messages,
+  // each global var needs to be created with a unique name.
+  std::string globalVarName = makeVarName(moduleOp, llvm::Twine("printfMsg"));
+  spirv::GlobalVariableOp globalVar;
+
+  IntegerType i8Type = rewriter.getI8Type();
+  IntegerType i32Type = rewriter.getI32Type();
+
+  // Each character of printf format string is
+  // stored as a spec constant. We need to create
+  // unique name for this spec constant like
+  // @printfMsg0_sc0, @printfMsg0_sc1, ... by searching in the module
+  // for existing spec constant names.
+  auto createSpecConstant = [&](unsigned value) {
+    auto attr = rewriter.getI8IntegerAttr(value);
+    std::string specCstName =
+        makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
+
+    return rewriter.create<spirv::SpecConstantOp>(
+        loc, rewriter.getStringAttr(specCstName), attr);
+  };
+  {
+    Operation *parent =
+        SymbolTable::getNearestSymbolTable(gpuPrintfOp->getParentOp());
+
+    ConversionPatternRewriter::InsertionGuard guard(rewriter);
+
+    Block &entryBlock = *parent->getRegion(0).begin();
+    rewriter.setInsertionPointToStart(
+        &entryBlock); // insertion point at module level
+
+    // Create Constituents with SpecConstant by scanning format string
+    // Each character of format string is stored as a spec constant
+    // and then these spec constants are used to create a
+    // SpecConstantCompositeOp.
+    llvm::SmallString<20> formatString(adaptor.getFormat());
+    formatString.push_back('\0'); // Null terminate for C.
+    SmallVector<Attribute, 4> constituents;
+    for (char c : formatString) {
+      spirv::SpecConstantOp cSpecConstantOp = createSpecConstant(c);
+      constituents.push_back(SymbolRefAttr::get(cSpecConstantOp));
+    }
+
+    // Create SpecConstantCompositeOp to initialize the global variable
+    size_t contentSize = constituents.size();
+    auto globalType = spirv::ArrayType::get(i8Type, contentSize);
+    spirv::SpecConstantCompositeOp specCstComposite;
+    // There will be one SpecConstantCompositeOp per printf message/global var,
+    // so no need do lookup for existing ones.
+    std::string specCstCompositeName =
+        (llvm::Twine(globalVarName) + "_scc").str();
+
+    specCstComposite = rewriter.create<spirv::SpecConstantCompositeOp>(
+        loc, TypeAttr::get(globalType),
+        rewriter.getStringAttr(specCstCompositeName),
+        rewriter.getArrayAttr(constituents));
+
+    auto ptrType = spirv::PointerType::get(
+        globalType, spirv::StorageClass::UniformConstant);
+
+    // Define a GlobalVarOp initialized using specialized constants
+    // that is used to specify the printf format string
+    // to be passed to the SPIRV CLPrintfOp.
+    globalVar = rewriter.create<spirv::GlobalVariableOp>(
+        loc, ptrType, globalVarName, FlatSymbolRefAttr::get(specCstComposite));
+
+    globalVar->setAttr("Constant", rewriter.getUnitAttr());
+  }
+  // Get SSA value of Global variable and create pointer to i8 to point to
+  // the format string.
+  Value globalPtr = rewriter.create<spirv::AddressOfOp>(loc, globalVar);
+  Value fmtStr = rewriter.create<spirv::BitcastOp>(
+      loc,
+      spirv::PointerType::get(i8Type, spirv::StorageClass::UniformConstant),
+      globalPtr);
+
+  // Get printf arguments.
+  auto printfArgs = llvm::to_vector_of<Value, 4>(adaptor.getArgs());
+
+  rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
+
+  // Need to erase the gpu.printf op as gpu.printf does not use result vs
+  // spirv::CLPrintfOp has i32 resultType so cannot replace with new SPIR-V
+  // printf op.
+  rewriter.eraseOp(gpuPrintfOp);
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
@@ -615,7 +732,7 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUModuleEndConversion, GPUReturnOpConversion, GPUShuffleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
@@ -630,5 +747,6 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
       WorkGroupSizeConversion, GPUAllReduceConversion,
-      GPUSubgroupReduceConversion>(typeConverter, patterns.getContext());
+      GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
+                                                        patterns.getContext());
 }

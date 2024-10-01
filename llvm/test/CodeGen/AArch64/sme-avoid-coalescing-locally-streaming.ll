@@ -25,8 +25,7 @@ define void @dont_coalesce_args(<2 x i64> %a) "aarch64_pstate_sm_body" nounwind 
   ; CHECK-REGALLOC: bb.0 (%ir-block.0):
   ; CHECK-REGALLOC-NEXT:   liveins: $q0
   ; CHECK-REGALLOC-NEXT: {{  $}}
-  ; CHECK-REGALLOC-NEXT:   renamable $q0 = COALESCER_BARRIER_FPR128 killed renamable $q0
-  ; CHECK-REGALLOC-NEXT:   STRQui killed renamable $q0, %stack.0, 0 :: (store (s128) into %stack.0)
+  ; CHECK-REGALLOC-NEXT:   STRQui $q0, %stack.0, 0 :: (store (s128) into %stack.0)
   ; CHECK-REGALLOC-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
   ; CHECK-REGALLOC-NEXT:   renamable $q0 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
   ; CHECK-REGALLOC-NEXT:   renamable $q0 = KILL killed renamable $q0, implicit-def $z0
@@ -61,7 +60,6 @@ define <2 x i64> @dont_coalesce_res() "aarch64_pstate_sm_body" nounwind {
   ; CHECK-REGALLOC-NEXT:   BL @scalable_res, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $z0
   ; CHECK-REGALLOC-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-REGALLOC-NEXT:   renamable $q0 = KILL renamable $q0, implicit killed $z0
-  ; CHECK-REGALLOC-NEXT:   renamable $q0 = COALESCER_BARRIER_FPR128 killed renamable $q0
   ; CHECK-REGALLOC-NEXT:   STRQui killed renamable $q0, %stack.0, 0 :: (store (s128) into %stack.0)
   ; CHECK-REGALLOC-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def dead $q0, implicit $vg, implicit-def $vg
   ; CHECK-REGALLOC-NEXT:   $q0 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
@@ -94,17 +92,13 @@ define <2 x i64> @dont_coalesce_arg_that_is_also_res(<2 x i64> %a) "aarch64_psta
   ; CHECK-REGALLOC: bb.0 (%ir-block.0):
   ; CHECK-REGALLOC-NEXT:   liveins: $q0
   ; CHECK-REGALLOC-NEXT: {{  $}}
-  ; CHECK-REGALLOC-NEXT:   renamable $q0 = COALESCER_BARRIER_FPR128 killed renamable $q0
-  ; CHECK-REGALLOC-NEXT:   STRQui killed renamable $q0, %stack.0, 0 :: (store (s128) into %stack.0)
+  ; CHECK-REGALLOC-NEXT:   STRQui $q0, %stack.0, 0 :: (store (s128) into %stack.0)
   ; CHECK-REGALLOC-NEXT:   MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
   ; CHECK-REGALLOC-NEXT:   renamable $q0 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
   ; CHECK-REGALLOC-NEXT:   renamable $q0 = KILL killed renamable $q0, implicit-def $z0
   ; CHECK-REGALLOC-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-REGALLOC-NEXT:   BL @scalable_args, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit-def $sp
   ; CHECK-REGALLOC-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-  ; CHECK-REGALLOC-NEXT:   renamable $q0 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
-  ; CHECK-REGALLOC-NEXT:   renamable $q0 = COALESCER_BARRIER_FPR128 killed renamable $q0
-  ; CHECK-REGALLOC-NEXT:   STRQui killed renamable $q0, %stack.0, 0 :: (store (s128) into %stack.0)
   ; CHECK-REGALLOC-NEXT:   MSRpstatesvcrImm1 1, 0, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit-def dead $q0, implicit $vg, implicit-def $vg
   ; CHECK-REGALLOC-NEXT:   $q0 = LDRQui %stack.0, 0 :: (load (s128) from %stack.0)
   ; CHECK-REGALLOC-NEXT:   RET_ReallyLR implicit $q0

@@ -10,6 +10,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   error_category.cpp
   exception.cpp
+  expected.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
@@ -98,6 +99,7 @@ endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
+    support/win32/compiler_rt_shims.cpp
     support/win32/locale_win32.cpp
     support/win32/support.cpp
     )
@@ -141,28 +143,9 @@ if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     )
 endif()
 
-# Add all the headers to the project for IDEs.
-if (LIBCXX_CONFIGURE_IDE)
-  file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
-  if(WIN32)
-    file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/__support/win32/*.h)
-    list(APPEND LIBCXX_HEADERS ${LIBCXX_WIN32_HEADERS})
-  endif()
-  # Force them all into the headers dir on MSVC, otherwise they end up at
-  # project scope because they don't have extensions.
-  if (MSVC_IDE)
-    source_group("Header Files" FILES ${LIBCXX_HEADERS})
-  endif()
-endif()
-
 if(NOT LIBCXX_INSTALL_LIBRARY)
   set(exclude_from_all EXCLUDE_FROM_ALL)
 endif()
-
-if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
-  find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
-endif()
-add_library_flags_if(LIBCXX_COVERAGE_LIBRARY "${LIBCXX_COVERAGE_LIBRARY}")
 
 if (APPLE AND LLVM_USE_SANITIZER)
   if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -197,7 +180,7 @@ split_list(LIBCXX_LINK_FLAGS)
 if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_shared PUBLIC cxx-headers
+  target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
                                    PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
@@ -274,8 +257,13 @@ if (LIBCXX_ENABLE_SHARED)
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
     # will attempt to use the manifest tool to generate the bundled manifest
-    set_target_properties(cxx_shared PROPERTIES
-                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    else()
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
+    endif()
   endif()
 endif()
 
@@ -285,7 +273,7 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(cxx_static PUBLIC cxx-headers
+  target_link_libraries(cxx_static PUBLIC cxx-headers libcxx-libc-static
                                    PRIVATE ${LIBCXX_LIBRARIES}
                                    PRIVATE libcxx-abi-static)
   set_target_properties(cxx_static
@@ -326,7 +314,7 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
+if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
     )
@@ -334,14 +322,16 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    include/tzdb/time_zone_link_private.h
-    include/tzdb/time_zone_private.h
-    include/tzdb/types_private.h
-    include/tzdb/tzdb_list_private.h
-    include/tzdb/tzdb_private.h
-    time_zone.cpp
-    tzdb.cpp
-    tzdb_list.cpp
+    experimental/include/tzdb/time_zone_private.h
+    experimental/include/tzdb/types_private.h
+    experimental/include/tzdb/tzdb_list_private.h
+    experimental/include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    experimental/chrono_exception.cpp
+    experimental/time_zone.cpp
+    experimental/tzdb.cpp
+    experimental/tzdb_list.cpp
     )
 endif()
 

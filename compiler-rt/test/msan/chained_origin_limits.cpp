@@ -3,63 +3,61 @@
 // Heap origin.
 // RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -O3 %s -o %t
 
-// RUN: MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
 // Stack origin.
 // RUN: %clangxx_msan -DSTACK -fsanitize-memory-track-origins=2 -O3 %s -o %t
 
-// RUN: MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
-
 
 // Heap origin, with calls.
 // RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -O3 %s -o %t
 
-// RUN: MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
-
 
 // Stack origin, with calls.
 // RUN: %clangxx_msan -DSTACK -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -O3 %s -o %t
 
-// RUN: MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=2 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_per_stack_limit=1 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK-PER-STACK --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
+// RUN: env MSAN_OPTIONS=origin_history_size=7,origin_history_per_stack_limit=0 not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK7 < %t.out
 
 #include <stdio.h>

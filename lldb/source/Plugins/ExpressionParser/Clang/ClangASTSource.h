@@ -49,7 +49,7 @@ public:
   ~ClangASTSource() override;
 
   /// Interface stubs.
-  clang::Decl *GetExternalDecl(uint32_t) override { return nullptr; }
+  clang::Decl *GetExternalDecl(clang::GlobalDeclID) override { return nullptr; }
   clang::Stmt *GetExternalDeclStmt(uint64_t) override { return nullptr; }
   clang::Selector GetExternalSelector(uint32_t) override {
     return clang::Selector();

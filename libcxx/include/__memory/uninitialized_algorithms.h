@@ -21,7 +21,7 @@
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
-#include <__memory/voidify.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -63,7 +63,7 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
   try {
 #endif
     for (; __ifirst != __ilast && !__stop_copying(__idx); ++__ifirst, (void)++__idx)
-      ::new (std::__voidify(*__idx)) _ValueType(*__ifirst);
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(*__ifirst);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__ofirst, __idx);
@@ -93,7 +93,7 @@ __uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __of
   try {
 #endif
     for (; __n > 0 && !__stop_copying(__idx); ++__ifirst, (void)++__idx, (void)--__n)
-      ::new (std::__voidify(*__idx)) _ValueType(*__ifirst);
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(*__ifirst);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__ofirst, __idx);
@@ -123,7 +123,7 @@ __uninitialized_fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __x)
   try {
 #endif
     for (; __idx != __last; ++__idx)
-      ::new (std::__voidify(*__idx)) _ValueType(__x);
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(__x);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -151,7 +151,7 @@ __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   try {
 #endif
     for (; __n > 0; ++__idx, (void)--__n)
-      ::new (std::__voidify(*__idx)) _ValueType(__x);
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(__x);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -181,7 +181,7 @@ __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
   try {
 #  endif
     for (; __idx != __last; ++__idx)
-      ::new (std::__voidify(*__idx)) _ValueType;
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType;
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -207,7 +207,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_default_construct_
   try {
 #  endif
     for (; __n > 0; ++__idx, (void)--__n)
-      ::new (std::__voidify(*__idx)) _ValueType;
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType;
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -234,7 +234,7 @@ __uninitialized_value_construct(_ForwardIterator __first, _Sentinel __last) {
   try {
 #  endif
     for (; __idx != __last; ++__idx)
-      ::new (std::__voidify(*__idx)) _ValueType();
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType();
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -260,7 +260,7 @@ inline _LIBCPP_HIDE_FROM_ABI _ForwardIterator __uninitialized_value_construct_n(
   try {
 #  endif
     for (; __n > 0; ++__idx, (void)--__n)
-      ::new (std::__voidify(*__idx)) _ValueType();
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType();
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__first, __idx);
@@ -296,7 +296,7 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
   try {
 #  endif
     for (; __ifirst != __ilast && !__stop_moving(__idx); ++__idx, (void)++__ifirst) {
-      ::new (std::__voidify(*__idx)) _ValueType(__iter_move(__ifirst));
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(__iter_move(__ifirst));
     }
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
@@ -334,7 +334,7 @@ inline _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _ForwardIterator> __uninitiali
   try {
 #  endif
     for (; __n > 0 && !__stop_moving(__idx); ++__idx, (void)++__ifirst, --__n)
-      ::new (std::__voidify(*__idx)) _ValueType(__iter_move(__ifirst));
+      ::new (static_cast<void*>(std::addressof(*__idx))) _ValueType(__iter_move(__ifirst));
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   } catch (...) {
     std::__destroy(__ofirst, __idx);
@@ -562,17 +562,13 @@ struct __allocator_has_trivial_copy_construct<allocator<_Type>, _Type> : true_ty
 
 template <class _Alloc,
           class _In,
-          class _RawTypeIn = __remove_const_t<_In>,
           class _Out,
-          __enable_if_t<
-              // using _RawTypeIn because of the allocator<T const> extension
-              is_trivially_copy_constructible<_RawTypeIn>::value && is_trivially_copy_assignable<_RawTypeIn>::value &&
-                  is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
-                  __allocator_has_trivial_copy_construct<_Alloc, _RawTypeIn>::value,
-              int> = 0>
+          __enable_if_t<is_trivially_copy_constructible<_In>::value && is_trivially_copy_assignable<_In>::value &&
+                            is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
+                            __allocator_has_trivial_copy_construct<_Alloc, _In>::value,
+                        int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
 __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* __first2) {
-  // TODO: Remove the const_cast once we drop support for std::allocator<T const>
   if (__libcpp_is_constant_evaluated()) {
     while (__first1 != __last1) {
       std::__construct_at(std::__to_address(__first2), *__first1);
@@ -581,7 +577,7 @@ __uninitialized_allocator_copy_impl(_Alloc&, _In* __first1, _In* __last1, _Out* 
     }
     return __first2;
   } else {
-    return std::copy(__first1, __last1, const_cast<_RawTypeIn*>(__first2));
+    return std::copy(__first1, __last1, __first2);
   }
 }
 
@@ -642,7 +638,7 @@ __uninitialized_allocator_relocate(_Alloc& __alloc, _Tp* __first, _Tp* __last, _
     __guard.__complete();
     std::__allocator_destroy(__alloc, __first, __last);
   } else {
-    __builtin_memcpy(const_cast<__remove_const_t<_Tp>*>(__result), __first, sizeof(_Tp) * (__last - __first));
+    __builtin_memcpy(__result, __first, sizeof(_Tp) * (__last - __first));
   }
 }
 

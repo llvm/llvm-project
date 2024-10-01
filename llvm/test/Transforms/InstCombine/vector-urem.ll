@@ -19,11 +19,11 @@ define <4 x i32> @test_v4i32_const_pow2(<4 x i32> %a0) {
   ret <4 x i32> %1
 }
 
-define <4 x i32> @test_v4i32_const_pow2_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_const_pow2_undef(
+define <4 x i32> @test_v4i32_const_pow2_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_const_pow2_poison(
 ; CHECK-NEXT:    ret <4 x i32> poison
 ;
-  %1 = urem <4 x i32> %a0, <i32 1, i32 2, i32 4, i32 undef>
+  %1 = urem <4 x i32> %a0, <i32 1, i32 2, i32 4, i32 poison>
   ret <4 x i32> %1
 }
 
@@ -37,13 +37,13 @@ define <4 x i32> @test_v4i32_one(<4 x i32> %a0) {
   ret <4 x i32> %1
 }
 
-define <4 x i32> @test_v4i32_one_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_one_undef(
+define <4 x i32> @test_v4i32_one_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_one_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[A0:%.*]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
-  %1 = urem <4 x i32> <i32 1, i32 1, i32 1, i32 undef>, %a0
+  %1 = urem <4 x i32> <i32 1, i32 1, i32 1, i32 poison>, %a0
   ret <4 x i32> %1
 }
 
@@ -71,10 +71,10 @@ define <4 x i32> @test_v4i32_negconst(<4 x i32> %a0) {
   ret <4 x i32> %1
 }
 
-define <4 x i32> @test_v4i32_negconst_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_negconst_undef(
+define <4 x i32> @test_v4i32_negconst_poison(<4 x i32> %a0) {
+; CHECK-LABEL: @test_v4i32_negconst_poison(
 ; CHECK-NEXT:    ret <4 x i32> poison
 ;
-  %1 = urem <4 x i32> %a0, <i32 -3, i32 -5, i32 -7, i32 undef>
+  %1 = urem <4 x i32> %a0, <i32 -3, i32 -5, i32 -7, i32 poison>
   ret <4 x i32> %1
 }

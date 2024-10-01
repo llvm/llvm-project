@@ -11,13 +11,14 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_num_result.h"
+#include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Returns a pointer to the first character in src that is not a whitespace
@@ -164,6 +165,6 @@ strtointeger(const char *__restrict src, int base,
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H

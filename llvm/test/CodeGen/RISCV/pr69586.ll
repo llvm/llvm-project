@@ -927,258 +927,258 @@ define void @test(ptr %0, ptr %1, i64 %2) {
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v12
-; REMAT-NEXT:    vle32.v v12, (a2)
+; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    li a2, 11
 ; REMAT-NEXT:    slli a2, a2, 10
 ; REMAT-NEXT:    add a2, a0, a2
-; REMAT-NEXT:    vle32.v v16, (a2)
+; REMAT-NEXT:    vle32.v v26, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v14
-; REMAT-NEXT:    vle32.v v10, (a2)
+; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    li a2, 23
 ; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
-; REMAT-NEXT:    vle32.v v26, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v16
-; REMAT-NEXT:    vle32.v v12, (a2)
-; REMAT-NEXT:    lui a2, 3
-; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v28, (a2)
 ; REMAT-NEXT:    vle32.v v14, (a2)
-; REMAT-NEXT:    li a2, 25
-; REMAT-NEXT:    slli a2, a2, 9
+; REMAT-NEXT:    lui a2, 3
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    vle32.v v16, (a2)
-; REMAT-NEXT:    li a2, 13
-; REMAT-NEXT:    slli a2, a2, 10
+; REMAT-NEXT:    li a2, 25
+; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v6, (a2)
 ; REMAT-NEXT:    vle32.v v18, (a2)
-; REMAT-NEXT:    li a2, 27
-; REMAT-NEXT:    slli a2, a2, 9
+; REMAT-NEXT:    li a2, 13
+; REMAT-NEXT:    slli a2, a2, 10
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v4, (a2)
 ; REMAT-NEXT:    vle32.v v20, (a2)
-; REMAT-NEXT:    li a2, 7
-; REMAT-NEXT:    slli a2, a2, 11
+; REMAT-NEXT:    li a2, 27
+; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    vle32.v v22, (a2)
-; REMAT-NEXT:    li a2, 29
-; REMAT-NEXT:    slli a2, a2, 9
+; REMAT-NEXT:    li a2, 7
+; REMAT-NEXT:    slli a2, a2, 11
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v24, (a2)
 ; REMAT-NEXT:    vle32.v v8, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v26
-; REMAT-NEXT:    li a2, 15
-; REMAT-NEXT:    slli a2, a2, 10
+; REMAT-NEXT:    li a2, 29
+; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v26, (a2)
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v28
-; REMAT-NEXT:    li a2, 31
-; REMAT-NEXT:    slli a2, a2, 9
+; REMAT-NEXT:    li a2, 15
+; REMAT-NEXT:    slli a2, a2, 10
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v28, (a2)
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v30
-; REMAT-NEXT:    lui a2, 4
+; REMAT-NEXT:    li a2, 31
+; REMAT-NEXT:    slli a2, a2, 9
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v6
 ; REMAT-NEXT:    lui a2, 4
-; REMAT-NEXT:    addiw a2, a2, 512
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v6, (a2)
 ; REMAT-NEXT:    vle32.v v16, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v4
-; REMAT-NEXT:    li a2, 17
-; REMAT-NEXT:    slli a2, a2, 10
+; REMAT-NEXT:    lui a2, 4
+; REMAT-NEXT:    addiw a2, a2, 512
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v4, (a2)
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v2
-; REMAT-NEXT:    lui a2, 4
-; REMAT-NEXT:    addiw a2, a2, 1536
+; REMAT-NEXT:    li a2, 17
+; REMAT-NEXT:    slli a2, a2, 10
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    vle32.v v20, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v24
-; REMAT-NEXT:    li a2, 9
-; REMAT-NEXT:    slli a2, a2, 11
+; REMAT-NEXT:    lui a2, 4
+; REMAT-NEXT:    addiw a2, a2, 1536
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v24, (a2)
 ; REMAT-NEXT:    vle32.v v22, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v26
-; REMAT-NEXT:    lui a2, 5
-; REMAT-NEXT:    addiw a2, a2, -1536
+; REMAT-NEXT:    li a2, 9
+; REMAT-NEXT:    slli a2, a2, 11
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v26, (a2)
 ; REMAT-NEXT:    vle32.v v8, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v28
-; REMAT-NEXT:    li a2, 19
-; REMAT-NEXT:    slli a2, a2, 10
+; REMAT-NEXT:    lui a2, 5
+; REMAT-NEXT:    addiw a2, a2, -1536
 ; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v28, (a2)
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v30
-; REMAT-NEXT:    lui ra, 5
-; REMAT-NEXT:    addiw ra, ra, -512
-; REMAT-NEXT:    add a2, a0, ra
+; REMAT-NEXT:    li a2, 19
+; REMAT-NEXT:    slli a2, a2, 10
+; REMAT-NEXT:    add a2, a0, a2
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v6
-; REMAT-NEXT:    lui s11, 5
-; REMAT-NEXT:    add a2, a0, s11
+; REMAT-NEXT:    lui ra, 5
+; REMAT-NEXT:    addiw ra, ra, -512
+; REMAT-NEXT:    add a2, a0, ra
 ; REMAT-NEXT:    vle32.v v6, (a2)
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v4
-; REMAT-NEXT:    lui s10, 5
-; REMAT-NEXT:    addiw s10, s10, 512
-; REMAT-NEXT:    add a2, a0, s10
+; REMAT-NEXT:    lui s11, 5
+; REMAT-NEXT:    add a2, a0, s11
 ; REMAT-NEXT:    vle32.v v4, (a2)
 ; REMAT-NEXT:    vle32.v v16, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v2
-; REMAT-NEXT:    li s9, 21
-; REMAT-NEXT:    slli s9, s9, 10
-; REMAT-NEXT:    add a2, a0, s9
+; REMAT-NEXT:    lui s10, 5
+; REMAT-NEXT:    addiw s10, s10, 512
+; REMAT-NEXT:    add a2, a0, s10
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v24
-; REMAT-NEXT:    lui s8, 5
-; REMAT-NEXT:    addiw s8, s8, 1536
-; REMAT-NEXT:    add a2, a0, s8
+; REMAT-NEXT:    li s9, 21
+; REMAT-NEXT:    slli s9, s9, 10
+; REMAT-NEXT:    add a2, a0, s9
 ; REMAT-NEXT:    vle32.v v24, (a2)
 ; REMAT-NEXT:    vle32.v v20, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v26
-; REMAT-NEXT:    li s7, 11
-; REMAT-NEXT:    slli s7, s7, 11
-; REMAT-NEXT:    add a2, a0, s7
+; REMAT-NEXT:    lui s8, 5
+; REMAT-NEXT:    addiw s8, s8, 1536
+; REMAT-NEXT:    add a2, a0, s8
 ; REMAT-NEXT:    vle32.v v26, (a2)
 ; REMAT-NEXT:    vle32.v v22, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v28
-; REMAT-NEXT:    lui s6, 6
-; REMAT-NEXT:    addiw s6, s6, -1536
-; REMAT-NEXT:    add a2, a0, s6
+; REMAT-NEXT:    li s7, 11
+; REMAT-NEXT:    slli s7, s7, 11
+; REMAT-NEXT:    add a2, a0, s7
 ; REMAT-NEXT:    vle32.v v28, (a2)
 ; REMAT-NEXT:    vle32.v v8, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v30
-; REMAT-NEXT:    li s5, 23
-; REMAT-NEXT:    slli s5, s5, 10
-; REMAT-NEXT:    add a2, a0, s5
+; REMAT-NEXT:    lui s6, 6
+; REMAT-NEXT:    addiw s6, s6, -1536
+; REMAT-NEXT:    add a2, a0, s6
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v6
-; REMAT-NEXT:    lui s4, 6
-; REMAT-NEXT:    addiw s4, s4, -512
-; REMAT-NEXT:    add a2, a0, s4
+; REMAT-NEXT:    li s5, 23
+; REMAT-NEXT:    slli s5, s5, 10
+; REMAT-NEXT:    add a2, a0, s5
 ; REMAT-NEXT:    vle32.v v6, (a2)
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v4
-; REMAT-NEXT:    lui s3, 6
-; REMAT-NEXT:    add a2, a0, s3
+; REMAT-NEXT:    lui s4, 6
+; REMAT-NEXT:    addiw s4, s4, -512
+; REMAT-NEXT:    add a2, a0, s4
 ; REMAT-NEXT:    vle32.v v4, (a2)
 ; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v2
-; REMAT-NEXT:    lui s2, 6
-; REMAT-NEXT:    addiw s2, s2, 512
-; REMAT-NEXT:    add a2, a0, s2
+; REMAT-NEXT:    lui s3, 6
+; REMAT-NEXT:    add a2, a0, s3
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    vle32.v v16, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v24
-; REMAT-NEXT:    li s1, 25
-; REMAT-NEXT:    slli s1, s1, 10
-; REMAT-NEXT:    add a2, a0, s1
+; REMAT-NEXT:    lui s2, 6
+; REMAT-NEXT:    addiw s2, s2, 512
+; REMAT-NEXT:    add a2, a0, s2
 ; REMAT-NEXT:    vle32.v v0, (a2)
 ; REMAT-NEXT:    vle32.v v18, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v26
-; REMAT-NEXT:    lui s0, 6
-; REMAT-NEXT:    addiw s0, s0, 1536
-; REMAT-NEXT:    add a2, a0, s0
+; REMAT-NEXT:    li s1, 25
+; REMAT-NEXT:    slli s1, s1, 10
+; REMAT-NEXT:    add a2, a0, s1
 ; REMAT-NEXT:    vle32.v v26, (a2)
 ; REMAT-NEXT:    vle32.v v20, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v28
-; REMAT-NEXT:    li t6, 13
-; REMAT-NEXT:    slli t6, t6, 11
-; REMAT-NEXT:    add a2, a0, t6
+; REMAT-NEXT:    lui s0, 6
+; REMAT-NEXT:    addiw s0, s0, 1536
+; REMAT-NEXT:    add a2, a0, s0
 ; REMAT-NEXT:    vle32.v v28, (a2)
 ; REMAT-NEXT:    vle32.v v22, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v30
-; REMAT-NEXT:    lui t5, 7
-; REMAT-NEXT:    addiw t5, t5, -1536
-; REMAT-NEXT:    add a2, a0, t5
+; REMAT-NEXT:    li t6, 13
+; REMAT-NEXT:    slli t6, t6, 11
+; REMAT-NEXT:    add a2, a0, t6
 ; REMAT-NEXT:    vle32.v v30, (a2)
 ; REMAT-NEXT:    vle32.v v24, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v6
-; REMAT-NEXT:    li t4, 27
-; REMAT-NEXT:    slli t4, t4, 10
-; REMAT-NEXT:    add a2, a0, t4
+; REMAT-NEXT:    lui t5, 7
+; REMAT-NEXT:    addiw t5, t5, -1536
+; REMAT-NEXT:    add a2, a0, t5
 ; REMAT-NEXT:    vle32.v v6, (a2)
 ; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v4
-; REMAT-NEXT:    lui t3, 7
-; REMAT-NEXT:    addiw t3, t3, -512
-; REMAT-NEXT:    add a2, a0, t3
+; REMAT-NEXT:    li t4, 27
+; REMAT-NEXT:    slli t4, t4, 10
+; REMAT-NEXT:    add a2, a0, t4
 ; REMAT-NEXT:    vle32.v v4, (a2)
 ; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v2
+; REMAT-NEXT:    lui t3, 7
+; REMAT-NEXT:    addiw t3, t3, -512
+; REMAT-NEXT:    add a2, a0, t3
+; REMAT-NEXT:    vle32.v v2, (a2)
+; REMAT-NEXT:    vle32.v v14, (a2)
+; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v0
 ; REMAT-NEXT:    lui t2, 7
 ; REMAT-NEXT:    add a2, a0, t2
-; REMAT-NEXT:    vle32.v v2, (a2)
+; REMAT-NEXT:    vle32.v v0, (a2)
 ; REMAT-NEXT:    vle32.v v8, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v0
+; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v26
 ; REMAT-NEXT:    lui t1, 7
 ; REMAT-NEXT:    addiw t1, t1, 512
 ; REMAT-NEXT:    add a2, a0, t1
-; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    vle32.v v16, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v26
+; REMAT-NEXT:    vle32.v v18, (a2)
+; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v28
 ; REMAT-NEXT:    li t0, 29
 ; REMAT-NEXT:    slli t0, t0, 10
 ; REMAT-NEXT:    add a2, a0, t0
-; REMAT-NEXT:    vle32.v v18, (a2)
+; REMAT-NEXT:    vle32.v v20, (a2)
 ; REMAT-NEXT:    vle32.v v26, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v20, v28
+; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v30
 ; REMAT-NEXT:    lui a7, 7
 ; REMAT-NEXT:    addiw a7, a7, 1536
 ; REMAT-NEXT:    add a2, a0, a7
-; REMAT-NEXT:    vle32.v v20, (a2)
+; REMAT-NEXT:    vle32.v v22, (a2)
 ; REMAT-NEXT:    vle32.v v28, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v22, v30
+; REMAT-NEXT:    sf.vc.vv 3, 0, v24, v6
 ; REMAT-NEXT:    li a6, 15
 ; REMAT-NEXT:    slli a6, a6, 11
 ; REMAT-NEXT:    add a2, a0, a6
-; REMAT-NEXT:    vle32.v v22, (a2)
+; REMAT-NEXT:    vle32.v v24, (a2)
 ; REMAT-NEXT:    vle32.v v30, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v24, v6
+; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v4
 ; REMAT-NEXT:    lui a5, 8
 ; REMAT-NEXT:    addiw a5, a5, -1536
 ; REMAT-NEXT:    add a2, a0, a5
-; REMAT-NEXT:    vle32.v v24, (a2)
+; REMAT-NEXT:    vle32.v v10, (a2)
 ; REMAT-NEXT:    vle32.v v6, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v10, v4
+; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v2
 ; REMAT-NEXT:    li a4, 31
 ; REMAT-NEXT:    slli a4, a4, 10
 ; REMAT-NEXT:    add a2, a0, a4
-; REMAT-NEXT:    vle32.v v10, (a2)
+; REMAT-NEXT:    vle32.v v12, (a2)
 ; REMAT-NEXT:    vle32.v v4, (a2)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v12, v2
+; REMAT-NEXT:    sf.vc.vv 3, 0, v14, v0
 ; REMAT-NEXT:    lui a3, 8
 ; REMAT-NEXT:    addiw a3, a3, -512
 ; REMAT-NEXT:    add a2, a0, a3
-; REMAT-NEXT:    vle32.v v12, (a2)
+; REMAT-NEXT:    vle32.v v14, (a2)
 ; REMAT-NEXT:    vle32.v v2, (a2)
 ; REMAT-NEXT:    lui a2, 8
 ; REMAT-NEXT:    add a0, a0, a2
 ; REMAT-NEXT:    vle32.v v0, (a0)
-; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v14
-; REMAT-NEXT:    sf.vc.vv 3, 0, v16, v18
-; REMAT-NEXT:    sf.vc.vv 3, 0, v26, v20
-; REMAT-NEXT:    sf.vc.vv 3, 0, v28, v22
-; REMAT-NEXT:    sf.vc.vv 3, 0, v30, v24
-; REMAT-NEXT:    sf.vc.vv 3, 0, v6, v10
-; REMAT-NEXT:    sf.vc.vv 3, 0, v4, v12
+; REMAT-NEXT:    sf.vc.vv 3, 0, v8, v16
+; REMAT-NEXT:    sf.vc.vv 3, 0, v18, v20
+; REMAT-NEXT:    sf.vc.vv 3, 0, v26, v22
+; REMAT-NEXT:    sf.vc.vv 3, 0, v28, v24
+; REMAT-NEXT:    sf.vc.vv 3, 0, v30, v10
+; REMAT-NEXT:    sf.vc.vv 3, 0, v6, v12
+; REMAT-NEXT:    sf.vc.vv 3, 0, v4, v14
 ; REMAT-NEXT:    sf.vc.vv 3, 0, v2, v0
 ; REMAT-NEXT:    sf.vc.v.i 2, 0, v8, 0
 ; REMAT-NEXT:    addi a0, a1, 1024

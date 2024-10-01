@@ -409,7 +409,8 @@ struct Bar2Template : public BarTemplates {
 // CHECK-CC22-NEXT: Objective-C interface
 
 // RUN: c-index-test -code-completion-at=%s:64:10 %s | FileCheck -check-prefix=CHECK-CC23 %s
-// CHECK-CC23: OverloadCandidate:{ResultType void}{Text foo_12}{LeftParen (}{CurrentParameter int}{Comma , }{Placeholder int}{RightParen )} (1)
+
+// CHECK-CC23: OverloadCandidate:{ResultType void}{Text foo_12}{LeftParen (}{CurrentParameter T}{Comma , }{Placeholder T}{RightParen )} (1)
 // CHECK-CC23: Completion contexts:
 // CHECK-CC23-NEXT: Any type
 // CHECK-CC23-NEXT: Any value
@@ -702,7 +703,7 @@ struct Bar2Template : public BarTemplates {
 // CHECK-CC46-NEXT: Objective-C interface
 
 // RUN: c-index-test -code-completion-at=%s:84:12 %s | FileCheck -check-prefix=CHECK-CC47 %s
-// CHECK-CC47: OverloadCandidate:{ResultType void}{Text foo_12}{LeftParen (}{CurrentParameter int}{Comma , }{Placeholder int}{RightParen )} (1)
+// CHECK-CC47: OverloadCandidate:{ResultType void}{Text foo_12}{LeftParen (}{CurrentParameter T}{Comma , }{Placeholder T}{RightParen )} (1)
 // CHECK-CC47: Completion contexts:
 // CHECK-CC47-NEXT: Any type
 // CHECK-CC47-NEXT: Any value

@@ -87,6 +87,10 @@ namespace llvm {
     COMI,
     UCOMI,
 
+    // X86 compare with Intrinsics similar to COMI.
+    COMX,
+    UCOMX,
+
     /// X86 bit-test instructions.
     BT,
 
@@ -340,6 +344,9 @@ namespace llvm {
 
     // Vector FP round.
     VFPROUND,
+    // Convert TWO packed single data to one packed data
+    VFPROUND2,
+    VFPROUND2_RND,
     VFPROUND_RND,
     VFPROUNDS,
     VFPROUNDS_RND,
@@ -595,6 +602,51 @@ namespace llvm {
     VPDPBSSD,
     VPDPBSSDS,
 
+    VPDPWSUD,
+    VPDPWSUDS,
+    VPDPWUSD,
+    VPDPWUSDS,
+    VPDPWUUD,
+    VPDPWUUDS,
+
+    VMINMAX,
+    VMINMAX_SAE,
+    VMINMAXS,
+    VMINMAXS_SAE,
+
+    CVTP2IBS,
+    CVTP2IUBS,
+    CVTP2IBS_RND,
+    CVTP2IUBS_RND,
+    CVTTP2IBS,
+    CVTTP2IUBS,
+    CVTTP2IBS_SAE,
+    CVTTP2IUBS_SAE,
+
+    MPSADBW,
+
+    VCVTNE2PH2BF8,
+    VCVTNE2PH2BF8S,
+    VCVTNE2PH2HF8,
+    VCVTNE2PH2HF8S,
+    VCVTBIASPH2BF8,
+    VCVTBIASPH2BF8S,
+    VCVTBIASPH2HF8,
+    VCVTBIASPH2HF8S,
+    VCVTNEPH2BF8,
+    VCVTNEPH2BF8S,
+    VCVTNEPH2HF8,
+    VCVTNEPH2HF8S,
+    VMCVTBIASPH2BF8,
+    VMCVTBIASPH2BF8S,
+    VMCVTBIASPH2HF8,
+    VMCVTBIASPH2HF8S,
+    VMCVTNEPH2BF8,
+    VMCVTNEPH2BF8S,
+    VMCVTNEPH2HF8,
+    VMCVTNEPH2HF8S,
+    VCVTHF82PH,
+
     // Compress and expand.
     COMPRESS,
     EXPAND,
@@ -626,6 +678,18 @@ namespace llvm {
     CVTTP2UI,
     CVTTP2SI_SAE,
     CVTTP2UI_SAE,
+
+    // Saturation enabled Vector float/double to signed/unsigned
+    // integer with truncation.
+    CVTTP2SIS,
+    CVTTP2UIS,
+    CVTTP2SIS_SAE,
+    CVTTP2UIS_SAE,
+    // Masked versions of above. Used for v2f64 to v4i32.
+    // SRC, PASSTHRU, MASK
+    MCVTTP2SIS,
+    MCVTTP2UIS,
+
     // Scalar float/double to signed/unsigned integer with truncation.
     CVTTS2SI,
     CVTTS2UI,
@@ -635,6 +699,12 @@ namespace llvm {
     // Vector signed/unsigned integer to float/double.
     CVTSI2P,
     CVTUI2P,
+
+    // Scalar float/double to signed/unsigned integer with saturation.
+    CVTTS2SIS,
+    CVTTS2UIS,
+    CVTTS2SIS_SAE,
+    CVTTS2UIS_SAE,
 
     // Masked versions of above. Used for v2f64->v4f32.
     // SRC, PASSTHRU, MASK
@@ -646,17 +716,16 @@ namespace llvm {
     MCVTUI2P,
 
     // Vector float to bfloat16.
-    // Convert TWO packed single data to one packed BF16 data
-    CVTNE2PS2BF16,
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
     // Masked version of above.
     // SRC, PASSTHRU, MASK
     MCVTNEPS2BF16,
 
-    // Dot product of BF16 pairs to accumulated into
+    // Dot product of BF16/FP16 pairs to accumulated into
     // packed single precision.
     DPBF16PS,
+    DPFP16PS,
 
     // A stack checking function call. On Windows it's _chkstk call.
     DYN_ALLOCA,
@@ -699,18 +768,6 @@ namespace llvm {
     // Test if in transactional execution.
     XTEST,
 
-    // ERI instructions.
-    RSQRT28,
-    RSQRT28_SAE,
-    RSQRT28S,
-    RSQRT28S_SAE,
-    RCP28,
-    RCP28_SAE,
-    RCP28S,
-    RCP28S_SAE,
-    EXP2,
-    EXP2_SAE,
-
     // Conversions between float and half-float.
     CVTPS2PH,
     CVTPS2PH_SAE,
@@ -746,6 +803,10 @@ namespace llvm {
 
     // Perform an FP80 add after changing precision control in FPCW.
     FP80_ADD,
+
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
 
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
@@ -910,6 +971,10 @@ namespace llvm {
     // Save xmm argument registers to the stack, according to %al. An operator
     // is needed so that this can be expanded with control flow.
     VASTART_SAVE_XMM_REGS,
+
+    // Conditional load/store instructions
+    CLOAD,
+    CSTORE,
 
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -1323,6 +1388,8 @@ namespace llvm {
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
 
+    bool addressingModeSupportsTLS(const GlobalValue &GV) const override;
+
     /// Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
     /// compare a register against the immediate without having to materialize
@@ -1384,7 +1451,7 @@ namespace llvm {
     /// Return true if it's profitable to narrow operations of type SrcVT to
     /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not
     /// from i32 to i16.
-    bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+    bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                               EVT VT) const override;
@@ -1479,11 +1546,6 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
-    /// Intel processors have a unified instruction and data cache
-    const char * getClearCacheBuiltinName() const override {
-      return nullptr; // nothing to do, move along.
-    }
-
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
@@ -1567,6 +1629,14 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                            MachineMemOperand *MMO, SDValue &NewLoad,
+                            SDValue Ptr, SDValue PassThru,
+                            SDValue Mask) const override;
+    SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                             MachineMemOperand *MMO, SDValue Ptr, SDValue Val,
+                             SDValue Mask) const override;
+
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedLoad(LoadInst *LI,
@@ -1630,10 +1700,8 @@ namespace llvm {
     /// Check whether the call is eligible for tail call optimization. Targets
     /// that want to do tail call optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleeStackStructRet,
-        bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
@@ -1805,6 +1873,9 @@ namespace llvm {
 
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *emitPatchableEventCall(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const;
 
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.

@@ -84,8 +84,7 @@ clang::Decl *ClangASTImporter::CopyDecl(clang::ASTContext *dst_ast,
     LLDB_LOG_ERROR(log, result.takeError(), "Couldn't import decl: {0}");
     if (log) {
       lldb::user_id_t user_id = LLDB_INVALID_UID;
-      ClangASTMetadata *metadata = GetDeclMetadata(decl);
-      if (metadata)
+      if (std::optional<ClangASTMetadata> metadata = GetDeclMetadata(decl))
         user_id = metadata->GetUserID();
 
       if (NamedDecl *named_decl = dyn_cast<NamedDecl>(decl))
@@ -313,8 +312,8 @@ CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
     return {};
 
   LLDB_LOG(log,
-           "    [ClangASTImporter] DeportType called on ({0}Type*){1} "
-           "from (ASTContext*){2} to (ASTContext*){3}",
+           "    [ClangASTImporter] DeportType called on ({0}Type*){1:x} "
+           "from (ASTContext*){2:x} to (ASTContext*){3:x}",
            src_type.GetTypeName(), src_type.GetOpaqueQualType(),
            &src_ctxt->getASTContext(), &dst.getASTContext());
 
@@ -334,8 +333,8 @@ clang::Decl *ClangASTImporter::DeportDecl(clang::ASTContext *dst_ctx,
 
   clang::ASTContext *src_ctx = &decl->getASTContext();
   LLDB_LOG(log,
-           "    [ClangASTImporter] DeportDecl called on ({0}Decl*){1} from "
-           "(ASTContext*){2} to (ASTContext*){3}",
+           "    [ClangASTImporter] DeportDecl called on ({0}Decl*){1:x} from "
+           "(ASTContext*){2:x} to (ASTContext*){3:x}",
            decl->getDeclKindName(), decl, src_ctx, dst_ctx);
 
   DeclContextOverride decl_context_override;
@@ -352,8 +351,8 @@ clang::Decl *ClangASTImporter::DeportDecl(clang::ASTContext *dst_ctx,
     return nullptr;
 
   LLDB_LOG(log,
-           "    [ClangASTImporter] DeportDecl deported ({0}Decl*){1} to "
-           "({2}Decl*){3}",
+           "    [ClangASTImporter] DeportDecl deported ({0}Decl*){1:x} to "
+           "({2}Decl*){3:x}",
            decl->getDeclKindName(), decl, result->getDeclKindName(), result);
 
   return result;
@@ -637,8 +636,8 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
 
   clang::ASTContext &dest_ctx = record->getASTContext();
   LLDB_LOG(log,
-           "LayoutRecordType on (ASTContext*){0} '{1}' for (RecordDecl*)"
-           "{2} [name = '{3}']",
+           "LayoutRecordType on (ASTContext*){0:x} '{1}' for (RecordDecl*)"
+           "{2:x} [name = '{3}']",
            &dest_ctx,
            TypeSystemClang::GetASTContext(&dest_ctx)->getDisplayName(), record,
            record->getName());
@@ -703,7 +702,7 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
 
   if (log) {
     LLDB_LOG(log, "LRT returned:");
-    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0}",
+    LLDB_LOG(log, "LRT   Original = (RecordDecl*){0:x}",
              static_cast<const void *>(origin_record.decl));
     LLDB_LOG(log, "LRT   Size = {0}", size);
     LLDB_LOG(log, "LRT   Alignment = {0}", alignment);
@@ -711,11 +710,11 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
     for (RecordDecl::field_iterator fi = record->field_begin(),
                                     fe = record->field_end();
          fi != fe; ++fi) {
-      LLDB_LOG(log,
-               "LRT     (FieldDecl*){0}, Name = '{1}', Type = '{2}', Offset = "
-               "{3} bits",
-               *fi, fi->getName(), fi->getType().getAsString(),
-               field_offsets[*fi]);
+      LLDB_LOG(
+          log,
+          "LRT     (FieldDecl*){0:x}, Name = '{1}', Type = '{2}', Offset = "
+          "{3} bits",
+          *fi, fi->getName(), fi->getType().getAsString(), field_offsets[*fi]);
     }
     DeclFromParser<const CXXRecordDecl> parser_cxx_record =
         DynCast<const CXXRecordDecl>(parser_record);
@@ -734,7 +733,7 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
             DynCast<CXXRecordDecl>(base_record);
 
         LLDB_LOG(log,
-                 "LRT     {0}(CXXRecordDecl*){1}, Name = '{2}', Offset = "
+                 "LRT     {0}(CXXRecordDecl*){1:x}, Name = '{2}', Offset = "
                  "{3} chars",
                  (is_virtual ? "Virtual " : ""), base_cxx_record.decl,
                  base_cxx_record.decl->getName(),
@@ -950,7 +949,8 @@ bool ClangASTImporter::RequireCompleteType(clang::QualType type) {
   return true;
 }
 
-ClangASTMetadata *ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
+std::optional<ClangASTMetadata>
+ClangASTImporter::GetDeclMetadata(const clang::Decl *decl) {
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
   if (decl_origin.Valid()) {
@@ -1025,7 +1025,7 @@ void ClangASTImporter::ForgetDestination(clang::ASTContext *dst_ast) {
   Log *log = GetLog(LLDBLog::Expressions);
 
   LLDB_LOG(log,
-           "    [ClangASTImporter] Forgetting destination (ASTContext*){0}",
+           "    [ClangASTImporter] Forgetting destination (ASTContext*){0:x}",
            dst_ast);
 
   m_metadata_map.erase(dst_ast);
@@ -1039,7 +1039,7 @@ void ClangASTImporter::ForgetSource(clang::ASTContext *dst_ast,
 
   LLDB_LOG(log,
            "    [ClangASTImporter] Forgetting source->dest "
-           "(ASTContext*){0}->(ASTContext*){1}",
+           "(ASTContext*){0:x}->(ASTContext*){1:x}",
            src_ast, dst_ast);
 
   if (!md)
@@ -1105,7 +1105,7 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
   // If we have a forcefully completed type, try to find an actual definition
   // for it in other modules.
-  const ClangASTMetadata *md = m_main.GetDeclMetadata(From);
+  std::optional<ClangASTMetadata> md = m_main.GetDeclMetadata(From);
   auto *td = dyn_cast<TagDecl>(From);
   if (td && md && md->IsForcefullyCompleted()) {
     Log *log = GetLog(LLDBLog::Expressions);
@@ -1162,11 +1162,11 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
         if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
           llvm::raw_string_ostream name_stream(name_string);
           from_named_decl->printName(name_stream);
-          name_stream.flush();
         }
-        LLDB_LOG(log_ast, "==== [ClangASTImporter][TUDecl: {0}] Imported "
-                          "({1}Decl*){2}, named {3} (from "
-                          "(Decl*){4})",
+        LLDB_LOG(log_ast,
+                 "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
+                 "({1}Decl*){2:x}, named {3} (from "
+                 "(Decl*){4:x})",
                  static_cast<void *>(to->getTranslationUnitDecl()),
                  from->getDeclKindName(), static_cast<void *>(to), name_string,
                  static_cast<void *>(from));
@@ -1283,8 +1283,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  ClangASTMetadata *metadata = m_main.GetDeclMetadata(from);
-  if (metadata)
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
     user_id = metadata->GetUserID();
 
   if (log) {
@@ -1292,16 +1291,16 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       std::string name_string;
       llvm::raw_string_ostream name_stream(name_string);
       from_named_decl->printName(name_stream);
-      name_stream.flush();
 
-      LLDB_LOG(log,
-               "    [ClangASTImporter] Imported ({0}Decl*){1}, named {2} (from "
-               "(Decl*){3}), metadata {4}",
-               from->getDeclKindName(), to, name_string, from, user_id);
+      LLDB_LOG(
+          log,
+          "    [ClangASTImporter] Imported ({0}Decl*){1:x}, named {2} (from "
+          "(Decl*){3:x}), metadata {4}",
+          from->getDeclKindName(), to, name_string, from, user_id);
     } else {
       LLDB_LOG(log,
-               "    [ClangASTImporter] Imported ({0}Decl*){1} (from "
-               "(Decl*){2}), metadata {3}",
+               "    [ClangASTImporter] Imported ({0}Decl*){1:x} (from "
+               "(Decl*){2:x}), metadata {3}",
                from->getDeclKindName(), to, from, user_id);
     }
   }
@@ -1321,8 +1320,8 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
 
         LLDB_LOG(log,
                  "    [ClangASTImporter] Propagated origin "
-                 "(Decl*){0}/(ASTContext*){1} from (ASTContext*){2} to "
-                 "(ASTContext*){3}",
+                 "(Decl*){0:x}/(ASTContext*){1:x} from (ASTContext*){2:x} to "
+                 "(ASTContext*){3:x}",
                  origin.decl, origin.ctx, &from->getASTContext(),
                  &to->getASTContext());
       }
@@ -1335,7 +1334,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
 
       LLDB_LOG(log,
                "    [ClangASTImporter] Decl has no origin information in "
-               "(ASTContext*){0}",
+               "(ASTContext*){0:x}",
                &from->getASTContext());
     }
 
@@ -1356,7 +1355,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
 
     LLDB_LOG(log,
              "    [ClangASTImporter] Sourced origin "
-             "(Decl*){0}/(ASTContext*){1} into (ASTContext*){2}",
+             "(Decl*){0:x}/(ASTContext*){1:x} into (ASTContext*){2:x}",
              from, m_source_ctx, &to->getASTContext());
   }
 

@@ -21,7 +21,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -74,7 +74,7 @@ public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
                        DominatorTree &DT_, ScalarEvolution &SE_,
                        TargetLibraryInfo &TLI_, const TargetMachine &TM_)
-      : F(F_), DL(F.getParent()->getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
+      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
         SE(SE_), TLI(TLI_),
         HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
 
@@ -142,8 +142,8 @@ public:
 
   Value *createHvxIntrinsic(IRBuilderBase &Builder, Intrinsic::ID IntID,
                             Type *RetTy, ArrayRef<Value *> Args,
-                            ArrayRef<Type *> ArgTys = std::nullopt,
-                            ArrayRef<Value *> MDSources = std::nullopt) const;
+                            ArrayRef<Type *> ArgTys = {},
+                            ArrayRef<Value *> MDSources = {}) const;
   SmallVector<Value *> splitVectorElements(IRBuilderBase &Builder, Value *Vec,
                                            unsigned ToWidth) const;
   Value *joinVectorElements(IRBuilderBase &Builder, ArrayRef<Value *> Values,
@@ -318,26 +318,24 @@ private:
 
   Value *createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                     Value *Predicate, int Alignment, Value *Mask,
-                    Value *PassThru,
-                    ArrayRef<Value *> MDSources = std::nullopt) const;
+                    Value *PassThru, ArrayRef<Value *> MDSources = {}) const;
   Value *createSimpleLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                           int Alignment,
-                          ArrayRef<Value *> MDSources = std::nullopt) const;
+                          ArrayRef<Value *> MDSources = {}) const;
 
   Value *createStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
                      Value *Predicate, int Alignment, Value *Mask,
-                     ArrayRef<Value *> MDSources = std ::nullopt) const;
+                     ArrayRef<Value *> MDSources = {}) const;
   Value *createSimpleStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
                            int Alignment,
-                           ArrayRef<Value *> MDSources = std ::nullopt) const;
+                           ArrayRef<Value *> MDSources = {}) const;
 
   Value *createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                               Value *Predicate, int Alignment,
-                              ArrayRef<Value *> MDSources = std::nullopt) const;
-  Value *
-  createPredicatedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
-                        Value *Predicate, int Alignment,
-                        ArrayRef<Value *> MDSources = std::nullopt) const;
+                              ArrayRef<Value *> MDSources = {}) const;
+  Value *createPredicatedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                               Value *Predicate, int Alignment,
+                               ArrayRef<Value *> MDSources = {}) const;
 
   DepList getUpwardDeps(Instruction *In, Instruction *Base) const;
   bool createAddressGroups();
@@ -767,8 +765,8 @@ auto AlignVectors::createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy,
   auto V6_vL32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vL32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vL32b_pred_ai, ValTy,
-                                {Predicate, Ptr, HVC.getConstInt(0)},
-                                std::nullopt, MDSources);
+                                {Predicate, Ptr, HVC.getConstInt(0)}, {},
+                                MDSources);
 }
 
 auto AlignVectors::createStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
@@ -838,8 +836,8 @@ auto AlignVectors::createPredicatedStore(IRBuilderBase &Builder, Value *Val,
   auto V6_vS32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vS32b_pred_ai);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vS32b_pred_ai, nullptr,
-                                {Predicate, Ptr, HVC.getConstInt(0), Val},
-                                std::nullopt, MDSources);
+                                {Predicate, Ptr, HVC.getConstInt(0), Val}, {},
+                                MDSources);
 }
 
 auto AlignVectors::getUpwardDeps(Instruction *In, Instruction *Base) const
@@ -2691,7 +2689,7 @@ auto HexagonVectorCombine::joinVectorElements(IRBuilderBase &Builder,
   // joins, the shuffles will hopefully be folded into a perfect shuffle.
   // The output will need to be sign-extended to a type with element width
   // being a power-of-2 anyways.
-  SmallVector<Value *> Inputs(Values.begin(), Values.end());
+  SmallVector<Value *> Inputs(Values);
 
   unsigned ToWidth = ToType->getScalarSizeInBits();
   unsigned Width = Inputs.front()->getType()->getScalarSizeInBits();

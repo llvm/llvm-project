@@ -199,7 +199,6 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
-#include <__availability>
 #include <__config>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -219,15 +218,18 @@ template <class T, class Allocator, class Predicate>
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <limits>
 #include <new> // __launder
 #include <version>
@@ -276,18 +278,20 @@ struct __forward_node_traits {
   typedef __rebind_pointer_t<_NodePtr, __begin_node> __begin_node_pointer;
   typedef __rebind_pointer_t<_NodePtr, void> __void_pointer;
 
-#if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
-  typedef __begin_node_pointer __iter_node_pointer;
-#else
-  typedef __conditional_t<is_pointer<__void_pointer>::value, __begin_node_pointer, __node_pointer> __iter_node_pointer;
+// TODO(LLVM 22): Remove this check
+#ifndef _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
+  static_assert(sizeof(__begin_node_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__begin_node_pointer) ==
+                    _LIBCPP_ALIGNOF(__node_pointer),
+                "It looks like you are using std::forward_list with a fancy pointer type that thas a different "
+                "representation depending on whether it points to a forward_list base pointer or a forward_list node "
+                "pointer (both of which are implementation details of the standard library). This means that your ABI "
+                "is being broken between LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define "
+                "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
 #endif
 
-  typedef __conditional_t<is_same<__iter_node_pointer, __node_pointer>::value, __begin_node_pointer, __node_pointer>
-      __non_iter_node_pointer;
-
-  _LIBCPP_HIDE_FROM_ABI static __iter_node_pointer __as_iter_node(__iter_node_pointer __p) { return __p; }
-  _LIBCPP_HIDE_FROM_ABI static __iter_node_pointer __as_iter_node(__non_iter_node_pointer __p) {
-    return static_cast<__iter_node_pointer>(static_cast<__void_pointer>(__p));
+  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__begin_node_pointer __p) { return __p; }
+  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__node_pointer __p) {
+    return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__p));
   }
 };
 
@@ -349,10 +353,9 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
   typedef __forward_node_traits<_NodePtr> __traits;
   typedef typename __traits::__node_pointer __node_pointer;
   typedef typename __traits::__begin_node_pointer __begin_node_pointer;
-  typedef typename __traits::__iter_node_pointer __iter_node_pointer;
   typedef typename __traits::__void_pointer __void_pointer;
 
-  __iter_node_pointer __ptr_;
+  __begin_node_pointer __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__ptr_));
@@ -408,17 +411,16 @@ public:
 
 template <class _NodeConstPtr>
 class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
-  static_assert((!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value), "");
+  static_assert(!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value, "");
   typedef _NodeConstPtr _NodePtr;
 
   typedef __forward_node_traits<_NodePtr> __traits;
   typedef typename __traits::__node_type __node_type;
   typedef typename __traits::__node_pointer __node_pointer;
   typedef typename __traits::__begin_node_pointer __begin_node_pointer;
-  typedef typename __traits::__iter_node_pointer __iter_node_pointer;
   typedef typename __traits::__void_pointer __void_pointer;
 
-  __iter_node_pointer __ptr_;
+  __begin_node_pointer __ptr_;
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __get_begin() const {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__ptr_));
@@ -490,40 +492,38 @@ protected:
   typedef __rebind_alloc<allocator_traits<allocator_type>, __begin_node> __begin_node_allocator;
   typedef typename allocator_traits<__begin_node_allocator>::pointer __begin_node_pointer;
 
-  __compressed_pair<__begin_node, __node_allocator> __before_begin_;
+  _LIBCPP_COMPRESSED_PAIR(__begin_node, __before_begin_, __node_allocator, __alloc_);
 
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __before_begin() _NOEXCEPT {
-    return pointer_traits<__begin_node_pointer>::pointer_to(__before_begin_.first());
+    return pointer_traits<__begin_node_pointer>::pointer_to(__before_begin_);
   }
   _LIBCPP_HIDE_FROM_ABI __begin_node_pointer __before_begin() const _NOEXCEPT {
-    return pointer_traits<__begin_node_pointer>::pointer_to(const_cast<__begin_node&>(__before_begin_.first()));
+    return pointer_traits<__begin_node_pointer>::pointer_to(const_cast<__begin_node&>(__before_begin_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI __node_allocator& __alloc() _NOEXCEPT { return __before_begin_.second(); }
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __alloc() const _NOEXCEPT { return __before_begin_.second(); }
+  _LIBCPP_HIDE_FROM_ABI __node_allocator& __alloc() _NOEXCEPT { return __alloc_; }
+  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __alloc() const _NOEXCEPT { return __alloc_; }
 
   typedef __forward_list_iterator<__node_pointer> iterator;
   typedef __forward_list_const_iterator<__node_pointer> const_iterator;
 
   _LIBCPP_HIDE_FROM_ABI __forward_list_base() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-      : __before_begin_(__begin_node(), __default_init_tag()) {}
+      : __before_begin_(__begin_node()) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const allocator_type& __a)
-      : __before_begin_(__begin_node(), __node_allocator(__a)) {}
+      : __before_begin_(__begin_node()), __alloc_(__node_allocator(__a)) {}
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_base(const __node_allocator& __a)
-      : __before_begin_(__begin_node(), __a) {}
-#ifndef _LIBCPP_CXX03_LANG
+      : __before_begin_(__begin_node()), __alloc_(__a) {}
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __forward_list_base(__forward_list_base&& __x)
-      _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
+#ifndef _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI
+  __forward_list_base(__forward_list_base&& __x) noexcept(is_nothrow_move_constructible<__node_allocator>::value);
   _LIBCPP_HIDE_FROM_ABI __forward_list_base(__forward_list_base&& __x, const allocator_type& __a);
 #endif // _LIBCPP_CXX03_LANG
 
-private:
-  __forward_list_base(const __forward_list_base&);
-  __forward_list_base& operator=(const __forward_list_base&);
+  __forward_list_base(const __forward_list_base&)            = delete;
+  __forward_list_base& operator=(const __forward_list_base&) = delete;
 
-public:
   _LIBCPP_HIDE_FROM_ABI ~__forward_list_base();
 
 protected:
@@ -554,7 +554,6 @@ protected:
     return __guard.__release_ptr();
   }
 
-  template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __delete_node(__node_pointer __node) {
     // For the same reason as above, we use the allocator's destroy() method for the value_type,
     // but not for the node itself.
@@ -569,7 +568,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value);
+      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>);
 #endif
 
 protected:
@@ -593,15 +592,15 @@ private:
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
-inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x)
-    _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
-    : __before_begin_(std::move(__x.__before_begin_)) {
+inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x) noexcept(
+    is_nothrow_move_constructible<__node_allocator>::value)
+    : __before_begin_(std::move(__x.__before_begin_)), __alloc_(std::move(__x.__alloc_)) {
   __x.__before_begin()->__next_ = nullptr;
 }
 
 template <class _Tp, class _Alloc>
 inline __forward_list_base<_Tp, _Alloc>::__forward_list_base(__forward_list_base&& __x, const allocator_type& __a)
-    : __before_begin_(__begin_node(), __node_allocator(__a)) {
+    : __before_begin_(__begin_node()), __alloc_(__node_allocator(__a)) {
   if (__alloc() == __x.__alloc()) {
     __before_begin()->__next_     = __x.__before_begin()->__next_;
     __x.__before_begin()->__next_ = nullptr;
@@ -620,11 +619,10 @@ inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value)
+    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
 {
-  std::__swap_allocator(
-      __alloc(), __x.__alloc(), integral_constant<bool, __node_traits::propagate_on_container_swap::value>());
+  std::__swap_allocator(__alloc(), __x.__alloc());
   using std::swap;
   swap(__before_begin()->__next_, __x.__before_begin()->__next_);
 }
@@ -652,16 +650,13 @@ public:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
 
+  static_assert(__check_valid_allocator<allocator_type>::value, "");
+
   static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
-  static_assert(is_same<allocator_type, __rebind_alloc<allocator_traits<allocator_type>, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
-
-  static_assert((!is_same<allocator_type, __node_allocator>::value),
-                "internal allocator type must differ from user-specified "
-                "type; otherwise overload resolution breaks");
+  static_assert(!is_same<allocator_type, __node_allocator>::value,
+                "internal allocator type must differ from user-specified type; otherwise overload resolution breaks");
 
   typedef value_type& reference;
   typedef const value_type& const_reference;
@@ -712,15 +707,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI forward_list& operator=(const forward_list& __x);
 
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI forward_list(forward_list&& __x) _NOEXCEPT_(is_nothrow_move_constructible<base>::value)
+  _LIBCPP_HIDE_FROM_ABI forward_list(forward_list&& __x) noexcept(is_nothrow_move_constructible<base>::value)
       : base(std::move(__x)) {}
   _LIBCPP_HIDE_FROM_ABI forward_list(forward_list&& __x, const __type_identity_t<allocator_type>& __a);
 
   _LIBCPP_HIDE_FROM_ABI forward_list(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI forward_list(initializer_list<value_type> __il, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI forward_list& operator=(forward_list&& __x) _NOEXCEPT_(
-      __node_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_HIDE_FROM_ABI forward_list& operator=(forward_list&& __x) noexcept(
+      __node_traits::propagate_on_container_move_assignment::value &&
+      is_nothrow_move_assignable<allocator_type>::value);
 
   _LIBCPP_HIDE_FROM_ABI forward_list& operator=(initializer_list<value_type> __il);
 
@@ -761,7 +757,7 @@ public:
     return const_iterator(base::__before_begin());
   }
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
     return base::__before_begin()->__next_ == nullptr;
   }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
@@ -823,7 +819,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT
 #else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value)
+      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
   {
     base::swap(__x);
@@ -1523,8 +1519,7 @@ operator<=(const forward_list<_Tp, _Alloc>& __x, const forward_list<_Tp, _Alloc>
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const forward_list<_Tp, _Allocator>& __x, const forward_list<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // #if _LIBCPP_STD_VER <= 17

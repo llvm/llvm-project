@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that SBProcess.LoadImageUsingPaths uses RTLD_LAZY
 """
 

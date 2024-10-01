@@ -2,12 +2,12 @@
 
 # Make sure incorrect usage of control flow intrinsics fails to select in case some transform separated the intrinsic from its branch.
 
-# ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_different_block)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: si_if_not_brcond_user)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: si_if_multi_user)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_xor_0)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_or_neg1)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_negated_multi_use)
+# ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_different_block)
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: si_if_not_brcond_user)
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: si_if_multi_user)
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_xor_0)
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_or_neg1)
+# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_negated_multi_use)
 
 
 ---
@@ -19,7 +19,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
 
   bb.1:
       G_BRCOND %3, %bb.1
@@ -34,7 +34,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     %5:_(s32) = G_SELECT %3, %0, %1
     S_ENDPGM 0, implicit %5
 
@@ -48,7 +48,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     %5:_(s32) = G_SELECT %3, %0, %1
     G_BRCOND %3, %bb.1
 
@@ -67,7 +67,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     %5:_(s1) = G_CONSTANT i1 false
     %6:_(s1) = G_XOR %3, %5
     G_BRCOND %6, %bb.2
@@ -93,7 +93,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     %5:_(s1) = G_CONSTANT i1 true
     %6:_(s1) = G_OR %3, %5
     G_BRCOND %6, %bb.2
@@ -118,7 +118,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     %5:_(s1) = G_CONSTANT i1 true
     %6:_(s1) = G_XOR %3, %5
     S_NOP 0, implicit %6

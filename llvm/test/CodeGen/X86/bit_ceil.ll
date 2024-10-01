@@ -8,16 +8,12 @@
 define i32 @bit_ceil_i32(i32 %x) {
 ; NOBMI-LABEL: bit_ceil_i32:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movl %edi, %eax
-; NOBMI-NEXT:    decl %eax
-; NOBMI-NEXT:    je .LBB0_1
-; NOBMI-NEXT:  # %bb.2: # %cond.false
-; NOBMI-NEXT:    bsrl %eax, %ecx
+; NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; NOBMI-NEXT:    leal -1(%rdi), %eax
+; NOBMI-NEXT:    bsrl %eax, %eax
+; NOBMI-NEXT:    movl $63, %ecx
+; NOBMI-NEXT:    cmovnel %eax, %ecx
 ; NOBMI-NEXT:    xorl $31, %ecx
-; NOBMI-NEXT:    jmp .LBB0_3
-; NOBMI-NEXT:  .LBB0_1:
-; NOBMI-NEXT:    movl $32, %ecx
-; NOBMI-NEXT:  .LBB0_3: # %cond.end
 ; NOBMI-NEXT:    negb %cl
 ; NOBMI-NEXT:    movl $1, %edx
 ; NOBMI-NEXT:    movl $1, %eax
@@ -51,15 +47,10 @@ define i32 @bit_ceil_i32(i32 %x) {
 define i32 @bit_ceil_i32_plus1(i32 noundef %x) {
 ; NOBMI-LABEL: bit_ceil_i32_plus1:
 ; NOBMI:       # %bb.0: # %entry
-; NOBMI-NEXT:    testl %edi, %edi
-; NOBMI-NEXT:    je .LBB1_1
-; NOBMI-NEXT:  # %bb.2: # %cond.false
-; NOBMI-NEXT:    bsrl %edi, %ecx
+; NOBMI-NEXT:    bsrl %edi, %eax
+; NOBMI-NEXT:    movl $63, %ecx
+; NOBMI-NEXT:    cmovnel %eax, %ecx
 ; NOBMI-NEXT:    xorl $31, %ecx
-; NOBMI-NEXT:    jmp .LBB1_3
-; NOBMI-NEXT:  .LBB1_1:
-; NOBMI-NEXT:    movl $32, %ecx
-; NOBMI-NEXT:  .LBB1_3: # %cond.end
 ; NOBMI-NEXT:    negb %cl
 ; NOBMI-NEXT:    movl $1, %edx
 ; NOBMI-NEXT:    movl $1, %eax
@@ -94,16 +85,11 @@ entry:
 define i64 @bit_ceil_i64(i64 %x) {
 ; NOBMI-LABEL: bit_ceil_i64:
 ; NOBMI:       # %bb.0:
-; NOBMI-NEXT:    movq %rdi, %rax
-; NOBMI-NEXT:    decq %rax
-; NOBMI-NEXT:    je .LBB2_1
-; NOBMI-NEXT:  # %bb.2: # %cond.false
-; NOBMI-NEXT:    bsrq %rax, %rcx
-; NOBMI-NEXT:    xorq $63, %rcx
-; NOBMI-NEXT:    jmp .LBB2_3
-; NOBMI-NEXT:  .LBB2_1:
-; NOBMI-NEXT:    movl $64, %ecx
-; NOBMI-NEXT:  .LBB2_3: # %cond.end
+; NOBMI-NEXT:    leaq -1(%rdi), %rax
+; NOBMI-NEXT:    bsrq %rax, %rax
+; NOBMI-NEXT:    movl $127, %ecx
+; NOBMI-NEXT:    cmovneq %rax, %rcx
+; NOBMI-NEXT:    xorl $63, %ecx
 ; NOBMI-NEXT:    negb %cl
 ; NOBMI-NEXT:    movl $1, %edx
 ; NOBMI-NEXT:    movl $1, %eax
@@ -136,15 +122,10 @@ define i64 @bit_ceil_i64(i64 %x) {
 define i64 @bit_ceil_i64_plus1(i64 noundef %x) {
 ; NOBMI-LABEL: bit_ceil_i64_plus1:
 ; NOBMI:       # %bb.0: # %entry
-; NOBMI-NEXT:    testq %rdi, %rdi
-; NOBMI-NEXT:    je .LBB3_1
-; NOBMI-NEXT:  # %bb.2: # %cond.false
-; NOBMI-NEXT:    bsrq %rdi, %rcx
-; NOBMI-NEXT:    xorq $63, %rcx
-; NOBMI-NEXT:    jmp .LBB3_3
-; NOBMI-NEXT:  .LBB3_1:
-; NOBMI-NEXT:    movl $64, %ecx
-; NOBMI-NEXT:  .LBB3_3: # %cond.end
+; NOBMI-NEXT:    bsrq %rdi, %rax
+; NOBMI-NEXT:    movl $127, %ecx
+; NOBMI-NEXT:    cmovneq %rax, %rcx
+; NOBMI-NEXT:    xorl $63, %ecx
 ; NOBMI-NEXT:    negb %cl
 ; NOBMI-NEXT:    movl $1, %edx
 ; NOBMI-NEXT:    movl $1, %eax

@@ -35,16 +35,41 @@ private:
   unsigned alignmentBit;
 };
 
+struct GPUFuncOpLoweringOptions {
+  /// The address space to use for `alloca`s in private memory.
+  unsigned allocaAddrSpace;
+  /// The address space to use declaring workgroup memory.
+  unsigned workgroupAddrSpace;
+
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
+  StringAttr kernelAttributeName;
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
+  StringAttr kernelBlockSizeAttributeName;
+
+  /// The calling convention to use for kernel functions.
+  LLVM::CConv kernelCallingConvention = LLVM::CConv::C;
+  /// The calling convention to use for non-kernel functions.
+  LLVM::CConv nonKernelCallingConvention = LLVM::CConv::C;
+
+  /// Whether to encode workgroup attributions as additional arguments instead
+  /// of a global variable.
+  bool encodeWorkgroupAttributionsAsArguments = false;
+};
+
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
-  GPUFuncOpLowering(
-      const LLVMTypeConverter &converter, unsigned allocaAddrSpace,
-      unsigned workgroupAddrSpace, StringAttr kernelAttributeName,
-      std::optional<StringAttr> kernelBlockSizeAttributeName = std::nullopt)
+  GPUFuncOpLowering(const LLVMTypeConverter &converter,
+                    const GPUFuncOpLoweringOptions &options)
       : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
-        allocaAddrSpace(allocaAddrSpace),
-        workgroupAddrSpace(workgroupAddrSpace),
-        kernelAttributeName(kernelAttributeName),
-        kernelBlockSizeAttributeName(kernelBlockSizeAttributeName) {}
+        allocaAddrSpace(options.allocaAddrSpace),
+        workgroupAddrSpace(options.workgroupAddrSpace),
+        kernelAttributeName(options.kernelAttributeName),
+        kernelBlockSizeAttributeName(options.kernelBlockSizeAttributeName),
+        kernelCallingConvention(options.kernelCallingConvention),
+        nonKernelCallingConvention(options.nonKernelCallingConvention),
+        encodeWorkgroupAttributionsAsArguments(
+            options.encodeWorkgroupAttributionsAsArguments) {}
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -56,11 +81,21 @@ private:
   /// The address space to use declaring workgroup memory.
   unsigned workgroupAddrSpace;
 
-  /// The attribute name to use instead of `gpu.kernel`.
+  /// The attribute name to use instead of `gpu.kernel`. Null if no attribute
+  /// should be used.
   StringAttr kernelAttributeName;
+  /// The attribute name to to set block size. Null if no attribute should be
+  /// used.
+  StringAttr kernelBlockSizeAttributeName;
 
-  /// The attribute name to to set block size
-  std::optional<StringAttr> kernelBlockSizeAttributeName;
+  /// The calling convention to use for kernel functions
+  LLVM::CConv kernelCallingConvention;
+  /// The calling convention to use for non-kernel functions
+  LLVM::CConv nonKernelCallingConvention;
+
+  /// Whether to encode workgroup attributions as additional arguments instead
+  /// of a global variable.
+  bool encodeWorkgroupAttributionsAsArguments;
 };
 
 /// The lowering of gpu.printf to a call to HIP hostcalls
@@ -79,7 +114,7 @@ struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
 /// The lowering of gpu.printf to a call to an external printf() function
 ///
 /// This pass will add a declaration of printf() to the GPUModule if needed
-/// and seperate out the format strings into global constants. For some
+/// and separate out the format strings into global constants. For some
 /// runtimes, such as OpenCL on AMD, this is sufficient setup, as the compiler
 /// will lower printf calls to appropriate device-side code
 struct GPUPrintfOpToLLVMCallLowering
@@ -112,10 +147,7 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
 
   LogicalResult
   matchAndRewrite(gpu::ReturnOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, adaptor.getOperands());
-    return success();
-  }
+                  ConversionPatternRewriter &rewriter) const override;
 };
 
 namespace impl {

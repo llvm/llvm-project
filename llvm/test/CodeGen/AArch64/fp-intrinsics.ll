@@ -146,6 +146,55 @@ define float @cos_f32(float %x) #0 {
   ret float %val
 }
 
+; CHECK-LABEL: tan_f32:
+; CHECK: bl tanf
+define float @tan_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: asin_f32:
+; CHECK: bl asinf
+define float @asin_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.asin.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: acos_f32:
+; CHECK: bl acosf
+define float @acos_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.acos.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: atan_f32:
+; CHECK: bl atanf
+define float @atan_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.atan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: sinh_f32:
+; CHECK: bl sinhf
+define float @sinh_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.sinh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: cosh_f32:
+; CHECK: bl coshf
+define float @cosh_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.cosh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: tanh_f32:
+; CHECK: bl tanhf
+define float @tanh_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.tanh.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
 ; CHECK-LABEL: pow_f32:
 ; CHECK: bl powf
 define float @pow_f32(float %x, float %y) #0 {
@@ -627,6 +676,55 @@ define double @sin_f64(double %x) #0 {
 ; CHECK: bl cos
 define double @cos_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.cos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: tan_f64:
+; CHECK: bl tan
+define double @tan_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.tan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: asin_f64:
+; CHECK: bl asin
+define double @asin_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.asin.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: acos_f64:
+; CHECK: bl acos
+define double @acos_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.acos.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: atan_f64:
+; CHECK: bl atan
+define double @atan_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.atan.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: sinh_f64:
+; CHECK: bl sinh
+define double @sinh_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.sinh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: cosh_f64:
+; CHECK: bl cosh
+define double @cosh_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.cosh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: tanh_f64:
+; CHECK: bl tanh
+define double @tanh_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.tanh.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
 }
 
@@ -1114,6 +1212,55 @@ define fp128 @cos_f128(fp128 %x) #0 {
   ret fp128 %val
 }
 
+; CHECK-LABEL: tan_f128:
+; CHECK: bl tanl
+define fp128 @tan_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.tan.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: asin_f128:
+; CHECK: bl asinl
+define fp128 @asin_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.asin.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: acos_f128:
+; CHECK: bl acosl
+define fp128 @acos_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.acos.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: atan_f128:
+; CHECK: bl atanl
+define fp128 @atan_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.atan.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: sinh_f128:
+; CHECK: bl sinhl
+define fp128 @sinh_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.sinh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: cosh_f128:
+; CHECK: bl coshl
+define fp128 @cosh_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.cosh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
+; CHECK-LABEL: tanh_f128:
+; CHECK: bl tanhl
+define fp128 @tanh_f128(fp128 %x) #0 {
+  %val = call fp128 @llvm.experimental.constrained.tanh.f128(fp128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret fp128 %val
+}
+
 ; CHECK-LABEL: pow_f128:
 ; CHECK: bl powl
 define fp128 @pow_f128(fp128 %x, fp128 %y) #0 {
@@ -1479,56 +1626,105 @@ define fp128 @fpext_f128_f64(double %x) #0 {
 
 ; CHECK-LABEL: sin_v1f64:
 ; CHECK: bl sin
-define <1 x double> @sin_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @sin_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.sin.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: cos_v1f64:
 ; CHECK: bl cos
-define <1 x double> @cos_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @cos_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.cos.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: tan_v1f64:
+; CHECK: bl tan
+define <1 x double> @tan_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.tan.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: asin_v1f64:
+; CHECK: bl asin
+define <1 x double> @asin_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.asin.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: acos_v1f64:
+; CHECK: bl acos
+define <1 x double> @acos_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.acos.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: atan_v1f64:
+; CHECK: bl atan
+define <1 x double> @atan_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.atan.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: sinh_v1f64:
+; CHECK: bl sinh
+define <1 x double> @sinh_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.sinh.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: cosh_v1f64:
+; CHECK: bl cosh
+define <1 x double> @cosh_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.cosh.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret <1 x double> %val
+}
+
+; CHECK-LABEL: tanh_v1f64:
+; CHECK: bl tanh
+define <1 x double> @tanh_v1f64(<1 x double> %x, <1 x double> %y) #0 {
+  %val = call <1 x double> @llvm.experimental.constrained.tanh.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: pow_v1f64:
 ; CHECK: bl pow
-define <1 x double> @pow_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @pow_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.pow.v1f64(<1 x double> %x, <1 x double> %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: log_v1f64:
 ; CHECK: bl log
-define <1 x double> @log_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @log_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.log.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: log2_v1f64:
 ; CHECK: bl log2
-define <1 x double> @log2_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @log2_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.log2.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: log10_v1f64:
 ; CHECK: bl log10
-define <1 x double> @log10_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @log10_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.log10.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: exp_v1f64:
 ; CHECK: bl exp
-define <1 x double> @exp_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @exp_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.exp.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
 
 ; CHECK-LABEL: exp2_v1f64:
 ; CHECK: bl exp2
-define <1 x double> @exp2_v1f64(<1 x double> %x, <1 x double> %y) {
+define <1 x double> @exp2_v1f64(<1 x double> %x, <1 x double> %y) #0 {
   %val = call <1 x double> @llvm.experimental.constrained.exp2.v1f64(<1 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
 }
@@ -1555,6 +1751,13 @@ declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.powi.f32(float, i32, metadata, metadata)
 declare float @llvm.experimental.constrained.sin.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.cos.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.asin.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.acos.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.atan.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.sinh.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.cosh.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.tanh.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.pow.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.log.f32(float, metadata, metadata)
 declare float @llvm.experimental.constrained.log10.f32(float, metadata, metadata)
@@ -1599,6 +1802,13 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)
 declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.asin.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.acos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.atan.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.sinh.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.cosh.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tanh.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.log.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.log10.f64(double, metadata, metadata)
@@ -1643,6 +1853,13 @@ declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata
 declare fp128 @llvm.experimental.constrained.powi.f128(fp128, i32, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sin.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.cos.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.asin.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.acos.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.atan.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.sinh.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.cosh.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.tanh.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.pow.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.log.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.log10.f128(fp128, metadata, metadata)

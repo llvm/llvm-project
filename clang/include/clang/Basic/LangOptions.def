@@ -87,9 +87,11 @@ LANGOPT(C99               , 1, 0, "C99")
 LANGOPT(C11               , 1, 0, "C11")
 LANGOPT(C17               , 1, 0, "C17")
 LANGOPT(C23               , 1, 0, "C23")
+LANGOPT(C2y               , 1, 0, "C2y")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
 LANGOPT(Kernel            , 1, 0, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
+LANGOPT(ZOSExt            , 1, 0, "z/OS extensions")
 LANGOPT(AsmBlocks         , 1, 0, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, "C++")
@@ -158,12 +160,27 @@ LANGOPT(GNUAsm            , 1, 1, "GNU-style inline assembly")
 LANGOPT(Coroutines        , 1, 0, "C++20 coroutines")
 LANGOPT(CoroAlignedAllocation, 1, 0, "prefer Aligned Allocation according to P2014 Option 2")
 LANGOPT(DllExportInlines  , 1, 1, "dllexported classes dllexport inline methods")
-LANGOPT(RelaxedTemplateTemplateArgs, 1, 0, "C++17 relaxed matching of template template arguments")
+LANGOPT(RelaxedTemplateTemplateArgs, 1, 1, "C++17 relaxed matching of template template arguments")
 LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library features")
+LANGOPT(RetainSubstTemplateTypeParmTypeAstNodes, 1, 0, "retain SubstTemplateTypeParmType nodes in the AST's representation of alias template specializations")
 
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
+LANGOPT(PointerAuthCalls  , 1, 0, "function pointer authentication")
+LANGOPT(PointerAuthReturns, 1, 0, "return pointer authentication")
+LANGOPT(PointerAuthIndirectGotos, 1, 0, "indirect gotos pointer authentication")
+LANGOPT(PointerAuthAuthTraps, 1, 0, "pointer authentication failure traps")
+LANGOPT(PointerAuthVTPtrAddressDiscrimination, 1, 0, "incorporate address discrimination in authenticated vtable pointers")
+LANGOPT(PointerAuthVTPtrTypeDiscrimination, 1, 0, "incorporate type discrimination in authenticated vtable pointers")
+LANGOPT(PointerAuthTypeInfoVTPtrDiscrimination, 1, 0, "incorporate type and address discrimination in authenticated vtable pointers for std::type_info")
+BENIGN_LANGOPT(PointerAuthFunctionTypeDiscrimination, 1, 0,
+               "Use type discrimination when signing function pointers")
+LANGOPT(PointerAuthInitFini, 1, 0, "sign function pointers in init/fini arrays")
+LANGOPT(PointerAuthInitFiniAddressDiscrimination, 1, 0,
+        "incorporate address discrimination in authenticated function pointers in init/fini arrays")
+LANGOPT(PointerAuthELFGOT, 1, 0, "authenticate pointers from GOT")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
+LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
 
 COMPATIBLE_LANGOPT(RecoveryAST, 1, 1, "Preserve expressions in AST when encountering errors")
 COMPATIBLE_LANGOPT(RecoveryASTType, 1, 1, "Preserve the type in recovery expressions")
@@ -173,7 +190,6 @@ LANGOPT(POSIXThreads      , 1, 0, "POSIX thread support")
 LANGOPT(Blocks            , 1, 0, "blocks extension to C")
 BENIGN_LANGOPT(EmitAllDecls      , 1, 0, "emitting all declarations")
 LANGOPT(MathErrno         , 1, 1, "errno in math functions")
-BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like and may be ripped out at any time")
 LANGOPT(Modules           , 1, 0, "modules semantics")
 COMPATIBLE_LANGOPT(CPlusPlusModules, 1, 0, "C++ modules syntax")
 LANGOPT(SkipODRCheckInGMF, 1, 0, "Skip ODR checks for decls in the global module fragment")
@@ -212,7 +228,6 @@ COMPATIBLE_LANGOPT(GNUInline         , 1, 0, "GNU inline semantics")
 COMPATIBLE_LANGOPT(NoInlineDefine    , 1, 0, "__NO_INLINE__ predefined macro")
 COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")
 COMPATIBLE_LANGOPT(FastMath          , 1, 0, "fast FP math optimizations, and __FAST_MATH__ predefined macro")
-COMPATIBLE_LANGOPT(FiniteMathOnly    , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 COMPATIBLE_LANGOPT(UnsafeFPMath      , 1, 0, "Unsafe Floating Point Math")
 COMPATIBLE_LANGOPT(ProtectParens     , 1, 0, "optimizer honors parentheses "
                    "when floating-point expressions are evaluated")
@@ -269,6 +284,8 @@ LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
 LANGOPT(HLSL, 1, 0, "HLSL")
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, "HLSL Version")
+LANGOPT(HLSLStrictAvailability, 1, 0,
+        "Strict availability diagnostic mode for HLSL built-in functions.")
 
 LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")
 LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA device code")
@@ -281,6 +298,7 @@ LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kern
 LANGOPT(GPUDeferDiag, 1, 0, "defer host/device related diagnostic messages for CUDA/HIP")
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 LANGOPT(OffloadingNewDriver, 1, 0, "use the new driver for generating offloading code.")
+LANGOPT(OffloadViaLLVM, 1, 0, "target LLVM/Offload as portable offloading runtime.")
 
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
@@ -293,6 +311,7 @@ LANGOPT(HIPStdParInterposeAlloc, 1, 0, "Replace allocations / deallocations with
 
 LANGOPT(OpenACC           , 1, 0, "OpenACC Enabled")
 
+LANGOPT(MSVCEnableStdcMacro , 1, 0, "Define __STDC__ with '-fms-compatibility'")
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")
 LANGOPT(AlignedAllocationUnavailable, 1, 0, "aligned allocation functions are unavailable")
@@ -325,7 +344,6 @@ LANGOPT(SinglePrecisionConstants , 1, 0, "treating double-precision floating poi
 LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
 BENIGN_LANGOPT(CLNoSignedZero , 1, 0, "Permit Floating Point optimization without regard to signed zeros")
 COMPATIBLE_LANGOPT(CLUnsafeMath , 1, 0, "Unsafe Floating Point Math")
-COMPATIBLE_LANGOPT(CLFiniteMathOnly , 1, 0, "__FINITE_MATH_ONLY__ predefined macro")
 /// FP_CONTRACT mode (on/off/fast).
 BENIGN_ENUM_LANGOPT(DefaultFPContractMode, FPModeKind, 2, FPM_Off, "FP contraction type")
 COMPATIBLE_LANGOPT(ExpStrictFP, 1, false, "Enable experimental strict floating point")
@@ -346,6 +364,8 @@ BENIGN_LANGOPT(CompatibilityQualifiedIdBlockParamTypeChecking, 1, 0,
 LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
         "Disable recognition of objc_direct methods")
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
+ENUM_LANGOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2, CFBranchLabelSchemeKind::Default,
+             "Control-Flow Branch Protection Label Scheme")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")
 LANGOPT(IncludeDefaultHeader, 1, 0, "Include default header file for OpenCL")
@@ -446,13 +466,17 @@ LANGOPT(FixedPoint, 1, 0, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
         "unsigned fixed point types having one extra padding bit")
 
-LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
+ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
+             RegisterStaticDestructorsKind::All,
+             "Register C++ static destructors")
 
 LANGOPT(RegCall4, 1, 0, "Set __regcall4 as a default calling convention to respect __regcall ABI v.4")
 
 LANGOPT(MatrixTypes, 1, 0, "Enable or disable the builtin matrix type")
 
 LANGOPT(CXXAssumptions, 1, 1, "Enable or disable codegen and compile-time checks for C++23's [[assume]] attribute")
+
+LANGOPT(RawStringLiterals, 1, 1, "Enable or disable raw string literals")
 
 ENUM_LANGOPT(StrictFlexArraysLevel, StrictFlexArraysLevelKind, 2,
              StrictFlexArraysLevelKind::Default,
@@ -496,6 +520,17 @@ COMPATIBLE_LANGOPT(IncrementalExtensions, 1, 0, " True if we want to process sta
         "-fincremental-extensions.")
 
 BENIGN_LANGOPT(CheckNew, 1, 0, "Do not assume C++ operator new may not return NULL")
+
+// FIXME: It would be better for us to find a way to encode the state of this
+// diagnostic in tablegen so that we can specify a particular diagnostic option
+// is disabled or enabled based on other language options or made it easier to
+// do this from the compiler invocation without hitting option round-tripping
+// issues.
+BENIGN_LANGOPT(CheckConstexprFunctionBodies, 1, 1,
+               "Emit diagnostics for a constexpr function body that can never "
+               "be used in a constant expression.")
+
+LANGOPT(BoundsSafety, 1, 0, "Bounds safety extension for C")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT

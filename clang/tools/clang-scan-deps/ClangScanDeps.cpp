@@ -15,6 +15,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
@@ -72,6 +74,7 @@ enum ResourceDirRecipeKind {
   RDRK_InvokeCompiler,
 };
 
+static std::string OutputFileName = "-";
 static ScanningMode ScanMode = ScanningMode::DependencyDirectivesScan;
 static ScanningOutputFormat Format = ScanningOutputFormat::Make;
 static ScanningOptimizations OptimizeArgs;
@@ -85,6 +88,8 @@ static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool PrintTiming;
+static llvm::BumpPtrAllocator Alloc;
+static llvm::StringSaver Saver{Alloc};
 static std::vector<const char *> CommandLine;
 
 #ifndef NDEBUG
@@ -98,8 +103,6 @@ static bool RoundTripArgs = DoRoundTripDefault;
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
   llvm::StringRef ToolName = argv[0];
-  llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver{A};
   llvm::opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -175,6 +178,9 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_files_dir_EQ))
     ModuleFilesDir = A->getValue();
 
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_o))
+    OutputFileName = A->getValue();
+
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
@@ -186,14 +192,8 @@ static void ParseArgs(int argc, char **argv) {
     }
   }
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ)) {
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
-  } else if (Format != ScanningOutputFormat::P1689) {
-    llvm::errs() << ToolName
-                 << ": for the --compiilation-database option: must be "
-                    "specified at least once!";
-    std::exit(1);
-  }
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
     ModuleName = A->getValue();
@@ -225,9 +225,8 @@ static void ParseArgs(int argc, char **argv) {
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
 
-  if (auto *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
-    CommandLine.insert(CommandLine.end(), A->getValues().begin(),
-                       A->getValues().end());
+  if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
+    CommandLine.assign(A->getValues().begin(), A->getValues().end());
 }
 
 class SharedStream {
@@ -351,6 +350,20 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
   return Ret;
 }
 
+static llvm::json::Array
+toJSONSorted(llvm::SmallVector<Module::LinkLibrary, 2> &LinkLibs) {
+  llvm::sort(LinkLibs, [](const Module::LinkLibrary &lhs,
+                          const Module::LinkLibrary &rhs) {
+    return lhs.Library < rhs.Library;
+  });
+
+  llvm::json::Array Ret;
+  for (const Module::LinkLibrary &LL : LinkLibs)
+    Ret.push_back(llvm::json::Object(
+        {{"link-name", LL.Library}, {"isFramework", LL.IsFramework}}));
+  return Ret;
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -426,6 +439,11 @@ public:
   }
 
   void printFullOutput(raw_ostream &OS) {
+    // Skip sorting modules and constructing the JSON object if the output
+    // cannot be observed anyway. This makes timings less noisy.
+    if (&OS == &llvm::nulls())
+      return;
+
     // Sort the modules by name to get a deterministic order.
     std::vector<IndexedModuleID> ModuleIDs;
     for (auto &&M : Modules)
@@ -437,14 +455,13 @@ public:
     Array OutModules;
     for (auto &&ModID : ModuleIDs) {
       auto &MD = Modules[ModID];
-      Object O{
-          {"name", MD.ID.ModuleName},
-          {"context-hash", MD.ID.ContextHash},
-          {"file-deps", toJSONSorted(MD.FileDeps)},
-          {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
-          {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.getBuildArguments()},
-      };
+      Object O{{"name", MD.ID.ModuleName},
+               {"context-hash", MD.ID.ContextHash},
+               {"file-deps", toJSONSorted(MD.FileDeps)},
+               {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
+               {"clang-modulemap-file", MD.ClangModuleMapFile},
+               {"command-line", MD.getBuildArguments()},
+               {"link-libraries", toJSONSorted(MD.LinkLibraries)}};
       OutModules.push_back(std::move(O));
     }
 
@@ -694,38 +711,28 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
   return std::string(Path);
 }
 
-// getCompilationDataBase - If -compilation-database is set, load the
-// compilation database from the specified file. Otherwise if the we're
-// generating P1689 format, trying to generate the compilation database
-// form specified command line after the positional parameter "--".
+/// Attempts to construct the compilation database from '-compilation-database'
+/// or from the arguments following the positional '--'.
 static std::unique_ptr<tooling::CompilationDatabase>
-getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
+getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
   ParseArgs(argc, argv);
+
+  if (!(CommandLine.empty() ^ CompilationDB.empty())) {
+    llvm::errs() << "The compilation command line must be provided either via "
+                    "'-compilation-database' or after '--'.";
+    return nullptr;
+  }
 
   if (!CompilationDB.empty())
     return tooling::JSONCompilationDatabase::loadFromFile(
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
-  if (Format != ScanningOutputFormat::P1689) {
-    llvm::errs() << "the --compilation-database option: must be specified at "
-                    "least once!";
-    return nullptr;
-  }
-
-  // Trying to get the input file, the output file and the command line options
-  // from the positional parameter "--".
-  char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
-  if (DoubleDash == argv + argc) {
-    llvm::errs() << "The command line arguments is required after '--' in "
-                    "P1689 per file mode.";
-    return nullptr;
-  }
-
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
+  TheDriver.setCheckInputsExist(false);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(CommandLine));
   if (!C || C->getJobs().empty())
@@ -740,7 +747,8 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
 
   FrontendOptions &FEOpts = CI->getFrontendOpts();
   if (FEOpts.Inputs.size() != 1) {
-    llvm::errs() << "Only one input file is allowed in P1689 per file mode.";
+    llvm::errs()
+        << "Exactly one input file is required in the per-file mode ('--').\n";
     return nullptr;
   }
 
@@ -749,8 +757,9 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
   auto LastCmd = C->getJobs().end();
   LastCmd--;
   if (LastCmd->getOutputFilenames().size() != 1) {
-    llvm::errs() << "The command line should provide exactly one output file "
-                    "in P1689 per file mode.\n";
+    llvm::errs()
+        << "Exactly one output file is required in the per-file mode ('--').\n";
+    return nullptr;
   }
   StringRef OutputFile = LastCmd->getOutputFilenames().front();
 
@@ -788,15 +797,25 @@ getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
 }
 
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
+  llvm::InitializeAllTargetInfos();
   std::string ErrorMessage;
   std::unique_ptr<tooling::CompilationDatabase> Compilations =
-      getCompilationDataBase(argc, argv, ErrorMessage);
+      getCompilationDatabase(argc, argv, ErrorMessage);
   if (!Compilations) {
     llvm::errs() << ErrorMessage << "\n";
     return 1;
   }
 
   llvm::cl::PrintOptionValues();
+
+  // Expand response files in advance, so that we can "see" all the arguments
+  // when adjusting below.
+  Compilations = expandResponseFiles(std::move(Compilations),
+                                     llvm::vfs::getRealFileSystem());
+
+  Compilations = inferTargetAndDriverMode(std::move(Compilations));
+
+  Compilations = inferToolLocation(std::move(Compilations));
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
@@ -818,7 +837,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           // Reverse scan, starting at the end or at the element before "--".
           auto R = std::make_reverse_iterator(FlagsEnd);
-          for (auto I = R, E = Args.rend(); I != E; ++I) {
+          auto E = Args.rend();
+          // Don't include Args[0] in the iteration; that's the executable, not
+          // an option.
+          if (E != R)
+            E--;
+          for (auto I = R; I != E; ++I) {
             StringRef Arg = *I;
             if (ClangCLMode) {
               // Ignore arguments that are preceded by "-Xclang".
@@ -864,8 +888,25 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       });
 
   SharedStream Errs(llvm::errs());
-  // Print out the dependency results to STDOUT by default.
-  SharedStream DependencyOS(llvm::outs());
+
+  std::optional<llvm::raw_fd_ostream> FileOS;
+  llvm::raw_ostream &ThreadUnsafeDependencyOS = [&]() -> llvm::raw_ostream & {
+    if (OutputFileName == "-")
+      return llvm::outs();
+
+    if (OutputFileName == "/dev/null")
+      return llvm::nulls();
+
+    std::error_code EC;
+    FileOS.emplace(OutputFileName, EC);
+    if (EC) {
+      llvm::errs() << "Failed to open output file '" << OutputFileName
+                   << "': " << llvm::errorCodeToError(EC) << '\n';
+      std::exit(1);
+    }
+    return *FileOS;
+  }();
+  SharedStream DependencyOS(ThreadUnsafeDependencyOS);
 
   std::vector<tooling::CompileCommand> Inputs =
       AdjustingCompilations->getAllCompileCommands();
@@ -885,6 +926,13 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   if (Format == ScanningOutputFormat::Full)
     FD.emplace(ModuleName.empty() ? Inputs.size() : 0);
+
+  std::atomic<size_t> NumStatusCalls = 0;
+  std::atomic<size_t> NumOpenFileForReadCalls = 0;
+  std::atomic<size_t> NumDirBeginCalls = 0;
+  std::atomic<size_t> NumGetRealPathCalls = 0;
+  std::atomic<size_t> NumExistsCalls = 0;
+  std::atomic<size_t> NumIsLocalCalls = 0;
 
   auto ScanningTask = [&](DependencyScanningService &Service) {
     DependencyScanningTool WorkerTool(Service);
@@ -970,10 +1018,21 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           HadErrors = true;
       }
     }
+
+    WorkerTool.getWorkerVFS().visit([&](llvm::vfs::FileSystem &VFS) {
+      if (auto *T = dyn_cast_or_null<llvm::vfs::TracingFileSystem>(&VFS)) {
+        NumStatusCalls += T->NumStatusCalls;
+        NumOpenFileForReadCalls += T->NumOpenFileForReadCalls;
+        NumDirBeginCalls += T->NumDirBeginCalls;
+        NumGetRealPathCalls += T->NumGetRealPathCalls;
+        NumExistsCalls += T->NumExistsCalls;
+        NumIsLocalCalls += T->NumIsLocalCalls;
+      }
+    });
   };
 
   DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
-                                    EagerLoadModules);
+                                    EagerLoadModules, /*TraceVFS=*/Verbose);
 
   llvm::Timer T;
   T.startTimer();
@@ -996,6 +1055,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   T.stopTimer();
+
+  if (Verbose)
+    llvm::errs() << "\n*** Virtual File System Stats:\n"
+                 << NumStatusCalls << " status() calls\n"
+                 << NumOpenFileForReadCalls << " openFileForRead() calls\n"
+                 << NumDirBeginCalls << " dir_begin() calls\n"
+                 << NumGetRealPathCalls << " getRealPath() calls\n"
+                 << NumExistsCalls << " exists() calls\n"
+                 << NumIsLocalCalls << " isLocal() calls\n";
+
   if (PrintTiming)
     llvm::errs() << llvm::format(
         "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",
@@ -1006,9 +1075,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       HadErrors = true;
 
   if (Format == ScanningOutputFormat::Full)
-    FD->printFullOutput(llvm::outs());
+    FD->printFullOutput(ThreadUnsafeDependencyOS);
   else if (Format == ScanningOutputFormat::P1689)
-    PD.printDependencies(llvm::outs());
+    PD.printDependencies(ThreadUnsafeDependencyOS);
 
   return HadErrors;
 }

@@ -13,10 +13,13 @@
 #include "X86RegisterBankInfo.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/IntrinsicsX86.h"
 
 #define GET_TARGET_REGBANK_IMPL
 #include "X86GenRegisterBank.inc"
@@ -41,31 +44,96 @@ X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI) {
          "GPRs should hold up to 64-bit");
 }
 
-const RegisterBank &
-X86RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                            LLT) const {
+// \returns true if a given intrinsic only uses and defines FPRs.
+static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
+                          const MachineInstr &MI) {
+  // TODO: Add more intrinsics.
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  default:
+    return false;
+  // SSE1
+  case Intrinsic::x86_sse_rcp_ss:
+  case Intrinsic::x86_sse_rcp_ps:
+  case Intrinsic::x86_sse_rsqrt_ss:
+  case Intrinsic::x86_sse_rsqrt_ps:
+  case Intrinsic::x86_sse_min_ss:
+  case Intrinsic::x86_sse_min_ps:
+  case Intrinsic::x86_sse_max_ss:
+  case Intrinsic::x86_sse_max_ps:
+    return true;
+  }
+  return false;
+}
 
-  if (X86::GR8RegClass.hasSubClassEq(&RC) ||
-      X86::GR16RegClass.hasSubClassEq(&RC) ||
-      X86::GR32RegClass.hasSubClassEq(&RC) ||
-      X86::GR64RegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESSRegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESS_RBPRegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::GPRRegBankID);
+bool X86RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
+                                           const MachineRegisterInfo &MRI,
+                                           const TargetRegisterInfo &TRI,
+                                           unsigned Depth) const {
+  unsigned Op = MI.getOpcode();
+  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MRI, MI))
+    return true;
 
-  if (X86::FR32XRegClass.hasSubClassEq(&RC) ||
-      X86::FR64XRegClass.hasSubClassEq(&RC) ||
-      X86::VR128XRegClass.hasSubClassEq(&RC) ||
-      X86::VR256XRegClass.hasSubClassEq(&RC) ||
-      X86::VR512RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::VECRRegBankID);
+  // Do we have an explicit floating point instruction?
+  if (isPreISelGenericFloatingPointOpcode(Op))
+    return true;
 
-  if (X86::RFP80RegClass.hasSubClassEq(&RC) ||
-      X86::RFP32RegClass.hasSubClassEq(&RC) ||
-      X86::RFP64RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::PSRRegBankID);
+  // No. Check if we have a copy-like instruction. If we do, then we could
+  // still be fed by floating point instructions.
+  if (Op != TargetOpcode::COPY && !MI.isPHI() &&
+      !isPreISelGenericOptimizationHint(Op))
+    return false;
 
-  llvm_unreachable("Unsupported register kind yet.");
+  // Check if we already know the register bank.
+  auto *RB = getRegBank(MI.getOperand(0).getReg(), MRI, TRI);
+  if (RB == &getRegBank(X86::PSRRegBankID))
+    return true;
+  if (RB == &getRegBank(X86::GPRRegBankID))
+    return false;
+
+  // We don't know anything.
+  //
+  // If we have a phi, we may be able to infer that it will be assigned a fp
+  // type based off of its inputs.
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
+    return Op.isReg() &&
+           onlyDefinesFP(*MRI.getVRegDef(Op.getReg()), MRI, TRI, Depth + 1);
+  });
+}
+
+bool X86RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI,
+                                     const TargetRegisterInfo &TRI,
+                                     unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_LROUND:
+  case TargetOpcode::G_LLROUND:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI, Depth);
+}
+
+bool X86RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
+                                        const MachineRegisterInfo &MRI,
+                                        const TargetRegisterInfo &TRI,
+                                        unsigned Depth) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return true;
+  default:
+    break;
+  }
+  return hasFPConstraints(MI, MRI, TRI, Depth);
 }
 
 X86GenRegisterBankInfo::PartialMappingIdx
@@ -180,11 +248,13 @@ X86RegisterBankInfo::getSameOperandsMapping(const MachineInstr &MI,
 const RegisterBankInfo::InstructionMapping &
 X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Opc = MI.getOpcode();
 
-  // Try the default logic for non-generic instructions that are either copies
-  // or already have some operands assigned to banks.
+  // Try the default logic for non-generic instructions that are either
+  // copies or already have some operands assigned to banks.
   if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
     const InstructionMapping &Mapping = getInstrMappingImpl(MI);
     if (Mapping.isValid())
@@ -221,22 +291,25 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
-    // Instruction having only floating-point operands (all scalars in VECRReg)
+    // Instruction having only floating-point operands (all scalars in
+    // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
     break;
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_FPTOSI: {
-    // Some of the floating-point instructions have mixed GPR and FP operands:
-    // fine-tune the computed mapping.
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_FPTOUI: {
+    // Some of the floating-point instructions have mixed GPR and FP
+    // operands: fine-tune the computed mapping.
     auto &Op0 = MI.getOperand(0);
     auto &Op1 = MI.getOperand(1);
     const LLT Ty0 = MRI.getType(Op0.getReg());
     const LLT Ty1 = MRI.getType(Op1.getReg());
 
-    bool FirstArgIsFP = Opc == TargetOpcode::G_SITOFP;
-    bool SecondArgIsFP = Opc == TargetOpcode::G_FPTOSI;
+    bool FirstArgIsFP =
+        Opc == TargetOpcode::G_SITOFP || Opc == TargetOpcode::G_UITOFP;
     OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP= */ FirstArgIsFP);
-    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ SecondArgIsFP);
+    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ !FirstArgIsFP);
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -271,9 +344,36 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
                                OpRegBankIdx);
-  } break;
+    break;
+  }
+  case TargetOpcode::G_LOAD: {
+    // Check if that load feeds fp instructions.
+    // In that case, we want the default mapping to be on FPR
+    // instead of blind map every scalar to GPR.
+    bool IsFP = any_of(MRI.use_nodbg_instructions(cast<GLoad>(MI).getDstReg()),
+                       [&](const MachineInstr &UseMI) {
+                         // If we have at least one direct use in a FP
+                         // instruction, assume this was a floating point load
+                         // in the IR. If it was not, we would have had a
+                         // bitcast before reaching that instruction.
+                         return onlyUsesFP(UseMI, MRI, TRI);
+                       });
+    getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
+    break;
+  }
+  case TargetOpcode::G_STORE: {
+    // Check if that store is fed by fp instructions.
+    Register VReg = cast<GStore>(MI).getValueReg();
+    if (!VReg)
+      break;
+    MachineInstr *DefMI = MRI.getVRegDef(VReg);
+    bool IsFP = onlyDefinesFP(*DefMI, MRI, TRI);
+    getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
+    break;
+  }
   default:
-    // Track the bank of each register, use NotFP mapping (all scalars in GPRs)
+    // Track the bank of each register, use NotFP mapping (all scalars in
+    // GPRs)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ false, OpRegBankIdx);
     break;
   }

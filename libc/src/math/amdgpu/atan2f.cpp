@@ -10,11 +10,12 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, atan2f, (float x, float y)) {
   return __ocml_atan2_f32(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

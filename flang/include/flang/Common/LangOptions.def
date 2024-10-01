@@ -1,0 +1,64 @@
+//===------ LangOptions.def - Code generation option database ----- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the language dialect options. Users of this file
+// must define the LANGOPT macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+#ifndef LANGOPT
+#  error Define the LANGOPT macro to handle language options
+#endif
+
+#ifndef ENUM_LANGOPT
+#  define ENUM_LANGOPT(Name, Type, Bits, Default) \
+LANGOPT(Name, Bits, Default)
+#endif
+
+ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Fast) ///< FP Contract Mode (off/fast)
+
+/// Indicate a build without the standard GPU libraries.
+LANGOPT(NoGPULib  , 1, false)
+/// Permit floating point optimization without regard to infinities
+LANGOPT(NoHonorInfs, 1, false)
+/// Permit floating point optimization without regard to NaN
+LANGOPT(NoHonorNaNs, 1, false)
+/// Allow math functions to be replaced with an approximately equivalent
+/// calculation
+LANGOPT(ApproxFunc, 1, false)
+/// Allow optimizations that ignore the sign of floating point zeros
+LANGOPT(NoSignedZeros, 1, false)
+/// Allow reassociation transformations for floating-point instructions
+LANGOPT(AssociativeMath, 1, false)
+/// Allow division operations to be reassociated
+LANGOPT(ReciprocalMath, 1, false)
+/// Specify version of OpenMP standard
+LANGOPT(OpenMPVersion, 32, 0)
+/// Generate code only for OpenMP target device
+LANGOPT(OpenMPIsTargetDevice, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPIsGPU, 1, false)
+/// Generate OpenMP target code only for GPUs
+LANGOPT(OpenMPForceUSM, 1, false)
+/// Enable debugging in the OpenMP offloading device RTL
+LANGOPT(OpenMPTargetDebug, 32, 0)
+/// Assume work-shared loops do not have more iterations than participating
+/// threads.
+LANGOPT(OpenMPThreadSubscription, 1, 0)
+/// Assume distributed loops do not have more iterations than participating
+/// teams.
+LANGOPT(OpenMPTeamSubscription, 1, 0)
+/// Assume that no thread in a parallel region will modify an ICV.
+LANGOPT(OpenMPNoThreadState, 1, 0)
+/// Assume that no thread in a parallel region will encounter a parallel region
+LANGOPT(OpenMPNoNestedParallelism, 1, 0)
+
+LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
+LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
+
+#undef LANGOPT
+#undef ENUM_LANGOPT

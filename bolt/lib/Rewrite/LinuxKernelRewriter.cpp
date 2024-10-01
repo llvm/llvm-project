@@ -62,6 +62,11 @@ static cl::opt<bool>
                   cl::desc("dump Linux kernel PCI fixup table"),
                   cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> DumpSMPLocks("dump-smp-locks",
+                                  cl::desc("dump Linux kernel SMP locks"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(BoltCategory));
+
 static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
                                      cl::init(false), cl::Hidden,
@@ -119,19 +124,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
 namespace {
 
 class LinuxKernelRewriter final : public MetadataRewriter {
-  /// Linux Kernel special sections point to a specific instruction in many
-  /// cases. Unlike SDTMarkerInfo, these markers can come from different
-  /// sections.
-  struct LKInstructionMarkerInfo {
-    uint64_t SectionOffset;
-    int32_t PCRelativeOffset;
-    bool IsPCRelative;
-    StringRef SectionName;
+  /// Information required for updating metadata referencing an instruction.
+  struct InstructionFixup {
+    BinarySection &Section; // Section referencing the instruction.
+    uint64_t Offset;        // Offset in the section above.
+    BinaryFunction &BF;     // Function containing the instruction.
+    MCSymbol &Label;        // Label marking the instruction.
+    bool IsPCRelative;      // If the reference type is relative.
   };
+  std::vector<InstructionFixup> Fixups;
 
-  /// Map linux kernel program locations/instructions to their pointers in
-  /// special linux kernel sections
-  std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;
+  /// Size of an entry in .smp_locks section.
+  static constexpr size_t SMP_LOCKS_ENTRY_SIZE = 4;
 
   /// Linux ORC sections.
   ErrorOr<BinarySection &> ORCUnwindSection = std::errc::bad_address;
@@ -221,23 +225,20 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
 
-  /// Insert an LKMarker for a given code pointer \p PC from a non-code section
-  /// \p SectionName.
-  void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
-                      int32_t PCRelativeOffset, bool IsPCRelative,
-                      StringRef SectionName);
-
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
 
   /// Process __ksymtab and __ksymtab_gpl.
   void processLKKSymtab(bool IsGPL = false);
 
-  /// Process special linux kernel section, .smp_locks.
-  void processLKSMPLocks();
+  // Create relocations in sections requiring fixups.
+  //
+  // Make sure functions that will not be emitted are marked as such before this
+  // function is executed.
+  void processInstructionFixups();
 
-  /// Update LKMarkers' locations for the output binary.
-  void updateLKMarkers();
+  /// Process .smp_locks section.
+  Error processSMPLocks();
 
   /// Read ORC unwind information and annotate instructions.
   Error readORCTables();
@@ -247,6 +248,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Update ORC data in the binary.
   Error rewriteORCTables();
+
+  /// Validate written ORC tables after binary emission.
+  Error validateORCTables();
 
   /// Static call table handling.
   Error readStaticCalls();
@@ -269,7 +273,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
-  Error rewriteAltInstructions();
+  void processAltInstructionsPostCFG();
+  Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                               bool AltInstHasPadLen, bool ParseOnly);
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -279,19 +285,14 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error rewriteStaticKeysJumpTable();
   Error updateStaticKeysJumpTablePostEmit();
 
-  /// Mark instructions referenced by kernel metadata.
-  Error markInstructions();
-
 public:
   LinuxKernelRewriter(BinaryContext &BC)
       : MetadataRewriter("linux-kernel-rewriter", BC) {}
 
   Error preCFGInitializer() override {
     processLKSections();
-    if (Error E = markInstructions())
-      return E;
 
-    if (Error E = readORCTables())
+    if (Error E = processSMPLocks())
       return E;
 
     if (Error E = readStaticCalls())
@@ -309,6 +310,11 @@ public:
     if (Error E = readAltInstructions())
       return E;
 
+    // Some ORC entries could be linked to alternative instruction
+    // sequences. Hence, we read ORC after .altinstructions.
+    if (Error E = readORCTables())
+      return E;
+
     if (Error E = readPCIFixupTable())
       return E;
 
@@ -322,6 +328,8 @@ public:
     if (Error E = processORCPostCFG())
       return E;
 
+    processAltInstructionsPostCFG();
+
     return Error::success();
   }
 
@@ -329,9 +337,6 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
-      return E;
-
-    if (Error E = rewriteAltInstructions())
       return E;
 
     if (Error E = rewriteParaInstructions())
@@ -349,52 +354,25 @@ public:
     if (Error E = rewriteBugTable())
       return E;
 
+    processInstructionFixups();
+
     return Error::success();
   }
 
   Error postEmitFinalizer() override {
-    updateLKMarkers();
-
     if (Error E = updateStaticKeysJumpTablePostEmit())
+      return E;
+
+    if (Error E = validateORCTables())
       return E;
 
     return Error::success();
   }
 };
 
-Error LinuxKernelRewriter::markInstructions() {
-  for (const uint64_t PC : llvm::make_first_range(LKMarkers)) {
-    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(PC);
-
-    if (!BF || !BC.shouldEmit(*BF))
-      continue;
-
-    const uint64_t Offset = PC - BF->getAddress();
-    MCInst *Inst = BF->getInstructionAtOffset(Offset);
-    if (!Inst)
-      return createStringError(errc::executable_format_error,
-                               "no instruction matches kernel marker offset");
-
-    BC.MIB->setOffset(*Inst, static_cast<uint32_t>(Offset));
-
-    BF->setHasSDTMarker(true);
-  }
-
-  return Error::success();
-}
-
-void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
-                                         int32_t PCRelativeOffset,
-                                         bool IsPCRelative,
-                                         StringRef SectionName) {
-  LKMarkers[PC].emplace_back(LKInstructionMarkerInfo{
-      SectionOffset, PCRelativeOffset, IsPCRelative, SectionName});
-}
-
 void LinuxKernelRewriter::processLKSections() {
   processLKKSymtab();
   processLKKSymtab(true);
-  processLKSMPLocks();
 }
 
 /// Process __ksymtab[_gpl] sections of Linux Kernel.
@@ -418,7 +396,7 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
   for (uint64_t I = 0; I < SectionSize; I += 4) {
     const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
+    ErrorOr<int64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
     assert(Offset && "Reading valid PC-relative offset for a ksymtab entry");
     const int32_t SignedOffset = *Offset;
     const uint64_t RefAddress = EntryAddress + SignedOffset;
@@ -433,79 +411,73 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
 /// .smp_locks section contains PC-relative references to instructions with LOCK
 /// prefix. The prefix can be converted to NOP at boot time on non-SMP systems.
-void LinuxKernelRewriter::processLKSMPLocks() {
-  ErrorOr<BinarySection &> SectionOrError =
+Error LinuxKernelRewriter::processSMPLocks() {
+  ErrorOr<BinarySection &> SMPLocksSection =
       BC.getUniqueSectionByName(".smp_locks");
-  if (!SectionOrError)
-    return;
+  if (!SMPLocksSection)
+    return Error::success();
 
-  uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 4) == 0 &&
-         "The size of the .smp_locks section should be a multiple of 4");
+  const uint64_t SectionSize = SMPLocksSection->getSize();
+  const uint64_t SectionAddress = SMPLocksSection->getAddress();
+  if (SectionSize % SMP_LOCKS_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "bad size of .smp_locks section");
 
-  for (uint64_t I = 0; I < SectionSize; I += 4) {
-    const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
-    assert(Offset && "Reading valid PC-relative offset for a .smp_locks entry");
-    int32_t SignedOffset = *Offset;
-    uint64_t RefAddress = EntryAddress + SignedOffset;
+  DataExtractor DE = DataExtractor(SMPLocksSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && Cursor.tell() < SectionSize) {
+    const uint64_t Offset = Cursor.tell();
+    const uint64_t IP = SectionAddress + Offset + (int32_t)DE.getU32(Cursor);
 
-    BinaryFunction *ContainingBF =
-        BC.getBinaryFunctionContainingAddress(RefAddress);
-    if (!ContainingBF)
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "error while reading .smp_locks: %s",
+                               toString(Cursor.takeError()).c_str());
+
+    if (opts::DumpSMPLocks)
+      BC.outs() << "SMP lock at 0x: " << Twine::utohexstr(IP) << '\n';
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(IP);
+    if (!BF || !BC.shouldEmit(*BF))
       continue;
 
-    insertLKMarker(RefAddress, I, SignedOffset, true, ".smp_locks");
+    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction matches lock at 0x%" PRIx64, IP);
+
+    // Check for duplicate entries.
+    if (BC.MIB->hasAnnotation(*Inst, "SMPLock"))
+      return createStringError(errc::executable_format_error,
+                               "duplicate SMP lock at 0x%" PRIx64, IP);
+
+    BC.MIB->addAnnotation(*Inst, "SMPLock", true);
+    MCSymbol *Label =
+        BC.MIB->getOrCreateInstLabel(*Inst, "__SMPLock_", BC.Ctx.get());
+
+    Fixups.push_back({*SMPLocksSection, Offset, *BF, *Label,
+                      /*IsPCRelative*/ true});
   }
+
+  const uint64_t NumEntries = SectionSize / SMP_LOCKS_ENTRY_SIZE;
+  BC.outs() << "BOLT-INFO: parsed " << NumEntries << " SMP lock entries\n";
+
+  return Error::success();
 }
 
-void LinuxKernelRewriter::updateLKMarkers() {
-  if (LKMarkers.size() == 0)
-    return;
-
-  std::unordered_map<std::string, uint64_t> PatchCounts;
-  for (std::pair<const uint64_t, std::vector<LKInstructionMarkerInfo>>
-           &LKMarkerInfoKV : LKMarkers) {
-    const uint64_t OriginalAddress = LKMarkerInfoKV.first;
-    const BinaryFunction *BF =
-        BC.getBinaryFunctionContainingAddress(OriginalAddress, false, true);
-    if (!BF)
+void LinuxKernelRewriter::processInstructionFixups() {
+  for (InstructionFixup &Fixup : Fixups) {
+    if (!BC.shouldEmit(Fixup.BF))
       continue;
 
-    uint64_t NewAddress = BF->translateInputToOutputAddress(OriginalAddress);
-    if (NewAddress == 0)
-      continue;
-
-    // Apply base address.
-    if (OriginalAddress >= 0xffffffff00000000 && NewAddress < 0xffffffff)
-      NewAddress = NewAddress + 0xffffffff00000000;
-
-    if (OriginalAddress == NewAddress)
-      continue;
-
-    for (LKInstructionMarkerInfo &LKMarkerInfo : LKMarkerInfoKV.second) {
-      StringRef SectionName = LKMarkerInfo.SectionName;
-      SimpleBinaryPatcher *LKPatcher;
-      ErrorOr<BinarySection &> BSec = BC.getUniqueSectionByName(SectionName);
-      assert(BSec && "missing section info for kernel section");
-      if (!BSec->getPatcher())
-        BSec->registerPatcher(std::make_unique<SimpleBinaryPatcher>());
-      LKPatcher = static_cast<SimpleBinaryPatcher *>(BSec->getPatcher());
-      PatchCounts[std::string(SectionName)]++;
-      if (LKMarkerInfo.IsPCRelative)
-        LKPatcher->addLE32Patch(LKMarkerInfo.SectionOffset,
-                                NewAddress - OriginalAddress +
-                                    LKMarkerInfo.PCRelativeOffset);
-      else
-        LKPatcher->addLE64Patch(LKMarkerInfo.SectionOffset, NewAddress);
-    }
+    Fixup.Section.addRelocation(Fixup.Offset, &Fixup.Label,
+                                Fixup.IsPCRelative ? ELF::R_X86_64_PC32
+                                                   : ELF::R_X86_64_64,
+                                /*Addend*/ 0);
   }
-  BC.outs() << "BOLT-INFO: patching linux kernel sections. Total patches per "
-               "section are as follows:\n";
-  for (const std::pair<const std::string, uint64_t> &KV : PatchCounts)
-    BC.outs() << "  Section: " << KV.first << ", patch-counts: " << KV.second
-              << '\n';
 }
 
 Error LinuxKernelRewriter::readORCTables() {
@@ -593,11 +565,28 @@ Error LinuxKernelRewriter::readORCTables() {
     if (!BF->hasInstructions())
       continue;
 
-    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
-    if (!Inst)
+    const uint64_t Offset = IP - BF->getAddress();
+    MCInst *Inst = BF->getInstructionAtOffset(Offset);
+    if (!Inst) {
+      // Check if there is an alternative instruction(s) at this IP. Multiple
+      // alternative instructions can take a place of a single original
+      // instruction and each alternative can have a separate ORC entry.
+      // Since ORC table is shared between all alternative sequences, there's
+      // a requirement that only one (out of many) sequences can have an
+      // instruction from the ORC table to avoid ambiguities/conflicts.
+      //
+      // For now, we have limited support for alternatives. I.e. we still print
+      // functions with them, but will not change the code in the output binary.
+      // As such, we can ignore alternative ORC entries. They will be preserved
+      // in the binary, but will not get printed in the instruction stream.
+      Inst = BF->getInstructionContainingOffset(Offset);
+      if (Inst || BC.MIB->hasAnnotation(*Inst, "AltInst"))
+        continue;
+
       return createStringError(
           errc::executable_format_error,
           "no instruction at address 0x%" PRIx64 " in .orc_unwind_ip", IP);
+    }
 
     // Some addresses will have two entries associated with them. The first
     // one being a "weak" section terminator. Since we ignore the terminator,
@@ -777,11 +766,9 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   };
 
   // Emit new ORC entries for the emitted function.
-  auto emitORC = [&](const BinaryFunction &BF) -> Error {
-    assert(!BF.isSplit() && "Split functions not supported by ORC writer yet.");
-
+  auto emitORC = [&](const FunctionFragment &FF) -> Error {
     ORCState CurrentState = NullORC;
-    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+    for (BinaryBasicBlock *BB : FF) {
       for (MCInst &Inst : *BB) {
         ErrorOr<ORCState> ErrorOrState =
             BC.MIB->tryGetAnnotationAs<ORCState>(Inst, "ORC");
@@ -802,7 +789,36 @@ Error LinuxKernelRewriter::rewriteORCTables() {
     return Error::success();
   };
 
+  // Emit ORC entries for cold fragments. We assume that these fragments are
+  // emitted contiguously in memory using reserved space in the kernel. This
+  // assumption is validated in post-emit pass validateORCTables() where we
+  // check that ORC entries are sorted by their addresses.
+  auto emitColdORC = [&]() -> Error {
+    for (BinaryFunction &BF :
+         llvm::make_second_range(BC.getBinaryFunctions())) {
+      if (!BC.shouldEmit(BF))
+        continue;
+      for (FunctionFragment &FF : BF.getLayout().getSplitFragments())
+        if (Error E = emitORC(FF))
+          return E;
+    }
+
+    return Error::success();
+  };
+
+  bool ShouldEmitCold = !BC.BOLTReserved.empty();
   for (ORCListEntry &Entry : ORCEntries) {
+    if (ShouldEmitCold && Entry.IP > BC.BOLTReserved.start()) {
+      if (Error E = emitColdORC())
+        return E;
+
+      // Emit terminator entry at the end of the reserved region.
+      if (Error E = emitORCEntry(BC.BOLTReserved.end(), NullORC))
+        return E;
+
+      ShouldEmitCold = false;
+    }
+
     // Emit original entries for functions that we haven't modified.
     if (!Entry.BF || !BC.shouldEmit(*Entry.BF)) {
       // Emit terminator only if it marks the start of a function.
@@ -816,7 +832,7 @@ Error LinuxKernelRewriter::rewriteORCTables() {
     // Emit all ORC entries for a function referenced by an entry and skip over
     // the rest of entries for this function by resetting its ORC attribute.
     if (Entry.BF->hasORC()) {
-      if (Error E = emitORC(*Entry.BF))
+      if (Error E = emitORC(Entry.BF->getLayout().getMainFragment()))
         return E;
       Entry.BF->setHasORC(false);
     }
@@ -825,13 +841,38 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitted " << NumEmitted
                     << " ORC entries\n");
 
-  // Replicate terminator entry at the end of sections to match the original
-  // table sizes.
-  const BinaryFunction &LastBF = BC.getBinaryFunctions().rbegin()->second;
-  const uint64_t LastIP = LastBF.getAddress() + LastBF.getMaxSize();
+  // Populate ORC tables with a terminator entry with max address to match the
+  // original table sizes.
+  const uint64_t LastIP = std::numeric_limits<uint64_t>::max();
   while (UnwindWriter.bytesRemaining()) {
     if (Error E = emitORCEntry(LastIP, NullORC, nullptr, /*Force*/ true))
       return E;
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::validateORCTables() {
+  if (!ORCUnwindIPSection)
+    return Error::success();
+
+  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
+  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getOutputContents(),
+                                     BC.AsmInfo->isLittleEndian(),
+                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor IPCursor(0);
+  uint64_t PrevIP = 0;
+  for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
+    const uint64_t IP =
+        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+    if (!IPCursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading ORC IP table: %s",
+                               toString(IPCursor.takeError()).c_str());
+
+    assert(IP >= PrevIP && "Unsorted ORC table detected");
+    (void)PrevIP;
+    PrevIP = IP;
   }
 
   return Error::success();
@@ -1298,12 +1339,69 @@ Error LinuxKernelRewriter::rewriteBugTable() {
 ///	    u8  padlen;         // present in older kernels
 ///   } __packed;
 ///
-/// Note the structures is packed.
+/// Note that the structure is packed.
+///
+/// Since the size of the "feature" field could be either u16 or u32, and
+/// "padlen" presence is unknown, we attempt to parse .altinstructions section
+/// using all possible combinations (four at this time). Since we validate the
+/// contents of the section and its size, the detection works quite well.
+/// Still, we leave the user the opportunity to specify these features on the
+/// command line and skip the guesswork.
 Error LinuxKernelRewriter::readAltInstructions() {
   AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
   if (!AltInstrSection)
     return Error::success();
 
+  // Presence of "padlen" field.
+  std::vector<bool> PadLenVariants;
+  if (opts::AltInstHasPadLen.getNumOccurrences())
+    PadLenVariants.push_back(opts::AltInstHasPadLen);
+  else
+    PadLenVariants = {false, true};
+
+  // Size (in bytes) variants of "feature" field.
+  std::vector<uint32_t> FeatureSizeVariants;
+  if (opts::AltInstFeatureSize.getNumOccurrences())
+    FeatureSizeVariants.push_back(opts::AltInstFeatureSize);
+  else
+    FeatureSizeVariants = {2, 4};
+
+  for (bool AltInstHasPadLen : PadLenVariants) {
+    for (uint32_t AltInstFeatureSize : FeatureSizeVariants) {
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: trying AltInstHasPadLen = " << AltInstHasPadLen
+               << "; AltInstFeatureSize = " << AltInstFeatureSize << ";\n";
+      });
+      if (Error E = tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                           /*ParseOnly*/ true)) {
+        consumeError(std::move(E));
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Matched .altinstructions format\n");
+
+      if (!opts::AltInstHasPadLen.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstHasPadLen.ArgStr
+                  << '=' << AltInstHasPadLen << '\n';
+
+      if (!opts::AltInstFeatureSize.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstFeatureSize.ArgStr
+                  << '=' << AltInstFeatureSize << '\n';
+
+      return tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                    /*ParseOnly*/ false);
+    }
+  }
+
+  // We couldn't match the format. Read again to properly propagate the error
+  // to the user.
+  return tryReadAltInstructions(opts::AltInstFeatureSize,
+                                opts::AltInstHasPadLen, /*ParseOnly*/ false);
+}
+
+Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                                                  bool AltInstHasPadLen,
+                                                  bool ParseOnly) {
   const uint64_t Address = AltInstrSection->getAddress();
   DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
                                    BC.AsmInfo->isLittleEndian(),
@@ -1315,12 +1413,12 @@ Error LinuxKernelRewriter::readAltInstructions() {
         Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
     const uint64_t AltInstAddress =
         Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Feature = DE.getUnsigned(Cursor, opts::AltInstFeatureSize);
+    const uint64_t Feature = DE.getUnsigned(Cursor, AltInstFeatureSize);
     const uint8_t OrgSize = DE.getU8(Cursor);
     const uint8_t AltSize = DE.getU8(Cursor);
 
     // Older kernels may have the padlen field.
-    const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+    const uint8_t PadLen = AltInstHasPadLen ? DE.getU8(Cursor) : 0;
 
     if (!Cursor)
       return createStringError(
@@ -1337,7 +1435,7 @@ Error LinuxKernelRewriter::readAltInstructions() {
                 << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
                 << "\n\tOrgSize: " << (int)OrgSize
                 << "\n\tAltSize: " << (int)AltSize << '\n';
-      if (opts::AltInstHasPadLen)
+      if (AltInstHasPadLen)
         BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
     }
 
@@ -1354,14 +1452,14 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
     BinaryFunction *AltBF =
         BC.getBinaryFunctionContainingAddress(AltInstAddress);
-    if (AltBF && BC.shouldEmit(*AltBF)) {
+    if (!ParseOnly && AltBF && BC.shouldEmit(*AltBF)) {
       BC.errs()
           << "BOLT-WARNING: alternative instruction sequence found in function "
           << *AltBF << '\n';
       AltBF->setIgnored();
     }
 
-    if (!BF || !BC.shouldEmit(*BF))
+    if (!BF || !BF->hasInstructions())
       continue;
 
     if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
@@ -1375,6 +1473,9 @@ Error LinuxKernelRewriter::readAltInstructions() {
                                "no instruction at address 0x%" PRIx64
                                " referenced by .altinstructions entry %d",
                                OrgInstAddress, EntryID);
+
+    if (ParseOnly)
+      continue;
 
     // There could be more than one alternative instruction sequences for the
     // same original instruction. Annotate each alternative separately.
@@ -1396,18 +1497,18 @@ Error LinuxKernelRewriter::readAltInstructions() {
     }
   }
 
-  BC.outs() << "BOLT-INFO: parsed " << EntryID
-            << " alternative instruction entries\n";
+  if (!ParseOnly)
+    BC.outs() << "BOLT-INFO: parsed " << EntryID
+              << " alternative instruction entries\n";
 
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteAltInstructions() {
-  // Disable output of functions with alt instructions before the rewrite
-  // support is complete.
+void LinuxKernelRewriter::processAltInstructionsPostCFG() {
+  // Disable optimization and output of functions with alt instructions before
+  // the rewrite support is complete. Alt instructions can modify the control
+  // flow, hence we may end up deleting seemingly unreachable code.
   skipFunctionsWithAnnotation("AltInst");
-
-  return Error::success();
 }
 
 /// When the Linux kernel needs to handle an error associated with a given PCI
@@ -1663,6 +1764,9 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     BC.MIB->addAnnotation(*Inst, "InitValue", Info.InitValue);
     if (!BC.MIB->getSize(*Inst))
       BC.MIB->setSize(*Inst, Size);
+
+    if (!BC.MIB->getOffset(*Inst))
+      BC.MIB->setOffset(*Inst, JumpAddress - BF->getAddress());
 
     if (opts::LongJumpLabels)
       BC.MIB->setSize(*Inst, 5);

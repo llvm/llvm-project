@@ -126,8 +126,7 @@ public:
   constexpr Result result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
-  llvm::raw_ostream &AsFortran(llvm::raw_ostream &,
-      const parser::CharBlock *derivedTypeRename = nullptr) const;
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;

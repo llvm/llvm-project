@@ -18,8 +18,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[A]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[B]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
@@ -62,8 +62,8 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ]
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32  [ [[TMP10]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC13:%.*]] = and i64 [[SMAX2]], 9223372036854775800
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
@@ -132,8 +132,8 @@ define void @inv_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b, i3
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[B]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[A]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
@@ -245,15 +245,15 @@ define void @variant_val_store_to_inv_address_conditional(ptr %a, i64 %n, ptr %b
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[B]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[A]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ugt ptr [[SCEVGEP2]], [[B]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ugt ptr [[SCEVGEP]], [[C]]
+; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ugt ptr [[SCEVGEP2]], [[A]]
-; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[C]]
+; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[C]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
 ; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
@@ -359,5 +359,36 @@ latch:
   br i1 %cond, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
+  ret void
+}
+
+define void @test_store_of_final_reduction_value(i64 %x, ptr %dst) {
+; CHECK-LABEL: @test_store_of_final_reduction_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV4:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED_NEXT]] = mul i64 [[RED]], [[X:%.*]]
+; CHECK-NEXT:    store i64 [[RED_NEXT]], ptr [[DST:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV4]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV4]], 1
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv4 = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ 0, %entry ], [ %red.next, %loop ]
+  %red.next = mul i64 %red, %x
+  store i64 %red.next, ptr %dst, align 8
+  %iv.next = add i64 %iv4, 1
+  %ec = icmp eq i64 %iv4, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

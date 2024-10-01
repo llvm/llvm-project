@@ -34,6 +34,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
@@ -117,6 +118,8 @@ public:
 
   InlineStrategy GetInlineStrategy() const;
 
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
+
   llvm::StringRef GetArg0() const;
 
   void SetArg0(llvm::StringRef arg);
@@ -140,6 +143,8 @@ public:
   bool GetSkipPrologue() const;
 
   PathMappingList &GetSourcePathMap() const;
+
+  PathMappingList &GetObjectPathMap() const;
 
   bool GetAutoSourceMapRelative() const;
 
@@ -200,7 +205,7 @@ public:
 
   bool GetBreakpointsConsultPlatformAvoidList();
 
-  lldb::LanguageType GetLanguage() const;
+  SourceLanguage GetLanguage() const;
 
   llvm::StringRef GetExpressionPrefixContents();
 
@@ -310,9 +315,18 @@ public:
     m_execution_policy = policy;
   }
 
-  lldb::LanguageType GetLanguage() const { return m_language; }
+  SourceLanguage GetLanguage() const { return m_language; }
 
-  void SetLanguage(lldb::LanguageType language) { m_language = language; }
+  void SetLanguage(lldb::LanguageType language_type) {
+    m_language = SourceLanguage(language_type);
+  }
+
+  /// Set the language using a pair of language code and version as
+  /// defined by the DWARF 6 specification.
+  /// WARNING: These codes may change until DWARF 6 is finalized.
+  void SetLanguage(uint16_t name, uint32_t version) {
+    m_language = SourceLanguage(name, version);
+  }
 
   bool DoesCoerceToId() const { return m_coerce_to_id; }
 
@@ -445,7 +459,7 @@ public:
 
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
-  lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
+  SourceLanguage m_language;
   std::string m_prefix;
   bool m_coerce_to_id = false;
   bool m_unwind_on_error = true;
@@ -499,9 +513,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -1068,9 +1082,11 @@ public:
   // section, then read from the file cache
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr);
+  //
+  // The method is virtual for mocking in the unit tests.
+  virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                            Status &error, bool force_live_memory = false,
+                            lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1160,7 +1176,7 @@ public:
 
   UserExpression *
   GetUserExpressionForLanguage(llvm::StringRef expr, llvm::StringRef prefix,
-                               lldb::LanguageType language,
+                               SourceLanguage language,
                                Expression::ResultType desired_type,
                                const EvaluateExpressionOptions &options,
                                ValueObject *ctx_obj, Status &error);
@@ -1207,6 +1223,10 @@ public:
                           lldb::addr_t load_addr);
 
   void ClearAllLoadedSections();
+
+  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(
+      lldb_private::TypeSummaryImpl &summary_provider);
+  lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.
@@ -1371,8 +1391,7 @@ public:
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
     StructuredDataImpl m_extra_args;
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp;
+    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     /// and fill it with commands, and SetSpecifier to set the specifier shared
@@ -1541,6 +1560,7 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
@@ -1606,7 +1626,7 @@ public:
 
   TargetStats &GetStatistics() { return m_stats; }
 
-private:
+protected:
   /// Construct with optional file and arch.
   ///
   /// This member is private. Clients must use

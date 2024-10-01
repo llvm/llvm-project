@@ -1,4 +1,5 @@
 # RUN: llc -mtriple amdgcn -run-pass livevars -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple amdgcn --passes='require<live-vars>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
 
 # CHECK-LABEL:  phi-cf-test
 # CHECK: bb.0:

@@ -131,11 +131,10 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         break;
       }
       case 2:
-        Valid = (CondBranch &&
-                 (TBB == getConditionalSuccessor(true)->getLabel() &&
-                  ((!UncondBranch && !FBB) ||
-                   (UncondBranch &&
-                    FBB == getConditionalSuccessor(false)->getLabel()))));
+        Valid =
+            CondBranch && TBB == getConditionalSuccessor(true)->getLabel() &&
+            (UncondBranch ? FBB == getConditionalSuccessor(false)->getLabel()
+                          : !FBB);
         break;
       }
     }
@@ -403,45 +402,6 @@ bool BinaryBasicBlock::analyzeBranch(const MCSymbol *&TBB, const MCSymbol *&FBB,
   auto &MIB = Function->getBinaryContext().MIB;
   return MIB->analyzeBranch(Instructions.begin(), Instructions.end(), TBB, FBB,
                             CondBranch, UncondBranch);
-}
-
-bool BinaryBasicBlock::isMacroOpFusionPair(const_iterator I) const {
-  auto &MIB = Function->getBinaryContext().MIB;
-  ArrayRef<MCInst> Insts = Instructions;
-  return MIB->isMacroOpFusionPair(Insts.slice(I - begin()));
-}
-
-BinaryBasicBlock::const_iterator
-BinaryBasicBlock::getMacroOpFusionPair() const {
-  if (!Function->getBinaryContext().isX86())
-    return end();
-
-  if (getNumNonPseudos() < 2 || succ_size() != 2)
-    return end();
-
-  auto RI = getLastNonPseudo();
-  assert(RI != rend() && "cannot have an empty block with 2 successors");
-
-  BinaryContext &BC = Function->getBinaryContext();
-
-  // Skip instruction if it's an unconditional branch following
-  // a conditional one.
-  if (BC.MIB->isUnconditionalBranch(*RI))
-    ++RI;
-
-  if (!BC.MIB->isConditionalBranch(*RI))
-    return end();
-
-  // Start checking with instruction preceding the conditional branch.
-  ++RI;
-  if (RI == rend())
-    return end();
-
-  auto II = std::prev(RI.base()); // convert to a forward iterator
-  if (isMacroOpFusionPair(II))
-    return II;
-
-  return end();
 }
 
 MCInst *BinaryBasicBlock::getTerminatorBefore(MCInst *Pos) {

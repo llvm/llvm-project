@@ -61,7 +61,11 @@
 #pragma push_macro("PTX81")
 #pragma push_macro("PTX82")
 #pragma push_macro("PTX83")
-#define PTX83 "ptx83"
+#pragma push_macro("PTX84")
+#pragma push_macro("PTX85")
+#define PTX85 "ptx85"
+#define PTX84 "ptx84|" PTX85
+#define PTX83 "ptx83|" PTX84
 #define PTX82 "ptx82|" PTX83
 #define PTX81 "ptx81|" PTX82
 #define PTX80 "ptx80|" PTX81
@@ -135,6 +139,7 @@ TARGET_BUILTIN(__nvvm_is_explicit_cluster, "b", "nc", AND(SM_90, PTX78))
 BUILTIN(__nvvm_read_ptx_sreg_laneid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_warpid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nwarpid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_warpsize, "i", "nc")
 
 BUILTIN(__nvvm_read_ptx_sreg_smid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nsmid, "i", "nc")
@@ -580,13 +585,20 @@ TARGET_BUILTIN(__nvvm_f2bf16_rz_relu, "yf", "", AND(SM_80,PTX70))
 
 TARGET_BUILTIN(__nvvm_f2tf32_rna, "ZUif", "", AND(SM_80,PTX70))
 
-// Bitcast
+TARGET_BUILTIN(__nvvm_ff_to_e4m3x2_rn, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e4m3x2_rn_relu, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e5m2x2_rn, "sff", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_ff_to_e5m2x2_rn_relu, "sff", "", AND(SM_89,PTX81))
 
-BUILTIN(__nvvm_bitcast_f2i, "if", "")
-BUILTIN(__nvvm_bitcast_i2f, "fi", "")
+TARGET_BUILTIN(__nvvm_f16x2_to_e4m3x2_rn, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e4m3x2_rn_relu, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e5m2x2_rn, "sV2h", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_f16x2_to_e5m2x2_rn_relu, "sV2h", "", AND(SM_89,PTX81))
 
-BUILTIN(__nvvm_bitcast_ll2d, "dLLi", "")
-BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
+TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
+TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
 
 // FNS
 TARGET_BUILTIN(__nvvm_fns, "UiUiUii", "n", PTX60)
@@ -825,6 +837,9 @@ BUILTIN(__nvvm_atom_xor_gen_ll, "LLiLLiD*LLi", "n")
 TARGET_BUILTIN(__nvvm_atom_cta_xor_gen_ll, "LLiLLiD*LLi", "n", SM_60)
 TARGET_BUILTIN(__nvvm_atom_sys_xor_gen_ll, "LLiLLiD*LLi", "n", SM_60)
 
+TARGET_BUILTIN(__nvvm_atom_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
+TARGET_BUILTIN(__nvvm_atom_cta_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
+TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_us, "UsUsD*UsUs", "n", SM_70)
 BUILTIN(__nvvm_atom_cas_gen_i, "iiD*ii", "n")
 TARGET_BUILTIN(__nvvm_atom_cta_cas_gen_i, "iiD*ii", "n", SM_60)
 TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_i, "iiD*ii", "n", SM_60)
@@ -1091,3 +1106,5 @@ TARGET_BUILTIN(__nvvm_getctarank_shared_cluster, "iv*3", "", AND(SM_90,PTX78))
 #pragma pop_macro("PTX81")
 #pragma pop_macro("PTX82")
 #pragma pop_macro("PTX83")
+#pragma pop_macro("PTX84")
+#pragma pop_macro("PTX85")

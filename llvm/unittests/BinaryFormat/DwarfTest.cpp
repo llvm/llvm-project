@@ -204,4 +204,19 @@ TEST(DwarfTest, format_provider) {
   EXPECT_EQ("DW_OP_lit0", formatv("{0}", DW_OP_lit0).str());
   EXPECT_EQ("DW_OP_unknown_ff", formatv("{0}", DW_OP_hi_user).str());
 }
+
+TEST(DwarfTest, lname) {
+  auto roundtrip = [](llvm::dwarf::SourceLanguage sl) {
+    auto name_version = toDW_LNAME(sl);
+    // Ignore ones without a defined mapping.
+    if (sl == DW_LANG_Mips_Assembler || sl == DW_LANG_GOOGLE_RenderScript ||
+        !name_version.has_value())
+      return sl;
+    return dwarf::toDW_LANG(name_version->first, name_version->second)
+        .value_or(sl);
+  };
+#define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)                 \
+  EXPECT_EQ(roundtrip(DW_LANG_##NAME), DW_LANG_##NAME);
+#include "llvm/BinaryFormat/Dwarf.def"
+}
 } // end namespace

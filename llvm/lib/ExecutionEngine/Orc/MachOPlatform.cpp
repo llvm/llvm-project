@@ -206,9 +206,12 @@ private:
 };
 
 static StringRef ObjCRuntimeObjectSectionsData[] = {
-    MachOObjCCatListSectionName,   MachOObjCClassListSectionName,
-    MachOObjCClassRefsSectionName, MachOObjCConstSectionName,
-    MachOObjCDataSectionName,      MachOObjCSelRefsSectionName};
+    MachOObjCCatListSectionName,   MachOObjCCatList2SectionName,
+    MachOObjCClassListSectionName, MachOObjCClassRefsSectionName,
+    MachOObjCConstSectionName,     MachOObjCDataSectionName,
+    MachOObjCProtoListSectionName, MachOObjCProtoRefsSectionName,
+    MachOObjCNLCatListSectionName, MachOObjCNLClassListSectionName,
+    MachOObjCSelRefsSectionName};
 
 static StringRef ObjCRuntimeObjectSectionsText[] = {
     MachOObjCClassNameSectionName, MachOObjCMethNameSectionName,
@@ -276,6 +279,10 @@ MachOPlatform::HeaderOptions::BuildVersionOpts::fromTriple(const Triple &TT,
   case Triple::WatchOS:
     Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_WATCHOSSIMULATOR
                                            : MachO::PLATFORM_WATCHOS;
+    break;
+  case Triple::XROS:
+    Platform = TT.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
     break;
   default:
     return std::nullopt;
@@ -421,6 +428,7 @@ MachOPlatform::standardRuntimeUtilityAliases() {
           {"___orc_rt_run_program", "___orc_rt_macho_run_program"},
           {"___orc_rt_jit_dlerror", "___orc_rt_macho_jit_dlerror"},
           {"___orc_rt_jit_dlopen", "___orc_rt_macho_jit_dlopen"},
+          {"___orc_rt_jit_dlupdate", "___orc_rt_macho_jit_dlupdate"},
           {"___orc_rt_jit_dlclose", "___orc_rt_macho_jit_dlclose"},
           {"___orc_rt_jit_dlsym", "___orc_rt_macho_jit_dlsym"},
           {"___orc_rt_log_error", "___orc_rt_log_error_to_stderr"}};
@@ -853,20 +861,6 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
         [this](LinkGraph &G) { return bootstrapPipelineEnd(G); });
 }
 
-ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
-MachOPlatform::MachOPlatformPlugin::getSyntheticSymbolDependencies(
-    MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(PluginMutex);
-  auto I = InitSymbolDeps.find(&MR);
-  if (I != InitSymbolDeps.end()) {
-    SyntheticSymbolDependenciesMap Result;
-    Result[MR.getInitializerSymbol()] = std::move(I->second);
-    InitSymbolDeps.erase(&MR);
-    return Result;
-  }
-  return SyntheticSymbolDependenciesMap();
-}
-
 Error MachOPlatform::MachOPlatformPlugin::bootstrapPipelineStart(
     jitlink::LinkGraph &G) {
   // Increment the active graphs count in BootstrapInfo.
@@ -990,40 +984,38 @@ Error MachOPlatform::MachOPlatformPlugin::preserveImportantSections(
   // Init sections are important: We need to preserve them and so that their
   // addresses can be captured and reported to the ORC runtime in
   // registerObjectPlatformSections.
-  JITLinkSymbolSet InitSectionSymbols;
-  for (auto &InitSectionName : MachOInitSectionNames) {
-    // Skip ObjCImageInfo -- this shouldn't have any dependencies, and we may
-    // remove it later.
-    if (InitSectionName == MachOObjCImageInfoSectionName)
-      continue;
+  if (const auto &InitSymName = MR.getInitializerSymbol()) {
 
-    // Skip non-init sections.
-    auto *InitSection = G.findSectionByName(InitSectionName);
-    if (!InitSection)
-      continue;
+    jitlink::Symbol *InitSym = nullptr;
+    for (auto &InitSectionName : MachOInitSectionNames) {
+      // Skip ObjCImageInfo -- this shouldn't have any dependencies, and we may
+      // remove it later.
+      if (InitSectionName == MachOObjCImageInfoSectionName)
+        continue;
 
-    // Make a pass over live symbols in the section: those blocks are already
-    // preserved.
-    DenseSet<jitlink::Block *> AlreadyLiveBlocks;
-    for (auto &Sym : InitSection->symbols()) {
-      auto &B = Sym->getBlock();
-      if (Sym->isLive() && Sym->getOffset() == 0 &&
-          Sym->getSize() == B.getSize() && !AlreadyLiveBlocks.count(&B)) {
-        InitSectionSymbols.insert(Sym);
-        AlreadyLiveBlocks.insert(&B);
+      // Skip non-init sections.
+      auto *InitSection = G.findSectionByName(InitSectionName);
+      if (!InitSection || InitSection->empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first block.
+      if (!InitSym) {
+        auto &B = **InitSection->blocks().begin();
+        InitSym = &G.addDefinedSymbol(B, 0, *InitSymName, B.getSize(),
+                                      jitlink::Linkage::Strong,
+                                      jitlink::Scope::Default, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all other init blocks.
+      for (auto *B : InitSection->blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
       }
     }
-
-    // Add anonymous symbols to preserve any not-already-preserved blocks.
-    for (auto *B : InitSection->blocks())
-      if (!AlreadyLiveBlocks.count(B))
-        InitSectionSymbols.insert(
-            &G.addAnonymousSymbol(*B, 0, B->getSize(), false, true));
-  }
-
-  if (!InitSectionSymbols.empty()) {
-    std::lock_guard<std::mutex> Lock(PluginMutex);
-    InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
   }
 
   return Error::success();
@@ -1134,12 +1126,16 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
 
-  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+  // HasCategoryClassProperties and HasSignedObjCClassROs can be disabled before
+  // they are registered, if necessary, but once they are in use must be
+  // supported by subsequent objects.
+  if (Info.Finalized && Old.HasCategoryClassProperties &&
+      !New.HasCategoryClassProperties)
     return make_error<StringError>("ObjC category class property support in " +
                                        G.getName() +
                                        " does not match first registered flags",
                                    inconvertibleErrorCode());
-  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+  if (Info.Finalized && Old.HasSignedObjCClassROs && !New.HasSignedObjCClassROs)
     return make_error<StringError>("ObjC class_ro_t pointer signing in " +
                                        G.getName() +
                                        " does not match first registered flags",
@@ -1158,6 +1154,12 @@ Error MachOPlatform::MachOPlatformPlugin::mergeImageInfoFlags(
   // Add a Swift ABI version if it was pure objc before.
   if (!New.SwiftABIVersion)
     New.SwiftABIVersion = Old.SwiftABIVersion;
+  // Disable class properties if any object does not support it.
+  if (Old.HasCategoryClassProperties != New.HasCategoryClassProperties)
+    New.HasCategoryClassProperties = false;
+  // Disable signed class ro data if any object does not support it.
+  if (Old.HasSignedObjCClassROs != New.HasSignedObjCClassROs)
+    New.HasSignedObjCClassROs = false;
 
   LLVM_DEBUG({
     dbgs() << "MachOPlatform: Merging __objc_imageinfo flags for "
@@ -1680,22 +1682,24 @@ Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
     HeaderAddr = I->second;
   }
 
-  SymbolTableVector LocalSymTab;
-  auto &SymTab = LLVM_LIKELY(!InBootstrapPhase) ? LocalSymTab
-                                                : MP.Bootstrap.load()->SymTab;
+  if (LLVM_UNLIKELY(InBootstrapPhase)) {
+    // If we're in the bootstrap phase then just record these symbols in the
+    // bootstrap object and then bail out -- registration will be attached to
+    // the bootstrap graph.
+    std::lock_guard<std::mutex> Lock(MP.Bootstrap.load()->Mutex);
+    auto &SymTab = MP.Bootstrap.load()->SymTab;
+    for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
+      SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
+                        flagsForSymbol(*OriginalSymbol)});
+    return Error::success();
+  }
+
+  SymbolTableVector SymTab;
   for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
     SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
                       flagsForSymbol(*OriginalSymbol)});
 
-  // Bail out if we're in the bootstrap phase -- registration of thees symbols
-  // will be attached to the bootstrap graph.
-  if (LLVM_UNLIKELY(InBootstrapPhase))
-    return Error::success();
-
-  shared::AllocActions &allocActions = LLVM_LIKELY(!InBootstrapPhase)
-                                           ? G.allocActions()
-                                           : MP.Bootstrap.load()->DeferredAAs;
-  allocActions.push_back(
+  G.allocActions().push_back(
       {cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(
            MP.RegisterObjectSymbolTable.Addr, HeaderAddr, SymTab)),
        cantFail(WrapperFunctionCall::Create<SPSRegisterSymbolsArgs>(

@@ -35,21 +35,21 @@ namespace dataflow {
 //===----------------------------------------------------------------------===//
 
 /// This is a simple analysis state that represents whether the associated
-/// program point (either a block or a control-flow edge) is live.
+/// lattice anchor (either a block or a control-flow edge) is live.
 class Executable : public AnalysisState {
 public:
   using AnalysisState::AnalysisState;
 
-  /// Set the state of the program point to live.
+  /// Set the state of the lattice anchor to live.
   ChangeResult setToLive();
 
-  /// Get whether the program point is live.
+  /// Get whether the lattice anchor is live.
   bool isLive() const { return live; }
 
   /// Print the liveness.
   void print(raw_ostream &os) const override;
 
-  /// When the state of the program point is changed to live, re-invoke
+  /// When the state of the lattice anchor is changed to live, re-invoke
   /// subscribed analyses on the operations in the block and on the block
   /// itself.
   void onUpdate(DataFlowSolver *solver) const override;
@@ -60,8 +60,8 @@ public:
   }
 
 private:
-  /// Whether the program point is live. Optimistically assume that the program
-  /// point is dead.
+  /// Whether the lattice anchor is live. Optimistically assume that the lattice
+  /// anchor is dead.
   bool live = false;
 
   /// A set of analyses that should be updated when this state changes.
@@ -140,10 +140,10 @@ private:
 // CFGEdge
 //===----------------------------------------------------------------------===//
 
-/// This program point represents a control-flow edge between a block and one
+/// This lattice anchor represents a control-flow edge between a block and one
 /// of its successors.
 class CFGEdge
-    : public GenericProgramPointBase<CFGEdge, std::pair<Block *, Block *>> {
+    : public GenericLatticeAnchorBase<CFGEdge, std::pair<Block *, Block *>> {
 public:
   using Base::Base;
 

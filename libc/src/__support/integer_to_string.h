@@ -67,10 +67,11 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt.h" // make_integral_or_big_int_unsigned_t
+#include "src/__support/big_int.h" // make_integral_or_big_int_unsigned_t
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace details {
 
@@ -317,6 +318,6 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H

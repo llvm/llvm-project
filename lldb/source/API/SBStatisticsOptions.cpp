@@ -18,7 +18,6 @@ using namespace lldb_private;
 SBStatisticsOptions::SBStatisticsOptions()
     : m_opaque_up(new StatisticsOptions()) {
   LLDB_INSTRUMENT_VA(this);
-  m_opaque_up->summary_only = false;
 }
 
 SBStatisticsOptions::SBStatisticsOptions(const SBStatisticsOptions &rhs) {
@@ -39,17 +38,43 @@ SBStatisticsOptions::operator=(const SBStatisticsOptions &rhs) {
 }
 
 void SBStatisticsOptions::SetSummaryOnly(bool b) {
-  m_opaque_up->summary_only = b;
+  m_opaque_up->SetSummaryOnly(b);
 }
 
-bool SBStatisticsOptions::GetSummaryOnly() { return m_opaque_up->summary_only; }
+bool SBStatisticsOptions::GetSummaryOnly() {
+  return m_opaque_up->GetSummaryOnly();
+}
+
+void SBStatisticsOptions::SetIncludeTargets(bool b) {
+  m_opaque_up->SetIncludeTargets(b);
+}
+
+bool SBStatisticsOptions::GetIncludeTargets() const {
+  return m_opaque_up->GetIncludeTargets();
+}
+
+void SBStatisticsOptions::SetIncludeModules(bool b) {
+  m_opaque_up->SetIncludeModules(b);
+}
+
+bool SBStatisticsOptions::GetIncludeModules() const {
+  return m_opaque_up->GetIncludeModules();
+}
+
+void SBStatisticsOptions::SetIncludeTranscript(bool b) {
+  m_opaque_up->SetIncludeTranscript(b);
+}
+
+bool SBStatisticsOptions::GetIncludeTranscript() const {
+  return m_opaque_up->GetIncludeTranscript();
+}
 
 void SBStatisticsOptions::SetReportAllAvailableDebugInfo(bool b) {
-  m_opaque_up->load_all_debug_info = b;
+  m_opaque_up->SetLoadAllDebugInfo(b);
 }
 
 bool SBStatisticsOptions::GetReportAllAvailableDebugInfo() {
-  return m_opaque_up->load_all_debug_info;
+  return m_opaque_up->GetLoadAllDebugInfo();
 }
 
 const lldb_private::StatisticsOptions &SBStatisticsOptions::ref() const {

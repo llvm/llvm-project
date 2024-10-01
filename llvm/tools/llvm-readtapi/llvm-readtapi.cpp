@@ -125,7 +125,7 @@ static std::unique_ptr<InterfaceFile>
 getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(Filename);
+      MemoryBuffer::getFile(Filename, /*IsText=*/true);
   if (BufferOrErr.getError())
     ExitOnErr(errorCodeToError(BufferOrErr.getError()));
   auto Buffer = std::move(*BufferOrErr);
@@ -133,9 +133,7 @@ getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_universal_binary:
     IF = ExitOnErr(DylibReader::get(Buffer->getMemBufferRef()));
     break;

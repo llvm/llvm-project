@@ -259,7 +259,7 @@ public:
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -276,7 +276,7 @@ public:
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -315,7 +315,7 @@ public:
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -335,8 +335,11 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    // SPIR-V has core support for atomic ops, and Int32 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -356,12 +359,71 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    // SPIR-V has core support for atomic ops, and Int64 is always available;
+    // we take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
-                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo final
+    : public BaseSPIRVTargetInfo {
+public:
+  SPIRV64AMDGCNTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : BaseSPIRVTargetInfo(Triple, Opts) {
+    assert(Triple.getArch() == llvm::Triple::spirv64 &&
+           "Invalid architecture for 64-bit AMDGCN SPIR-V.");
+    assert(Triple.getVendor() == llvm::Triple::VendorType::AMD &&
+           "64-bit AMDGCN SPIR-V target must use AMD vendor");
+    assert(getTriple().getOS() == llvm::Triple::OSType::AMDHSA &&
+           "64-bit AMDGCN SPIR-V target must use AMDHSA OS");
+    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
+           "64-bit SPIR-V target must use unknown environment type");
+    PointerWidth = PointerAlign = 64;
+    SizeType = TargetInfo::UnsignedLong;
+    PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    AddrSpaceMap = &SPIRDefIsGenMap;
+
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1-P4-A0");
+
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
+
+    HasLegalHalfType = true;
+    HasFloat16 = true;
+    HalfArgsAndReturns = true;
+  }
+
+  bool hasBFloat16Type() const override { return true; }
+
+  ArrayRef<const char *> getGCCRegNames() const override;
+
+  bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                      StringRef,
+                      const std::vector<std::string> &) const override;
+
+  bool validateAsmConstraint(const char *&Name,
+                             TargetInfo::ConstraintInfo &Info) const override;
+
+  std::string convertConstraint(const char *&Constraint) const override;
+
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+
+  void setAuxTarget(const TargetInfo *Aux) override;
+
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    TargetInfo::adjust(Diags, Opts);
+  }
+
+  bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 };
 
 } // namespace targets

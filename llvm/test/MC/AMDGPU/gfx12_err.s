@@ -118,10 +118,10 @@ s_load_b128 s[20:23], s[2:3], vcc_lo th:TH_LOAD_NT_HT
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid th value for SMEM instruction
 
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D th:TH_LOAD_HT scope:SCOPE_SE th:TH_LOAD_HT
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 image_load v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D scope:SCOPE_SE th:TH_LOAD_HT scope:SCOPE_SE
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
 s_prefetch_inst s[14:15], 0xffffff, m0, 7
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 24-bit signed offset

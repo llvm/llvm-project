@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdio>
+#include <iterator>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -29,83 +31,57 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                                  llvm::ArrayRef<CompilerContext> pattern) {
-  auto ctx = context_chain.begin();
-  auto ctx_end = context_chain.end();
-  for (const CompilerContext &pat : pattern) {
-    // Early exit if the pattern is too long.
-    if (ctx == ctx_end)
-      return false;
-    if (*ctx != pat) {
-      // Skip any number of module matches.
-      if (pat.kind == CompilerContextKind::AnyModule) {
-        // Greedily match 0..n modules.
-        ctx = std::find_if(ctx, ctx_end, [](const CompilerContext &ctx) {
-          return ctx.kind != CompilerContextKind::Module;
-        });
-        continue;
-      }
-      // See if there is a kind mismatch; they should have 1 bit in common.
-      if (((uint16_t)ctx->kind & (uint16_t)pat.kind) == 0)
-        return false;
-      // The name is ignored for AnyModule, but not for AnyType.
-      if (pat.kind != CompilerContextKind::AnyModule && ctx->name != pat.name)
-        return false;
-    }
-    ++ctx;
-  }
-  return true;
+llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &os,
+                                            const CompilerContext &rhs) {
+  StreamString lldb_stream;
+  rhs.Dump(lldb_stream);
+  return os << lldb_stream.GetString();
 }
 
 static CompilerContextKind ConvertTypeClass(lldb::TypeClass type_class) {
   if (type_class == eTypeClassAny)
     return CompilerContextKind::AnyType;
-  uint16_t result = 0;
-  if (type_class & lldb::eTypeClassClass)
-    result |= (uint16_t)CompilerContextKind::Class;
-  if (type_class & lldb::eTypeClassStruct)
-    result |= (uint16_t)CompilerContextKind::Struct;
+  CompilerContextKind result = {};
+  if (type_class & (lldb::eTypeClassClass | lldb::eTypeClassStruct))
+    result |= CompilerContextKind::ClassOrStruct;
   if (type_class & lldb::eTypeClassUnion)
-    result |= (uint16_t)CompilerContextKind::Union;
+    result |= CompilerContextKind::Union;
   if (type_class & lldb::eTypeClassEnumeration)
-    result |= (uint16_t)CompilerContextKind::Enum;
+    result |= CompilerContextKind::Enum;
   if (type_class & lldb::eTypeClassFunction)
-    result |= (uint16_t)CompilerContextKind::Function;
+    result |= CompilerContextKind::Function;
   if (type_class & lldb::eTypeClassTypedef)
-    result |= (uint16_t)CompilerContextKind::Typedef;
-  return (CompilerContextKind)result;
+    result |= CompilerContextKind::Typedef;
+  return result;
 }
 
 TypeQuery::TypeQuery(llvm::StringRef name, TypeQueryOptions options)
     : m_options(options) {
-  llvm::StringRef scope, basename;
-  lldb::TypeClass type_class = lldb::eTypeClassAny;
-  if (Type::GetTypeScopeAndBasename(name, scope, basename, type_class)) {
-    if (scope.consume_front("::"))
-      m_options |= e_exact_match;
+  if (std::optional<Type::ParsedName> parsed_name =
+          Type::GetTypeScopeAndBasename(name)) {
+    llvm::ArrayRef scope = parsed_name->scope;
     if (!scope.empty()) {
-      std::pair<llvm::StringRef, llvm::StringRef> scope_pair =
-          scope.split("::");
-      while (!scope_pair.second.empty()) {
-        m_context.push_back({CompilerContextKind::AnyDeclContext,
-                             ConstString(scope_pair.first.str())});
-        scope_pair = scope_pair.second.split("::");
+      if (scope[0] == "::") {
+        m_options |= e_exact_match;
+        scope = scope.drop_front();
       }
-      m_context.push_back({CompilerContextKind::AnyDeclContext,
-                           ConstString(scope_pair.first.str())});
+      for (llvm::StringRef s : scope) {
+        m_context.push_back(
+            {CompilerContextKind::AnyDeclContext, ConstString(s)});
+      }
     }
-    m_context.push_back(
-        {ConvertTypeClass(type_class), ConstString(basename.str())});
+    m_context.push_back({ConvertTypeClass(parsed_name->type_class),
+                         ConstString(parsed_name->basename)});
   } else {
-    m_context.push_back(
-        {CompilerContextKind::AnyType, ConstString(name.str())});
+    m_context.push_back({CompilerContextKind::AnyType, ConstString(name)});
   }
 }
 
@@ -151,19 +127,56 @@ void TypeQuery::SetLanguages(LanguageSet languages) {
 
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
-  if (GetExactMatch() || context_chain.size() == m_context.size())
-    return ::contextMatches(context_chain, m_context);
+  auto ctx = context_chain.rbegin(), ctx_end = context_chain.rend();
+  for (auto pat = m_context.rbegin(), pat_end = m_context.rend();
+       pat != pat_end;) {
 
-  // We don't have an exact match, we need to bottom m_context.size() items to
-  // match for a successful lookup.
-  if (context_chain.size() < m_context.size())
-    return false; // Not enough items in context_chain to allow for a match.
+    if (ctx == ctx_end)
+      return false; // Pattern too long.
 
-  size_t compare_count = context_chain.size() - m_context.size();
-  return ::contextMatches(
-      llvm::ArrayRef<CompilerContext>(context_chain.data() + compare_count,
-                                      m_context.size()),
-      m_context);
+    if (ctx->kind == CompilerContextKind::Namespace && ctx->name.IsEmpty()) {
+      // We're matching an anonymous namespace. These are optional, so we check
+      // if the pattern expects an anonymous namespace.
+      if (pat->name.IsEmpty() && (pat->kind & CompilerContextKind::Namespace) ==
+                                     CompilerContextKind::Namespace) {
+        // Match, advance both iterators.
+        ++pat;
+      }
+      // Otherwise, only advance the context to skip over the anonymous
+      // namespace, and try matching again.
+      ++ctx;
+      continue;
+    }
+
+    // See if there is a kind mismatch; they should have 1 bit in common.
+    if ((ctx->kind & pat->kind) == CompilerContextKind())
+      return false;
+
+    if (ctx->name != pat->name)
+      return false;
+
+    ++ctx;
+    ++pat;
+  }
+
+  // Skip over any remaining module and anonymous namespace entries if we were
+  // asked to do that.
+  auto should_skip = [this](const CompilerContext &ctx) {
+    if (ctx.kind == CompilerContextKind::Module)
+      return GetIgnoreModules();
+    if (ctx.kind == CompilerContextKind::Namespace && ctx.name.IsEmpty())
+      return !GetStrictNamespaces();
+    return false;
+  };
+  ctx = std::find_if_not(ctx, ctx_end, should_skip);
+
+  // At this point, we have exhausted the pattern and we have a partial match at
+  // least. If that's all we're looking for, we're done.
+  if (!GetExactMatch())
+    return true;
+
+  // We have an exact match if we've exhausted the target context as well.
+  return ctx == ctx_end;
 }
 
 bool TypeQuery::LanguageMatches(lldb::LanguageType language) const {
@@ -203,11 +216,8 @@ void CompilerContext::Dump(Stream &s) const {
   case CompilerContextKind::Namespace:
     s << "Namespace";
     break;
-  case CompilerContextKind::Class:
-    s << "Class";
-    break;
-  case CompilerContextKind::Struct:
-    s << "Structure";
+  case CompilerContextKind::ClassOrStruct:
+    s << "ClassOrStruct";
     break;
   case CompilerContextKind::Union:
     s << "Union";
@@ -223,9 +233,6 @@ void CompilerContext::Dump(Stream &s) const {
     break;
   case CompilerContextKind::Typedef:
     s << "Typedef";
-    break;
-  case CompilerContextKind::AnyModule:
-    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
     s << "AnyType";
@@ -355,6 +362,9 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
+      break;
     }
   }
 }
@@ -416,6 +426,8 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
     }
   }
 
@@ -477,7 +489,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     // If we are a pointer or reference, then this is just a pointer size;
     case eEncodingIsPointerUID:
     case eEncodingIsLValueReferenceUID:
-    case eEncodingIsRValueReferenceUID: {
+    case eEncodingIsRValueReferenceUID:
+    case eEncodingIsLLVMPtrAuthUID: {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
@@ -621,6 +634,12 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
             encoding_type->GetForwardCompilerType().GetRValueReferenceType();
         break;
 
+      case eEncodingIsLLVMPtrAuthUID:
+        m_compiler_type =
+            encoding_type->GetForwardCompilerType().AddPtrAuthModifier(
+                m_payload);
+        break;
+
       default:
         llvm_unreachable("Unhandled encoding_data_type.");
       }
@@ -675,6 +694,10 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsRValueReferenceUID:
           m_compiler_type = void_compiler_type.GetRValueReferenceType();
           break;
+
+        case eEncodingIsLLVMPtrAuthUID:
+          llvm_unreachable("Cannot handle eEncodingIsLLVMPtrAuthUID without "
+                           "valid encoding_type");
 
         default:
           llvm_unreachable("Unhandled encoding_data_type.");
@@ -757,65 +780,62 @@ ConstString Type::GetQualifiedName() {
   return GetForwardCompilerType().GetTypeName();
 }
 
-bool Type::GetTypeScopeAndBasename(llvm::StringRef name,
-                                   llvm::StringRef &scope,
-                                   llvm::StringRef &basename,
-                                   TypeClass &type_class) {
-  type_class = eTypeClassAny;
+std::optional<Type::ParsedName>
+Type::GetTypeScopeAndBasename(llvm::StringRef name) {
+  ParsedName result;
 
   if (name.empty())
-    return false;
+    return std::nullopt;
 
-  // Clear the scope in case we have just a type class and a basename.
-  scope = llvm::StringRef();
-  basename = name;
-  if (basename.consume_front("struct "))
-    type_class = eTypeClassStruct;
-  else if (basename.consume_front("class "))
-    type_class = eTypeClassClass;
-  else if (basename.consume_front("union "))
-    type_class = eTypeClassUnion;
-  else if (basename.consume_front("enum "))
-    type_class = eTypeClassEnumeration;
-  else if (basename.consume_front("typedef "))
-    type_class = eTypeClassTypedef;
+  if (name.consume_front("struct "))
+    result.type_class = eTypeClassStruct;
+  else if (name.consume_front("class "))
+    result.type_class = eTypeClassClass;
+  else if (name.consume_front("union "))
+    result.type_class = eTypeClassUnion;
+  else if (name.consume_front("enum "))
+    result.type_class = eTypeClassEnumeration;
+  else if (name.consume_front("typedef "))
+    result.type_class = eTypeClassTypedef;
 
-  size_t namespace_separator = basename.find("::");
-  if (namespace_separator == llvm::StringRef::npos) {
-    // If "name" started a type class we need to return true with no scope.
-    return type_class != eTypeClassAny;
-  }
+  if (name.consume_front("::"))
+    result.scope.push_back("::");
 
-  size_t template_begin = basename.find('<');
-  while (namespace_separator != llvm::StringRef::npos) {
-    if (template_begin != llvm::StringRef::npos &&
-        namespace_separator > template_begin) {
-      size_t template_depth = 1;
-      llvm::StringRef template_arg =
-          basename.drop_front(template_begin + 1);
-      while (template_depth > 0 && !template_arg.empty()) {
-        if (template_arg.front() == '<')
-          template_depth++;
-        else if (template_arg.front() == '>')
-          template_depth--;
-        template_arg = template_arg.drop_front(1);
+  bool prev_is_colon = false;
+  size_t template_depth = 0;
+  size_t name_begin = 0;
+  for (const auto &pos : llvm::enumerate(name)) {
+    switch (pos.value()) {
+    case ':':
+      if (prev_is_colon && template_depth == 0) {
+        llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
+        // The itanium demangler uses this string to represent anonymous
+        // namespaces. Convert it to a more language-agnostic form (which is
+        // also used in DWARF).
+        if (scope_name == "(anonymous namespace)")
+          scope_name = "";
+        result.scope.push_back(scope_name);
+        name_begin = pos.index() + 1;
       }
-      if (template_depth != 0)
-        return false; // We have an invalid type name. Bail out.
-      if (template_arg.empty())
-        break; // The template ends at the end of the full name.
-      basename = template_arg;
-    } else {
-      basename = basename.drop_front(namespace_separator + 2);
+      break;
+    case '<':
+      ++template_depth;
+      break;
+    case '>':
+      if (template_depth == 0)
+        return std::nullopt; // Invalid name.
+      --template_depth;
+      break;
     }
-    template_begin = basename.find('<');
-    namespace_separator = basename.find("::");
+    prev_is_colon = pos.value() == ':';
   }
-  if (basename.size() < name.size()) {
-    scope = name.take_front(name.size() - basename.size());
-    return true;
-  }
-  return false;
+
+  if (name_begin < name.size() && template_depth == 0)
+    result.basename = name.substr(name_begin);
+  else
+    return std::nullopt;
+
+  return result;
 }
 
 ModuleSP Type::GetModule() {
@@ -1176,21 +1196,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
-  auto *symbol_file = type_system->GetSymbolFile();
-  if (!symbol_file)
-    return CompilerType();
-  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
-  if (!decl_context.IsValid())
-    return CompilerType();
-  TypeQuery query(decl_context, ConstString(name),
-                  TypeQueryOptions::e_find_one);
-  TypeResults results;
-  symbol_file->FindTypes(query, results);
-  TypeSP type_sp = results.GetFirstType();
-  if (type_sp)
-    return type_sp->GetFullCompilerType();
-  return CompilerType();
+  return GetCompilerType(/*prefer_dynamic=*/false)
+      .GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

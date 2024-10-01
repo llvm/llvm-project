@@ -70,9 +70,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
   }
+  if (Subtarget->hasFP16()) {
+    addRegisterClass(MVT::v8f16, &WebAssembly::V128RegClass);
+  }
   if (Subtarget->hasReferenceTypes()) {
     addRegisterClass(MVT::externref, &WebAssembly::EXTERNREFRegClass);
     addRegisterClass(MVT::funcref, &WebAssembly::FUNCREFRegClass);
+    if (Subtarget->hasExceptionHandling()) {
+      addRegisterClass(MVT::exnref, &WebAssembly::EXNREFRegClass);
+    }
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -90,6 +96,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(ISD::STORE, T, Custom);
     }
   }
+  if (Subtarget->hasFP16()) {
+    setOperationAction(ISD::LOAD, MVT::v8f16, Custom);
+    setOperationAction(ISD::STORE, MVT::v8f16, Custom);
+  }
   if (Subtarget->hasReferenceTypes()) {
     // We need custom load and store lowering for both externref, funcref and
     // Other. The MVT::Other here represents tables of reference types.
@@ -105,6 +115,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::JumpTable, MVTPtr, Custom);
   setOperationAction(ISD::BlockAddress, MVTPtr, Custom);
   setOperationAction(ISD::BRIND, MVT::Other, Custom);
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
 
   // Take the default expansion for va_arg, va_copy, and va_end. There is no
   // default action for va_start, so we do that custom.
@@ -137,6 +148,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::FP_TO_FP16, T, Expand);
     setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
     setTruncStoreAction(T, MVT::f16, Expand);
+  }
+
+  if (Subtarget->hasFP16()) {
+    setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
   }
 
   // Expand unavailable integer operations.
@@ -182,8 +198,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
-    // Support saturating add for i8x16 and i16x8
-    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+    // Support saturating add/sub for i8x16 and i16x8
+    for (auto Op : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
         setOperationAction(Op, T, Legal);
 
@@ -195,6 +211,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
                    MVT::v2f64})
       setOperationAction(ISD::BUILD_VECTOR, T, Custom);
+
+    if (Subtarget->hasFP16())
+      setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -263,8 +282,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
     // But saturating fp_to_int converstions are
-    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
+    for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
+      if (Subtarget->hasFP16()) {
+        setOperationAction(Op, MVT::v8i16, Custom);
+      }
+    }
 
     // Support vector extending
     for (auto T : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -575,20 +598,6 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   MachineFunction &MF = *BB->getParent();
   const MCInstrDesc &MCID = TII.get(CallOp);
   MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
-
-  // See if we must truncate the function pointer.
-  // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
-  // as 64-bit for uniformity with other pointer types.
-  // See also: WebAssemblyFastISel::selectCall
-  if (IsIndirect && MF.getSubtarget<WebAssemblySubtarget>().hasAddr64()) {
-    Register Reg32 =
-        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
-    auto &FnPtr = CallParams.getOperand(0);
-    BuildMI(*BB, CallResults.getIterator(), DL,
-            TII.get(WebAssembly::I32_WRAP_I64), Reg32)
-        .addReg(FnPtr.getReg());
-    FnPtr.setReg(Reg32);
-  }
 
   // Move the function pointer to the end of the arguments for indirect calls
   if (IsIndirect) {
@@ -906,6 +915,22 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
+  case Intrinsic::wasm_loadf16_f32:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::f16;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Align(2);
+    Info.flags = MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_storef16_f32:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::f16;
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = Align(2);
+    Info.flags = MachineMemOperand::MOStore;
+    return true;
   default:
     return false;
   }
@@ -1109,10 +1134,11 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
-      Chain = DAG.getMemcpy(
-          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getNonZeroByValAlign(),
-          /*isVolatile*/ false, /*AlwaysInline=*/false,
-          /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
+      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode,
+                            Out.Flags.getNonZeroByValAlign(),
+                            /*isVolatile*/ false, /*AlwaysInline=*/false,
+                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                            MachinePointerInfo());
       OutVal = FINode;
     }
     // Count the number of fixed args *after* legalization.
@@ -1174,8 +1200,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
-                                                 Layout.getStackAlignment(),
+    MaybeAlign StackAlign = Layout.getStackAlignment();
+    assert(StackAlign && "data layout string is missing stack alignment");
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes, *StackAlign,
                                                  /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
@@ -1288,7 +1315,7 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     LLVMContext & /*Context*/) const {
   // WebAssembly can only handle returning tuples with multivalue enabled
-  return Subtarget->hasMultivalue() || Outs.size() <= 1;
+  return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -1296,7 +1323,7 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert((Subtarget->hasMultivalue() || Outs.size() <= 1) &&
+  assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget) &&
          "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
@@ -1490,6 +1517,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::CTLZ:
   case ISD::CTTZ:
     return DAG.UnrollVectorOp(Op.getNode());
+  case ISD::CLEAR_CACHE:
+    report_fatal_error("llvm.clear_cache is not supported on wasm");
   }
 }
 
@@ -2033,6 +2062,18 @@ static SDValue LowerConvertLow(SDValue Op, SelectionDAG &DAG) {
 
 SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  if (VT == MVT::v8f16) {
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // FP16 type, so cast them to I16s.
+    MVT IVT = VT.changeVectorElementType(MVT::i16);
+    SmallVector<SDValue, 8> NewOps;
+    for (unsigned I = 0, E = Op.getNumOperands(); I < E; ++I)
+      NewOps.push_back(DAG.getBitcast(MVT::i16, Op.getOperand(I)));
+    SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
+    return DAG.getBitcast(VT, Res);
+  }
+
   if (auto ConvertLow = LowerConvertLow(Op, DAG))
     return ConvertLow;
 
@@ -2258,8 +2299,15 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat (which might be selected as a load splat)
-    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    size_t DestLaneSize = VecT.getVectorElementType().getFixedSizeInBits();
+    if (NumSplatLanes == 1 && Op->getOperand(0) == SplatValue &&
+        (DestLaneSize == 32 || DestLaneSize == 64)) {
+      // Could be selected to load_zero.
+      Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecT, SplatValue);
+    } else {
+      // Use a splat (which might be selected as a load splat)
+      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
+    }
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
@@ -2448,6 +2496,9 @@ SDValue WebAssemblyTargetLowering::LowerFP_TO_INT_SAT(SDValue Op,
     return Op;
 
   if (ResT == MVT::v4i32 && SatVT == MVT::i32)
+    return Op;
+
+  if (ResT == MVT::v8i16 && SatVT == MVT::i16)
     return Op;
 
   return SDValue();

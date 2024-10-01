@@ -28,11 +28,11 @@ namespace Fortran::evaluate {
 static constexpr bool allowOperandDuplication{false};
 
 std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol()};
-  if (auto dyType{DynamicType::From(symbol)}) {
+  if (auto dyType{DynamicType::From(ref.GetLastSymbol())}) {
     return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
@@ -82,6 +82,8 @@ auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
   const Symbol &ultimate{symbol.GetUltimate()};
   return !IsNamedConstant(ultimate) &&
       (ultimate.has<semantics::ObjectEntityDetails>() ||
+          (ultimate.has<semantics::EntityDetails>() &&
+              ultimate.attrs().test(semantics::Attr::TARGET)) ||
           ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
@@ -818,10 +820,10 @@ bool IsCoarray(const Symbol &symbol) {
   return GetAssociationRoot(symbol).Corank() > 0;
 }
 
-bool IsProcedure(const Expr<SomeType> &expr) {
+bool IsProcedureDesignator(const Expr<SomeType> &expr) {
   return std::holds_alternative<ProcedureDesignator>(expr.u);
 }
-bool IsFunction(const Expr<SomeType> &expr) {
+bool IsFunctionDesignator(const Expr<SomeType> &expr) {
   const auto *designator{std::get_if<ProcedureDesignator>(&expr.u)};
   return designator && designator->GetType().has_value();
 }
@@ -845,6 +847,10 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
   } else {
     return false;
   }
+}
+
+bool IsProcedure(const Expr<SomeType> &expr) {
+  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
@@ -994,6 +1000,38 @@ template semantics::UnorderedSymbolSet CollectSymbols(
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
+struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
+                                      semantics::UnorderedSymbolSet> {
+  using Base =
+      SetTraverse<CollectCudaSymbolsHelper, semantics::UnorderedSymbolSet>;
+  CollectCudaSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    return {symbol};
+  }
+  // Overload some of the operator() to filter out the symbols that are not
+  // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const Subscript &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectCudaSymbols(const A &x) {
+  return CollectCudaSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SubscriptInteger> &);
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1056,8 +1094,8 @@ public:
   explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(call.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            call.proc(), context_, /*emitError=*/false)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }
@@ -1265,12 +1303,12 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
     const Expr<SomeType> &expr, const DynamicType &type) {
   if (std::optional<std::string> chValue{GetScalarConstantValue<Ascii>(expr)}) {
     // Pad on the right with spaces when short, truncate the right if long.
-    // TODO: big-endian targets
     auto bytes{static_cast<std::size_t>(
         ToInt64(type.MeasureSizeInBytes(context, false)).value())};
     BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
-      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
+      auto idx{isHostLittleEndian ? j : bytes - j - 1};
+      char ch{idx >= chValue->size() ? ' ' : chValue->at(idx)};
       BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
       bits = bits.IOR(chBOZ.SHIFTL(8 * j));
     }
@@ -1661,7 +1699,8 @@ bool IsSaved(const Symbol &original) {
       (features.IsEnabled(common::LanguageFeature::SaveMainProgram) ||
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
-              symbol.size() > 32))) {
+              symbol.size() > 32)) &&
+      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -1750,13 +1789,34 @@ bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {
           derived->typeSymbol().get<DerivedTypeDetails>().sequence());
 }
 
+static bool IsSameModule(const Scope *x, const Scope *y) {
+  if (x == y) {
+    return true;
+  } else if (x && y) {
+    // Allow for a builtin module to be read from distinct paths
+    const Symbol *xSym{x->symbol()};
+    const Symbol *ySym{y->symbol()};
+    if (xSym && ySym && xSym->name() == ySym->name()) {
+      const auto *xMod{xSym->detailsIf<ModuleDetails>()};
+      const auto *yMod{ySym->detailsIf<ModuleDetails>()};
+      if (xMod && yMod) {
+        auto xHash{xMod->moduleFileHash()};
+        auto yHash{yMod->moduleFileHash()};
+        return xHash && yHash && *xHash == *yHash;
+      }
+    }
+  }
+  return false;
+}
+
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
-  if (!derived) {
-    return false;
-  } else {
+  if (derived) {
     const auto &symbol{derived->typeSymbol()};
-    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
-        symbol.name() == "__builtin_"s + name;
+    const Scope &scope{symbol.owner()};
+    return symbol.name() == "__builtin_"s + name &&
+        IsSameModule(&scope, scope.context().GetBuiltinsScope());
+  } else {
+    return false;
   }
 }
 
@@ -1784,6 +1844,14 @@ bool IsLockType(const DerivedTypeSpec *derived) {
 
 bool IsNotifyType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "notify_type");
+}
+
+bool IsIeeeFlagType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_flag_type");
+}
+
+bool IsIeeeRoundType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_round_type");
 }
 
 bool IsTeamType(const DerivedTypeSpec *derived) {

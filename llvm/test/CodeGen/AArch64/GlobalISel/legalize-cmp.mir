@@ -56,7 +56,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %0:_(s128) = G_IMPLICIT_DEF
@@ -93,7 +94,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s128) = G_IMPLICIT_DEF
@@ -132,7 +134,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s88) = G_IMPLICIT_DEF
@@ -171,7 +174,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s88) = G_IMPLICIT_DEF
@@ -210,7 +214,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s96) = G_IMPLICIT_DEF
@@ -272,7 +277,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s318) = G_IMPLICIT_DEF
@@ -318,7 +324,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors:
-  ; CHECK: bb.2:
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   bb.1:
     %lhs:_(s158) = G_IMPLICIT_DEF
@@ -352,8 +359,8 @@ body:             |
     %rhs:_(<3 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32)
     %lhs:_(<3 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32)
     %cmp:_(<3 x s32>) = G_ICMP intpred(eq), %lhs(<3 x s32>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s32) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s32>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s32) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s32>), %1(s64)
     $w0 = COPY %2(s32)
     RET_ReallyLR
 ...
@@ -386,8 +393,8 @@ body:             |
     %rhs:_(<3 x s16>) = G_BUILD_VECTOR %const(s16), %const(s16), %const(s16)
     %lhs:_(<3 x s16>) = G_BUILD_VECTOR %const(s16), %const(s16), %const(s16)
     %cmp:_(<3 x s16>) = G_ICMP intpred(eq), %lhs(<3 x s16>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s16) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s16>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s16) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s16>), %1(s64)
     %zext:_(s32) = G_ZEXT %2(s16)
     $w0 = COPY %zext(s32)
     RET_ReallyLR
@@ -405,12 +412,11 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<8 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(eq), [[BUILD_VECTOR]](<8 x s8>), [[BUILD_VECTOR1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s8>), [[UV1:%[0-9]+]]:_(<4 x s8>) = G_UNMERGE_VALUES [[ICMP]](<8 x s8>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[UV]](<4 x s8>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[ICMP]](<8 x s8>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s8)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[DEF]](s32)
     ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR2]](<4 x s32>), [[C]](s64)
@@ -422,8 +428,8 @@ body:             |
     %rhs:_(<3 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8)
     %lhs:_(<3 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8)
     %cmp:_(<3 x s8>) = G_ICMP intpred(eq), %lhs(<3 x s8>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s8) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s8>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s8) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s8>), %1(s64)
     %zext:_(s32) = G_ZEXT %2(s8)
     $w0 = COPY %zext(s32)
     RET_ReallyLR
@@ -449,8 +455,8 @@ body:             |
     %rhs:_(<3 x s64>) = G_BUILD_VECTOR %const(s64), %const(s64), %const(s64)
     %lhs:_(<3 x s64>) = G_BUILD_VECTOR %const(s64), %const(s64), %const(s64)
     %cmp:_(<3 x s64>) = G_ICMP intpred(eq), %lhs(<3 x s64>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s64) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s64>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s64) = G_EXTRACT_VECTOR_ELT %cmp(<3 x s64>), %1(s64)
     $x0 = COPY %2(s64)
     RET_ReallyLR
 ...
@@ -475,8 +481,8 @@ body:             |
     %rhs:_(<5 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32), %const(s32), %const(s32)
     %lhs:_(<5 x s32>) = G_BUILD_VECTOR %const(s32), %const(s32), %const(s32), %const(s32), %const(s32)
     %cmp:_(<5 x s32>) = G_ICMP intpred(eq), %lhs(<5 x s32>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s32) = G_EXTRACT_VECTOR_ELT %cmp(<5 x s32>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s32) = G_EXTRACT_VECTOR_ELT %cmp(<5 x s32>), %1(s64)
     $w0 = COPY %2(s32)
     RET_ReallyLR
 ...
@@ -502,8 +508,8 @@ body:             |
     %rhs:_(<7 x s16>) = G_BUILD_VECTOR %const(s16), %const(s16), %const(s16), %const(s16), %const(s16), %const(s16), %const(s16)
     %lhs:_(<7 x s16>) = G_BUILD_VECTOR %const(s16), %const(s16), %const(s16), %const(s16), %const(s16), %const(s16), %const(s16)
     %cmp:_(<7 x s16>) = G_ICMP intpred(eq), %lhs(<7 x s16>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s16) = G_EXTRACT_VECTOR_ELT %cmp(<7 x s16>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s16) = G_EXTRACT_VECTOR_ELT %cmp(<7 x s16>), %1(s64)
     %zext:_(s32) = G_ZEXT %2(s16)
     $w0 = COPY %zext(s32)
     RET_ReallyLR
@@ -530,8 +536,8 @@ body:             |
     %rhs:_(<9 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     %lhs:_(<9 x s8>) = G_BUILD_VECTOR %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8), %const(s8)
     %cmp:_(<9 x s8>) = G_ICMP intpred(eq), %lhs(<9 x s8>), %rhs
-    %1:_(s32) = G_CONSTANT i32 1
-    %2:_(s8) = G_EXTRACT_VECTOR_ELT %cmp(<9 x s8>), %1(s32)
+    %1:_(s64) = G_CONSTANT i64 1
+    %2:_(s8) = G_EXTRACT_VECTOR_ELT %cmp(<9 x s8>), %1(s64)
     %zext:_(s32) = G_ZEXT %2(s8)
     $w0 = COPY %zext(s32)
     RET_ReallyLR

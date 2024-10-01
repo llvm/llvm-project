@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -247,53 +248,53 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 9
-    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 23
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 23
-    // CHECK-NEXT: crd[0] : ( 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 22, 23, 24, 25, 26, 27, 30
-    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    // CHECK-NEXT: pos[0] : ( 0, 23 )
+    // CHECK-NEXT: crd[0] : ( 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 22, 23, 24, 25, 26, 27, 30 )
+    // CHECK-NEXT: values : ( 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 32
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 32
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-    // CHECK-NEXT: values : ( -1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, -3, 1, 1, 1, 1, 1, -4, 1, 1, -5, -6, 1, 1, 1, 1, 1, 1, -7, -8, 1, -9
+    // CHECK-NEXT: pos[0] : ( 0, 32 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 )
+    // CHECK-NEXT: values : ( -1, 1, 1, -2, 1, 1, 1, 1, 1, 1, 1, -3, 1, 1, 1, 1, 1, -4, 1, 1, -5, -6, 1, 1, 1, 1, 1, 1, -7, -8, 1, -9 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 9
-    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31
-    // CHECK-NEXT: values : ( 0, 6, 33, 68, 100, 126, 196, 232, 279
+    // CHECK-NEXT: pos[0] : ( 0, 9 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 11, 17, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ( 0, 6, 33, 68, 100, 126, 196, 232, 279 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 3, 3, 3, 4, 5, 6, 7, 7, 7
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 3, 3, 3, 4, 5, 6, 7, 7, 7 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 99, 99, 99, 99, 5, 6, 99, 99, 99
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 99, 99, 99, 99, 5, 6, 99, 99, 99 )
     // CHECK-NEXT: ----
     // CHECK-NEXT: ( 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0 )
     //

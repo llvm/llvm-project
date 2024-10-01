@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux"
 define void @f0(ptr %a, i64 %n) {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp x30, x23, [sp, #-48]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -15,7 +15,6 @@ define void @f0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
 ; CHECK-NEXT:    .cfi_offset w30, -48
 ; CHECK-NEXT:    mov x21, #1 // =0x1
 ; CHECK-NEXT:    mov x19, x1
@@ -27,18 +26,17 @@ define void @f0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    b.ge .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x23, x22, #2
+; CHECK-NEXT:    ldr w0, [x20, x22, lsl #2]
 ; CHECK-NEXT:    mov x1, x21
-; CHECK-NEXT:    ldr w0, [x20, x23]
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:    str w0, [x20, x23]
+; CHECK-NEXT:    str w0, [x20, x22, lsl #2]
 ; CHECK-NEXT:    add x22, x22, #1
 ; CHECK-NEXT:    cmp x22, x19
 ; CHECK-NEXT:    b.lt .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: // %exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x30, x23, [sp], #48 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   br label %loop
@@ -64,15 +62,13 @@ exit:
 define void @f1(ptr %a, i64 %n) {
 ; CHECK-LABEL: f1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w30, -48
+; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    mov x21, xzr
@@ -80,19 +76,17 @@ define void @f1(ptr %a, i64 %n) {
 ; CHECK-NEXT:    b.ge .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x22, x21, #2
+; CHECK-NEXT:    ldr w0, [x20, x21, lsl #2]
 ; CHECK-NEXT:    mov x1, #1450704896 // =0x56780000
 ; CHECK-NEXT:    movk x1, #4660, lsl #48
-; CHECK-NEXT:    ldr w0, [x20, x22]
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:    str w0, [x20, x22]
+; CHECK-NEXT:    str w0, [x20, x21, lsl #2]
 ; CHECK-NEXT:    add x21, x21, #1
 ; CHECK-NEXT:    cmp x21, x19
 ; CHECK-NEXT:    b.lt .LBB1_1
 ; CHECK-NEXT:  .LBB1_2: // %exit
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   br label %loop

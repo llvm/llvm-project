@@ -1,14 +1,14 @@
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=none -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=none -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-DEF,FUND-DEF %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-DEF %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -DFUNDAMENTAL_IS_EXPLICIT -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=explicit -DFUNDAMENTAL_IS_EXPLICIT -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-DEF,EXPLICIT-EXP,FUND-EXP %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-EXP,EXPLICIT-EXP,FUND-EXP %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -fvisibility=hidden -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -fvisibility=hidden -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-HID,EXPLICIT-EXP,FUND-HID %s
-// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -DFUNDAMENTAL_IS_EXPLICIT -fvisibility=hidden -S -emit-llvm -o - | \
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix %s -internal-isystem %S -mdefault-visibility-export-mapping=all -DFUNDAMENTAL_IS_EXPLICIT -fvisibility=hidden -emit-llvm -o - | \
 // RUN:   FileCheck -check-prefixes=CHECK,UNSPECIFIED-HID,EXPLICIT-EXP,FUND-EXP %s
 
 #include <typeinfo>

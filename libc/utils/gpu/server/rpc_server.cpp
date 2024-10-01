@@ -11,10 +11,19 @@
 #define __has_builtin(x) 0
 #endif
 
+// Make sure these are included first so they don't conflict with the system.
+#include <limits.h>
+
 #include "llvmlibc_rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
+#include "src/__support/arg_list.h"
+#include "src/stdio/printf_core/converter.h"
+#include "src/stdio/printf_core/parser.h"
+#include "src/stdio/printf_core/writer.h"
+
 #include "src/stdio/gpu/file.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -25,12 +34,183 @@
 #include <vector>
 
 using namespace LIBC_NAMESPACE;
+using namespace LIBC_NAMESPACE::printf_core;
 
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
 
 static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
               "Incorrect maximum port count");
+
+namespace {
+struct TempStorage {
+  char *alloc(size_t size) {
+    storage.emplace_back(std::make_unique<char[]>(size));
+    return storage.back().get();
+  }
+
+  std::vector<std::unique_ptr<char[]>> storage;
+};
+} // namespace
+
+template <bool packed, uint32_t lane_size>
+static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
+  FILE *files[lane_size] = {nullptr};
+  // Get the appropriate output stream to use.
+  if (port.get_opcode() == RPC_PRINTF_TO_STREAM ||
+      port.get_opcode() == RPC_PRINTF_TO_STREAM_PACKED)
+    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
+      files[id] = reinterpret_cast<FILE *>(buffer->data[0]);
+    });
+  else if (port.get_opcode() == RPC_PRINTF_TO_STDOUT ||
+           port.get_opcode() == RPC_PRINTF_TO_STDOUT_PACKED)
+    std::fill(files, files + lane_size, stdout);
+  else
+    std::fill(files, files + lane_size, stderr);
+
+  uint64_t format_sizes[lane_size] = {0};
+  void *format[lane_size] = {nullptr};
+
+  uint64_t args_sizes[lane_size] = {0};
+  void *args[lane_size] = {nullptr};
+
+  // Recieve the format string and arguments from the client.
+  port.recv_n(format, format_sizes,
+              [&](uint64_t size) { return temp_storage.alloc(size); });
+
+  // Parse the format string to get the expected size of the buffer.
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    WriteBuffer wb(nullptr, 0);
+    Writer writer(&wb);
+
+    internal::DummyArgList<packed> printf_args;
+    Parser<internal::DummyArgList<packed> &> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section())
+      ;
+    args_sizes[lane] = printf_args.read_count();
+  }
+  port.send([&](rpc::Buffer *buffer, uint32_t id) {
+    buffer->data[0] = args_sizes[id];
+  });
+  port.recv_n(args, args_sizes,
+              [&](uint64_t size) { return temp_storage.alloc(size); });
+
+  // Identify any arguments that are actually pointers to strings on the client.
+  // Additionally we want to determine how much buffer space we need to print.
+  std::vector<void *> strs_to_copy[lane_size];
+  int buffer_size[lane_size] = {0};
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    WriteBuffer wb(nullptr, 0);
+    Writer writer(&wb);
+
+    internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList<packed>> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section()) {
+      if (cur_section.has_conv && cur_section.conv_name == 's' &&
+          cur_section.conv_val_ptr) {
+        strs_to_copy[lane].emplace_back(cur_section.conv_val_ptr);
+        // Get the minimum size of the string in the case of padding.
+        char c = '\0';
+        cur_section.conv_val_ptr = &c;
+        convert(&writer, cur_section);
+      } else if (cur_section.has_conv) {
+        // Ignore conversion errors for the first pass.
+        convert(&writer, cur_section);
+      } else {
+        writer.write(cur_section.raw_string);
+      }
+    }
+    buffer_size[lane] = writer.get_chars_written();
+  }
+
+  // Recieve any strings from the client and push them into a buffer.
+  std::vector<void *> copied_strs[lane_size];
+  while (std::any_of(std::begin(strs_to_copy), std::end(strs_to_copy),
+                     [](const auto &v) { return !v.empty() && v.back(); })) {
+    port.send([&](rpc::Buffer *buffer, uint32_t id) {
+      void *ptr = !strs_to_copy[id].empty() ? strs_to_copy[id].back() : nullptr;
+      buffer->data[1] = reinterpret_cast<uintptr_t>(ptr);
+      if (!strs_to_copy[id].empty())
+        strs_to_copy[id].pop_back();
+    });
+    uint64_t str_sizes[lane_size] = {0};
+    void *strs[lane_size] = {nullptr};
+    port.recv_n(strs, str_sizes,
+                [&](uint64_t size) { return temp_storage.alloc(size); });
+    for (uint32_t lane = 0; lane < lane_size; ++lane) {
+      if (!strs[lane])
+        continue;
+
+      copied_strs[lane].emplace_back(strs[lane]);
+      buffer_size[lane] += str_sizes[lane];
+    }
+  }
+
+  // Perform the final formatting and printing using the LLVM C library printf.
+  int results[lane_size] = {0};
+  for (uint32_t lane = 0; lane < lane_size; ++lane) {
+    if (!format[lane])
+      continue;
+
+    char *buffer = temp_storage.alloc(buffer_size[lane]);
+    WriteBuffer wb(buffer, buffer_size[lane]);
+    Writer writer(&wb);
+
+    internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
+    Parser<internal::StructArgList<packed>> parser(
+        reinterpret_cast<const char *>(format[lane]), printf_args);
+
+    // Parse and print the format string using the arguments we copied from
+    // the client.
+    int ret = 0;
+    for (FormatSection cur_section = parser.get_next_section();
+         !cur_section.raw_string.empty();
+         cur_section = parser.get_next_section()) {
+      // If this argument was a string we use the memory buffer we copied from
+      // the client by replacing the raw pointer with the copied one.
+      if (cur_section.has_conv && cur_section.conv_name == 's') {
+        if (!copied_strs[lane].empty()) {
+          cur_section.conv_val_ptr = copied_strs[lane].back();
+          copied_strs[lane].pop_back();
+        } else {
+          cur_section.conv_val_ptr = nullptr;
+        }
+      }
+      if (cur_section.has_conv) {
+        ret = convert(&writer, cur_section);
+        if (ret == -1)
+          break;
+      } else {
+        writer.write(cur_section.raw_string);
+      }
+    }
+
+    results[lane] = fwrite(buffer, 1, writer.get_chars_written(), files[lane]);
+    if (results[lane] != writer.get_chars_written() || ret == -1)
+      results[lane] = -1;
+  }
+
+  // Send the final return value and signal completion by setting the string
+  // argument to null.
+  port.send([&](rpc::Buffer *buffer, uint32_t id) {
+    buffer->data[0] = static_cast<uint64_t>(results[id]);
+    buffer->data[1] = reinterpret_cast<uintptr_t>(nullptr);
+  });
+}
 
 template <uint32_t lane_size>
 rpc_status_t handle_server_impl(
@@ -41,6 +221,8 @@ rpc_status_t handle_server_impl(
   auto port = server.try_open(lane_size, index);
   if (!port)
     return RPC_STATUS_SUCCESS;
+
+  TempStorage temp_storage;
 
   switch (port->get_opcode()) {
   case RPC_WRITE_TO_STREAM:
@@ -60,7 +242,8 @@ rpc_status_t handle_server_impl(
       std::fill(files, files + lane_size, stdout);
     }
 
-    port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
+    port->recv_n(strs, sizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port->send([&](rpc::Buffer *buffer, uint32_t id) {
       flockfile(files[id]);
       buffer->data[0] = fwrite_unlocked(strs[id], 1, sizes[id], files[id]);
@@ -68,7 +251,6 @@ rpc_status_t handle_server_impl(
           buffer->data[0] == sizes[id])
         buffer->data[0] += fwrite_unlocked("\n", 1, 1, files[id]);
       funlockfile(files[id]);
-      delete[] reinterpret_cast<uint8_t *>(strs[id]);
     });
     break;
   }
@@ -76,13 +258,12 @@ rpc_status_t handle_server_impl(
     uint64_t sizes[lane_size] = {0};
     void *data[lane_size] = {nullptr};
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
-      data[id] = new char[buffer->data[0]];
+      data[id] = temp_storage.alloc(buffer->data[0]);
       sizes[id] =
           fread(data[id], 1, buffer->data[0], file::to_stream(buffer->data[1]));
     });
     port->send_n(data, sizes);
     port->send([&](rpc::Buffer *buffer, uint32_t id) {
-      delete[] reinterpret_cast<uint8_t *>(data[id]);
       std::memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
     });
     break;
@@ -91,22 +272,20 @@ rpc_status_t handle_server_impl(
     uint64_t sizes[lane_size] = {0};
     void *data[lane_size] = {nullptr};
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
-      data[id] = new char[buffer->data[0]];
+      data[id] = temp_storage.alloc(buffer->data[0]);
       const char *str =
           fgets(reinterpret_cast<char *>(data[id]), buffer->data[0],
                 file::to_stream(buffer->data[1]));
       sizes[id] = !str ? 0 : std::strlen(str) + 1;
     });
     port->send_n(data, sizes);
-    for (uint32_t id = 0; id < lane_size; ++id)
-      if (data[id])
-        delete[] reinterpret_cast<uint8_t *>(data[id]);
     break;
   }
   case RPC_OPEN_FILE: {
     uint64_t sizes[lane_size] = {0};
     void *paths[lane_size] = {nullptr};
-    port->recv_n(paths, sizes, [&](uint64_t size) { return new char[size]; });
+    port->recv_n(paths, sizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
       FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
                          reinterpret_cast<char *>(buffer->data));
@@ -141,13 +320,12 @@ rpc_status_t handle_server_impl(
   case RPC_HOST_CALL: {
     uint64_t sizes[lane_size] = {0};
     void *args[lane_size] = {nullptr};
-    port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
+    port->recv_n(args, sizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
       reinterpret_cast<void (*)(void *)>(buffer->data[0])(args[id]);
     });
-    port->send([&](rpc::Buffer *, uint32_t id) {
-      delete[] reinterpret_cast<uint8_t *>(args[id]);
-    });
+    port->send([&](rpc::Buffer *, uint32_t id) {});
     break;
   }
   case RPC_FEOF: {
@@ -192,6 +370,56 @@ rpc_status_t handle_server_impl(
     port->recv_and_send([](rpc::Buffer *buffer) {
       buffer->data[0] = ungetc(static_cast<int>(buffer->data[0]),
                                file::to_stream(buffer->data[1]));
+    });
+    break;
+  }
+  case RPC_PRINTF_TO_STREAM_PACKED:
+  case RPC_PRINTF_TO_STDOUT_PACKED:
+  case RPC_PRINTF_TO_STDERR_PACKED: {
+    handle_printf<true, lane_size>(*port, temp_storage);
+    break;
+  }
+  case RPC_PRINTF_TO_STREAM:
+  case RPC_PRINTF_TO_STDOUT:
+  case RPC_PRINTF_TO_STDERR: {
+    handle_printf<false, lane_size>(*port, temp_storage);
+    break;
+  }
+  case RPC_REMOVE: {
+    uint64_t sizes[lane_size] = {0};
+    void *args[lane_size] = {nullptr};
+    port->recv_n(args, sizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          remove(reinterpret_cast<const char *>(args[id])));
+    });
+    break;
+  }
+  case RPC_RENAME: {
+    uint64_t oldsizes[lane_size] = {0};
+    uint64_t newsizes[lane_size] = {0};
+    void *oldpath[lane_size] = {nullptr};
+    void *newpath[lane_size] = {nullptr};
+    port->recv_n(oldpath, oldsizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
+    port->recv_n(newpath, newsizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          rename(reinterpret_cast<const char *>(oldpath[id]),
+                 reinterpret_cast<const char *>(newpath[id])));
+    });
+    break;
+  }
+  case RPC_SYSTEM: {
+    uint64_t sizes[lane_size] = {0};
+    void *args[lane_size] = {nullptr};
+    port->recv_n(args, sizes,
+                 [&](uint64_t size) { return temp_storage.alloc(size); });
+    port->send([&](rpc::Buffer *buffer, uint32_t id) {
+      buffer->data[0] = static_cast<uint64_t>(
+          system(reinterpret_cast<const char *>(args[id])));
     });
     break;
   }

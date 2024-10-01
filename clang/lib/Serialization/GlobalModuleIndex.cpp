@@ -13,7 +13,6 @@
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "ASTReaderInternals.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -89,10 +88,8 @@ public:
   static std::pair<unsigned, unsigned>
   ReadKeyDataLength(const unsigned char*& d) {
     using namespace llvm::support;
-    unsigned KeyLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
-    unsigned DataLen =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(d);
+    unsigned KeyLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
+    unsigned DataLen = endian::readNext<uint16_t, llvm::endianness::little>(d);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -113,8 +110,7 @@ public:
 
     data_type Result;
     while (DataLen > 0) {
-      unsigned ID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      unsigned ID = endian::readNext<uint32_t, llvm::endianness::little>(d);
       Result.push_back(ID);
       DataLen -= 4;
     }
@@ -514,8 +510,8 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID =
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+      IdentifierID RawID =
+          endian::readNext<IdentifierID, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }

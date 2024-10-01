@@ -18,7 +18,7 @@
 # RUN: %T/baremetal_multilib_layered/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
 # RUN:     --target=thumbv7m-none-eabi -mfloat-abi=softfp --sysroot= \
 # RUN:   | FileCheck -DSYSROOT=%T/baremetal_multilib_layered %s
-# CHECK:      "-cc1" "-triple" "thumbv7m-none-unknown-eabi"
+# CHECK:      "-cc1" "-triple" "thumbv7m-unknown-none-eabi"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include/c++/v1"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/soft/include/c++/v1"
 # CHECK-SAME: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/softfp/include"

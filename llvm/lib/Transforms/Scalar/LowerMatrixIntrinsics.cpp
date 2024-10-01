@@ -362,7 +362,7 @@ class LowerMatrixIntrinsics {
   public:
     MatrixTy() : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(ArrayRef<Value *> Vectors)
-        : Vectors(Vectors.begin(), Vectors.end()),
+        : Vectors(Vectors),
           IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {}
     MatrixTy(unsigned NumRows, unsigned NumColumns, Type *EltTy)
         : IsColumnMajor(MatrixLayout == MatrixLayoutTy::ColumnMajor) {
@@ -521,7 +521,7 @@ public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
                         AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
                         OptimizationRemarkEmitter *ORE)
-      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), AA(AA), DT(DT),
+      : Func(F), DL(F.getDataLayout()), TTI(TTI), AA(AA), DT(DT),
         LI(LI), ORE(ORE) {}
 
   unsigned getNumOps(Type *VT) {
@@ -1380,7 +1380,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost +=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1402,7 +1402,7 @@ public:
         for (unsigned I = 1; I < N; ++I)
           EmbedCost -=
               TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 std::nullopt, TTI::TCK_RecipThroughput);
+                                 {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1641,7 +1641,7 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *IntPtrTy = Builder.getIntPtrTy(Load->getModule()->getDataLayout());
+    Type *IntPtrTy = Builder.getIntPtrTy(Load->getDataLayout());
     Value *StoreBegin = Builder.CreatePtrToInt(
         const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
     Value *StoreEnd = Builder.CreateAdd(
@@ -2306,7 +2306,6 @@ public:
         default:
           llvm_unreachable("Unhandled case");
         }
-        SS.flush();
         write(Tmp);
       }
     }
@@ -2361,7 +2360,6 @@ public:
         else
           TmpStream << "scalar";
       }
-      TmpStream.flush();
       Tmp = std::string(StringRef(Tmp).trim());
       LineLength += Tmp.size();
       Stream << Tmp;
@@ -2435,7 +2433,6 @@ public:
     }
 
     const std::string &getResult() {
-      Stream.flush();
       return Str;
     }
   };
@@ -2462,7 +2459,7 @@ public:
     RemarkGenerator(const MapVector<Value *, MatrixTy> &Inst2Matrix,
                     OptimizationRemarkEmitter &ORE, Function &Func)
         : Inst2Matrix(Inst2Matrix), ORE(ORE), Func(Func),
-          DL(Func.getParent()->getDataLayout()) {}
+          DL(Func.getDataLayout()) {}
 
     /// Return all leaves of the expressions in \p ExprsInSubprogram. Those are
     /// instructions in Inst2Matrix returning void or without any users in

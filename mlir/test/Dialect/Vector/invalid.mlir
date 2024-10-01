@@ -35,6 +35,27 @@ func.func @broadcast_dim2_mismatch(%arg0: vector<4x8xf32>) {
 
 // -----
 
+func.func @broadcast_scalable_unit_dim(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. [4])}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<[4]xf32>
+}
+
+// -----
+
+func.func @broadcast_fixed_to_scalable(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch (2 vs. [2])}}
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[2]xf32>
+}
+
+// -----
+
+func.func @broadcast_scalable_to_fixed(%arg0: vector<[1]xf32>) {
+  // expected-error@+1 {{'vector.broadcast' op dimension mismatch ([1] vs. 1)}}
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x1xf32>
+}
+
+// -----
+
 func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
   // expected-error@+1 {{'vector.broadcast' op source type is not a vector}}
   %1 = vector.broadcast %arg0 : memref<4x8xf32> to vector<1x8xf32>
@@ -80,6 +101,13 @@ func.func @shuffle_trailing_dim_size_mismatch(%arg0: vector<2x2xf32>, %arg1: vec
 func.func @shuffle_index_out_of_range(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
   // expected-error@+1 {{'vector.shuffle' op mask index #2 out of range}}
   %1 = vector.shuffle %arg0, %arg1 [0, 4] : vector<2xf32>, vector<2xf32>
+}
+
+// -----
+
+func.func @shuffle_scalable_vec(%arg0: vector<[2]xf32>, %arg1: vector<[2]xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op operand #0 must be fixed-length vector of any type values}}
+  %1 = vector.shuffle %arg0, %arg1 [0, 1, 2, 3] : vector<[2]xf32>, vector<[2]xf32>
 }
 
 // -----
@@ -471,7 +499,7 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
   %vf0 = vector.splat %f0 : vector<2x3xf32>
-  // expected-error@+1 {{ expects the optional in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
+  // expected-error@+1 {{ expects the in_bounds attr of same rank as permutation_map results: affine_map<(d0, d1) -> (d0, d1)>}}
   %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 {in_bounds = [true], permutation_map = affine_map<(d0, d1)->(d0, d1)>} : memref<?x?xvector<2x3xf32>>, vector<1x1x2x3xf32>
 }
 
@@ -1087,66 +1115,6 @@ func.func @cannot_print_string_with_source_set(%vec: vector<[4]xf32>) {
 
 // -----
 
-func.func @reshape_bad_input_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{invalid input shape for vector type}}
-  %1 = vector.reshape %arg0, [%c3, %c6, %c3], [%c2, %c9], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_output_shape(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{invalid output shape for vector type}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9, %c3], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_input_output_shape_product(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{product of input and output shape sizes must match}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c6], [4]
-    : vector<3x2x4xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_input_fixed_size(%arg0 : vector<3x2x5xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{fixed vector size must match input vector for dim 0}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
-    : vector<3x2x5xf32> to vector<2x3x4xf32>
-}
-
-// -----
-
-func.func @reshape_bad_output_fixed_size(%arg0 : vector<3x2x4xf32>) {
-  %c2 = arith.constant 2 : index
-  %c3 = arith.constant 3 : index
-  %c6 = arith.constant 6 : index
-  %c9 = arith.constant 9 : index
-  // expected-error@+1 {{fixed vector size must match output vector for dim 0}}
-  %1 = vector.reshape %arg0, [%c3, %c6], [%c2, %c9], [4]
-    : vector<3x2x4xf32> to vector<2x3x5xf32>
-}
-
-// -----
-
 func.func @shape_cast_wrong_element_type(%arg0 : vector<5x1x3x2xf32>) {
   // expected-error@+1 {{op source/result vectors must have same element type}}
   %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xi32>
@@ -1171,6 +1139,20 @@ func.func @shape_cast_invalid_rank_reduction(%arg0 : vector<5x1x3x2xf32>) {
 func.func @shape_cast_invalid_rank_expansion(%arg0 : vector<15x2xf32>) {
   // expected-error@+1 {{invalid shape cast}}
   %0 = vector.shape_cast %arg0 : vector<15x2xf32> to vector<5x2x3x1xf32>
+}
+
+// -----
+
+func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<15x[2]xf32>) {
+  // expected-error@+1 {{different number of scalable dims at source (1) and result (0)}}
+  %0 = vector.shape_cast %arg0 : vector<15x[2]xf32> to vector<30xf32>
+}
+
+// -----
+
+func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<2x[15]x[2]xf32>) {
+  // expected-error@+1 {{different number of scalable dims at source (2) and result (1)}}
+  %0 = vector.shape_cast %arg0 : vector<2x[15]x[2]xf32> to vector<30x[2]xf32>
 }
 
 // -----
@@ -1742,6 +1724,14 @@ func.func @vector_mask_passthru_no_return(%val: vector<16xf32>, %t0: tensor<?xf3
   vector.mask %m0, %pt0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> vector<16xf32>
   return
 }
+// -----
+
+func.func @vector_mask_non_maskable_op(%a : vector<3x4xf32>) -> vector<3x4xf32> {
+   %m0 = vector.constant_mask [2, 2] : vector<3x4xi1>
+  // expected-error@+1 {{'vector.mask' op expects a MaskableOpInterface within the mask region}}
+   %0 = vector.mask %m0 { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
+   return %0 : vector<3x4xf32>
+}
 
 // -----
 
@@ -1790,4 +1780,106 @@ func.func @invalid_outerproduct1(%src : memref<?xf32>) {
 
   // expected-error @+1 {{'vector.outerproduct' op expected 1-d vector for operand #1}}
   %op = vector.outerproduct %0, %1 : vector<[4]x[4]xf32>, vector<[4]xf32>
+}
+
+// -----
+
+func.func @deinterleave_zero_dim_fail(%vec : vector<f32>) {
+  // expected-error @+1 {{'vector.deinterleave' op operand #0 must be vector of any type values, but got 'vector<f32>}}
+  %0, %1 = vector.deinterleave %vec : vector<f32> -> vector<f32>
+  return
+}
+
+// -----
+
+func.func @deinterleave_one_dim_fail(%vec : vector<1xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that the trailing dimension of the source vector has an even number of elements}}
+  %0, %1 = vector.deinterleave %vec : vector<1xf32> -> vector<1xf32>
+  return
+}
+
+// -----
+
+func.func @deinterleave_oversized_output_fail(%vec : vector<4xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that the trailing dimension of the results is half the width of source trailing dimension}}
+  %0, %1 = "vector.deinterleave" (%vec) : (vector<4xf32>) -> (vector<8xf32>, vector<8xf32>)
+  return
+}
+
+// -----
+
+func.func @deinterleave_output_dim_size_mismatch(%vec : vector<4xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that the trailing dimension of the results is half the width of source trailing dimension}}
+  %0, %1 = "vector.deinterleave" (%vec) : (vector<4xf32>) -> (vector<4xf32>, vector<2xf32>)
+  return
+}
+
+// -----
+
+func.func @deinterleave_n_dim_rank_fail(%vec : vector<2x3x4xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that the trailing dimension of the results is half the width of source trailing dimension}}
+  %0, %1 = "vector.deinterleave" (%vec) : (vector<2x3x4xf32>) -> (vector<2x3x4xf32>, vector<2x3x2xf32>)
+  return
+}
+
+// -----
+
+func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<2x[1]xf32>)
+  return
+}
+
+// -----
+
+func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<[2]xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_from_elements(%a: f32) {
+  // expected-error @+1 {{'vector.from_elements' 1 operands present, but expected 2}}
+  vector.from_elements %a : vector<2xf32>
+  return
+}
+
+// -----
+
+// expected-note @+1 {{prior use here}}
+func.func @invalid_from_elements(%a: f32, %b: i32) {
+  // expected-error @+1 {{use of value '%b' expects different type than prior uses: 'f32' vs 'i32'}}
+  vector.from_elements %a, %b : vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_0d() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<f32>'}}
+  vector.step : vector<f32>
+  return
+}
+
+// -----
+
+func.func @invalid_step_2d() {
+  // expected-error @+1 {{vector.step' op result #0 must be vector of index values of ranks 1, but got 'vector<2x4xf32>'}}
+  vector.step : vector<2x4xf32>
+  return
+}
+
+// -----
+
+func.func @matrix_multiply_scalable(%a: vector<[4]xf64>, %b: vector<4xf64>) {
+  // expected-error @+1 {{'vector.matrix_multiply' op operand #0 must be fixed-length vector of signless integer or signed integer or index or floating-point values of ranks 1, but got 'vector<[4]xf64>'}}
+  %c = vector.matrix_multiply %a, %b {
+    lhs_rows = 2: i32,
+    lhs_columns = 2: i32 ,
+    rhs_columns = 2: i32 }
+  : (vector<[4]xf64>, vector<4xf64>) -> vector<4xf64>
+
+  return
 }

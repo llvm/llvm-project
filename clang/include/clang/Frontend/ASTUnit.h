@@ -241,7 +241,7 @@ private:
 
   /// A list of the serialization ID numbers for each of the top-level
   /// declarations parsed within the precompiled preamble.
-  std::vector<serialization::DeclID> TopLevelDeclsInPreamble;
+  std::vector<LocalDeclID> TopLevelDeclsInPreamble;
 
   /// Whether we should be caching code-completion results.
   bool ShouldCacheCodeCompletionResults : 1;
@@ -692,8 +692,8 @@ public:
   ///
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit>
-  LoadFromASTFile(const std::string &Filename,
-                  const PCHContainerReader &PCHContainerRdr, WhatToLoad ToLoad,
+  LoadFromASTFile(StringRef Filename, const PCHContainerReader &PCHContainerRdr,
+                  WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
                   std::shared_ptr<HeaderSearchOptions> HSOpts,

@@ -49,6 +49,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -326,7 +327,7 @@ ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
           for (unsigned j = 0; j < 2; ++j) {
             // Look at the two new MI's in reverse order.
             MachineInstr *NewMI = NewMIs[j];
-            if (!NewMI->readsRegister(Reg))
+            if (!NewMI->readsRegister(Reg, /*TRI=*/nullptr))
               continue;
             LV->addVirtualRegisterKilled(Reg, *NewMI);
             if (VI.removeKill(MI))
@@ -891,7 +892,9 @@ void llvm::addPredicatedMveVpredROp(MachineInstrBuilder &MIB,
 void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   MCRegister SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   bool GPRDest = ARM::GPRRegClass.contains(DestReg);
   bool GPRSrc = ARM::GPRRegClass.contains(SrcReg);
 
@@ -1732,7 +1735,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   // Get rid of the old implicit-def of DstRegD.  Leave it if it defines a Q-reg
   // or some other super-register.
-  int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD);
+  int ImpDefIdx = MI.findRegisterDefOperandIdx(DstRegD, /*TRI=*/nullptr);
   if (ImpDefIdx != -1)
     MI.removeOperand(ImpDefIdx);
 
@@ -2085,7 +2088,7 @@ bool ARMBaseInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   // Calls don't actually change the stack pointer, even if they have imp-defs.
   // No ARM calling conventions change the stack pointer. (X86 calling
   // conventions sometimes do).
-  if (!MI.isCall() && MI.definesRegister(ARM::SP))
+  if (!MI.isCall() && MI.definesRegister(ARM::SP, /*TRI=*/nullptr))
     return true;
 
   return false;
@@ -2310,7 +2313,7 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
       return nullptr;
   }
   bool DontMoveAcrossStores = true;
-  if (!MI->isSafeToMove(/* AliasAnalysis = */ nullptr, DontMoveAcrossStores))
+  if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
   return MI;
 }
@@ -4137,7 +4140,7 @@ static const MachineInstr *getBundledDefMI(const TargetRegisterInfo *TRI,
 
   int Idx = -1;
   while (II->isInsideBundle()) {
-    Idx = II->findRegisterDefOperandIdx(Reg, false, true, TRI);
+    Idx = II->findRegisterDefOperandIdx(Reg, TRI, false, true);
     if (Idx != -1)
       break;
     --II;
@@ -4161,7 +4164,7 @@ static const MachineInstr *getBundledUseMI(const TargetRegisterInfo *TRI,
   // FIXME: This doesn't properly handle multiple uses.
   int Idx = -1;
   while (II != E && II->isInsideBundle()) {
-    Idx = II->findRegisterUseOperandIdx(Reg, false, TRI);
+    Idx = II->findRegisterUseOperandIdx(Reg, TRI, false);
     if (Idx != -1)
       break;
     if (II->getOpcode() != ARM::t2IT)
@@ -5361,7 +5364,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
   case ARM::VMOVv2i32:
   case ARM::VMOVv2f32:
   case ARM::VMOVv1i64:
-    UseOp = MI.findRegisterUseOperandIdx(Reg, false, TRI);
+    UseOp = MI.findRegisterUseOperandIdx(Reg, TRI, false);
     break;
 
     // Explicitly reads the dependency.
@@ -5870,13 +5873,13 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
   return !Live;
 }
 
-std::optional<outliner::OutlinedFunction>
+std::optional<std::unique_ptr<outliner::OutlinedFunction>>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
-    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-
+    const MachineModuleInfo &MMI,
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+    unsigned MinRepeats) const {
   unsigned SequenceSize = 0;
-  for (auto &MI : FirstCand)
+  for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
 
   // Properties about candidate MBBs that hold for all of them.
@@ -5915,7 +5918,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     llvm::erase_if(RepeatedSequenceLocs, CantGuaranteeValueAcrossCall);
 
     // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < 2)
+    if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
   }
 
@@ -5941,7 +5944,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   else
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoBTI);
 
-  if (RepeatedSequenceLocs.size() < 2)
+  if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
   // Likewise, partition the candidates according to PAC-RET enablement.
@@ -5958,7 +5961,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   else
     RepeatedSequenceLocs.erase(RepeatedSequenceLocs.begin(), NoPAC);
 
-  if (RepeatedSequenceLocs.size() < 2)
+  if (RepeatedSequenceLocs.size() < MinRepeats)
     return std::nullopt;
 
   // At this point, we have only "safe" candidates to outline. Figure out
@@ -6062,6 +6065,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
+      if (RepeatedSequenceLocs.size() < MinRepeats)
+        return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
   }
@@ -6071,8 +6076,9 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // check if the range contains a call.  These require a save + restore of
     // the link register.
-    if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
-                    [](const MachineInstr &MI) { return MI.isCall(); }))
+    outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
+    if (any_of(drop_end(FirstCand),
+               [](const MachineInstr &MI) { return MI.isCall(); }))
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
 
     // Handle the last instruction separately.  If it is tail call, then the
@@ -6085,14 +6091,14 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;
   }
 
-  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
-                                    NumBytesToCreateFrame, FrameID);
+  return std::make_unique<outliner::OutlinedFunction>(
+      RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
 }
 
 bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
                                                  int64_t Fixup,
                                                  bool Updt) const {
-  int SPIdx = MI->findRegisterUseOperandIdx(ARM::SP);
+  int SPIdx = MI->findRegisterUseOperandIdx(ARM::SP, /*TRI=*/nullptr);
   unsigned AddrMode = (MI->getDesc().TSFlags & ARMII::AddrModeMask);
   if (SPIdx < 0)
     // No SP operand
@@ -6276,8 +6282,9 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 }
 
 outliner::InstrType
-ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
-                                   unsigned Flags) const {
+ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                       MachineBasicBlock::iterator &MIT,
+                                       unsigned Flags) const {
   MachineInstr &MI = *MIT;
   const TargetRegisterInfo *TRI = &getRegisterInfo();
 
@@ -6348,8 +6355,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
 
     // We have a function we have information about.  Check if it's something we
     // can safely outline.
-    MachineFunction *MF = MI.getParent()->getParent();
-    MachineFunction *CalleeMF = MF->getMMI().getMachineFunction(*Callee);
+    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
 
     // We don't know what's going on with the callee at all.  Don't touch it.
     if (!CalleeMF)

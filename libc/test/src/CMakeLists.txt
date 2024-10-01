@@ -3,7 +3,7 @@ function(add_fp_unittest name)
     "MATH_UNITTEST"
     "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
-    "LINK_LIBRARIES" # Multi-value arguments
+    "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -24,15 +24,25 @@ function(add_fp_unittest name)
       message(FATAL_ERROR "Hermetic math test cannot require MPFR.")
     endif()
     set(test_type UNIT_TEST_ONLY)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+    if(NOT(LIBC_TARGET_OS_IS_DARWIN))
+      # macOS does not have libatomic.
+      list(APPEND MATH_UNITTEST_LINK_LIBRARIES -latomic)
+    endif()
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
+
+  set(deps libc.hdr.math_macros)
+  if(MATH_UNITTEST_DEPENDS)
+    list(APPEND deps ${MATH_UNITTEST_DEPENDS})
+  endif()
 
   add_libc_test(
     ${name}
     ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
+    DEPENDS "${deps}"
   )
 endfunction(add_fp_unittest)
 
@@ -72,6 +82,7 @@ add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
 add_subdirectory(time)
+add_subdirectory(locale)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)

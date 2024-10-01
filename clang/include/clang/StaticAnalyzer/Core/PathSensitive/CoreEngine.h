@@ -45,14 +45,8 @@ class FunctionSummariesTy;
 class ExprEngine;
 
 //===----------------------------------------------------------------------===//
-/// CoreEngine - Implements the core logic of the graph-reachability
-///   analysis. It traverses the CFG and generates the ExplodedGraph.
-///   Program "states" are treated as opaque void pointers.
-///   The template class CoreEngine (which subclasses CoreEngine)
-///   provides the matching component to the engine that knows the actual types
-///   for states.  Note that this engine only dispatches to transfer functions
-///   at the statement and block-level.  The analyses themselves must implement
-///   any transfer function logic and the sub-expression level (if any).
+/// CoreEngine - Implements the core logic of the graph-reachability analysis.
+/// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class CommonNodeBuilder;
   friend class EndOfFunctionNodeBuilder;

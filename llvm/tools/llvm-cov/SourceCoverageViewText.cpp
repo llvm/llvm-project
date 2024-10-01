@@ -179,7 +179,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   unsigned Col = 1;
   for (const auto *S : Segments) {
     unsigned End = std::min(S->Col, static_cast<unsigned>(Line.size()) + 1);
-    colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
+    colored_ostream(OS, Highlight.value_or(raw_ostream::SAVEDCOLOR),
                     getOptions().Colors && Highlight, /*Bold=*/false,
                     /*BG=*/true)
         << Line.substr(Col - 1, End - Col);
@@ -196,7 +196,7 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
   }
 
   // Show the rest of the line.
-  colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
+  colored_ostream(OS, Highlight.value_or(raw_ostream::SAVEDCOLOR),
                   getOptions().Colors && Highlight, /*Bold=*/false, /*BG=*/true)
       << Line.substr(Col - 1, Line.size() - Col + 1);
   OS << '\n';
@@ -414,5 +414,4 @@ void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {
         << getOptions().CreatedTimeStr << "\n";
 }
 
-void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned,
-                                               unsigned) {}
+void SourceCoverageViewText::renderTableHeader(raw_ostream &, unsigned) {}

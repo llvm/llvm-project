@@ -12,16 +12,16 @@
 // UNSUPPORTED: c++03
 
 // TODO: Investigate these failures which break the CI.
-// UNSUPPORTED: clang-16, clang-17, clang-18, clang-19
-
-// TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-13
+// UNSUPPORTED: clang-17, clang-18, clang-19
 
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb. gdb needs special support to make this work (e.g.
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
 // support gdb anymore, favoring lldb instead.
 // UNSUPPORTED: android
+
+// This test doesn't work as such on Windows.
+// UNSUPPORTED: windows
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.
@@ -158,6 +158,11 @@ void framework_self_test() {
 template <typename T> class UncompressibleAllocator : public std::allocator<T> {
  public:
   char X;
+
+  template <class U>
+  struct rebind {
+    using other = UncompressibleAllocator<U>;
+  };
 };
 
 void string_test() {

@@ -100,6 +100,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
+  if (Style.InsertNewlineAtEOF) {
+    auto &TokEOF = *Tokens.back();
+    if (TokEOF.NewlinesBefore == 0) {
+      TokEOF.NewlinesBefore = 1;
+      TokEOF.OriginalColumn = 0;
+    }
+  }
   return Tokens;
 }
 
@@ -404,7 +411,7 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
     return false;
   auto &NullishCoalescing = *(Tokens.end() - 2);
   auto &Equal = *(Tokens.end() - 1);
-  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+  if (NullishCoalescing->isNot(TT_NullCoalescingOperator) ||
       Equal->isNot(tok::equal)) {
     return false;
   }
@@ -1442,7 +1449,6 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
 
 void FormatTokenLexer::resetLexer(unsigned Offset) {
   StringRef Buffer = SourceMgr.getBufferData(ID);
-  LangOpts = getFormattingLangOpts(Style);
   Lex.reset(new Lexer(SourceMgr.getLocForStartOfFile(ID), LangOpts,
                       Buffer.begin(), Buffer.begin() + Offset, Buffer.end()));
   Lex->SetKeepWhitespaceMode(true);

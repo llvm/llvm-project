@@ -1,3 +1,12 @@
+BOLT:
+  - bolt/**/*
+
+ClangIR:
+  - clang/include/clang/CIR/**/*
+  - clang/lib/CIR/**/*
+  - clang/tools/cir-*/**/*
+  - clang/test/CIR/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -45,6 +54,9 @@ llvm-lit:
   - llvm/utils/lit/**/*
 
 PGO:
+  - llvm/**/ProfileData/**/*
+  - llvm/**/SampleProfile*
+  - llvm/**/CodeGen/MIRSampleProfile*
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
   - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
   - llvm/lib/Transforms/Instrumentation/IndirectCallPromotion.cpp
@@ -53,9 +65,9 @@ PGO:
   - llvm/lib/Transforms/Instrumentation/ValueProfile*
   - llvm/test/Instrumentation/InstrProfiling/**/*
   - llvm/test/Transforms/PGOProfile/**/*
+  - llvm/test/Transforms/SampleProfile/**/*
   - llvm/**/llvm-profdata/**/*
   - llvm/**/llvm-profgen/**/*
-  - llvm/unittests/ProfileData/**/*
 
 vectorization:
   - llvm/lib/Transforms/Vectorize/**/*
@@ -230,7 +242,7 @@ mlir:dlti:
   - mlir/**/DLTI/**
 
 mlir:emitc:
-  - mlir/**/EmitC/**
+  - mlir/**/*EmitC*/**
   - mlir/lib/Target/Cpp/**
 
 mlir:func:
@@ -297,7 +309,7 @@ mlir:tensor:
   - mlir/**/Tensor/**
 
 mlir:tosa:
-  - mlir/**/Tosa/**
+  - mlir/**/*Tosa*/**
 
 mlir:ub:
   - mlir/**/UB/**
@@ -461,6 +473,7 @@ backend:m68k:
 
 libc++:
   - libcxx/**
+  - .github/workflows/libcxx-*
 
 libc++abi:
   - libcxxabi/**
@@ -655,7 +668,7 @@ mlgo:
   - llvm/lib/CodeGen/ML*
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
-  - llvm/utils/mlgo-utils/*
+  - llvm/utils/mlgo-utils/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -704,6 +717,16 @@ backend:AMDGPU:
   - '**/*amdgpu*/**'
   - '**/*AMDGPU*/**'
 
+backend:NVPTX:
+  - 'llvm/**/*nvvm*'
+  - 'llvm/**/*NVVM*'
+  - 'llvm/**/*nvptx*'
+  - 'llvm/**/*NVPTX*'
+  - 'llvm/**/*nvvm*/**'
+  - 'llvm/**/*NVVM*/**'
+  - 'llvm/**/*nvptx*/**'
+  - 'llvm/**/*NVPTX*/**'
+
 backend:RISC-V:
   - clang/**/*riscv*
   - clang/**/*RISCV*
@@ -736,6 +759,8 @@ backend:ARM:
   - clang/lib/CodeGen/Targets/ARM.cpp
   - clang/include/clang/Basic/BuiltinsARM*
   - llvm/test/MC/DisasemblerARM/**
+  - clang/include/clang/Sema/SemaARM.h
+  - clang/lib/Sema/SemaARM.cpp
 
 backend:AArch64:
   - llvm/include/llvm/IR/IntrinsicsAArch64.td
@@ -747,6 +772,31 @@ backend:AArch64:
   - clang/lib/CodeGen/Targets/AArch64.cpp
   - clang/include/clang/Basic/BuiltinsAArch64*
   - llvm/test/MC/Disassembler/AArch64/**
+  - clang/include/clang/Sema/SemaARM.h
+  - clang/lib/Sema/SemaARM.cpp
+
+backend:Hexagon:
+  - clang/include/clang/Basic/BuiltinsHexagon*.def
+  - clang/include/clang/Sema/SemaHexagon.h
+  - clang/lib/Basic/Targets/Hexagon.*
+  - clang/lib/CodeGen/Targets/Hexagon.cpp
+  - clang/lib/Driver/ToolChains/Hexagon.*
+  - clang/lib/Sema/SemaHexagon.cpp
+  - lld/ELF/Arch/Hexagon.cpp
+  - lldb/source/Plugins/ABI/Hexagon/**
+  - lldb/source/Plugins/DynamicLoader/Hexagon-DYLD/**
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/Hexagon.def
+  - llvm/include/llvm/IR/IntrinsicsHexagon*
+  - llvm/include/llvm/Support/Hexagon*
+  - llvm/lib/Support/Hexagon*
+  - llvm/lib/Target/Hexagon/**
+  - llvm/test/CodeGen/Hexagon/**
+  - llvm/test/CodeGen/*/Hexagon/**
+  - llvm/test/DebugInfo/*/Hexagon/**
+  - llvm/test/Transforms/*/Hexagon
+  - llvm/test/MC/Disassembler/Hexagon/**
+  - llvm/test/MC/Hexagon/**
+  - llvm/test/tools/llvm-objdump/ELF/Hexagon/**
 
 backend:loongarch:
   - llvm/include/llvm/IR/IntrinsicsLoongArch.td
@@ -757,6 +807,8 @@ backend:loongarch:
   - clang/lib/Driver/ToolChains/Arch/LoongArch.*
   - clang/lib/CodeGen/Targets/LoongArch.cpp
   - clang/include/clang/Basic/BuiltinsLoongArch*
+  - clang/include/clang/Sema/SemaLoongArch.h
+  - clang/lib/Sema/SemaLoongArch.cpp
 
 backend:MSP430:
   - llvm/include/llvm/IR/IntrinsicsMSP430.td
@@ -804,6 +856,8 @@ backend:WebAssembly:
   - llvm/unittests/Target/WebAssembly/**
   - llvm/test/DebugInfo/WebAssembly/**
   - llvm/test/MC/WebAssembly/**
+  - clang/include/clang/Sema/SemaWasm.h
+  - clang/lib/Sema/SemaLoongWasm.cpp
 
 backend:X86:
   - llvm/include/llvm/IR/IntrinsicsX86.td
@@ -823,6 +877,8 @@ backend:X86:
   - llvm/include/llvm/TargetParser/X86*
   - llvm/lib/TargetParser/X86*
   - llvm/utils/TableGen/X86*
+  - clang/include/clang/Sema/SemaX86.h
+  - clang/lib/Sema/SemaX86.cpp
 
 backend:PowerPC:
   - llvm/include/llvm/BinaryFormat/ELFRelocs/PowerPC*
@@ -847,6 +903,8 @@ backend:PowerPC:
   - clang/lib/Driver/ToolChains/AIX*
   - clang/lib/Driver/ToolChains/Arch/PPC.*
   - clang/test/CodeGen/PowerPC/**
+  - clang/include/clang/Sema/SemaPPC.h
+  - clang/lib/Sema/SemaPPC.cpp
 
 backend:SystemZ:
   - llvm/include/llvm/BinaryFormat/ELFRelocs/SystemZ*
@@ -867,6 +925,8 @@ backend:SystemZ:
   - clang/lib/Driver/ToolChains/ZOS*
   - clang/lib/Driver/ToolChains/Arch/SystemZ.*
   - clang/test/CodeGen/SystemZ/**
+  - clang/include/clang/Sema/SemaSystemZ.h
+  - clang/lib/Sema/SemaSystemZ.cpp
 
 third-party:unittests:
   - third-party/unittests/**
@@ -930,6 +990,13 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:as-a-library:
+  - clang/tools/libclang/**
+  - clang/bindings/**
+  - clang/include/clang-c/**
+  - clang/test/LibClang/**
+  - clang/unittest/libclang/**
+
 openmp:libomp:
   - any: ['openmp/**', '!openmp/libomptarget/**']
 
@@ -938,3 +1005,11 @@ openmp:libomptarget:
 
 bazel:
   - utils/bazel/**
+
+offload:
+  - offload/**
+
+tablegen:
+  - llvm/include/TableGen/**
+  - llvm/lib/TableGen/**
+  - llvm/utils/TableGen/**

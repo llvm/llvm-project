@@ -34,29 +34,32 @@ Compilation database setup:
 http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
-from __future__ import print_function
-
 import argparse
+import asyncio
+from dataclasses import dataclass
 import glob
 import json
 import multiprocessing
 import os
-import queue
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
-import threading
+import time
 import traceback
+from types import ModuleType
+from typing import Any, Awaitable, Callable, List, Optional, TypeVar
 
+
+yaml: Optional[ModuleType] = None
 try:
     import yaml
 except ImportError:
     yaml = None
 
 
-def strtobool(val):
+def strtobool(val: str) -> bool:
     """Convert a string representation of truth to a bool following LLVM's CLI argument parsing."""
 
     val = val.lower()
@@ -67,11 +70,11 @@ def strtobool(val):
 
     # Return ArgumentTypeError so that argparse does not substitute its own error message
     raise argparse.ArgumentTypeError(
-        "'{}' is invalid value for boolean argument! Try 0 or 1.".format(val)
+        f"'{val}' is invalid value for boolean argument! Try 0 or 1."
     )
 
 
-def find_compilation_database(path):
+def find_compilation_database(path: str) -> str:
     """Adjusts the directory until a compilation database is found."""
     result = os.path.realpath("./")
     while not os.path.isfile(os.path.join(result, path)):
@@ -83,45 +86,43 @@ def find_compilation_database(path):
     return result
 
 
-def make_absolute(f, directory):
-    if os.path.isabs(f):
-        return f
-    return os.path.normpath(os.path.join(directory, f))
-
-
 def get_tidy_invocation(
-    f,
-    clang_tidy_binary,
-    checks,
-    tmpdir,
-    build_path,
-    header_filter,
-    allow_enabling_alpha_checkers,
-    extra_arg,
-    extra_arg_before,
-    quiet,
-    config_file_path,
-    config,
-    line_filter,
-    use_color,
-    plugins,
-    warnings_as_errors,
-):
+    f: str,
+    clang_tidy_binary: str,
+    checks: str,
+    tmpdir: Optional[str],
+    build_path: str,
+    header_filter: Optional[str],
+    allow_enabling_alpha_checkers: bool,
+    extra_arg: List[str],
+    extra_arg_before: List[str],
+    quiet: bool,
+    config_file_path: str,
+    config: str,
+    line_filter: Optional[str],
+    use_color: bool,
+    plugins: List[str],
+    warnings_as_errors: Optional[str],
+    exclude_header_filter: Optional[str],
+    allow_no_checks: bool,
+) -> List[str]:
     """Gets a command line for clang-tidy."""
     start = [clang_tidy_binary]
     if allow_enabling_alpha_checkers:
         start.append("-allow-enabling-analyzer-alpha-checkers")
+    if exclude_header_filter is not None:
+        start.append(f"--exclude-header-filter={exclude_header_filter}")
     if header_filter is not None:
-        start.append("-header-filter=" + header_filter)
+        start.append(f"-header-filter={header_filter}")
     if line_filter is not None:
-        start.append("-line-filter=" + line_filter)
+        start.append(f"-line-filter={line_filter}")
     if use_color is not None:
         if use_color:
             start.append("--use-color")
         else:
             start.append("--use-color=false")
     if checks:
-        start.append("-checks=" + checks)
+        start.append(f"-checks={checks}")
     if tmpdir is not None:
         start.append("-export-fixes")
         # Get a temporary file. We immediately close the handle so clang-tidy can
@@ -130,26 +131,29 @@ def get_tidy_invocation(
         os.close(handle)
         start.append(name)
     for arg in extra_arg:
-        start.append("-extra-arg=%s" % arg)
+        start.append(f"-extra-arg={arg}")
     for arg in extra_arg_before:
-        start.append("-extra-arg-before=%s" % arg)
-    start.append("-p=" + build_path)
+        start.append(f"-extra-arg-before={arg}")
+    start.append(f"-p={build_path}")
     if quiet:
         start.append("-quiet")
     if config_file_path:
-        start.append("--config-file=" + config_file_path)
+        start.append(f"--config-file={config_file_path}")
     elif config:
-        start.append("-config=" + config)
+        start.append(f"-config={config}")
     for plugin in plugins:
-        start.append("-load=" + plugin)
+        start.append(f"-load={plugin}")
     if warnings_as_errors:
-        start.append("--warnings-as-errors=" + warnings_as_errors)
+        start.append(f"--warnings-as-errors={warnings_as_errors}")
+    if allow_no_checks:
+        start.append("--allow-no-checks")
     start.append(f)
     return start
 
 
-def merge_replacement_files(tmpdir, mergefile):
+def merge_replacement_files(tmpdir: str, mergefile: str) -> None:
     """Merge all replacement files in a directory into a single file"""
+    assert yaml
     # The fixes suggested by clang-tidy >= 4.0.0 are given under
     # the top level key 'Diagnostics' in the output yaml files
     mergekey = "Diagnostics"
@@ -173,16 +177,14 @@ def merge_replacement_files(tmpdir, mergefile):
         open(mergefile, "w").close()
 
 
-def find_binary(arg, name, build_path):
+def find_binary(arg: str, name: str, build_path: str) -> str:
     """Get the path for a binary or exit"""
     if arg:
         if shutil.which(arg):
             return arg
         else:
             raise SystemExit(
-                "error: passed binary '{}' was not found or is not executable".format(
-                    arg
-                )
+                f"error: passed binary '{arg}' was not found or is not executable"
             )
 
     built_path = os.path.join(build_path, "bin", name)
@@ -190,64 +192,102 @@ def find_binary(arg, name, build_path):
     if binary:
         return binary
     else:
-        raise SystemExit(
-            "error: failed to find {} in $PATH or at {}".format(name, built_path)
-        )
+        raise SystemExit(f"error: failed to find {name} in $PATH or at {built_path}")
 
 
-def apply_fixes(args, clang_apply_replacements_binary, tmpdir):
+def apply_fixes(
+    args: argparse.Namespace, clang_apply_replacements_binary: str, tmpdir: str
+) -> None:
     """Calls clang-apply-fixes on a given directory."""
     invocation = [clang_apply_replacements_binary]
     invocation.append("-ignore-insert-conflict")
     if args.format:
         invocation.append("-format")
     if args.style:
-        invocation.append("-style=" + args.style)
+        invocation.append(f"-style={args.style}")
     invocation.append(tmpdir)
     subprocess.call(invocation)
 
 
-def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_files):
-    """Takes filenames out of queue and runs clang-tidy on them."""
-    while True:
-        name = queue.get()
-        invocation = get_tidy_invocation(
-            name,
-            clang_tidy_binary,
-            args.checks,
-            tmpdir,
-            build_path,
-            args.header_filter,
-            args.allow_enabling_alpha_checkers,
-            args.extra_arg,
-            args.extra_arg_before,
-            args.quiet,
-            args.config_file,
-            args.config,
-            args.line_filter,
-            args.use_color,
-            args.plugins,
-            args.warnings_as_errors,
+# FIXME Python 3.12: This can be simplified out with run_with_semaphore[T](...).
+T = TypeVar("T")
+
+
+async def run_with_semaphore(
+    semaphore: asyncio.Semaphore,
+    f: Callable[..., Awaitable[T]],
+    *args: Any,
+    **kwargs: Any,
+) -> T:
+    async with semaphore:
+        return await f(*args, **kwargs)
+
+
+@dataclass
+class ClangTidyResult:
+    filename: str
+    invocation: List[str]
+    returncode: int
+    stdout: str
+    stderr: str
+    elapsed: float
+
+
+async def run_tidy(
+    args: argparse.Namespace,
+    name: str,
+    clang_tidy_binary: str,
+    tmpdir: str,
+    build_path: str,
+) -> ClangTidyResult:
+    """
+    Runs clang-tidy on a single file and returns the result.
+    """
+    invocation = get_tidy_invocation(
+        name,
+        clang_tidy_binary,
+        args.checks,
+        tmpdir,
+        build_path,
+        args.header_filter,
+        args.allow_enabling_alpha_checkers,
+        args.extra_arg,
+        args.extra_arg_before,
+        args.quiet,
+        args.config_file,
+        args.config,
+        args.line_filter,
+        args.use_color,
+        args.plugins,
+        args.warnings_as_errors,
+        args.exclude_header_filter,
+        args.allow_no_checks,
+    )
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
+        start = time.time()
+        stdout, stderr = await process.communicate()
+        end = time.time()
+    except asyncio.CancelledError:
+        process.terminate()
+        await process.wait()
+        raise
 
-        proc = subprocess.Popen(
-            invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        output, err = proc.communicate()
-        if proc.returncode != 0:
-            if proc.returncode < 0:
-                msg = "%s: terminated by signal %d\n" % (name, -proc.returncode)
-                err += msg.encode("utf-8")
-            failed_files.append(name)
-        with lock:
-            sys.stdout.write(" ".join(invocation) + "\n" + output.decode("utf-8"))
-            if len(err) > 0:
-                sys.stdout.flush()
-                sys.stderr.write(err.decode("utf-8"))
-        queue.task_done()
+    assert process.returncode is not None
+    return ClangTidyResult(
+        name,
+        invocation,
+        process.returncode,
+        stdout.decode("UTF-8"),
+        stderr.decode("UTF-8"),
+        end - start,
+    )
 
 
-def main():
+async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Runs clang-tidy over all files "
         "in a compilation database. Requires "
@@ -257,20 +297,20 @@ def main():
     parser.add_argument(
         "-allow-enabling-alpha-checkers",
         action="store_true",
-        help="allow alpha checkers from clang-analyzer.",
+        help="Allow alpha checkers from clang-analyzer.",
     )
     parser.add_argument(
-        "-clang-tidy-binary", metavar="PATH", help="path to clang-tidy binary"
+        "-clang-tidy-binary", metavar="PATH", help="Path to clang-tidy binary."
     )
     parser.add_argument(
         "-clang-apply-replacements-binary",
         metavar="PATH",
-        help="path to clang-apply-replacements binary",
+        help="Path to clang-apply-replacements binary.",
     )
     parser.add_argument(
         "-checks",
         default=None,
-        help="checks filter, when not specified, use clang-tidy default",
+        help="Checks filter, when not specified, use clang-tidy default.",
     )
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument(
@@ -293,9 +333,17 @@ def main():
         "Use either -config-file or -config, not both.",
     )
     parser.add_argument(
+        "-exclude-header-filter",
+        default=None,
+        help="Regular expression matching the names of the "
+        "headers to exclude diagnostics from. Diagnostics from "
+        "the main file of each translation unit are always "
+        "displayed.",
+    )
+    parser.add_argument(
         "-header-filter",
         default=None,
-        help="regular expression matching the names of the "
+        help="Regular expression matching the names of the "
         "headers to output diagnostics from. Diagnostics from "
         "the main file of each translation unit are always "
         "displayed.",
@@ -335,19 +383,22 @@ def main():
         "-j",
         type=int,
         default=0,
-        help="number of tidy instances to be run in parallel.",
+        help="Number of tidy instances to be run in parallel.",
     )
     parser.add_argument(
-        "files", nargs="*", default=[".*"], help="files to be processed (regex on path)"
+        "files",
+        nargs="*",
+        default=[".*"],
+        help="Files to be processed (regex on path).",
     )
-    parser.add_argument("-fix", action="store_true", help="apply fix-its")
+    parser.add_argument("-fix", action="store_true", help="apply fix-its.")
     parser.add_argument(
-        "-format", action="store_true", help="Reformat code after applying fixes"
+        "-format", action="store_true", help="Reformat code after applying fixes."
     )
     parser.add_argument(
         "-style",
         default="file",
-        help="The style of reformat code after applying fixes",
+        help="The style of reformat code after applying fixes.",
     )
     parser.add_argument(
         "-use-color",
@@ -376,7 +427,7 @@ def main():
         help="Additional argument to prepend to the compiler command line.",
     )
     parser.add_argument(
-        "-quiet", action="store_true", help="Run clang-tidy in quiet mode"
+        "-quiet", action="store_true", help="Run clang-tidy in quiet mode."
     )
     parser.add_argument(
         "-load",
@@ -388,7 +439,12 @@ def main():
     parser.add_argument(
         "-warnings-as-errors",
         default=None,
-        help="Upgrades warnings to errors. Same format as '-checks'",
+        help="Upgrades warnings to errors. Same format as '-checks'.",
+    )
+    parser.add_argument(
+        "-allow-no-checks",
+        action="store_true",
+        help="Allow empty enabled checks.",
     )
     args = parser.parse_args()
 
@@ -408,7 +464,7 @@ def main():
         )
 
     combine_fixes = False
-    export_fixes_dir = None
+    export_fixes_dir: Optional[str] = None
     delete_fixes_dir = False
     if args.export_fixes is not None:
         # if a directory is given, create it if it does not exist
@@ -450,24 +506,24 @@ def main():
             args.use_color,
             args.plugins,
             args.warnings_as_errors,
+            args.exclude_header_filter,
+            args.allow_no_checks,
         )
         invocation.append("-list-checks")
         invocation.append("-")
-        if args.quiet:
-            # Even with -quiet we still want to check if we can call clang-tidy.
-            with open(os.devnull, "w") as dev_null:
-                subprocess.check_call(invocation, stdout=dev_null)
-        else:
-            subprocess.check_call(invocation)
+        # Even with -quiet we still want to check if we can call clang-tidy.
+        subprocess.check_call(
+            invocation, stdout=subprocess.DEVNULL if args.quiet else None
+        )
     except:
         print("Unable to run clang-tidy.", file=sys.stderr)
         sys.exit(1)
 
     # Load the database and extract all files.
-    database = json.load(open(os.path.join(build_path, db_path)))
-    files = set(
-        [make_absolute(entry["file"], entry["directory"]) for entry in database]
-    )
+    with open(os.path.join(build_path, db_path)) as f:
+        database = json.load(f)
+    files = {os.path.abspath(os.path.join(e["directory"], e["file"])) for e in database}
+    number_files_in_database = len(files)
 
     # Filter source files from compilation database.
     if args.source_filter:
@@ -488,70 +544,84 @@ def main():
 
     # Build up a big regexy filter from all command line arguments.
     file_name_re = re.compile("|".join(args.files))
+    files = {f for f in files if file_name_re.search(f)}
 
-    return_code = 0
-    try:
-        # Spin up a bunch of tidy-launching threads.
-        task_queue = queue.Queue(max_task)
-        # List of files with a non-zero return code.
-        failed_files = []
-        lock = threading.Lock()
-        for _ in range(max_task):
-            t = threading.Thread(
-                target=run_tidy,
-                args=(
-                    args,
-                    clang_tidy_binary,
-                    export_fixes_dir,
-                    build_path,
-                    task_queue,
-                    lock,
-                    failed_files,
-                ),
+    print(
+        "Running clang-tidy for",
+        len(files),
+        "files out of",
+        number_files_in_database,
+        "in compilation database ...",
+    )
+
+    returncode = 0
+    semaphore = asyncio.Semaphore(max_task)
+    tasks = [
+        asyncio.create_task(
+            run_with_semaphore(
+                semaphore,
+                run_tidy,
+                args,
+                f,
+                clang_tidy_binary,
+                export_fixes_dir,
+                build_path,
             )
-            t.daemon = True
-            t.start()
+        )
+        for f in files
+    ]
 
-        # Fill the queue with files.
-        for name in files:
-            if file_name_re.search(name):
-                task_queue.put(name)
-
-        # Wait for all threads to be done.
-        task_queue.join()
-        if len(failed_files):
-            return_code = 1
-
-    except KeyboardInterrupt:
-        # This is a sad hack. Unfortunately subprocess goes
-        # bonkers with ctrl-c and we start forking merrily.
+    try:
+        for i, coro in enumerate(asyncio.as_completed(tasks)):
+            result = await coro
+            if result.returncode != 0:
+                returncode = 1
+                if result.returncode < 0:
+                    result.stderr += f"{result.filename}: terminated by signal {-result.returncode}\n"
+            progress = f"[{i + 1: >{len(f'{len(files)}')}}/{len(files)}]"
+            runtime = f"[{result.elapsed:.1f}s]"
+            print(f"{progress}{runtime} {' '.join(result.invocation)}")
+            if result.stdout:
+                print(result.stdout, end=("" if result.stderr else "\n"))
+            if result.stderr:
+                print(result.stderr)
+    except asyncio.CancelledError:
         print("\nCtrl-C detected, goodbye.")
+        for task in tasks:
+            task.cancel()
         if delete_fixes_dir:
+            assert export_fixes_dir
             shutil.rmtree(export_fixes_dir)
-        os.kill(0, 9)
+        return
 
     if combine_fixes:
-        print("Writing fixes to " + args.export_fixes + " ...")
+        print(f"Writing fixes to {args.export_fixes} ...")
         try:
+            assert export_fixes_dir
             merge_replacement_files(export_fixes_dir, args.export_fixes)
         except:
             print("Error exporting fixes.\n", file=sys.stderr)
             traceback.print_exc()
-            return_code = 1
+            returncode = 1
 
     if args.fix:
         print("Applying fixes ...")
         try:
+            assert export_fixes_dir
             apply_fixes(args, clang_apply_replacements_binary, export_fixes_dir)
         except:
             print("Error applying fixes.\n", file=sys.stderr)
             traceback.print_exc()
-            return_code = 1
+            returncode = 1
 
     if delete_fixes_dir:
+        assert export_fixes_dir
         shutil.rmtree(export_fixes_dir)
-    sys.exit(return_code)
+    sys.exit(returncode)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

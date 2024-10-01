@@ -189,3 +189,78 @@ void recursive() {
 
 }
 }
+
+// GH63845: Test if we have skipped past RequiresExprBodyDecls in tryCaptureVariable().
+namespace GH63845 {
+
+template <bool> struct A {};
+
+struct true_type {
+  constexpr operator bool() noexcept { return true; }
+};
+
+constexpr bool foo() {
+  true_type x{};
+  return requires { typename A<x>; };
+}
+
+static_assert(foo());
+
+} // namespace GH63845
+
+// GH69307: Test if we can correctly handle param decls that have yet to get into the function scope.
+namespace GH69307 {
+
+constexpr auto ICE() {
+  constexpr auto b = 1;
+  return [=](auto c) -> int
+           requires requires { b + c; }
+  { return 1; };
+};
+
+constexpr auto Ret = ICE()(1);
+
+} // namespace GH69307
+
+// GH88081: Test if we evaluate the requires expression with lambda captures properly.
+namespace GH88081 {
+
+// Test that ActOnLambdaClosureQualifiers() is called only once.
+void foo(auto value)
+  requires requires { [&] -> decltype(value) {}; }
+  // expected-error@-1 {{non-local lambda expression cannot have a capture-default}}
+{}
+
+struct S { //#S
+  S(auto value) //#S-ctor
+  requires requires { [&] -> decltype(value) { return 2; }; } {} // #S-requires
+
+  static auto foo(auto value) -> decltype([&]() -> decltype(value) {}()) { return {}; } // #S-foo
+
+  // FIXME: 'value' does not constitute an ODR use here. Add a diagnostic for it.
+  static auto bar(auto value) -> decltype([&] { return value; }()) {
+    return "a"; // #bar-body
+  }
+};
+
+S s("a"); // #use
+// expected-error@#S-requires {{cannot initialize return object of type 'decltype(value)' (aka 'const char *') with an rvalue of type 'int'}}
+// expected-error@#use {{no matching constructor}}
+// expected-note@#S-requires {{substituting into a lambda expression here}}
+// expected-note@#S-requires {{substituting template arguments into constraint expression here}}
+// expected-note@#S-requires {{in instantiation of requirement here}}
+// expected-note@#use {{checking constraint satisfaction for template 'S<const char *>' required here}}
+// expected-note@#use {{requested here}}
+// expected-note-re@#S 2{{candidate constructor {{.*}} not viable}}
+// expected-note@#S-ctor {{constraints not satisfied}}
+// expected-note-re@#S-requires {{because {{.*}} would be invalid}}
+
+void func() {
+  S::foo(42);
+  S::bar("str");
+  S::bar(0.618);
+  // expected-error-re@#bar-body {{cannot initialize return object of type {{.*}} (aka 'double') with an lvalue of type 'const char[2]'}}
+  // expected-note@-2 {{requested here}}
+}
+
+} // namespace GH88081

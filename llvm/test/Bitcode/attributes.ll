@@ -505,6 +505,17 @@ define void @f86() nosanitize_bounds
         ret void;
 }
 
+; CHECK: define void @f92() #53
+define void @f92() sanitize_realtime
+{
+        ret void;
+}
+
+; CHECK: define void @f93() #54
+define void @f93() sanitize_realtime_unsafe {
+        ret void;
+}
+
 ; CHECK: define void @f87() [[FNRETTHUNKEXTERN:#[0-9]+]]
 define void @f87() fn_ret_thunk_extern { ret void }
 
@@ -531,8 +542,18 @@ define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
   ret i32 0
 }
 
+; CHECK: define range(i32 0, 0) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a)
+define range(i32 0, 0) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a) {
+  ret i32 0
+}
+
 ; CHECK: define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a)
 define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a) {
+  ret void
+}
+
+; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
+define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
   ret void
 }
 
@@ -589,6 +610,8 @@ define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 6
 ; CHECK: attributes #50 = { disable_sanitizer_instrumentation }
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
+; CHECK: attributes #53 = { sanitize_realtime }
+; CHECK: attributes #54 = { sanitize_realtime_unsafe }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }

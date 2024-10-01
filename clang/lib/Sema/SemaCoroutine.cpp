@@ -684,6 +684,19 @@ bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
   return ThrowingDecls.empty();
 }
 
+// [stmt.return.coroutine]p1:
+//   A coroutine shall not enclose a return statement ([stmt.return]).
+static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
+  assert(FSI && "FunctionScopeInfo is null");
+  assert(FSI->FirstCoroutineStmtLoc.isValid() &&
+         "first coroutine location not set");
+  if (FSI->FirstReturnLoc.isInvalid())
+    return;
+  S.Diag(FSI->FirstReturnLoc, diag::err_return_in_coroutine);
+  S.Diag(FSI->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
+      << FSI->getFirstCoroutineStmtKeyword();
+}
+
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
   // Ignore previous expr evaluation contexts.
@@ -693,6 +706,10 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
     return false;
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
+
+  // Avoid duplicate errors, report only on first keyword.
+  if (ScopeInfo->FirstCoroutineStmtLoc == KWLoc)
+    checkReturnStmtInCoroutine(*this, ScopeInfo);
 
   // If we have existing coroutine statements then we have already built
   // the initial and final suspend points.
@@ -801,6 +818,7 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
     if (R.isInvalid()) return ExprError();
     E = R.get();
   }
+
   ExprResult Lookup = BuildOperatorCoawaitLookupExpr(S, Loc);
   if (Lookup.isInvalid())
     return ExprError();
@@ -817,15 +835,42 @@ ExprResult Sema::BuildOperatorCoawaitLookupExpr(Scope *S, SourceLocation Loc) {
 
   assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
   const auto &Functions = Operators.asUnresolvedSet();
-  bool IsOverloaded =
-      Functions.size() > 1 ||
-      (Functions.size() == 1 && isa<FunctionTemplateDecl>(*Functions.begin()));
   Expr *CoawaitOp = UnresolvedLookupExpr::Create(
       Context, /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
-      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, IsOverloaded,
-      Functions.begin(), Functions.end());
+      DeclarationNameInfo(OpName, Loc), /*RequiresADL*/ true, Functions.begin(),
+      Functions.end(), /*KnownDependent=*/false,
+      /*KnownInstantiationDependent=*/false);
   assert(CoawaitOp);
   return CoawaitOp;
+}
+
+static bool isAttributedCoroAwaitElidable(const QualType &QT) {
+  auto *Record = QT->getAsCXXRecordDecl();
+  return Record && Record->hasAttr<CoroAwaitElidableAttr>();
+}
+
+static void applySafeElideContext(Expr *Operand) {
+  auto *Call = dyn_cast<CallExpr>(Operand->IgnoreImplicit());
+  if (!Call || !Call->isPRValue())
+    return;
+
+  if (!isAttributedCoroAwaitElidable(Call->getType()))
+    return;
+
+  Call->setCoroElideSafe();
+
+  // Check parameter
+  auto *Fn = llvm::dyn_cast_if_present<FunctionDecl>(Call->getCalleeDecl());
+  if (!Fn)
+    return;
+
+  size_t ParmIdx = 0;
+  for (ParmVarDecl *PD : Fn->parameters()) {
+    if (PD->hasAttr<CoroAwaitElidableArgumentAttr>())
+      applySafeElideContext(Call->getArg(ParmIdx));
+
+    ParmIdx++;
+  }
 }
 
 // Attempts to resolve and build a CoawaitExpr from "raw" inputs, bailing out to
@@ -851,7 +896,14 @@ ExprResult Sema::BuildUnresolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   }
 
   auto *RD = Promise->getType()->getAsCXXRecordDecl();
-  auto *Transformed = Operand;
+
+  bool CurFnAwaitElidable = isAttributedCoroAwaitElidable(
+      getCurFunctionDecl(/*AllowLambda=*/true)->getReturnType());
+
+  if (CurFnAwaitElidable)
+    applySafeElideContext(Operand);
+
+  Expr *Transformed = Operand;
   if (lookupMember(*this, "await_transform", RD, Loc)) {
     ExprResult R =
         buildPromiseCall(*this, Promise, Loc, "await_transform", Operand);
@@ -1120,16 +1172,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // diagnose if we've seen a VLA in the body of this function.
   if (Fn->FirstVLALoc.isValid())
     Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
-
-  // [stmt.return.coroutine]p1:
-  //   A coroutine shall not enclose a return statement ([stmt.return]).
-  if (Fn->FirstReturnLoc.isValid()) {
-    assert(Fn->FirstCoroutineStmtLoc.isValid() &&
-                   "first coroutine location not set");
-    Diag(Fn->FirstReturnLoc, diag::err_return_in_coroutine);
-    Diag(Fn->FirstCoroutineStmtLoc, diag::note_declared_coroutine_here)
-            << Fn->getFirstCoroutineStmtKeyword();
-  }
 
   // Coroutines will get splitted into pieces. The GNU address of label
   // extension wouldn't be meaningful in coroutines.

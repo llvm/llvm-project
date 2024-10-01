@@ -150,9 +150,6 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
 Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
     MCContext &Context) {
-  if (Options.MCOptions.MCSaveTempLabels)
-    Context.setAllowTemporaryLabels(false);
-
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCAsmInfo &MAI = *getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
@@ -163,33 +160,20 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
   switch (FileType) {
   case CodeGenFileType::AssemblyFile: {
     MCInstPrinter *InstPrinter = getTarget().createMCInstPrinter(
-        getTargetTriple(), MAI.getAssemblerDialect(), MAI, MII, MRI);
+        getTargetTriple(),
+        Options.MCOptions.OutputAsmVariant.value_or(MAI.getAssemblerDialect()),
+        MAI, MII, MRI);
 
     // Create a code emitter if asked to show the encoding.
     std::unique_ptr<MCCodeEmitter> MCE;
     if (Options.MCOptions.ShowMCEncoding)
       MCE.reset(getTarget().createMCCodeEmitter(MII, Context));
 
-    bool UseDwarfDirectory = false;
-    switch (Options.MCOptions.MCUseDwarfDirectory) {
-    case MCTargetOptions::DisableDwarfDirectory:
-      UseDwarfDirectory = false;
-      break;
-    case MCTargetOptions::EnableDwarfDirectory:
-      UseDwarfDirectory = true;
-      break;
-    case MCTargetOptions::DefaultDwarfDirectory:
-      UseDwarfDirectory = MAI.enableDwarfFileDirectoryDefault();
-      break;
-    }
-
     std::unique_ptr<MCAsmBackend> MAB(
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), Options.MCOptions.AsmVerbose,
-        UseDwarfDirectory, InstPrinter, std::move(MCE), std::move(MAB),
-        Options.MCOptions.ShowMCInst);
+        Context, std::move(FOut), InstPrinter, std::move(MCE), std::move(MAB));
     AsmStreamer.reset(S);
     break;
   }
@@ -211,9 +195,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
         DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)
                : MAB->createObjectWriter(Out),
-        std::unique_ptr<MCCodeEmitter>(MCE), STI, Options.MCOptions.MCRelaxAll,
-        Options.MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ true));
+        std::unique_ptr<MCCodeEmitter>(MCE), STI));
     break;
   }
   case CodeGenFileType::Null:
@@ -272,8 +254,6 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   // libunwind is unable to load compact unwind dynamically, so we must generate
   // DWARF unwind info for the JIT.
   Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
-  if (Options.MCOptions.MCSaveTempLabels)
-    Ctx->setAllowTemporaryLabels(false);
 
   // Create the code emitter for the target if it exists.  If not, .o file
   // emission fails.
@@ -281,17 +261,17 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   std::unique_ptr<MCCodeEmitter> MCE(
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
-  std::unique_ptr<MCAsmBackend> MAB(
-      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
-  if (!MCE || !MAB)
+  if (!MCE)
+    return true;
+  MCAsmBackend *MAB =
+      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
+  if (!MAB)
     return true;
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::move(MAB), MAB->createObjectWriter(Out), std::move(MCE),
-      STI, Options.MCOptions.MCRelaxAll,
-      Options.MCOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ true));
+      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
+      std::move(MCE), STI));
 
   // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
   FunctionPass *Printer =

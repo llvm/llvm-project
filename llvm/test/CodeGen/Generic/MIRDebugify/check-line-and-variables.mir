@@ -1,6 +1,8 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,dead-mi-elimination,mir-check-debugify -o - %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,mir-check-debugify -o - %s 2>&1 | FileCheck %s --check-prefix=CHECK-PASS
+# RUN: llc --experimental-debuginfo-iterators=false -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,dead-mi-elimination,mir-check-debugify -o - %s 2>&1 | FileCheck %s
+# RUN: llc --experimental-debuginfo-iterators=false -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-debugify,mir-check-debugify -o - %s 2>&1 | FileCheck %s --check-prefix=CHECK-PASS
 --- |
   ; ModuleID = 'check-line-and-variables.mir'
   source_filename = "check-line-and-variables.ll"

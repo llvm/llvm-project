@@ -130,6 +130,14 @@ namespace {
     // Remember which edges have been considered for breaking.
     SmallSet<std::pair<MachineBasicBlock*, MachineBasicBlock*>, 8>
     CEBCandidates;
+    // Memorize the register that also wanted to sink into the same block along
+    // a different critical edge.
+    // {register to sink, sink-to block} -> the first sink-from block.
+    // We're recording the first sink-from block because that (critical) edge
+    // was deferred until we see another register that's going to sink into the
+    // same block.
+    DenseMap<std::pair<Register, MachineBasicBlock *>, MachineBasicBlock *>
+        CEMergeCandidates;
     // Remember which edges we are about to split.
     // This is different from CEBCandidates since those edges
     // will be split.
@@ -138,7 +146,7 @@ namespace {
     DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
-        DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
+        SmallDenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
 
     /// DBG_VALUE pointer and flag. The flag is true if this DBG_VALUE is
     /// post-dominated by another DBG_VALUE of the same variable location.
@@ -184,27 +192,30 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);
       AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<MachineDominatorTree>();
-      AU.addRequired<MachinePostDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addRequired<MachinePostDominatorTreeWrapperPass>();
       AU.addRequired<MachineCycleInfoWrapperPass>();
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addPreserved<MachineCycleInfoWrapperPass>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       if (UseBlockFreqInfo)
-        AU.addRequired<MachineBlockFrequencyInfo>();
+        AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
     }
 
     void releaseMemory() override {
       CEBCandidates.clear();
+      CEMergeCandidates.clear();
     }
 
   private:
     bool ProcessBlock(MachineBasicBlock &MBB);
     void ProcessDbgInst(MachineInstr &MI);
-    bool isWorthBreakingCriticalEdge(MachineInstr &MI,
-                                     MachineBasicBlock *From,
-                                     MachineBasicBlock *To);
+    bool isLegalToBreakCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
+                                    MachineBasicBlock *To, bool BreakPHIEdge);
+    bool isWorthBreakingCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
+                                     MachineBasicBlock *To,
+                                     MachineBasicBlock *&DeferredFromBlock);
 
     bool hasStoreBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                          MachineInstr &MI);
@@ -273,8 +284,8 @@ char &llvm::MachineSinkingID = MachineSinking::ID;
 
 INITIALIZE_PASS_BEGIN(MachineSinking, DEBUG_TYPE,
                       "Machine code sinking", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineSinking, DEBUG_TYPE,
@@ -309,7 +320,7 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
         if (PI->readsRegister(Reg, TRI))
           return true;
         // Check for interference with non-dead defs
-        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        auto *DefOp = PI->findRegisterDefOperand(Reg, TRI, false, true);
         if (DefOp && !DefOp->isDead())
           return true;
       }
@@ -363,7 +374,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
 
   // Check if it's safe to move the instruction.
   bool SawStore = true;
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -406,7 +417,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       continue;
     }
 
-    if (Reg.isPhysical() &&
+    if (Reg.isPhysical() && MO.isUse() &&
         (MRI->isConstantPhysReg(Reg) || TII->isIgnorableUse(MO)))
       continue;
 
@@ -676,7 +687,7 @@ void MachineSinking::FindCycleSinkCandidates(
       continue;
     }
     bool DontMoveAcrossStore = true;
-    if (!MI.isSafeToMove(AA, DontMoveAcrossStore)) {
+    if (!MI.isSafeToMove(DontMoveAcrossStore)) {
       LLVM_DEBUG(dbgs() << "CycleSink: Instruction not safe to move.\n");
       continue;
     }
@@ -708,11 +719,13 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT = &getAnalysis<MachineDominatorTree>();
-  PDT = &getAnalysis<MachinePostDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  MBFI = UseBlockFreqInfo
+             ? &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI()
+             : nullptr;
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   RegClassInfo.runOnMachineFunction(MF);
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
@@ -725,6 +738,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
     // Process all basic blocks.
     CEBCandidates.clear();
+    CEMergeCandidates.clear();
     ToSplit.clear();
     for (auto &MBB: MF)
       MadeChange |= ProcessBlock(MBB);
@@ -752,8 +766,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (SinkInstsIntoCycle) {
-    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_begin(),
-                                          CI->toplevel_end());
+    SmallVector<MachineCycle *, 8> Cycles(CI->toplevel_cycles());
     for (auto *Cycle : Cycles) {
       MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
       if (!Preheader) {
@@ -820,7 +833,7 @@ bool MachineSinking::ProcessBlock(MachineBasicBlock &MBB) {
     if (!ProcessedBegin)
       --I;
 
-    if (MI.isDebugOrPseudoInstr()) {
+    if (MI.isDebugOrPseudoInstr() || MI.isFakeUse()) {
       if (MI.isDebugValue())
         ProcessDbgInst(MI);
       continue;
@@ -873,9 +886,9 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
   SeenDbgVars.insert(Var);
 }
 
-bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
-                                                 MachineBasicBlock *From,
-                                                 MachineBasicBlock *To) {
+bool MachineSinking::isWorthBreakingCriticalEdge(
+    MachineInstr &MI, MachineBasicBlock *From, MachineBasicBlock *To,
+    MachineBasicBlock *&DeferredFromBlock) {
   // FIXME: Need much better heuristics.
 
   // If the pass has already considered breaking this edge (during this pass
@@ -886,6 +899,27 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
 
   if (!MI.isCopy() && !TII->isAsCheapAsAMove(MI))
     return true;
+
+  // Check and record the register and the destination block we want to sink
+  // into. Note that we want to do the following before the next check on branch
+  // probability. Because we want to record the initial candidate even if it's
+  // on hot edge, so that other candidates that might not on hot edges can be
+  // sinked as well.
+  for (const auto &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    Register SrcReg = Reg.isVirtual() ? TRI->lookThruCopyLike(Reg, MRI) : Reg;
+    auto Key = std::make_pair(SrcReg, To);
+    auto Res = CEMergeCandidates.try_emplace(Key, From);
+    // We wanted to sink the same register into the same block, consider it to
+    // be profitable.
+    if (!Res.second) {
+      // Return the source block that was previously held off.
+      DeferredFromBlock = Res.first->second;
+      return true;
+    }
+  }
 
   if (From->isSuccessor(To) && MBPI->getEdgeProbability(From, To) <=
       BranchProbability(SplitEdgeProbabilityThreshold, 100))
@@ -921,15 +955,12 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
   return false;
 }
 
-bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
-                                               MachineBasicBlock *FromBB,
-                                               MachineBasicBlock *ToBB,
-                                               bool BreakPHIEdge) {
-  if (!isWorthBreakingCriticalEdge(MI, FromBB, ToBB))
-    return false;
-
+bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
+                                                MachineBasicBlock *FromBB,
+                                                MachineBasicBlock *ToBB,
+                                                bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
-  if (!SplitEdges || FromBB == ToBB)
+  if (!SplitEdges || FromBB == ToBB || !FromBB->isSuccessor(ToBB))
     return false;
 
   MachineCycle *FromCycle = CI->getCycle(FromBB);
@@ -985,9 +1016,30 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
         return false;
   }
 
-  ToSplit.insert(std::make_pair(FromBB, ToBB));
-
   return true;
+}
+
+bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
+                                               MachineBasicBlock *FromBB,
+                                               MachineBasicBlock *ToBB,
+                                               bool BreakPHIEdge) {
+  bool Status = false;
+  MachineBasicBlock *DeferredFromBB = nullptr;
+  if (isWorthBreakingCriticalEdge(MI, FromBB, ToBB, DeferredFromBB)) {
+    // If there is a DeferredFromBB, we consider FromBB only if _both_
+    // of them are legal to split.
+    if ((!DeferredFromBB ||
+         ToSplit.count(std::make_pair(DeferredFromBB, ToBB)) ||
+         isLegalToBreakCriticalEdge(MI, DeferredFromBB, ToBB, BreakPHIEdge)) &&
+        isLegalToBreakCriticalEdge(MI, FromBB, ToBB, BreakPHIEdge)) {
+      ToSplit.insert(std::make_pair(FromBB, ToBB));
+      if (DeferredFromBB)
+        ToSplit.insert(std::make_pair(DeferredFromBB, ToBB));
+      Status = true;
+    }
+  }
+
+  return Status;
 }
 
 std::vector<unsigned> &
@@ -1601,7 +1653,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     return false;
 
   // Check if it's safe to move the instruction.
-  if (!MI.isSafeToMove(AA, SawStore))
+  if (!MI.isSafeToMove(SawStore))
     return false;
 
   // Convergent operations may not be made control-dependent on additional
@@ -1652,7 +1704,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
     bool TryBreak = false;
     bool Store =
         MI.mayLoad() ? hasStoreBetween(ParentBlock, SuccToSinkTo, MI) : true;
-    if (!MI.isSafeToMove(AA, Store)) {
+    if (!MI.isSafeToMove(Store)) {
       LLVM_DEBUG(dbgs() << " *** NOTE: Won't sink load along critical edge.\n");
       TryBreak = true;
     }
@@ -2100,8 +2152,9 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     MachineBasicBlock::iterator InsertPos =
         SuccBB->SkipPHIsAndLabels(SuccBB->begin());
     if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
-      LLVM_DEBUG(
-          dbgs() << " *** Not sinking: prologue interference\n");
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+      LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
       continue;
     }
 

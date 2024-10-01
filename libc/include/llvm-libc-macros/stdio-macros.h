@@ -15,4 +15,8 @@
 
 #define BUFSIZ 1024
 
+#define _IONBF 2
+#define _IOLBF 1
+#define _IOFBF 0
+
 #endif // LLVM_LIBC_MACROS_STDIO_MACROS_H

@@ -154,10 +154,35 @@ void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
   }
 }
 
+void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                                             const LangOptions &LangOpts,
+                                             CodeGenOptions &CGOpts) {
+  // TODO: Figure out better way to set options to their default value.
+  if (ProgramAction == frontend::GenerateModule) {
+    CGOpts.MainFileName.clear();
+    CGOpts.DwarfDebugFlags.clear();
+  }
+  if (ProgramAction == frontend::GeneratePCH ||
+      (ProgramAction == frontend::GenerateModule && !LangOpts.ModulesCodegen)) {
+    CGOpts.DebugCompilationDir.clear();
+    CGOpts.CoverageCompilationDir.clear();
+    CGOpts.CoverageDataFile.clear();
+    CGOpts.CoverageNotesFile.clear();
+    CGOpts.ProfileInstrumentUsePath.clear();
+    CGOpts.SampleProfileFile.clear();
+    CGOpts.ProfileRemappingFile.clear();
+  }
+}
+
 static CowCompilerInvocation
 makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   CI.resetNonModularOptions();
   CI.clearImplicitModuleBuildOptions();
+
+  // The scanner takes care to avoid passing non-affecting module maps to the
+  // explicit compiles. No need to do extra work just to find out there are no
+  // module map files to prune.
+  CI.getHeaderSearchOpts().ModulesPruneNonAffectingModuleMaps = false;
 
   // Remove options incompatible with explicit module build or are likely to
   // differ between identical modules discovered from different translation
@@ -167,15 +192,8 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
-  // TODO: Figure out better way to set options to their default value.
-  CI.getCodeGenOpts().MainFileName.clear();
-  CI.getCodeGenOpts().DwarfDebugFlags.clear();
-  if (!CI.getLangOpts().ModulesCodegen) {
-    CI.getCodeGenOpts().DebugCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageCompilationDir.clear();
-    CI.getCodeGenOpts().CoverageDataFile.clear();
-    CI.getCodeGenOpts().CoverageNotesFile.clear();
-  }
+  resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
+                            CI.getCodeGenOpts());
 
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
@@ -223,7 +241,7 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
                                               ModuleMapInputKind);
 
   auto CurrentModuleMapEntry =
-      ScanInstance.getFileManager().getFile(Deps.ClangModuleMapFile);
+      ScanInstance.getFileManager().getOptionalFileRef(Deps.ClangModuleMapFile);
   assert(CurrentModuleMapEntry && "module map file entry not found");
 
   // Remove directly passed modulemap files. They will get added back if they
@@ -233,7 +251,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
     // TODO: Track these as `FileEntryRef` to simplify the equality check below.
-    auto ModuleMapEntry = ScanInstance.getFileManager().getFile(ModuleMapFile);
+    auto ModuleMapEntry =
+        ScanInstance.getFileManager().getOptionalFileRef(ModuleMapFile);
     assert(ModuleMapEntry && "module map file entry not found");
 
     // Don't report module maps describing eagerly-loaded dependency. This
@@ -281,7 +300,8 @@ llvm::DenseSet<const FileEntry *> ModuleDepCollector::collectModuleMapFiles(
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
     assert(MD && "Inconsistent dependency info");
     // TODO: Track ClangModuleMapFile as `FileEntryRef`.
-    auto FE = ScanInstance.getFileManager().getFile(MD->ClangModuleMapFile);
+    auto FE = ScanInstance.getFileManager().getOptionalFileRef(
+        MD->ClangModuleMapFile);
     assert(FE && "Missing module map file that was previously found");
     ModuleMapFiles.insert(*FE);
   }
@@ -339,6 +359,8 @@ static bool needsModules(FrontendInputFile FIF) {
 
 void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
   CI.clearImplicitModuleBuildOptions();
+  resetBenignCodeGenOptions(CI.getFrontendOpts().ProgramAction,
+                            CI.getLangOpts(), CI.getCodeGenOpts());
 
   if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
     Preprocessor &PP = ScanInstance.getPreprocessor();
@@ -549,15 +571,18 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
     return {};
 
   // If this module has been handled already, just return its ID.
-  auto ModI = MDC.ModularDeps.insert({M, nullptr});
-  if (!ModI.second)
-    return ModI.first->second->ID;
+  if (auto ModI = MDC.ModularDeps.find(M); ModI != MDC.ModularDeps.end())
+    return ModI->second->ID;
 
-  ModI.first->second = std::make_unique<ModuleDeps>();
-  ModuleDeps &MD = *ModI.first->second;
+  auto OwnedMD = std::make_unique<ModuleDeps>();
+  ModuleDeps &MD = *OwnedMD;
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
+  // For modules which use export_as link name, the linked product that of the
+  // corresponding export_as-named module.
+  if (!M->UseExportAsModuleLinkName)
+    MD.LinkLibraries = M->LinkLibraries;
 
   ModuleMap &ModMapInfo =
       MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
@@ -625,6 +650,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.addOutputPaths(CI, MD);
 
   MD.BuildInfo = std::move(CI);
+
+  MDC.ModularDeps.insert({M, std::move(OwnedMD)});
 
   return MD.ID;
 }

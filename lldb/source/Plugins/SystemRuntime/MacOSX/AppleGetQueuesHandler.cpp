@@ -235,7 +235,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   if (!thread.SafeToCallFunctions()) {
     LLDB_LOGF(log, "Not safe to call functions on thread 0x%" PRIx64,
               thread.GetID());
-    error.SetErrorString("Not safe to call functions on this thread.");
+    error =
+        Status::FromErrorString("Not safe to call functions on this thread.");
     return return_value;
   }
 
@@ -315,7 +316,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   addr_t args_addr = SetupGetQueuesFunction(thread, argument_values);
 
   if (!m_get_queues_impl_code_up) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Unable to compile __introspection_dispatch_get_queues.");
     return return_value;
   }
@@ -324,7 +325,7 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
       m_get_queues_impl_code_up->GetFunctionCaller();
 
   if (get_queues_caller == nullptr) {
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "Unable to get caller for call __introspection_dispatch_get_queues");
     return return_value;
   }
@@ -353,8 +354,9 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
               "Unable to call introspection_get_dispatch_queues(), got "
               "ExpressionResults %d, error contains %s",
               func_call_ret, error.AsCString(""));
-    error.SetErrorString("Unable to call introspection_get_dispatch_queues() "
-                         "for list of queues");
+    error = Status::FromErrorString(
+        "Unable to call introspection_get_dispatch_queues() "
+        "for list of queues");
     return return_value;
   }
 

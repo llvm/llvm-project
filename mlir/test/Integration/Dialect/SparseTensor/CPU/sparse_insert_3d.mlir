@@ -10,9 +10,10 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_libs_sve} = -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils
 // DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
-// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs_sve}
 //
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
@@ -64,11 +65,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 5, 4, 3 )
     // CHECK-NEXT: lvl = ( 5, 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 3, 4
-    // CHECK-NEXT: pos[2] : ( 0, 2, 2, 2, 3, 3, 3, 4, 5
-    // CHECK-NEXT: crd[2] : ( 1, 2, 1, 2, 2
-    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 3, 4 )
+    // CHECK-NEXT: pos[2] : ( 0, 2, 2, 2, 3, 3, 3, 4, 5 )
+    // CHECK-NEXT: crd[2] : ( 1, 2, 1, 2, 2 )
+    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5 )
     // CHECK-NEXT: ----
     %tensora = tensor.empty() : tensor<5x4x3xf64, #TensorCSR>
     %tensor1 = tensor.insert %f1 into %tensora[%c3, %c0, %c1] : tensor<5x4x3xf64, #TensorCSR>
@@ -83,11 +84,11 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 5, 4, 3 )
     // CHECK-NEXT: lvl = ( 5, 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 3, 4
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4
-    // CHECK-NEXT: crd[1] : ( 0, 3, 2, 3
-    // CHECK-NEXT: values : ( 0, 1.1, 2.2, 0, 3.3, 0, 0, 0, 4.4, 0, 0, 5.5
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 3, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 2, 3 )
+    // CHECK-NEXT: values : ( 0, 1.1, 2.2, 0, 3.3, 0, 0, 0, 4.4, 0, 0, 5.5 )
     // CHECK-NEXT: ----
     %rowa = tensor.empty() : tensor<5x4x3xf64, #TensorRow>
     %row1 = tensor.insert %f1 into %rowa[%c3, %c0, %c1] : tensor<5x4x3xf64, #TensorRow>
@@ -102,11 +103,11 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 5, 4, 3 )
     // CHECK-NEXT: lvl = ( 5, 4, 3 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 3, 4
-    // CHECK-NEXT: pos[1] : ( 0, 3, 5
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 2, 3, 1, 2, 2, 3, 2
-    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 3, 4 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 2, 3, 1, 2, 2, 3, 2 )
+    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5 )
     // CHECK-NEXT: ----
     %ccoo = tensor.empty() : tensor<5x4x3xf64, #CCoo>
     %ccoo1 = tensor.insert %f1 into %ccoo[%c3, %c0, %c1] : tensor<5x4x3xf64, #CCoo>
@@ -121,9 +122,9 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 5, 4, 3 )
     // CHECK-NEXT: lvl = ( 5, 4, 3 )
-    // CHECK-NEXT: pos[1] : ( 0, 0, 0, 0, 3, 5
-    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 2, 3, 1, 2, 2, 3, 2
-    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5
+    // CHECK-NEXT: pos[1] : ( 0, 0, 0, 0, 3, 5 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 0, 2, 3, 1, 2, 2, 3, 2 )
+    // CHECK-NEXT: values : ( 1.1, 2.2, 3.3, 4.4, 5.5 )
     // CHECK-NEXT: ----
     %dcoo = tensor.empty() : tensor<5x4x3xf64, #DCoo>
     %dcoo1 = tensor.insert %f1 into %dcoo[%c3, %c0, %c1] : tensor<5x4x3xf64, #DCoo>

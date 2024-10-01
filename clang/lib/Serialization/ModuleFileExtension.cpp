@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Serialization/ModuleFileExtension.h"
-#include "llvm/ADT/Hashing.h"
+
 using namespace clang;
 
 char ModuleFileExtension::ID = 0;

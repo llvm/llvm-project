@@ -72,7 +72,7 @@ cl::opt<bool> VerboseErrors("verbose-errors",
 
 static bool isValidModule(std::unique_ptr<Module> &M,
                           bool ExitOnFailure = true) {
-  if (!llvm::verifyModule(*M.get(), &llvm::errs()))
+  if (!llvm::verifyModule(*M, &llvm::errs()))
     return true;
 
   if (ExitOnFailure) {

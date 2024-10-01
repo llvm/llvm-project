@@ -690,7 +690,7 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
       // Let P equal the precision if nonzero, 6 if the precision is not
       // specified, or 1 if the precision is 0. Then, if a conversion with
       // style E would have an exponent of X:
-      int __p = std::max(1, (__specs.__has_precision() ? __specs.__precision_ : 6));
+      int __p = std::max<int>(1, (__specs.__has_precision() ? __specs.__precision_ : 6));
       if (__result.__exponent == __result.__last)
         // if P > X >= -4, the conversion is with style f or F and precision P - 1 - X.
         // By including the radix point it calculates P - (1 + X)
@@ -774,7 +774,15 @@ struct _LIBCPP_TEMPLATE_VIS formatter<double, _CharT> : public __formatter_float
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<long double, _CharT> : public __formatter_floating_point<_CharT> {};
 
-#endif //_LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 23
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<float> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<double> = true;
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<long double> = true;
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

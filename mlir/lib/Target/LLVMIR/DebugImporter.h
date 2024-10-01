@@ -17,6 +17,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/CyclicReplacerCache.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 namespace mlir {
@@ -29,8 +31,7 @@ namespace detail {
 
 class DebugImporter {
 public:
-  DebugImporter(ModuleOp mlirModule)
-      : context(mlirModule.getContext()), mlirModule(mlirModule) {}
+  DebugImporter(ModuleOp mlirModule, bool dropDICompositeTypeElements);
 
   /// Translates the given LLVM debug location to an MLIR location.
   Location translateLoc(llvm::DILocation *loc);
@@ -64,14 +65,17 @@ private:
   DICompileUnitAttr translateImpl(llvm::DICompileUnit *node);
   DICompositeTypeAttr translateImpl(llvm::DICompositeType *node);
   DIDerivedTypeAttr translateImpl(llvm::DIDerivedType *node);
+  DIStringTypeAttr translateImpl(llvm::DIStringType *node);
   DIFileAttr translateImpl(llvm::DIFile *node);
   DILabelAttr translateImpl(llvm::DILabel *node);
   DILexicalBlockAttr translateImpl(llvm::DILexicalBlock *node);
   DILexicalBlockFileAttr translateImpl(llvm::DILexicalBlockFile *node);
   DIGlobalVariableAttr translateImpl(llvm::DIGlobalVariable *node);
   DILocalVariableAttr translateImpl(llvm::DILocalVariable *node);
+  DIVariableAttr translateImpl(llvm::DIVariable *node);
   DIModuleAttr translateImpl(llvm::DIModule *node);
   DINamespaceAttr translateImpl(llvm::DINamespace *node);
+  DIImportedEntityAttr translateImpl(llvm::DIImportedEntity *node);
   DIScopeAttr translateImpl(llvm::DIScope *node);
   DISubprogramAttr translateImpl(llvm::DISubprogram *node);
   DISubrangeAttr translateImpl(llvm::DISubrange *node);
@@ -86,27 +90,27 @@ private:
   /// for it, or create a new one if not.
   DistinctAttr getOrCreateDistinctID(llvm::DINode *node);
 
-  /// Get the `getRecSelf` constructor for the translated type of `node` if its
-  /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
-  function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
-  getRecSelfConstructor(llvm::DINode *node);
+  std::optional<DINodeAttr> createRecSelf(llvm::DINode *node);
 
-  /// A mapping between LLVM debug metadata and the corresponding attribute.
-  DenseMap<llvm::DINode *, DINodeAttr> nodeToAttr;
   /// A mapping between distinct LLVM debug metadata nodes and the corresponding
   /// distinct id attribute.
   DenseMap<llvm::DINode *, DistinctAttr> nodeToDistinctAttr;
 
-  /// A stack that stores the metadata nodes that are being traversed. The stack
-  /// is used to detect cyclic dependencies during the metadata translation.
-  /// A node is pushed with a null value. If it is ever seen twice, it is given
-  /// a recursive id attribute, indicating that it is a recursive node.
-  llvm::MapVector<llvm::DINode *, DistinctAttr> translationStack;
-  /// All the unbound recursive self references in the translation stack.
-  SmallVector<DenseSet<DistinctAttr>> unboundRecursiveSelfRefs;
+  /// A mapping between DINodes that are recursive, and their assigned recId.
+  /// This is kept so that repeated occurrences of the same node can reuse the
+  /// same ID and be deduplicated.
+  DenseMap<llvm::DINode *, DistinctAttr> nodeToRecId;
+
+  CyclicReplacerCache<llvm::DINode *, DINodeAttr> cache;
 
   MLIRContext *context;
   ModuleOp mlirModule;
+
+  /// An option to control if DICompositeTypes should always be imported without
+  /// converting their elements. If set, the option avoids the recursive
+  /// traversal of composite type debug information, which can be expensive for
+  /// adversarial inputs.
+  bool dropDICompositeTypeElements;
 };
 
 } // namespace detail

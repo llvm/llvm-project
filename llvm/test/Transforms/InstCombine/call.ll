@@ -110,7 +110,7 @@ declare i32 @test6a(i32)
 
 define i32 @test6() {
 ; CHECK-LABEL: define i32 @test6() {
-; CHECK-NEXT:    [[X:%.*]] = call i32 @test6a(i32 0)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @test6a()
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %X = call i32 @test6a( )
@@ -141,12 +141,12 @@ declare void @test8a()
 define ptr @test8() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define ptr @test8() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    invoke void @test8a()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[TRY_HANDLER:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TRY_HANDLER:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       try.handler:
 ; CHECK-NEXT:    [[EXN:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret ptr null
 ;
 ; Don't turn this into "unreachable": the callee and caller don't agree in

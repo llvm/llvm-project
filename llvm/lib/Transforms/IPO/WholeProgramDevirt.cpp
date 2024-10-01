@@ -311,7 +311,7 @@ void wholeprogramdevirt::setAfterReturnValues(
 
 VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
     : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()),
+      IsBigEndian(Fn->getDataLayout().isBigEndian()),
       WasDevirt(false) {}
 
 namespace {
@@ -860,8 +860,8 @@ void llvm::updatePublicTypeTestCalls(Module &M,
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
-          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)},
-          std::nullopt, "", CI->getIterator());
+          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)}, {}, "",
+          CI->getIterator());
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
@@ -1196,8 +1196,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // function pointer to the devirtualized target. In case of a mismatch,
       // fall back to indirect call.
       if (DevirtCheckMode == WPDCheckMode::Fallback) {
-        MDNode *Weights =
-            MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
+        MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
         // site will be executed.
@@ -1617,7 +1616,7 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
   for (uint64_t Arg : Args)
     OS << '_' << Arg;
   OS << '_' << Name;
-  return OS.str();
+  return FullName;
 }
 
 bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {
@@ -1928,7 +1927,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
   // element (the original initializer).
   auto Alias = GlobalAlias::create(
       B.GV->getInitializer()->getType(), 0, B.GV->getLinkage(), "",
-      ConstantExpr::getGetElementPtr(
+      ConstantExpr::getInBoundsGetElementPtr(
           NewInit->getType(), NewGV,
           ArrayRef<Constant *>{ConstantInt::get(Int32Ty, 0),
                                ConstantInt::get(Int32Ty, 1)}),

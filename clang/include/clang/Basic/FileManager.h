@@ -84,7 +84,7 @@ class FileManager : public RefCountedBase<FileManager> {
   /// VirtualDirectoryEntries/VirtualFileEntries above.
   ///
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
-  SeenDirEntries;
+      SeenDirEntries;
 
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
@@ -113,6 +113,12 @@ class FileManager : public RefCountedBase<FileManager> {
   /// Each FileEntry we create is assigned a unique ID #.
   ///
   unsigned NextFileUID;
+
+  /// Statistics gathered during the lifetime of the FileManager.
+  unsigned NumDirLookups = 0;
+  unsigned NumFileLookups = 0;
+  unsigned NumDirCacheMisses = 0;
+  unsigned NumFileCacheMisses = 0;
 
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
@@ -184,6 +190,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning DirectoryEntry are deprecated.",
+                  "getOptionalDirectoryRef()")
   llvm::ErrorOr<const DirectoryEntry *>
   getDirectory(StringRef DirName, bool CacheFailure = true);
 
@@ -201,6 +209,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getOptionalFileRef()")
   llvm::ErrorOr<const FileEntry *>
   getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
 
@@ -263,6 +273,8 @@ public:
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
 
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getVirtualFileRef()")
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 
@@ -280,18 +292,23 @@ public:
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
-                   bool RequiresNullTerminator = true);
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true) const {
-    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
-                                RequiresNullTerminator);
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt) const {
+    return getBufferForFileImpl(Filename,
+                                /*FileSize=*/MaybeLimit.value_or(-1),
+                                isVolatile, RequiresNullTerminator);
   }
 
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
                        bool RequiresNullTerminator) const;
+
+  DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 
 public:
   /// Get the 'stat' information for the given \p Path.
@@ -341,6 +358,10 @@ private:
 
 public:
   void PrintStats() const;
+
+  /// Import statistics from a child FileManager and add them to this current
+  /// FileManager.
+  void AddStats(const FileManager &Other);
 };
 
 } // end namespace clang

@@ -33,11 +33,11 @@ define <2 x i1> @eq_f_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @eq_f_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @eq_f_not_undef(
+define <2 x i1> @eq_f_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @eq_f_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp eq <2 x i1> %not, <i1 false, i1 false>
   ret <2 x i1> %r
 }
@@ -60,11 +60,11 @@ define <2 x i1> @ne_t_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @ne_t_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @ne_t_not_undef(
+define <2 x i1> @ne_t_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @ne_t_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp ne <2 x i1> %not, <i1 true, i1 true>
   ret <2 x i1> %r
 }
@@ -116,11 +116,11 @@ define <2 x i1> @ult_t_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @ult_t_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @ult_t_not_undef(
+define <2 x i1> @ult_t_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @ult_t_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp ult <2 x i1> %not, <i1 true, i1 true>
   ret <2 x i1> %r
 }
@@ -152,11 +152,11 @@ define <2 x i1> @sgt_t_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @sgt_t_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @sgt_t_not_undef(
+define <2 x i1> @sgt_t_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @sgt_t_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp sgt <2 x i1> %not, <i1 true, i1 true>
   ret <2 x i1> %r
 }
@@ -235,11 +235,11 @@ define <2 x i1> @ule_f_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @ule_f_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @ule_f_not_undef(
+define <2 x i1> @ule_f_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @ule_f_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp ule <2 x i1> %not, <i1 false, i1 false>
   ret <2 x i1> %r
 }
@@ -271,11 +271,11 @@ define <2 x i1> @sge_f_not_swap(<2 x i1> %a) {
   ret <2 x i1> %r
 }
 
-define <2 x i1> @sge_f_not_undef(<2 x i1> %a) {
-; CHECK-LABEL: @sge_f_not_undef(
+define <2 x i1> @sge_f_not_poison(<2 x i1> %a) {
+; CHECK-LABEL: @sge_f_not_poison(
 ; CHECK-NEXT:    ret <2 x i1> [[A:%.*]]
 ;
-  %not = xor <2 x i1> %a, <i1 undef, i1 true>
+  %not = xor <2 x i1> %a, <i1 poison, i1 true>
   %r = icmp sge <2 x i1> %not, <i1 false, i1 false>
   ret <2 x i1> %r
 }

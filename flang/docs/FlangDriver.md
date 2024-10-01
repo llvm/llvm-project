@@ -179,46 +179,20 @@ like this:
 
 ```
 $ flang -v -o example example.o
-"/usr/bin/ld" [...] example.o [...] "--whole-archive" "-lFortran_main"
-"--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal" [...]
+"/usr/bin/ld" [...] example.o [...] "-lFortranRuntime" "-lFortranDecimal" [...]
 ```
 
 The automatically added libraries are:
 
-* `Fortran_main`: Provides the main entry point `main` that then invokes
-  `_QQmain` with the Fortran program unit.  This library has a dependency to
-  the `FortranRuntime` library.
 * `FortranRuntime`: Provides most of the Flang runtime library.
 * `FortranDecimal`: Provides operations for decimal numbers.
-
-The default is that, when using Flang as the linker, one of the Fortran
-translation units provides the program unit and therefore it is assumed that
-Fortran is the main code part (calling into C/C++ routines via `BIND (C)`
-interfaces).  When composing the linker commandline, Flang uses
-`--whole-archive` and `--no-whole-archive` (Windows: `/WHOLEARCHIVE:`,
-Darwin & AIX: *not implemented yet*) to make sure that all for `Fortran_main`
-is processed by the linker.  This is done to issue a proper error message when
-multiple definitions of `main` occur.  This happens, for instance, when linking
-a code that has a Fortran program unit with a C/C++ code that also defines a
-`main` function.  A user may be required to explicitly provide the C++ runtime
-libraries at link time (e.g., via `-lstdc++` for STL)
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
 In this case, one has to explicitly provide the Fortran runtime libraries
-`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link
-and use the `-fno-fortran-main` flag.  This flag removes
-`Fortran_main` from the linker stage and hence requires one of the C/C++
-translation units to provide a definition of the `main` function. In this case,
-it may be required to explicitly supply C++ runtime libraries as mentioned above.
-
-When creating shared or static libraries using Flang with `-shared` or `-static`
-flag, Fortran_main is automatically removed from the linker stage (i.e.,
-`-fno-fortran-main` is on by default).  It is assumed that when creating a
-static or shared library, the generated library does not need a `main`
-function, as a final link stage will occur that will provide the `Fortran_main`
-library when creating the final executable.
+`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link.
+In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
@@ -265,26 +239,6 @@ action flags, only the last one will be taken into account. The default action
 is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang-new -fc1 <input-file>` is equivalent to `flang-new -fc1 -fsyntax-only
 <input-file>`.
-
-## The `flang-to-external-fc` script
-The `flang-to-external-fc` wrapper script for `flang-new` was introduced as a
-development tool and to facilitate testing. The `flang-to-external-fc` wrapper
-script will:
-* use `flang-new` to unparse the input source file (i.e. it will run `flang-new
-  -fc1 -fdebug-unparse <input-file>`), and then
-* call a host Fortran compiler, e.g. `gfortran`, to compile the unparsed file.
-
-Here's a basic breakdown of what happens inside `flang-to-external-fc` when you
-run `flang-to-external-fc file.f90`:
-```bash
-flang-new -fc1 -fdebug-unparse file.f90 -o file-unparsed.f90
-gfortran file-unparsed.f90
-```
-This is a simplified version for illustration purposes only. In practice,
-`flang-to-external-fc` adds a few more frontend options and it also supports
-various other use cases (e.g. compiling C files, linking existing object
-files). `gfortran` is the default host compiler used by `flang-to-external-fc`.
-You can change it by setting the `FLANG_FC` environment variable.
 
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
@@ -563,6 +517,16 @@ Lastly, if `ParseTree` modifications are performed, then it might be necessary
 to re-analyze expressions and modify scope or symbols. You can check
 [Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
 e.g. during the semantic checks.
+
+## FIR Optimizer Pass Pipeline Extension Points
+
+The default FIR optimizer pass pipeline `createDefaultFIROptimizerPassPipeline`
+in `flang/lib/Optimizer/Passes/Pipelines.cpp` contains extension point callback
+invocations `invokeFIROptEarlyEPCallbacks`, `invokeFIRInlinerCallback`, and
+`invokeFIROptLastEPCallbacks` for Flang drivers to be able to insert additonal
+passes at different points of the default pass pipeline. An example use of these
+extension point callbacks is shown in `registerDefaultInlinerPass` to invoke the
+default inliner pass in `flang-new`.
 
 ## LLVM Pass Plugins
 

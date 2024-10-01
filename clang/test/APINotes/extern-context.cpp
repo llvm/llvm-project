@@ -1,8 +1,8 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalInExternC -x c++ | FileCheck -check-prefix=CHECK-EXTERN-C %s
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalInExternCXX -x c++ | FileCheck -check-prefix=CHECK-EXTERN-CXX %s
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalFuncInExternC -x c++ | FileCheck -check-prefix=CHECK-FUNC-EXTERN-C %s
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -fsyntax-only -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalFuncInExternCXX -x c++ | FileCheck -check-prefix=CHECK-FUNC-EXTERN-CXX %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalInExternC -x c++ | FileCheck -check-prefix=CHECK-EXTERN-C %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalInExternCXX -x c++ | FileCheck -check-prefix=CHECK-EXTERN-CXX %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalFuncInExternC -x c++ | FileCheck -check-prefix=CHECK-FUNC-EXTERN-C %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter globalFuncInExternCXX -x c++ | FileCheck -check-prefix=CHECK-FUNC-EXTERN-CXX %s
 
 #include "ExternCtx.h"
 

@@ -993,24 +993,24 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ldrb w8, [x0, #4095]
 ; CHECK-NOLSE-O1-NEXT:    ldrb w9, [x0, w1, sxtw]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O1-NEXT:    ldurb w10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w9
-; CHECK-NOLSE-O1-NEXT:    ldrb w9, [x11]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10
-; CHECK-NOLSE-O1-NEXT:    add w0, w8, w9
+; CHECK-NOLSE-O1-NEXT:    add w8, w9, w8, uxtb
+; CHECK-NOLSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldrb w9, [x9]
+; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10, uxtb
+; CHECK-NOLSE-O1-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: atomic_load_relaxed_8:
 ; CHECK-OUTLINE-O1:       ; %bb.0:
 ; CHECK-OUTLINE-O1-NEXT:    ldrb w8, [x0, #4095]
 ; CHECK-OUTLINE-O1-NEXT:    ldrb w9, [x0, w1, sxtw]
-; CHECK-OUTLINE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
 ; CHECK-OUTLINE-O1-NEXT:    ldurb w10, [x0, #-256]
-; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w9
-; CHECK-OUTLINE-O1-NEXT:    ldrb w9, [x11]
-; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w10
-; CHECK-OUTLINE-O1-NEXT:    add w0, w8, w9
+; CHECK-OUTLINE-O1-NEXT:    add w8, w9, w8, uxtb
+; CHECK-OUTLINE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-OUTLINE-O1-NEXT:    ldrb w9, [x9]
+; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w10, uxtb
+; CHECK-OUTLINE-O1-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-OUTLINE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_8:
@@ -1045,12 +1045,12 @@ define i8 @atomic_load_relaxed_8(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    ldrb w8, [x0, #4095]
 ; CHECK-LSE-O1-NEXT:    ldrb w9, [x0, w1, sxtw]
-; CHECK-LSE-O1-NEXT:    ldurb w10, [x0, #-256]
-; CHECK-LSE-O1-NEXT:    add w8, w8, w10
-; CHECK-LSE-O1-NEXT:    add w8, w8, w9
+; CHECK-LSE-O1-NEXT:    add w8, w9, w8, uxtb
+; CHECK-LSE-O1-NEXT:    ldurb w9, [x0, #-256]
+; CHECK-LSE-O1-NEXT:    add w8, w8, w9, uxtb
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldrb w9, [x9]
-; CHECK-LSE-O1-NEXT:    add w0, w8, w9
+; CHECK-LSE-O1-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: atomic_load_relaxed_8:
@@ -1089,24 +1089,24 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) #0 {
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    ldrh w8, [x0, #8190]
 ; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x0, w1, sxtw #1]
-; CHECK-NOLSE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
 ; CHECK-NOLSE-O1-NEXT:    ldurh w10, [x0, #-256]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w9
-; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x11]
-; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10
-; CHECK-NOLSE-O1-NEXT:    add w0, w8, w9
+; CHECK-NOLSE-O1-NEXT:    add w8, w9, w8, uxth
+; CHECK-NOLSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x9]
+; CHECK-NOLSE-O1-NEXT:    add w8, w8, w10, uxth
+; CHECK-NOLSE-O1-NEXT:    add w0, w8, w9, uxth
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: atomic_load_relaxed_16:
 ; CHECK-OUTLINE-O1:       ; %bb.0:
 ; CHECK-OUTLINE-O1-NEXT:    ldrh w8, [x0, #8190]
 ; CHECK-OUTLINE-O1-NEXT:    ldrh w9, [x0, w1, sxtw #1]
-; CHECK-OUTLINE-O1-NEXT:    add x11, x0, #291, lsl #12 ; =1191936
 ; CHECK-OUTLINE-O1-NEXT:    ldurh w10, [x0, #-256]
-; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w9
-; CHECK-OUTLINE-O1-NEXT:    ldrh w9, [x11]
-; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w10
-; CHECK-OUTLINE-O1-NEXT:    add w0, w8, w9
+; CHECK-OUTLINE-O1-NEXT:    add w8, w9, w8, uxth
+; CHECK-OUTLINE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
+; CHECK-OUTLINE-O1-NEXT:    ldrh w9, [x9]
+; CHECK-OUTLINE-O1-NEXT:    add w8, w8, w10, uxth
+; CHECK-OUTLINE-O1-NEXT:    add w0, w8, w9, uxth
 ; CHECK-OUTLINE-O1-NEXT:    ret
 ;
 ; CHECK-NOLSE-O0-LABEL: atomic_load_relaxed_16:
@@ -1141,12 +1141,12 @@ define i16 @atomic_load_relaxed_16(ptr %p, i32 %off32) #0 {
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    ldrh w8, [x0, #8190]
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x0, w1, sxtw #1]
-; CHECK-LSE-O1-NEXT:    ldurh w10, [x0, #-256]
-; CHECK-LSE-O1-NEXT:    add w8, w8, w10
-; CHECK-LSE-O1-NEXT:    add w8, w8, w9
+; CHECK-LSE-O1-NEXT:    add w8, w9, w8, uxth
+; CHECK-LSE-O1-NEXT:    ldurh w9, [x0, #-256]
+; CHECK-LSE-O1-NEXT:    add w8, w8, w9, uxth
 ; CHECK-LSE-O1-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x9]
-; CHECK-LSE-O1-NEXT:    add w0, w8, w9
+; CHECK-LSE-O1-NEXT:    add w0, w8, w9, uxth
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: atomic_load_relaxed_16:
@@ -2659,9 +2659,9 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:  LBB35_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, lo
+; CHECK-NOLSE-O1-NEXT:    and w8, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w8, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w8, w9, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxrb w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB35_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2674,9 +2674,9 @@ define i8 @atomicrmw_umin_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:  LBB35_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xff
-; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, lo
+; CHECK-OUTLINE-O1-NEXT:    and w8, w8, #0xff
+; CHECK-OUTLINE-O1-NEXT:    cmp w8, w9
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w8, w9, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxrb w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB35_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2781,9 +2781,9 @@ define i8 @atomicrmw_umax_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:  LBB36_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-NOLSE-O1-NEXT:    and w8, w8, #0xff
+; CHECK-NOLSE-O1-NEXT:    cmp w8, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w8, w9, hi
 ; CHECK-NOLSE-O1-NEXT:    stxrb w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB36_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2796,9 +2796,9 @@ define i8 @atomicrmw_umax_i8(ptr %ptr, i8 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:  LBB36_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xff
-; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-OUTLINE-O1-NEXT:    and w8, w8, #0xff
+; CHECK-OUTLINE-O1-NEXT:    cmp w8, w9
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w8, w9, hi
 ; CHECK-OUTLINE-O1-NEXT:    stxrb w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB36_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3714,9 +3714,9 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:  LBB45_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, lo
+; CHECK-NOLSE-O1-NEXT:    and w8, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w8, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w8, w9, lo
 ; CHECK-NOLSE-O1-NEXT:    stlxrh w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB45_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3729,9 +3729,9 @@ define i16 @atomicrmw_umin_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:  LBB45_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, lo
+; CHECK-OUTLINE-O1-NEXT:    and w8, w8, #0xffff
+; CHECK-OUTLINE-O1-NEXT:    cmp w8, w9
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w8, w9, lo
 ; CHECK-OUTLINE-O1-NEXT:    stlxrh w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB45_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3836,9 +3836,9 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-NOLSE-O1-NEXT:  LBB46_1: ; %atomicrmw.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-NOLSE-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-NOLSE-O1-NEXT:    cmp w10, w9
-; CHECK-NOLSE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-NOLSE-O1-NEXT:    and w8, w8, #0xffff
+; CHECK-NOLSE-O1-NEXT:    cmp w8, w9
+; CHECK-NOLSE-O1-NEXT:    csel w10, w8, w9, hi
 ; CHECK-NOLSE-O1-NEXT:    stxrh w11, w10, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w11, LBB46_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3851,9 +3851,9 @@ define i16 @atomicrmw_umax_i16(ptr %ptr, i16 %rhs) {
 ; CHECK-OUTLINE-O1-NEXT:  LBB46_1: ; %atomicrmw.start
 ; CHECK-OUTLINE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-OUTLINE-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-OUTLINE-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-OUTLINE-O1-NEXT:    cmp w10, w9
-; CHECK-OUTLINE-O1-NEXT:    csel w10, w10, w9, hi
+; CHECK-OUTLINE-O1-NEXT:    and w8, w8, #0xffff
+; CHECK-OUTLINE-O1-NEXT:    cmp w8, w9
+; CHECK-OUTLINE-O1-NEXT:    csel w10, w8, w9, hi
 ; CHECK-OUTLINE-O1-NEXT:    stxrh w11, w10, [x0]
 ; CHECK-OUTLINE-O1-NEXT:    cbnz w11, LBB46_1
 ; CHECK-OUTLINE-O1-NEXT:  ; %bb.2: ; %atomicrmw.end

@@ -4,11 +4,11 @@
 ; RUN:     | FileCheck -check-prefix=RELAX-DWARFDUMP %s
 ;
 ; RELAX:      Section ({{.*}}) .rela.eh_frame {
-; RELAX-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x30 R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x44 R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x48 R_RISCV_ADD32 <null> 0x0
-; RELAX-NEXT:   0x48 R_RISCV_SUB32 <null> 0x0
+; RELAX-NEXT:   0x1C R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x30 R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x44 R_RISCV_32_PCREL .L0  0x0
+; RELAX-NEXT:   0x48 R_RISCV_ADD32 .L0  0x0
+; RELAX-NEXT:   0x48 R_RISCV_SUB32 .L0  0x0
 ; RELAX-NEXT:  }
 
 ; RELAX-DWARFDUMP-NOT: error: failed to compute relocation

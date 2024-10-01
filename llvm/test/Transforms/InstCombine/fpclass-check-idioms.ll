@@ -217,12 +217,7 @@ define i1 @f32_fczero_strictfp(float %a) strictfp {
 define i1 @f32_fcnan(float %a) {
 ; CHECK-LABEL: define i1 @f32_fcnan(
 ; CHECK-SAME: float [[A:%.*]]) {
-; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A]] to i32
-; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[I32]], 2139095040
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND1]], 2139095040
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[I32]], 8388607
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND2]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fcmp uno float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %i32 = bitcast float %a to i32
@@ -645,6 +640,241 @@ define i1 @f32_fcposinf_multiuse_strictfp(float %a) strictfp {
   call void @usei32(i32 %i32)
   %cmp = icmp eq i32 %i32, 2139095040
   ret i1 %cmp
+}
+
+define i1 @isnan_idiom(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define <2 x i1> @isnan_idiom_vec(<2 x double> %x) {
+; CHECK-LABEL: define <2 x i1> @isnan_idiom_vec(
+; CHECK-SAME: <2 x double> [[X:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno <2 x double> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %bits = bitcast <2 x double> %x to <2 x i64>
+  %mask1 = and <2 x i64> %bits, splat(i64 9218868437227405312)
+  %cond1 = icmp eq <2 x i64> %mask1, splat(i64 9218868437227405312)
+  %mask2 = and <2 x i64> %bits, splat(i64 4503599627370495)
+  %cond2 = icmp ne <2 x i64> %mask2, zeroinitializer
+  %ret = and <2 x i1> %cond1, %cond2
+  ret <2 x i1> %ret
+}
+
+define i1 @isnan_idiom_commuted(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_commuted(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond2, %cond1
+  ret i1 %ret
+}
+
+define i1 @isnotnan_idiom(double %x) {
+; CHECK-LABEL: define i1 @isnotnan_idiom(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[RET:%.*]] = fcmp ord double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp ne i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp eq i64 %mask2, 0
+  %ret = or i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+; negative tests
+
+define i1 @isnan_idiom_strictfp(double %x) strictfp {
+; CHECK-LABEL: define i1 @isnan_idiom_strictfp(
+; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370495
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_pred1(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_pred1(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370495
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp ne i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_pred2(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_pred2(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[X]])
+; CHECK-NEXT:    [[RET:%.*]] = fcmp oeq double [[TMP1]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp eq i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_pred3(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_pred3(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370495
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = or i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = or i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_mask1(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_mask1(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405311
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405311
+; CHECK-NEXT:    ret i1 [[COND1]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405311
+  %cond1 = icmp eq i64 %mask1, 9218868437227405311
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_mask2(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_mask2(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370494
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370494
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_wrong_mask3(double %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_wrong_mask3(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast double [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370495
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 4503599627370495
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast double %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 4503599627370495
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_invalid_bitcast(<2 x float> %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_invalid_bitcast(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <2 x float> [[X]] to i64
+; CHECK-NEXT:    [[MASK1:%.*]] = and i64 [[BITS]], 9218868437227405312
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[MASK1]], 9218868437227405312
+; CHECK-NEXT:    [[MASK2:%.*]] = and i64 [[BITS]], 4503599627370495
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i64 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast <2 x float> %x to i64
+  %mask1 = and i64 %bits, 9218868437227405312
+  %cond1 = icmp eq i64 %mask1, 9218868437227405312
+  %mask2 = and i64 %bits, 4503599627370495
+  %cond2 = icmp ne i64 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
+}
+
+define i1 @isnan_idiom_ppc_fp128(ppc_fp128 %x) {
+; CHECK-LABEL: define i1 @isnan_idiom_ppc_fp128(
+; CHECK-SAME: ppc_fp128 [[X:%.*]]) {
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast ppc_fp128 [[X]] to i128
+; CHECK-NEXT:    [[MASK1:%.*]] = and i128 [[BITS]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i128 [[MASK1]], 170058106710732674489630815774616584192
+; CHECK-NEXT:    [[MASK2:%.*]] = and i128 [[BITS]], 83076749736557242056487941267521535
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i128 [[MASK2]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %bits = bitcast ppc_fp128 %x to i128
+  %mask1 = and i128 %bits, 170058106710732674489630815774616584192
+  %cond1 = icmp eq i128 %mask1, 170058106710732674489630815774616584192
+  %mask2 = and i128 %bits, 83076749736557242056487941267521535
+  %cond2 = icmp ne i128 %mask2, 0
+  %ret = and i1 %cond1, %cond2
+  ret i1 %ret
 }
 
 declare void @usei32(i32)

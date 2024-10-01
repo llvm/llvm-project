@@ -17,7 +17,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -376,7 +375,7 @@ public:
 
   /// Parse a shared string from the string section. The shared string is
   /// encoded using an index to a corresponding string in the string section.
-  LogicalResult parseString(EncodingReader &reader, StringRef &result) {
+  LogicalResult parseString(EncodingReader &reader, StringRef &result) const {
     return parseEntry(reader, strings, result, "string");
   }
 
@@ -384,7 +383,7 @@ public:
   /// encoded using an index to a corresponding string in the string section.
   /// This variant parses a flag compressed with the index.
   LogicalResult parseStringWithFlag(EncodingReader &reader, StringRef &result,
-                                    bool &flag) {
+                                    bool &flag) const {
     uint64_t entryIdx;
     if (failed(reader.parseVarIntWithFlag(entryIdx, flag)))
       return failure();
@@ -394,7 +393,7 @@ public:
   /// Parse a shared string from the string section. The shared string is
   /// encoded using an index to a corresponding string in the string section.
   LogicalResult parseStringAtIndex(EncodingReader &reader, uint64_t index,
-                                   StringRef &result) {
+                                   StringRef &result) const {
     return resolveEntry(reader, strings, index, result, "string");
   }
 
@@ -545,7 +544,7 @@ public:
 
   /// Parse a dialect resource handle from the resource section.
   LogicalResult parseResourceHandle(EncodingReader &reader,
-                                    AsmDialectResourceHandle &result) {
+                                    AsmDialectResourceHandle &result) const {
     return parseEntry(reader, dialectResources, result, "resource handle");
   }
 
@@ -707,7 +706,7 @@ LogicalResult ResourceSectionReader::initialize(
     auto resolveKey = [&](StringRef key) -> StringRef {
       auto it = dialectResourceHandleRenamingMap.find(key);
       if (it == dialectResourceHandleRenamingMap.end())
-        return "";
+        return key;
       return it->second;
     };
 
@@ -801,8 +800,8 @@ class AttrTypeReader {
   using TypeEntry = Entry<Type>;
 
 public:
-  AttrTypeReader(StringSectionReader &stringReader,
-                 ResourceSectionReader &resourceReader,
+  AttrTypeReader(const StringSectionReader &stringReader,
+                 const ResourceSectionReader &resourceReader,
                  const llvm::StringMap<BytecodeDialect *> &dialectsMap,
                  uint64_t &bytecodeVersion, Location fileLoc,
                  const ParserConfig &config)
@@ -882,11 +881,11 @@ private:
 
   /// The string section reader used to resolve string references when parsing
   /// custom encoded attribute/type entries.
-  StringSectionReader &stringReader;
+  const StringSectionReader &stringReader;
 
   /// The resource section reader used to resolve resource references when
   /// parsing custom encoded attribute/type entries.
-  ResourceSectionReader &resourceReader;
+  const ResourceSectionReader &resourceReader;
 
   /// The map of the loaded dialects used to retrieve dialect information, such
   /// as the dialect version.
@@ -909,8 +908,8 @@ private:
 class DialectReader : public DialectBytecodeReader {
 public:
   DialectReader(AttrTypeReader &attrTypeReader,
-                StringSectionReader &stringReader,
-                ResourceSectionReader &resourceReader,
+                const StringSectionReader &stringReader,
+                const ResourceSectionReader &resourceReader,
                 const llvm::StringMap<BytecodeDialect *> &dialectsMap,
                 EncodingReader &reader, uint64_t &bytecodeVersion)
       : attrTypeReader(attrTypeReader), stringReader(stringReader),
@@ -1043,8 +1042,8 @@ public:
 
 private:
   AttrTypeReader &attrTypeReader;
-  StringSectionReader &stringReader;
-  ResourceSectionReader &resourceReader;
+  const StringSectionReader &stringReader;
+  const ResourceSectionReader &resourceReader;
   const llvm::StringMap<BytecodeDialect *> &dialectsMap;
   EncodingReader &reader;
   uint64_t &bytecodeVersion;
@@ -1083,7 +1082,7 @@ public:
   }
 
   LogicalResult read(Location fileLoc, DialectReader &dialectReader,
-                     OperationName *opName, OperationState &opState) {
+                     OperationName *opName, OperationState &opState) const {
     uint64_t propertiesIdx;
     if (failed(dialectReader.readVarInt(propertiesIdx)))
       return failure();
@@ -2018,10 +2017,9 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   DenseSet<unsigned> set;
   uint64_t accumulator = 0;
   for (const auto &elem : shuffle) {
-    if (set.contains(elem))
+    if (!set.insert(elem).second)
       return failure();
     accumulator += elem;
-    set.insert(elem);
   }
   if (numUses != shuffle.size() ||
       accumulator != (((numUses - 1) * numUses) >> 1))

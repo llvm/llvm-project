@@ -1,6 +1,4 @@
 // REQUIRES: zlib && !zstd
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
 
 // Test compress bundled bitcode.
 

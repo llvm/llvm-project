@@ -410,7 +410,7 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
                                                const void *new_mid_p) {
   if (!flags()->detect_container_overflow)
     return;
-  VPrintf(2, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p\n", beg_p, end_p, old_mid_p,
           new_mid_p);
   uptr storage_beg = reinterpret_cast<uptr>(beg_p);
   uptr storage_end = reinterpret_cast<uptr>(end_p);
@@ -479,7 +479,7 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if (!flags()->detect_container_overflow)
     return;
 
-  VPrintf(2, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
+  VPrintf(3, "contiguous_container: %p %p %p %p %p %p\n", storage_beg_p,
           storage_end_p, old_container_beg_p, old_container_end_p,
           new_container_beg_p, new_container_end_p);
 

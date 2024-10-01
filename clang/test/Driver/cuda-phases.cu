@@ -4,9 +4,6 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // Test single gpu architecture with complete compilation.
 //
 // Test CUDA NVPTX phases.

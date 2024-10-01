@@ -267,7 +267,234 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define void @ne_nsw_pos_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nsw_pos_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_pos_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %pos_step = icmp sgt i32 %s, 0
+  call void @llvm.assume(i1 %pos_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
 
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nsw_neg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nsw_neg_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_neg_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %neg_step = icmp slt i32 %s, 0
+  call void @llvm.assume(i1 %neg_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nsw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nsw_nonneg_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_nonneg_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %nonneg_step = icmp sge i32 %s, 0
+  call void @llvm.assume(i1 %nonneg_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nsw_unknown_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nsw_unknown_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_unknown_step
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nuw_pos_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nuw_pos_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_pos_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %pos_step = icmp sgt i32 %s, 0
+  call void @llvm.assume(i1 %pos_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nuw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nuw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nuw_neg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nuw_neg_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_neg_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %n) + %s) /u (-1 * %s))
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %neg_step = icmp slt i32 %s, 0
+  call void @llvm.assume(i1 %neg_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nuw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nuw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nuw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nuw_nonneg_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_nonneg_step
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %nonneg_step = icmp sge i32 %s, 0
+  call void @llvm.assume(i1 %nonneg_step)
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nuw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nuw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+define void @ne_nuw_unknown_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
+;
+; CHECK-LABEL: 'ne_nuw_unknown_step'
+; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_unknown_step
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %cmp4 = icmp sgt i32 %n, 0
+  br i1 %cmp4, label %for.body, label %for.end
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
+  %inc = add nuw i32 %0, 1
+  store i32 %inc, ptr %arrayidx, align 4
+  %add = add nuw i32 %i.05, %s
+  %cmp = icmp ne i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+
+declare void @llvm.assume(i1)
 
 !8 = distinct !{!8, !9}
 !9 = !{!"llvm.loop.mustprogress"}

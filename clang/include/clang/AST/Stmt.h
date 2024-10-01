@@ -460,10 +460,10 @@ protected:
     unsigned : NumExprBits;
 
     static_assert(
-        llvm::APFloat::S_MaxSemantics < 16,
-        "Too many Semantics enum values to fit in bitfield of size 4");
+        llvm::APFloat::S_MaxSemantics < 32,
+        "Too many Semantics enum values to fit in bitfield of size 5");
     LLVM_PREFERRED_TYPE(llvm::APFloat::Semantics)
-    unsigned Semantics : 4; // Provides semantics for APFloat construction
+    unsigned Semantics : 5; // Provides semantics for APFloat construction
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsExact : 1;
   };
@@ -561,8 +561,11 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
+    /// True if the call expression is a must-elide call to a coroutine.
+    unsigned IsCoroElideSafe : 1;
+
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    unsigned : 24 - 4 - NumExprBits;
 
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
@@ -583,11 +586,13 @@ protected:
     unsigned IsArrow : 1;
 
     /// True if this member expression used a nested-name-specifier to
-    /// refer to the member, e.g., "x->Base::f", or found its member via
-    /// a using declaration.  When true, a MemberExprNameQualifier
-    /// structure is allocated immediately after the MemberExpr.
+    /// refer to the member, e.g., "x->Base::f".
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasQualifierOrFoundDecl : 1;
+    unsigned HasQualifier : 1;
+
+    // True if this member expression found its member via a using declaration.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFoundDecl : 1;
 
     /// True if this member expression specified a template keyword
     /// and/or a template argument list explicitly, e.g., x->f<int>,
@@ -647,6 +652,11 @@ protected:
     /// It is 0 otherwise.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
+
+    /// Whether or not this BinaryOperator should be excluded from integer
+    /// overflow sanitization.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExcludedOverflowPattern : 1;
 
     SourceLocation OpLoc;
   };
@@ -781,6 +791,11 @@ protected:
     /// Whether this is an implicit "this".
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImplicit : 1;
+
+    /// Whether there is a lambda with an explicit object parameter that
+    /// captures this "this" by copy.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
 
     /// The location of the "this".
     SourceLocation Loc;
@@ -1060,11 +1075,6 @@ protected:
     /// argument-dependent lookup if this is the operand of a function call.
     LLVM_PREFERRED_TYPE(bool)
     unsigned RequiresADL : 1;
-
-    /// True if these lookup results are overloaded.  This is pretty trivially
-    /// rederivable if we urgently need to kill this field.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned Overloaded : 1;
   };
   static_assert(sizeof(UnresolvedLookupExprBitfields) <= 4,
                 "UnresolvedLookupExprBitfields must be <= than 4 bytes to"
@@ -1654,6 +1664,11 @@ public:
   FPOptionsOverride getStoredFPFeatures() const {
     assert(hasStoredFPFeatures());
     return *getTrailingObjects<FPOptionsOverride>();
+  }
+
+  /// Get the store FPOptionsOverride or default if not stored.
+  FPOptionsOverride getStoredFPFeaturesOrDefault() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
   }
 
   using body_iterator = Stmt **;

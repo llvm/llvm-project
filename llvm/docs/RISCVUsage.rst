@@ -70,6 +70,33 @@ To specify the target triple:
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. ``riscv32``) with the extension ``e``.
 
+Profiles
+========
+
+Supported profile names can be passed using ``-march`` instead of a standard
+ISA naming string. Currently supported profiles:
+
+* ``rvi20u32``
+* ``rvi20u64``
+* ``rva20u64``
+* ``rva20s64``
+* ``rva22u64``
+* ``rva22s64``
+
+Note that you can also append additional extension names to be enabled, e.g.
+``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
+in the ``rva20u64`` profile.
+
+Profiles that are not yet ratified cannot be used unless
+``-menable-experimental-extensions`` (or equivalent for other tools) is
+specified. This applies to the following profiles:
+
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
+* ``rvm23u32``
+
 .. _riscv-extensions:
 
 Extensions
@@ -85,6 +112,7 @@ on support follow.
      Extension         Status
      ================  =================================================================
      ``A``             Supported
+     ``B``             Supported
      ``C``             Supported
      ``D``             Supported
      ``F``             Supported
@@ -98,11 +126,17 @@ on support follow.
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
+     ``Smcdeleg``      Supported
+     ``Smcsrind``      Supported
      ``Smepmp``        Supported
+     ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
+     ``Ssccfg``        Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscsrind``      Supported
+     ``Ssqosid``       Assembly Support
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstc``          Assembly Support
@@ -118,7 +152,11 @@ on support follow.
      ``V``             Supported
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Zaamo``         Assembly Support
+     ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zalrsc``        Assembly Support
+     ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
      ``Zba``           Supported
      ``Zbb``           Supported
@@ -131,10 +169,12 @@ on support follow.
      ``Zcb``           Supported
      ``Zcd``           Supported
      ``Zcf``           Supported
+     ``Zcmop``         Supported
      ``Zcmp``          Supported
      ``Zcmt``          Assembly Support
      ``Zdinx``         Supported
      ``Zfa``           Supported
+     ``Zfbfmin``       Supported
      ``Zfh``           Supported
      ``Zfhmin``        Supported
      ``Zfinx``         Supported
@@ -155,6 +195,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
      ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -166,28 +207,32 @@ on support follow.
      ``Zks``           Supported
      ``Zkt``           Supported
      ``Zmmul``         Supported
-     ``Zvbb``          Assembly Support
-     ``Zvbc``          Assembly Support
+     ``Ztso``          Supported
+     ``Zvbb``          Supported
+     ``Zvbc``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
      ``Zve64f``        Supported
      ``Zve64d``        Supported
+     ``Zvfbfmin``      Supported
+     ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
-     ``Zvkb``          Assembly Support
-     ``Zvkg``          Assembly Support
-     ``Zvkn``          Assembly Support
-     ``Zvknc``         Assembly Support
-     ``Zvkned``        Assembly Support
-     ``Zvkng``         Assembly Support
-     ``Zvknha``        Assembly Support
-     ``Zvknhb``        Assembly Support
-     ``Zvks``          Assembly Support
-     ``Zvksc``         Assembly Support
-     ``Zvksed``        Assembly Support
-     ``Zvksg``         Assembly Support
-     ``Zvksh``         Assembly Support
-     ``Zvkt``          Assembly Support
+     ``Zvfhmin``       Supported
+     ``Zvkb``          Supported
+     ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkned``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkng``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknha``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvknhb``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvks``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksc``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksed``        Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksg``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvksh``         Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkt``          Supported
      ``Zvl32b``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``        Supported
      ``Zvl128b``       Supported
@@ -223,6 +268,11 @@ Supported
 ``Zknd``, ``Zkne``, ``Zknh``, ``Zksed``, ``Zksh``
   No pattern matching exists.  As a result, these instructions can only be used from assembler or via intrinsic calls.
 
+.. _riscv-vector-crypto-note:
+
+``Zvbc``, ``Zvkg``, ``Zvkn``, ``Zvknc``, ``Zvkned``, ``Zvkng``, ``Zvknha``, ``Zvknhb``, ``Zvks``, ``Zvks``, ``Zvks``, ``Zvksc``, ``Zvksed``, ``Zvksg``, ``Zvksh``.
+  No pattern matching exists. As a result, these instructions can only be used from assembler or via intrinsic calls.
+
 .. _riscv-vlen-32-note:
 
 ``Zve32x``, ``Zve32f``, ``Zvl32b``
@@ -235,13 +285,20 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
-  .. _riscv-zacas-note:
+.. _riscv-zacas-note:
 
 ``Zacas``
-  amocas.w will be used for i32 cmpxchg. amocas.d will be used i64 cmpxchg on RV64. The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+
+Atomics ABIs
+============
+
+At the time of writing there are three atomics mappings (ABIs) `defined for RISC-V <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version>`__.  As of LLVM 19, LLVM defaults to "A6S", which is compatible with both the original "A6" and the future "A7" ABI. See `the psABI atomics document <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-atomic.adoc>`__ for more information on these mappings.
+
+Note that although the "A6S" mapping is used, the ELF attribute recording the mapping isn't currently emitted by default due to a bug causing a crash in older versions of binutils when processing files containing this attribute.
 
 Experimental Extensions
 =======================
@@ -251,34 +308,19 @@ LLVM supports (to various degrees) a number of experimental extensions.  All exp
 The primary goal of experimental support is to assist in the process of ratification by providing an existence proof of an implementation, and simplifying efforts to validate the value of a proposed extension against large code bases.  Experimental extensions are expected to either transition to ratified status, or be eventually removed.  The decision on whether to accept an experimental extension is currently done on an entirely case by case basis; if you want to propose one, attending the bi-weekly RISC-V sync-up call is strongly advised.
 
 ``experimental-ssnpm``, ``experimental-smnpm``, ``experimental-smmpm``, ``experimental-sspm``, ``experimental-supm``
-  LLVM implements the `v0.8.1 draft specification <https://github.com/riscv/riscv-j-extension/blob/master/zjpm-spec.pdf>`__.
-
-``experimental-ssqosid``
-  LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
-
-``experimental-zabha``
-  LLVM implements the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
+  LLVM implements the `v1.0.0-rc2 specification <https://github.com/riscv/riscv-j-extension/releases/tag/pointer-masking-v1.0.0-rc2>`__.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
 
-``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
-  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`__.
-
 ``experimental-zicfilp``, ``experimental-zicfiss``
-  LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
+  LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
 
-``experimental-ztso``
-  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
+``experimental-zvbc32e``, ``experimental-zvkgs``
+  LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
-``experimental-zimop``
-  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
-
-``experimental-zcmop``
-  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
-
-``experimental-zaamo``, ``experimental-zalrsc``
-  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-zaamo-zalrsc/releases/tag/v0.2>`__.
+``experimental-smctr``, ``experimental-ssctr``
+  LLVM implements the `1.0-rc3 specification <https://github.com/riscv/riscv-control-transfer-records/releases/tag/v1.0_rc3>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
@@ -330,7 +372,7 @@ The current vendor extensions supported are:
   LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`__ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
 
 ``XSfvcp``
-  LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
+  LLVM implements `version 1.1.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/Zn3m1R5LeNNTwnLS_vcix-spec-software-v1p1.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
 ``XSfvqmaccdod``, ``XSfvqmaccqoq``
   LLVM implements `version 1.1.0 of the SiFive Int8 Matrix Multiplication Extensions Specification <https://sifive.cdn.prismic.io/sifive/1a2ad85b-d818-49f7-ba83-f51f1731edbe_int8-matmul-spec.pdf>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification linked above.
@@ -371,6 +413,9 @@ The current vendor extensions supported are:
 ``XSfcease``
   LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
 
+``Xwchc``
+  LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
 Experimental C Intrinsics
 =========================
 
@@ -379,19 +424,31 @@ extension are still experimental.  To use C intrinsics for such an extension
 from `clang`, you must add `-menable-experimental-extensions` to the command
 line.  This currently applies to the following extensions:
 
-* ``Zvbb``
-* ``Zvbc``
-* ``Zvkb``
-* ``Zvkg``
-* ``Zvkn``
-* ``Zvknc``
-* ``Zvkned``
-* ``Zvkng``
-* ``Zvknha``
-* ``Zvknhb``
-* ``Zvks``
-* ``Zvksc``
-* ``Zvksed``
-* ``Zvksg``
-* ``Zvksh``
-* ``Zvkt``
+No extensions have experimental intrinsics.
+
+Global Pointer (GP) Relaxation and the Small Data Limit
+=======================================================
+
+Some of the RISC-V psABI variants reserve ``gp`` (``x3``) for use as a "Global Pointer", to make generating data addresses more efficient.
+
+To use this functionality, you need to be doing all of the following:
+
+* Use the ``medlow`` (aka ``small``) code model;
+* Not use the ``gp`` register for any other uses (some platforms use it for the shadow stack and others as a temporary -- as denoted by the ``Tag_RISCV_x3_reg_usage`` build attribute);
+* Compile your objects with Clang's ``-mrelax`` option, to enable relaxation annotations on relocatable objects (this is the default, but ``-mno-relax`` disables these relaxation annotations);
+* Compile for a position-dependent static executable (not a shared library, and ``-fno-PIC`` / ``-fno-pic`` / ``-fno-pie``); and
+* Use LLD's ``--relax-gp`` option.
+
+LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of ``__global_pointer$`` (which will be defined if it is used and does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
+
+There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+
+Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
+
+Therefore the compiler can place smaller global variables into sections with names starting with ``.sdata`` or ``.sbss`` (matching sections with names starting with ``.data`` and ``.bss`` respectively). LLD knows to define the ``global_pointer$`` symbol close to these sections, and to lay these sections out adjacent to the ``.data`` section.
+
+Clang's ``-msmall-data-limit=`` option controls what the threshold size is (in bytes) for a global variable to be considered small. ``-msmall-data-limit=0`` disables the use of sections starting ``.sdata`` and ``.sbss``. The ``-msmall-data-limit=`` option will not move global variables that have an explicit data section, and will keep globals in separate sections if you are using ``-fdata-sections``.
+
+The small data limit threshold is also used to separate small constants into sections with names starting with ``.srodata``. LLD does not place these with the ``.sdata`` and ``.sbss`` sections as ``.srodata`` sections are read only and the other two are writable. Instead the ``.srodata`` sections are placed adjacent to ``.rodata``.
+
+Data suggests that these options can produce significant improvements across a range of benchmarks.

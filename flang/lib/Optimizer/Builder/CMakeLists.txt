@@ -23,22 +23,28 @@ add_flang_library(FIRBuilder
   Runtime/Execute.cpp
   Runtime/Inquiry.cpp
   Runtime/Intrinsics.cpp
+  Runtime/Main.cpp
   Runtime/Numeric.cpp
   Runtime/Pointer.cpp
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Stop.cpp
+  Runtime/Support.cpp
   Runtime/TemporaryStack.cpp
   Runtime/Transformational.cpp
   TemporaryStorage.cpp
 
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   HLFIRDialect
   ${dialect_libs}
   ${extension_libs}
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

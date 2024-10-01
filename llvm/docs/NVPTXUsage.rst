@@ -127,69 +127,6 @@ Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 NVPTX Intrinsics
 ================
 
-Address Space Conversion
-------------------------
-
-'``llvm.nvvm.ptr.*.to.gen``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr @llvm.nvvm.ptr.global.to.gen.p0.p1(ptr addrspace(1))
-    declare ptr @llvm.nvvm.ptr.shared.to.gen.p0.p3(ptr addrspace(3))
-    declare ptr @llvm.nvvm.ptr.constant.to.gen.p0.p4(ptr addrspace(4))
-    declare ptr @llvm.nvvm.ptr.local.to.gen.p0.p5(ptr addrspace(5))
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.*.to.gen``' intrinsics convert a pointer in a non-generic
-address space to a generic address space pointer.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid generic address space
-pointer.
-
-
-'``llvm.nvvm.ptr.gen.to.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-These are overloaded intrinsics.  You can use these on any pointer types.
-
-.. code-block:: llvm
-
-    declare ptr addrspace(1) @llvm.nvvm.ptr.gen.to.global.p1.p0(ptr)
-    declare ptr addrspace(3) @llvm.nvvm.ptr.gen.to.shared.p3.p0(ptr)
-    declare ptr addrspace(4) @llvm.nvvm.ptr.gen.to.constant.p4.p0(ptr)
-    declare ptr addrspace(5) @llvm.nvvm.ptr.gen.to.local.p5.p0(ptr)
-
-Overview:
-"""""""""
-
-The '``llvm.nvvm.ptr.gen.to.*``' intrinsics convert a pointer in the generic
-address space to a pointer in the target address space.  Note that these
-intrinsics are only useful if the address space of the target address space of
-the pointer is known.  It is not legal to use address space conversion
-intrinsics to convert a pointer from one non-generic address space to another
-non-generic address space.
-
-Semantics:
-""""""""""
-
-These intrinsics modify the pointer value to be a valid pointer in the target
-non-generic address space.
-
-
 Reading PTX Special Registers
 -----------------------------
 
@@ -250,6 +187,138 @@ Overview:
 
 The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
 instruction, equivalent to the ``__syncthreads()`` call in CUDA.
+
+Electing a thread
+-----------------
+
+'``llvm.nvvm.elect.sync``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare {i32, i1} @llvm.nvvm.elect.sync(i32 %membermask)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.elect.sync``' intrinsic generates the ``elect.sync``
+PTX instruction, which elects one predicated active leader thread from
+a set of threads specified by ``membermask``. The behavior is undefined
+if the executing thread is not in ``membermask``. The laneid of the
+elected thread is captured in the i32 return value. The i1 return
+value is set to ``True`` for the leader thread and ``False`` for all
+the other threads. Election of a leader thread happens deterministically,
+i.e. the same leader thread is elected for the same ``membermask``
+every time. For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+
+Membar/Fences
+-------------
+
+'``llvm.nvvm.fence.proxy.tensormap_generic.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
+
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr %addr, i32 %size)
+  declare void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr %addr, i32 %size)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence used to establish ordering between a prior memory access performed via the generic `proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>_` and a subsequent memory access performed via the tensormap proxy. ``nvvm.fence.proxy.tensormap_generic.release`` can form a release sequence that synchronizes with an acquire sequence that contains the ``nvvm.fence.proxy.tensormap_generic.acquire`` proxy fence. The following table describes the mapping between LLVM Intrinsic and the PTX instruction:
+
+  ====================================================== =========================================================
+  NVVM Intrinsic                                         PTX Instruction
+  ====================================================== =========================================================
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.release.*`` ``fence.proxy.tensormap::generic.release.*``
+  ``@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*`` ``fence.proxy.tensormap::generic.acquire.* [addr], size``
+  ====================================================== =========================================================
+
+The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+
+Arithmetic Intrinsics
+---------------------
+
+'``llvm.nvvm.idp2a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp2a.s.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.s.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.s(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+    declare i32 @llvm.nvvm.idp2a.u.u(i32 %a, i32 %b, i1 immarg %is.hi, i32 %c)
+
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp2a.[us].[us]``' intrinsics performs a 2-element vector dot
+product followed by addition. They corresponds directly to the ``dp2a`` PTX 
+instruction.
+
+Semantics:
+""""""""""
+
+The 32-bit value in ``%a`` is broken into 2 16-bit values which are extended to
+32 bits. For the '``llvm.nvvm.idp2a.u.[us]``' variants zero-extension is used,
+while for the '``llvm.nvvm.idp2a.s.[us]``' sign-extension is used. Two bytes are
+selected from ``%b``, if ``%is.hi`` is true, the most significant bytes are
+selected, otherwise the least significant bytes are selected. These bytes are
+then extended to 32-bits. For the '``llvm.nvvm.idp2a.[us].u``' variants
+zero-extension is used, while for the '``llvm.nvvm.idp2a.[us].s``'
+sign-extension is used. The dot product of these 2-element vectors is added to
+``%c`` to produce the return.
+
+
+'``llvm.nvvm.idp4a.[us].[us]``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.idp4a.s.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.s.u(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.s(i32 %a, i32 %b, i32 %c)
+    declare i32 @llvm.nvvm.idp4a.u.u(i32 %a, i32 %b, i32 %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.idp4a.[us].[us]``' intrinsics perform a 4-element vector dot
+product followed by addition. They corresponds directly to the ``dp4a`` PTX
+instruction.
+
+Semantics:
+""""""""""
+
+Each of the 4 bytes in both ``%a`` and ``%b`` are extended to 32-bit integers
+forming 2 ``<4 x i32>``. For ``%a``, zero-extension is used in the
+'``llvm.nvvm.idp4a.u.[us]``' variants, while sign-extension is used with
+'``llvm.nvvm.idp4a.s.[us]``' variants. Similarly, for ``%b``, zero-extension is
+used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
+with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
+vectors is added to ``%c`` to produce the return.
+
 
 
 Other Intrinsics
@@ -360,7 +429,7 @@ The following sets the ftz flag to 1.
 
 .. code-block:: llvm
 
-    !llvm.module.flag = !{!0}
+    !llvm.module.flags = !{!0}
     !0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}
 
 (``i32 4`` indicates that the value set here overrides the value in another

@@ -4,6 +4,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare void @use.i8(i8)
+
 ; Should be optimized to one and.
 define i1 @test1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test1(
@@ -75,3 +77,98 @@ define <2 x i1> @test3vec(<2 x i64> %A) {
   ret <2 x i1> %cmp
 }
 
+define i1 @test_ne_cp2(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2(
+; CHECK-NEXT:    [[AND_X_NEG_Y:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_NEG_Y]])
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], 31
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -16
+  %and_x_y = and i8 %x, 16
+  call void @use.i8(i8 %and_x_neg_y)
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp ne i8 %and_x_neg_y, %and_x_y
+  ret i1 %r
+}
+
+define i1 @test_ne_cp2_2(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2_2(
+; CHECK-NEXT:    [[AND_X_NEG_Y:%.*]] = and i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X]], 4
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_NEG_Y]])
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], 8
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -4
+  %and_x_y = and i8 %x, 4
+  call void @use.i8(i8 %and_x_neg_y)
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp eq i8 %and_x_y, %and_x_neg_y
+  ret i1 %r
+}
+
+define i1 @test_ne_cp2_other_okay_all_ones(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2_other_okay_all_ones(
+; CHECK-NEXT:    [[AND_X_NEG_Y:%.*]] = and i8 [[X:%.*]], -17
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X]], 16
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_NEG_Y]])
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -17
+  %and_x_y = and i8 %x, 16
+  call void @use.i8(i8 %and_x_neg_y)
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp ne i8 %and_x_neg_y, %and_x_y
+  ret i1 %r
+}
+
+define i1 @test_ne_cp2_other_fail2(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2_other_fail2(
+; CHECK-NEXT:    [[AND_X_NEG_Y:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X]], 17
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_NEG_Y]])
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND_X_NEG_Y]], [[AND_X_Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -16
+  %and_x_y = and i8 %x, 17
+  call void @use.i8(i8 %and_x_neg_y)
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp ne i8 %and_x_neg_y, %and_x_y
+  ret i1 %r
+}
+
+define i1 @test_ne_cp2_other_okay(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2_other_okay(
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X:%.*]], 16
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -17
+  %and_x_y = and i8 %x, 16
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp ne i8 %and_x_neg_y, %and_x_y
+  ret i1 %r
+}
+
+define i1 @test_ne_cp2_other_okay2(i8 %x, i8 %yy) {
+; CHECK-LABEL: @test_ne_cp2_other_okay2(
+; CHECK-NEXT:    [[AND_X_Y:%.*]] = and i8 [[X:%.*]], 16
+; CHECK-NEXT:    call void @use.i8(i8 [[AND_X_Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %and_x_neg_y = and i8 %x, -17
+  %and_x_y = and i8 %x, 16
+  call void @use.i8(i8 %and_x_y)
+  %r = icmp ne i8 %and_x_y, %and_x_neg_y
+  ret i1 %r
+}

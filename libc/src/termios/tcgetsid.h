@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_TCGETSID_H
 #define LLVM_LIBC_SRC_TERMIOS_TCGETSID_H
 
+#include "src/__support/macros/config.h"
 #include <termios.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 pid_t tcgetsid(int fd);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TERMIOS_TCGETSID_H

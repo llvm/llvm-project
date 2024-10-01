@@ -517,7 +517,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
             line_highlight = "**";
           }
           source_manager.DisplaySourceLinesWithLineNumbers(
-              ln.file, ln.line, ln.column, 0, 0, line_highlight, &strm);
+              std::make_shared<SupportFile>(ln.file), ln.line, ln.column, 0, 0,
+              line_highlight, &strm);
         }
         if (source_lines_to_display.print_source_context_end_eol)
           strm.EOL();
@@ -1117,8 +1118,7 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
 
 // Disassembler copy constructor
 Disassembler::Disassembler(const ArchSpec &arch, const char *flavor)
-    : m_arch(arch), m_instruction_list(), m_base_addr(LLDB_INVALID_ADDRESS),
-      m_flavor() {
+    : m_arch(arch), m_instruction_list(), m_flavor() {
   if (flavor == nullptr)
     m_flavor.assign("default");
   else

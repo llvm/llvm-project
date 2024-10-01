@@ -14,12 +14,12 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
@@ -29,12 +29,9 @@ namespace llvm {
 
 class Operator;
 class AddOperator;
-class AllocaInst;
-class APInt;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
-class LoadInst;
 class WithOverflowInst;
 struct KnownBits;
 class Loop;
@@ -42,7 +39,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
-class Value;
+template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
 
@@ -99,6 +96,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,
@@ -116,6 +119,11 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
+bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
+                            const SimplifyQuery &Q);
+
+bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
 /// Return true if the given value is known to be non-zero when defined. For
@@ -124,17 +132,21 @@ bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                    AssumptionCache *AC = nullptr,
-                    const Instruction *CxtI = nullptr,
-                    const DominatorTree *DT = nullptr,
-                    bool UseInstrInfo = true);
+bool isKnownNonZero(const Value *V, const SimplifyQuery &Q, unsigned Depth = 0);
 
 /// Return true if the two given values are negation.
 /// Currently can recoginze Value pair:
 /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
 /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
-bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
+bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
+                     bool AllowPoison = true);
+
+/// Return true iff:
+/// 1. X is poison implies Y is poison.
+/// 2. X is true implies Y is false.
+/// 3. X is false implies Y is true.
+/// Otherwise, return false.
+bool isKnownInversion(const Value *X, const Value *Y);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
@@ -263,6 +275,8 @@ struct KnownFPClass {
     return (KnownFPClasses & Mask) == fcNone;
   }
 
+  bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
+
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
   }
@@ -271,6 +285,9 @@ struct KnownFPClass {
   bool isKnownNeverNaN() const {
     return isKnownNever(fcNan);
   }
+
+  /// Return true if it's known this must always be a nan.
+  bool isKnownAlwaysNaN() const { return isKnownAlways(fcNan); }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {
@@ -508,22 +525,34 @@ inline KnownFPClass computeKnownFPClass(
 }
 
 /// Wrapper to account for known fast math flags at the use instruction.
-inline KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
-                                        FPClassTest InterestedClasses,
-                                        unsigned Depth,
-                                        const SimplifyQuery &SQ) {
+inline KnownFPClass
+computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                    FastMathFlags FMF, FPClassTest InterestedClasses,
+                    unsigned Depth, const SimplifyQuery &SQ) {
   if (FMF.noNaNs())
     InterestedClasses &= ~fcNan;
   if (FMF.noInfs())
     InterestedClasses &= ~fcInf;
 
-  KnownFPClass Result = computeKnownFPClass(V, InterestedClasses, Depth, SQ);
+  KnownFPClass Result =
+      computeKnownFPClass(V, DemandedElts, InterestedClasses, Depth, SQ);
 
   if (FMF.noNaNs())
     Result.KnownFPClasses &= ~fcNan;
   if (FMF.noInfs())
     Result.KnownFPClasses &= ~fcInf;
   return Result;
+}
+
+inline KnownFPClass computeKnownFPClass(const Value *V, FastMathFlags FMF,
+                                        FPClassTest InterestedClasses,
+                                        unsigned Depth,
+                                        const SimplifyQuery &SQ) {
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  return computeKnownFPClass(V, DemandedElts, FMF, InterestedClasses, Depth,
+                             SQ);
 }
 
 /// Return true if we can prove that the specified FP value is never equal to
@@ -694,17 +723,21 @@ inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
 bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness);
 
-/// This method strips off any GEP address adjustments and pointer casts from
-/// the specified value, returning the original object being addressed. Note
-/// that the returned value has pointer type if the specified value does. If
-/// the MaxLookup value is non-zero, it limits the number of instructions to
-/// be stripped off.
+/// This method strips off any GEP address adjustments, pointer casts
+/// or `llvm.threadlocal.address` from the specified value \p V, returning the
+/// original object being addressed. Note that the returned value has pointer
+/// type if the specified value does. If the \p MaxLookup value is non-zero, it
+/// limits the number of instructions to be stripped off.
 const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
 inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
 }
+
+/// Like getUnderlyingObject(), but will try harder to find a single underlying
+/// object. In particular, this function also looks through selects and phis.
+const Value *getUnderlyingObjectAggressive(const Value *V);
 
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.
@@ -736,7 +769,7 @@ inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
 /// it shouldn't look through the phi above.
 void getUnderlyingObjects(const Value *V,
                           SmallVectorImpl<const Value *> &Objects,
-                          LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
+                          const LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
@@ -758,13 +791,6 @@ bool onlyUsedByLifetimeMarkers(const Value *V);
 /// droppable instructions.
 bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
-/// Return true if speculation of the given load must be suppressed to avoid
-/// ordering or interfering with an active sanitizer.  If not suppressed,
-/// dereferenceability and alignment must be proven separately.  Note: This
-/// is only needed for raw reasoning; if you use the interface below
-/// (isSafeToSpeculativelyExecute), this is handled internally.
-bool mustSuppressSpeculation(const LoadInst &LI);
-
 /// Return true if the instruction does not have any effects besides
 /// calculating the result and does not have undefined behavior.
 ///
@@ -779,7 +805,9 @@ bool mustSuppressSpeculation(const LoadInst &LI);
 ///
 /// If the CtxI is specified this method performs context-sensitive analysis
 /// and returns true if it is safe to execute the instruction immediately
-/// before the CtxI.
+/// before the CtxI. If the instruction has (transitive) operands that don't
+/// dominate CtxI, the analysis is performed under the assumption that these
+/// operands will also be speculated to a point before CxtI.
 ///
 /// If the CtxI is NOT specified this method only looks at the instruction
 /// itself and its operands, so if this method returns true, it is safe to
@@ -792,15 +820,25 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   const Instruction *CtxI = nullptr,
                                   AssumptionCache *AC = nullptr,
                                   const DominatorTree *DT = nullptr,
-                                  const TargetLibraryInfo *TLI = nullptr);
+                                  const TargetLibraryInfo *TLI = nullptr,
+                                  bool UseVariableInfo = true);
 
-inline bool
-isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
-                             AssumptionCache *AC = nullptr,
-                             const DominatorTree *DT = nullptr,
-                             const TargetLibraryInfo *TLI = nullptr) {
+inline bool isSafeToSpeculativelyExecute(const Instruction *I,
+                                         BasicBlock::iterator CtxI,
+                                         AssumptionCache *AC = nullptr,
+                                         const DominatorTree *DT = nullptr,
+                                         const TargetLibraryInfo *TLI = nullptr,
+                                         bool UseVariableInfo = true) {
   // Take an iterator, and unwrap it into an Instruction *.
-  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI);
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo);
+}
+
+/// Don't use information from its non-constant operands. This helper is used
+/// when its operands are going to be replaced.
+inline bool
+isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I) {
+  return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
+                                      /*UseVariableInfo=*/false);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -823,7 +861,7 @@ isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
 bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
-    const TargetLibraryInfo *TLI = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.
@@ -862,7 +900,8 @@ enum class OverflowResult {
 };
 
 OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
-                                             const SimplifyQuery &SQ);
+                                             const SimplifyQuery &SQ,
+                                             bool IsNSW = false);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
 OverflowResult

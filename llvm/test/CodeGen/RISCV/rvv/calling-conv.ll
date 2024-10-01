@@ -39,11 +39,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    vs8r.v v16, (a0)
+; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect
 ; RV32-NEXT:    addi sp, s0, -144
@@ -70,11 +70,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    vs8r.v v16, (a0)
+; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect
 ; RV64-NEXT:    addi sp, s0, -144
@@ -162,90 +162,3 @@ define void @caller_tuple_argument({<vscale x 4 x i32>, <vscale x 4 x i32>} %x) 
 }
 
 declare void @callee_tuple_argument({<vscale x 4 x i32>, <vscale x 4 x i32>})
-
-; %0 -> v8
-; %1 -> v9
-define <vscale x 1 x i64> @case1(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1) {
-; CHECK-LABEL: case1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %a = add <vscale x 1 x i64> %0, %1
-  ret <vscale x 1 x i64> %a
-}
-
-; %0 -> v8
-; %1 -> v10-v11
-; %2 -> v9
-define <vscale x 1 x i64> @case2_1(<vscale x 1 x i64> %0, <vscale x 2 x i64> %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case2_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %a = add <vscale x 1 x i64> %0, %2
-  ret <vscale x 1 x i64> %a
-}
-define <vscale x 2 x i64> @case2_2(<vscale x 1 x i64> %0, <vscale x 2 x i64> %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case2_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
-; CHECK-NEXT:    ret
-  %a = add <vscale x 2 x i64> %1, %1
-  ret <vscale x 2 x i64> %a
-}
-
-; %0 -> v8
-; %1 -> {v10-v11, v12-v13}
-; %2 -> v9
-define <vscale x 1 x i64> @case3_1(<vscale x 1 x i64> %0, {<vscale x 2 x i64>, <vscale x 2 x i64>} %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case3_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %add = add <vscale x 1 x i64> %0, %2
-  ret <vscale x 1 x i64> %add
-}
-define <vscale x 2 x i64> @case3_2(<vscale x 1 x i64> %0, {<vscale x 2 x i64>, <vscale x 2 x i64>} %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case3_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v12
-; CHECK-NEXT:    ret
-  %a = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %1, 0
-  %b = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %1, 1
-  %add = add <vscale x 2 x i64> %a, %b
-  ret <vscale x 2 x i64> %add
-}
-
-; %0 -> v8
-; %1 -> {by-ref, by-ref}
-; %2 -> v9
-define <vscale x 8 x i64> @case4_1(<vscale x 1 x i64> %0, {<vscale x 8 x i64>, <vscale x 8 x i64>} %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case4_1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vl8re64.v v8, (a1)
-; CHECK-NEXT:    vl8re64.v v16, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v16, v8
-; CHECK-NEXT:    ret
-  %a = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %1, 0
-  %b = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %1, 1
-  %add = add <vscale x 8 x i64> %a, %b
-  ret <vscale x 8 x i64> %add
-}
-define <vscale x 1 x i64> @case4_2(<vscale x 1 x i64> %0, {<vscale x 8 x i64>, <vscale x 8 x i64>} %1, <vscale x 1 x i64> %2) {
-; CHECK-LABEL: case4_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-  %add = add <vscale x 1 x i64> %0, %2
-  ret <vscale x 1 x i64> %add
-}

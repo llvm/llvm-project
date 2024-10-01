@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -ast-print %s | FileCheck %s
 
 using size_t = __SIZE_TYPE__;
 static_assert(__has_builtin(__make_integer_seq));

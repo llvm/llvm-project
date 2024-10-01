@@ -35,6 +35,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 
@@ -70,7 +71,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineDominanceFrontier>();
     AU.setPreservesAll();
   }
@@ -80,8 +81,10 @@ public:
 private:
   using MISetType = DenseSet<MachineInstr *>;
   using InstrEvalMap = DenseMap<MachineInstr *, bool>;
+  DenseSet<MachineInstr *> ProcessedAddiInsts;
 
   MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   const HexagonInstrInfo *HII = nullptr;
   const HexagonRegisterInfo *HRI = nullptr;
   MachineDominatorTree *MDT = nullptr;
@@ -93,6 +96,15 @@ private:
   bool processBlock(NodeAddr<BlockNode *> BA);
   bool xformUseMI(MachineInstr *TfrMI, MachineInstr *UseMI,
                   NodeAddr<UseNode *> UseN, unsigned UseMOnum);
+  bool processAddBases(NodeAddr<StmtNode *> AddSN, MachineInstr *AddMI);
+  bool usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN, int64_t NewOffset);
+  bool findFirstReachedInst(
+      MachineInstr *AddMI,
+      std::vector<std::pair<NodeAddr<StmtNode *>, NodeAddr<UseNode *>>>
+          &AddiList,
+      NodeAddr<StmtNode *> &UseSN);
+  bool updateAddBases(MachineInstr *CurrentMI, MachineInstr *FirstReachedMI,
+                      int64_t NewOffset);
   bool processAddUses(NodeAddr<StmtNode *> AddSN, MachineInstr *AddMI,
                       const NodeList &UNodeList);
   bool updateAddUses(MachineInstr *AddMI, MachineInstr *UseMI);
@@ -122,7 +134,7 @@ char HexagonOptAddrMode::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonOptAddrMode, "amode-opt",
                       "Optimize addressing mode", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonOptAddrMode, "amode-opt", "Optimize addressing mode",
                     false, false)
@@ -207,8 +219,17 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
       return false;
 
     for (auto &Mo : UseMI.operands())
+      // Is it a frame index?
       if (Mo.isFI())
         return false;
+    // Is the OffsetReg definition actually reaches UseMI?
+    if (!UseMI.getParent()->isLiveIn(OffsetReg) &&
+        MI.getParent() != UseMI.getParent()) {
+      LLVM_DEBUG(dbgs() << "  The offset reg " << printReg(OffsetReg, TRI)
+                        << " is NOT live in to MBB "
+                        << UseMI.getParent()->getName() << "\n");
+      return false;
+    }
   }
   return true;
 }
@@ -327,6 +348,14 @@ bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
     if ((LRExtRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI->getParent() != UseMI->getParent())
       return false;
+    // Is the OffsetReg definition actually reaches UseMI?
+    if (!UseMI->getParent()->isLiveIn(LRExtReg) &&
+        MI->getParent() != UseMI->getParent()) {
+      LLVM_DEBUG(dbgs() << "  The LRExtReg reg " << printReg(LRExtReg, TRI)
+                        << " is NOT live in to MBB "
+                        << UseMI->getParent()->getName() << "\n");
+      return false;
+    }
   }
   return true;
 }
@@ -344,6 +373,12 @@ bool HexagonOptAddrMode::isValidOffset(MachineInstr *MI, int Offset) {
     case Hexagon::V6_vgathermhwq_pseudo:
       return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
     default:
+      if (HII->getAddrMode(*MI) == HexagonII::BaseImmOffset) {
+        // The immediates are mentioned in multiples of vector counts
+        unsigned AlignMask = HII->getMemAccessSize(*MI) - 1;
+        if ((AlignMask & Offset) == 0)
+          return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+      }
       return false;
     }
   }
@@ -412,6 +447,264 @@ unsigned HexagonOptAddrMode::getOffsetOpPosition(MachineInstr *MI) {
   default:
     return MID.mayLoad() ? 2 : 1;
   }
+}
+
+bool HexagonOptAddrMode::usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN,
+                                         int64_t NewOffset) {
+  NodeList LoadStoreUseList;
+
+  getAllRealUses(CurrentInstSN, LoadStoreUseList);
+  bool FoundLoadStoreUse = false;
+  for (auto I = LoadStoreUseList.begin(), E = LoadStoreUseList.end(); I != E;
+       ++I) {
+    NodeAddr<UseNode *> UN = *I;
+    NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
+    MachineInstr *LoadStoreMI = SN.Addr->getCode();
+    const MCInstrDesc &MID = LoadStoreMI->getDesc();
+    if ((MID.mayLoad() || MID.mayStore()) &&
+        isValidOffset(LoadStoreMI, NewOffset)) {
+      FoundLoadStoreUse = true;
+      break;
+    }
+  }
+  return FoundLoadStoreUse;
+}
+
+bool HexagonOptAddrMode::findFirstReachedInst(
+    MachineInstr *AddMI,
+    std::vector<std::pair<NodeAddr<StmtNode *>, NodeAddr<UseNode *>>> &AddiList,
+    NodeAddr<StmtNode *> &UseSN) {
+  // Find the very first Addi instruction in the current basic block among the
+  // AddiList This is the Addi that should be preserved so that we do not need
+  // to handle the complexity of moving instructions
+  //
+  // TODO: find Addi instructions across basic blocks
+  //
+  // TODO: Try to remove this and add a solution that optimizes the number of
+  // Addi instructions that can be modified.
+  // This change requires choosing the Addi with the median offset value, but
+  // would also require moving that instruction above the others. Since this
+  // pass runs after register allocation, there might be multiple cases that
+  // need to be handled if we move instructions around
+  MachineBasicBlock *CurrentMBB = AddMI->getParent();
+  for (auto &InstIter : *CurrentMBB) {
+    // If the instruction is an Addi and is in the AddiList
+    if (InstIter.getOpcode() == Hexagon::A2_addi) {
+      auto Iter = std::find_if(
+          AddiList.begin(), AddiList.end(), [&InstIter](const auto &SUPair) {
+            return SUPair.first.Addr->getCode() == &InstIter;
+          });
+      if (Iter != AddiList.end()) {
+        UseSN = Iter->first;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// This function tries to modify the immediate value in Hexagon::Addi
+// instructions, so that the immediates could then be moved into a load/store
+// instruction with offset and the add removed completely when we call
+// processAddUses
+//
+// For Example, If we have the below sequence of instructions:
+//
+//         r1 = add(r2,#1024)
+//               ...
+//         r3 = add(r2,#1152)
+//               ...
+//         r4 = add(r2,#1280)
+//
+// Where the register r2 has the same reaching definition, They get modified to
+// the below sequence:
+//
+//         r1 = add(r2,#1024)
+//              ...
+//         r3 = add(r1,#128)
+//              ...
+//         r4 = add(r1,#256)
+//
+//  The below change helps the processAddUses method to later move the
+//  immediates #128 and #256 into a load/store instruction that can take an
+//  offset, like the Vd = mem(Rt+#s4)
+bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
+                                         MachineInstr *AddMI) {
+
+  bool Changed = false;
+
+  LLVM_DEBUG(dbgs() << "\n\t\t[Processing Addi]: " << *AddMI << "\n");
+
+  auto Processed =
+      [](const MachineInstr *MI,
+         const DenseSet<MachineInstr *> &ProcessedAddiInsts) -> bool {
+    // If we've already processed this Addi, just return
+    if (ProcessedAddiInsts.find(MI) != ProcessedAddiInsts.end()) {
+      LLVM_DEBUG(dbgs() << "\t\t\tAddi already found in ProcessedAddiInsts: "
+                        << *MI << "\n\t\t\tSkipping...");
+      return true;
+    }
+    return false;
+  };
+
+  if (Processed(AddMI, ProcessedAddiInsts))
+    return Changed;
+  ProcessedAddiInsts.insert(AddMI);
+
+  // Get the base register that would be shared by other Addi Intructions
+  Register BaseReg = AddMI->getOperand(1).getReg();
+
+  // Store a list of all Addi instructions that share the above common base
+  // register
+  std::vector<std::pair<NodeAddr<StmtNode *>, NodeAddr<UseNode *>>> AddiList;
+
+  NodeId UAReachingDefID;
+  // Find the UseNode that contains the base register and it's reachingDef
+  for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
+    RegisterRef URR = UA.Addr->getRegRef(*DFG);
+    if (BaseReg != URR.Reg)
+      continue;
+
+    UAReachingDefID = UA.Addr->getReachingDef();
+    NodeAddr<DefNode *> UADef = DFG->addr<DefNode *>(UAReachingDefID);
+    if (!UAReachingDefID || UADef.Addr->getFlags() & NodeAttrs::PhiRef) {
+      LLVM_DEBUG(dbgs() << "\t\t\t Could not find reachingDef. Skipping...\n");
+      return false;
+    }
+  }
+
+  NodeAddr<DefNode *> UAReachingDef = DFG->addr<DefNode *>(UAReachingDefID);
+  NodeAddr<StmtNode *> ReachingDefStmt = UAReachingDef.Addr->getOwner(*DFG);
+
+  // If the reaching definition is a predicated instruction, this might not be
+  // the only definition of our base register, so return immediately.
+  MachineInstr *ReachingDefInstr = ReachingDefStmt.Addr->getCode();
+  if (HII->isPredicated(*ReachingDefInstr))
+    return false;
+
+  NodeList AddiUseList;
+
+  // Find all Addi instructions that share the same base register and add them
+  // to the AddiList
+  getAllRealUses(ReachingDefStmt, AddiUseList);
+  for (auto I = AddiUseList.begin(), E = AddiUseList.end(); I != E; ++I) {
+    NodeAddr<UseNode *> UN = *I;
+    NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
+    MachineInstr *MI = SN.Addr->getCode();
+
+    // Only add instructions if it's an Addi and it's not already processed.
+    if (MI->getOpcode() == Hexagon::A2_addi &&
+        !(MI != AddMI && Processed(MI, ProcessedAddiInsts))) {
+      AddiList.push_back({SN, UN});
+
+      // This ensures that we process each instruction only once
+      ProcessedAddiInsts.insert(MI);
+    }
+  }
+
+  // If there's only one Addi instruction, nothing to do here
+  if (AddiList.size() <= 1)
+    return Changed;
+
+  NodeAddr<StmtNode *> FirstReachedUseSN;
+  // Find the first reached use of Addi instruction from the list
+  if (!findFirstReachedInst(AddMI, AddiList, FirstReachedUseSN))
+    return Changed;
+
+  // If we reach this point we know that the StmtNode FirstReachedUseSN is for
+  // an Addi instruction. So, we're guaranteed to have just one DefNode, and
+  // hence we can access the front() directly without checks
+  NodeAddr<DefNode *> FirstReachedUseDN =
+      FirstReachedUseSN.Addr->members_if(DFG->IsDef, *DFG).front();
+
+  MachineInstr *FirstReachedMI = FirstReachedUseSN.Addr->getCode();
+  const MachineOperand FirstReachedMIImmOp = FirstReachedMI->getOperand(2);
+  if (!FirstReachedMIImmOp.isImm())
+    return false;
+
+  for (auto &I : AddiList) {
+    NodeAddr<StmtNode *> CurrentInstSN = I.first;
+    NodeAddr<UseNode *> CurrentInstUN = I.second;
+
+    MachineInstr *CurrentMI = CurrentInstSN.Addr->getCode();
+    MachineOperand &CurrentMIImmOp = CurrentMI->getOperand(2);
+
+    int64_t NewOffset;
+
+    // Even though we know it's an Addi instruction, the second operand could be
+    // a global value and not an immediate
+    if (!CurrentMIImmOp.isImm())
+      continue;
+
+    NewOffset = CurrentMIImmOp.getImm() - FirstReachedMIImmOp.getImm();
+
+    // This is the first occuring Addi, so skip modifying this
+    if (CurrentMI == FirstReachedMI) {
+      continue;
+    }
+
+    if (CurrentMI->getParent() != FirstReachedMI->getParent())
+      continue;
+
+    // Modify the Addi instruction only if it could be used to modify a
+    // future load/store instruction and get removed
+    //
+    // This check is needed because, if we modify the current Addi instruction
+    // we create RAW dependence between the FirstReached Addi and the current
+    // one, which could result in extra packets. So we only do this change if
+    // we know the current Addi would get removed later
+    if (!usedInLoadStore(CurrentInstSN, NewOffset)) {
+      return false;
+    }
+
+    // Verify whether the First Addi's definition register is still live when
+    // we reach the current Addi
+    RegisterRef FirstReachedDefRR = FirstReachedUseDN.Addr->getRegRef(*DFG);
+    NodeAddr<InstrNode *> CurrentAddiIN = CurrentInstUN.Addr->getOwner(*DFG);
+    NodeAddr<RefNode *> NearestAA =
+        LV->getNearestAliasedRef(FirstReachedDefRR, CurrentAddiIN);
+    if ((DFG->IsDef(NearestAA) && NearestAA.Id != FirstReachedUseDN.Id) ||
+        (!DFG->IsDef(NearestAA) &&
+         NearestAA.Addr->getReachingDef() != FirstReachedUseDN.Id)) {
+      // Found another definition of FirstReachedDef
+      LLVM_DEBUG(dbgs() << "\t\t\tCould not modify below Addi since the first "
+                           "defined Addi register was redefined\n");
+      continue;
+    }
+
+    MachineOperand CurrentMIBaseOp = CurrentMI->getOperand(1);
+    if (CurrentMIBaseOp.getReg() != FirstReachedMI->getOperand(1).getReg()) {
+      continue;
+    }
+
+    // If we reached this point, then we can modify MI to use the result of
+    // FirstReachedMI
+    Changed |= updateAddBases(CurrentMI, FirstReachedMI, NewOffset);
+
+    // Update the reachingDef of the Current AddI use after change
+    CurrentInstUN.Addr->linkToDef(CurrentInstUN.Id, FirstReachedUseDN);
+  }
+
+  return Changed;
+}
+
+bool HexagonOptAddrMode::updateAddBases(MachineInstr *CurrentMI,
+                                        MachineInstr *FirstReachedMI,
+                                        int64_t NewOffset) {
+  LLVM_DEBUG(dbgs() << "[About to modify the Addi]: " << *CurrentMI << "\n");
+  const MachineOperand FirstReachedDef = FirstReachedMI->getOperand(0);
+  Register FirstDefRegister = FirstReachedDef.getReg();
+
+  MachineOperand &CurrentMIBaseOp = CurrentMI->getOperand(1);
+  MachineOperand &CurrentMIImmOp = CurrentMI->getOperand(2);
+
+  CurrentMIBaseOp.setReg(FirstDefRegister);
+  CurrentMIBaseOp.setIsUndef(FirstReachedDef.isUndef());
+  CurrentMIBaseOp.setImplicit(FirstReachedDef.isImplicit());
+  CurrentMIImmOp.setImm(NewOffset);
+  ProcessedAddiInsts.insert(CurrentMI);
+  MRI->clearKillFlags(FirstDefRegister);
+  return true;
 }
 
 bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
@@ -737,7 +1030,6 @@ bool HexagonOptAddrMode::changeAddAsl(NodeAddr<UseNode *> AddAslUN,
 
     for (unsigned i = OpStart; i < OpEnd; ++i)
       MIB.add(UseMI->getOperand(i));
-
     Deleted.insert(UseMI);
   }
 
@@ -782,6 +1074,8 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
                       << "]: " << *MI << "\n\t[InstrNode]: "
                       << Print<NodeAddr<InstrNode *>>(IA, *DFG) << '\n');
 
+    if (MI->getOpcode() == Hexagon::A2_addi)
+      Changed |= processAddBases(SA, MI);
     NodeList UNodeList;
     getAllRealUses(SA, UNodeList);
 
@@ -869,10 +1163,11 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   MRI = &MF.getRegInfo();
+  TRI = MF.getSubtarget().getRegisterInfo();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF);
   // Need to keep dead phis because we can propagate uses of registers into
@@ -885,6 +1180,7 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   LV = &L;
 
   Deleted.clear();
+  ProcessedAddiInsts.clear();
   NodeAddr<FuncNode *> FA = DFG->getFunc();
   LLVM_DEBUG(dbgs() << "==== [RefMap#]=====:\n "
                     << Print<NodeAddr<FuncNode *>>(FA, *DFG) << "\n");

@@ -2,6 +2,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.assert
     libc.include.ctype
     libc.include.string
+    libc.include.strings
+    libc.include.signal
     libc.include.float
     libc.include.stdint
     libc.include.inttypes
@@ -12,6 +14,10 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.errno
     libc.include.stdlib
     libc.include.stdio
+    libc.include.wchar
+    libc.include.uchar
+    libc.include.features
+    libc.include.locale
 
     # Header for RPC extensions
     libc.include.gpu_rpc

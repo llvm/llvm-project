@@ -258,7 +258,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
         StreamString feedback_stream;
         if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
           Stream &s = GetErrorStream();
-          for (auto error : errors) {
+          for (auto &error : errors) {
             s.Printf("%s\n", error.AsCString());
           }
           if (feedback_stream.GetSize())
@@ -592,7 +592,18 @@ lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
   const uint32_t idx = ePropertyDWIMPrintVerbosity;
   return GetPropertyAtIndexAs<lldb::DWIMPrintVerbosity>(
       idx, static_cast<lldb::DWIMPrintVerbosity>(
-               g_debugger_properties[idx].default_uint_value));
+               g_debugger_properties[idx].default_uint_value != 0));
+}
+
+bool Debugger::GetShowInlineDiagnostics() const {
+  const uint32_t idx = ePropertyShowInlineDiagnostics;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+bool Debugger::SetShowInlineDiagnostics(bool b) {
+  const uint32_t idx = ePropertyShowInlineDiagnostics;
+  return SetPropertyAtIndex(idx, b);
 }
 
 #pragma mark Debugger
@@ -655,7 +666,7 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
     // The g_load_plugin_callback is registered in SBDebugger::Initialize() and
     // if the public API layer isn't available (code is linking against all of
     // the internal LLDB static libraries), then we can't load plugins
-    error.SetErrorString("Public API layer is not available");
+    error = Status::FromErrorString("Public API layer is not available");
   }
   return false;
 }
@@ -743,9 +754,22 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 }
 
 void Debugger::HandleDestroyCallback() {
-  if (m_destroy_callback) {
-    m_destroy_callback(GetID(), m_destroy_callback_baton);
-    m_destroy_callback = nullptr;
+  const lldb::user_id_t user_id = GetID();
+  // Invoke and remove all the callbacks in an FIFO order. Callbacks which are
+  // added during this loop will be appended, invoked and then removed last.
+  // Callbacks which are removed during this loop will not be invoked.
+  while (true) {
+    DestroyCallbackInfo callback_info;
+    {
+      std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+      if (m_destroy_callbacks.empty())
+        break;
+      // Pop the first item in the list
+      callback_info = m_destroy_callbacks.front();
+      m_destroy_callbacks.erase(m_destroy_callbacks.begin());
+    }
+    // Call the destroy callback with user id and baton
+    callback_info.callback(user_id, callback_info.baton);
   }
 }
 
@@ -823,8 +847,8 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
   return target_sp;
 }
 
-ConstString Debugger::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.debugger");
+llvm::StringRef Debugger::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.debugger");
   return class_name;
 }
 
@@ -846,7 +870,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
-                    GetStaticBroadcasterClass().AsCString()),
+                    GetStaticBroadcasterClass().str()),
       m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
@@ -989,18 +1013,18 @@ Status Debugger::SetInputString(const char *data) {
   int fds[2] = {-1, -1};
 
   if (data == nullptr) {
-    result.SetErrorString("String data is null");
+    result = Status::FromErrorString("String data is null");
     return result;
   }
 
   size_t size = strlen(data);
   if (size == 0) {
-    result.SetErrorString("String data is empty");
+    result = Status::FromErrorString("String data is empty");
     return result;
   }
 
   if (OpenPipe(fds, size) != 0) {
-    result.SetErrorString(
+    result = Status::FromErrorString(
         "can't create pipe file descriptors for LLDB commands");
     return result;
   }
@@ -1015,9 +1039,10 @@ Status Debugger::SetInputString(const char *data) {
   // handle.
   FILE *commands_file = fdopen(fds[READ], "rb");
   if (commands_file == nullptr) {
-    result.SetErrorStringWithFormat("fdopen(%i, \"rb\") failed (errno = %i) "
-                                    "when trying to open LLDB commands pipe",
-                                    fds[READ], errno);
+    result = Status::FromErrorStringWithFormat(
+        "fdopen(%i, \"rb\") failed (errno = %i) "
+        "when trying to open LLDB commands pipe",
+        fds[READ], errno);
     llvm::sys::Process::SafelyCloseFileDescriptor(fds[READ]);
     return result;
   }
@@ -1115,9 +1140,6 @@ void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
   IOHandlerSP top_reader_sp = reader_sp;
 
   while (top_reader_sp) {
-    if (!top_reader_sp)
-      break;
-
     top_reader_sp->Run();
 
     // Don't unwind past the starting point.
@@ -1430,8 +1452,30 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  m_destroy_callback = destroy_callback;
-  m_destroy_callback_baton = baton;
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  m_destroy_callbacks.clear();
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
+}
+
+lldb::callback_token_t Debugger::AddDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  const lldb::callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callbacks.emplace_back(token, destroy_callback, baton);
+  return token;
+}
+
+bool Debugger::RemoveDestroyCallback(lldb::callback_token_t token) {
+  std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
+  for (auto it = m_destroy_callbacks.begin(); it != m_destroy_callbacks.end();
+       ++it) {
+    if (it->token == token) {
+      m_destroy_callbacks.erase(it);
+      return true;
+    }
+  }
+  return false;
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
@@ -1479,20 +1523,19 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
   }
 }
 
-static void PrivateReportDiagnostic(Debugger &debugger,
-                                    DiagnosticEventData::Type type,
+static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
                                     std::string message,
                                     bool debugger_specific) {
   uint32_t event_type = 0;
-  switch (type) {
-  case DiagnosticEventData::Type::Info:
-    assert(false && "DiagnosticEventData::Type::Info should not be broadcast");
+  switch (severity) {
+  case eSeverityInfo:
+    assert(false && "eSeverityInfo should not be broadcast");
     return;
-  case DiagnosticEventData::Type::Warning:
-    event_type = Debugger::eBroadcastBitWarning;
+  case eSeverityWarning:
+    event_type = lldb::eBroadcastBitWarning;
     break;
-  case DiagnosticEventData::Type::Error:
-    event_type = Debugger::eBroadcastBitError;
+  case eSeverityError:
+    event_type = lldb::eBroadcastBitError;
     break;
   }
 
@@ -1500,29 +1543,32 @@ static void PrivateReportDiagnostic(Debugger &debugger,
   if (!broadcaster.EventTypeHasListeners(event_type)) {
     // Diagnostics are too important to drop. If nobody is listening, print the
     // diagnostic directly to the debugger's error stream.
-    DiagnosticEventData event_data(type, std::move(message), debugger_specific);
+    DiagnosticEventData event_data(severity, std::move(message),
+                                   debugger_specific);
     StreamSP stream = debugger.GetAsyncErrorStream();
     event_data.Dump(stream.get());
     return;
   }
   EventSP event_sp = std::make_shared<Event>(
       event_type,
-      new DiagnosticEventData(type, std::move(message), debugger_specific));
+      new DiagnosticEventData(severity, std::move(message), debugger_specific));
   broadcaster.BroadcastEvent(event_sp);
 }
 
-void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
-                                    std::string message,
+void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
                                     std::optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
+    // Always log diagnostics to the system log.
+    Host::SystemLog(severity, message);
+
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
       Diagnostics::Instance().Report(message);
 
     // We don't broadcast info events.
-    if (type == DiagnosticEventData::Type::Info)
+    if (severity == lldb::eSeverityInfo)
       return;
 
     // Check if this diagnostic is for a specific debugger.
@@ -1531,7 +1577,8 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
       // still exists.
       DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
       if (debugger_sp)
-        PrivateReportDiagnostic(*debugger_sp, type, std::move(message), true);
+        PrivateReportDiagnostic(*debugger_sp, severity, std::move(message),
+                                true);
       return;
     }
     // The diagnostic event is not debugger specific, iterate over all debuggers
@@ -1539,7 +1586,7 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
     if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
       std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
       for (const auto &debugger : *g_debugger_list_ptr)
-        PrivateReportDiagnostic(*debugger, type, message, false);
+        PrivateReportDiagnostic(*debugger, severity, message, false);
     }
   };
 
@@ -1552,22 +1599,19 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
 void Debugger::ReportWarning(std::string message,
                              std::optional<lldb::user_id_t> debugger_id,
                              std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Warning, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityWarning, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportError(std::string message,
                            std::optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Error, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityError, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportInfo(std::string message,
                           std::optional<lldb::user_id_t> debugger_id,
                           std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Info, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityInfo, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
@@ -1575,7 +1619,7 @@ void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
       EventSP event_sp = std::make_shared<Event>(
-          Debugger::eBroadcastSymbolChange,
+          lldb::eBroadcastSymbolChange,
           new SymbolChangeEventData(debugger_sp, module_spec));
       debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
     }
@@ -1837,7 +1881,8 @@ void Debugger::HandleThreadEvent(const EventSP &event_sp) {
     ThreadSP thread_sp(
         Thread::ThreadEventData::GetThreadFromEvent(event_sp.get()));
     if (thread_sp) {
-      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format);
+      thread_sp->GetStatus(*GetAsyncOutputStream(), 0, 1, 1, stop_format,
+                           /*show_hidden*/ true);
     }
   }
 }
@@ -1882,8 +1927,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
   listener_sp->StartListeningForEvents(
-      &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
-                          eBroadcastBitError | eBroadcastSymbolChange);
+      &m_broadcaster, lldb::eBroadcastBitProgress | lldb::eBroadcastBitWarning |
+                          lldb::eBroadcastBitError |
+                          lldb::eBroadcastSymbolChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
@@ -1935,11 +1981,11 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
               }
             }
           } else if (broadcaster == &m_broadcaster) {
-            if (event_type & Debugger::eBroadcastBitProgress)
+            if (event_type & lldb::eBroadcastBitProgress)
               HandleProgressEvent(event_sp);
-            else if (event_type & Debugger::eBroadcastBitWarning)
+            else if (event_type & lldb::eBroadcastBitWarning)
               HandleDiagnosticEvent(event_sp);
-            else if (event_type & Debugger::eBroadcastBitError)
+            else if (event_type & lldb::eBroadcastBitError)
               HandleDiagnosticEvent(event_sp);
           }
         }
@@ -2167,11 +2213,11 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
     if (auto single_lang = repl_languages.GetSingularLanguage()) {
       language = *single_lang;
     } else if (repl_languages.Empty()) {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "LLDB isn't configured with REPL support for any languages.");
       return err;
     } else {
-      err.SetErrorString(
+      err = Status::FromErrorString(
           "Multiple possible REPL languages.  Please specify a language.");
       return err;
     }
@@ -2187,8 +2233,9 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   }
 
   if (!repl_sp) {
-    err.SetErrorStringWithFormat("couldn't find a REPL for %s",
-                                 Language::GetNameForLanguageType(language));
+    err = Status::FromErrorStringWithFormat(
+        "couldn't find a REPL for %s",
+        Language::GetNameForLanguageType(language));
     return err;
   }
 

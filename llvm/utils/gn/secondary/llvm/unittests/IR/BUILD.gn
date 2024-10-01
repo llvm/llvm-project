@@ -17,6 +17,8 @@ unittest("IRTests") {
     "BasicBlockDbgInfoTest.cpp",
     "BasicBlockTest.cpp",
     "CFGBuilder.cpp",
+    "ConstantFPRangeTest.cpp",
+    "ConstantRangeListTest.cpp",
     "ConstantRangeTest.cpp",
     "ConstantsTest.cpp",
     "CoreBindings.cpp",
@@ -33,6 +35,7 @@ unittest("IRTests") {
     "LegacyPassManagerTest.cpp",
     "MDBuilderTest.cpp",
     "ManglerTest.cpp",
+    "MemoryModelRelaxationAnnotationsTest.cpp",
     "MetadataTest.cpp",
     "ModuleSummaryIndexTest.cpp",
     "ModuleTest.cpp",
@@ -45,6 +48,7 @@ unittest("IRTests") {
     "TypesTest.cpp",
     "UseTest.cpp",
     "UserTest.cpp",
+    "VFABIDemanglerTest.cpp",
     "VPIntrinsicTest.cpp",
     "ValueHandleTest.cpp",
     "ValueMapTest.cpp",
@@ -52,6 +56,5 @@ unittest("IRTests") {
     "VectorBuilderTest.cpp",
     "VectorTypesTest.cpp",
     "VerifierTest.cpp",
-    "VFABIDemanglerTest.cpp",
   ]
 }

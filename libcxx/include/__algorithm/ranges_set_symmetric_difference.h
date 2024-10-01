@@ -40,9 +40,7 @@ namespace ranges {
 template <class _InIter1, class _InIter2, class _OutIter>
 using set_symmetric_difference_result = in_in_out_result<_InIter1, _InIter2, _OutIter>;
 
-namespace __set_symmetric_difference {
-
-struct __fn {
+struct __set_symmetric_difference {
   template <input_iterator _InIter1,
             sentinel_for<_InIter1> _Sent1,
             input_iterator _InIter2,
@@ -98,10 +96,8 @@ struct __fn {
   }
 };
 
-} // namespace __set_symmetric_difference
-
 inline namespace __cpo {
-inline constexpr auto set_symmetric_difference = __set_symmetric_difference::__fn{};
+inline constexpr auto set_symmetric_difference = __set_symmetric_difference{};
 } // namespace __cpo
 } // namespace ranges
 

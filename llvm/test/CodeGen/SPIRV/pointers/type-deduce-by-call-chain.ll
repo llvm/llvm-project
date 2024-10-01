@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: OpName %[[ArgCum:.*]] "_arg_cum"
@@ -10,22 +10,42 @@
 ; CHECK-SPIRV-DAG: OpName %[[FooObj:.*]] "foo_object"
 ; CHECK-SPIRV-DAG: OpName %[[FooMemOrder:.*]] "mem_order"
 ; CHECK-SPIRV-DAG: OpName %[[FooFunc:.*]] "foo"
+
 ; CHECK-SPIRV-DAG: %[[TyLong:.*]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[TyVoid:.*]] = OpTypeVoid
+; CHECK-SPIRV-DAG: %[[TyGenPtrLong:.*]] = OpTypePointer Generic %[[TyLong]]
 ; CHECK-SPIRV-DAG: %[[TyPtrLong:.*]] = OpTypePointer CrossWorkgroup %[[TyLong]]
 ; CHECK-SPIRV-DAG: %[[TyFunPtrLong:.*]] = OpTypeFunction %[[TyVoid]] %[[TyPtrLong]]
-; CHECK-SPIRV-DAG: %[[TyGenPtrLong:.*]] = OpTypePointer Generic %[[TyLong]]
+; CHECK-SPIRV-DAG: %[[TyGenPtrPtrLong:.*]] = OpTypePointer Generic %[[TyGenPtrLong]]
 ; CHECK-SPIRV-DAG: %[[TyFunGenPtrLongLong:.*]] = OpTypeFunction %[[TyVoid]] %[[TyGenPtrLong]] %[[TyLong]]
 ; CHECK-SPIRV-DAG: %[[Const3:.*]] = OpConstant %[[TyLong]] 3
+; CHECK-SPIRV-DAG: %[[TyFunPtrGenPtrLong:.*]] = OpTypePointer Function %[[TyGenPtrLong]]
+
 ; CHECK-SPIRV: %[[FunTest]] = OpFunction %[[TyVoid]] None %[[TyFunPtrLong]]
 ; CHECK-SPIRV: %[[ArgCum]] = OpFunctionParameter %[[TyPtrLong]]
+
 ; CHECK-SPIRV: OpFunctionCall %[[TyVoid]] %[[FooFunc]] %[[Addr]] %[[Const3]]
+
+; CHECK-SPIRV: %[[HalfAddr:.*]] = OpPtrCastToGeneric
+; CHECK-SPIRV-NEXT: %[[HalfAddrCasted:.*]] = OpBitcast %[[TyGenPtrLong]] %[[HalfAddr]]
+; CHECK-SPIRV-NEXT: OpFunctionCall %[[TyVoid]] %[[FooFunc]] %[[HalfAddrCasted]] %[[Const3]]
+
+; CHECK-SPIRV: %[[DblAddr:.*]] = OpPtrCastToGeneric
+; CHECK-SPIRV-NEXT: %[[DblAddrCasted:.*]] = OpBitcast %[[TyGenPtrLong]] %[[DblAddr]]
+; CHECK-SPIRV-NEXT: OpFunctionCall %[[TyVoid]] %[[FooFunc]] %[[DblAddrCasted]] %[[Const3]]
+
 ; CHECK-SPIRV: %[[FooStub]] = OpFunction %[[TyVoid]] None %[[TyFunGenPtrLongLong]]
 ; CHECK-SPIRV: %[[StubObj]] = OpFunctionParameter %[[TyGenPtrLong]]
 ; CHECK-SPIRV: %[[MemOrder]] = OpFunctionParameter %[[TyLong]]
+
+; CHECK-SPIRV: %[[ObjectAddr:.*]] = OpVariable %[[TyFunPtrGenPtrLong]] Function
+; CHECK-SPIRV-NEXT: %[[ToGeneric:.*]] = OpPtrCastToGeneric %[[TyGenPtrPtrLong]] %[[ObjectAddr]]
+; CHECK-SPIRV-NEXT: OpStore %[[ToGeneric]] %[[StubObj]]
+
 ; CHECK-SPIRV: %[[FooFunc]] = OpFunction %[[TyVoid]] None %[[TyFunGenPtrLongLong]]
 ; CHECK-SPIRV: %[[FooObj]] = OpFunctionParameter %[[TyGenPtrLong]]
 ; CHECK-SPIRV: %[[FooMemOrder]] = OpFunctionParameter %[[TyLong]]
+
 ; CHECK-SPIRV: OpFunctionCall %[[TyVoid]] %[[FooStub]] %[[FooObj]] %[[FooMemOrder]]
 
 define spir_kernel void @test(ptr addrspace(1) noundef align 4 %_arg_cum) {

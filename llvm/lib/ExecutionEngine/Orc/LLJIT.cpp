@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
@@ -538,7 +539,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
 
       for (auto E : COrDtors)
         InitsOrDeInits.push_back(std::make_pair(E.Func, E.Priority));
-      llvm::sort(InitsOrDeInits, llvm::less_second());
+      llvm::stable_sort(InitsOrDeInits, llvm::less_second());
 
       auto *InitOrDeInitFuncEntryBlock =
           BasicBlock::Create(Ctx, "entry", InitOrDeInitFunc);
@@ -601,6 +602,7 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   using llvm::orc::shared::SPSExecutorAddr;
   using llvm::orc::shared::SPSString;
   using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+  using SPSDLUpdateSig = int32_t(SPSExecutorAddr, int32_t);
   enum dlopen_mode : int32_t {
     ORC_RT_RTLD_LAZY = 0x1,
     ORC_RT_RTLD_NOW = 0x2,
@@ -611,9 +613,30 @@ Error ORCPlatformSupport::initialize(orc::JITDylib &JD) {
   auto &ES = J.getExecutionSession();
   auto MainSearchOrder = J.getMainJITDylib().withLinkOrderDo(
       [](const JITDylibSearchOrder &SO) { return SO; });
+  StringRef WrapperToCall = "__orc_rt_jit_dlopen_wrapper";
+  bool dlupdate = false;
+  if (ES.getTargetTriple().isOSBinFormatMachO()) {
+    if (InitializedDylib.contains(&JD)) {
+      WrapperToCall = "__orc_rt_jit_dlupdate_wrapper";
+      dlupdate = true;
+    } else
+      InitializedDylib.insert(&JD);
+  }
 
-  if (auto WrapperAddr = ES.lookup(
-          MainSearchOrder, J.mangleAndIntern("__orc_rt_jit_dlopen_wrapper"))) {
+  if (auto WrapperAddr =
+          ES.lookup(MainSearchOrder, J.mangleAndIntern(WrapperToCall))) {
+    if (dlupdate) {
+      int32_t result;
+      auto E = ES.callSPSWrapper<SPSDLUpdateSig>(WrapperAddr->getAddress(),
+                                                 result, DSOHandles[&JD],
+                                                 int32_t(ORC_RT_RTLD_LAZY));
+      if (E)
+        return E;
+      else if (result)
+        return make_error<StringError>("dlupdate failed",
+                                       inconvertibleErrorCode());
+      return Error::success();
+    }
     return ES.callSPSWrapper<SPSDLOpenSig>(WrapperAddr->getAddress(),
                                            DSOHandles[&JD], JD.getName(),
                                            int32_t(ORC_RT_RTLD_LAZY));
@@ -640,6 +663,7 @@ Error ORCPlatformSupport::deinitialize(orc::JITDylib &JD) {
       return make_error<StringError>("dlclose failed",
                                      inconvertibleErrorCode());
     DSOHandles.erase(&JD);
+    InitializedDylib.erase(&JD);
   } else
     return WrapperAddr.takeError();
   return Error::success();
@@ -667,6 +691,40 @@ Error LLJITBuilderState::prepareForConstruction() {
       return JTMBOrErr.takeError();
   }
 
+  if ((ES || EPC) && NumCompileThreads)
+    return make_error<StringError>(
+        "NumCompileThreads cannot be used with a custom ExecutionSession or "
+        "ExecutorProcessControl",
+        inconvertibleErrorCode());
+
+#if !LLVM_ENABLE_THREADS
+  if (NumCompileThreads)
+    return make_error<StringError>(
+        "LLJIT num-compile-threads is " + Twine(NumCompileThreads) +
+            " but LLVM was compiled with LLVM_ENABLE_THREADS=Off",
+        inconvertibleErrorCode());
+#endif // !LLVM_ENABLE_THREADS
+
+  // Only used in debug builds.
+  [[maybe_unused]] bool ConcurrentCompilationSettingDefaulted =
+      !SupportConcurrentCompilation;
+
+  if (!SupportConcurrentCompilation) {
+#if LLVM_ENABLE_THREADS
+    SupportConcurrentCompilation = NumCompileThreads || ES || EPC;
+#else
+    SupportConcurrentCompilation = false;
+#endif // LLVM_ENABLE_THREADS
+  } else {
+#if !LLVM_ENABLE_THREADS
+    if (*SupportConcurrentCompilation)
+      return make_error<StringError>(
+          "LLJIT concurrent compilation support requested, but LLVM was built "
+          "with LLVM_ENABLE_THREADS=Off",
+          inconvertibleErrorCode());
+#endif // !LLVM_ENABLE_THREADS
+  }
+
   LLVM_DEBUG({
     dbgs() << "  JITTargetMachineBuilder is "
            << JITTargetMachineBuilderPrinter(*JTMB, "  ")
@@ -684,11 +742,13 @@ Error LLJITBuilderState::prepareForConstruction() {
            << (CreateCompileFunction ? "Yes" : "No") << "\n"
            << "  Custom platform-setup function: "
            << (SetUpPlatform ? "Yes" : "No") << "\n"
-           << "  Number of compile threads: " << NumCompileThreads;
-    if (!NumCompileThreads)
-      dbgs() << " (code will be compiled on the execution thread)\n";
+           << "  Support concurrent compilation: "
+           << (*SupportConcurrentCompilation ? "Yes" : "No");
+    if (ConcurrentCompilationSettingDefaulted)
+      dbgs() << " (defaulted based on ES / EPC / NumCompileThreads)\n";
     else
       dbgs() << "\n";
+    dbgs() << "  Number of compile threads: " << NumCompileThreads << "\n";
   });
 
   // Create DL if not specified.
@@ -705,7 +765,19 @@ Error LLJITBuilderState::prepareForConstruction() {
       dbgs() << "ExecutorProcessControl not specified, "
                 "Creating SelfExecutorProcessControl instance\n";
     });
-    if (auto EPCOrErr = SelfExecutorProcessControl::Create())
+
+    std::unique_ptr<TaskDispatcher> D = nullptr;
+#if LLVM_ENABLE_THREADS
+    if (*SupportConcurrentCompilation) {
+      std::optional<size_t> NumThreads = std ::nullopt;
+      if (NumCompileThreads)
+        NumThreads = NumCompileThreads;
+      D = std::make_unique<DynamicThreadPoolTaskDispatcher>(NumThreads);
+    } else
+      D = std::make_unique<InPlaceTaskDispatcher>();
+#endif // LLVM_ENABLE_THREADS
+    if (auto EPCOrErr =
+            SelfExecutorProcessControl::Create(nullptr, std::move(D), nullptr))
       EPC = std::move(*EPCOrErr);
     else
       return EPCOrErr.takeError();
@@ -753,8 +825,9 @@ Error LLJITBuilderState::prepareForConstruction() {
       break;
     }
     if (UseJITLink) {
+      if (!JTMB->getCodeModel())
+        JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
-      JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
@@ -790,8 +863,6 @@ Error LLJITBuilderState::prepareForConstruction() {
 }
 
 LLJIT::~LLJIT() {
-  if (CompileThreads)
-    CompileThreads->wait();
   if (auto Err = ES->endSession())
     ES->reportError(std::move(Err));
 }
@@ -916,9 +987,8 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
   if (S.CreateCompileFunction)
     return S.CreateCompileFunction(std::move(JTMB));
 
-  // Otherwise default to creating a SimpleCompiler, or ConcurrentIRCompiler,
-  // depending on the number of threads requested.
-  if (S.NumCompileThreads > 0)
+  // If using a custom EPC then use a ConcurrentIRCompiler by default.
+  if (*S.SupportConcurrentCompilation)
     return std::make_unique<ConcurrentIRCompiler>(std::move(JTMB));
 
   auto TM = JTMB.createTargetMachine();
@@ -970,21 +1040,8 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
         std::make_unique<IRTransformLayer>(*ES, *TransformLayer);
   }
 
-  if (S.NumCompileThreads > 0) {
+  if (*S.SupportConcurrentCompilation)
     InitHelperTransformLayer->setCloneToNewContextOnEmit(true);
-    CompileThreads = std::make_unique<DefaultThreadPool>(
-        hardware_concurrency(S.NumCompileThreads));
-    ES->setDispatchTask([this](std::unique_ptr<Task> T) {
-      // FIXME: We should be able to use move-capture here, but ThreadPool's
-      // AsyncTaskTys are std::functions rather than unique_functions
-      // (because MSVC's std::packaged_tasks don't support move-only types).
-      // Fix this when all the above gets sorted out.
-      CompileThreads->async([UnownedT = T.release()]() mutable {
-        std::unique_ptr<Task> T(UnownedT);
-        T->run();
-      });
-    });
-  }
 
   if (S.SetupProcessSymbolsJITDylib) {
     if (auto ProcSymsJD = S.SetupProcessSymbolsJITDylib(*this)) {
@@ -1240,7 +1297,7 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
   CODLayer = std::make_unique<CompileOnDemandLayer>(
       *ES, *InitHelperTransformLayer, *LCTMgr, std::move(ISMBuilder));
 
-  if (S.NumCompileThreads > 0)
+  if (*S.SupportConcurrentCompilation)
     CODLayer->setCloneToNewContextOnEmit(true);
 }
 

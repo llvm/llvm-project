@@ -126,9 +126,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   TrapNumErrorsOccurred = 0;
   TrapNumUnrecoverableErrorsOccurred = 0;
 
-  CurDiagID = std::numeric_limits<unsigned>::max();
   LastDiagLevel = DiagnosticIDs::Ignored;
-  DelayedDiagID = 0;
 
   if (!soft) {
     // Clear state related to #pragma diagnostic.
@@ -141,23 +139,6 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
     DiagStates.emplace_back();
     DiagStatesByLoc.appendFirst(&DiagStates.back());
   }
-}
-
-void DiagnosticsEngine::SetDelayedDiagnostic(unsigned DiagID, StringRef Arg1,
-                                             StringRef Arg2, StringRef Arg3) {
-  if (DelayedDiagID)
-    return;
-
-  DelayedDiagID = DiagID;
-  DelayedDiagArg1 = Arg1.str();
-  DelayedDiagArg2 = Arg2.str();
-  DelayedDiagArg3 = Arg3.str();
-}
-
-void DiagnosticsEngine::ReportDelayed() {
-  unsigned ID = DelayedDiagID;
-  DelayedDiagID = 0;
-  Report(ID) << DelayedDiagArg1 << DelayedDiagArg2 << DelayedDiagArg3;
 }
 
 DiagnosticMapping &
@@ -360,9 +341,10 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
-  // Don't allow a mapping to a warning override an error/fatal mapping.
+  // A command line -Wfoo has an invalid L and cannot override error/fatal
+  // mapping, while a warning pragma can.
   bool WasUpgradedFromWarning = false;
-  if (Map == diag::Severity::Warning) {
+  if (Map == diag::Severity::Warning && L.isInvalid()) {
     DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
     if (Info.getSeverity() == diag::Severity::Error ||
         Info.getSeverity() == diag::Severity::Fatal) {
@@ -496,39 +478,31 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
-  assert(CurDiagID == std::numeric_limits<unsigned>::max() &&
-         "Multiple diagnostics in flight at once!");
-
-  CurDiagLoc = storedDiag.getLocation();
-  CurDiagID = storedDiag.getID();
-  DiagStorage.NumDiagArgs = 0;
-
-  DiagStorage.DiagRanges.clear();
+  DiagnosticStorage DiagStorage;
   DiagStorage.DiagRanges.append(storedDiag.range_begin(),
                                 storedDiag.range_end());
 
-  DiagStorage.FixItHints.clear();
   DiagStorage.FixItHints.append(storedDiag.fixit_begin(),
                                 storedDiag.fixit_end());
 
   assert(Client && "DiagnosticConsumer not set!");
   Level DiagLevel = storedDiag.getLevel();
-  Diagnostic Info(this, storedDiag.getMessage());
+  Diagnostic Info(this, storedDiag.getLocation(), storedDiag.getID(),
+                  DiagStorage, storedDiag.getMessage());
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
     if (DiagLevel == DiagnosticsEngine::Warning)
       ++NumWarnings;
   }
-
-  CurDiagID = std::numeric_limits<unsigned>::max();
 }
 
-bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
+bool DiagnosticsEngine::EmitDiagnostic(const DiagnosticBuilder &DB,
+                                       bool Force) {
   assert(getClient() && "DiagnosticClient not set!");
 
   bool Emitted;
   if (Force) {
-    Diagnostic Info(this);
+    Diagnostic Info(this, DB);
 
     // Figure out the diagnostic level of this message.
     DiagnosticIDs::Level DiagLevel
@@ -537,23 +511,49 @@ bool DiagnosticsEngine::EmitCurrentDiagnostic(bool Force) {
     Emitted = (DiagLevel != DiagnosticIDs::Ignored);
     if (Emitted) {
       // Emit the diagnostic regardless of suppression level.
-      Diags->EmitDiag(*this, DiagLevel);
+      Diags->EmitDiag(*this, DB, DiagLevel);
     }
   } else {
     // Process the diagnostic, sending the accumulated information to the
     // DiagnosticConsumer.
-    Emitted = ProcessDiag();
+    Emitted = ProcessDiag(DB);
   }
-
-  // Clear out the current diagnostic object.
-  Clear();
-
-  // If there was a delayed diagnostic, emit it now.
-  if (!Force && DelayedDiagID)
-    ReportDelayed();
 
   return Emitted;
 }
+
+DiagnosticBuilder::DiagnosticBuilder(DiagnosticsEngine *DiagObj,
+                                     SourceLocation DiagLoc, unsigned DiagID)
+    : StreamingDiagnostic(DiagObj->DiagAllocator), DiagObj(DiagObj),
+      DiagLoc(DiagLoc), DiagID(DiagID), IsActive(true) {
+  assert(DiagObj && "DiagnosticBuilder requires a valid DiagnosticsEngine!");
+}
+
+DiagnosticBuilder::DiagnosticBuilder(const DiagnosticBuilder &D)
+    : StreamingDiagnostic() {
+  DiagLoc = D.DiagLoc;
+  DiagID = D.DiagID;
+  FlagValue = D.FlagValue;
+  DiagObj = D.DiagObj;
+  DiagStorage = D.DiagStorage;
+  D.DiagStorage = nullptr;
+  Allocator = D.Allocator;
+  IsActive = D.IsActive;
+  IsForceEmit = D.IsForceEmit;
+  D.Clear();
+}
+
+Diagnostic::Diagnostic(const DiagnosticsEngine *DO,
+                       const DiagnosticBuilder &DiagBuilder)
+    : DiagObj(DO), DiagLoc(DiagBuilder.DiagLoc), DiagID(DiagBuilder.DiagID),
+      FlagValue(DiagBuilder.FlagValue), DiagStorage(*DiagBuilder.getStorage()) {
+}
+
+Diagnostic::Diagnostic(const DiagnosticsEngine *DO, SourceLocation DiagLoc,
+                       unsigned DiagID, const DiagnosticStorage &DiagStorage,
+                       StringRef StoredDiagMessage)
+    : DiagObj(DO), DiagLoc(DiagLoc), DiagID(DiagID), DiagStorage(DiagStorage),
+      StoredDiagMessage(StoredDiagMessage) {}
 
 DiagnosticConsumer::~DiagnosticConsumer() = default;
 
@@ -851,8 +851,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
   // When the diagnostic string is only "%0", the entire string is being given
   // by an outside source.  Remove unprintable characters from this string
   // and skip all the other string processing.
-  if (DiagEnd - DiagStr == 2 &&
-      StringRef(DiagStr, DiagEnd - DiagStr).equals("%0") &&
+  if (DiagEnd - DiagStr == 2 && StringRef(DiagStr, DiagEnd - DiagStr) == "%0" &&
       getArgKind(0) == DiagnosticsEngine::ak_std_string) {
     const std::string &S = getArgStdStr(0);
     EscapeStringForDiagnostic(S, OutStr);
@@ -1210,13 +1209,13 @@ bool ForwardingDiagnosticConsumer::IncludeInDiagnosticCounts() const {
   return Target.IncludeInDiagnosticCounts();
 }
 
-PartialDiagnostic::DiagStorageAllocator::DiagStorageAllocator() {
+DiagStorageAllocator::DiagStorageAllocator() {
   for (unsigned I = 0; I != NumCached; ++I)
     FreeList[I] = Cached + I;
   NumFreeListEntries = NumCached;
 }
 
-PartialDiagnostic::DiagStorageAllocator::~DiagStorageAllocator() {
+DiagStorageAllocator::~DiagStorageAllocator() {
   // Don't assert if we are in a CrashRecovery context, as this invariant may
   // be invalidated during a crash.
   assert((NumFreeListEntries == NumCached ||

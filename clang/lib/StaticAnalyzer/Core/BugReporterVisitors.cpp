@@ -59,6 +59,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <utility>
 
@@ -113,6 +114,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       // Pointer arithmetic: '*(x + 2)' -> 'x') etc.
       if (const Expr *Inner = peelOffPointerArithmetic(B)) {
         E = Inner;
+      } else if (B->isAssignmentOp()) {
+        // Follow LHS of assignments: '*p = 404' -> 'p'.
+        E = B->getLHS();
       } else {
         // Probably more arithmetic can be pattern-matched here,
         // but for now give up.
@@ -517,95 +521,6 @@ PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
 
   return maybeEmitNoteForParameters(R, *Call, N);
 }
-
-//===----------------------------------------------------------------------===//
-// Implementation of NoStoreFuncVisitor.
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Put a diagnostic on return statement of all inlined functions
-/// for which  the region of interest \p RegionOfInterest was passed into,
-/// but not written inside, and it has caused an undefined read or a null
-/// pointer dereference outside.
-class NoStoreFuncVisitor final : public NoStateChangeFuncVisitor {
-  const SubRegion *RegionOfInterest;
-  MemRegionManager &MmrMgr;
-  const SourceManager &SM;
-  const PrintingPolicy &PP;
-
-  /// Recursion limit for dereferencing fields when looking for the
-  /// region of interest.
-  /// The limit of two indicates that we will dereference fields only once.
-  static const unsigned DEREFERENCE_LIMIT = 2;
-
-  using RegionVector = SmallVector<const MemRegion *, 5>;
-
-public:
-  NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
-      : NoStateChangeFuncVisitor(TKind), RegionOfInterest(R),
-        MmrMgr(R->getMemRegionManager()),
-        SM(MmrMgr.getContext().getSourceManager()),
-        PP(MmrMgr.getContext().getPrintingPolicy()) {}
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    static int Tag = 0;
-    ID.AddPointer(&Tag);
-    ID.AddPointer(RegionOfInterest);
-  }
-
-private:
-  /// \return Whether \c RegionOfInterest was modified at \p CurrN compared to
-  /// the value it holds in \p CallExitBeginN.
-  bool wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                                 const ExplodedNode *CallExitBeginN) override;
-
-  /// Attempts to find the region of interest in a given record decl,
-  /// by either following the base classes or fields.
-  /// Dereferences fields up to a given recursion limit.
-  /// Note that \p Vec is passed by value, leading to quadratic copying cost,
-  /// but it's OK in practice since its length is limited to DEREFERENCE_LIMIT.
-  /// \return A chain fields leading to the region of interest or std::nullopt.
-  const std::optional<RegionVector>
-  findRegionOfInterestInRecord(const RecordDecl *RD, ProgramStateRef State,
-                               const MemRegion *R, const RegionVector &Vec = {},
-                               int depth = 0);
-
-  // Region of interest corresponds to an IVar, exiting a method
-  // which could have written into that IVar, but did not.
-  PathDiagnosticPieceRef maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                                                  const ObjCMethodCall &Call,
-                                                  const ExplodedNode *N) final;
-
-  PathDiagnosticPieceRef maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                                                 const CXXConstructorCall &Call,
-                                                 const ExplodedNode *N) final;
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
-                             const ExplodedNode *N) final;
-
-  /// Consume the information on the no-store stack frame in order to
-  /// either emit a note or suppress the report enirely.
-  /// \return Diagnostics piece for region not modified in the current function,
-  /// if it decides to emit one.
-  PathDiagnosticPieceRef
-  maybeEmitNote(PathSensitiveBugReport &R, const CallEvent &Call,
-                const ExplodedNode *N, const RegionVector &FieldChain,
-                const MemRegion *MatchedRegion, StringRef FirstElement,
-                bool FirstIsReferenceType, unsigned IndirectionLevel);
-
-  bool prettyPrintRegionName(const RegionVector &FieldChain,
-                             const MemRegion *MatchedRegion,
-                             StringRef FirstElement, bool FirstIsReferenceType,
-                             unsigned IndirectionLevel,
-                             llvm::raw_svector_ostream &os);
-
-  StringRef prettyPrintFirstElement(StringRef FirstElement,
-                                    bool MoreItemsExpected,
-                                    int IndirectionLevel,
-                                    llvm::raw_svector_ostream &os);
-};
-} // namespace
 
 /// \return Whether the method declaration \p Parent
 /// syntactically has a binary operation writing into the ivar \p Ivar.
@@ -1238,7 +1153,7 @@ public:
   ///        changes to its value in a nested stackframe could be pruned, and
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
-  StoreSiteFinder(bugreporter::TrackerRef ParentTracker, KnownSVal V,
+  StoreSiteFinder(bugreporter::TrackerRef ParentTracker, SVal V,
                   const MemRegion *R, TrackingOptions Options,
                   const StackFrameContext *OriginSFC = nullptr)
       : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
@@ -2539,9 +2454,9 @@ public:
         Report.addVisitor<UndefOrNullArgVisitor>(L->getRegion());
         Result.FoundSomethingToTrack = true;
 
-        if (auto KV = RVal.getAs<KnownSVal>())
+        if (!RVal.isUnknown())
           Result.combineWith(
-              getParentTracker().track(*KV, L->getRegion(), Opts, SFC));
+              getParentTracker().track(RVal, L->getRegion(), Opts, SFC));
       }
 
       const MemRegion *RegionRVal = RVal.getAsRegion();
@@ -2663,8 +2578,8 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
                                const StackFrameContext *Origin) {
-  if (auto KV = V.getAs<KnownSVal>()) {
-    Report.addVisitor<StoreSiteFinder>(this, *KV, R, Opts, Origin);
+  if (!V.isUnknown()) {
+    Report.addVisitor<StoreSiteFinder>(this, V, R, Opts, Origin);
     return {true};
   }
   return {};
@@ -2692,7 +2607,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
       .FoundSomethingToTrack;
 }
 
-void bugreporter::trackStoredValue(KnownSVal V, const MemRegion *R,
+void bugreporter::trackStoredValue(SVal V, const MemRegion *R,
                                    PathSensitiveBugReport &Report,
                                    TrackingOptions Opts,
                                    const StackFrameContext *Origin) {
@@ -3441,82 +3356,6 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
     }
   }
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// Implementation of FalsePositiveRefutationBRVisitor.
-//===----------------------------------------------------------------------===//
-
-FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
-    : Constraints(ConstraintMap::Factory().getEmptyMap()) {}
-
-void FalsePositiveRefutationBRVisitor::finalizeVisitor(
-    BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-    PathSensitiveBugReport &BR) {
-  // Collect new constraints
-  addConstraints(EndPathNode, /*OverwriteConstraintsOnExistingSyms=*/true);
-
-  // Create a refutation manager
-  llvm::SMTSolverRef RefutationSolver = llvm::CreateZ3Solver();
-  ASTContext &Ctx = BRC.getASTContext();
-
-  // Add constraints to the solver
-  for (const auto &I : Constraints) {
-    const SymbolRef Sym = I.first;
-    auto RangeIt = I.second.begin();
-
-    llvm::SMTExprRef SMTConstraints = SMTConv::getRangeExpr(
-        RefutationSolver, Ctx, Sym, RangeIt->From(), RangeIt->To(),
-        /*InRange=*/true);
-    while ((++RangeIt) != I.second.end()) {
-      SMTConstraints = RefutationSolver->mkOr(
-          SMTConstraints, SMTConv::getRangeExpr(RefutationSolver, Ctx, Sym,
-                                                RangeIt->From(), RangeIt->To(),
-                                                /*InRange=*/true));
-    }
-
-    RefutationSolver->addConstraint(SMTConstraints);
-  }
-
-  // And check for satisfiability
-  std::optional<bool> IsSAT = RefutationSolver->check();
-  if (!IsSAT)
-    return;
-
-  if (!*IsSAT)
-    BR.markInvalid("Infeasible constraints", EndPathNode->getLocationContext());
-}
-
-void FalsePositiveRefutationBRVisitor::addConstraints(
-    const ExplodedNode *N, bool OverwriteConstraintsOnExistingSyms) {
-  // Collect new constraints
-  ConstraintMap NewCs = getConstraintMap(N->getState());
-  ConstraintMap::Factory &CF = N->getState()->get_context<ConstraintMap>();
-
-  // Add constraints if we don't have them yet
-  for (auto const &C : NewCs) {
-    const SymbolRef &Sym = C.first;
-    if (!Constraints.contains(Sym)) {
-      // This symbol is new, just add the constraint.
-      Constraints = CF.add(Constraints, Sym, C.second);
-    } else if (OverwriteConstraintsOnExistingSyms) {
-      // Overwrite the associated constraint of the Symbol.
-      Constraints = CF.remove(Constraints, Sym);
-      Constraints = CF.add(Constraints, Sym, C.second);
-    }
-  }
-}
-
-PathDiagnosticPieceRef FalsePositiveRefutationBRVisitor::VisitNode(
-    const ExplodedNode *N, BugReporterContext &, PathSensitiveBugReport &) {
-  addConstraints(N, /*OverwriteConstraintsOnExistingSyms=*/false);
-  return nullptr;
-}
-
-void FalsePositiveRefutationBRVisitor::Profile(
-    llvm::FoldingSetNodeID &ID) const {
-  static int Tag = 0;
-  ID.AddPointer(&Tag);
 }
 
 //===----------------------------------------------------------------------===//

@@ -14,10 +14,12 @@
 #include "mlir/Conversion/ArithToArmSME/ArithToArmSME.h"
 #include "mlir/Conversion/ArmSMEToLLVM/ArmSMEToLLVM.h"
 #include "mlir/Conversion/ArmSMEToSCF/ArmSMEToSCF.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/VectorToArmSME/VectorToArmSME.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -34,6 +36,10 @@ struct TestLowerToArmSMEOptions
       llvm::cl::desc("Fuse outer product operations via "
                      "'-arm-sme-outer-product-fusion' pass"),
       llvm::cl::init(true)};
+  PassOptions::Option<bool> dumpTileLiveRanges{
+      *this, "dump-tile-live-ranges",
+      llvm::cl::desc("Dump the live ranges of SME tiles (for debugging)"),
+      llvm::cl::init(false)};
 };
 
 void buildTestLowerToArmSME(OpPassManager &pm,
@@ -65,20 +71,17 @@ void buildTestLowerToArmSME(OpPassManager &pm,
   pm.addPass(createConvertVectorToSCFPass(
       VectorTransferToSCFOptions().enableFullUnroll()));
 
-  // Allocate tiles for ArmSME operations.
-  //
-  // Later passes may create further ArmSME ops that implement the
-  // ArmSMETileOpInterface, but tiles are allocated for root operations,
-  // all of which should now exist.
-  pm.addPass(arm_sme::createTileAllocationPass());
-
   // Enable streaming-mode and ZA.
   pm.addPass(arm_sme::createEnableArmStreamingPass(
       arm_sme::ArmStreamingMode::StreamingLocally, arm_sme::ArmZaMode::NewZA,
-      /*onlyIfRequiredByOps=*/true));
+      /*ifRequiredByOps=*/true));
+
+  // Convert SCF to CF (required for ArmSME tile allocation).
+  pm.addPass(createConvertSCFToCFPass());
 
   // Convert ArmSME to LLVM.
-  pm.addPass(createConvertArmSMEToLLVMPass());
+  pm.addNestedPass<func::FuncOp>(
+      createConvertArmSMEToLLVMPass(options.dumpTileLiveRanges));
 
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());

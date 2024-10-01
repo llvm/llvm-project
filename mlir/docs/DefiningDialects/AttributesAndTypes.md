@@ -14,8 +14,8 @@ from the [MLIR LangRef](../LangRef.md).
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`arith.cmpi` operation](../Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
-the underlying value of a [`arith.constant` operation](../Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
+[`arith.cmpi` operation](../Dialects/ArithOps.md/#arithcmpi-arithcmpiop), or
+the underlying value of a [`arith.constant` operation](../Dialects/ArithOps.md/#arithconstant-arithconstantop).
 Each operation has an attribute dictionary, which associates a set of attribute
 names to attribute values.
 
@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithmetic AddI operation](../Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](../Dialects/ArithOps.md/#arithaddi-arithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64
@@ -32,7 +32,7 @@ the following [Arithmetic AddI operation](../Dialects/ArithOps.md#arithaddi-mlir
 
 It takes two input SSA values (`%lhs` and `%rhs`), and returns a single SSA
 value (`%result`). The inputs and outputs of this operation are of type `i64`,
-which is an instance of the [Builtin IntegerType](../Dialects/Builtin.md#integertype).
+which is an instance of the [Builtin IntegerType](../Dialects/Builtin.md/#integertype).
 
 ## Attributes and Types
 
@@ -551,13 +551,13 @@ For Types, these methods will have the form:
 
 - `static Type MyType::parse(AsmParser &parser)`
 
-- `Type MyType::print(AsmPrinter &p) const`
+- `void MyType::print(AsmPrinter &p) const`
 
 For Attributes, these methods will have the form:
 
 - `static Attribute MyAttr::parse(AsmParser &parser, Type attrType)`
 
-- `Attribute MyAttr::print(AsmPrinter &p) const`
+- `void MyAttr::print(AsmPrinter &p) const`
 
 #### Using `assemblyFormat`
 

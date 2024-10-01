@@ -15,4 +15,30 @@
 
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+
+namespace llvm::omp {
+ArrayRef<Directive> getLeafConstructs(Directive D);
+ArrayRef<Directive> getLeafConstructsOrSelf(Directive D);
+
+ArrayRef<Directive>
+getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output);
+
+Directive getCompoundConstruct(ArrayRef<Directive> Parts);
+
+bool isLeafConstruct(Directive D);
+bool isCompositeConstruct(Directive D);
+bool isCombinedConstruct(Directive D);
+
+/// Create a nicer version of a function name for humans to look at.
+std::string prettifyFunctionName(StringRef FunctionName);
+
+/// Deconstruct an OpenMP kernel name into the parent function name and the line
+/// number.
+std::string deconstructOpenMPKernelName(StringRef KernelName, unsigned &LineNo);
+
+} // namespace llvm::omp
+
 #endif // LLVM_FRONTEND_OPENMP_OMP_H

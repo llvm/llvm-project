@@ -1,10 +1,8 @@
-# See https://libcxx.llvm.org/docs/BuildingLibcxx.html for instructions on how
-# to build libcxx with CMake.
-
 #===============================================================================
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -70,12 +68,16 @@ if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
     "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
 endif()
 set(LIBCXX_ASSERTION_HANDLER_FILE
-  "${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"
+  "vendor/llvm/default_assertion_handler.in"
   CACHE STRING
   "Specify the path to a header that contains a custom implementation of the
    assertion handler that gets invoked when a hardening assertion fails. If
    provided, this header will be included by the library, replacing the
-   default assertion handler.")
+   default assertion handler. If this is specified as a relative path, it
+   is assumed to be relative to '<monorepo>/libcxx'.")
+if (NOT IS_ABSOLUTE "${LIBCXX_ASSERTION_HANDLER_FILE}")
+  set(LIBCXX_ASSERTION_HANDLER_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${LIBCXX_ASSERTION_HANDLER_FILE}")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -92,6 +94,8 @@ option(LIBCXX_ENABLE_UNICODE
   "Whether to include support for Unicode in the library. Disabling Unicode can
    be useful when porting to platforms that don't support UTF-8 encoding (e.g.
    embedded)." ON)
+option(LIBCXX_HAS_TERMINAL_AVAILABLE
+  "Build libc++ with support for checking whether a stream is a terminal." ON)
 option(LIBCXX_ENABLE_WIDE_CHARACTERS
   "Whether to include support for wide characters in the library. Disabling
    wide character support can be useful when porting to platforms that don't
@@ -121,14 +125,17 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    on definitions in a shared library. By default, we assume that we're not building
    libc++ for any specific vendor, and we disable those annotations. Vendors wishing
    to provide compile-time errors when using features unavailable on some version of
-   the shared library they shipped should turn this on and see `include/__availability`
+   the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
-option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
 elseif(MINGW)
-  set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-mingw.cfg.in")
+  if (LIBCXX_ENABLE_SHARED)
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-mingw.cfg.in")
+  else()
+    set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-static-mingw.cfg.in")
+  endif()
 elseif(WIN32) # clang-cl
   if (LIBCXX_ENABLE_SHARED)
     set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-clangcl.cfg.in")
@@ -159,27 +166,13 @@ set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
 set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
     "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
 
-set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
-        "Build the benchmarks against the specified native STL.
-         The value must be one of libc++/libstdc++")
-set(LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN "" CACHE STRING
-    "Use alternate GCC toolchain when building the native benchmarks")
-
-if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
-  if (NOT (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++"
-        OR LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++"))
-    message(FATAL_ERROR "Invalid value for LIBCXX_BENCHMARK_NATIVE_STDLIB: "
-            "'${LIBCXX_BENCHMARK_NATIVE_STDLIB}'")
-  endif()
-endif()
-
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
 option(LIBCXX_INSTALL_HEADERS "Install the libc++ headers." ON)
 option(LIBCXX_INSTALL_LIBRARY "Install the libc++ library." ON)
 option(LIBCXX_INSTALL_MODULES
-  "Install the libc++ C++20 module source files (experimental)." OFF
+  "Install the libc++ C++20 module source files (experimental)." ON
 )
 cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
   "Install the static libc++ library." ON
@@ -225,6 +218,14 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 set(LIBCXX_EXTRA_SITE_DEFINES "" CACHE STRING "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
+
+# C Library options -----------------------------------------------------------
+
+set(LIBCXX_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(LIBCXX_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+if (NOT "${LIBCXX_LIBC}" IN_LIST LIBCXX_SUPPORTED_C_LIBRARIES)
+  message(FATAL_ERROR "Unsupported C library: '${LIBCXX_CXX_ABI}'. Supported values are ${LIBCXX_SUPPORTED_C_LIBRARIES}.")
+endif()
 
 # ABI Library options ---------------------------------------------------------
 if (MSVC)
@@ -301,9 +302,9 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
 
 if (LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_CPU_BACKEND "std_thread" CACHE STRING "Which PSTL CPU backend to use")
+  set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
 else()
-  set(LIBCXX_PSTL_CPU_BACKEND "serial" CACHE STRING "Which PSTL CPU backend to use")
+  set(LIBCXX_PSTL_BACKEND "serial" CACHE STRING "Which PSTL backend to use")
 endif()
 
 # Misc options ----------------------------------------------------------------
@@ -311,17 +312,6 @@ endif()
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
-
-option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
-set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
-    "The Profile-rt library used to build with code coverage")
-
-set(LIBCXX_CONFIGURE_IDE_DEFAULT OFF)
-if (XCODE OR MSVC_IDE)
-  set(LIBCXX_CONFIGURE_IDE_DEFAULT ON)
-endif()
-option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
-      ${LIBCXX_CONFIGURE_IDE_DEFAULT})
 
 set(LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
@@ -385,12 +375,6 @@ if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
                       " for details.")
 endif()
 
-# Ensure LLVM_USE_SANITIZER is not specified when LIBCXX_GENERATE_COVERAGE
-# is ON.
-if (LLVM_USE_SANITIZER AND LIBCXX_GENERATE_COVERAGE)
-  message(FATAL_ERROR "LLVM_USE_SANITIZER cannot be used with LIBCXX_GENERATE_COVERAGE")
-endif()
-
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     if (APPLE)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT cannot be used on APPLE targets")
@@ -433,18 +417,19 @@ set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared lib
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBCXX_LIBDIR_SUBDIR)
+    string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
+  endif()
+  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
-  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
+  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE STRING
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXX_TARGET_SUBDIR}/c++/v1" CACHE STRING
       "Path where target-specific libc++ headers should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
-    string(APPEND LIBCXX_INSTALL_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
-  endif()
+  unset(LIBCXX_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -498,16 +483,11 @@ endif()
 # Configure compiler.
 include(config-ix)
 
-# Configure coverage options.
-if (LIBCXX_GENERATE_COVERAGE)
-  include(CodeCoverage)
-  set(CMAKE_BUILD_TYPE "COVERAGE" CACHE STRING "" FORCE)
-endif()
-
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
 
+include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
@@ -551,6 +531,10 @@ function(cxx_add_basic_build_flags target)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
   endif()
+
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(${target} PRIVATE -fsized-deallocation)
 
   # Let the library headers know they are currently being used to build the
   # library.
@@ -763,6 +747,7 @@ config_define_if(LIBCXX_ABI_FORCE_ITANIUM _LIBCPP_ABI_FORCE_ITANIUM)
 config_define_if(LIBCXX_ABI_FORCE_MICROSOFT _LIBCPP_ABI_FORCE_MICROSOFT)
 config_define_if_not(LIBCXX_ENABLE_THREADS _LIBCPP_HAS_NO_THREADS)
 config_define_if_not(LIBCXX_ENABLE_MONOTONIC_CLOCK _LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+config_define_if_not(LIBCXX_HAS_TERMINAL_AVAILABLE _LIBCPP_HAS_NO_TERMINAL)
 if (NOT LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION STREQUAL "default")
   config_define("${LIBCXX_TYPEINFO_COMPARISON_IMPLEMENTATION}" _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION)
 endif()
@@ -779,8 +764,8 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
+  message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
   set(LIBCXX_HARDENING_MODE "extensive")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
@@ -793,14 +778,14 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
 endif()
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_SERIAL)
-elseif(LIBCXX_PSTL_CPU_BACKEND STREQUAL "std_thread")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_THREAD)
-elseif(LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+if (LIBCXX_PSTL_BACKEND STREQUAL "serial")
+  config_define(1 _LIBCPP_PSTL_BACKEND_SERIAL)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "std_thread")
+  config_define(1 _LIBCPP_PSTL_BACKEND_STD_THREAD)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
+  config_define(1 _LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 else()
-  message(FATAL_ERROR "LIBCXX_PSTL_CPU_BACKEND is set to ${LIBCXX_PSTL_CPU_BACKEND}, which is not a valid backend.
+  message(FATAL_ERROR "LIBCXX_PSTL_BACKEND is set to ${LIBCXX_PSTL_BACKEND}, which is not a valid backend.
                        Valid backends are: serial, std_thread and libdispatch")
 endif()
 
@@ -856,22 +841,13 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
+add_custom_target(cxx-test-depends
+  COMMENT "Build dependencies required to run the libc++ test suite.")
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-if (LIBCXX_ENABLE_CLANG_TIDY)
-  list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
-endif()
-
-list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
-
-if (LIBCXX_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
 
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)

@@ -30,9 +30,7 @@ define <vscale x 1 x i8> @vxor_vi_nxv1i8_0(<vscale x 1 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i8> %va, %splat
+  %vc = xor <vscale x 1 x i8> %va, splat (i8 -1)
   ret <vscale x 1 x i8> %vc
 }
 
@@ -42,9 +40,7 @@ define <vscale x 1 x i8> @vxor_vi_nxv1i8_1(<vscale x 1 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i8> %va, %splat
+  %vc = xor <vscale x 1 x i8> %va, splat (i8 8)
   ret <vscale x 1 x i8> %vc
 }
 
@@ -55,9 +51,7 @@ define <vscale x 1 x i8> @vxor_vi_nxv1i8_2(<vscale x 1 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i8> %va, %splat
+  %vc = xor <vscale x 1 x i8> %va, splat (i8 16)
   ret <vscale x 1 x i8> %vc
 }
 
@@ -89,9 +83,7 @@ define <vscale x 2 x i8> @vxor_vi_nxv2i8_0(<vscale x 2 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i8> %va, %splat
+  %vc = xor <vscale x 2 x i8> %va, splat (i8 -1)
   ret <vscale x 2 x i8> %vc
 }
 
@@ -101,9 +93,7 @@ define <vscale x 2 x i8> @vxor_vi_nxv2i8_1(<vscale x 2 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i8> %va, %splat
+  %vc = xor <vscale x 2 x i8> %va, splat (i8 8)
   ret <vscale x 2 x i8> %vc
 }
 
@@ -114,9 +104,7 @@ define <vscale x 2 x i8> @vxor_vi_nxv2i8_2(<vscale x 2 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i8> %va, %splat
+  %vc = xor <vscale x 2 x i8> %va, splat (i8 16)
   ret <vscale x 2 x i8> %vc
 }
 
@@ -148,9 +136,7 @@ define <vscale x 4 x i8> @vxor_vi_nxv4i8_0(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i8> %va, %splat
+  %vc = xor <vscale x 4 x i8> %va, splat (i8 -1)
   ret <vscale x 4 x i8> %vc
 }
 
@@ -160,9 +146,7 @@ define <vscale x 4 x i8> @vxor_vi_nxv4i8_1(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i8> %va, %splat
+  %vc = xor <vscale x 4 x i8> %va, splat (i8 8)
   ret <vscale x 4 x i8> %vc
 }
 
@@ -173,9 +157,7 @@ define <vscale x 4 x i8> @vxor_vi_nxv4i8_2(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i8> %va, %splat
+  %vc = xor <vscale x 4 x i8> %va, splat (i8 16)
   ret <vscale x 4 x i8> %vc
 }
 
@@ -207,9 +189,7 @@ define <vscale x 8 x i8> @vxor_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i8> %va, %splat
+  %vc = xor <vscale x 8 x i8> %va, splat (i8 -1)
   ret <vscale x 8 x i8> %vc
 }
 
@@ -219,9 +199,7 @@ define <vscale x 8 x i8> @vxor_vi_nxv8i8_1(<vscale x 8 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i8> %va, %splat
+  %vc = xor <vscale x 8 x i8> %va, splat (i8 8)
   ret <vscale x 8 x i8> %vc
 }
 
@@ -232,9 +210,7 @@ define <vscale x 8 x i8> @vxor_vi_nxv8i8_2(<vscale x 8 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i8> %va, %splat
+  %vc = xor <vscale x 8 x i8> %va, splat (i8 16)
   ret <vscale x 8 x i8> %vc
 }
 
@@ -266,9 +242,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_0(<vscale x 16 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i8> %va, %splat
+  %vc = xor <vscale x 16 x i8> %va, splat (i8 -1)
   ret <vscale x 16 x i8> %vc
 }
 
@@ -278,9 +252,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_1(<vscale x 16 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i8> %va, %splat
+  %vc = xor <vscale x 16 x i8> %va, splat (i8 8)
   ret <vscale x 16 x i8> %vc
 }
 
@@ -291,9 +263,7 @@ define <vscale x 16 x i8> @vxor_vi_nxv16i8_2(<vscale x 16 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 16 x i8> %head, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i8> %va, %splat
+  %vc = xor <vscale x 16 x i8> %va, splat (i8 16)
   ret <vscale x 16 x i8> %vc
 }
 
@@ -325,9 +295,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_0(<vscale x 32 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 32 x i8> %head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i8> %va, %splat
+  %vc = xor <vscale x 32 x i8> %va, splat (i8 -1)
   ret <vscale x 32 x i8> %vc
 }
 
@@ -337,9 +305,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_1(<vscale x 32 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 32 x i8> %head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i8> %va, %splat
+  %vc = xor <vscale x 32 x i8> %va, splat (i8 8)
   ret <vscale x 32 x i8> %vc
 }
 
@@ -350,9 +316,7 @@ define <vscale x 32 x i8> @vxor_vi_nxv32i8_2(<vscale x 32 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 32 x i8> %head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i8> %va, %splat
+  %vc = xor <vscale x 32 x i8> %va, splat (i8 16)
   ret <vscale x 32 x i8> %vc
 }
 
@@ -384,9 +348,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_0(<vscale x 64 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i8> poison, i8 -1, i32 0
-  %splat = shufflevector <vscale x 64 x i8> %head, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
-  %vc = xor <vscale x 64 x i8> %va, %splat
+  %vc = xor <vscale x 64 x i8> %va, splat (i8 -1)
   ret <vscale x 64 x i8> %vc
 }
 
@@ -396,9 +358,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_1(<vscale x 64 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i8> poison, i8 8, i32 0
-  %splat = shufflevector <vscale x 64 x i8> %head, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
-  %vc = xor <vscale x 64 x i8> %va, %splat
+  %vc = xor <vscale x 64 x i8> %va, splat (i8 8)
   ret <vscale x 64 x i8> %vc
 }
 
@@ -409,9 +369,7 @@ define <vscale x 64 x i8> @vxor_vi_nxv64i8_2(<vscale x 64 x i8> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 64 x i8> poison, i8 16, i32 0
-  %splat = shufflevector <vscale x 64 x i8> %head, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
-  %vc = xor <vscale x 64 x i8> %va, %splat
+  %vc = xor <vscale x 64 x i8> %va, splat (i8 16)
   ret <vscale x 64 x i8> %vc
 }
 
@@ -443,9 +401,7 @@ define <vscale x 1 x i16> @vxor_vi_nxv1i16_0(<vscale x 1 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i16> %va, %splat
+  %vc = xor <vscale x 1 x i16> %va, splat (i16 -1)
   ret <vscale x 1 x i16> %vc
 }
 
@@ -455,9 +411,7 @@ define <vscale x 1 x i16> @vxor_vi_nxv1i16_1(<vscale x 1 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i16> %va, %splat
+  %vc = xor <vscale x 1 x i16> %va, splat (i16 8)
   ret <vscale x 1 x i16> %vc
 }
 
@@ -468,9 +422,7 @@ define <vscale x 1 x i16> @vxor_vi_nxv1i16_2(<vscale x 1 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i16> %va, %splat
+  %vc = xor <vscale x 1 x i16> %va, splat (i16 16)
   ret <vscale x 1 x i16> %vc
 }
 
@@ -502,9 +454,7 @@ define <vscale x 2 x i16> @vxor_vi_nxv2i16_0(<vscale x 2 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i16> %va, %splat
+  %vc = xor <vscale x 2 x i16> %va, splat (i16 -1)
   ret <vscale x 2 x i16> %vc
 }
 
@@ -514,9 +464,7 @@ define <vscale x 2 x i16> @vxor_vi_nxv2i16_1(<vscale x 2 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i16> %va, %splat
+  %vc = xor <vscale x 2 x i16> %va, splat (i16 8)
   ret <vscale x 2 x i16> %vc
 }
 
@@ -527,9 +475,7 @@ define <vscale x 2 x i16> @vxor_vi_nxv2i16_2(<vscale x 2 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i16> %va, %splat
+  %vc = xor <vscale x 2 x i16> %va, splat (i16 16)
   ret <vscale x 2 x i16> %vc
 }
 
@@ -561,9 +507,7 @@ define <vscale x 4 x i16> @vxor_vi_nxv4i16_0(<vscale x 4 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i16> %va, %splat
+  %vc = xor <vscale x 4 x i16> %va, splat (i16 -1)
   ret <vscale x 4 x i16> %vc
 }
 
@@ -573,9 +517,7 @@ define <vscale x 4 x i16> @vxor_vi_nxv4i16_1(<vscale x 4 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i16> %va, %splat
+  %vc = xor <vscale x 4 x i16> %va, splat (i16 8)
   ret <vscale x 4 x i16> %vc
 }
 
@@ -586,9 +528,7 @@ define <vscale x 4 x i16> @vxor_vi_nxv4i16_2(<vscale x 4 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i16> %va, %splat
+  %vc = xor <vscale x 4 x i16> %va, splat (i16 16)
   ret <vscale x 4 x i16> %vc
 }
 
@@ -620,9 +560,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i16> %va, %splat
+  %vc = xor <vscale x 8 x i16> %va, splat (i16 -1)
   ret <vscale x 8 x i16> %vc
 }
 
@@ -632,9 +570,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_1(<vscale x 8 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i16> %va, %splat
+  %vc = xor <vscale x 8 x i16> %va, splat (i16 8)
   ret <vscale x 8 x i16> %vc
 }
 
@@ -645,9 +581,7 @@ define <vscale x 8 x i16> @vxor_vi_nxv8i16_2(<vscale x 8 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i16> %va, %splat
+  %vc = xor <vscale x 8 x i16> %va, splat (i16 16)
   ret <vscale x 8 x i16> %vc
 }
 
@@ -679,9 +613,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_0(<vscale x 16 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i16> %va, %splat
+  %vc = xor <vscale x 16 x i16> %va, splat (i16 -1)
   ret <vscale x 16 x i16> %vc
 }
 
@@ -691,9 +623,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_1(<vscale x 16 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i16> %va, %splat
+  %vc = xor <vscale x 16 x i16> %va, splat (i16 8)
   ret <vscale x 16 x i16> %vc
 }
 
@@ -704,9 +634,7 @@ define <vscale x 16 x i16> @vxor_vi_nxv16i16_2(<vscale x 16 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i16> %va, %splat
+  %vc = xor <vscale x 16 x i16> %va, splat (i16 16)
   ret <vscale x 16 x i16> %vc
 }
 
@@ -738,9 +666,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_0(<vscale x 32 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i16> poison, i16 -1, i32 0
-  %splat = shufflevector <vscale x 32 x i16> %head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i16> %va, %splat
+  %vc = xor <vscale x 32 x i16> %va, splat (i16 -1)
   ret <vscale x 32 x i16> %vc
 }
 
@@ -750,9 +676,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_1(<vscale x 32 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i16> poison, i16 8, i32 0
-  %splat = shufflevector <vscale x 32 x i16> %head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i16> %va, %splat
+  %vc = xor <vscale x 32 x i16> %va, splat (i16 8)
   ret <vscale x 32 x i16> %vc
 }
 
@@ -763,9 +687,7 @@ define <vscale x 32 x i16> @vxor_vi_nxv32i16_2(<vscale x 32 x i16> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 32 x i16> poison, i16 16, i32 0
-  %splat = shufflevector <vscale x 32 x i16> %head, <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer
-  %vc = xor <vscale x 32 x i16> %va, %splat
+  %vc = xor <vscale x 32 x i16> %va, splat (i16 16)
   ret <vscale x 32 x i16> %vc
 }
 
@@ -797,9 +719,7 @@ define <vscale x 1 x i32> @vxor_vi_nxv1i32_0(<vscale x 1 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> poison, i32 -1, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i32> %va, %splat
+  %vc = xor <vscale x 1 x i32> %va, splat (i32 -1)
   ret <vscale x 1 x i32> %vc
 }
 
@@ -809,9 +729,7 @@ define <vscale x 1 x i32> @vxor_vi_nxv1i32_1(<vscale x 1 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> poison, i32 8, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i32> %va, %splat
+  %vc = xor <vscale x 1 x i32> %va, splat (i32 8)
   ret <vscale x 1 x i32> %vc
 }
 
@@ -822,9 +740,7 @@ define <vscale x 1 x i32> @vxor_vi_nxv1i32_2(<vscale x 1 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i32> poison, i32 16, i32 0
-  %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i32> %va, %splat
+  %vc = xor <vscale x 1 x i32> %va, splat (i32 16)
   ret <vscale x 1 x i32> %vc
 }
 
@@ -856,9 +772,7 @@ define <vscale x 2 x i32> @vxor_vi_nxv2i32_0(<vscale x 2 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> poison, i32 -1, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i32> %va, %splat
+  %vc = xor <vscale x 2 x i32> %va, splat (i32 -1)
   ret <vscale x 2 x i32> %vc
 }
 
@@ -868,9 +782,7 @@ define <vscale x 2 x i32> @vxor_vi_nxv2i32_1(<vscale x 2 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> poison, i32 8, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i32> %va, %splat
+  %vc = xor <vscale x 2 x i32> %va, splat (i32 8)
   ret <vscale x 2 x i32> %vc
 }
 
@@ -881,9 +793,7 @@ define <vscale x 2 x i32> @vxor_vi_nxv2i32_2(<vscale x 2 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i32> poison, i32 16, i32 0
-  %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i32> %va, %splat
+  %vc = xor <vscale x 2 x i32> %va, splat (i32 16)
   ret <vscale x 2 x i32> %vc
 }
 
@@ -915,9 +825,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_0(<vscale x 4 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 -1, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i32> %va, %splat
+  %vc = xor <vscale x 4 x i32> %va, splat (i32 -1)
   ret <vscale x 4 x i32> %vc
 }
 
@@ -927,9 +835,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_1(<vscale x 4 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 8, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i32> %va, %splat
+  %vc = xor <vscale x 4 x i32> %va, splat (i32 8)
   ret <vscale x 4 x i32> %vc
 }
 
@@ -940,9 +846,7 @@ define <vscale x 4 x i32> @vxor_vi_nxv4i32_2(<vscale x 4 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i32> poison, i32 16, i32 0
-  %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i32> %va, %splat
+  %vc = xor <vscale x 4 x i32> %va, splat (i32 16)
   ret <vscale x 4 x i32> %vc
 }
 
@@ -974,9 +878,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> poison, i32 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i32> %va, %splat
+  %vc = xor <vscale x 8 x i32> %va, splat (i32 -1)
   ret <vscale x 8 x i32> %vc
 }
 
@@ -986,9 +888,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_1(<vscale x 8 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> poison, i32 8, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i32> %va, %splat
+  %vc = xor <vscale x 8 x i32> %va, splat (i32 8)
   ret <vscale x 8 x i32> %vc
 }
 
@@ -999,9 +899,7 @@ define <vscale x 8 x i32> @vxor_vi_nxv8i32_2(<vscale x 8 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> poison, i32 16, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i32> %va, %splat
+  %vc = xor <vscale x 8 x i32> %va, splat (i32 16)
   ret <vscale x 8 x i32> %vc
 }
 
@@ -1033,9 +931,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_0(<vscale x 16 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i32> poison, i32 -1, i32 0
-  %splat = shufflevector <vscale x 16 x i32> %head, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i32> %va, %splat
+  %vc = xor <vscale x 16 x i32> %va, splat (i32 -1)
   ret <vscale x 16 x i32> %vc
 }
 
@@ -1045,9 +941,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_1(<vscale x 16 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i32> poison, i32 8, i32 0
-  %splat = shufflevector <vscale x 16 x i32> %head, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i32> %va, %splat
+  %vc = xor <vscale x 16 x i32> %va, splat (i32 8)
   ret <vscale x 16 x i32> %vc
 }
 
@@ -1058,9 +952,7 @@ define <vscale x 16 x i32> @vxor_vi_nxv16i32_2(<vscale x 16 x i32> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 16 x i32> poison, i32 16, i32 0
-  %splat = shufflevector <vscale x 16 x i32> %head, <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-  %vc = xor <vscale x 16 x i32> %va, %splat
+  %vc = xor <vscale x 16 x i32> %va, splat (i32 16)
   ret <vscale x 16 x i32> %vc
 }
 
@@ -1105,9 +997,7 @@ define <vscale x 1 x i64> @vxor_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i64> %va, %splat
+  %vc = xor <vscale x 1 x i64> %va, splat (i64 -1)
   ret <vscale x 1 x i64> %vc
 }
 
@@ -1117,9 +1007,7 @@ define <vscale x 1 x i64> @vxor_vi_nxv1i64_1(<vscale x 1 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i64> poison, i64 8, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i64> %va, %splat
+  %vc = xor <vscale x 1 x i64> %va, splat (i64 8)
   ret <vscale x 1 x i64> %vc
 }
 
@@ -1130,9 +1018,7 @@ define <vscale x 1 x i64> @vxor_vi_nxv1i64_2(<vscale x 1 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i64> poison, i64 16, i32 0
-  %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
-  %vc = xor <vscale x 1 x i64> %va, %splat
+  %vc = xor <vscale x 1 x i64> %va, splat (i64 16)
   ret <vscale x 1 x i64> %vc
 }
 
@@ -1177,9 +1063,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i64> %va, %splat
+  %vc = xor <vscale x 2 x i64> %va, splat (i64 -1)
   ret <vscale x 2 x i64> %vc
 }
 
@@ -1189,9 +1073,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_1(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i64> poison, i64 8, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i64> %va, %splat
+  %vc = xor <vscale x 2 x i64> %va, splat (i64 8)
   ret <vscale x 2 x i64> %vc
 }
 
@@ -1202,9 +1084,7 @@ define <vscale x 2 x i64> @vxor_vi_nxv2i64_2(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 2 x i64> poison, i64 16, i32 0
-  %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-  %vc = xor <vscale x 2 x i64> %va, %splat
+  %vc = xor <vscale x 2 x i64> %va, splat (i64 16)
   ret <vscale x 2 x i64> %vc
 }
 
@@ -1249,9 +1129,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i64> %va, %splat
+  %vc = xor <vscale x 4 x i64> %va, splat (i64 -1)
   ret <vscale x 4 x i64> %vc
 }
 
@@ -1261,9 +1139,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_1(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i64> poison, i64 8, i32 0
-  %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i64> %va, %splat
+  %vc = xor <vscale x 4 x i64> %va, splat (i64 8)
   ret <vscale x 4 x i64> %vc
 }
 
@@ -1274,9 +1150,7 @@ define <vscale x 4 x i64> @vxor_vi_nxv4i64_2(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 4 x i64> poison, i64 16, i32 0
-  %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-  %vc = xor <vscale x 4 x i64> %va, %splat
+  %vc = xor <vscale x 4 x i64> %va, splat (i64 16)
   ret <vscale x 4 x i64> %vc
 }
 
@@ -1321,9 +1195,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 -1, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i64> %va, %splat
+  %vc = xor <vscale x 8 x i64> %va, splat (i64 -1)
   ret <vscale x 8 x i64> %vc
 }
 
@@ -1333,9 +1205,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_1(<vscale x 8 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vxor.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 8, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i64> %va, %splat
+  %vc = xor <vscale x 8 x i64> %va, splat (i64 8)
   ret <vscale x 8 x i64> %vc
 }
 
@@ -1346,9 +1216,7 @@ define <vscale x 8 x i64> @vxor_vi_nxv8i64_2(<vscale x 8 x i64> %va) {
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vxor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i64> poison, i64 16, i32 0
-  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-  %vc = xor <vscale x 8 x i64> %va, %splat
+  %vc = xor <vscale x 8 x i64> %va, splat (i64 16)
   ret <vscale x 8 x i64> %vc
 }
 
@@ -1356,16 +1224,13 @@ define <vscale x 8 x i64> @vxor_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32-LABEL: vxor_xx_nxv8i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    xor a0, a0, a2
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v16, (a0), zero
-; RV32-NEXT:    vxor.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1413,9 +1278,7 @@ define <vscale x 8 x i32> @vxor_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale 
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vxor.vi v8, v8, 7, v0.t
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 8 x i32> poison, i32 7, i32 0
-  %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> %splat, <vscale x 8 x i32> zeroinitializer
+  %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> splat (i32 7), <vscale x 8 x i32> zeroinitializer
   %vc = xor <vscale x 8 x i32> %va, %vs
   ret <vscale x 8 x i32> %vc
 }

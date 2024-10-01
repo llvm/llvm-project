@@ -28,8 +28,9 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap();
   }
   case Instruction::Trunc: {
-    auto *TI = dyn_cast<TruncInst>(this);
-    return TI->hasNoUnsignedWrap() || TI->hasNoSignedWrap();
+    if (auto *TI = dyn_cast<TruncInst>(this))
+      return TI->hasNoUnsignedWrap() || TI->hasNoSignedWrap();
+    return false;
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -41,8 +42,10 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
-    return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
+    return GEP->getNoWrapFlags() != GEPNoWrapFlags::none() ||
+           GEP->getInRange() != std::nullopt;
   }
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     if (auto *NNI = dyn_cast<PossiblyNonNegInst>(this))
       return NNI->hasNonNeg();
@@ -54,11 +57,12 @@ bool Operator::hasPoisonGeneratingFlags() const {
   }
 }
 
-bool Operator::hasPoisonGeneratingFlagsOrMetadata() const {
+bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && I->hasPoisonGeneratingMetadata();
+  return I && (I->hasPoisonGeneratingReturnAttributes() ||
+               I->hasPoisonGeneratingMetadata());
 }
 
 Type *GEPOperator::getSourceElementType() const {
@@ -197,7 +201,7 @@ bool GEPOperator::accumulateConstantOffset(
 
 bool GEPOperator::collectOffset(
     const DataLayout &DL, unsigned BitWidth,
-    MapVector<Value *, APInt> &VariableOffsets,
+    SmallMapVector<Value *, APInt, 4> &VariableOffsets,
     APInt &ConstantOffset) const {
   assert(BitWidth == DL.getIndexSizeInBits(getPointerAddressSpace()) &&
          "The offset bit width does not match DL specification.");

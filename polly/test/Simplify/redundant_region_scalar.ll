@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-simplify -disable-output < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,print<polly-simplify>' -polly-import-jscop-postfix=transformed -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Remove redundant store (a store that writes the same value already
 ; at the destination) in a region.

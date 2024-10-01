@@ -34,8 +34,24 @@ Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
 // Types.
 //===----------------------------------------------------------------------===//
 
+FloatType Builder::getFloat4E2M1FNType() {
+  return FloatType::getFloat4E2M1FN(context);
+}
+
+FloatType Builder::getFloat6E2M3FNType() {
+  return FloatType::getFloat6E2M3FN(context);
+}
+
+FloatType Builder::getFloat6E3M2FNType() {
+  return FloatType::getFloat6E3M2FN(context);
+}
+
 FloatType Builder::getFloat8E5M2Type() {
   return FloatType::getFloat8E5M2(context);
+}
+
+FloatType Builder::getFloat8E4M3Type() {
+  return FloatType::getFloat8E4M3(context);
 }
 
 FloatType Builder::getFloat8E4M3FNType() {
@@ -52,6 +68,10 @@ FloatType Builder::getFloat8E4M3FNUZType() {
 
 FloatType Builder::getFloat8E4M3B11FNUZType() {
   return FloatType::getFloat8E4M3B11FNUZ(context);
+}
+
+FloatType Builder::getFloat8E3M4Type() {
+  return FloatType::getFloat8E3M4(context);
 }
 
 FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
@@ -476,16 +496,14 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-/// Attempts to fold the given operation and places new results within
-/// 'results'. Returns success if the operation was folded, failure otherwise.
-/// Note: This function does not erase the operation on a successful fold.
 LogicalResult OpBuilder::tryFold(Operation *op,
                                  SmallVectorImpl<Value> &results) {
+  assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
   results.reserve(opResults.size());
   auto cleanupFailure = [&] {
-    results.assign(opResults.begin(), opResults.end());
+    results.clear();
     return failure();
   };
 
@@ -495,8 +513,12 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
-  if (failed(op->fold(foldResults)) || foldResults.empty())
+  if (failed(op->fold(foldResults)))
     return cleanupFailure();
+
+  // An in-place fold does not require generation of any constants.
+  if (foldResults.empty())
+    return success();
 
   // A temporary builder used for creating constants during folding.
   OpBuilder cstBuilder(context);
@@ -504,11 +526,11 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
   // Populate the results with the folded results.
   Dialect *dialect = op->getDialect();
-  for (auto it : llvm::zip_equal(foldResults, opResults.getTypes())) {
-    Type expectedType = std::get<1>(it);
+  for (auto [foldResult, expectedType] :
+       llvm::zip_equal(foldResults, opResults.getTypes())) {
 
     // Normal values get pushed back directly.
-    if (auto value = llvm::dyn_cast_if_present<Value>(std::get<0>(it))) {
+    if (auto value = llvm::dyn_cast_if_present<Value>(foldResult)) {
       results.push_back(value);
       continue;
     }
@@ -518,7 +540,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
       return cleanupFailure();
 
     // Ask the dialect to materialize a constant operation for this value.
-    Attribute attr = std::get<0>(it).get<Attribute>();
+    Attribute attr = foldResult.get<Attribute>();
     auto *constOp = dialect->materializeConstant(cstBuilder, attr, expectedType,
                                                  op->getLoc());
     if (!constOp) {

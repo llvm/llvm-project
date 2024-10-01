@@ -37,24 +37,30 @@ struct ShardingOption {
   ShardingOption() = default;
   ShardingOption(ShardingArray shardingArray, FlatSymbolRefAttr mesh)
       : shardingArray(std::move(shardingArray)), mesh(mesh) {}
+  static ShardingOption makeEmpty() {
+    auto res = ShardingOption();
+    res.empty = true;
+    return res;
+  }
 };
 
-// This method retrieves the 'MeshShardingAttr' attribute from a given operation
+// This method retrieves the 'MeshSharding' from a given operation
 // result and includes the 'annotate_for_users' information.
-FailureOr<std::pair<bool, MeshShardingAttr>>
-getMeshShardingAttr(OpResult result);
+FailureOr<std::pair<bool, MeshSharding>> getMeshSharding(OpResult result);
 
-// This method retrieves the 'MeshShardingAttr' attribute from a given operation
+// This method retrieves the 'MeshSharding' from a given operation
 // operand and includes the 'annotate_for_users' information.
-FailureOr<std::pair<bool, MeshShardingAttr>>
-getMeshShardingAttr(OpOperand &opOperand);
+FailureOr<std::pair<bool, MeshSharding>> getMeshSharding(OpOperand &opOperand);
 
 namespace detail {
 
 FailureOr<ShardingOption>
-defaultGetShardingOption(Operation *op,
-                         ArrayRef<MeshShardingAttr> operandShardings,
-                         ArrayRef<MeshShardingAttr> resultShardings);
+defaultGetShardingOption(Operation *op, ArrayRef<MeshSharding> operandShardings,
+                         ArrayRef<MeshSharding> resultShardings);
+
+FailureOr<std::vector<MeshSharding>>
+defaultGetShardingAnnotations(Operation *op,
+                              const ShardingOption &shardingOption);
 
 LogicalResult
 defaultAddShardingAnnotations(Operation *op, OpBuilder &b,
@@ -63,11 +69,13 @@ defaultAddShardingAnnotations(Operation *op, OpBuilder &b,
 } // namespace detail
 
 // Assumes full replication on all ranked tensor arguments and results.
-void spmdizeFullyReplicatedOperation(
-    Operation &op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
-    SymbolTableCollection &symbolTable, OpBuilder &builder);
+void spmdizeFullyReplicatedOperation(Operation &op,
+                                     ArrayRef<Value> spmdizedOperands,
+                                     ArrayRef<MeshSharding> operandShardings,
+                                     ArrayRef<MeshSharding> resultShardings,
+                                     IRMapping &spmdizationMap,
+                                     SymbolTableCollection &symbolTable,
+                                     OpBuilder &builder);
 
 } // namespace mesh
 } // namespace mlir

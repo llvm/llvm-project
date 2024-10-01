@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Statepoint.h"
@@ -43,8 +44,8 @@ using namespace llvm;
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
                                                   unsigned AddressSpace,
-                                                  Module *M) {
-  Constant *StrConstant = ConstantDataArray::getString(Context, Str);
+                                                  Module *M, bool AddNull) {
+  Constant *StrConstant = ConstantDataArray::getString(Context, Str, AddNull);
   if (!M)
     M = BB->getParent()->getParent();
   auto *GV = new GlobalVariable(
@@ -116,8 +117,8 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
     if (STy->getScalarSizeInBits() < 8)
       StepVecType =
           VectorType::get(getInt8Ty(), cast<ScalableVectorType>(DstType));
-    Value *Res = CreateIntrinsic(Intrinsic::experimental_stepvector,
-                                 {StepVecType}, {}, nullptr, Name);
+    Value *Res = CreateIntrinsic(Intrinsic::stepvector, {StepVecType}, {},
+                                 nullptr, Name);
     if (StepVecType != DstType)
       Res = CreateTrunc(Res, DstType);
     return Res;
@@ -345,8 +346,8 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
-                      MallocF, Name);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
+                      Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
@@ -1029,17 +1030,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
     UseFMF = FMFSource->getFastMathFlags();
 
   CallInst *C;
-  bool HasRoundingMD = false;
-  switch (ID) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD) {
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
     C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
                         nullptr, Name);
@@ -1063,9 +1054,8 @@ Value *IRBuilderBase::CreateFCmpHelper(
     return CreateConstrainedFPCmp(ID, P, LHS, RHS, Name);
   }
 
-  if (auto *LC = dyn_cast<Constant>(LHS))
-    if (auto *RC = dyn_cast<Constant>(RHS))
-      return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+  if (auto *V = Folder.FoldCmp(P, LHS, RHS))
+    return V;
   return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
 }
 
@@ -1088,17 +1078,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   llvm::SmallVector<Value *, 6> UseArgs;
 
   append_range(UseArgs, Args);
-  bool HasRoundingMD = false;
-  switch (Callee->getIntrinsicID()) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD)
+
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
   UseArgs.push_back(getConstrainedFPExcept(Except));
 
@@ -1171,8 +1152,7 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   auto *Ty = cast<VectorType>(V->getType());
   if (isa<ScalableVectorType>(Ty)) {
     Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_reverse, Ty);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, Ty);
     return Insert(CallInst::Create(F, V), Name);
   }
   // Keep the original behaviour for fixed vector
@@ -1191,8 +1171,7 @@ Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
 
   if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
     Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_splice, VTy);
+    Function *F = Intrinsic::getDeclaration(M, Intrinsic::vector_splice, VTy);
 
     Value *Ops[] = {V1, V2, getInt32(Imm)};
     return Insert(CallInst::Create(F, Ops), Name);

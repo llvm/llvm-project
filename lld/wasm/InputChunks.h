@@ -78,7 +78,7 @@ public:
 
   size_t getNumRelocations() const { return relocations.size(); }
   void writeRelocations(llvm::raw_ostream &os) const;
-  void generateRelocationCode(raw_ostream &os) const;
+  bool generateRelocationCode(raw_ostream &os) const;
 
   bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
   bool isRetained() const { return flags & llvm::wasm::WASM_SEG_FLAG_RETAIN; }
@@ -279,7 +279,14 @@ public:
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
-  uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
+  uint32_t getFunctionCodeOffset() const {
+    // For generated synthetic functions, such as unreachable stubs generated
+    // for signature mismatches, 'function' reference does not exist. This
+    // function is used to get function offsets for .debug_info section, and for
+    // those generated stubs function offsets are not meaningful anyway. So just
+    // return 0 in those cases.
+    return function ? function->CodeOffset : 0;
+  }
   uint32_t getFunctionIndex() const { return *functionIndex; }
   bool hasFunctionIndex() const { return functionIndex.has_value(); }
   void setFunctionIndex(uint32_t index);
@@ -301,7 +308,7 @@ public:
     return compressedSize;
   }
 
-  const WasmFunction *function;
+  const WasmFunction *function = nullptr;
 
 protected:
   std::optional<std::string> exportName;

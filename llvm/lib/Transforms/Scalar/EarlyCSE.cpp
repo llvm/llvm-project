@@ -1833,7 +1833,7 @@ PreservedAnalyses EarlyCSEPass::run(Function &F,
   auto *MSSA =
       UseMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : nullptr;
 
-  EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
+  EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
   if (!CSE.run())
     return PreservedAnalyses::all();
@@ -1887,7 +1887,7 @@ public:
     auto *MSSA =
         UseMemorySSA ? &getAnalysis<MemorySSAWrapperPass>().getMSSA() : nullptr;
 
-    EarlyCSE CSE(F.getParent()->getDataLayout(), TLI, TTI, DT, AC, MSSA);
+    EarlyCSE CSE(F.getDataLayout(), TLI, TTI, DT, AC, MSSA);
 
     return CSE.run();
   }

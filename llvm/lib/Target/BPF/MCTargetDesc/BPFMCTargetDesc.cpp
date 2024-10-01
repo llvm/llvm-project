@@ -50,13 +50,13 @@ static MCSubtargetInfo *createBPFMCSubtargetInfo(const Triple &TT,
   return createBPFMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
-static MCStreamer *createBPFMCStreamer(const Triple &T, MCContext &Ctx,
-                                       std::unique_ptr<MCAsmBackend> &&MAB,
-                                       std::unique_ptr<MCObjectWriter> &&OW,
-                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool RelaxAll) {
-  return createELFStreamer(Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
-                           RelaxAll);
+static MCStreamer *
+createBPFMCStreamer(const Triple &T, MCContext &Ctx,
+                    std::unique_ptr<MCAsmBackend> &&MAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return createELFStreamer(Ctx, std::move(MAB), std::move(OW),
+                           std::move(Emitter));
 }
 
 static MCInstPrinter *createBPFMCInstPrinter(const Triple &T,

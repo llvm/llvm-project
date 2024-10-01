@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -S -mtocdata=f,g,h,i,j,k,l,m,n,o,p -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK32 --match-full-lines
-// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK32 --match-full-lines
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata=f,g,h,i,j,k,l,m,n,o,p -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK32 --match-full-lines
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK32 --match-full-lines
 
-// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata=f,g,h,i,j,k,l,m,n,o,p -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK64 --match-full-lines
-// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK64 --match-full-lines
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata=f,g,h,i,j,k,l,m,n,o,p -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK64 --match-full-lines
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 | FileCheck %s -check-prefixes=COMMON,CHECK64 --match-full-lines
 
 extern int f;
 long long g = 5;

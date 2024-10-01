@@ -655,14 +655,11 @@ define i1 @t10() {
 ; V8MBASE-NEXT:    .pad #8
 ; V8MBASE-NEXT:    sub sp, #8
 ; V8MBASE-NEXT:    movs r0, #7
-; V8MBASE-NEXT:    mvns r0, r0
-; V8MBASE-NEXT:    str r0, [sp]
-; V8MBASE-NEXT:    adds r1, r0, #5
-; V8MBASE-NEXT:    str r1, [sp, #4]
-; V8MBASE-NEXT:    sdiv r2, r1, r0
-; V8MBASE-NEXT:    muls r2, r0, r2
-; V8MBASE-NEXT:    subs r0, r1, r2
-; V8MBASE-NEXT:    subs r1, r0, r1
+; V8MBASE-NEXT:    mvns r1, r0
+; V8MBASE-NEXT:    str r1, [sp]
+; V8MBASE-NEXT:    adds r0, r1, #5
+; V8MBASE-NEXT:    str r0, [sp, #4]
+; V8MBASE-NEXT:    adds r1, #8
 ; V8MBASE-NEXT:    rsbs r0, r1, #0
 ; V8MBASE-NEXT:    adcs r0, r1
 ; V8MBASE-NEXT:    add sp, #8
@@ -719,7 +716,7 @@ define i1 @t11() {
 ; ARMT2-NEXT:    and r1, r1, r2
 ; ARMT2-NEXT:    orr r0, r1, r0
 ; ARMT2-NEXT:    str r0, [sp]
-; ARMT2-NEXT:    bfc r0, #12, #20
+; ARMT2-NEXT:    and r0, r0, #15
 ; ARMT2-NEXT:    sub r0, r0, #3
 ; ARMT2-NEXT:    clz r0, r0
 ; ARMT2-NEXT:    lsr r0, r0, #5
@@ -781,7 +778,7 @@ define i1 @t11() {
 ; THUMB2-NEXT:    ands r1, r2
 ; THUMB2-NEXT:    orrs r0, r1
 ; THUMB2-NEXT:    str r0, [sp]
-; THUMB2-NEXT:    bfc r0, #12, #20
+; THUMB2-NEXT:    and r0, r0, #15
 ; THUMB2-NEXT:    subs r0, #3
 ; THUMB2-NEXT:    clz r0, r0
 ; THUMB2-NEXT:    lsrs r0, r0, #5

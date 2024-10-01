@@ -204,6 +204,22 @@ def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
 def : PfmCountersBinding<"rocketlake", IceLakePfmCounters>;
 def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
 
+def AlderLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"ADLPPort00", "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"ADLPPort01", "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched_port:port_2_3_10">,
+    PfmIssueCounter<"ADLPPort04_09", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"ADLPPort06", "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
+
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,
@@ -334,3 +350,4 @@ def ZnVer4PfmCounters : ProcPfmCounters {
   let ValidationCounters = DefaultAMDPfmValidationCounters;
 }
 def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;
+def : PfmCountersBinding<"znver5", ZnVer4PfmCounters>;

@@ -23,6 +23,7 @@
 #include "lldb/Core/PluginInterface.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <optional>
@@ -60,10 +61,10 @@ public:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          const lldb_private::AddressRange &func_range) override;
 
-  bool
-  CompleteTypeFromDWARF(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        lldb_private::Type *type,
-                        lldb_private::CompilerType &compiler_type) override;
+  bool CompleteTypeFromDWARF(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb_private::Type *type,
+      const lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl GetDeclForUIDFromDWARF(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
@@ -103,10 +104,13 @@ public:
   ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
-  /// If the DIE's name already has '<>', returns an empty ConstString because
+  /// If the DIE's name already has '<>', returns an empty string because
   /// it's assumed that the caller is using the DIE name anyway.
-  lldb_private::ConstString GetDIEClassTemplateParams(
-      const lldb_private::plugin::dwarf::DWARFDIE &die) override;
+  std::string
+  GetDIEClassTemplateParams(lldb_private::plugin::dwarf::DWARFDIE die) override;
+
+  void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
+                          const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
 protected:
   /// Protected typedefs and members.
@@ -167,12 +171,14 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  std::string
-  GetCPlusPlusQualifiedName(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  void GetUniqueTypeNameAndDeclaration(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb::LanguageType language, lldb_private::ConstString &unique_typename,
+      lldb_private::Declaration &decl_declaration);
 
   bool ParseChildMembers(
       const lldb_private::plugin::dwarf::DWARFDIE &die,
-      lldb_private::CompilerType &class_compiler_type,
+      const lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &member_function_dies,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &contained_type_dies,
@@ -190,7 +196,7 @@ protected:
                        unsigned &type_quals);
 
   size_t ParseChildEnumerators(
-      lldb_private::CompilerType &compiler_type, bool is_signed,
+      const lldb_private::CompilerType &compiler_type, bool is_signed,
       uint32_t enumerator_byte_size,
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die);
 
@@ -252,15 +258,33 @@ protected:
 
 private:
   struct FieldInfo {
+    /// Size in bits that this field occupies. Can but
+    /// need not be the DW_AT_bit_size of the field.
     uint64_t bit_size = 0;
+
+    /// Offset of this field in bits from the beginning
+    /// of the containing struct. Can but need not
+    /// be the DW_AT_data_bit_offset of the field.
     uint64_t bit_offset = 0;
+
+    /// In case this field is folded into the storage
+    /// of a previous member's storage (for example
+    /// with [[no_unique_address]]), the effective field
+    /// end is the offset in bits from the beginning of
+    /// the containing struct where the field we were
+    /// folded into ended.
+    std::optional<uint64_t> effective_field_end;
+
+    /// Set to 'true' if this field is a bit-field.
     bool is_bitfield = false;
+
+    /// Set to 'true' if this field is DW_AT_artificial.
     bool is_artificial = false;
 
     FieldInfo() = default;
 
     void SetIsBitfield(bool flag) { is_bitfield = flag; }
-    bool IsBitfield() { return is_bitfield; }
+    bool IsBitfield() const { return is_bitfield; }
 
     void SetIsArtificial(bool flag) { is_artificial = flag; }
     bool IsArtificial() const { return is_artificial; }
@@ -269,6 +293,19 @@ private:
       // Any subsequent bitfields must not overlap and must be at a higher
       // bit offset than any previous bitfield + size.
       return (bit_size + bit_offset) <= next_bit_offset;
+    }
+
+    /// Returns the offset in bits of where the storage this field
+    /// occupies ends.
+    uint64_t GetFieldEnd() const { return bit_size + bit_offset; }
+
+    void SetEffectiveFieldEnd(uint64_t val) { effective_field_end = val; }
+
+    /// If this field was folded into storage of a previous field,
+    /// returns the offset in bits of where that storage ends. Otherwise,
+    /// returns the regular field end (see \ref GetFieldEnd).
+    uint64_t GetEffectiveFieldEnd() const {
+      return effective_field_end.value_or(GetFieldEnd());
     }
   };
 
@@ -311,6 +348,35 @@ private:
       FieldInfo const &last_field_info, uint64_t last_field_end,
       FieldInfo const &this_field_info,
       lldb_private::ClangASTImporter::LayoutInfo const &layout_info) const;
+
+  /// Tries to detect whether \ref class_clang_type contained an unnamed
+  /// bit-field between \ref previous_field and \ref current_field, and if
+  /// so, adds a clang::FieldDecl representing that bit-field to
+  /// \ref class_clang_type.
+  ///
+  /// This is necessary because Clang (and GCC) doesn't emit a DW_TAG_member
+  /// entry for unnamed bit-fields. So we derive it (with some exceptions),
+  /// by checking whether there is a gap between where the storage of a
+  /// DW_TAG_member ended and the subsequent DW_TAG_member began.
+  ///
+  /// \param[in,out] layout_info Layout information of all decls parsed by the
+  ///                            current parser. Will contain an entry for
+  ///                            the unnamed bit-field if this function created
+  ///                            one.
+  ///
+  /// \param[in] class_clang_type The RecordType to which the unnamed bit-field
+  ///                             will be added (if any).
+  ///
+  /// \param[in] previous_field FieldInfo of the previous DW_TAG_member
+  ///                           we parsed.
+  ///
+  /// \param[in] current_field FieldInfo of the current DW_TAG_member
+  ///                          being parsed.
+  ///
+  void AddUnnamedBitfieldToRecordTypeIfNeeded(
+      lldb_private::ClangASTImporter::LayoutInfo &class_layout_info,
+      const lldb_private::CompilerType &class_clang_type,
+      const FieldInfo &previous_field, const FieldInfo &current_field);
 
   /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
   /// list of delayed Objective-C properties.
@@ -356,10 +422,10 @@ private:
 
   bool CompleteRecordType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                           lldb_private::Type *type,
-                          lldb_private::CompilerType &clang_type);
+                          const lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                         lldb_private::Type *type,
-                        lldb_private::CompilerType &clang_type);
+                        const lldb_private::CompilerType &clang_type);
 
   lldb::TypeSP
   ParseTypeModifier(const lldb_private::SymbolContext &sc,
@@ -370,6 +436,56 @@ private:
                          ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const lldb_private::plugin::dwarf::DWARFDIE &die,
                                const ParsedDWARFTypeAttributes &attrs);
+
+  /// Helper function called by \ref ParseSubroutine when parsing ObjC-methods.
+  ///
+  /// \param[in] objc_method Name of the ObjC method being parsed.
+  ///
+  /// \param[in] die The DIE that represents the ObjC method being parsed.
+  ///
+  /// \param[in] clang_type The CompilerType representing the function prototype
+  ///                       of the ObjC method being parsed.
+  ///
+  /// \param[in] attrs DWARF attributes for \ref die.
+  ///
+  /// \param[in] is_variadic Is true iff we're parsing a variadic method.
+  ///
+  /// \returns true on success
+  bool
+  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+                  const lldb_private::plugin::dwarf::DWARFDIE &die,
+                  lldb_private::CompilerType clang_type,
+                  const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
+
+  /// Helper function called by \ref ParseSubroutine when parsing C++ methods.
+  ///
+  /// \param[in] die The DIE that represents the C++ method being parsed.
+  ///
+  /// \param[in] clang_type The CompilerType representing the function prototype
+  ///                       of the C++ method being parsed.
+  ///
+  /// \param[in] attrs DWARF attributes for \ref die.
+  ///
+  /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
+  ///                         method being parsed.
+  ///
+  /// \param[in] is_static Is true iff we're parsing a static method.
+  ///
+  /// \param[out] ignore_containing_context Will get set to true if the caller
+  ///             should treat this C++ method as-if it was not a C++ method.
+  ///             Currently used as a hack to work around templated C++ methods
+  ///             causing class definitions to mismatch between CUs.
+  ///
+  /// \returns A pair of <bool, TypeSP>. The first element is 'true' on success.
+  ///          The second element is non-null if we have previously parsed this
+  ///          method (a null TypeSP does not indicate failure).
+  std::pair<bool, lldb::TypeSP>
+  ParseCXXMethod(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                 lldb_private::CompilerType clang_type,
+                 const ParsedDWARFTypeAttributes &attrs,
+                 const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
+                 bool is_static, bool &ignore_containing_context);
+
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP
@@ -411,7 +527,7 @@ private:
   void
   ParseRustVariantPart(lldb_private::plugin::dwarf::DWARFDIE &die,
                        const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
-                       lldb_private::CompilerType &class_clang_type,
+                       const lldb_private::CompilerType &class_clang_type,
                        const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };

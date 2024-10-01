@@ -57,7 +57,7 @@ static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
     return;
   case TEK_Aggregate:
     CGF.EmitAggExpr(Init,
-                    AggValueSlot::forLValue(lv, CGF, AggValueSlot::IsDestructed,
+                    AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
                                             AggValueSlot::DoesNotNeedGCBarriers,
                                             AggValueSlot::IsNotAliased,
                                             AggValueSlot::DoesNotOverlap));
@@ -162,7 +162,8 @@ void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size) {
   // Grab the llvm.invariant.start intrinsic.
   llvm::Intrinsic::ID InvStartID = llvm::Intrinsic::invariant_start;
   // Overloaded address space type.
-  llvm::Type *ObjectPtr[1] = {Int8PtrTy};
+  assert(Addr->getType()->isPointerTy() && "Address must be a pointer");
+  llvm::Type *ObjectPtr[1] = {Addr->getType()};
   llvm::Function *InvariantStart = CGM.getIntrinsic(InvStartID, ObjectPtr);
 
   // Emit a call with the size in bytes of the object.
@@ -231,7 +232,7 @@ void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
 
 /// Create a stub function, suitable for being passed to atexit,
 /// which passes the given address to the given destructor function.
-llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
+llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
                                                   llvm::FunctionCallee dtor,
                                                   llvm::Constant *addr) {
   // Get the destructor function type, void(*)(void).
@@ -263,7 +264,12 @@ llvm::Function *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
   CGF.FinishFunction();
 
-  return fn;
+  // Get a proper function pointer.
+  FunctionProtoType::ExtProtoInfo EPI(getContext().getDefaultCallingConvention(
+      /*IsVariadic=*/false, /*IsCXXMethod=*/false));
+  QualType fnType = getContext().getFunctionType(getContext().VoidTy,
+                                                 {getContext().VoidPtrTy}, EPI);
+  return CGM.getFunctionPointer(fn, fnType);
 }
 
 /// Create a stub function, suitable for being passed to __pt_atexit_np,
@@ -332,7 +338,8 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
                                                  llvm::FunctionCallee Dtor,
                                                  llvm::Constant *Addr) {
   // Create a function which calls the destructor.
-  llvm::Function *dtorStub = createAtExitStub(VD, Dtor, Addr);
+  llvm::Function *dtorStub =
+      cast<llvm::Function>(createAtExitStub(VD, Dtor, Addr));
   CGM.AddGlobalDtor(dtorStub);
 }
 
@@ -476,6 +483,10 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       !isInNoSanitizeList(SanitizerKind::Thread, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeThread);
 
+  if (getLangOpts().Sanitize.has(SanitizerKind::NumericalStability) &&
+      !isInNoSanitizeList(SanitizerKind::NumericalStability, Fn, Loc))
+    Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
+
   if (getLangOpts().Sanitize.has(SanitizerKind::Memory) &&
       !isInNoSanitizeList(SanitizerKind::Memory, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
@@ -575,31 +586,50 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
                                           PrioritizedCXXGlobalInits.size());
     PrioritizedCXXGlobalInits.push_back(std::make_pair(Key, Fn));
   } else if (isTemplateInstantiation(D->getTemplateSpecializationKind()) ||
-             getContext().GetGVALinkageForVariable(D) == GVA_DiscardableODR ||
+             !isUniqueGVALinkage(getContext().GetGVALinkageForVariable(D)) ||
              D->hasAttr<SelectAnyAttr>()) {
+    // For vague linkage globals, put the initializer into its own global_ctors
+    // entry with the global as a comdat key. This ensures at most one
+    // initializer per DSO runs during DSO dynamic initialization.
+    //
+    // For ELF platforms, this is an important code size and startup time
+    // optimization. For dynamic, non-hidden symbols, the weak guard variable
+    // remains to ensure that other DSOs do not re-initialize the global.
+    //
+    // For PE-COFF platforms, there is no guard variable, and COMDAT
+    // associativity is the only way to ensure vauge linkage globals are
+    // initialized exactly once.
+    //
+    // MachO is the only remaining platform with no comdats that doesn't
+    // benefit from this optimization. The rest are mainly modeled on ELF
+    // behavior.
+    //
+    // C++ requires that inline global variables are initialized in source
+    // order, but this requirement does not exist for templated entities.
+    // llvm.global_ctors does not guarantee initialization order, so in
+    // general, Clang does not fully conform to the ordering requirement.
+    // However, in practice, LLVM emits global_ctors in the provided order, and
+    // users typically don't rely on ordering between inline globals in
+    // different headers which are then transitively included in varying order.
+    // Clang's current behavior is a practical tradeoff, since dropping the
+    // comdat would lead to unacceptable impact on code size and startup time.
+    //
+    // FIXME: Find a solution to guarantee source-order initialization of
+    // inline variables.
+    //
     // C++ [basic.start.init]p2:
     //   Definitions of explicitly specialized class template static data
     //   members have ordered initialization. Other class template static data
     //   members (i.e., implicitly or explicitly instantiated specializations)
     //   have unordered initialization.
     //
-    // As a consequence, we can put them into their own llvm.global_ctors entry.
-    //
-    // If the global is externally visible, put the initializer into a COMDAT
-    // group with the global being initialized.  On most platforms, this is a
-    // minor startup time optimization.  In the MS C++ ABI, there are no guard
-    // variables, so this COMDAT key is required for correctness.
-    //
-    // SelectAny globals will be comdat-folded. Put the initializer into a
-    // COMDAT group associated with the global, so the initializers get folded
-    // too.
-    I = DelayedCXXInitPosition.find(D);
     // CXXGlobalInits.size() is the lex order number for the next deferred
     // VarDecl. Use it when the current VarDecl is non-deferred. Although this
     // lex order number is shared between current VarDecl and some following
     // VarDecls, their order of insertion into `llvm.global_ctors` is the same
     // as the lexing order and the following stable sort would preserve such
     // order.
+    I = DelayedCXXInitPosition.find(D);
     unsigned LexOrder =
         I == DelayedCXXInitPosition.end() ? CXXGlobalInits.size() : I->second;
     AddGlobalCtor(Fn, 65535, LexOrder, COMDATKey);
@@ -834,6 +864,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
     for (Module *M : ImportedModules) {
       // No Itanium initializer in header like modules.
       if (M->isHeaderLikeModule())
+        continue;
+      // We're allowed to skip the initialization if we are sure it doesn't
+      // do any thing.
+      if (!M->isNamedModuleInterfaceHasInit())
         continue;
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;

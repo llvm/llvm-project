@@ -290,14 +290,14 @@ poly64x2x4_t test_vld4q_p64(poly64_t const * ptr) {
 // CHECK-LABEL: define{{.*}} void @test_vst2_p64(ptr noundef %ptr, [2 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x2_t, align 8
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x1x2_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [2 x <1 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 8
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[__S1]], ptr align 8 [[VAL]], i64 16, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x1x2_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x <1 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <1 x i64>, ptr [[ARRAYIDX]], align 8
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x i64> [[TMP3]] to <8 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x1x2_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [2 x <1 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <1 x i64>, ptr [[ARRAYIDX3]], align 8
 // CHECK:   [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to <8 x i8>
@@ -312,14 +312,14 @@ void test_vst2_p64(poly64_t * ptr, poly64x1x2_t val) {
 // CHECK-LABEL: define{{.*}} void @test_vst2q_p64(ptr noundef %ptr, [2 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x2_t, align 16
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x2x2_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 16
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[__S1]], ptr align 16 [[VAL]], i64 32, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x2x2_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x <2 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <2 x i64>, ptr [[ARRAYIDX]], align 16
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to <16 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x2x2_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [2 x <2 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <2 x i64>, ptr [[ARRAYIDX3]], align 16
 // CHECK:   [[TMP6:%.*]] = bitcast <2 x i64> [[TMP5]] to <16 x i8>
@@ -334,18 +334,18 @@ void test_vst2q_p64(poly64_t * ptr, poly64x2x2_t val) {
 // CHECK-LABEL: define{{.*}} void @test_vst3_p64(ptr noundef %ptr, [3 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x3_t, align 8
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x1x3_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [3 x <1 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 8
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[__S1]], ptr align 8 [[VAL]], i64 24, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [3 x <1 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <1 x i64>, ptr [[ARRAYIDX]], align 8
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x i64> [[TMP3]] to <8 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [3 x <1 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <1 x i64>, ptr [[ARRAYIDX3]], align 8
 // CHECK:   [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to <8 x i8>
-// CHECK:   [[VAL4:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL4:%.*]] = getelementptr inbounds nuw %struct.poly64x1x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX5:%.*]] = getelementptr inbounds [3 x <1 x i64>], ptr [[VAL4]], i64 0, i64 2
 // CHECK:   [[TMP7:%.*]] = load <1 x i64>, ptr [[ARRAYIDX5]], align 8
 // CHECK:   [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <8 x i8>
@@ -361,18 +361,18 @@ void test_vst3_p64(poly64_t * ptr, poly64x1x3_t val) {
 // CHECK-LABEL: define{{.*}} void @test_vst3q_p64(ptr noundef %ptr, [3 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x3_t, align 16
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x2x3_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 16
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[__S1]], ptr align 16 [[VAL]], i64 48, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [3 x <2 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <2 x i64>, ptr [[ARRAYIDX]], align 16
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to <16 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [3 x <2 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <2 x i64>, ptr [[ARRAYIDX3]], align 16
 // CHECK:   [[TMP6:%.*]] = bitcast <2 x i64> [[TMP5]] to <16 x i8>
-// CHECK:   [[VAL4:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL4:%.*]] = getelementptr inbounds nuw %struct.poly64x2x3_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX5:%.*]] = getelementptr inbounds [3 x <2 x i64>], ptr [[VAL4]], i64 0, i64 2
 // CHECK:   [[TMP7:%.*]] = load <2 x i64>, ptr [[ARRAYIDX5]], align 16
 // CHECK:   [[TMP8:%.*]] = bitcast <2 x i64> [[TMP7]] to <16 x i8>
@@ -388,22 +388,22 @@ void test_vst3q_p64(poly64_t * ptr, poly64x2x3_t val) {
 // CHECK-LABEL: define{{.*}} void @test_vst4_p64(ptr noundef %ptr, [4 x <1 x i64>] alignstack(8) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x4_t, align 8
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x1x4_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [4 x <1 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 8
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[__S1]], ptr align 8 [[VAL]], i64 32, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x <1 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <1 x i64>, ptr [[ARRAYIDX]], align 8
 // CHECK:   [[TMP4:%.*]] = bitcast <1 x i64> [[TMP3]] to <8 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x <1 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <1 x i64>, ptr [[ARRAYIDX3]], align 8
 // CHECK:   [[TMP6:%.*]] = bitcast <1 x i64> [[TMP5]] to <8 x i8>
-// CHECK:   [[VAL4:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL4:%.*]] = getelementptr inbounds nuw %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX5:%.*]] = getelementptr inbounds [4 x <1 x i64>], ptr [[VAL4]], i64 0, i64 2
 // CHECK:   [[TMP7:%.*]] = load <1 x i64>, ptr [[ARRAYIDX5]], align 8
 // CHECK:   [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <8 x i8>
-// CHECK:   [[VAL6:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL6:%.*]] = getelementptr inbounds nuw %struct.poly64x1x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX7:%.*]] = getelementptr inbounds [4 x <1 x i64>], ptr [[VAL6]], i64 0, i64 3
 // CHECK:   [[TMP9:%.*]] = load <1 x i64>, ptr [[ARRAYIDX7]], align 8
 // CHECK:   [[TMP10:%.*]] = bitcast <1 x i64> [[TMP9]] to <8 x i8>
@@ -420,22 +420,22 @@ void test_vst4_p64(poly64_t * ptr, poly64x1x4_t val) {
 // CHECK-LABEL: define{{.*}} void @test_vst4q_p64(ptr noundef %ptr, [4 x <2 x i64>] alignstack(16) %val.coerce) #0 {
 // CHECK:   [[VAL:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x4_t, align 16
-// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[VAL]], i32 0, i32 0
+// CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw %struct.poly64x2x4_t, ptr [[VAL]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i64>] [[VAL]].coerce, ptr [[COERCE_DIVE]], align 16
 // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[__S1]], ptr align 16 [[VAL]], i64 64, i1 false)
-// CHECK:   [[VAL1:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL1:%.*]] = getelementptr inbounds nuw %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x <2 x i64>], ptr [[VAL1]], i64 0, i64 0
 // CHECK:   [[TMP3:%.*]] = load <2 x i64>, ptr [[ARRAYIDX]], align 16
 // CHECK:   [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to <16 x i8>
-// CHECK:   [[VAL2:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL2:%.*]] = getelementptr inbounds nuw %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX3:%.*]] = getelementptr inbounds [4 x <2 x i64>], ptr [[VAL2]], i64 0, i64 1
 // CHECK:   [[TMP5:%.*]] = load <2 x i64>, ptr [[ARRAYIDX3]], align 16
 // CHECK:   [[TMP6:%.*]] = bitcast <2 x i64> [[TMP5]] to <16 x i8>
-// CHECK:   [[VAL4:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL4:%.*]] = getelementptr inbounds nuw %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX5:%.*]] = getelementptr inbounds [4 x <2 x i64>], ptr [[VAL4]], i64 0, i64 2
 // CHECK:   [[TMP7:%.*]] = load <2 x i64>, ptr [[ARRAYIDX5]], align 16
 // CHECK:   [[TMP8:%.*]] = bitcast <2 x i64> [[TMP7]] to <16 x i8>
-// CHECK:   [[VAL6:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
+// CHECK:   [[VAL6:%.*]] = getelementptr inbounds nuw %struct.poly64x2x4_t, ptr [[__S1]], i32 0, i32 0
 // CHECK:   [[ARRAYIDX7:%.*]] = getelementptr inbounds [4 x <2 x i64>], ptr [[VAL6]], i64 0, i64 3
 // CHECK:   [[TMP9:%.*]] = load <2 x i64>, ptr [[ARRAYIDX7]], align 16
 // CHECK:   [[TMP10:%.*]] = bitcast <2 x i64> [[TMP9]] to <16 x i8>

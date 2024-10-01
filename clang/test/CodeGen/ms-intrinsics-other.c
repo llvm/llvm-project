@@ -56,7 +56,7 @@ unsigned char test_BitScanForward(unsigned LONG *Index, unsigned LONG Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[INDEX:%[0-9]+]] = tail call i32 @llvm.cttz.i32(i32 %Mask, i1 true)
+// CHECK:   [[INDEX:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 %Mask, i1 true)
 // CHECK:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
 
@@ -70,7 +70,7 @@ unsigned char test_BitScanReverse(unsigned LONG *Index, unsigned LONG Mask) {
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[REVINDEX:%[0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
+// CHECK:   [[REVINDEX:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %Mask, i1 true)
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[REVINDEX]], 31
 // CHECK:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
@@ -86,8 +86,8 @@ unsigned char test_BitScanForward64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[INDEX:%[0-9]+]] = tail call i64 @llvm.cttz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc i64 [[INDEX]] to i32
+// CHECK:   [[INDEX:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.cttz.i64(i64 %Mask, i1 true)
+// CHECK:   [[TRUNC_INDEX:%[0-9]+]] = trunc nuw nsw i64 [[INDEX]] to i32
 // CHECK:   store i32 [[TRUNC_INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
 
@@ -101,8 +101,8 @@ unsigned char test_BitScanReverse64(unsigned LONG *Index, unsigned __int64 Mask)
 // CHECK:   [[RESULT:%[a-z0-9._]+]] = phi i8 [ 0, %[[ISZERO_LABEL:[a-z0-9._]+]] ], [ 1, %[[ISNOTZERO_LABEL]] ]
 // CHECK:   ret i8 [[RESULT]]
 // CHECK:   [[ISNOTZERO_LABEL]]:
-// CHECK:   [[REVINDEX:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
-// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc i64 [[REVINDEX]] to i32
+// CHECK:   [[REVINDEX:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 %Mask, i1 true)
+// CHECK:   [[TRUNC_REVINDEX:%[0-9]+]] = trunc nuw nsw i64 [[REVINDEX]] to i32
 // CHECK:   [[INDEX:%[0-9]+]] = xor i32 [[TRUNC_REVINDEX]], 63
 // CHECK:   store i32 [[INDEX]], ptr %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
@@ -187,7 +187,7 @@ unsigned short test__lzcnt16(unsigned short x) {
   return __lzcnt16(x);
 }
 // CHECK: i16 @test__lzcnt16
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i16 @llvm.ctlz.i16(i16 %x, i1 false)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 %x, i1 false)
 // CHECK: ret i16 [[RESULT]]
 // CHECK: }
 
@@ -195,7 +195,7 @@ unsigned int test__lzcnt(unsigned int x) {
   return __lzcnt(x);
 }
 // CHECK: i32 @test__lzcnt
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %x, i1 false)
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
 
@@ -203,7 +203,7 @@ unsigned __int64 test__lzcnt64(unsigned __int64 x) {
   return __lzcnt64(x);
 }
 // CHECK: i64 @test__lzcnt64
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 %x, i1 false)
 // CHECK: ret i64 [[RESULT]]
 // CHECK: }
 
@@ -211,7 +211,7 @@ unsigned short test__popcnt16(unsigned short x) {
   return __popcnt16(x);
 }
 // CHECK: i16 @test__popcnt16
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i16 @llvm.ctpop.i16(i16 %x)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 %x)
 // CHECK: ret i16 [[RESULT]]
 // CHECK: }
 
@@ -219,7 +219,7 @@ unsigned int test__popcnt(unsigned int x) {
   return __popcnt(x);
 }
 // CHECK: i32 @test__popcnt
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i32 @llvm.ctpop.i32(i32 %x)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 %x)
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
 
@@ -227,7 +227,7 @@ unsigned __int64 test__popcnt64(unsigned __int64 x) {
   return __popcnt64(x);
 }
 // CHECK: i64 @test__popcnt64
-// CHECK:  [[RESULT:%[0-9]+]] = tail call i64 @llvm.ctpop.i64(i64 %x)
+// CHECK:  [[RESULT:%[0-9]+]] = tail call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 %x)
 // CHECK: ret i64 [[RESULT]]
 // CHECK: }
 

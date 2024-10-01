@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -funwind-tables=2 -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -funwind-tables=2 -emit-llvm %s -o - | FileCheck %s
 
 __attribute__((nouwtable))
 int test1(void) { return 0; }

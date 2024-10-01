@@ -203,20 +203,20 @@ define <2 x i32> @t4_vec(<2 x i64> %data, <2 x i32> %nbits) {
   ret <2 x i32> %signextended
 }
 
-define <3 x i32> @t5_vec_undef(<3 x i64> %data, <3 x i32> %nbits) {
-; CHECK-LABEL: @t5_vec_undef(
-; CHECK-NEXT:    [[SKIP_HIGH:%.*]] = sub <3 x i32> <i32 64, i32 64, i32 undef>, [[NBITS:%.*]]
+define <3 x i32> @t5_vec_poison(<3 x i64> %data, <3 x i32> %nbits) {
+; CHECK-LABEL: @t5_vec_poison(
+; CHECK-NEXT:    [[SKIP_HIGH:%.*]] = sub <3 x i32> <i32 64, i32 64, i32 poison>, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[SKIP_HIGH_WIDE:%.*]] = zext nneg <3 x i32> [[SKIP_HIGH]] to <3 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i64> [[DATA:%.*]], [[SKIP_HIGH_WIDE]]
 ; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = trunc <3 x i64> [[TMP1]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[SIGNEXTENDED]]
 ;
-  %skip_high = sub <3 x i32> <i32 64, i32 64, i32 undef>, %nbits
+  %skip_high = sub <3 x i32> <i32 64, i32 64, i32 poison>, %nbits
   %skip_high_wide = zext <3 x i32> %skip_high to <3 x i64>
   %extracted = lshr <3 x i64> %data, %skip_high_wide
   %extracted_narrow = trunc <3 x i64> %extracted to <3 x i32>
-  %num_high_bits_to_smear_narrow0 = sub <3 x i32> <i32 32, i32 32, i32 undef>, %nbits
-  %num_high_bits_to_smear_narrow1 = sub <3 x i32> <i32 undef, i32 32, i32 32>, %nbits
+  %num_high_bits_to_smear_narrow0 = sub <3 x i32> <i32 32, i32 32, i32 poison>, %nbits
+  %num_high_bits_to_smear_narrow1 = sub <3 x i32> <i32 poison, i32 32, i32 32>, %nbits
   %signbit_positioned = shl <3 x i32> %extracted_narrow, %num_high_bits_to_smear_narrow0
   %signextended = ashr <3 x i32> %signbit_positioned, %num_high_bits_to_smear_narrow1
   ret <3 x i32> %signextended

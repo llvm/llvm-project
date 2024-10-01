@@ -10,7 +10,7 @@
 define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ; GFX10-LABEL: long_store_chain:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x24
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_mov_b32 s1, s0
@@ -91,7 +91,7 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ;
 ; GFX11-LABEL: long_store_chain:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[4:5], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s1, s0
@@ -176,7 +176,7 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 ;
 ; GFX12-LABEL: long_store_chain:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b64 s[4:5], s[2:3], 0x24
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s1, s0
@@ -397,7 +397,7 @@ define amdgpu_kernel void @long_store_chain(ptr addrspace(1) %p) {
 define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ; GFX10-LABEL: long_load_chain:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x3e
 ; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x0
@@ -670,7 +670,7 @@ define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ;
 ; GFX11-LABEL: long_load_chain:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1f
 ; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x0
@@ -944,7 +944,7 @@ define amdgpu_kernel void @long_load_chain(ptr addrspace(1) %p) {
 ;
 ; GFX12-LABEL: long_load_chain:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_clause 0x1f
 ; GFX12-NEXT:    s_load_b32 s2, s[0:1], 0x0

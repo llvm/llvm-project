@@ -144,7 +144,7 @@ public:
       return CatchTypeInfo{nullptr, 0x40};
   }
 
-  bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
+  bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -334,10 +334,11 @@ public:
                                      Address This, llvm::Type *Ty,
                                      SourceLocation Loc) override;
 
-  llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
-                                         const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType, Address This,
-                                         DeleteOrMemberCallExpr E) override;
+  llvm::Value *
+  EmitVirtualDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *Dtor,
+                            CXXDtorType DtorType, Address This,
+                            DeleteOrMemberCallExpr E,
+                            llvm::CallBase **CallOrInvoke) override;
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
@@ -415,9 +416,11 @@ public:
   bool exportThunk() override { return false; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
-                                     const ThisAdjustment &TA) override;
+                                     const CXXRecordDecl * /*UnadjustedClass*/,
+                                     const ThunkInfo &TI) override;
 
   llvm::Value *performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                       const CXXRecordDecl * /*UnadjustedClass*/,
                                        const ReturnAdjustment &RA) override;
 
   void EmitThreadLocalInitFuncs(
@@ -899,7 +902,8 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE);
+  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE,
+                                                  /*CallOrInvoke=*/nullptr);
   if (UseGlobalDelete)
     CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
 }
@@ -977,11 +981,9 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
                          PolymorphicBase);
 }
 
-bool MicrosoftCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
-                                                QualType SrcRecordTy) {
+bool MicrosoftCXXABI::shouldTypeidBeNullChecked(QualType SrcRecordTy) {
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
-  return IsDeref &&
-         !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
+  return !getContext().getASTRecordLayout(SrcDecl).hasExtendableVFPtr();
 }
 
 static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,
@@ -1111,7 +1113,7 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
   if (CGM.getTarget().getTriple().isAArch64() &&
-      CGM.getTypes().getABIInfo().isHomogeneousAggregate(Ty, Base, NumElts) &&
+      CGM.getABIInfo().isHomogeneousAggregate(Ty, Base, NumElts) &&
       isa<VectorType>(Base)) {
     return true;
   }
@@ -1122,7 +1124,22 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   //   No base classes
   //   No virtual functions
   // Additionally, we need to ensure that there is a trivial copy assignment
-  // operator, a trivial destructor and no user-provided constructors.
+  // operator, a trivial destructor, no user-provided constructors and no
+  // deleted copy assignment operator.
+
+  // We need to cover two cases when checking for a deleted copy assignment
+  // operator.
+  //
+  // struct S { int& r; };
+  // The above will have an implicit copy assignment operator that is deleted
+  // and there will not be a `CXXMethodDecl` for the copy assignment operator.
+  // This is handled by the `needsImplicitCopyAssignment()` check below.
+  //
+  // struct S { S& operator=(const S&) = delete; int i; };
+  // The above will not have an implicit copy assignment operator that is
+  // deleted but there is a deleted `CXXMethodDecl` for the declared copy
+  // assignment operator. This is handled by the `isDeleted()` check below.
+
   if (RD->hasProtectedFields() || RD->hasPrivateFields())
     return false;
   if (RD->getNumBases() > 0)
@@ -1131,9 +1148,20 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
     return false;
   if (RD->hasNonTrivialCopyAssignment())
     return false;
-  for (const CXXConstructorDecl *Ctor : RD->ctors())
-    if (Ctor->isUserProvided())
-      return false;
+  if (RD->needsImplicitCopyAssignment() && !RD->hasSimpleCopyAssignment())
+    return false;
+  for (const Decl *D : RD->decls()) {
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
+      if (Ctor->isUserProvided())
+        return false;
+    } else if (auto *Template = dyn_cast<FunctionTemplateDecl>(D)) {
+      if (isa<CXXConstructorDecl>(Template->getTemplatedDecl()))
+        return false;
+    } else if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(D)) {
+      if (MethodDecl->isCopyAssignmentOperator() && MethodDecl->isDeleted())
+        return false;
+    }
+  }
   if (RD->hasNonTrivialDestructor())
     return false;
   return true;
@@ -1659,7 +1687,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
                             ThisTy,
                             /*ImplicitParam=*/Implicit,
-                            /*ImplicitParamTy=*/QualType(), nullptr);
+                            /*ImplicitParamTy=*/QualType(), /*E=*/nullptr);
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
@@ -1975,7 +2003,7 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, DeleteOrMemberCallExpr E) {
+    Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
   auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
   auto *D = E.dyn_cast<const CXXDeleteExpr *>();
   assert((CE != nullptr) ^ (D != nullptr));
@@ -2005,7 +2033,7 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
   RValue RV =
       CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                                ImplicitParam, Context.IntTy, CE);
+                                ImplicitParam, Context.IntTy, CE, CallOrInvoke);
   return RV.getScalarVal();
 }
 
@@ -2199,9 +2227,10 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
     GV->setLinkage(llvm::GlobalVariable::AvailableExternallyLinkage);
 }
 
-llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
-                                                    Address This,
-                                                    const ThisAdjustment &TA) {
+llvm::Value *MicrosoftCXXABI::performThisAdjustment(
+    CodeGenFunction &CGF, Address This,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ThunkInfo &TI) {
+  const ThisAdjustment &TA = TI.This;
   if (TA.isEmpty())
     return This.emitRawPointer(CGF);
 
@@ -2251,9 +2280,10 @@ llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
   return V;
 }
 
-llvm::Value *
-MicrosoftCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
-                                         const ReturnAdjustment &RA) {
+llvm::Value *MicrosoftCXXABI::performReturnAdjustment(
+    CodeGenFunction &CGF, Address Ret,
+    const CXXRecordDecl * /*UnadjustedClass*/, const ReturnAdjustment &RA) {
+
   if (RA.isEmpty())
     return Ret.emitRawPointer(CGF);
 

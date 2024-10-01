@@ -71,10 +71,13 @@ define void @machine_licm() {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -4
+; CHECK-NEXT:    .cfi_offset s0, -8
+; CHECK-NEXT:    csrr s0, vlenb
 ; CHECK-NEXT:  .LBB4_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call use
 ; CHECK-NEXT:    j .LBB4_1
 entry:

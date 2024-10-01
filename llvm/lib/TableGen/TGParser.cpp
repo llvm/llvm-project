@@ -1190,6 +1190,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XNOT:
   case tgtok::XToLower:
   case tgtok::XToUpper:
+  case tgtok::XListFlatten:
   case tgtok::XLOG2:
   case tgtok::XHead:
   case tgtok::XTail:
@@ -1234,6 +1235,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       Lex.Lex();  // eat the operation
       Code = UnOpInit::NOT;
       Type = IntRecTy::get(Records);
+      break;
+    case tgtok::XListFlatten:
+      Lex.Lex(); // eat the operation.
+      Code = UnOpInit::LISTFLATTEN;
+      Type = IntRecTy::get(Records); // Bogus type used here.
       break;
     case tgtok::XLOG2:
       Lex.Lex();  // eat the operation
@@ -1309,7 +1315,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       }
     }
 
-    if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
+    if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL ||
+        Code == UnOpInit::LISTFLATTEN) {
       ListInit *LHSl = dyn_cast<ListInit>(LHS);
       TypedInit *LHSt = dyn_cast<TypedInit>(LHS);
       if (!LHSl && !LHSt) {
@@ -1328,6 +1335,8 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         TokError("empty list argument in unary operator");
         return nullptr;
       }
+      bool UseElementType =
+          Code == UnOpInit::HEAD || Code == UnOpInit::LISTFLATTEN;
       if (LHSl) {
         Init *Item = LHSl->getElement(0);
         TypedInit *Itemt = dyn_cast<TypedInit>(Item);
@@ -1335,12 +1344,25 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           TokError("untyped list element in unary operator");
           return nullptr;
         }
-        Type = (Code == UnOpInit::HEAD) ? Itemt->getType()
-                                        : ListRecTy::get(Itemt->getType());
+        Type = UseElementType ? Itemt->getType()
+                              : ListRecTy::get(Itemt->getType());
       } else {
         assert(LHSt && "expected list type argument in unary operator");
         ListRecTy *LType = dyn_cast<ListRecTy>(LHSt->getType());
-        Type = (Code == UnOpInit::HEAD) ? LType->getElementType() : LType;
+        Type = UseElementType ? LType->getElementType() : LType;
+      }
+
+      // for !listflatten, we expect a list of lists, but also support a list of
+      // non-lists, where !listflatten will be a NOP.
+      if (Code == UnOpInit::LISTFLATTEN) {
+        ListRecTy *InnerListTy = dyn_cast<ListRecTy>(Type);
+        if (InnerListTy) {
+          // listflatten will convert list<list<X>> to list<X>.
+          Type = ListRecTy::get(InnerListTy->getElementType());
+        } else {
+          // If its a list of non-lists, !listflatten will be a NOP.
+          Type = ListRecTy::get(Type);
+        }
       }
     }
 
@@ -1378,7 +1400,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 
   case tgtok::XExists: {
     // Value ::= !exists '<' Type '>' '(' Value ')'
-    Lex.Lex(); // eat the operation
+    Lex.Lex(); // eat the operation.
 
     RecTy *Type = ParseOperatorType();
     if (!Type)
@@ -2844,11 +2866,13 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     return ListInit::get(Vals, DeducedEltTy);
   }
-  case tgtok::l_paren: {         // Value ::= '(' IDValue DagArgList ')'
+  case tgtok::l_paren: { // Value ::= '(' IDValue DagArgList ')'
+                         // Value ::= '(' '[' ValueList ']' DagArgList ')'
     Lex.Lex();   // eat the '('
     if (Lex.getCode() != tgtok::Id && Lex.getCode() != tgtok::XCast &&
-        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp) {
-      TokError("expected identifier in dag init");
+        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp &&
+        Lex.getCode() != tgtok::l_square) {
+      TokError("expected identifier or list of value types in dag init");
       return nullptr;
     }
 
@@ -2982,9 +3006,9 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
           DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
         } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
           if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
-            for (Record *R : RecTy->getClasses())
+            for (const Record *R : RecTy->getClasses())
               if (auto *RV = R->getValue(FieldName))
-                RV->addReferenceLoc(FieldNameLoc);
+                const_cast<RecordVal *>(RV)->addReferenceLoc(FieldNameLoc);
           }
         }
       }
@@ -3294,7 +3318,7 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
     if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, std::nullopt, Val,
+        SetValue(CurRec, ValLoc, DeclName, {}, Val,
                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown.  This is so that we can
       // continue to make some progress, even without the value having been
@@ -4381,8 +4405,7 @@ bool TGParser::CheckTemplateArgValues(
     SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
-  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
-    auto *Value = Values[I];
+  for (llvm::ArgumentInit *&Value : Values) {
     Init *ArgName = nullptr;
     if (Value->isPositional())
       ArgName = TArgs[Value->getIndex()];
@@ -4398,7 +4421,7 @@ bool TGParser::CheckTemplateArgValues(
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = Value->cloneWithValue(CastValue);
+        Value = Value->cloneWithValue(CastValue);
       } else {
         PrintFatalError(Loc, "Value specified for template argument '" +
                                  Arg->getNameInitAsString() + "' is of type " +
@@ -4461,8 +4484,13 @@ bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
 
   if (CurRec)
     CurRec->addDump(Loc, Message);
-  else
-    addEntry(std::make_unique<Record::DumpInfo>(Loc, Message));
+  else {
+    HasReferenceResolver resolver{nullptr};
+    resolver.setFinal(true);
+    // force a resolution with a dummy resolver
+    Init *ResolvedMessage = Message->resolveReferences(resolver);
+    addEntry(std::make_unique<Record::DumpInfo>(Loc, ResolvedMessage));
+  }
 
   return false;
 }

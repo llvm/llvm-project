@@ -43,7 +43,7 @@ define <4 x i8> @range_from_lshr_vec(<4 x i8> %a) {
 ; CHECK-LABEL: @range_from_lshr_vec(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr <4 x i8> [[A:%.*]], <i8 1, i8 2, i8 3, i8 4>
-; CHECK-NEXT:    [[ADD_1:%.*]] = add <4 x i8> [[A_SHR]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw <4 x i8> [[A_SHR]], <i8 1, i8 2, i8 3, i8 4>
 ; CHECK-NEXT:    ret <4 x i8> [[ADD_1]]
 ;
 entry:
@@ -56,7 +56,7 @@ define <4 x i8> @range_from_lshr_vec_2(<4 x i8> %a) {
 ; CHECK-LABEL: @range_from_lshr_vec_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr <4 x i8> [[A:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[ADD_1:%.*]] = add <4 x i8> [[A_SHR]], <i8 2, i8 2, i8 2, i8 2>
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw <4 x i8> [[A_SHR]], <i8 2, i8 2, i8 2, i8 2>
 ; CHECK-NEXT:    ret <4 x i8> [[ADD_1]]
 ;
 entry:
@@ -169,7 +169,7 @@ else:
 define <6 x i8> @vector_constant_replacement_in_add(<6 x i8> %a) {
 ; CHECK-LABEL: @vector_constant_replacement_in_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add <6 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <6 x i8> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <6 x i8> [[ADD]]
 ;
 entry:

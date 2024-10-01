@@ -27,15 +27,14 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -45,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -334,10 +334,6 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     raw_svector_ostream OS(OutputBuffer);
     legacy::PassManager PM;
 
-    // If the bitcode files contain ARC code and were compiled with optimization,
-    // the ObjCARCContractPass must be run, so do it unconditionally here.
-    PM.add(createObjCARCContractPass());
-
     // Setup the codegen now.
     if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
                                /* DisableVerify */ true))
@@ -385,13 +381,13 @@ public:
     Conf.RelocModel = TMBuilder.RelocModel;
     Conf.CGOptLevel = TMBuilder.CGOptLevel;
     Conf.Freestanding = Freestanding;
-    SmallString<40> Key;
-    computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
-                       ResolvedODR, DefinedGVSummaries);
+    std::string Key =
+        computeLTOCacheKey(Conf, Index, ModuleID, ImportList, ExportList,
+                           ResolvedODR, DefinedGVSummaries);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
+    sys::path::append(EntryPath, CachePath, Twine("llvmcache-", Key));
   }
 
   // Access the path to this entry in the cache.
@@ -696,7 +692,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -748,7 +744,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -765,8 +761,8 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  */
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    const lto::InputFile &File) {
+    ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries, const lto::InputFile &File) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -788,7 +784,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -796,7 +792,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
 
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 }
 
 /**
@@ -826,16 +822,20 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
-  std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  // 'EmitImportsFiles' emits the list of modules from which to import from, and
+  // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
+  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
+  GVSummaryPtrSet DecSummaries;
+  ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 
   std::error_code EC;
   if ((EC = EmitImportsFiles(ModuleIdentifier, OutputName,
@@ -873,7 +873,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   computePrevailingCopies(Index, PrevailingCopy);
 
   // Generate import/export list
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
@@ -1041,9 +1041,6 @@ void ThinLTOCodeGenerator::run() {
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
 
-  // Synthesize entry counts for functions in the combined index.
-  computeSyntheticCounts(*Index);
-
   // Currently there is no support for enabling whole program visibility via a
   // linker option in the old LTO API, but this call allows it to be specified
   // via the internal option. Must be done before WPD below.
@@ -1073,7 +1070,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
-  DenseMap<StringRef, FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
+  FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
   ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,

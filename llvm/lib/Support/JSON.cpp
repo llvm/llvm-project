@@ -239,10 +239,8 @@ Error Path::Root::getError() const {
         OS << '[' << S.index() << ']';
     }
   }
-  return createStringError(llvm::inconvertibleErrorCode(), OS.str());
+  return createStringError(llvm::inconvertibleErrorCode(), S);
 }
-
-namespace {
 
 std::vector<const Object::value_type *> sortedElements(const Object &O) {
   std::vector<const Object::value_type *> Elements;
@@ -258,7 +256,7 @@ std::vector<const Object::value_type *> sortedElements(const Object &O) {
 // Prints a one-line version of a value that isn't our main focus.
 // We interleave writes to OS and JOS, exploiting the lack of extra buffering.
 // This is OK as we own the implementation.
-void abbreviate(const Value &V, OStream &JOS) {
+static void abbreviate(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.rawValue(V.getAsArray()->empty() ? "[]" : "[ ... ]");
@@ -284,7 +282,7 @@ void abbreviate(const Value &V, OStream &JOS) {
 
 // Prints a semi-expanded version of a value that is our main focus.
 // Array/Object entries are printed, but not recursively as they may be huge.
-void abbreviateChildren(const Value &V, OStream &JOS) {
+static void abbreviateChildren(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.array([&] {
@@ -305,8 +303,6 @@ void abbreviateChildren(const Value &V, OStream &JOS) {
     JOS.value(V);
   }
 }
-
-} // namespace
 
 void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
   OStream JOS(OS, /*IndentSize=*/2);
@@ -336,7 +332,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
       JOS.object([&] {
         for (const auto *KV : sortedElements(*O)) {
           JOS.attributeBegin(KV->first);
-          if (FieldName.equals(KV->first))
+          if (FieldName == StringRef(KV->first))
             Recurse(KV->second, Path.drop_back(), Recurse);
           else
             abbreviate(KV->second, JOS);
@@ -414,6 +410,7 @@ private:
   std::optional<Error> Err;
   const char *Start, *P, *End;
 };
+} // namespace
 
 bool Parser::parseValue(Value &Out) {
   eatWhitespace();
@@ -681,7 +678,6 @@ bool Parser::parseError(const char *Msg) {
       std::make_unique<ParseError>(Msg, Line, P - StartOfLine, P - Start));
   return false;
 }
-} // namespace
 
 Expected<Value> parse(StringRef JSON) {
   Parser P(JSON);

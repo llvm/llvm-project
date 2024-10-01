@@ -92,9 +92,7 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
 
   Target &target = *exe_ctx.GetTargetPtr();
   Process &process = *exe_ctx.GetProcessPtr();
-  ABISP abi_sp = process.GetABI();
   const ArchSpec &arch = target.GetArchitecture();
-  assert(abi_sp && "Missing ABI info");
 
   // Check for a ptrauth-enabled target.
   const bool ptrauth_enabled_target =
@@ -109,6 +107,9 @@ bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
                 m_exc_code, at_address);
     strm.Printf("Note: Possible pointer authentication failure detected.\n");
   };
+
+  ABISP abi_sp = process.GetABI();
+  assert(abi_sp && "Missing ABI info");
 
   // Check if we have a "brk 0xc47x" trap, where the value that failed to
   // authenticate is in x16.

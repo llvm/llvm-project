@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -97,13 +98,15 @@ public:
   /// Create an empty function with the given name.
   Function *createDummyFunction(StringRef Name, Module &M);
 
-  bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI);
+  bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
+                             ModuleAnalysisManager *FAM = nullptr);
 
   /// Parse the machine function in the current YAML document.
   ///
   ///
   /// Return true if an error occurred.
-  bool parseMachineFunction(Module &M, MachineModuleInfo &MMI);
+  bool parseMachineFunction(Module &M, MachineModuleInfo &MMI,
+                            ModuleAnalysisManager *FAM);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
@@ -175,7 +178,8 @@ private:
   SMDiagnostic diagFromBlockStringDiag(const SMDiagnostic &Error,
                                        SMRange SourceRange);
 
-  void computeFunctionProperties(MachineFunction &MF);
+  bool computeFunctionProperties(MachineFunction &MF,
+                                 const yaml::MachineFunction &YamlMF);
 
   void setupDebugValueTracking(MachineFunction &MF,
     PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF);
@@ -275,13 +279,14 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   return M;
 }
 
-bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
+bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
+                                          ModuleAnalysisManager *MAM) {
   if (NoMIRDocuments)
     return false;
 
   // Parse the machine functions.
   do {
-    if (parseMachineFunction(M, MMI))
+    if (parseMachineFunction(M, MMI, MAM))
       return true;
     In.nextDocument();
   } while (In.setCurrentDocument());
@@ -303,7 +308,8 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI) {
+bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
+                                         ModuleAnalysisManager *MAM) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
@@ -327,14 +333,28 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI) {
                    "' isn't defined in the provided LLVM IR");
     }
   }
-  if (MMI.getMachineFunction(*F) != nullptr)
-    return error(Twine("redefinition of machine function '") + FunctionName +
-                 "'");
 
-  // Create the MachineFunction.
-  MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
-  if (initializeMachineFunction(YamlMF, MF))
-    return true;
+  if (!MAM) {
+    if (MMI.getMachineFunction(*F) != nullptr)
+      return error(Twine("redefinition of machine function '") + FunctionName +
+                   "'");
+
+    // Create the MachineFunction.
+    MachineFunction &MF = MMI.getOrCreateMachineFunction(*F);
+    if (initializeMachineFunction(YamlMF, MF))
+      return true;
+  } else {
+    auto &FAM =
+        MAM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    if (FAM.getCachedResult<MachineFunctionAnalysis>(*F))
+      return error(Twine("redefinition of machine function '") + FunctionName +
+                   "'");
+
+    // Create the MachineFunction.
+    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(*F).getMF();
+    if (initializeMachineFunction(YamlMF, MF))
+      return true;
+  }
 
   return false;
 }
@@ -354,7 +374,8 @@ static bool isSSA(const MachineFunction &MF) {
   return true;
 }
 
-void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
+bool MIRParserImpl::computeFunctionProperties(
+    MachineFunction &MF, const yaml::MachineFunction &YamlMF) {
   MachineFunctionProperties &Properties = MF.getProperties();
 
   bool HasPHI = false;
@@ -379,21 +400,48 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
       }
     }
   }
-  if (!HasPHI)
-    Properties.set(MachineFunctionProperties::Property::NoPHIs);
+
+  // Helper function to sanity-check and set properties that are computed, but
+  // may be explicitly set from the input MIR
+  auto ComputedPropertyHelper =
+      [&Properties](std::optional<bool> ExplicitProp, bool ComputedProp,
+                    MachineFunctionProperties::Property P) -> bool {
+    // Prefer explicitly given values over the computed properties
+    if (ExplicitProp.value_or(ComputedProp))
+      Properties.set(P);
+    else
+      Properties.reset(P);
+
+    // Check for conflict between the explicit values and the computed ones
+    return ExplicitProp && *ExplicitProp && !ComputedProp;
+  };
+
+  if (ComputedPropertyHelper(YamlMF.NoPHIs, !HasPHI,
+                             MachineFunctionProperties::Property::NoPHIs)) {
+    return error(MF.getName() +
+                 " has explicit property NoPhi, but contains at least one PHI");
+  }
+
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
     Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
 
-  if (isSSA(MF))
-    Properties.set(MachineFunctionProperties::Property::IsSSA);
-  else
-    Properties.reset(MachineFunctionProperties::Property::IsSSA);
+  if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
+                             MachineFunctionProperties::Property::IsSSA)) {
+    return error(MF.getName() +
+                 " has explicit property IsSSA, but is not valid SSA");
+  }
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (MRI.getNumVirtRegs() == 0)
-    Properties.set(MachineFunctionProperties::Property::NoVRegs);
+  if (ComputedPropertyHelper(YamlMF.NoVRegs, MRI.getNumVirtRegs() == 0,
+                             MachineFunctionProperties::Property::NoVRegs)) {
+    return error(
+        MF.getName() +
+        " has explicit property NoVRegs, but contains virtual registers");
+  }
+
+  return false;
 }
 
 bool MIRParserImpl::initializeCallSiteInfo(
@@ -425,11 +473,11 @@ bool MIRParserImpl::initializeCallSiteInfo(
       Register Reg;
       if (parseNamedRegisterReference(PFS, Reg, ArgRegPair.Reg.Value, Error))
         return error(Error, ArgRegPair.Reg.SourceRange);
-      CSInfo.emplace_back(Reg, ArgRegPair.ArgNo);
+      CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
 
     if (TM.Options.EmitCallSiteInfo)
-      MF.addCallArgsForwardingRegs(&*CallI, std::move(CSInfo));
+      MF.addCallSiteInfo(&*CallI, std::move(CSInfo));
   }
 
   if (YamlMF.CallSitesInfo.size() && !TM.Options.EmitCallSiteInfo)
@@ -521,9 +569,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
     return true;
   }
   // Check Basic Block Section Flags.
-  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
-    MF.setBBSectionsType(BasicBlockSection::Labels);
-  } else if (MF.hasBBSections()) {
+  if (MF.hasBBSections()) {
     MF.assignBeginEndSections();
   }
   PFS.SM = &SM;
@@ -576,16 +622,17 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.freezeReservedRegs();
 
-  computeFunctionProperties(MF);
+  if (computeFunctionProperties(MF, YamlMF))
+    return true;
 
   if (initializeCallSiteInfo(PFS, YamlMF))
-    return false;
+    return true;
 
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
-  MF.verify();
+  MF.verify(nullptr, nullptr, &errs());
   return false;
 }
 
@@ -760,6 +807,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasVAStart(YamlMFI.HasVAStart);
   MFI.setHasMustTailInVarArgFunc(YamlMFI.HasMustTailInVarArgFunc);
   MFI.setHasTailCall(YamlMFI.HasTailCall);
+  MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
   if (!YamlMFI.SavePoint.Value.empty()) {
     MachineBasicBlock *MBB = nullptr;
@@ -1052,7 +1100,7 @@ SMDiagnostic MIRParserImpl::diagFromMIStringDiag(const SMDiagnostic &Error,
                            (HasQuote ? 1 : 0));
 
   // TODO: Translate any source ranges as well.
-  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), std::nullopt,
+  return SM.GetMessage(Loc, Error.getKind(), Error.getMessage(), {},
                        Error.getFixIts());
 }
 
@@ -1099,6 +1147,11 @@ MIRParser::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
 
 bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
   return Impl->parseMachineFunctions(M, MMI);
+}
+
+bool MIRParser::parseMachineFunctions(Module &M, ModuleAnalysisManager &MAM) {
+  auto &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
+  return Impl->parseMachineFunctions(M, MMI, &MAM);
 }
 
 std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(

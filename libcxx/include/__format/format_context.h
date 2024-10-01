@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 #define _LIBCPP___FORMAT_FORMAT_CONTEXT_H
 
-#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>
@@ -132,6 +131,10 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args)
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif
+
+public:
+  basic_format_context(const basic_format_context&)            = delete;
+  basic_format_context& operator=(const basic_format_context&) = delete;
 };
 
 // A specialization for __retarget_buffer
@@ -209,7 +212,7 @@ private:
 };
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_context);
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

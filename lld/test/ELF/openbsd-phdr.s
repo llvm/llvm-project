@@ -1,10 +1,10 @@
 # REQUIRES: x86
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64 randomdata.s -o randomdata.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd randomdata.s -o randomdata.o
 # RUN: ld.lld randomdata.o -o randomdata
 # RUN: llvm-readelf -S -l randomdata | FileCheck %s --check-prefix=RANDOMDATA
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o wxneeded.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd /dev/null -o wxneeded.o
 # RUN: ld.lld -z wxneeded wxneeded.o -o wxneeded
 # RUN: llvm-readelf -l wxneeded | FileCheck %s --check-prefix=WXNEEDED
 
@@ -20,6 +20,8 @@
 # RANDOMDATA: Type              Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # RANDOMDATA: OPENBSD_RANDOMIZE 0x[[O]]  0x[[ADDR]]         0x[[ADDR]]         0x000008 0x000008 R   0x1
 # CHECK-NEXT: OPENBSD_BOOTDATA  0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0
+# CHECK-NEXT: OPENBSD_MUTABLE   0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0
+# CHECK-NEXT: OPENBSD_SYSCALLS  0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0
 # CHECK-NEXT: OPENBSD_WXNEEDED  0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0
 
 #--- randomdata.s
@@ -31,6 +33,8 @@ PHDRS {
   text PT_LOAD FILEHDR PHDRS;
   rand PT_OPENBSD_RANDOMIZE;
   boot PT_OPENBSD_BOOTDATA;
+  mutable PT_OPENBSD_MUTABLE;
+  syscalls PT_OPENBSD_SYSCALLS;
   wxneeded PT_OPENBSD_WXNEEDED;
 }
 SECTIONS {

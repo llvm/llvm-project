@@ -39,6 +39,11 @@ using namespace llvm;
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
+#define CASE_PTERNLOG(Inst, src)                                               \
+  CASE_AVX512_INS_COMMON(Inst, Z, r##src##i)                                   \
+  CASE_AVX512_INS_COMMON(Inst, Z256, r##src##i)                                \
+  CASE_AVX512_INS_COMMON(Inst, Z128, r##src##i)
+
 #define CASE_MOVDUP(Inst, src)                    \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
   CASE_AVX512_INS_COMMON(Inst, Z256, r##src)      \
@@ -223,14 +228,14 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SD4, , mr_Int)        \
   CASE_AVX_INS_COMMON(Inst##SS4, , mr_Int)
 
-static unsigned getVectorRegSize(unsigned RegNo) {
-  if (X86II::isZMMReg(RegNo))
+static unsigned getVectorRegSize(MCRegister Reg) {
+  if (X86II::isZMMReg(Reg))
     return 512;
-  if (X86II::isYMMReg(RegNo))
+  if (X86II::isYMMReg(Reg))
     return 256;
-  if (X86II::isXMMReg(RegNo))
+  if (X86II::isXMMReg(Reg))
     return 128;
-  if (X86::MM0 <= RegNo && RegNo <= X86::MM7)
+  if (Reg >= X86::MM0 && Reg <= X86::MM7)
     return 64;
 
   llvm_unreachable("Unknown vector reg!");
@@ -238,7 +243,7 @@ static unsigned getVectorRegSize(unsigned RegNo) {
 
 static unsigned getRegOperandNumElts(const MCInst *MI, unsigned ScalarSize,
                                      unsigned OperandIndex) {
-  unsigned OpReg = MI->getOperand(OperandIndex).getReg();
+  MCRegister OpReg = MI->getOperand(OperandIndex).getReg();
   return getVectorRegSize(OpReg) / ScalarSize;
 }
 
@@ -617,6 +622,90 @@ static bool printFMAComments(const MCInst *MI, raw_ostream &OS,
   return true;
 }
 
+static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
+                                  const MCInstrInfo &MCII) {
+  unsigned NumOperands = MI->getNumOperands();
+
+  int Src2Idx;
+  int Src3Idx;
+  switch (MI->getOpcode()) {
+    // dest, src1, src2, src3, tbl
+    // dest, src1, mask, src2, src3, tbl
+    CASE_PTERNLOG(PTERNLOGD, r)
+    CASE_PTERNLOG(PTERNLOGQ, r)
+    Src2Idx = NumOperands - 3;
+    Src3Idx = NumOperands - 2;
+    break;
+
+    // dest, src1, src2, memory, tbl
+    // dest, src1, mask, src2, memory, tbl
+    CASE_PTERNLOG(PTERNLOGD, m)
+    CASE_PTERNLOG(PTERNLOGQ, m)
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -1;
+    break;
+
+  default:
+    return false;
+  }
+  const char *DestName = getRegName(MI->getOperand(0).getReg());
+  const char *Src1Name = getRegName(MI->getOperand(1).getReg());
+  const char *Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
+  const char *Src3Name =
+      Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
+  uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
+
+  OS << DestName;
+  printMasking(OS, MI, MCII);
+  OS << " = ";
+
+  constexpr unsigned kNumVariables = 3;
+  constexpr unsigned kNumTruthTableEntries = 1 << kNumVariables;
+  int NumMinterms = llvm::popcount(TruthTable);
+  if (NumMinterms == 0) {
+    OS << '0';
+  } else if (NumMinterms == kNumTruthTableEntries) {
+    OS << "-1";
+  } else {
+    while (TruthTable != 0) {
+      // Index of the lowest bit set.
+      unsigned I = llvm::countr_zero(TruthTable);
+      // Clear the lowest bit set.
+      TruthTable &= TruthTable - 1;
+      // Our index tells us which sources are and are not complemented. Note
+      // that the indexing goes left-to-right.
+      bool Src1 = I & 0b100;
+      bool Src2 = I & 0b010;
+      bool Src3 = I & 0b001;
+
+      // Group in parenthesis to make the output more obvious but only if there
+      // are multiple terms.
+      if (NumMinterms > 1)
+        OS << '(';
+
+      if (!Src1)
+        OS << '~';
+      OS << Src1Name << " & ";
+      if (!Src2)
+        OS << '~';
+      OS << Src2Name << " & ";
+      if (!Src3)
+        OS << '~';
+      OS << Src3Name;
+
+      if (NumMinterms > 1)
+        OS << ')';
+
+      // Output an OR if there is another term in the table.
+      if (TruthTable != 0)
+        OS << " | ";
+    }
+  }
+  OS << '\n';
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // Top Level Entrypoint
@@ -634,6 +723,9 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   bool RegForm = false;
 
   if (printFMAComments(MI, OS, MCII))
+    return true;
+
+  if (printPTERNLOGComments(MI, OS, MCII))
     return true;
 
   switch (MI->getOpcode()) {
@@ -703,14 +795,14 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::INSERTPSrr:
-  case X86::VINSERTPSrr:
-  case X86::VINSERTPSZrr:
+  case X86::INSERTPSrri:
+  case X86::VINSERTPSrri:
+  case X86::VINSERTPSZrri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     [[fallthrough]];
-  case X86::INSERTPSrm:
-  case X86::VINSERTPSrm:
-  case X86::VINSERTPSZrm:
+  case X86::INSERTPSrmi:
+  case X86::VINSERTPSrmi:
+  case X86::VINSERTPSZrmi:
     DestName = getRegName(MI->getOperand(0).getReg());
     Src1Name = getRegName(MI->getOperand(1).getReg());
     if (MI->getOperand(NumOperands - 1).isImm())
@@ -1158,13 +1250,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::VPERM2F128rr:
-  case X86::VPERM2I128rr:
+  case X86::VPERM2F128rri:
+  case X86::VPERM2I128rri:
     Src2Name = getRegName(MI->getOperand(2).getReg());
     [[fallthrough]];
 
-  case X86::VPERM2F128rm:
-  case X86::VPERM2I128rm:
+  case X86::VPERM2F128rmi:
+  case X86::VPERM2I128rmi:
     // For instruction comments purpose, assume the 256-bit vector is v4i64.
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodeVPERM2X128Mask(4, MI->getOperand(NumOperands - 1).getImm(),
@@ -1249,18 +1341,18 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
 
   case X86::VBROADCASTF128rm:
   case X86::VBROADCASTI128rm:
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z128, rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z128, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z256, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z256, rm)
     DecodeSubVectorBroadcast(4, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X2, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X2, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X2, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X2, Z, rm)
     DecodeSubVectorBroadcast(8, 2, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF64X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI64X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF64X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI64X4, Z, rm)
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -1269,13 +1361,13 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DecodeSubVectorBroadcast(8, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X4, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X4, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X4, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X4, Z, rm)
     DecodeSubVectorBroadcast(16, 4, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
-  CASE_AVX512_INS_COMMON(BROADCASTF32X8, , rm)
-  CASE_AVX512_INS_COMMON(BROADCASTI32X8, , rm)
+  CASE_AVX512_INS_COMMON(BROADCASTF32X8, Z, rm)
+  CASE_AVX512_INS_COMMON(BROADCASTI32X8, Z, rm)
     DecodeSubVectorBroadcast(16, 8, ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;

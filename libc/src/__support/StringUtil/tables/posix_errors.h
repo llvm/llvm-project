@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/macros/config.h"
 
 #include <errno.h> // For error macros
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPERM, "Operation not permitted"),
@@ -94,6 +95,85 @@ LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(ENOTRECOVERABLE, "State not recoverable"),
 };
 
-} // namespace LIBC_NAMESPACE
+LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRNO_NAMES = {
+    MsgMapping(EPERM, "EPERM"),
+    MsgMapping(ENOENT, "ENOENT"),
+    MsgMapping(ESRCH, "ESRCH"),
+    MsgMapping(EINTR, "EINTR"),
+    MsgMapping(EIO, "EIO"),
+    MsgMapping(ENXIO, "ENXIO"),
+    MsgMapping(E2BIG, "E2BIG"),
+    MsgMapping(ENOEXEC, "ENOEXEC"),
+    MsgMapping(EBADF, "EBADF"),
+    MsgMapping(ECHILD, "ECHILD"),
+    MsgMapping(EAGAIN, "EAGAIN"),
+    MsgMapping(ENOMEM, "ENOMEM"),
+    MsgMapping(EACCES, "EACCES"),
+    MsgMapping(EFAULT, "EFAULT"),
+    MsgMapping(EBUSY, "EBUSY"),
+    MsgMapping(EEXIST, "EEXIST"),
+    MsgMapping(EXDEV, "EXDEV"),
+    MsgMapping(ENODEV, "ENODEV"),
+    MsgMapping(ENOTDIR, "ENOTDIR"),
+    MsgMapping(EISDIR, "EISDIR"),
+    MsgMapping(EINVAL, "EINVAL"),
+    MsgMapping(ENFILE, "ENFILE"),
+    MsgMapping(EMFILE, "EMFILE"),
+    MsgMapping(ENOTTY, "ENOTTY"),
+    MsgMapping(ETXTBSY, "ETXTBSY"),
+    MsgMapping(EFBIG, "EFBIG"),
+    MsgMapping(ENOSPC, "ENOSPC"),
+    MsgMapping(ESPIPE, "ESPIPE"),
+    MsgMapping(EROFS, "EROFS"),
+    MsgMapping(EMLINK, "EMLINK"),
+    MsgMapping(EPIPE, "EPIPE"),
+    MsgMapping(EDEADLK, "EDEADLK"),
+    MsgMapping(ENAMETOOLONG, "ENAMETOOLONG"),
+    MsgMapping(ENOLCK, "ENOLCK"),
+    MsgMapping(ENOSYS, "ENOSYS"),
+    MsgMapping(ENOTEMPTY, "ENOTEMPTY"),
+    MsgMapping(ELOOP, "ELOOP"),
+    MsgMapping(ENOMSG, "ENOMSG"),
+    MsgMapping(EIDRM, "EIDRM"),
+    MsgMapping(ENOSTR, "ENOSTR"),
+    MsgMapping(ENODATA, "ENODATA"),
+    MsgMapping(ETIME, "ETIME"),
+    MsgMapping(ENOSR, "ENOSR"),
+    MsgMapping(ENOLINK, "ENOLINK"),
+    MsgMapping(EPROTO, "EPROTO"),
+    MsgMapping(EMULTIHOP, "EMULTIHOP"),
+    MsgMapping(EBADMSG, "EBADMSG"),
+    MsgMapping(EOVERFLOW, "EOVERFLOW"),
+    MsgMapping(ENOTSOCK, "ENOTSOCK"),
+    MsgMapping(EDESTADDRREQ, "EDESTADDRREQ"),
+    MsgMapping(EMSGSIZE, "EMSGSIZE"),
+    MsgMapping(EPROTOTYPE, "EPROTOTYPE"),
+    MsgMapping(ENOPROTOOPT, "ENOPROTOOPT"),
+    MsgMapping(EPROTONOSUPPORT, "EPROTONOSUPPORT"),
+    MsgMapping(ENOTSUP, "ENOTSUP"),
+    MsgMapping(EAFNOSUPPORT, "EAFNOSUPPORT"),
+    MsgMapping(EADDRINUSE, "EADDRINUSE"),
+    MsgMapping(EADDRNOTAVAIL, "EADDRNOTAVAIL"),
+    MsgMapping(ENETDOWN, "ENETDOWN"),
+    MsgMapping(ENETUNREACH, "ENETUNREACH"),
+    MsgMapping(ENETRESET, "ENETRESET"),
+    MsgMapping(ECONNABORTED, "ECONNABORTED"),
+    MsgMapping(ECONNRESET, "ECONNRESET"),
+    MsgMapping(ENOBUFS, "ENOBUFS"),
+    MsgMapping(EISCONN, "EISCONN"),
+    MsgMapping(ENOTCONN, "ENOTCONN"),
+    MsgMapping(ETIMEDOUT, "ETIMEDOUT"),
+    MsgMapping(ECONNREFUSED, "ECONNREFUSED"),
+    MsgMapping(EHOSTUNREACH, "EHOSTUNREACH"),
+    MsgMapping(EALREADY, "EALREADY"),
+    MsgMapping(EINPROGRESS, "EINPROGRESS"),
+    MsgMapping(ESTALE, "ESTALE"),
+    MsgMapping(EDQUOT, "EDQUOT"),
+    MsgMapping(ECANCELED, "ECANCELED"),
+    MsgMapping(EOWNERDEAD, "EOWNERDEAD"),
+    MsgMapping(ENOTRECOVERABLE, "ENOTRECOVERABLE"),
+};
+
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_ERRORS_H

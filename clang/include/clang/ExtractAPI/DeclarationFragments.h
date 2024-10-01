@@ -27,8 +27,8 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include <iterator>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -115,28 +115,26 @@ public:
 
   ConstFragmentIterator cend() const { return Fragments.cend(); }
 
-  // Add a new Fragment at an arbitrary offset.
-  DeclarationFragments &insert(FragmentIterator It, StringRef Spelling,
-                               FragmentKind Kind,
-                               StringRef PreciseIdentifier = "",
-                               const Decl *Declaration = nullptr) {
-    Fragments.insert(It,
-                     Fragment(Spelling, Kind, PreciseIdentifier, Declaration));
-    return *this;
+  /// Prepend another DeclarationFragments to the beginning.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &prepend(DeclarationFragments Other) {
+    return insert(begin(), std::move(Other));
   }
 
-  DeclarationFragments &insert(FragmentIterator It,
-                               DeclarationFragments &&Other) {
-    Fragments.insert(It, std::make_move_iterator(Other.Fragments.begin()),
-                     std::make_move_iterator(Other.Fragments.end()));
-    Other.Fragments.clear();
-    return *this;
+  /// Append another DeclarationFragments to the end.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &append(DeclarationFragments Other) {
+    return insert(end(), std::move(Other));
   }
 
   /// Append a new Fragment to the end of the Fragments.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
+  /// appending to chain up consecutive operations.
   DeclarationFragments &append(StringRef Spelling, FragmentKind Kind,
                                StringRef PreciseIdentifier = "",
                                const Decl *Declaration = nullptr) {
@@ -151,18 +149,48 @@ public:
     return *this;
   }
 
-  /// Append another DeclarationFragments to the end.
-  ///
-  /// Note: \p Other is moved from and cannot be used after a call to this
-  /// method.
+  /// Inserts another DeclarationFragments at \p It.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
-  DeclarationFragments &append(DeclarationFragments &&Other) {
-    Fragments.insert(Fragments.end(),
-                     std::make_move_iterator(Other.Fragments.begin()),
-                     std::make_move_iterator(Other.Fragments.end()));
-    Other.Fragments.clear();
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &insert(FragmentIterator It,
+                               DeclarationFragments Other) {
+    if (Other.Fragments.empty())
+      return *this;
+
+    if (Fragments.empty()) {
+      Fragments = std::move(Other.Fragments);
+      return *this;
+    }
+
+    const auto &OtherFrags = Other.Fragments;
+    auto ToInsertBegin = std::make_move_iterator(Other.begin());
+    auto ToInsertEnd = std::make_move_iterator(Other.end());
+
+    // If we aren't inserting at the end let's make sure that we merge their
+    // last fragment with It if both are text fragments.
+    if (It != end() && It->Kind == FragmentKind::Text &&
+        OtherFrags.back().Kind == FragmentKind::Text) {
+      auto &TheirBackSpelling = OtherFrags.back().Spelling;
+      It->Spelling.reserve(It->Spelling.size() + TheirBackSpelling.size());
+      It->Spelling.insert(It->Spelling.begin(), TheirBackSpelling.begin(),
+                          TheirBackSpelling.end());
+      --ToInsertEnd;
+    }
+
+    // If we aren't inserting at the beginning we want to merge their first
+    // fragment with the fragment before It if both are text fragments.
+    if (It != begin() && std::prev(It)->Kind == FragmentKind::Text &&
+        OtherFrags.front().Kind == FragmentKind::Text) {
+      auto PrevIt = std::prev(It);
+      auto &TheirFrontSpelling = OtherFrags.front().Spelling;
+      PrevIt->Spelling.reserve(PrevIt->Spelling.size() +
+                               TheirFrontSpelling.size());
+      PrevIt->Spelling.append(TheirFrontSpelling);
+      ++ToInsertBegin;
+    }
+
+    Fragments.insert(It, ToInsertBegin, ToInsertEnd);
     return *this;
   }
 
@@ -179,8 +207,20 @@ public:
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
+  /// appending to chain up consecutive operations.
   DeclarationFragments &appendSpace();
+
+  /// Append a text Fragment of a semicolon character.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &appendSemicolon();
+
+  /// Removes a trailing semicolon character if present.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// removing to chain up consecutive operations.
+  DeclarationFragments &removeTrailingSemicolon();
 
   /// Get the string description of a FragmentKind \p Kind.
   static StringRef getFragmentKindString(FragmentKind Kind);
@@ -194,12 +234,14 @@ public:
   static DeclarationFragments getStructureTypeFragment(const RecordDecl *Decl);
 
 private:
+  DeclarationFragments &appendUnduplicatedTextCharacter(char Character);
   std::vector<Fragment> Fragments;
 };
 
 class AccessControl {
 public:
   AccessControl(std::string Access) : Access(Access) {}
+  AccessControl() : Access("public") {}
 
   const std::string &getAccess() const { return Access; }
 
@@ -315,13 +357,9 @@ public:
   static DeclarationFragments
       getFragmentsForTemplateParameters(ArrayRef<NamedDecl *>);
 
-  static std::string
-  getNameForTemplateArgument(const ArrayRef<NamedDecl *>, std::string);
-
-  static DeclarationFragments
-  getFragmentsForTemplateArguments(const ArrayRef<TemplateArgument>,
-                                   ASTContext &,
-                                   const std::optional<ArrayRef<NamedDecl *>>);
+  static DeclarationFragments getFragmentsForTemplateArguments(
+      const ArrayRef<TemplateArgument>, ASTContext &,
+      const std::optional<ArrayRef<TemplateArgumentLoc>>);
 
   static DeclarationFragments getFragmentsForConcept(const ConceptDecl *);
 
@@ -373,9 +411,9 @@ public:
   /// Build DeclarationFragments for a macro.
   ///
   /// \param Name name of the macro.
-  /// \param MD the associated MacroDirective.
+  /// \param MI the associated MacroInfo.
   static DeclarationFragments getFragmentsForMacro(StringRef Name,
-                                                   const MacroDirective *MD);
+                                                   const MacroInfo *MI);
 
   /// Build DeclarationFragments for a typedef \p TypedefNameDecl.
   static DeclarationFragments
@@ -430,12 +468,7 @@ DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
   if (isa<FunctionDecl>(Function) &&
       dyn_cast<FunctionDecl>(Function)->getDescribedFunctionTemplate() &&
       StringRef(ReturnType.begin()->Spelling).starts_with("type-parameter")) {
-    std::string ProperArgName =
-        getNameForTemplateArgument(dyn_cast<FunctionDecl>(Function)
-                                       ->getDescribedFunctionTemplate()
-                                       ->getTemplateParameters()
-                                       ->asArray(),
-                                   ReturnType.begin()->Spelling);
+    std::string ProperArgName = Function->getReturnType().getAsString();
     ReturnType.begin()->Spelling.swap(ProperArgName);
   }
   ReturnType.append(std::move(After));

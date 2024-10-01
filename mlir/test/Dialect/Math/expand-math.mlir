@@ -221,7 +221,7 @@ func.func @roundf_func(%a: f32) -> f32 {
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64)
 func.func @powf_func(%a: f64, %b: f64) ->f64 {
-  // CHECK-DAG = [[CST0:%.+]] = arith.constant 0.000000e+00
+  // CHECK-DAG: [[CST0:%.+]] = arith.constant 0.000000e+00
   // CHECK-DAG: [[TWO:%.+]] = arith.constant 2.000000e+00
   // CHECK-DAG: [[NEGONE:%.+]] = arith.constant -1.000000e+00
   // CHECK-DAG: [[SQR:%.+]] = arith.mulf [[ARG0]], [[ARG0]]
@@ -511,3 +511,220 @@ func.func @roundeven16(%arg: f16) -> f16 {
 // CHECK:     %[[COPYSIGN:.*]] = math.copysign %[[RESULT]], %[[VAL_0]] : f16
 
 // CHECK: return %[[COPYSIGN]] : f16
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_neg_odd_power
+func.func @math_fpowi_neg_odd_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
+  %1 = arith.constant dense<-3> : tensor<8xi64> 
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi64>
+  return %2 : tensor<8xf32>
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
+//  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEG0:.*]] = arith.constant dense<-0.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<0xFF800000> : tensor<8xf32>
+//  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:        %[[CUBE:.*]] = arith.mulf %[[SQ]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[CUBE]], %[[CST0]] : tensor<8xf32>
+//  CHECK:        %[[CMPNEG0:.*]] = arith.cmpf oeq, %[[CUBE]], %[[CSTNEG0]] : tensor<8xf32>
+//  CHECK:        %[[INV:.*]] = arith.divf %[[CST1]], %[[CUBE]] : tensor<8xf32>
+//  CHECK:        %[[UB1:.*]] = arith.select %[[CMP0]], %[[CSTINF]], %[[INV]] : tensor<8xi1>, tensor<8xf32>
+//  CHECK:        %[[UB2:.*]] = arith.select %[[CMPNEG0]], %[[CSTNEGINF]], %[[UB1]] : tensor<8xi1>, tensor<8xf32>
+//  CHECK:      return %[[UB2]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_neg_even_power
+func.func @math_fpowi_neg_even_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
+  %1 = arith.constant dense<-4> : tensor<8xi64> 
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi64>
+  return %2 : tensor<8xf32>
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
+//  CHECK-DAG:    %[[CST1:.*]] = arith.constant dense<1.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEG0:.*]] = arith.constant dense<-0.000000e+00> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTINF:.*]] = arith.constant dense<0x7F800000> : tensor<8xf32>
+//  CHECK-DAG:    %[[CSTNEGINF:.*]] = arith.constant dense<0xFF800000> : tensor<8xf32>
+//  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:        %[[PW4:.*]] = arith.mulf %[[SQ]], %[[SQ]] : tensor<8xf32>
+//  CHECK:        %[[CMP0:.*]] = arith.cmpf oeq, %[[PW4]], %[[CST0]] : tensor<8xf32>
+//  CHECK:        %[[CMPNEG0:.*]] = arith.cmpf oeq, %[[PW4]], %[[CSTNEG0]] : tensor<8xf32>
+//  CHECK:        %[[INV:.*]] = arith.divf %[[CST1]], %[[PW4]] : tensor<8xf32>
+//  CHECK:        %[[UB1:.*]] = arith.select %[[CMP0]], %[[CSTINF]], %[[INV]] : tensor<8xi1>, tensor<8xf32>
+//  CHECK:        %[[UB2:.*]] = arith.select %[[CMPNEG0]], %[[CSTNEGINF]], %[[UB1]] : tensor<8xi1>, tensor<8xf32>
+//  CHECK:      return %[[UB2]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_pos_odd_power
+func.func @math_fpowi_pos_odd_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
+  %1 = arith.constant dense<5> : tensor<8xi64> 
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi64>
+  return %2 : tensor<8xf32>
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
+//  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:        %[[PW4:.*]] = arith.mulf %[[SQ]], %[[SQ]] : tensor<8xf32>
+//  CHECK:        %[[PW5:.*]] = arith.mulf %[[PW4]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:      return %[[PW5]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_pos_even_power
+func.func @math_fpowi_pos_even_power(%0 : tensor<8xf32>) -> tensor<8xf32> {
+  %1 = arith.constant dense<4> : tensor<8xi64> 
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi64>
+  return %2 : tensor<8xf32>
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>) -> tensor<8xf32> {
+//  CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+//  CHECK:        %[[PW4:.*]] = arith.mulf %[[SQ]], %[[SQ]] : tensor<8xf32>
+//  CHECK:      return %[[PW4]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_even_scalar
+func.func @math_fpowi_even_scalar(%0 : f32) -> f32 {
+  %pow = arith.constant 2 : i64
+  %2 = math.fpowi %0, %pow : f32, i64
+  return %2 : f32
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: f32) -> f32 {
+//  CHECK:         %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : f32
+//  CHECK:         return %[[SQ]] : f32
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_scalar_zero
+func.func @math_fpowi_scalar_zero(%0 : f32) -> f32 {
+  %pow = arith.constant 0 : i64
+  %2 = math.fpowi %0, %pow : f32, i64
+  return %2 : f32
+}
+//  CHECK-SAME: (%[[ARG0:.*]]: f32) -> f32 {
+//  CHECK:         %[[RET:.*]] = arith.constant 1.000000e+00 : f32
+//  CHECK:         return %[[RET]] : f32
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_to_powf_tensor
+func.func @math_fpowi_to_powf_tensor(%0 : tensor<8xf32>, %1: tensor<8xi32>) -> tensor<8xf32> {
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi32>
+  return %2 : tensor<8xf32>
+}
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>, %[[ARG1:.*]]: tensor<8xi32>) -> tensor<8xf32> {
+// CHECK:        %[[CSTNEG1:.*]] = arith.constant dense<-1.000000e+00> : tensor<8xf32>
+// CHECK:        %[[CST2:.*]] = arith.constant dense<2.000000e+00> : tensor<8xf32>
+// CHECK:        %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
+// CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : tensor<8xi32> to tensor<8xf32>
+// CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+// CHECK:        %[[DIV:.*]] = arith.divf %[[TOFP]], %[[CST2]] : tensor<8xf32>
+// CHECK:        %[[LG:.*]] = math.log %[[SQ]] : tensor<8xf32>
+// CHECK:        %[[MUL:.*]] = arith.mulf %[[DIV]], %[[LG]] : tensor<8xf32>
+// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : tensor<8xf32>
+// CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : tensor<8xf32>
+// CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : tensor<8xf32>
+// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : tensor<8xf32>
+// CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : tensor<8xf32>
+// CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : tensor<8xi1>
+// CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : tensor<8xi1>, tensor<8xf32>
+// CHECK:      return %[[SEL]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_to_powf_scalar
+func.func @math_fpowi_to_powf_scalar(%0 : f32, %1: i64) -> f32 {
+  %2 = math.fpowi %0, %1 : f32, i64
+  return %2 : f32
+}
+// CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: i64) -> f32 {
+// CHECK:        %[[CSTNEG1:.*]] = arith.constant -1.000000e+00 : f32
+// CHECK:        %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:        %[[CST0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : i64 to f32
+// CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : f32
+// CHECK:        %[[DIV:.*]] = arith.divf %[[TOFP]], %[[CST2]] : f32
+// CHECK:        %[[LG:.*]] = math.log %[[SQ]] : f32
+// CHECK:        %[[MUL:.*]] = arith.mulf %[[DIV]], %[[LG]] : f32
+// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : f32
+// CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : f32
+// CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : f32
+// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : f32
+// CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : f32
+// CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : i1
+// CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : f32
+// CHECK:       return %[[SEL]] : f32
+
+// -----
+
+// CHECK-LABEL:   func.func @rsqrt
+// CHECK-SAME:     (%[[ARG:.*]]: f16)
+// CHECK-SAME:    -> f16
+// CHECK-DAG:     %[[CST:.*]] = arith.constant 1.000000e+00 : f16
+// CHECK-DAG:     %[[SQRT:.*]] = math.sqrt %[[ARG]] : f16
+// CHECK-DAG:     %[[DIV:.*]] = arith.divf %[[CST]], %[[SQRT]] : f16
+// CHECK:         return %[[DIV]] : f16
+func.func @rsqrt16(%float: f16) -> (f16)  {
+  %float_result = math.rsqrt %float : f16
+  return %float_result : f16
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @rsqrt
+// CHECK-SAME:     (%[[ARG:.*]]: f32)
+// CHECK-SAME:    -> f32
+// CHECK-DAG:     %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG:     %[[SQRT:.*]] = math.sqrt %[[ARG]] : f32
+// CHECK-DAG:     %[[DIV:.*]] = arith.divf %[[CST]], %[[SQRT]] : f32
+// CHECK:         return %[[DIV]] : f32
+func.func @rsqrt32(%float: f32) -> (f32)  {
+  %float_result = math.rsqrt %float : f32
+  return %float_result : f32
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @rsqrt
+// CHECK-SAME:     (%[[ARG:.*]]: f64)
+// CHECK-SAME:    -> f64
+// CHECK-DAG:     %[[CST:.*]] = arith.constant 1.000000e+00 : f64
+// CHECK-DAG:     %[[SQRT:.*]] = math.sqrt %[[ARG]] : f64
+// CHECK-DAG:     %[[DIV:.*]] = arith.divf %[[CST]], %[[SQRT]] : f64
+// CHECK:         return %[[DIV]] : f64
+func.func @rsqrt64(%float: f64) -> (f64)  {
+  %float_result = math.rsqrt %float : f64
+  return %float_result : f64
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @rsqrt_vec
+// CHECK-SAME:     (%[[ARG:.*]]: vector<5xf32>)
+// CHECK-SAME:    -> vector<5xf32>
+// CHECK-DAG:     %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<5xf32>
+// CHECK-DAG:     %[[SQRT:.*]] = math.sqrt %[[ARG]] : vector<5xf32>
+// CHECK-DAG:     %[[DIV:.*]] = arith.divf %[[CST]], %[[SQRT]] : vector<5xf32>
+// CHECK:         return %[[DIV]] : vector<5xf32>
+func.func @rsqrt_vec(%float: vector<5xf32>) -> (vector<5xf32>)  {
+  %float_result = math.rsqrt %float : vector<5xf32>
+  return %float_result : vector<5xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @rsqrt_tns
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<5x8xf32>)
+// CHECK-SAME:    -> tensor<5x8xf32>
+// CHECK-DAG:     %[[CST:.*]] = arith.constant dense<1.000000e+00> : tensor<5x8xf32>
+// CHECK-DAG:     %[[SQRT:.*]] = math.sqrt %[[ARG]] : tensor<5x8xf32>
+// CHECK-DAG:     %[[DIV:.*]] = arith.divf %[[CST]], %[[SQRT]] : tensor<5x8xf32>
+// CHECK:         return %[[DIV]] : tensor<5x8xf32>
+func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
+  %float_result = math.rsqrt %float : tensor<5x8xf32>
+  return %float_result : tensor<5x8xf32>
+}

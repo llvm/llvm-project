@@ -103,7 +103,7 @@ Options
 
     int i = -42;
     unsigned int u = 0xffffffff;
-    printf("%d %u\n", i, u);
+    printf("%u %d\n", i, u);
 
   would be converted to:
 
@@ -118,22 +118,25 @@ Options
 
 .. option:: PrintfLikeFunctions
 
-   A semicolon-separated list of (fully qualified) extra function names to
+   A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter contains the
    printf-style format string and the arguments to be formatted follow
-   immediately afterwards. If neither this option nor
-   `FprintfLikeFunctions` are set then the default value for this option
-   is `printf; absl::PrintF`, otherwise it is empty.
+   immediately afterwards. Qualified member function names are supported,
+   but the replacement function name must be unqualified. If neither this
+   option nor `FprintfLikeFunctions` are set then the default value for
+   this option is `printf; absl::PrintF`, otherwise it is empty.
 
 
 .. option:: FprintfLikeFunctions
 
-   A semicolon-separated list of (fully qualified) extra function names to
+   A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter is retained, the
    second parameter contains the printf-style format string and the
-   arguments to be formatted follow immediately afterwards. If neither this
-   option nor `PrintfLikeFunctions` are set then the default value for
-   this option is `fprintf; absl::FPrintF`, otherwise it is empty.
+   arguments to be formatted follow immediately afterwards. Qualified
+   member function names are supported, but the replacement function name
+   must be unqualified. If neither this option nor `PrintfLikeFunctions`
+   are set then the default value for this option is `fprintf;
+   absl::FPrintF`, otherwise it is empty.
 
 .. option:: ReplacementPrintFunction
 

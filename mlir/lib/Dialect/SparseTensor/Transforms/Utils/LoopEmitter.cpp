@@ -75,6 +75,40 @@ static Value genSliceStride(OpBuilder &builder, Location loc, Value tensor,
   return createOrFoldSliceStrideOp(builder, loc, tensor, toDim(enc, lvl));
 }
 
+static bool isIntOrFPZero(Attribute attr) {
+  if (auto f = llvm::dyn_cast<FloatAttr>(attr); f && f.getValue().isZero())
+    return true;
+  if (auto i = llvm::dyn_cast<IntegerAttr>(attr); i && i.getValue().isZero())
+    return true;
+  return false;
+}
+
+static Value unFoldOpIntResult(OpBuilder &builder, Location loc,
+                               OpFoldResult ofr) {
+  if (std::optional<int64_t> i = getConstantIntValue(ofr); i.has_value())
+    return constantIndex(builder, loc, *i);
+  return ofr.get<Value>();
+}
+
+static Value tryFoldTensors(Value t) {
+  // TODO: this should be done through a folding pass after switching to
+  // `sparse_tensor.iterate`-based sparsification.
+  auto stt = tryGetSparseTensorType(t);
+  auto padOp = t.getDefiningOp<tensor::PadOp>();
+  if (padOp && stt.has_value() && stt->hasEncoding() &&
+      padOp.getSourceType().getEncoding() == stt->getEncoding() &&
+      stt->getEncoding().isIdentity()) {
+    // Try fusing padOp with zeros.
+    Attribute padCst;
+    if (matchPattern(padOp.getBody()->getTerminator(),
+                     m_Op<tensor::YieldOp>(m_Constant(&padCst))) &&
+        isIntOrFPZero(padCst)) {
+      return padOp.getSource();
+    }
+  }
+  return t;
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse tensor loop emitter class implementations
 //===----------------------------------------------------------------------===//
@@ -105,6 +139,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   this->valBuffer.assign(numTensors, nullptr);
   this->lvls.resize(numTensors);
   this->iters.resize(numTensors);
+  this->spIterVals.resize(numTensors);
 
   // These zeros will be overwritten below, but we need to initialize
   // them to something since we'll need random-access assignment.
@@ -139,6 +174,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 
     lvls[tid].resize(lvlRank);
     iters[tid].resize(lvlRank);
+    spIterVals[tid].resize(lvlRank);
     loopHighs.assign(numLoops, nullptr);
 
     // Slice-driven loops related initialization.
@@ -150,8 +186,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       for (Level l = 0; l < lvlRank; l++) {
         std::vector<std::pair<LoopId, unsigned>> deps = dimGetter(tid, l);
         // Sort the loop by order.
-        std::sort(deps.begin(), deps.end(),
-                  [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+        llvm::sort(deps, llvm::less_first());
 
         dependentLvlMap[tid][l] = std::move(deps);
         unsigned depends = dependentLvlMap[tid][l].size();
@@ -166,75 +201,54 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
 std::unique_ptr<SparseIterator>
 LoopEmitter::makeLevelIterator(OpBuilder &builder, Location loc, TensorId t,
                                Level l) {
+  Value tensor = tensors[t];
+  auto stt = getSparseTensorType(tensor);
   auto it = makeSimpleIterator(*lvls[t][l], emitStrategy);
-  auto stt = getSparseTensorType(tensors[t]);
+
+  Value folded = tryFoldTensors(tensor);
+  if (folded != tensor) {
+    auto padOp = tensor.getDefiningOp<tensor::PadOp>();
+    assert(padOp);
+    if (padOp.getPaddedDims().test(l)) {
+      Value low = unFoldOpIntResult(builder, loc, padOp.getMixedLowPad()[l]);
+      Value high = unFoldOpIntResult(builder, loc, padOp.getMixedHighPad()[l]);
+      auto padIt = makePaddedIterator(std::move(it), low, high, emitStrategy);
+      return padIt;
+    }
+  }
+
   if (stt.hasEncoding() && stt.getEncoding().isSlice()) {
-    Value offset = genSliceOffset(builder, loc, tensors[t], l);
-    Value stride = genSliceStride(builder, loc, tensors[t], l);
+    Value offset = genSliceOffset(builder, loc, tensor, l);
+    Value stride = genSliceStride(builder, loc, tensor, l);
     auto slicedIt = makeSlicedLevelIterator(
         std::move(it), offset, stride, lvls[t][l]->getSize(), emitStrategy);
     return slicedIt;
   }
+
   return it;
 }
 
 void LoopEmitter::initializeLoopEmit(
     OpBuilder &builder, Location loc, LoopEmitter::OutputUpdater updater,
     LoopEmitter::SynTensorBoundSetter synSetter) {
-  // For every synthetic tensor, set the high bound by calling the callback.
-  if (synSetter) {
-    TensorId synId = getSynTensorId();
-    for (unsigned i = 0, e = loopHighs.size(); i < e; i++) {
-      Value sz = loopHighs[i] = synSetter(builder, loc, i);
-      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i, emitStrategy);
-      lvls[synId][i] = std::move(stl);
-      iters[synId][i].emplace_back(std::move(it));
-    }
-  }
 
-  // For every manifest tensor:
-  // * get the values buffer.
-  // * For every level:
-  //   * get the positions and coordinates buffers
-  //   * get/compute the level-size, which is also used as the upper-bound
-  //     on positions.
+  // For every manifest tensor, set up the values buffer.
   for (TensorId t = 0, numTensors = getNumManifestTensors(); t < numTensors;
        t++) {
-    const Value tensor = tensors[t];
+    // TODO: this should be done through a folding pass after switching to
+    // `sparse_tensor.iterate`-based sparsification.
+    const Value tensor = tryFoldTensors(tensors[t]);
     const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
+    // Skips only scalar, zero ranked tensor still need to be bufferized and
+    // (probably) filled with zeros by users.
     if (!rtp)
-      // Skips only scalar, zero ranked tensor still need to be bufferized and
-      // (probably) filled with zeros by users.
       continue;
-    // FIXME: the definition of `lvlRank` looks more like a dim-rank;
-    // but the variable is used as a level everywhere below, which
-    // suggests there may be some dim/lvl confusion going on here.
+
     auto stt = getSparseTensorType(tensor);
-    const Level lvlRank = stt.getLvlRank();
     const auto shape = rtp.getShape();
 
-    SmallVector<Value> lvlSzs;
-    for (Level l = 0; l < stt.getLvlRank(); l++) {
-      if (stt.hasEncoding())
-        lvlSzs.push_back(builder.create<LvlOp>(loc, tensor, l));
-      else
-        lvlSzs.push_back(builder.create<tensor::DimOp>(loc, tensor, l));
-    }
-
-    // Scan all levels of current tensor.
-    for (Level l = 0; l < lvlRank; l++) {
-      // Find upper bound in current dimension.
-      lvls[t][l] = makeSparseTensorLevel(builder, loc, tensor, t, l);
-      if (!dependentLvlMap[t][l].empty())
-        continue;
-
-      auto it = makeLevelIterator(builder, loc, t, l);
-      iters[t][l].emplace_back(std::move(it));
-    }
-
-    // Perform the required bufferization. Dense inputs materialize
-    // from the input tensors. Sparse inputs use sparse primitives to obtain the
-    // values.
+    // Perform the required bufferization. Dense inputs materialize from the
+    // input tensors. Sparse inputs use sparse primitives to obtain the values.
     // Delegates extra output initialization to clients.
     bool isOutput = isOutputTensor(t);
     Type elementType = stt.getElementType();
@@ -260,6 +274,53 @@ void LoopEmitter::initializeLoopEmit(
       // We also need the value buffer for all-dense annotated "sparse"
       // tensors.
       valBuffer[t] = builder.create<ToValuesOp>(loc, tensor);
+    }
+  }
+
+  // The sparse iterator values will only be available after the loop is
+  // constructed.
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator)
+    return;
+
+  // For every synthetic tensor, set the high bound by calling the callback.
+  if (synSetter) {
+    TensorId synId = getSynTensorId();
+    for (unsigned i = 0, e = loopHighs.size(); i < e; i++) {
+      Value sz = loopHighs[i] = synSetter(builder, loc, i);
+      auto [stl, it] = makeSynLevelAndIterator(sz, synId, i, emitStrategy);
+      lvls[synId][i] = std::move(stl);
+      iters[synId][i].emplace_back(std::move(it));
+    }
+  }
+
+  // For every manifest tensor:
+  // * For every level:
+  //   * get the positions and coordinates buffers
+  //   * get/compute the level-size, which is also used as the upper-bound
+  //     on positions.
+  for (TensorId t = 0, numTensors = getNumManifestTensors(); t < numTensors;
+       t++) {
+    // TODO: this should be done through a folding pass after switching to
+    // `sparse_tensor.iterate`-based sparsification.
+    const Value tensor = tryFoldTensors(tensors[t]);
+    const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
+    if (!rtp)
+      // Skips only scalar, zero ranked tensor still need to be bufferized and
+      // (probably) filled with zeros by users.
+      continue;
+
+    auto stt = getSparseTensorType(tensor);
+    const Level lvlRank = stt.getLvlRank();
+
+    // Scan all levels of current tensor.
+    for (Level l = 0; l < lvlRank; l++) {
+      // Find upper bound in current dimension.
+      lvls[t][l] = makeSparseTensorLevel(builder, loc, tensor, t, l);
+      if (!dependentLvlMap[t][l].empty())
+        continue;
+
+      auto it = makeLevelIterator(builder, loc, t, l);
+      iters[t][l].emplace_back(std::move(it));
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist
     // some loop preparation from tensor iteration, but will also (undesirably)
@@ -354,11 +415,13 @@ void LoopEmitter::enterNewLoopSeq(OpBuilder &builder, Location loc,
                                   ArrayRef<TensorLevel> tidLvls) {
   // TODO: sort
   assert(loopSeqStack.size() == loopStack.size());
-  // Prepares for all the tensors used in the current loop sequence.
 
-  for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
-    levelReducedDep[tid][lvl]++;
-    prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+  if (emitStrategy != SparseEmitStrategy::kSparseIterator) {
+    // Prepares for all the tensors used in the current loop sequence.
+    for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+      levelReducedDep[tid][lvl]++;
+      prepareLoopOverTensorAtLvl(builder, loc, tid, lvl);
+    }
   }
 
   // Universal Index starts from 0.
@@ -461,84 +524,8 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
 std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
     MutableArrayRef<Value> reduc, bool needsUniv) {
-  // NOTE: the slice driven tensor-related reduction variable must
-  // appear before normal tensors.
-
-  // The set of induction variables for the while loop.
-  SmallVector<Value> ivs;
-
-  // Construct the while-loop with a parameter for each coordinate.
-  for (SparseIterator *it : spIters) {
-    ValueRange itVals = it->getCursor();
-    ivs.append(itVals.begin(), itVals.end());
-  }
-
-  // The position where user-supplied reduction variable starts.
-  ivs.append(reduc.begin(), reduc.end());
-  // Update universal index.
-  if (needsUniv)
-    ivs.push_back(loopSeqStack.back().first);
-
-  // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
-  TypeRange types = ValueRange(ivs).getTypes();
-  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
-
-  SmallVector<Location> locs(types.size(), loc);
-  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
-  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
-
-  // Generates loop conditions.
-  builder.setInsertionPointToStart(before);
-  ValueRange bArgs = before->getArguments();
-  Value whileCond = nullptr; // bool values for loop condition.
-
-  for (SparseIterator *it : spIters) {
-    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
-    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
-    bArgs = remArgs;
-  }
-  // The remaining block arguments are user-provided reduction values and an
-  // optional universal index. Make sure their sizes match.
-  assert(bArgs.size() == reduc.size() + needsUniv ? 1 : 0);
-  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
-
-  // Generates loop body.
-  builder.setInsertionPointToStart(after);
-  ValueRange aArgs = after->getArguments();
-  // Since some LoopCondKind might need extra checks to filter out invalid
-  // iterations, we maintains another array to hold the iteration arguments to
-  // yield if the checks fails.
-  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
-
-  for (SparseIterator *it : spIters) {
-    aArgs = it->linkNewScope(aArgs);
-    // Dereference the iterator to cache the coordinate.
-    it->deref(builder, loc);
-  }
-
-  // In-place update on reduction variable.
-  assert(aArgs.size() == reduc.size() + needsUniv ? 1 : 0);
-  for (unsigned i = 0, e = reduc.size(); i < e; i++)
-    reduc[i] = aArgs[i];
-
-  Value min;
-  // Finds the minimum coordinate
-  if (!needsUniv) {
-    for (SparseIterator *it : spIters) {
-      if (min) {
-        Value cmp = CMPI(ult, it->getCrd(), min);
-        min = SELECT(cmp, it->getCrd(), min);
-      } else {
-        min = it->getCrd();
-      }
-    }
-  } else {
-    // Otherwise, universal index is the minimal pos.
-    min = whileOp.getAfterArguments().back();
-  }
-
-  return {whileOp, min};
+  return genCoIteration(builder, loc, spIters, reduc,
+                        needsUniv ? loopSeqStack.back().first : nullptr);
 }
 
 bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
@@ -552,9 +539,107 @@ bool LoopEmitter::shouldIteratedByForLoop(ArrayRef<SparseIterator *> spIters) {
   return true;
 }
 
+Region *LoopEmitter::enterCurrentCoIterationCase(OpBuilder &builder,
+                                                 Location loc,
+                                                 I64BitSet caseBit,
+                                                 unsigned caseIdx,
+                                                 MutableArrayRef<Value> reduc) {
+  auto coIterOp = cast<CoIterateOp>(loopStack.back().loop);
+  SmallVector<Attribute> cases(coIterOp.getCases().getAsRange<Attribute>());
+  cases[caseIdx] = builder.getI64IntegerAttr(caseBit);
+
+  coIterOp.setCasesAttr(builder.getArrayAttr(cases));
+  Region &caseRegion = coIterOp.getRegion(caseIdx);
+  assert(caseRegion.getBlocks().empty() &&
+         "re-initialize the same coiteration case region.");
+
+  // Each block starts with by a list of user-provided iteration arguments.
+  TypeRange iterArgsTps = coIterOp.getInitArgs().getTypes();
+  // Followed by a list of used coordinates of index type.
+  SmallVector<Type> blockArgTps(coIterOp.getCrdUsedLvls().count(),
+                                builder.getIndexType());
+
+  blockArgTps.append(iterArgsTps.begin(), iterArgsTps.end());
+  // Ends with a set of iterators that defines the actually iteration space.
+  for (auto i : caseBit.bits()) {
+    blockArgTps.push_back(
+        cast<IterSpaceType>(coIterOp.getIterSpaces()[i].getType())
+            .getIteratorType());
+  }
+  SmallVector<Location> locs(blockArgTps.size(), loc);
+  caseRegion.emplaceBlock().addArguments(blockArgTps, locs);
+
+  // Entering the new region scope, updating the SSA chain.
+  builder.setInsertionPointToStart(&caseRegion.front());
+  // Update the coordinates.
+  loopStack.back().iv = coIterOp.getCrds(caseIdx).front();
+  // Updates loop iteration arguments.
+  ValueRange iterArgs = coIterOp.getRegionIterArgs(caseIdx);
+  llvm::copy(iterArgs, reduc.begin());
+  // Updates sparse iterator values.
+  ValueRange iters = coIterOp.getRegionIterators(caseIdx);
+  ArrayRef<TensorLevel> tidLvls = loopStack.back().tidLvls;
+  for (auto [i, tl] : llvm::enumerate(unpackTensorLevelRange(tidLvls))) {
+    if (caseBit[i]) {
+      spIterVals[tl.first][tl.second] = iters.front();
+      iters = iters.drop_front();
+    } else {
+      spIterVals[tl.first][tl.second] = nullptr;
+    }
+  }
+  // Must have consumed all iterator SSA values.
+  assert(iters.empty());
+  return &caseRegion;
+}
+
 Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     OpBuilder &builder, Location loc, ArrayRef<TensorLevel> tidLvls,
-    MutableArrayRef<Value> reduc, bool tryParallel, bool needsUniv) {
+    unsigned numCases, MutableArrayRef<Value> reduc, bool tryParallel,
+    bool needsUniv) {
+  // TODO: Argument `numCases` only used when generating iterator-based sparse
+  // loops. Simplify the code upon feature complete.
+  // TODO: handle coiteration with sparse iterator.
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
+    if (tidLvls.size() == 1) {
+      auto [tid, lvl] = unpackTensorLevel(tidLvls.front());
+      Value t = tensors[tid];
+
+      // Extract and iterate over the iteration space.
+      ExtractIterSpaceOp extractSpaceOp =
+          lvl == 0 ? builder.create<ExtractIterSpaceOp>(loc, t)
+                   : builder.create<ExtractIterSpaceOp>(
+                         loc, t, spIterVals[tid][lvl - 1], lvl);
+
+      IterateOp iterOp = builder.create<IterateOp>(
+          loc, extractSpaceOp.getExtractedSpace(), reduc);
+      spIterVals[tid][lvl] = iterOp.getIterator();
+
+      // Update the reduction varaibles.
+      llvm::copy(iterOp.getRegionIterArgs(), reduc.begin());
+      // Set the insertion point to loop body.
+      builder.setInsertionPointToStart(iterOp.getBody());
+      loopStack.emplace_back(tidLvls, iterOp, builder.getInsertionBlock(),
+                             iterOp.getCrds().front(), loopTag);
+      return iterOp;
+    }
+
+    // CoIteration Loops.
+    SmallVector<Value> spaces;
+    for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
+      Value t = tensors[tid];
+      ExtractIterSpaceOp extractSpaceOp =
+          lvl == 0 ? builder.create<ExtractIterSpaceOp>(loc, t)
+                   : builder.create<ExtractIterSpaceOp>(
+                         loc, t, spIterVals[tid][lvl - 1], lvl);
+      spaces.push_back(extractSpaceOp.getExtractedSpace());
+    }
+    auto coIterOp = builder.create<CoIterateOp>(loc, spaces, reduc, numCases);
+    // The CoIterationOp does not have insertion block nor induction variable.
+    // TODO: the `struct LoopInfo` should be simplied after full migration.
+    loopStack.emplace_back(tidLvls, coIterOp, /*insertion block*/ nullptr,
+                           /*induction variable*/ nullptr, loopTag);
+    return coIterOp;
+  }
 
   // TODO: support multiple return on parallel for?
   tryParallel = tryParallel && reduc.size() <= 1;
@@ -643,6 +728,16 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
 void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
                               MutableArrayRef<Value> reduc) {
   const LoopInfo &loopInfo = loopStack.back();
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
+    auto iterateOp = llvm::cast<IterateOp>(loopInfo.loop);
+    assert(reduc.size() == iterateOp.getNumResults());
+    rewriter.create<sparse_tensor::YieldOp>(loc, reduc);
+    // Exit the loop.
+    rewriter.setInsertionPointAfter(iterateOp);
+    // In-place update reduction variables.
+    llvm::copy(iterateOp.getResults(), reduc.begin());
+    return;
+  }
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
@@ -651,8 +746,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
     // Exit the loop.
     rewriter.setInsertionPointAfter(forOp);
     // In-place update reduction variables.
-    for (unsigned i = 0, e = forOp.getResults().size(); i < e; i++)
-      reduc[i] = forOp.getResult(i);
+    llvm::copy(forOp.getResults(), reduc.begin());
   } else {
     auto parOp = llvm::cast<scf::ParallelOp>(loopInfo.loop);
     if (!reduc.empty()) {
@@ -769,6 +863,18 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   const LoopInfo &loopInfo = loopStack.back();
+  if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
+    Operation *p = loopInfo.loop;
+    if (isa<IterateOp>(p))
+      rewriter.create<sparse_tensor::YieldOp>(loc, reduc);
+
+    // Exit the loop.
+    rewriter.setInsertionPointAfter(p);
+    // In-place update reduction variables.
+    llvm::copy(p->getResults(), reduc.begin());
+    loopStack.pop_back();
+    return;
+  }
 
   // Sets the insertion point to the right position.
   rewriter.setInsertionPointToEnd(loopInfo.userCodeBlock);
@@ -788,6 +894,100 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
 
   assert(loopStack.size() == loopSeqStack.size());
   loopStack.pop_back();
+}
+
+//===----------------------------------------------------------------------===//
+// Loop generation utils
+//===----------------------------------------------------------------------===//
+
+std::pair<Operation *, Value> sparse_tensor::genCoIteration(
+    OpBuilder &builder, Location loc, ArrayRef<SparseIterator *> spIters,
+    MutableArrayRef<Value> reduc, Value uniIdx, bool userReducFirst) {
+  // NOTE: the slice driven tensor-related reduction variable must
+  // appear before normal tensors.
+
+  // The set of induction variables for the while loop.
+  SmallVector<Value> ivs;
+
+  // TODO: remove the flag after full migration. Currently
+  // `sparse_tensor.coiterate` operation (must) put user provided reduction
+  // values at the front of the block list, while direct sparsification to scf
+  // loops put them at the end.
+  if (userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Construct the while-loop with a parameter for each coordinate.
+  for (SparseIterator *it : spIters) {
+    ValueRange itVals = it->getCursor();
+    ivs.append(itVals.begin(), itVals.end());
+  }
+
+  if (!userReducFirst)
+    ivs.append(reduc.begin(), reduc.end());
+
+  // Update universal index.
+  if (uniIdx)
+    ivs.push_back(uniIdx);
+
+  // Ensures all operands are valid.
+  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  TypeRange types = ValueRange(ivs).getTypes();
+  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
+
+  SmallVector<Location> locs(types.size(), loc);
+  Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
+  Block *after = builder.createBlock(&whileOp.getAfter(), {}, types, locs);
+
+  // Generates loop conditions.
+  builder.setInsertionPointToStart(before);
+  ValueRange bArgs = before->getArguments();
+  Value whileCond = nullptr; // bool values for loop condition.
+
+  for (SparseIterator *it : spIters) {
+    auto [cond, remArgs] = it->genWhileCond(builder, loc, bArgs);
+    whileCond = !whileCond ? cond : ANDI(whileCond, cond);
+    bArgs = remArgs;
+  }
+  // The remaining block arguments are user-provided reduction values and an
+  // optional universal index. Make sure their sizes match.
+  assert(bArgs.size() == reduc.size() + (uniIdx ? 1 : 0));
+  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
+
+  // Generates loop body.
+  builder.setInsertionPointToStart(after);
+  ValueRange aArgs = after->getArguments();
+  // Since some LoopCondKind might need extra checks to filter out invalid
+  // iterations, we maintains another array to hold the iteration arguments to
+  // yield if the checks fails.
+  SmallVector<Value> nextArgs(aArgs.begin(), aArgs.end());
+
+  for (SparseIterator *it : spIters) {
+    aArgs = it->linkNewScope(aArgs);
+    // Dereference the iterator to cache the coordinate.
+    it->deref(builder, loc);
+  }
+
+  // In-place update on reduction variable.
+  for (unsigned i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = aArgs[i];
+
+  Value min;
+  // Finds the minimum coordinate
+  if (!uniIdx) {
+    for (SparseIterator *it : spIters) {
+      if (min) {
+        Value cmp = CMPI(ult, it->getCrd(), min);
+        min = SELECT(cmp, it->getCrd(), min);
+      } else {
+        min = it->getCrd();
+      }
+    }
+  } else {
+    // Otherwise, universal index is the minimal pos.
+    min = whileOp.getAfterArguments().back();
+  }
+
+  return {whileOp, min};
 }
 
 #undef CMPI

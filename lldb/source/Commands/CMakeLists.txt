@@ -26,7 +26,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectQuit.cpp
   CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp
-  CommandObjectScript.cpp
+  CommandObjectScripting.cpp
   CommandObjectSession.cpp
   CommandObjectSettings.cpp
   CommandObjectSource.cpp

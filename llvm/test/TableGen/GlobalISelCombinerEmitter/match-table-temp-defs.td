@@ -36,21 +36,21 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 ]>;
 
 // CHECK:       // Combiner Rule #0: Test0
-// CHECK-NEXT:  GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UDIVREM),
+// CHECK-NEXT:  GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UDIVREM),
 // CHECK-NEXT:  GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // lhs
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // rhs
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/0, // dst
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/1, // lhs
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/2, // rhs
 
 // CHECK:       // Combiner Rule #1: Test1
-// CHECK-NEXT:  GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UDIVREM),
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:  GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_UDIVREM),
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/0, // dst
 // CHECK-NEXT:  GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // lhs
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // rhs
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/1, // lhs
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/2, // rhs
 
 // CHECK:       // Combiner Rule #2: Test2
-// CHECK-NEXT:  GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::G_ADD),
+// CHECK-NEXT:  GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_ADD),
 // CHECK-NEXT:  GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:  GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/1,
-// CHECK-NEXT:  GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // lhs
+// CHECK-NEXT:  GIR_RootToRootCopy, /*OpIdx*/1, // lhs

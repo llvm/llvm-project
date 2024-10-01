@@ -9,6 +9,7 @@ endif()
 # test will have to link to the LLVM libc startup system. LLVM libc's startup
 # system is not complete enough to allow this. It is also desireable to
 # keep the dependencies as minimal as possible.
+
 add_entrypoint_library(
   libc_for_scudo_integration_test
   DEPENDS
@@ -17,6 +18,9 @@ add_entrypoint_library(
     libc.src.stdlib.realloc
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
+    libc.src.errno.errno
+    libc.src.unistd.__llvm_libc_syscall
+    libc.src.sched.__sched_getcpucount
 )
 
 add_executable(

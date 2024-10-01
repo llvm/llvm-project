@@ -649,9 +649,9 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
                                   const FileToSectionIDMap &FileToSecIDMap) {
 
   for (StringRef Mapping : SpecificSectionMappings) {
-    size_t EqualsIdx = Mapping.find_first_of("=");
+    size_t EqualsIdx = Mapping.find_first_of('=');
     std::string SectionIDStr = std::string(Mapping.substr(0, EqualsIdx));
-    size_t ComaIdx = Mapping.find_first_of(",");
+    size_t ComaIdx = Mapping.find_first_of(',');
 
     if (ComaIdx == StringRef::npos)
       report_fatal_error("Invalid section specification '" + Mapping +

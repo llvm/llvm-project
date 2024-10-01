@@ -16,6 +16,7 @@
 #include "SPIRVCallLowering.h"
 #include "SPIRVFrameLowering.h"
 #include "SPIRVISelLowering.h"
+#include "SPIRVInlineAsmLowering.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
@@ -37,8 +38,8 @@ class SPIRVTargetMachine;
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 private:
   const unsigned PointerSize;
-  uint32_t SPIRVVersion;
-  uint32_t OpenCLVersion;
+  VersionTuple SPIRVVersion;
+  VersionTuple OpenCLVersion;
 
   SmallSet<SPIRV::Extension::Extension, 4> AvailableExtensions;
   SmallSet<SPIRV::InstructionSet::InstructionSet, 4> AvailableExtInstSets;
@@ -54,6 +55,7 @@ private:
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<InlineAsmLowering> InlineAsmInfo;
 
   // TODO: Initialise the available extensions, extended instruction sets
   // based on the environment settings.
@@ -81,9 +83,10 @@ public:
            TargetTriple.getArch() == Triple::spirv64;
   }
   bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
-  uint32_t getSPIRVVersion() const { return SPIRVVersion; };
-  bool isAtLeastSPIRVVer(uint32_t VerToCompareTo) const;
-  bool isAtLeastOpenCLVer(uint32_t VerToCompareTo) const;
+  const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
+  VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
+  bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
+  bool isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const;
   // TODO: implement command line args or other ways to determine this.
   bool hasOpenCLFullProfile() const { return true; }
   bool hasOpenCLImageSupport() const { return true; }
@@ -108,6 +111,9 @@ public:
   InstructionSelector *getInstructionSelector() const override {
     return InstSelector.get();
   }
+  const InlineAsmLowering *getInlineAsmLowering() const override {
+    return InlineAsmInfo.get();
+  }
   const SPIRVInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const SPIRVFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
@@ -122,6 +128,14 @@ public:
   static bool classof(const TargetSubtargetInfo *ST) {
     return ST->getTargetTriple().isSPIRV();
   }
+
+  static constexpr unsigned MaxLegalAddressSpace = 6;
+
+  // Adds known SPIR-V extensions to the global list of allowed extensions that
+  // SPIRVSubtarget module owns as
+  // cl::opt<std::set<SPIRV::Extension::Extension>, ...> global variable.
+  static void
+  addExtensionsToClOpt(const std::set<SPIRV::Extension::Extension> &AllowList);
 };
 } // namespace llvm
 

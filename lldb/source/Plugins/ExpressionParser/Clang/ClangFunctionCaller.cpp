@@ -138,7 +138,7 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
         type_name = clang_qual_type.GetTypeName().AsCString("");
       } else {
         diagnostic_manager.Printf(
-            eDiagnosticSeverityError,
+            lldb::eSeverityError,
             "Could not determine type of input value %" PRIu64 ".",
             (uint64_t)i);
         return 1;
@@ -194,7 +194,7 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
     num_errors = clang_parser->Parse(diagnostic_manager);
     m_parser.reset(clang_parser);
   } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "no process - unable to inject function");
     num_errors = 1;
   }

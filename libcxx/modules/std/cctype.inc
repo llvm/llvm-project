@@ -8,18 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-  using std::isalnum;
-  using std::isalpha;
-  using std::isblank;
-  using std::iscntrl;
-  using std::isdigit;
-  using std::isgraph;
-  using std::islower;
-  using std::isprint;
-  using std::ispunct;
-  using std::isspace;
-  using std::isupper;
-  using std::isxdigit;
-  using std::tolower;
-  using std::toupper;
+  using std::isalnum _LIBCPP_USING_IF_EXISTS;
+  using std::isalpha _LIBCPP_USING_IF_EXISTS;
+  using std::isblank _LIBCPP_USING_IF_EXISTS;
+  using std::iscntrl _LIBCPP_USING_IF_EXISTS;
+  using std::isdigit _LIBCPP_USING_IF_EXISTS;
+  using std::isgraph _LIBCPP_USING_IF_EXISTS;
+  using std::islower _LIBCPP_USING_IF_EXISTS;
+  using std::isprint _LIBCPP_USING_IF_EXISTS;
+  using std::ispunct _LIBCPP_USING_IF_EXISTS;
+  using std::isspace _LIBCPP_USING_IF_EXISTS;
+  using std::isupper _LIBCPP_USING_IF_EXISTS;
+  using std::isxdigit _LIBCPP_USING_IF_EXISTS;
+  using std::tolower _LIBCPP_USING_IF_EXISTS;
+  using std::toupper _LIBCPP_USING_IF_EXISTS;
 } // namespace std

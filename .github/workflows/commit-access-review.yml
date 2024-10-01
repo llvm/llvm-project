@@ -1,0 +1,34 @@
+name: Commit Access Review
+
+on:
+  workflow_dispatch:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 7 1 * *'
+
+permissions:
+  contents: read
+
+jobs:
+  commit-access-review:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+      
+      - name: Run Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
+
+      - name: Upload Triage List
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        with:
+          name: triagers
+          path: triagers.log

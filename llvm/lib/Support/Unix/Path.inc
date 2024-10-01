@@ -487,7 +487,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
-#ifdef __GNU__
+#if defined(__GNU__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 39)))
   switch ((uint32_t)Vfs.__f_type) {
 #else
   switch ((uint32_t)Vfs.f_type) {
@@ -516,7 +516,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   // target
   StringRef fstype(Vfs.f_basetype);
   // NFS is the only non-local fstype??
-  return !fstype.equals("nfs");
+  return fstype != "nfs";
 #elif defined(_AIX)
   // Call mntctl; try more than twice in case of timing issues with a concurrent
   // mount.
@@ -1096,17 +1096,17 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
-      if (auto EC = llvm::enableAutoConversion(ResultFD))
+      if (auto EC = llvm::enablezOSAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, CCSID_IBM_1047, true))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, CCSID_IBM_1047, true))
           return EC;
       }
     } else {
-      if (auto EC = llvm::disableAutoConversion(ResultFD))
+      if (auto EC = llvm::disablezOSAutoConversion(ResultFD))
         return EC;
       if (DoSetTag) {
-        if (auto EC = llvm::setFileTag(ResultFD, FT_BINARY, false))
+        if (auto EC = llvm::setzOSFileTag(ResultFD, FT_BINARY, false))
           return EC;
       }
     }
@@ -1191,6 +1191,15 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
   if (ssize_t(NumRead) == -1)
     return errorCodeToError(errnoAsErrorCode());
+// The underlying operation on these platforms allow opening directories
+// for reading in more cases than other platforms.
+#if defined(__MVS__) || defined(_AIX)
+  struct stat Status;
+  if (fstat(FD, &Status) == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  if (S_ISDIR(Status.st_mode))
+    return errorCodeToError(make_error_code(errc::is_a_directory));
+#endif
   return NumRead;
 }
 

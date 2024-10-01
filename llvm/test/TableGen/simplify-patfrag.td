@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-dag-isel -I %p/../../include %s 2>&1 | FileCheck %s
+// RUN: llvm-tblgen -gen-dag-isel -I %p/../../include -DIGNORE %s 2>&1 | FileCheck %s
 
 include "llvm/Target/Target.td"
 
@@ -29,6 +30,10 @@ def anyconvert : PatFrags<(ops node:$src),
                           [(bitconvert node:$src),
                            (specialconvert node:$src)]>;
 
+#ifdef IGNORE
+// Ensure ShouldIgnore does not disable records in dag isel emitter
+let GISelShouldIgnore = 1 in
+#endif
 // And a rule that matches that PatFrag and turns it into i2f
 def : Pat<(f32 (anyconvert (i32 GPR:$val))), (i2f GPR:$val)>;
 

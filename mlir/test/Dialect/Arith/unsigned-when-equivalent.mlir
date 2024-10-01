@@ -1,6 +1,6 @@
 // RUN: mlir-opt -arith-unsigned-when-equivalent %s | FileCheck %s
 
-// CHECK-LABEL func @not_with_maybe_overflow
+// CHECK-LABEL: func @not_with_maybe_overflow
 // CHECK: arith.divsi
 // CHECK: arith.ceildivsi
 // CHECK: arith.floordivsi
@@ -32,7 +32,7 @@ func.func @not_with_maybe_overflow(%arg0 : i32) {
     func.return
 }
 
-// CHECK-LABEL func @yes_with_no_overflow
+// CHECK-LABEL: func @yes_with_no_overflow
 // CHECK: arith.divui
 // CHECK: arith.ceildivui
 // CHECK: arith.divui

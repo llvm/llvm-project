@@ -26,12 +26,12 @@ config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
 # TODO: This is a non-standard Lit attribute and we should have another way of accessing this.
 config.host_triple = '@LLVM_HOST_TRIPLE@'
 
-config.substitutions.append(('%{cxx}', '@CMAKE_CXX_COMPILER@'))
 config.substitutions.append(('%{libcxx}', '@LIBCXXABI_LIBCXX_PATH@'))
-config.substitutions.append(('%{include}', '@LIBCXXABI_SOURCE_DIR@/include'))
-config.substitutions.append(('%{cxx-include}', '@LIBCXXABI_HEADER_DIR@/include/c++/v1'))
-config.substitutions.append(('%{cxx-target-include}', '@LIBCXXABI_HEADER_DIR@/include/%{triple}/c++/v1'))
-config.substitutions.append(('%{lib}', '@LIBCXXABI_LIBRARY_DIR@'))
+config.substitutions.append(('%{install-prefix}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@'))
+config.substitutions.append(('%{include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/include'))
+config.substitutions.append(('%{cxx-include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/@LIBCXXABI_INSTALL_INCLUDE_DIR@'))
+config.substitutions.append(('%{cxx-target-include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/include/%{triple}/c++/v1'))
+config.substitutions.append(('%{lib}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/@LIBCXXABI_INSTALL_LIBRARY_DIR@'))
 
 if @LIBCXXABI_USE_LLVM_UNWINDER@:
     config.substitutions.append(('%{maybe-include-libunwind}', '-I "@LIBCXXABI_LIBUNWIND_INCLUDES_INTERNAL@"'))

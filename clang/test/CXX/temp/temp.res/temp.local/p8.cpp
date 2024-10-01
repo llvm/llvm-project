@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 namespace N { 
   enum { C };
@@ -151,4 +152,38 @@ namespace SearchClassBetweenTemplateParameterLists {
   void A<T>::B<BB>::k(V) { // expected-error {{does not match}}
     BB bb; // expected-error {{incomplete type}}
   }
+
+  int CC;
+  template <typename> struct C;
+  template <template<typename> typename> struct D;
+#if __cplusplus >= 202002L
+  template <bool CC> requires (CC) struct E;
+  template <typename> struct F;
+  template <typename> concept True = true;
+#endif
 }
+
+template <typename CC>
+struct SearchClassBetweenTemplateParameterLists::C {
+  void foo(CC); // This should find the template type parameter.
+};
+
+template <template<typename> typename CC>
+struct SearchClassBetweenTemplateParameterLists::D {
+  template <typename AA>
+  CC<AA> foo(CC<AA>);
+};
+
+#if __cplusplus >= 202002L
+
+template <bool CC> requires (CC)
+struct SearchClassBetweenTemplateParameterLists::E {
+  void foo() requires (CC);
+};
+
+template <SearchClassBetweenTemplateParameterLists::True CC>
+struct SearchClassBetweenTemplateParameterLists::F<CC> {
+  void foo(CC);
+};
+
+#endif

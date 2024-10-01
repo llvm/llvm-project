@@ -1,4 +1,5 @@
 // REQUIRES: x86-registered-target
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -triple=x86_64 %s -emit-llvm -o - \
 // RUN:| FileCheck --check-prefixes CHECK,CHECK-DEFAULT  %s
 

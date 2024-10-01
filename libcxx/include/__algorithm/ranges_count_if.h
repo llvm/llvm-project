@@ -44,13 +44,12 @@ __count_if_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   return __counter;
 }
 
-namespace __count_if {
-struct __fn {
+struct __count_if {
   template <input_iterator _Iter,
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Predicate>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter>
   operator()(_Iter __first, _Sent __last, _Predicate __pred, _Proj __proj = {}) const {
     return ranges::__count_if_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
@@ -58,15 +57,14 @@ struct __fn {
   template <input_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Predicate>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Range>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Range>
   operator()(_Range&& __r, _Predicate __pred, _Proj __proj = {}) const {
     return ranges::__count_if_impl(ranges::begin(__r), ranges::end(__r), __pred, __proj);
   }
 };
-} // namespace __count_if
 
 inline namespace __cpo {
-inline constexpr auto count_if = __count_if::__fn{};
+inline constexpr auto count_if = __count_if{};
 } // namespace __cpo
 } // namespace ranges
 

@@ -82,8 +82,8 @@ declare void @llvm.va_end(ptr) #1
 
 declare dso_local i32 @_Z1gi(i32) local_unnamed_addr
 
-attributes #0 = { optsize }
-attributes #1 = { nounwind }
+attributes #0 = { optsize "sign-return-address"="non-leaf"}
+attributes #1 = { nounwind "sign-return-address"="non-leaf"}
 
 !llvm.module.flags = !{!0, !1, !2}
 

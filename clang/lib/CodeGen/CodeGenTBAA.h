@@ -24,7 +24,6 @@ namespace clang {
   class ASTContext;
   class CodeGenOptions;
   class LangOptions;
-  class MangleContext;
   class QualType;
   class Type;
 
@@ -120,7 +119,6 @@ class CodeGenTBAA {
   llvm::Module &Module;
   const CodeGenOptions &CodeGenOpts;
   const LangOptions &Features;
-  MangleContext &MContext;
 
   // MDHelper - Helper for creating metadata.
   llvm::MDBuilder MDHelper;
@@ -168,10 +166,13 @@ class CodeGenTBAA {
   /// used to describe accesses to objects of the given base type.
   llvm::MDNode *getBaseTypeInfoHelper(const Type *Ty);
 
+  /// getValidBaseTypeInfo - Return metadata that describes the given base
+  /// access type. The type must be suitable.
+  llvm::MDNode *getValidBaseTypeInfo(QualType QTy);
+
 public:
   CodeGenTBAA(ASTContext &Ctx, CodeGenTypes &CGTypes, llvm::Module &M,
-              const CodeGenOptions &CGO, const LangOptions &Features,
-              MangleContext &MContext);
+              const CodeGenOptions &CGO, const LangOptions &Features);
   ~CodeGenTBAA();
 
   /// getTypeInfo - Get metadata used to describe accesses to objects of the
@@ -190,8 +191,9 @@ public:
   /// the given type.
   llvm::MDNode *getTBAAStructInfo(QualType QTy);
 
-  /// getBaseTypeInfo - Get metadata that describes the given base access type.
-  /// Return null if the type is not suitable for use in TBAA access tags.
+  /// getBaseTypeInfo - Get metadata that describes the given base access
+  /// type. Return null if the type is not suitable for use in TBAA access
+  /// tags.
   llvm::MDNode *getBaseTypeInfo(QualType QTy);
 
   /// getAccessTagInfo - Get TBAA tag for a given memory access.

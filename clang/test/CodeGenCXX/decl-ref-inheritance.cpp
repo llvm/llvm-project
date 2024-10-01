@@ -15,7 +15,7 @@ template <typename T> struct bar : T {
 
 struct baz : bar<foo> {
   // CHECK-1: define{{.*}} float @_ZN3baz3getEv
-  // CHECK-1: {{%.+}} = getelementptr inbounds [[FOO]], ptr {{%.+}}, i32 0, i32 0
+  // CHECK-1: {{%.+}} = getelementptr inbounds nuw [[FOO]], ptr {{%.+}}, i32 0, i32 0
   float get() {
     return val;
   }
@@ -33,7 +33,7 @@ struct f {
 
 template <typename j> struct k : j {
   // CHECK-2: define{{.*}} void @_ZN1kI1fE1lEv
-  // CHECK-2: {{%.+}} = getelementptr inbounds [[F]], ptr {{%.+}}, i32 0, i32 0
+  // CHECK-2: {{%.+}} = getelementptr inbounds nuw [[F]], ptr {{%.+}}, i32 0, i32 0
   virtual void l(){ (void)f::g; }
 };
 
@@ -48,7 +48,7 @@ protected:
 template <typename Parent>
 struct Subclass : public Parent {
   // CHECK-3: define{{.*}} i32 @_ZN8SubclassI4BaseE4funcEv
-  // CHECK-3: {{%.+}} = getelementptr inbounds [[BASE]], ptr {{%.+}}, i32 0, i32 0
+  // CHECK-3: {{%.+}} = getelementptr inbounds nuw [[BASE]], ptr {{%.+}}, i32 0, i32 0
   int func() { return Base::member; }
 };
 

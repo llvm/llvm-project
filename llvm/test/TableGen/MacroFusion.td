@@ -83,7 +83,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
-// CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = FirstMI;
 // CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
@@ -101,7 +101,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
-// CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
@@ -149,7 +149,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
-// CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
@@ -185,7 +185,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
-// CHECK-PREDICATOR-NEXT:    auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(

@@ -449,3 +449,59 @@ TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(AArch64GISelMITest, BuildFPEnv) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32); 
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  B.buildGetFPEnv(Copies[0]);
+  B.buildSetFPEnv(Copies[1]);
+  B.buildResetFPEnv();
+  auto GetFPMode = B.buildGetFPMode(S32);
+  B.buildSetFPMode(GetFPMode);
+  B.buildResetFPMode();
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+  ; CHECK: [[COPY0]]:_(s64) = G_GET_FPENV
+  ; CHECK: G_SET_FPENV [[COPY1]]:_(s64)
+  ; CHECK: G_RESET_FPENV
+  ; CHECK: [[FPMODE:%[0-9]+]]:_(s32) = G_GET_FPMODE
+  ; CHECK: G_SET_FPMODE [[FPMODE]]:_(s32)
+  ; CHECK: G_RESET_FPMODE
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT VecTy = LLT::fixed_vector(4, 32);
+  LLT SubVecTy = LLT::fixed_vector(2, 32);
+  auto Vec = B.buildUndef(VecTy);
+  B.buildExtractSubvector(SubVecTy, Vec, 0);
+
+  VecTy = LLT::scalable_vector(4, 32);
+  SubVecTy = LLT::scalable_vector(2, 32);
+  Vec = B.buildUndef(VecTy);
+  B.buildExtractSubvector(SubVecTy, Vec, 0);
+
+  auto CheckStr = R"(
+  ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF]]:_(<4 x s32>), 0
+  ; CHECK: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; CHECK: [[EXTRACT_SUBVECTOR1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_EXTRACT_SUBVECTOR [[DEF1]]:_(<vscale x 4 x s32>), 0
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

@@ -57,7 +57,7 @@ def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
 def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
-def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -68,8 +68,10 @@ defm compress_debug_sections:
   MetaVarName<"[none,zlib,zstd]">;
 
 defm compress_sections: EEq<"compress-sections",
-  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
-  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+  "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
+  "The sections remain uncompressed if compressed content would be larger. "
+  "The compression level is <level> (if specified) or a default speed-focused level">,
+  MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
@@ -153,6 +155,12 @@ def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
 
+defm debug_names: BB<"debug-names",
+    "Generate a merged .debug_names section",
+    "Do not generate a merged .debug_names section (default)">;
+
+defm default_script: EEq<"default-script", "In the absence of --script, read this default linker script">;
+
 defm demangle: B<"demangle",
     "Demangle symbol names (default)",
     "Do not demangle symbol names">;
@@ -189,6 +197,9 @@ def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags (default)">;
+
+def enable_non_contiguous_regions : FF<"enable-non-contiguous-regions">,
+  HelpText<"Spill input sections to later matching output sections to avoid memory region overflow">;
 
 def end_group: F<"end-group">,
   HelpText<"Ignored for compatibility with GNU unless you pass --warn-backrefs">;
@@ -242,6 +253,9 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 
 def fix_cortex_a8: F<"fix-cortex-a8">,
   HelpText<"Apply fixes for ARM Cortex-A8 erratum 657417">;
+
+def force_group_allocation: FF<"force-group-allocation">,
+  HelpText<"Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well">;
 
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
@@ -551,6 +565,7 @@ HelpText<"Format diagnostics for Visual Studio compatibility">;
 def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
 
 // Aliases
+def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
 def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
@@ -599,6 +614,8 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_emit_llvm: FF<"lto-emit-llvm">,
+  HelpText<"Emit LLVM-IR bitcode">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -680,7 +697,8 @@ def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
 def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
   Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
-def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">,
+  Alias<lto_emit_llvm>, HelpText<"Alias for --lto-emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
@@ -711,6 +729,7 @@ def: J<"plugin-opt=sample-profile=">,
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
 def plugin_opt_stats_file: J<"plugin-opt=stats-file=">,
   HelpText<"Filename to write LTO statistics to">;
+def: J<"plugin-opt=time-trace=">, Alias<time_trace_eq>, HelpText<"Alias for --time-trace=">;
 def: F<"plugin-opt=thinlto-emit-imports-files">,
   Alias<thinlto_emit_imports_files>,
   HelpText<"Alias for --thinlto-emit-imports-files">;

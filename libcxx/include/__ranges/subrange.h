@@ -28,11 +28,12 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple/pair_like.h>
 #include <__tuple/tuple_element.h>
+#include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/make_unsigned.h>
@@ -64,7 +65,7 @@ concept __convertible_to_non_slicing =
 
 template <class _Pair, class _Iter, class _Sent>
 concept __pair_like_convertible_from =
-    !range<_Pair> && __pair_like<_Pair> && constructible_from<_Pair, _Iter, _Sent> &&
+    !range<_Pair> && __pair_like_no_subrange<_Pair> && constructible_from<_Pair, _Iter, _Sent> &&
     __convertible_to_non_slicing<_Iter, tuple_element_t<0, _Pair>> && convertible_to<_Sent, tuple_element_t<1, _Pair>>;
 
 template <input_or_output_iterator _Iter,
@@ -125,8 +126,7 @@ public:
                requires(_Kind == subrange_kind::sized)
       : subrange(ranges::begin(__range), ranges::end(__range), __n) {}
 
-  template <__different_from<subrange> _Pair>
-    requires __pair_like_convertible_from<_Pair, const _Iter&, const _Sent&>
+  template <__pair_like_convertible_from<const _Iter&, const _Sent&> _Pair>
   _LIBCPP_HIDE_FROM_ABI constexpr operator _Pair() const {
     return _Pair(__begin_, __end_);
   }
@@ -201,12 +201,11 @@ template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
 subrange(_Iter, _Sent, make_unsigned_t<iter_difference_t<_Iter>>) -> subrange<_Iter, _Sent, subrange_kind::sized>;
 
 template <borrowed_range _Range>
-subrange(_Range&&)
-    -> subrange<iterator_t<_Range>,
-                sentinel_t<_Range>,
-                (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
-                    ? subrange_kind::sized
-                    : subrange_kind::unsized>;
+subrange(_Range&&) -> subrange<iterator_t<_Range>,
+                               sentinel_t<_Range>,
+                               (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
+                                   ? subrange_kind::sized
+                                   : subrange_kind::unsized>;
 
 template <borrowed_range _Range>
 subrange(_Range&&, make_unsigned_t<range_difference_t<_Range>>)

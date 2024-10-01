@@ -48,7 +48,6 @@ cl_khr_int64_extended_atomics/atom_max.cl
 cl_khr_int64_extended_atomics/atom_min.cl
 cl_khr_int64_extended_atomics/atom_or.cl
 cl_khr_int64_extended_atomics/atom_xor.cl
-convert.cl
 common/degrees.cl
 common/mix.cl
 common/radians.cl

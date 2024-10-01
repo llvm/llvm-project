@@ -197,15 +197,21 @@ public:
 
   /// Factory method to create an appropriately typed reader for the given
   /// instrprof file.
-  static Expected<std::unique_ptr<InstrProfReader>>
-  create(const Twine &Path, vfs::FileSystem &FS,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+  static Expected<std::unique_ptr<InstrProfReader>> create(
+      const Twine &Path, vfs::FileSystem &FS,
+      const InstrProfCorrelator *Correlator = nullptr,
+      const object::BuildIDFetcher *BIDFetcher = nullptr,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
+          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::function<void(Error)> Warn = nullptr);
 
-  static Expected<std::unique_ptr<InstrProfReader>>
-  create(std::unique_ptr<MemoryBuffer> Buffer,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+  static Expected<std::unique_ptr<InstrProfReader>> create(
+      std::unique_ptr<MemoryBuffer> Buffer,
+      const InstrProfCorrelator *Correlator = nullptr,
+      const object::BuildIDFetcher *BIDFetcher = nullptr,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
+          InstrProfCorrelator::ProfCorrelatorKind::NONE,
+      std::function<void(Error)> Warn = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
@@ -314,6 +320,14 @@ private:
   /// If available, this hold the ProfileData array used to correlate raw
   /// instrumentation data to their functions.
   const InstrProfCorrelatorImpl<IntPtrT> *Correlator;
+  /// Fetches debuginfo by build id to correlate profiles.
+  const object::BuildIDFetcher *BIDFetcher;
+  /// Correlates profiles with build id fetcher by fetching debuginfo with build
+  /// ID.
+  std::unique_ptr<InstrProfCorrelator> BIDFetcherCorrelator;
+  /// Indicates if should use debuginfo or binary to correlate with build id
+  /// fetcher.
+  InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind;
   /// A list of timestamps paired with a function name reference.
   std::vector<std::pair<uint64_t, uint64_t>> TemporalProfTimestamps;
   bool ShouldSwapBytes;
@@ -349,13 +363,18 @@ private:
   static const uint64_t MaxCounterValue = (1ULL << 56);
 
 public:
-  RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                     const InstrProfCorrelator *Correlator,
-                     std::function<void(Error)> Warn)
+  RawInstrProfReader(
+      std::unique_ptr<MemoryBuffer> DataBuffer,
+      const InstrProfCorrelator *Correlator,
+      const object::BuildIDFetcher *BIDFetcher,
+      const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
+      std::function<void(Error)> Warn)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
             Correlator)),
-        Warn(Warn) {}
+        BIDFetcher(BIDFetcher),
+        BIDFetcherCorrelatorKind(BIDFetcherCorrelatorKind), Warn(Warn) {}
+
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
@@ -439,7 +458,7 @@ private:
 
   void advanceData() {
     // `CountersDelta` is a constant zero when using debug info correlation.
-    if (!Correlator) {
+    if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
       // start(__llvm_prf_cnts) - start(__llvm_prf_data)
@@ -508,9 +527,9 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -560,6 +579,8 @@ using MemProfRecordHashTable =
     OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
 using MemProfFrameHashTable =
     OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
+using MemProfCallStackHashTable =
+    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -626,6 +647,12 @@ public:
   InstrProfKind getProfileKind() const override;
 
   Error populateSymtab(InstrProfSymtab &Symtab) override {
+    // FIXME: the create method calls 'finalizeSymtab' and sorts a bunch of
+    // arrays/maps. Since there are other data sources other than 'HashTable' to
+    // populate a symtab, it might make sense to have something like this
+    // 1. Let each data source populate Symtab and init the arrays/maps without
+    // calling 'finalizeSymtab'
+    // 2. Call 'finalizeSymtab' once to get all arrays/maps sorted if needed.
     return Symtab.create(HashTable->keys());
   }
 };
@@ -637,6 +664,36 @@ public:
   virtual Error populateRemappings() { return Error::success(); }
   virtual Error getRecords(StringRef FuncName,
                            ArrayRef<NamedInstrProfRecord> &Data) = 0;
+};
+
+class IndexedMemProfReader {
+private:
+  /// The MemProf version.
+  memprof::IndexedVersion Version = memprof::Version0;
+  /// MemProf profile schema (if available).
+  memprof::MemProfSchema Schema;
+  /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
+  std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
+  /// MemProf frame profile data on-disk indexed via frame id.
+  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
+  /// MemProf call stack data on-disk indexed via call stack id.
+  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+  /// The starting address of the frame array.
+  const unsigned char *FrameBase = nullptr;
+  /// The starting address of the call stack array.
+  const unsigned char *CallStackBase = nullptr;
+
+  Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
+                        uint64_t FirstWord);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
+
+public:
+  IndexedMemProfReader() = default;
+
+  Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
+
+  Expected<memprof::MemProfRecord>
+  getMemProfRecord(const uint64_t FuncNameHash) const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -654,28 +711,16 @@ private:
   std::unique_ptr<ProfileSummary> Summary;
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
-  /// MemProf profile schema (if available).
-  memprof::MemProfSchema Schema;
-  /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
-  std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
-  /// MemProf frame profile data on-disk indexed via frame id.
-  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
-  /// VTableNamePtr points to the beginning of compressed vtable names.
-  /// When a symtab is constructed from profiles by llvm-profdata, the list of
-  /// names could be decompressed based on `VTableNamePtr` and
-  /// `CompressedVTableNamesLen`.
+  IndexedMemProfReader MemProfReader;
+  /// The compressed vtable names, to be used for symtab construction.
   /// A compiler that reads indexed profiles could construct symtab from module
   /// IR so it doesn't need the decompressed names.
-  const char *VTableNamePtr = nullptr;
-  /// The length of compressed vtable names.
-  uint64_t CompressedVTableNamesLen = 0;
-  /// Total size of binary ids.
-  uint64_t BinaryIdsSize{0};
-  /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart = nullptr;
+  StringRef VTableName;
+  /// A memory buffer holding binary ids.
+  ArrayRef<uint8_t> BinaryIdsBuffer;
 
   // Index to the current record in the record array.
-  unsigned RecordIndex;
+  unsigned RecordIndex = 0;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -688,7 +733,7 @@ public:
       std::unique_ptr<MemoryBuffer> DataBuffer,
       std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr)
       : DataBuffer(std::move(DataBuffer)),
-        RemappingBuffer(std::move(RemappingBuffer)), RecordIndex(0) {}
+        RemappingBuffer(std::move(RemappingBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 
@@ -743,7 +788,9 @@ public:
 
   /// Return the memprof record for the function identified by
   /// llvm::md5(Name).
-  Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash);
+  Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
+    return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
 
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,

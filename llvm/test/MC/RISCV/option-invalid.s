@@ -34,14 +34,14 @@
 # CHECK: :[[#@LINE+1]]:18: error: expected comma
 .option arch, +c foo
 
-# CHECK: :[[#@LINE+1]]:16: error: Extension version number parsing not currently implemented
+# CHECK: :[[#@LINE+1]]:16: error: extension version number parsing not currently implemented
 .option arch, +c2p0
 
 .option arch, +d
-# CHECK: :[[#@LINE+1]]:16: error: Can't disable f extension, d extension requires f extension be enabled
+# CHECK: :[[#@LINE+1]]:16: error: can't disable f extension; d extension requires f extension
 .option arch, -f
 
-# CHECK: :[[#@LINE+1]]:16: error: Can't disable zicsr extension, f extension requires zicsr extension be enabled
+# CHECK: :[[#@LINE+1]]:16: error: can't disable zicsr extension; f extension requires zicsr extension
 .option arch, -zicsr
 
 # CHECK: :[[#@LINE+1]]:20: error: 'f' and 'zfinx' extensions are incompatible

@@ -37,290 +37,14 @@ passes.  One of the main features of the LLVM Pass Framework is that it
 schedules passes to run in an efficient way based on the constraints that your
 pass meets (which are indicated by which class they derive from).
 
-We start by showing you how to construct a pass, everything from setting up the
-code, to compiling, loading, and executing it.  After the basics are down, more
-advanced features are discussed.
-
-Quick Start --- Writing hello world
-===================================
-
-Here we describe how to write the "hello world" of passes.  The "Hello" pass is
-designed to simply print out the name of non-external functions that exist in
-the program being compiled.  It does not modify the program at all, it just
-inspects it.  The source code and files for this pass are available in the LLVM
-source tree in the ``lib/Transforms/Hello`` directory.
-
-.. _writing-an-llvm-pass-makefile:
-
-Setting up the build environment
---------------------------------
-
-First, configure and build LLVM.  Next, you need to create a new directory
-somewhere in the LLVM source base.  For this example, we'll assume that you
-made ``lib/Transforms/Hello``.  Finally, you must set up a build script
-that will compile the source code for the new pass.  To do this,
-copy the following into ``CMakeLists.txt``:
-
-.. code-block:: cmake
-
-  add_llvm_library( LLVMHello MODULE
-    Hello.cpp
-
-    PLUGIN_TOOL
-    opt
-    )
-
-and the following line into ``lib/Transforms/CMakeLists.txt``:
-
-.. code-block:: cmake
-
-  add_subdirectory(Hello)
-
-(Note that there is already a directory named ``Hello`` with a sample "Hello"
-pass; you may play with it -- in which case you don't need to modify any
-``CMakeLists.txt`` files -- or, if you want to create everything from scratch,
-use another name.)
-
-This build script specifies that ``Hello.cpp`` file in the current directory
-is to be compiled and linked into a shared object ``$(LEVEL)/lib/LLVMHello.so`` that
-can be dynamically loaded by the :program:`opt` tool via its :option:`-load`
-option. If your operating system uses a suffix other than ``.so`` (such as
-Windows or macOS), the appropriate extension will be used.
-
-Now that we have the build scripts set up, we just need to write the code for
-the pass itself.
-
-.. _writing-an-llvm-pass-basiccode:
-
-Basic code required
--------------------
-
-Now that we have a way to compile our new pass, we just have to write it.
-Start out with:
-
-.. code-block:: c++
-
-  #include "llvm/Pass.h"
-  #include "llvm/IR/Function.h"
-  #include "llvm/Support/raw_ostream.h"
-
-Which are needed because we are writing a `Pass
-<https://llvm.org/doxygen/classllvm_1_1Pass.html>`_, we are operating on
-`Function <https://llvm.org/doxygen/classllvm_1_1Function.html>`_\ s, and we will
-be doing some printing.
-
-Next we have:
-
-.. code-block:: c++
-
-  using namespace llvm;
-
-... which is required because the functions from the include files live in the
-llvm namespace.
-
-Next we have:
-
-.. code-block:: c++
-
-  namespace {
-
-... which starts out an anonymous namespace.  Anonymous namespaces are to C++
-what the "``static``" keyword is to C (at global scope).  It makes the things
-declared inside of the anonymous namespace visible only to the current file.
-If you're not familiar with them, consult a decent C++ book for more
-information.
-
-Next, we declare our pass itself:
-
-.. code-block:: c++
-
-  struct Hello : public FunctionPass {
-
-This declares a "``Hello``" class that is a subclass of :ref:`FunctionPass
-<writing-an-llvm-pass-FunctionPass>`.  The different builtin pass subclasses
-are described in detail :ref:`later <writing-an-llvm-pass-pass-classes>`, but
-for now, know that ``FunctionPass`` operates on a function at a time.
-
-.. code-block:: c++
-
-    static char ID;
-    Hello() : FunctionPass(ID) {}
-
-This declares pass identifier used by LLVM to identify pass.  This allows LLVM
-to avoid using expensive C++ runtime information.
-
-.. code-block:: c++
-
-    bool runOnFunction(Function &F) override {
-      errs() << "Hello: ";
-      errs().write_escaped(F.getName()) << '\n';
-      return false;
-    }
-  }; // end of struct Hello
-  }  // end of anonymous namespace
-
-We declare a :ref:`runOnFunction <writing-an-llvm-pass-runOnFunction>` method,
-which overrides an abstract virtual method inherited from :ref:`FunctionPass
-<writing-an-llvm-pass-FunctionPass>`.  This is where we are supposed to do our
-thing, so we just print out our message with the name of each function.
-
-.. code-block:: c++
-
-  char Hello::ID = 0;
-
-We initialize pass ID here.  LLVM uses ID's address to identify a pass, so
-initialization value is not important.
-
-.. code-block:: c++
-
-  static RegisterPass<Hello> X("hello", "Hello World Pass",
-                               false /* Only looks at CFG */,
-                               false /* Analysis Pass */);
-
-Lastly, we :ref:`register our class <writing-an-llvm-pass-registration>`
-``Hello``, giving it a command line argument "``hello``", and a name "Hello
-World Pass".  The last two arguments describe its behavior: if a pass walks CFG
-without modifying it then the third argument is set to ``true``; if a pass is
-an analysis pass, for example dominator tree pass, then ``true`` is supplied as
-the fourth argument.
-
-As a whole, the ``.cpp`` file looks like:
-
-.. code-block:: c++
-
-  #include "llvm/Pass.h"
-  #include "llvm/IR/Function.h"
-  #include "llvm/Support/raw_ostream.h"
-
-  #include "llvm/IR/LegacyPassManager.h"
-
-  using namespace llvm;
-
-  namespace {
-  struct Hello : public FunctionPass {
-    static char ID;
-    Hello() : FunctionPass(ID) {}
-
-    bool runOnFunction(Function &F) override {
-      errs() << "Hello: ";
-      errs().write_escaped(F.getName()) << '\n';
-      return false;
-    }
-  }; // end of struct Hello
-  }  // end of anonymous namespace
-
-  char Hello::ID = 0;
-  static RegisterPass<Hello> X("hello", "Hello World Pass",
-                               false /* Only looks at CFG */,
-                               false /* Analysis Pass */);
-
-Now that it's all together, compile the file with a simple "``gmake``" command
-from the top level of your build directory and you should get a new file
-"``lib/LLVMHello.so``".  Note that everything in this file is
-contained in an anonymous namespace --- this reflects the fact that passes
-are self contained units that do not need external interfaces (although they
-can have them) to be useful.
-
-Running a pass with ``opt``
----------------------------
-
-.. warning::
-  This document deals with the legacy pass manager. The :program:`opt` tool no
-  longer supports running legacy passes (except for certain hardcoded backend
-  passes and when using bugpoint). So the examples below for loading and
-  running legacy passes using :program:`opt` are deprecated and no longer
-  guaranteed to work.
-
-Now that you have a brand new shiny shared object file, we can use the
-:program:`opt` command to run an LLVM program through your pass.  Because you
-registered your pass with ``RegisterPass``, you will be able to use the
-:program:`opt` tool to access it, once loaded.
-
-To test it, follow the example at the end of the :doc:`GettingStarted` to
-compile "Hello World" to LLVM.  We can now run the bitcode file (hello.bc) for
-the program through our transformation like this (or course, any bitcode file
-will work):
-
-.. code-block:: console
-
-  $ opt -load lib/LLVMHello.so -hello < hello.bc > /dev/null
-  Hello: __main
-  Hello: puts
-  Hello: main
-
-The :option:`-load` option specifies that :program:`opt` should load your pass
-as a shared object, which makes "``-hello``" a valid command line argument
-(which is one reason you need to :ref:`register your pass
-<writing-an-llvm-pass-registration>`).  Because the Hello pass does not modify
-the program in any interesting way, we just throw away the result of
-:program:`opt` (sending it to ``/dev/null``).
-
-To see what happened to the other string you registered, try running
-:program:`opt` with the :option:`-help` option:
-
-.. code-block:: console
-
-  $ opt -load lib/LLVMHello.so -help
-  OVERVIEW: llvm .bc -> .bc modular optimizer and analysis printer
-
-  USAGE: opt [subcommand] [options] <input bitcode file>
-
-  OPTIONS:
-    Optimizations available:
-  ...
-      -guard-widening           - Widen guards
-      -gvn                      - Global Value Numbering
-      -gvn-hoist                - Early GVN Hoisting of Expressions
-      -hello                    - Hello World Pass
-      -indvars                  - Induction Variable Simplification
-      -inferattrs               - Infer set function attributes
-  ...
-
-The pass name gets added as the information string for your pass, giving some
-documentation to users of :program:`opt`.  Now that you have a working pass,
-you would go ahead and make it do the cool transformations you want.  Once you
-get it all working and tested, it may become useful to find out how fast your
-pass is.  The :ref:`PassManager <writing-an-llvm-pass-passmanager>` provides a
-nice command line option (:option:`-time-passes`) that allows you to get
-information about the execution time of your pass along with the other passes
-you queue up.  For example:
-
-.. code-block:: console
-
-  $ opt -load lib/LLVMHello.so -hello -time-passes < hello.bc > /dev/null
-  Hello: __main
-  Hello: puts
-  Hello: main
-  ===-------------------------------------------------------------------------===
-                        ... Pass execution timing report ...
-  ===-------------------------------------------------------------------------===
-    Total Execution Time: 0.0007 seconds (0.0005 wall clock)
-
-     ---User Time---   --User+System--   ---Wall Time---  --- Name ---
-     0.0004 ( 55.3%)   0.0004 ( 55.3%)   0.0004 ( 75.7%)  Bitcode Writer
-     0.0003 ( 44.7%)   0.0003 ( 44.7%)   0.0001 ( 13.6%)  Hello World Pass
-     0.0000 (  0.0%)   0.0000 (  0.0%)   0.0001 ( 10.7%)  Module Verifier
-     0.0007 (100.0%)   0.0007 (100.0%)   0.0005 (100.0%)  Total
-
-As you can see, our implementation above is pretty fast.  The additional
-passes listed are automatically inserted by the :program:`opt` tool to verify
-that the LLVM emitted by your pass is still valid and well formed LLVM, which
-hasn't been broken somehow.
-
-Now that you have seen the basics of the mechanics behind passes, we can talk
-about some more details of how they work and how to use them.
-
 .. _writing-an-llvm-pass-pass-classes:
 
 Pass classes and requirements
 =============================
 
 One of the first things that you should do when designing a new pass is to
-decide what class you should subclass for your pass.  The :ref:`Hello World
-<writing-an-llvm-pass-basiccode>` example uses the :ref:`FunctionPass
-<writing-an-llvm-pass-FunctionPass>` class for its implementation, but we did
-not discuss why or when this should occur.  Here we talk about the classes
-available, from the most general to the most specific.
+decide what class you should subclass for your pass. Here we talk about the
+classes available, from the most general to the most specific.
 
 When choosing a superclass for your ``Pass``, you should choose the **most
 specific** class possible, while still being able to meet the requirements
@@ -471,11 +195,10 @@ To be explicit, ``FunctionPass`` subclasses are not allowed to:
 #. Maintain state across invocations of :ref:`runOnFunction
    <writing-an-llvm-pass-runOnFunction>` (including global data).
 
-Implementing a ``FunctionPass`` is usually straightforward (See the :ref:`Hello
-World <writing-an-llvm-pass-basiccode>` pass for example).
-``FunctionPass``\ es may override three virtual methods to do their work.  All
-of these methods should return ``true`` if they modified the program, or
-``false`` if they didn't.
+Implementing a ``FunctionPass`` is usually straightforward. ``FunctionPass``\
+es may override three virtual methods to do their work.  All of these methods
+should return ``true`` if they modified the program, or ``false`` if they
+didn't.
 
 .. _writing-an-llvm-pass-doInitialization-mod:
 
@@ -691,17 +414,11 @@ may not modify the LLVM ``Function`` or its contents from a
 Pass registration
 -----------------
 
-In the :ref:`Hello World <writing-an-llvm-pass-basiccode>` example pass we
-illustrated how pass registration works, and discussed some of the reasons that
-it is used and what it does.  Here we discuss how and why passes are
-registered.
-
-As we saw above, passes are registered with the ``RegisterPass`` template.  The
-template parameter is the name of the pass that is to be used on the command
-line to specify that the pass should be added to a program (for example, with
-:program:`opt` or :program:`bugpoint`).  The first argument is the name of the
-pass, which is to be used for the :option:`-help` output of programs, as well
-as for debug output generated by the `--debug-pass` option.
+Passes are registered with the ``RegisterPass`` template.  The template
+parameter is the name of the pass that is to be used on the command line to
+specify that the pass should be added to a program. The first argument is the
+name of the pass, which is to be used for the :option:`-help` output of
+programs, as well as for debug output generated by the `--debug-pass` option.
 
 If you want your pass to be easily dumpable, you should implement the virtual
 print method:
@@ -772,7 +489,7 @@ spanning the range from ``DominatorSet`` to ``BreakCriticalEdges``.  Requiring
 edges in the CFG when your pass has been run.
 
 Some analyses chain to other analyses to do their job.  For example, an
-`AliasAnalysis <AliasAnalysis>` implementation is required to :ref:`chain
+`AliasAnalysis <AliasAnalysis.html>`_ implementation is required to :ref:`chain
 <aliasanalysis-chaining>` to other alias analysis passes.  In cases where
 analyses chain, the ``addRequiredTransitive`` method should be used instead of
 the ``addRequired`` method.  This informs the ``PassManager`` that the
@@ -863,124 +580,6 @@ it is active.  For example:
     // A DominatorSet is active.  This code will update it.
   }
 
-Implementing Analysis Groups
-----------------------------
-
-Now that we understand the basics of how passes are defined, how they are used,
-and how they are required from other passes, it's time to get a little bit
-fancier.  All of the pass relationships that we have seen so far are very
-simple: one pass depends on one other specific pass to be run before it can
-run.  For many applications, this is great, for others, more flexibility is
-required.
-
-In particular, some analyses are defined such that there is a single simple
-interface to the analysis results, but multiple ways of calculating them.
-Consider alias analysis for example.  The most trivial alias analysis returns
-"may alias" for any alias query.  The most sophisticated analysis a
-flow-sensitive, context-sensitive interprocedural analysis that can take a
-significant amount of time to execute (and obviously, there is a lot of room
-between these two extremes for other implementations).  To cleanly support
-situations like this, the LLVM Pass Infrastructure supports the notion of
-Analysis Groups.
-
-Analysis Group Concepts
-^^^^^^^^^^^^^^^^^^^^^^^
-
-An Analysis Group is a single simple interface that may be implemented by
-multiple different passes.  Analysis Groups can be given human readable names
-just like passes, but unlike passes, they need not derive from the ``Pass``
-class.  An analysis group may have one or more implementations, one of which is
-the "default" implementation.
-
-Analysis groups are used by client passes just like other passes are: the
-``AnalysisUsage::addRequired()`` and ``Pass::getAnalysis()`` methods.  In order
-to resolve this requirement, the :ref:`PassManager
-<writing-an-llvm-pass-passmanager>` scans the available passes to see if any
-implementations of the analysis group are available.  If none is available, the
-default implementation is created for the pass to use.  All standard rules for
-:ref:`interaction between passes <writing-an-llvm-pass-interaction>` still
-apply.
-
-Although :ref:`Pass Registration <writing-an-llvm-pass-registration>` is
-optional for normal passes, all analysis group implementations must be
-registered, and must use the :ref:`INITIALIZE_AG_PASS
-<writing-an-llvm-pass-RegisterAnalysisGroup>` template to join the
-implementation pool.  Also, a default implementation of the interface **must**
-be registered with :ref:`RegisterAnalysisGroup
-<writing-an-llvm-pass-RegisterAnalysisGroup>`.
-
-As a concrete example of an Analysis Group in action, consider the
-`AliasAnalysis <https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_
-analysis group.  The default implementation of the alias analysis interface
-(the `basic-aa <https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass)
-just does a few simple checks that don't require significant analysis to
-compute (such as: two different globals can never alias each other, etc).
-Passes that use the `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ interface (for
-example the `gvn <https://llvm.org/doxygen/classllvm_1_1GVN.html>`_ pass), do not
-care which implementation of alias analysis is actually provided, they just use
-the designated interface.
-
-From the user's perspective, commands work just like normal.  Issuing the
-command ``opt -gvn ...`` will cause the ``basic-aa`` class to be instantiated
-and added to the pass sequence.  Issuing the command ``opt -somefancyaa -gvn
-...`` will cause the ``gvn`` pass to use the ``somefancyaa`` alias analysis
-(which doesn't actually exist, it's just a hypothetical example) instead.
-
-.. _writing-an-llvm-pass-RegisterAnalysisGroup:
-
-Using ``RegisterAnalysisGroup``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``RegisterAnalysisGroup`` template is used to register the analysis group
-itself, while the ``INITIALIZE_AG_PASS`` is used to add pass implementations to
-the analysis group.  First, an analysis group should be registered, with a
-human readable name provided for it.  Unlike registration of passes, there is
-no command line argument to be specified for the Analysis Group Interface
-itself, because it is "abstract":
-
-.. code-block:: c++
-
-  static RegisterAnalysisGroup<AliasAnalysis> A("Alias Analysis");
-
-Once the analysis is registered, passes can declare that they are valid
-implementations of the interface by using the following code:
-
-.. code-block:: c++
-
-  namespace {
-    // Declare that we implement the AliasAnalysis interface
-    INITIALIZE_AG_PASS(FancyAA, AliasAnalysis , "somefancyaa",
-        "A more complex alias analysis implementation",
-        false,  // Is CFG Only?
-        true,   // Is Analysis?
-        false); // Is default Analysis Group implementation?
-  }
-
-This just shows a class ``FancyAA`` that uses the ``INITIALIZE_AG_PASS`` macro
-both to register and to "join" the `AliasAnalysis
-<https://llvm.org/doxygen/classllvm_1_1AliasAnalysis.html>`_ analysis group.
-Every implementation of an analysis group should join using this macro.
-
-.. code-block:: c++
-
-  namespace {
-    // Declare that we implement the AliasAnalysis interface
-    INITIALIZE_AG_PASS(BasicAA, AliasAnalysis, "basic-aa",
-        "Basic Alias Analysis (default AA impl)",
-        false, // Is CFG Only?
-        true,  // Is Analysis?
-        true); // Is default Analysis Group implementation?
-  }
-
-Here we show how the default implementation is specified (using the final
-argument to the ``INITIALIZE_AG_PASS`` template).  There must be exactly one
-default implementation available at all times for an Analysis Group to be used.
-Only default implementation can derive from ``ImmutablePass``.  Here we declare
-that the `BasicAliasAnalysis
-<https://llvm.org/doxygen/structBasicAliasAnalysis.html>`_ pass is the default
-implementation for the interface.
-
 Pass Statistics
 ===============
 
@@ -1040,113 +639,30 @@ The ``PassManager`` class exposes a ``--debug-pass`` command line options that
 is useful for debugging pass execution, seeing how things work, and diagnosing
 when you should be preserving more analyses than you currently are.  (To get
 information about all of the variants of the ``--debug-pass`` option, just type
-"``opt -help-hidden``").
+"``llc -help-hidden``").
 
-By using the --debug-pass=Structure option, for example, we can see how our
-:ref:`Hello World <writing-an-llvm-pass-basiccode>` pass interacts with other
-passes.  Lets try it out with the gvn and licm passes:
-
-.. code-block:: console
-
-  $ opt -load lib/LLVMHello.so -gvn -licm --debug-pass=Structure < hello.bc > /dev/null
-  ModulePass Manager
-    FunctionPass Manager
-      Dominator Tree Construction
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Memory Dependence Analysis
-      Global Value Numbering
-      Natural Loop Information
-      Canonicalize natural loops
-      Loop-Closed SSA Form Pass
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Scalar Evolution Analysis
-      Loop Pass Manager
-        Loop Invariant Code Motion
-      Module Verifier
-    Bitcode Writer
-
-This output shows us when passes are constructed.
-Here we see that GVN uses dominator tree information to do its job.  The LICM pass
-uses natural loop information, which uses dominator tree as well.
-
-After the LICM pass, the module verifier runs (which is automatically added by
-the :program:`opt` tool), which uses the dominator tree to check that the
-resultant LLVM code is well formed. Note that the dominator tree is computed
-once, and shared by three passes.
-
-Lets see how this changes when we run the :ref:`Hello World
-<writing-an-llvm-pass-basiccode>` pass in between the two passes:
+By using the --debug-pass=Structure option, for example, we can see inspect the
+default optimization pipelines, e.g. (the output has been trimmed):
 
 .. code-block:: console
 
-  $ opt -load lib/LLVMHello.so -gvn -hello -licm --debug-pass=Structure < hello.bc > /dev/null
+  $ llc -mtriple=arm64-- -O3 -debug-pass=Structure file.ll > /dev/null
+  (...)
   ModulePass Manager
+  Pre-ISel Intrinsic Lowering
+  FunctionPass Manager
+    Expand large div/rem
+    Expand large fp convert
+    Expand Atomic instructions
+  SVE intrinsics optimizations
     FunctionPass Manager
       Dominator Tree Construction
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Memory Dependence Analysis
-      Global Value Numbering
-      Hello World Pass
-      Dominator Tree Construction
-      Natural Loop Information
-      Canonicalize natural loops
-      Loop-Closed SSA Form Pass
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Scalar Evolution Analysis
-      Loop Pass Manager
-        Loop Invariant Code Motion
-      Module Verifier
-    Bitcode Writer
-  Hello: __main
-  Hello: puts
-  Hello: main
-
-Here we see that the :ref:`Hello World <writing-an-llvm-pass-basiccode>` pass
-has killed the Dominator Tree pass, even though it doesn't modify the code at
-all!  To fix this, we need to add the following :ref:`getAnalysisUsage
-<writing-an-llvm-pass-getAnalysisUsage>` method to our pass:
-
-.. code-block:: c++
-
-  // We don't modify the program, so we preserve all analyses
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-Now when we run our pass, we get this output:
-
-.. code-block:: console
-
-  $ opt -load lib/LLVMHello.so -gvn -hello -licm --debug-pass=Structure < hello.bc > /dev/null
-  Pass Arguments:  -gvn -hello -licm
-  ModulePass Manager
-    FunctionPass Manager
-      Dominator Tree Construction
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Memory Dependence Analysis
-      Global Value Numbering
-      Hello World Pass
-      Natural Loop Information
-      Canonicalize natural loops
-      Loop-Closed SSA Form Pass
-      Basic Alias Analysis (stateless AA impl)
-      Function Alias Analysis Results
-      Scalar Evolution Analysis
-      Loop Pass Manager
-        Loop Invariant Code Motion
-      Module Verifier
-    Bitcode Writer
-  Hello: __main
-  Hello: puts
-  Hello: main
-
-Which shows that we don't accidentally invalidate dominator information
-anymore, and therefore do not have to compute it twice.
+  FunctionPass Manager
+    Simplify the CFG
+    Dominator Tree Construction
+    Natural Loop Information
+    Canonicalize natural loops
+  (...)
 
 .. _writing-an-llvm-pass-releaseMemory:
 

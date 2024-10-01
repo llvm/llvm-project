@@ -19,7 +19,7 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     // FIXME this should be CPlusPlus11 but that causes test cases to
     // erroneously fail.
-    return LangOpts.CPlusPlus;
+    return LangOpts.CPlusPlus || LangOpts.C23;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

@@ -38,8 +38,8 @@ llvm::omp::Clause getClauseIdForClass(C &&) {
 } // namespace detail
 
 static llvm::omp::Clause getClauseId(const Fortran::parser::OmpClause &clause) {
-  return std::visit([](auto &&s) { return detail::getClauseIdForClass(s); },
-                    clause.u);
+  return Fortran::common::visit(
+      [](auto &&s) { return detail::getClauseIdForClass(s); }, clause.u);
 }
 
 namespace Fortran::lower::omp {
@@ -83,7 +83,7 @@ struct SymbolAndDesignatorExtractor {
 
   template <typename T>
   static SymbolWithDesignator visit(const evaluate::Expr<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return Fortran::common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   static void verify(const SymbolWithDesignator &sd) {
@@ -112,7 +112,7 @@ struct SymbolAndDesignatorExtractor {
 SymbolWithDesignator getSymbolAndDesignator(const MaybeExpr &expr) {
   if (!expr)
     return SymbolWithDesignator{};
-  return std::visit(
+  return Fortran::common::visit(
       [](auto &&s) { return SymbolAndDesignatorExtractor::visit(s); }, expr->u);
 }
 
@@ -150,11 +150,10 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
-std::optional<Object>
-getBaseObject(const Object &object,
-              Fortran::semantics::SemanticsContext &semaCtx) {
+std::optional<Object> getBaseObject(const Object &object,
+                                    semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
-  if (!object.id())
+  if (!object.ref())
     return std::nullopt;
 
   auto maybeRef = evaluate::ExtractDataRef(*object.ref());
@@ -219,9 +218,9 @@ MAKE_EMPTY_CLASS(Full, Full);
 MAKE_EMPTY_CLASS(Inbranch, Inbranch);
 MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
-// MAKE_EMPTY_CLASS(NoOpenmp, );         // missing-in-parser
-// MAKE_EMPTY_CLASS(NoOpenmpRoutines, ); // missing-in-parser
-// MAKE_EMPTY_CLASS(NoParallelism, );    // missing-in-parser
+MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
+MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
 MAKE_EMPTY_CLASS(OmpxAttribute, OmpxAttribute);
@@ -279,7 +278,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
       // clang-format on
   );
 
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::DefinedOpName &s) {
             return DefinedOperator{
@@ -295,7 +294,7 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
 ProcedureDesignator
 makeProcedureDesignator(const parser::ProcedureDesignator &inp,
                         semantics::SemanticsContext &semaCtx) {
-  return ProcedureDesignator{std::visit(
+  return ProcedureDesignator{Fortran::common::visit(
       common::visitors{
           [&](const parser::Name &t) { return makeObject(t, semaCtx); },
           [&](const parser::ProcComponentRef &t) {
@@ -307,7 +306,7 @@ makeProcedureDesignator(const parser::ProcedureDesignator &inp,
 
 ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
                                         semantics::SemanticsContext &semaCtx) {
-  return std::visit(
+  return Fortran::common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &s) {
             return ReductionOperator{makeDefinedOperator(s, semaCtx)};
@@ -322,7 +321,11 @@ ReductionOperator makeReductionOperator(const parser::OmpReductionOperator &inp,
 // --------------------------------------------------------------------
 // Actual clauses. Each T (where tomp::T exists in ClauseT) has its "make".
 
-// Absent: missing-in-parser
+Absent make(const parser::OmpClause::Absent &inp,
+            semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: absent");
+}
+
 // AcqRel: empty
 // Acquire: empty
 // AdjustArgs: incomplete
@@ -367,7 +370,7 @@ Allocate make(const parser::OmpClause::Allocate &inp,
 
   using Tuple = decltype(Allocate::t);
 
-  return Allocate{std::visit(
+  return Allocate{Fortran::common::visit(
       common::visitors{
           // simple-modifier
           [&](const wrapped::AllocateModifier::Allocator &v) -> Tuple {
@@ -445,7 +448,11 @@ Collapse make(const parser::OmpClause::Collapse &inp,
 }
 
 // Compare: empty
-// Contains: missing-in-parser
+
+Contains make(const parser::OmpClause::Contains &inp,
+              semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: contains");
+}
 
 Copyin make(const parser::OmpClause::Copyin &inp,
             semantics::SemanticsContext &semaCtx) {
@@ -532,7 +539,7 @@ Depend make(const parser::OmpClause::Depend &inp,
       // clang-format on
   );
 
-  return Depend{std::visit( //
+  return Depend{Fortran::common::visit( //
       common::visitors{
           // Doacross
           [&](const wrapped::Source &s) -> Variant {
@@ -705,7 +712,10 @@ Hint make(const parser::OmpClause::Hint &inp,
   return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
 }
 
-// Holds: missing-in-parser
+Holds make(const parser::OmpClause::Holds &inp,
+           semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Unimplemented: holds");
+}
 
 If make(const parser::OmpClause::If &inp,
         semantics::SemanticsContext &semaCtx) {
@@ -794,7 +804,7 @@ Linear make(const parser::OmpClause::Linear &inp,
 
   using Tuple = decltype(Linear::t);
 
-  return Linear{std::visit(
+  return Linear{Fortran::common::visit(
       common::visitors{
           [&](const wrapped::WithModifier &s) -> Tuple {
             return {
@@ -884,9 +894,9 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
   return Nontemporal{/*List=*/makeList(inp.v, makeObjectFn(semaCtx))};
 }
 
-// NoOpenmp: missing-in-parser
-// NoOpenmpRoutines: missing-in-parser
-// NoParallelism: missing-in-parser
+// NoOpenmp: empty
+// NoOpenmpRoutines: empty
+// NoParallelism: empty
 // Notinbranch: empty
 
 Novariants make(const parser::OmpClause::Novariants &inp,
@@ -907,8 +917,9 @@ NumTasks make(const parser::OmpClause::NumTasks &inp,
 NumTeams make(const parser::OmpClause::NumTeams &inp,
               semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::ScalarIntExpr
-  return NumTeams{{/*LowerBound=*/std::nullopt,
-                   /*UpperBound=*/makeExpr(inp.v, semaCtx)}};
+  List<NumTeams::Range> v{{{/*LowerBound=*/std::nullopt,
+                            /*UpperBound=*/makeExpr(inp.v, semaCtx)}}};
+  return NumTeams{/*List=*/v};
 }
 
 NumThreads make(const parser::OmpClause::NumThreads &inp,
@@ -950,7 +961,7 @@ Order make(const parser::OmpClause::Order &inp,
   auto &t1 = std::get<wrapped::Type>(inp.v.t);
 
   auto convert3 = [&](const parser::OmpOrderModifier &s) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](parser::OmpOrderModifier::Kind k) { return convert1(k); }, s.u);
   };
   return Order{
@@ -1005,12 +1016,28 @@ ProcBind make(const parser::OmpClause::ProcBind &inp,
 Reduction make(const parser::OmpClause::Reduction &inp,
                semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpReductionClause
-  auto &t0 = std::get<parser::OmpReductionOperator>(inp.v.t);
-  auto &t1 = std::get<parser::OmpObjectList>(inp.v.t);
+  using wrapped = parser::OmpReductionClause;
+
+  CLAUSET_ENUM_CONVERT( //
+      convert, wrapped::ReductionModifier, Reduction::ReductionModifier,
+      // clang-format off
+      MS(Inscan,  Inscan)
+      MS(Task,    Task)
+      MS(Default, Default)
+      // clang-format on
+  );
+
+  auto &t0 =
+      std::get<std::optional<parser::OmpReductionClause::ReductionModifier>>(
+          inp.v.t);
+  auto &t1 = std::get<parser::OmpReductionOperator>(inp.v.t);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
   return Reduction{
-      {/*ReductionIdentifiers=*/{makeReductionOperator(t0, semaCtx)},
-       /*ReductionModifier=*/std::nullopt,
-       /*List=*/makeObjects(t1, semaCtx)}};
+      {/*ReductionModifier=*/t0
+           ? std::make_optional<Reduction::ReductionModifier>(convert(*t0))
+           : std::nullopt,
+       /*ReductionIdentifiers=*/{makeReductionOperator(t1, semaCtx)},
+       /*List=*/makeObjects(t2, semaCtx)}};
 }
 
 // Relaxed: empty
@@ -1195,9 +1222,9 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 // Write: empty
 } // namespace clause
 
-Clause makeClause(const Fortran::parser::OmpClause &cls,
+Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
-  return std::visit(
+  return Fortran::common::visit(
       [&](auto &&s) {
         return makeClause(getClauseId(cls), clause::make(s, semaCtx),
                           cls.source);
@@ -1211,4 +1238,27 @@ List<Clause> makeClauses(const parser::OmpClauseList &clauses,
     return makeClause(s, semaCtx);
   });
 }
+
+bool transferLocations(const List<Clause> &from, List<Clause> &to) {
+  bool allDone = true;
+
+  for (Clause &clause : to) {
+    if (!clause.source.empty())
+      continue;
+    auto found =
+        llvm::find_if(from, [&](const Clause &c) { return c.id == clause.id; });
+    // This is not completely accurate, but should be good enough for now.
+    // It can be improved in the future if necessary, but in cases of
+    // synthesized clauses getting accurate location may be impossible.
+    if (found != from.end()) {
+      clause.source = found->source;
+    } else {
+      // Found a clause that won't have "source".
+      allDone = false;
+    }
+  }
+
+  return allDone;
+}
+
 } // namespace Fortran::lower::omp

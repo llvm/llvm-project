@@ -46,11 +46,13 @@ using namespace lldb_private;
 
 GDBRemoteCommunicationServerPlatform::PortMap::PortMap(uint16_t min_port,
                                                        uint16_t max_port) {
+  assert(min_port);
   for (; min_port < max_port; ++min_port)
     m_port_map[min_port] = LLDB_INVALID_PROCESS_ID;
 }
 
 void GDBRemoteCommunicationServerPlatform::PortMap::AllowPort(uint16_t port) {
+  assert(port);
   // Do not modify existing mappings
   m_port_map.insert({port, LLDB_INVALID_PROCESS_ID});
 }
@@ -147,7 +149,7 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
   RegisterPacketHandler(StringExtractorGDBRemote::eServerPacketType_interrupt,
                         [](StringExtractorGDBRemote packet, Status &error,
                            bool &interrupt, bool &quit) {
-                          error.SetErrorString("interrupt received");
+                          error = Status::FromErrorString("interrupt received");
                           interrupt = true;
                           return PacketResult::Success;
                         });
@@ -165,7 +167,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     if (available_port)
       port = *available_port;
     else
-      return Status(available_port.takeError());
+      return Status::FromError(available_port.takeError());
   }
 
   // Spawn a new thread to accept the port that gets bound after binding to
@@ -206,8 +208,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     port_ptr = nullptr;
   }
 
-  Status error = StartDebugserverProcess(
-      url.str().c_str(), nullptr, debugserver_launch_info, port_ptr, &args, -1);
+  Status error = StartDebugserverProcess(url.str().c_str(), nullptr,
+                                         debugserver_launch_info, port_ptr,
+                                         &args, SharedSocket::kInvalidFD);
 
   pid = debugserver_launch_info.GetProcessID();
   if (pid != LLDB_INVALID_PROCESS_ID) {
@@ -239,9 +242,9 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   llvm::StringRef value;
   std::optional<uint16_t> port;
   while (packet.GetNameColonValue(name, value)) {
-    if (name.equals("host"))
+    if (name == "host")
       hostname = std::string(value);
-    else if (name.equals("port")) {
+    else if (name == "port") {
       // Make the Optional valid so we can use its value
       port = 0;
       value.getAsInteger(0, *port);
@@ -525,8 +528,8 @@ void GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
 
 Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
   if (!m_process_launch_info.GetArguments().GetArgumentCount())
-    return Status("%s: no process command line specified to launch",
-                  __FUNCTION__);
+    return Status::FromErrorStringWithFormat(
+        "%s: no process command line specified to launch", __FUNCTION__);
 
   // specify the process monitor if not already set.  This should generally be
   // what happens since we need to reap started processes.

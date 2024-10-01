@@ -468,6 +468,7 @@ class LldbGdbServerTestCase(
         self.Hg_fails_on_pid(0)
 
     @add_test_categories(["llgs"])
+    @skipIfWindows  # Sometimes returns '$E37'.
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -953,7 +954,7 @@ class LldbGdbServerTestCase(
         z_packet_type = 0
 
         # If hardware breakpoint is requested set packet type to Z1
-        if want_hardware == True:
+        if want_hardware:
             z_packet_type = 1
 
         self.reset_test_sequence()

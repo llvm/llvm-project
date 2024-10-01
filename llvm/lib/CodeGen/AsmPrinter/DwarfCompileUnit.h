@@ -335,8 +335,8 @@ public:
   void addGlobalNameForTypeUnit(StringRef Name, const DIScope *Context);
 
   /// Add a new global type to the compile unit.
-  void addGlobalType(const DIType *Ty, const DIE &Die,
-                     const DIScope *Context) override;
+  void addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                         const DIScope *Context) override;
 
   /// Add a new global type present in a type unit to this compile unit.
   void addGlobalTypeUnitType(const DIType *Ty, const DIScope *Context);

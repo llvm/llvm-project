@@ -26,9 +26,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
@@ -38,7 +36,6 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <16 x i8> [[WIDE_LOAD]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 16
 ; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP13]], align 1
@@ -47,12 +44,12 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD1]], i32 15
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -125,9 +122,7 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[VECTOR_RECUR4:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT3]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
@@ -145,7 +140,6 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <16 x i8> [[TMP15]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <16 x i8> [[TMP16]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[Y]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 16
 ; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr [[TMP21]], align 1
@@ -154,16 +148,16 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <16 x i8> [[WIDE_LOAD5]], i32 15
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT6:%.*]] = extractelement <16 x i8> [[TMP8]], i32 15
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <16 x i8> [[TMP10]], i32 15
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT10:%.*]] = phi i8 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT9]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT7:%.*]] = phi i8 [ [[DOTPRE44]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT6]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[DOTPRE45]], [[FOR_BODY_PREHEADER]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 3, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE45]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT7:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT6]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE44]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR_INIT10:%.*]] = phi i8 [ [[VECTOR_RECUR_EXTRACT9]], [[MIDDLE_BLOCK]] ], [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

@@ -243,6 +243,7 @@ public:
     SmallVector<LiveInReg, 4> LiveIns;
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
   };
 
   /// InstrCycles represents the cycle height and depth of an instruction in a
@@ -271,6 +272,7 @@ public:
     explicit Trace(Ensemble &te, TraceBlockInfo &tbi) : TE(te), TBI(tbi) {}
 
     void print(raw_ostream&) const;
+    void dump() const { print(dbgs()); }
 
     /// Compute the total number of instructions in the trace.
     unsigned getInstrCount() const {
@@ -293,9 +295,9 @@ public:
     /// classes are included. For the caller to account for extra machine
     /// instructions, it must first resolve each instruction's scheduling class.
     unsigned getResourceLength(
-        ArrayRef<const MachineBasicBlock *> Extrablocks = std::nullopt,
-        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = std::nullopt,
-        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = std::nullopt) const;
+        ArrayRef<const MachineBasicBlock *> Extrablocks = {},
+        ArrayRef<const MCSchedClassDesc *> ExtraInstrs = {},
+        ArrayRef<const MCSchedClassDesc *> RemoveInstrs = {}) const;
 
     /// Return the length of the (data dependency) critical path through the
     /// trace.
@@ -361,7 +363,8 @@ public:
     virtual ~Ensemble();
 
     virtual const char *getName() const = 0;
-    void print(raw_ostream&) const;
+    void print(raw_ostream &) const;
+    void dump() const { print(dbgs()); }
     void invalidate(const MachineBasicBlock *MBB);
     void verify() const;
 

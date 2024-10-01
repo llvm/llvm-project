@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -25,8 +26,10 @@
 
 // template<class... Args>
 //   void print(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println();                                                          // Since C++26
 // template<class... Args>
 //   void println(FILE* stream, format_string<Args...> fmt, Args&&... args);
+// void println(FILE* stream);                                              // Since C++26
 // void vprint_unicode(FILE* stream, string_view fmt, format_args args);
 // void vprint_nonunicode(FILE* stream, string_view fmt, format_args args);
 
@@ -63,7 +66,22 @@ static void test_println() {
   assert(std::string_view(buffer.data(), pos) == "hello world!\n");
 }
 
+static void test_println_blank_line() {
+  std::array<char, 100> buffer{0};
+
+  FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
+  assert(file);
+
+  std::println(file);
+  long pos = std::ftell(file);
+  std::fclose(file);
+
+  assert(pos > 0);
+  assert(std::string_view(buffer.data(), pos) == "\n");
+}
+
 static void test_vprint_unicode() {
+#ifdef TEST_HAS_NO_UNICODE
   std::array<char, 100> buffer{0};
 
   FILE* file = fmemopen(buffer.data(), buffer.size(), "wb");
@@ -76,6 +94,7 @@ static void test_vprint_unicode() {
 
   assert(pos > 0);
   assert(std::string_view(buffer.data(), pos) == "hello world!");
+#endif // TEST_HAS_NO_UNICODE
 }
 
 static void test_vprint_nonunicode() {
@@ -96,6 +115,7 @@ static void test_vprint_nonunicode() {
 int main(int, char**) {
   test_print();
   test_println();
+  test_println_blank_line();
   test_vprint_unicode();
   test_vprint_nonunicode();
 

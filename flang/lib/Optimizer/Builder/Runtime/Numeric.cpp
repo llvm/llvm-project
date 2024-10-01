@@ -22,6 +22,28 @@ using namespace Fortran::runtime;
 // may not have them in their runtime library. This can occur in the
 // case of cross compilation, for example.
 
+/// Placeholder for real*10 version of ErfcScaled Intrinsic
+struct ForcedErfcScaled10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ErfcScaled10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of ErfcScaled Intrinsic
+struct ForcedErfcScaled16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ErfcScaled16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      return mlir::FunctionType::get(ctx, {ty}, {ty});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Exponent Intrinsic
 struct ForcedExponent10_4 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Exponent10_4));
@@ -110,6 +132,20 @@ struct ForcedMod16 {
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto fltTy = mlir::FloatType::getF128(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Modulo Intrinsic
+struct ForcedModulo10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF80(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
@@ -349,7 +385,13 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
 
   // MODULO is lowered into math operations in intrinsics lowering,
   // so genModulo() should only be used for F128 data type now.
-  if (fltTy.isF128())
+  if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedModulo10>(loc, builder);
+  else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedModulo16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "MODULO");
@@ -364,10 +406,10 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
-/// Generate call to Nearest intrinsic runtime routine.
+/// Generate call to Nearest intrinsic or a "Next" intrinsic module procedure.
 mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value x,
-                                     mlir::Value s) {
+                                     mlir::Value valueUp) {
   mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
 
@@ -383,19 +425,7 @@ mlir::Value fir::runtime::genNearest(fir::FirOpBuilder &builder,
     fir::intrinsicTypeTODO(builder, fltTy, loc, "NEAREST");
 
   auto funcTy = func.getFunctionType();
-
-  mlir::Type sTy = s.getType();
-  mlir::Value zero = builder.createRealZeroConstant(loc, sTy);
-  auto cmp = builder.create<mlir::arith::CmpFOp>(
-      loc, mlir::arith::CmpFPredicate::OGT, s, zero);
-
-  mlir::Type boolTy = mlir::IntegerType::get(builder.getContext(), 1);
-  mlir::Value False = builder.createIntegerConstant(loc, boolTy, 0);
-  mlir::Value True = builder.createIntegerConstant(loc, boolTy, 1);
-
-  mlir::Value positive =
-      builder.create<mlir::arith::SelectOp>(loc, cmp, True, False);
-  auto args = fir::runtime::createArguments(builder, loc, funcTy, x, positive);
+  auto args = fir::runtime::createArguments(builder, loc, funcTy, x, valueUp);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
@@ -416,6 +446,30 @@ mlir::Value fir::runtime::genRRSpacing(fir::FirOpBuilder &builder,
     func = fir::runtime::getRuntimeFunc<ForcedRRSpacing16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "RRSPACING");
+
+  auto funcTy = func.getFunctionType();
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, funcTy.getInput(0), x)};
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to ErfcScaled intrinsic runtime routine.
+mlir::Value fir::runtime::genErfcScaled(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value x) {
+  mlir::func::FuncOp func;
+  mlir::Type fltTy = x.getType();
+
+  if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ErfcScaled4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ErfcScaled8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedErfcScaled10>(loc, builder);
+  else if (fltTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedErfcScaled16>(loc, builder);
+  else
+    fir::intrinsicTypeTODO(builder, fltTy, loc, "ERFC_SCALED");
 
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
@@ -448,12 +502,53 @@ mlir::Value fir::runtime::genScale(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+/// Generate call to Selected_char_kind intrinsic runtime routine.
+mlir::Value fir::runtime::genSelectedCharKind(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value name,
+                                              mlir::Value length) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(SelectedCharKind)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  if (!fir::isa_ref_type(name.getType()))
+    fir::emitFatalError(loc, "argument address for runtime not found");
+
+  auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
+                                            sourceLine, name, length);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 /// Generate call to Selected_int_kind intrinsic runtime routine.
 mlir::Value fir::runtime::genSelectedIntKind(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              mlir::Value x) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(SelectedIntKind)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  if (!fir::isa_ref_type(x.getType()))
+    fir::emitFatalError(loc, "argument address for runtime not found");
+  mlir::Type eleTy = fir::unwrapRefType(x.getType());
+  mlir::Value xKind = builder.createIntegerConstant(
+      loc, fTy.getInput(3), eleTy.getIntOrFloatBitWidth() / 8);
+  auto args = fir::runtime::createArguments(builder, loc, fTy, sourceFile,
+                                            sourceLine, x, xKind);
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to Selected_logical_kind intrinsic runtime routine.
+mlir::Value fir::runtime::genSelectedLogicalKind(fir::FirOpBuilder &builder,
+                                                 mlir::Location loc,
+                                                 mlir::Value x) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(SelectedLogicalKind)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -530,7 +625,11 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value x) {
   mlir::func::FuncOp func;
   mlir::Type fltTy = x.getType();
-
+  // TODO: for f16/bf16, there are better alternatives that do not require
+  // casting the argument (resp. result) to (resp. from) f32, but this requires
+  // knowing that the target runtime has been compiled with std::float16_t or
+  // std::bfloat16_t support, which is not an information available here for
+  // now.
   if (fltTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing4)>(loc, builder);
   else if (fltTy.isF64())
@@ -539,6 +638,10 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
     func = fir::runtime::getRuntimeFunc<ForcedSpacing10>(loc, builder);
   else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedSpacing16>(loc, builder);
+  else if (fltTy.isF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing2By4)>(loc, builder);
+  else if (fltTy.isBF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Spacing3By4)>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "SPACING");
 
@@ -546,5 +649,6 @@ mlir::Value fir::runtime::genSpacing(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
 
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  mlir::Value res = builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return builder.createConvert(loc, fltTy, res);
 }

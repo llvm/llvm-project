@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 
+import argparse
 import libcxx.header_information
 import os
 import pathlib
 import re
+import sys
 import typing
 
 def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
     ignore = [
         "__debug_utils/.+",
         "__fwd/get[.]h",
+        "__pstl/.+",
         "__support/.+",
+        "__utility/private_constructor_tag.h",
     ]
     if any(re.match(pattern, header) for pattern in ignore):
         return None
@@ -18,6 +22,8 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["bits"]
     elif header in ("__bit_reference", "__fwd/bit_reference.h"):
         return ["bitset", "vector"]
+    elif re.match("__configuration/.+", header) or header == "__config":
+        return ["version"]
     elif header == "__hash_table":
         return ["unordered_map", "unordered_set"]
     elif header == "__locale":
@@ -34,6 +40,8 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["atomic", "mutex", "semaphore", "thread"]
     elif header == "__tree":
         return ["map", "set"]
+    elif header == "__fwd/byte.h":
+        return ["cstddef"]
     elif header == "__fwd/pair.h":
         return ["utility"]
     elif header == "__fwd/subrange.h":
@@ -49,7 +57,18 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
     else:
         return None
 
-def main():
+
+def main(argv: typing.List[str]):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-o",
+        help="File to output the IWYU mappings into",
+        type=argparse.FileType("w"),
+        required=True,
+        dest="output",
+    )
+    args = parser.parse_args(argv)
+
     mappings = []  # Pairs of (header, public_header)
     for header in libcxx.header_information.all_headers:
         public_headers = IWYU_mapping(header)
@@ -62,13 +81,12 @@ def main():
         if public not in libcxx.header_information.public_headers:
             raise RuntimeError(f"{header}: Header {public} is not a valid header")
 
-    with open(libcxx.header_information.include / "libcxx.imp", "w") as f:
-        f.write("[\n")
-        for header, public in sorted(mappings):
-            f.write(
-                f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n'
-            )
-        f.write("]\n")
+    args.output.write("[\n")
+    for header, public in sorted(mappings):
+        args.output.write(
+            f'  {{ include: [ "<{header}>", "private", "<{public}>", "public" ] }},\n'
+        )
+    args.output.write("]\n")
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

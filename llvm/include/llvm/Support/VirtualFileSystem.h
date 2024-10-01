@@ -31,7 +31,6 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -219,7 +218,7 @@ namespace detail {
 
 /// Keeps state for the recursive_directory_iterator.
 struct RecDirIterState {
-  std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
+  std::vector<directory_iterator> Stack;
   bool HasNoPushRequest = false;
 };
 
@@ -242,8 +241,8 @@ public:
   /// Equivalent to operator++, with an error code.
   recursive_directory_iterator &increment(std::error_code &EC);
 
-  const directory_entry &operator*() const { return *State->Stack.top(); }
-  const directory_entry *operator->() const { return &*State->Stack.top(); }
+  const directory_entry &operator*() const { return *State->Stack.back(); }
+  const directory_entry *operator->() const { return &*State->Stack.back(); }
 
   bool operator==(const recursive_directory_iterator &Other) const {
     return State == Other.State; // identity
@@ -298,10 +297,11 @@ public:
   /// symlinks. For real file system, this uses `llvm::sys::fs::real_path`.
   /// This returns errc::operation_not_permitted if not implemented by subclass.
   virtual std::error_code getRealPath(const Twine &Path,
-                                      SmallVectorImpl<char> &Output) const;
+                                      SmallVectorImpl<char> &Output);
 
-  /// Check whether a file exists. Provided for convenience.
-  bool exists(const Twine &Path);
+  /// Check whether \p Path exists. By default this uses \c status(), but
+  /// filesystems may provide a more efficient implementation if available.
+  virtual bool exists(const Twine &Path);
 
   /// Is the file mounted on a local filesystem?
   virtual std::error_code isLocal(const Twine &Path, bool &Result);
@@ -318,6 +318,10 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  /// \returns true if \p A and \p B represent the same file, or an error or
+  /// false if they do not.
+  llvm::ErrorOr<bool> equivalent(const Twine &A, const Twine &B);
 
   enum class PrintType { Summary, Contents, RecursiveContents };
   void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
@@ -386,6 +390,7 @@ public:
   void pushOverlay(IntrusiveRefCntPtr<FileSystem> FS);
 
   llvm::ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
@@ -393,7 +398,7 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
@@ -439,6 +444,7 @@ public:
   llvm::ErrorOr<Status> status(const Twine &Path) override {
     return FS->status(Path);
   }
+  bool exists(const Twine &Path) override { return FS->exists(Path); }
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override {
     return FS->openFileForRead(Path);
@@ -453,7 +459,7 @@ public:
     return FS->setCurrentWorkingDirectory(Path);
   }
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     return FS->getRealPath(Path, Output);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) override {
@@ -622,7 +628,7 @@ public:
   /// This doesn't resolve symlinks as they are not supported in in-memory file
   /// system.
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
@@ -958,7 +964,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
+    if ((CaseSensitive ? lhs == rhs : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }
@@ -1044,10 +1050,11 @@ public:
          bool UseExternalNames, FileSystem &ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
 
@@ -1123,6 +1130,60 @@ public:
   const std::vector<YAMLVFSEntry> &getMappings() const { return Mappings; }
 
   void write(llvm::raw_ostream &OS);
+};
+
+/// File system that tracks the number of calls to the underlying file system.
+/// This is particularly useful when wrapped around \c RealFileSystem to add
+/// lightweight tracking of expensive syscalls.
+class TracingFileSystem
+    : public llvm::RTTIExtends<TracingFileSystem, ProxyFileSystem> {
+public:
+  static const char ID;
+
+  std::size_t NumStatusCalls = 0;
+  std::size_t NumOpenFileForReadCalls = 0;
+  std::size_t NumDirBeginCalls = 0;
+  std::size_t NumGetRealPathCalls = 0;
+  std::size_t NumExistsCalls = 0;
+  std::size_t NumIsLocalCalls = 0;
+
+  TracingFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : RTTIExtends(std::move(FS)) {}
+
+  ErrorOr<Status> status(const Twine &Path) override {
+    ++NumStatusCalls;
+    return ProxyFileSystem::status(Path);
+  }
+
+  ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override {
+    ++NumOpenFileForReadCalls;
+    return ProxyFileSystem::openFileForRead(Path);
+  }
+
+  directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
+    ++NumDirBeginCalls;
+    return ProxyFileSystem::dir_begin(Dir, EC);
+  }
+
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) override {
+    ++NumGetRealPathCalls;
+    return ProxyFileSystem::getRealPath(Path, Output);
+  }
+
+  bool exists(const Twine &Path) override {
+    ++NumExistsCalls;
+    return ProxyFileSystem::exists(Path);
+  }
+
+  std::error_code isLocal(const Twine &Path, bool &Result) override {
+    ++NumIsLocalCalls;
+    return ProxyFileSystem::isLocal(Path, Result);
+  }
+
+protected:
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override;
 };
 
 } // namespace vfs

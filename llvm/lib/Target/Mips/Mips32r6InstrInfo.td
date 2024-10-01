@@ -153,15 +153,15 @@ class SELNEZ_ENC : SPECIAL_3R_FM<0b00000, 0b110111>;
 
 class LWPC_ENC   : PCREL19_FM<OPCODE2_LWPC>;
 
-class MAX_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
-class MAX_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
+class MAX_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
+class MAX_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
 class MIN_S_ENC : COP1_3R_FM<0b011100, FIELD_FMT_S>;
 class MIN_D_ENC : COP1_3R_FM<0b011100, FIELD_FMT_D>;
 
 class MAXA_S_ENC : COP1_3R_FM<0b011111, FIELD_FMT_S>;
 class MAXA_D_ENC : COP1_3R_FM<0b011111, FIELD_FMT_D>;
-class MINA_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
-class MINA_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
+class MINA_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
+class MINA_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
 
 class SELEQZ_S_ENC : COP1_3R_FM<0b010100, FIELD_FMT_S>;
 class SELEQZ_D_ENC : COP1_3R_FM<0b010100, FIELD_FMT_D>;
@@ -1115,6 +1115,65 @@ def : MipsPat<(select i32:$cond, i32:$t, immz),
 def : MipsPat<(select i32:$cond, immz, i32:$f),
               (SELEQZ i32:$f, i32:$cond)>,
               ISA_MIPS32R6;
+}
+
+// llvm.fmin/fmax operations.
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(fmaxnum_ieee f32:$lhs, f32:$rhs),
+                (MAX_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fmaxnum_ieee f64:$lhs, f64:$rhs),
+                (MAX_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum_ieee f32:$lhs, f32:$rhs),
+                (MIN_S   f32:$lhs, f32:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(fminnum_ieee f64:$lhs, f64:$rhs),
+                (MIN_D   f64:$lhs, f64:$rhs)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f32 (fcanonicalize f32:$src)),
+                (MIN_S   f32:$src, f32:$src)>,
+                ISA_MIPS32R6;
+  def : MipsPat<(f64 (fcanonicalize f64:$src)),
+                (MIN_D   f64:$src, f64:$src)>,
+                ISA_MIPS32R6;
+}
+
+// llvm.is_fpclass operations.
+def to_fclass_mask: SDNodeXForm<imm, [{
+  unsigned Check = N->getZExtValue();
+  unsigned Mask = 0;
+  if (Check & fcSNan)
+    Mask |= Mips::FClassMaskSignalingNaN;
+  if (Check & fcQNan)
+    Mask |= Mips::FClassMaskQuietNaN;
+  if (Check & fcPosInf)
+    Mask |= Mips::FClassMaskPositiveInfinity;
+  if (Check & fcNegInf)
+    Mask |= Mips::FClassMaskNegativeInfinity;
+  if (Check & fcPosNormal)
+    Mask |= Mips::FClassMaskPositiveNormal;
+  if (Check & fcNegNormal)
+    Mask |= Mips::FClassMaskNegativeNormal;
+  if (Check & fcPosSubnormal)
+    Mask |= Mips::FClassMaskPositiveSubnormal;
+  if (Check & fcNegSubnormal)
+    Mask |= Mips::FClassMaskNegativeSubnormal;
+  if (Check & fcPosZero)
+    Mask |= Mips::FClassMaskPositiveZero;
+  if (Check & fcNegZero)
+    Mask |= Mips::FClassMaskNegativeZero;
+  return CurDAG->getTargetConstant(Mask, SDLoc(N), MVT::i32);
+}]>;
+let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(is_fpclass f32:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1 (CLASS_S f32:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
+  def : MipsPat<(is_fpclass f64:$lhs, i32:$imm),
+                (SLTu ZERO, (ANDi (MFC1_D64 (CLASS_D f64:$lhs)),
+                          (to_fclass_mask imm:$imm)))>,
+                ISA_MIPS32R6;
 }
 
 // Pseudo instructions

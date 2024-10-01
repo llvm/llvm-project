@@ -63,7 +63,7 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<0.000000e+00> : tensor<8x8xf64>
 // CHECK-DAG:       %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {memory_space = 0 : i64} : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) : tensor<8x8xf64>
 // CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
@@ -71,7 +71,7 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_15:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// CHECK:           %[[VAL_16:.*]] = bufferization.to_memref %[[VAL_8]] : memref<8x8xf64>
+// CHECK-DAG:       %[[VAL_16:.*]] = bufferization.to_memref %[[VAL_8]] : memref<8x8xf64>
 // CHECK:           %[[VAL_17:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // CHECK:           %[[VAL_18:.*]] = memref.load %[[VAL_11]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // CHECK:           scf.for %[[VAL_19:.*]] = %[[VAL_17]] to %[[VAL_18]] step %[[VAL_5]] {

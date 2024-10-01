@@ -18,28 +18,43 @@ using namespace llvm;
 
 #define DEBUG_TYPE "slotindexes"
 
-char SlotIndexes::ID = 0;
+AnalysisKey SlotIndexesAnalysis::Key;
 
-SlotIndexes::SlotIndexes() : MachineFunctionPass(ID) {
-  initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
+SlotIndexesAnalysis::Result
+SlotIndexesAnalysis::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &) {
+  return Result(MF);
+}
+
+PreservedAnalyses
+SlotIndexesPrinterPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  OS << "Slot indexes in machine function: " << MF.getName() << '\n';
+  MFAM.getResult<SlotIndexesAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
+char SlotIndexesWrapperPass::ID = 0;
+
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
+  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
-  indexList.clearAndLeakNodesUnsafely();
+  indexList.clear();
 }
 
-INITIALIZE_PASS(SlotIndexes, DEBUG_TYPE,
-                "Slot index numbering", false, false)
+INITIALIZE_PASS(SlotIndexesWrapperPass, DEBUG_TYPE, "Slot index numbering",
+                false, false)
 
 STATISTIC(NumLocalRenum,  "Number of local renumberings");
 
-void SlotIndexes::getAnalysisUsage(AnalysisUsage &au) const {
+void SlotIndexesWrapperPass::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(au);
 }
 
-void SlotIndexes::releaseMemory() {
+void SlotIndexes::clear() {
   mi2iMap.clear();
   MBBRanges.clear();
   idx2MBBMap.clear();
@@ -47,7 +62,7 @@ void SlotIndexes::releaseMemory() {
   ileAllocator.Reset();
 }
 
-bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
+void SlotIndexes::analyze(MachineFunction &fn) {
 
   // Compute numbering as follows:
   // Grab an iterator to the start of the index list.
@@ -75,7 +90,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   MBBRanges.resize(mf->getNumBlockIDs());
   idx2MBBMap.reserve(mf->size());
 
-  indexList.push_back(createEntry(nullptr, index));
+  indexList.push_back(*createEntry(nullptr, index));
 
   // Iterate over the function.
   for (MachineBasicBlock &MBB : *mf) {
@@ -87,7 +102,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
         continue;
 
       // Insert a store index for the instr.
-      indexList.push_back(createEntry(&MI, index += SlotIndex::InstrDist));
+      indexList.push_back(*createEntry(&MI, index += SlotIndex::InstrDist));
 
       // Save this base index in the maps.
       mi2iMap.insert(std::make_pair(
@@ -95,7 +110,7 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
     }
 
     // We insert one blank instructions between basic blocks.
-    indexList.push_back(createEntry(nullptr, index += SlotIndex::InstrDist));
+    indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
     MBBRanges[MBB.getNumber()].first = blockStartIndex;
     MBBRanges[MBB.getNumber()].second = SlotIndex(&indexList.back(),
@@ -107,9 +122,6 @@ bool SlotIndexes::runOnMachineFunction(MachineFunction &fn) {
   llvm::sort(idx2MBBMap, less_first());
 
   LLVM_DEBUG(mf->print(dbgs(), this));
-
-  // And we're done!
-  return false;
 }
 
 void SlotIndexes::removeMachineInstrFromMaps(MachineInstr &MI,
@@ -242,22 +254,23 @@ void SlotIndexes::packIndexes() {
     Entry.setIndex(Index * SlotIndex::InstrDist);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SlotIndexes::dump() const {
+void SlotIndexes::print(raw_ostream &OS) const {
   for (const IndexListEntry &ILE : indexList) {
-    dbgs() << ILE.getIndex() << " ";
+    OS << ILE.getIndex() << ' ';
 
-    if (ILE.getInstr()) {
-      dbgs() << *ILE.getInstr();
-    } else {
-      dbgs() << "\n";
-    }
+    if (ILE.getInstr())
+      OS << *ILE.getInstr();
+    else
+      OS << '\n';
   }
 
   for (unsigned i = 0, e = MBBRanges.size(); i != e; ++i)
-    dbgs() << "%bb." << i << "\t[" << MBBRanges[i].first << ';'
-           << MBBRanges[i].second << ")\n";
+    OS << "%bb." << i << "\t[" << MBBRanges[i].first << ';'
+       << MBBRanges[i].second << ")\n";
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SlotIndexes::dump() const { print(dbgs()); }
 #endif
 
 // Print a SlotIndex to a raw_ostream.

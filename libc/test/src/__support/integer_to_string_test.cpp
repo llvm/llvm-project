@@ -9,10 +9,10 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/UInt.h"
-#include "src/__support/UInt128.h"
+#include "src/__support/big_int.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/integer_to_string.h"
+#include "src/__support/uint128.h"
 
 #include "test/UnitTest/Test.h"
 

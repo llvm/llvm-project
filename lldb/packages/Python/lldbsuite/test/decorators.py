@@ -1,6 +1,6 @@
 # System modules
 from functools import wraps
-from pkg_resources import packaging
+from packaging import version
 import ctypes
 import locale
 import os
@@ -66,9 +66,7 @@ def _check_expected_version(comparison, expected, actual):
         "<=": fn_leq,
     }
 
-    return op_lookup[comparison](
-        packaging.version.parse(actual), packaging.version.parse(expected)
-    )
+    return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
 def _match_decorator_property(expected, actual):
@@ -206,6 +204,7 @@ def _decorateTest(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     def fn(actual_debug_info=None):
         skip_for_os = _match_decorator_property(
@@ -256,6 +255,7 @@ def _decorateTest(
             )
         )
         skip_for_setting = (setting is None) or (setting in configuration.settings)
+        skip_for_asan = (asan is None) or is_running_under_asan()
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -273,6 +273,7 @@ def _decorateTest(
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
+            (asan, skip_for_asan, "running under asan"),
         ]
         reasons = []
         final_skip_result = True
@@ -331,6 +332,7 @@ def expectedFailureAll(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Xfail,
@@ -348,6 +350,7 @@ def expectedFailureAll(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
@@ -356,7 +359,7 @@ def expectedFailureAll(
 # for example,
 # @skipIf, skip for all platform/compiler/arch,
 # @skipIf(compiler='gcc'), skip for gcc on all platform/architecture
-# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386
+# @skipIf(bugnumber, ["linux"], "gcc", ['>=', '4.9'], ['i386']), skip for gcc>=4.9 on linux with i386 (all conditions must be true)
 def skipIf(
     bugnumber=None,
     oslist=None,
@@ -372,6 +375,7 @@ def skipIf(
     remote=None,
     dwarf_version=None,
     setting=None,
+    asan=None,
 ):
     return _decorateTest(
         DecorateMode.Skip,
@@ -389,6 +393,7 @@ def skipIf(
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
+        asan=asan,
     )
 
 
@@ -421,18 +426,6 @@ def add_test_categories(cat):
     return impl
 
 
-def benchmarks_test(func):
-    """Decorate the item as a benchmarks test."""
-
-    def should_skip_benchmarks_test():
-        return "benchmarks test"
-
-    # Mark this function as such to separate them from the regular tests.
-    result = skipTestIfFn(should_skip_benchmarks_test)(func)
-    result.__benchmarks_test__ = True
-    return result
-
-
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
@@ -462,9 +455,8 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
         try:
-            DEVNULL = open(os.devnull, "w")
             output = subprocess.check_output(
-                ["xcodebuild", "-showsdks"], stderr=DEVNULL
+                ["xcodebuild", "-showsdks"], stderr=subprocess.DEVNULL
             ).decode("utf-8")
             if re.search("%ssimulator" % platform, output):
                 return None
@@ -1048,6 +1040,10 @@ def _get_bool_config_skip_if_decorator(key):
     return unittest.skipIf(not have, "requires " + key)
 
 
+def skipIfCurlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curl")(func)
+
+
 def skipIfCursesSupportMissing(func):
     return _get_bool_config_skip_if_decorator("curses")(func)
 
@@ -1085,13 +1081,12 @@ def skipUnlessFeature(feature):
     def is_feature_enabled():
         if platform.system() == "Darwin":
             try:
-                DEVNULL = open(os.devnull, "w")
                 output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=DEVNULL
+                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
-                if re.match("%s: 1\s*" % feature, output):
+                if re.match(r"%s: 1\s*" % feature, output):
                     return None
                 else:
                     return "%s is not supported on this system." % feature

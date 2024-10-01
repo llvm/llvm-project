@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LiveDebugVariables.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -78,14 +78,14 @@ char LiveDebugVariables::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(LiveDebugVariables, DEBUG_TYPE,
                 "Debug Variable Analysis", false, false)
 
 void LiveDebugVariables::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTree>();
-  AU.addRequiredTransitive<LiveIntervals>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<LiveIntervalsWrapperPass>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -764,9 +764,9 @@ void LDVImpl::print(raw_ostream &OS) {
 #endif
 
 void UserValue::mapVirtRegs(LDVImpl *LDV) {
-  for (unsigned i = 0, e = locations.size(); i != e; ++i)
-    if (locations[i].isReg() && locations[i].getReg().isVirtual())
-      LDV->mapVirtReg(locations[i].getReg(), this);
+  for (const MachineOperand &MO : locations)
+    if (MO.isReg() && MO.getReg().isVirtual())
+      LDV->mapVirtReg(MO.getReg(), this);
 }
 
 UserValue *
@@ -1254,16 +1254,16 @@ void LDVImpl::computeIntervals() {
   LexicalScopes LS;
   LS.initialize(*MF);
 
-  for (unsigned i = 0, e = userValues.size(); i != e; ++i) {
-    userValues[i]->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
-    userValues[i]->mapVirtRegs(this);
+  for (const auto &UV : userValues) {
+    UV->computeIntervals(MF->getRegInfo(), *TRI, *LIS, LS);
+    UV->mapVirtRegs(this);
   }
 }
 
 bool LDVImpl::runOnMachineFunction(MachineFunction &mf, bool InstrRef) {
   clear();
   MF = &mf;
-  LIS = &pass.getAnalysis<LiveIntervals>();
+  LIS = &pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TRI = mf.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(dbgs() << "********** COMPUTING LIVE DEBUG VARIABLES: "
                     << mf.getName() << " **********\n");
@@ -1529,8 +1529,7 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
     // Only virtual registers are rewritten.
     if (Loc.isReg() && Loc.getReg() && Loc.getReg().isVirtual()) {
       Register VirtReg = Loc.getReg();
-      if (VRM.isAssignedReg(VirtReg) &&
-          Register::isPhysicalRegister(VRM.getPhys(VirtReg))) {
+      if (VRM.isAssignedReg(VirtReg) && VRM.hasPhys(VirtReg)) {
         // This can create a %noreg operand in rare cases when the sub-register
         // index is no longer available. That means the user value is in a
         // non-existent sub-register, and %noreg is exactly what we want.
@@ -1839,8 +1838,7 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     unsigned SubReg = It.second.SubReg;
 
     MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
-    if (VRM->isAssignedReg(Reg) &&
-        Register::isPhysicalRegister(VRM->getPhys(Reg))) {
+    if (VRM->isAssignedReg(Reg) && VRM->hasPhys(Reg)) {
       unsigned PhysReg = VRM->getPhys(Reg);
       if (SubReg != 0)
         PhysReg = TRI->getSubReg(PhysReg, SubReg);
@@ -1875,12 +1873,10 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
         Builder.addImm(regSizeInBits);
       }
 
-      LLVM_DEBUG(
-      if (SpillOffset != 0) {
-        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
-                  " has nonzero offset\n";
-      }
-      );
+      LLVM_DEBUG(if (SpillOffset != 0) {
+        dbgs() << "DBG_PHI for " << printReg(Reg, TRI, SubReg)
+               << " has nonzero offset\n";
+      });
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.

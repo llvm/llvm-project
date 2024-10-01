@@ -38,10 +38,25 @@
 namespace clang {
 namespace dataflow {
 
-static bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
-                                        llvm::StringRef Name) {
-  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
-         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
+// Note: the Names appear in reverse order. E.g., to check
+// if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
+template <class... NameTypes>
+static bool isFullyQualifiedNamespaceEqualTo(const NamespaceDecl &NS,
+                                             llvm::StringRef Name,
+                                             NameTypes... Names) {
+  if (!(NS.getDeclName().isIdentifier() && NS.getName() == Name &&
+        NS.getParent() != nullptr))
+    return false;
+
+  if constexpr (sizeof...(NameTypes) > 0) {
+    if (NS.getParent()->isTranslationUnit())
+      return false;
+    if (const auto *NextNS = dyn_cast_or_null<NamespaceDecl>(NS.getParent()))
+      return isFullyQualifiedNamespaceEqualTo(*NextNS, Names...);
+    return false;
+  } else {
+    return NS.getParent()->isTranslationUnit();
+  }
 }
 
 static bool hasOptionalClassName(const CXXRecordDecl &RD) {
@@ -50,15 +65,23 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
 
   if (RD.getName() == "optional") {
     if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
-      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
+      return N->isStdNamespace() ||
+             isFullyQualifiedNamespaceEqualTo(*N, "absl") ||
+             isFullyQualifiedNamespaceEqualTo(*N, "bsl");
     return false;
   }
 
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr && (isTopLevelNamespaceWithName(*N, "base") ||
-                            isTopLevelNamespaceWithName(*N, "folly"));
+    return N != nullptr && (isFullyQualifiedNamespaceEqualTo(*N, "base") ||
+                            isFullyQualifiedNamespaceEqualTo(*N, "folly"));
+  }
+
+  if (RD.getName() == "NullableValue") {
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr &&
+           isFullyQualifiedNamespaceEqualTo(*N, "bdlb", "BloombergLP");
   }
 
   return false;
@@ -195,22 +218,25 @@ auto isOptionalOperatorCallWithName(
 }
 
 auto isMakeOptionalCall() {
-  return callExpr(callee(functionDecl(hasAnyName(
-                      "std::make_optional", "base::make_optional",
-                      "absl::make_optional", "folly::make_optional"))),
-                  hasOptionalType());
+  return callExpr(
+      callee(functionDecl(hasAnyName(
+          "std::make_optional", "base::make_optional", "absl::make_optional",
+          "folly::make_optional", "bsl::make_optional"))),
+      hasOptionalType());
 }
 
 auto nulloptTypeDecl() {
   return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
-                              "base::nullopt_t", "folly::None"));
+                              "base::nullopt_t", "folly::None",
+                              "bsl::nullopt_t"));
 }
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
   return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t"));
+                               "base::in_place_t", "folly::in_place_t",
+                               "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -339,17 +365,6 @@ void setHasValue(RecordStorageLocation &OptionalLoc, BoolValue &HasValueVal,
   Env.setValue(locForHasValue(OptionalLoc), HasValueVal);
 }
 
-/// Creates a symbolic value for an `optional` value at an existing storage
-/// location. Uses `HasValueVal` as the symbolic value of the "has_value"
-/// property.
-RecordValue &createOptionalValue(RecordStorageLocation &Loc,
-                                 BoolValue &HasValueVal, Environment &Env) {
-  auto &OptionalVal = Env.create<RecordValue>(Loc);
-  Env.setValue(Loc, OptionalVal);
-  setHasValue(Loc, HasValueVal, Env);
-  return OptionalVal;
-}
-
 /// Returns the symbolic value that represents the "has_value" property of the
 /// optional at `OptionalLoc`. Returns null if `OptionalLoc` is null.
 BoolValue *getHasValue(Environment &Env, RecordStorageLocation *OptionalLoc) {
@@ -413,9 +428,8 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  State.Env.setValue(
-      *E, createOptionalValue(State.Env.getResultObjectLocation(*E),
-                              State.Env.getBoolLiteralValue(true), State.Env));
+  setHasValue(State.Env.getResultObjectLocation(*E),
+              State.Env.getBoolLiteralValue(true), State.Env);
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -424,6 +438,15 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   if (auto *HasValueVal = getHasValue(
           State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
     State.Env.setValue(*CallExpr, *HasValueVal);
+  }
+}
+
+void transferOptionalIsNullCall(const CXXMemberCallExpr *CallExpr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  if (auto *HasValueVal = getHasValue(
+          State.Env, getImplicitObjectLocation(*CallExpr, State.Env))) {
+    State.Env.setValue(*CallExpr, State.Env.makeNot(*HasValueVal));
   }
 }
 
@@ -483,9 +506,6 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
 void transferCallReturningOptional(const CallExpr *E,
                                    const MatchFinder::MatchResult &Result,
                                    LatticeTransferState &State) {
-  if (State.Env.getValue(*E) != nullptr)
-    return;
-
   RecordStorageLocation *Loc = nullptr;
   if (E->isPRValue()) {
     Loc = &State.Env.getResultObjectLocation(*E);
@@ -497,16 +517,16 @@ void transferCallReturningOptional(const CallExpr *E,
     }
   }
 
-  RecordValue &Val =
-      createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
-  if (E->isPRValue())
-    State.Env.setValue(*E, Val);
+  if (State.Env.getValue(locForHasValue(*Loc)) != nullptr)
+    return;
+
+  setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
                             BoolValue &HasValueVal) {
   RecordStorageLocation &Loc = Env.getResultObjectLocation(E);
-  Env.setValue(E, createOptionalValue(Loc, HasValueVal, Env));
+  setHasValue(Loc, HasValueVal, Env);
 }
 
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
@@ -555,7 +575,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
   assert(E->getNumArgs() > 0);
 
   if (auto *Loc = State.Env.get<RecordStorageLocation>(*E->getArg(0))) {
-    createOptionalValue(*Loc, HasValueVal, State.Env);
+    setHasValue(*Loc, HasValueVal, State.Env);
 
     // Assign a storage location for the whole expression.
     State.Env.setStorageLocation(*E, *Loc);
@@ -587,11 +607,11 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
 
   if (Loc1 == nullptr) {
     if (Loc2 != nullptr)
-      createOptionalValue(*Loc2, Env.makeAtomicBoolValue(), Env);
+      setHasValue(*Loc2, Env.makeAtomicBoolValue(), Env);
     return;
   }
   if (Loc2 == nullptr) {
-    createOptionalValue(*Loc1, Env.makeAtomicBoolValue(), Env);
+    setHasValue(*Loc1, Env.makeAtomicBoolValue(), Env);
     return;
   }
 
@@ -609,8 +629,8 @@ void transferSwap(RecordStorageLocation *Loc1, RecordStorageLocation *Loc2,
   if (BoolVal2 == nullptr)
     BoolVal2 = &Env.makeAtomicBoolValue();
 
-  createOptionalValue(*Loc1, *BoolVal2, Env);
-  createOptionalValue(*Loc2, *BoolVal1, Env);
+  setHasValue(*Loc1, *BoolVal2, Env);
+  setHasValue(*Loc2, *BoolVal1, Env);
 }
 
 void transferSwapCall(const CXXMemberCallExpr *E,
@@ -799,6 +819,12 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
+      // NullableValue::isNull
+      // Only NullableValue has isNull
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(hasName("isNull")),
+          transferOptionalIsNullCall)
+
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("emplace")),
@@ -806,8 +832,7 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(true),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
             }
           })
 
@@ -818,8 +843,8 @@ auto buildTransferMatchSwitch() {
              LatticeTransferState &State) {
             if (RecordStorageLocation *Loc =
                     getImplicitObjectLocation(*E, State.Env)) {
-              createOptionalValue(*Loc, State.Env.getBoolLiteralValue(false),
-                                  State.Env);
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(false),
+                          State.Env);
             }
           })
 

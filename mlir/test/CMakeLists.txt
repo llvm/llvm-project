@@ -1,3 +1,5 @@
+include(MLIRCheckHardwareFeatures)
+
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
@@ -39,6 +41,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
+  # Check whether an emulator is required - if yes then make sure that it's
+  # been set.
+  check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
+  check_emulator(MLIR_RUN_ARM_SME_TESTS "HWCAP2_SME" ARM_EMULATOR_EXECUTABLE)
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
@@ -61,8 +67,8 @@ endif()
 
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
+  LLVM_HAS_NVPTX_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
-  MLIR_ENABLE_CUDA_CONVERSIONS
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
@@ -95,9 +101,11 @@ configure_lit_site_cfg(
 set(MLIR_TEST_DEPENDS
   FileCheck count not split-file
   mlir-capi-ir-test
+  mlir-capi-irdl-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-rewrite-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test
@@ -140,6 +148,10 @@ endif()
 
 if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
+endif()
+
+if(MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS mlir-capi-execution-engine-test)
 endif()
 
 if(MLIR_ENABLE_ROCM_RUNNER)
@@ -210,12 +222,12 @@ endif()
 add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
   )
-set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}

@@ -16,6 +16,7 @@
 
 #include "make_string.h"
 #include "test_macros.h"
+#include "constexpr_char_traits.h" // is_pointer_in_range
 
 // This defines a nasty_string similar to nasty_containers. This string's
 // value_type does operator hijacking, which allows us to ensure that the
@@ -118,11 +119,14 @@ constexpr const nasty_char* nasty_char_traits::find(const nasty_char* s, std::si
 }
 
 constexpr nasty_char* nasty_char_traits::move(nasty_char* s1, const nasty_char* s2, std::size_t n) {
+  if (s1 == s2)
+    return s1;
+
   nasty_char* r = s1;
-  if (s1 < s2) {
-    for (; n; --n, ++s1, ++s2)
-      assign(*s1, *s2);
-  } else if (s2 < s1) {
+  if (is_pointer_in_range(s1, s1 + n, s2)) {
+    for (; n; --n)
+      assign(*s1++, *s2++);
+  } else {
     s1 += n;
     s2 += n;
     for (; n; --n)

@@ -80,7 +80,6 @@ namespace std {
 
 */
 
-#include <__availability>
 #include <__config>
 #include <__memory/allocator.h>
 #include <__memory/allocator_destructor.h>
@@ -91,6 +90,7 @@ namespace std {
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -127,7 +127,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-_LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
+[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST void __throw_bad_any_cast() {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw bad_any_cast();
 #  else
@@ -206,7 +206,7 @@ public:
   template < class _ValueType,
              class _Tp = decay_t<_ValueType>,
              class     = enable_if_t< !is_same<_Tp, any>::value && !__is_inplace_type<_ValueType>::value &&
-                                  is_copy_constructible<_Tp>::value> >
+                                      is_copy_constructible<_Tp>::value> >
   _LIBCPP_HIDE_FROM_ABI any(_ValueType&& __value);
 
   template <class _ValueType,
@@ -220,7 +220,7 @@ public:
             class... _Args,
             class _Tp = decay_t<_ValueType>,
             class     = enable_if_t< is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
-                                 is_copy_constructible<_Tp>::value> >
+                                     is_copy_constructible<_Tp>::value> >
   _LIBCPP_HIDE_FROM_ABI explicit any(in_place_type_t<_ValueType>, initializer_list<_Up>, _Args&&... __args);
 
   _LIBCPP_HIDE_FROM_ABI ~any() { this->reset(); }
@@ -252,7 +252,7 @@ public:
             class... _Args,
             class _Tp = decay_t<_ValueType>,
             class     = enable_if_t< is_constructible<_Tp, initializer_list<_Up>&, _Args...>::value &&
-                                 is_copy_constructible<_Tp>::value> >
+                                     is_copy_constructible<_Tp>::value> >
   _LIBCPP_HIDE_FROM_ABI _Tp& emplace(initializer_list<_Up>, _Args&&...);
 
   // 6.3.3 any modifiers

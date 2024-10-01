@@ -1527,8 +1527,8 @@ void PDBLinker::addImportFilesToPDB() {
     if (!file->thunkSym)
       continue;
 
-    if (!file->thunkLive)
-        continue;
+    if (!file->thunkSym->isLive())
+      continue;
 
     std::string dll = StringRef(file->dllName).lower();
     llvm::pdb::DbiModuleDescriptorBuilder *&mod = dllToModuleDbi[dll];
@@ -1726,15 +1726,15 @@ void PDBLinker::commit(codeview::GUID *guid) {
   }
 }
 
-static uint32_t getSecrelReloc(llvm::COFF::MachineTypes machine) {
-  switch (machine) {
-  case AMD64:
+static uint32_t getSecrelReloc(Triple::ArchType arch) {
+  switch (arch) {
+  case Triple::x86_64:
     return COFF::IMAGE_REL_AMD64_SECREL;
-  case I386:
+  case Triple::x86:
     return COFF::IMAGE_REL_I386_SECREL;
-  case ARMNT:
+  case Triple::thumb:
     return COFF::IMAGE_REL_ARM_SECREL;
-  case ARM64:
+  case Triple::aarch64:
     return COFF::IMAGE_REL_ARM64_SECREL;
   default:
     llvm_unreachable("unknown machine type");
@@ -1752,7 +1752,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
                           DebugLinesSubsectionRef &lines,
                           uint32_t &offsetInLinetable) {
   ExitOnError exitOnErr;
-  const uint32_t secrelReloc = getSecrelReloc(c->file->ctx.config.machine);
+  const uint32_t secrelReloc = getSecrelReloc(c->getArch());
 
   for (SectionChunk *dbgC : c->file->getDebugChunks()) {
     if (dbgC->getSectionName() != ".debug$S")

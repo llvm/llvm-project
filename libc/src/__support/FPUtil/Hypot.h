@@ -15,10 +15,11 @@
 #include "rounding_mode.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 namespace internal {
@@ -108,44 +109,38 @@ LIBC_INLINE T hypot(T x, T y) {
   using StorageType = typename FPBits<T>::StorageType;
   using DStorageType = typename DoubleLength<StorageType>::Type;
 
-  FPBits_t x_bits(x), y_bits(y);
+  FPBits_t x_abs = FPBits_t(x).abs();
+  FPBits_t y_abs = FPBits_t(y).abs();
 
-  if (x_bits.is_inf() || y_bits.is_inf()) {
-    return FPBits_t::inf().get_val();
-  }
-  if (x_bits.is_nan()) {
-    return x;
-  }
-  if (y_bits.is_nan()) {
+  bool x_abs_larger = x_abs.uintval() >= y_abs.uintval();
+
+  FPBits_t a_bits = x_abs_larger ? x_abs : y_abs;
+  FPBits_t b_bits = x_abs_larger ? y_abs : x_abs;
+
+  if (LIBC_UNLIKELY(a_bits.is_inf_or_nan())) {
+    if (x_abs.is_signaling_nan() || y_abs.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits_t::quiet_nan().get_val();
+    }
+    if (x_abs.is_inf() || y_abs.is_inf())
+      return FPBits_t::inf().get_val();
+    if (x_abs.is_nan())
+      return x;
+    // y is nan
     return y;
   }
 
-  uint16_t x_exp = x_bits.get_biased_exponent();
-  uint16_t y_exp = y_bits.get_biased_exponent();
-  uint16_t exp_diff = (x_exp > y_exp) ? (x_exp - y_exp) : (y_exp - x_exp);
+  uint16_t a_exp = a_bits.get_biased_exponent();
+  uint16_t b_exp = b_bits.get_biased_exponent();
 
-  if ((exp_diff >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0)) {
-    return abs(x) + abs(y);
-  }
+  if ((a_exp - b_exp >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0))
+    return x_abs.get_val() + y_abs.get_val();
 
-  uint16_t a_exp, b_exp, out_exp;
-  StorageType a_mant, b_mant;
+  uint64_t out_exp = a_exp;
+  StorageType a_mant = a_bits.get_mantissa();
+  StorageType b_mant = b_bits.get_mantissa();
   DStorageType a_mant_sq, b_mant_sq;
   bool sticky_bits;
-
-  if (abs(x) >= abs(y)) {
-    a_exp = x_exp;
-    a_mant = x_bits.get_mantissa();
-    b_exp = y_exp;
-    b_mant = y_bits.get_mantissa();
-  } else {
-    a_exp = y_exp;
-    a_mant = y_bits.get_mantissa();
-    b_exp = x_exp;
-    b_mant = x_bits.get_mantissa();
-  }
-
-  out_exp = a_exp;
 
   // Add an extra bit to simplify the final rounding bit computation.
   constexpr StorageType ONE = StorageType(1) << (FPBits_t::FRACTION_LEN + 1);
@@ -164,11 +159,10 @@ LIBC_INLINE T hypot(T x, T y) {
     a_exp = 1;
   }
 
-  if (b_exp != 0) {
+  if (b_exp != 0)
     b_mant |= ONE;
-  } else {
+  else
     b_exp = 1;
-  }
 
   a_mant_sq = static_cast<DStorageType>(a_mant) * a_mant;
   b_mant_sq = static_cast<DStorageType>(b_mant) * b_mant;
@@ -259,10 +253,14 @@ LIBC_INLINE T hypot(T x, T y) {
   }
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
+
+  if (!(round_bit || sticky_bits || (r != 0)))
+    fputil::clear_except_if_required(FE_INEXACT);
+
   return cpp::bit_cast<T>(y_new);
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H

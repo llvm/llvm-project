@@ -46,30 +46,6 @@ enum DeclUpdateKind {
 
 TypeIdx TypeIdxFromBuiltin(const BuiltinType *BT);
 
-template <typename IdxForTypeTy>
-TypeID MakeTypeID(ASTContext &Context, QualType T, IdxForTypeTy IdxForType) {
-  if (T.isNull())
-    return PREDEF_TYPE_NULL_ID;
-
-  unsigned FastQuals = T.getLocalFastQualifiers();
-  T.removeLocalFastQualifiers();
-
-  if (T.hasLocalNonFastQualifiers())
-    return IdxForType(T).asTypeID(FastQuals);
-
-  assert(!T.hasLocalQualifiers());
-
-  if (const BuiltinType *BT = dyn_cast<BuiltinType>(T.getTypePtr()))
-    return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
-
-  if (T == Context.AutoDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
-  if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
-
-  return IdxForType(T).asTypeID(FastQuals);
-}
-
 unsigned ComputeHash(Selector Sel);
 
 /// Retrieve the "definitive" declaration that provides all of the

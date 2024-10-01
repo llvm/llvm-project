@@ -367,11 +367,11 @@ static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
 class ParamIterator {
   const AMDGPULibFunc::Param (&Leads)[2];
   const ManglingRule& Rule;
-  int Index;
+  int Index = 0;
 public:
   ParamIterator(const AMDGPULibFunc::Param (&leads)[2],
                 const ManglingRule& rule)
-    : Leads(leads), Rule(rule), Index(0) {}
+    : Leads(leads), Rule(rule) {}
 
   AMDGPULibFunc::Param getNextParam();
 };
@@ -953,11 +953,10 @@ static Type* getIntrinsicParamType(
   case AMDGPULibFunc::IMG1D:
   case AMDGPULibFunc::IMG2D:
   case AMDGPULibFunc::IMG3D:
-    T = StructType::create(C,"ocl_image")->getPointerTo(); break;
   case AMDGPULibFunc::SAMPLER:
-    T = StructType::create(C,"ocl_sampler")->getPointerTo(); break;
   case AMDGPULibFunc::EVENT:
-    T = StructType::create(C,"ocl_event")->getPointerTo(); break;
+    T = PointerType::getUnqual(C);
+    break;
   default:
     llvm_unreachable("Unhandled param type");
     return nullptr;
@@ -965,9 +964,8 @@ static Type* getIntrinsicParamType(
   if (P.VectorSize > 1)
     T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
-    T = useAddrSpace ? T->getPointerTo((P.PtrKind & AMDGPULibFunc::ADDR_SPACE)
-                                       - 1)
-                     : T->getPointerTo();
+    T = PointerType::get(
+        C, useAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
   return T;
 }
 
@@ -1084,9 +1082,9 @@ bool UnmangledFuncInfo::lookup(StringRef Name, ID &Id) {
 
 AMDGPULibFunc::AMDGPULibFunc(const AMDGPULibFunc &F) {
   if (auto *MF = dyn_cast<AMDGPUMangledLibFunc>(F.Impl.get()))
-    Impl.reset(new AMDGPUMangledLibFunc(*MF));
+    Impl = std::make_unique<AMDGPUMangledLibFunc>(*MF);
   else if (auto *UMF = dyn_cast<AMDGPUUnmangledLibFunc>(F.Impl.get()))
-    Impl.reset(new AMDGPUUnmangledLibFunc(*UMF));
+    Impl = std::make_unique<AMDGPUUnmangledLibFunc>(*UMF);
   else
     Impl = std::unique_ptr<AMDGPULibFuncImpl>();
 }
@@ -1101,19 +1099,21 @@ AMDGPULibFunc &AMDGPULibFunc::operator=(const AMDGPULibFunc &F) {
 AMDGPULibFunc::AMDGPULibFunc(EFuncId Id, const AMDGPULibFunc &CopyFrom) {
   assert(AMDGPULibFuncBase::isMangled(Id) && CopyFrom.isMangled() &&
          "not supported");
-  Impl.reset(new AMDGPUMangledLibFunc(
-      Id, *cast<AMDGPUMangledLibFunc>(CopyFrom.Impl.get())));
+  Impl = std::make_unique<AMDGPUMangledLibFunc>(
+      Id, *cast<AMDGPUMangledLibFunc>(CopyFrom.Impl.get()));
 }
 
 AMDGPULibFunc::AMDGPULibFunc(EFuncId Id, FunctionType *FT, bool SignedInts) {
-  Impl.reset(new AMDGPUMangledLibFunc(Id, FT, SignedInts));
+  Impl = std::make_unique<AMDGPUMangledLibFunc>(Id, FT, SignedInts);
 }
 
 AMDGPULibFunc::AMDGPULibFunc(StringRef Name, FunctionType *FT) {
-  Impl.reset(new AMDGPUUnmangledLibFunc(Name, FT));
+  Impl = std::make_unique<AMDGPUUnmangledLibFunc>(Name, FT);
 }
 
-void AMDGPULibFunc::initMangled() { Impl.reset(new AMDGPUMangledLibFunc()); }
+void AMDGPULibFunc::initMangled() {
+  Impl = std::make_unique<AMDGPUMangledLibFunc>();
+}
 
 AMDGPULibFunc::Param *AMDGPULibFunc::getLeads() {
   if (!Impl)

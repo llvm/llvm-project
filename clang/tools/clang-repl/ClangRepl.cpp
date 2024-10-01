@@ -152,6 +152,7 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
 
   if (OptHostSupportsJit) {
     auto J = llvm::orc::LLJITBuilder().create();
@@ -214,12 +215,14 @@ int main(int argc, const char **argv) {
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
-  for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input))
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
-
   bool HasError = false;
+
+  for (const std::string &input : OptInputs) {
+    if (auto Err = Interp->ParseAndExecute(input)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      HasError = true;
+    }
+  }
 
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
@@ -229,8 +232,10 @@ int main(int argc, const char **argv) {
       llvm::StringRef L = *Line;
       L = L.trim();
       if (L.ends_with("\\")) {
-        // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
+        // If it is a preprocessor directive, new lines matter.
+        if (L.starts_with('#'))
+          Input += "\n";
         LE.setPrompt("clang-repl...   ");
         continue;
       }
@@ -240,18 +245,13 @@ int main(int argc, const char **argv) {
         break;
       }
       if (Input == R"(%undo)") {
-        if (auto Err = Interp->Undo()) {
+        if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5)) {
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-        HasError = true;
       }
 
       Input = "";

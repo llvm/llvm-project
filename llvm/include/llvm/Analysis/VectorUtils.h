@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
@@ -96,6 +97,7 @@ public:
   VFDatabase(CallInst &CI)
       : M(CI.getModule()), CI(CI),
         ScalarToVectorMappings(VFDatabase::getMappings(CI)) {}
+
   /// \defgroup VFDatabase query interface.
   ///
   /// @{
@@ -118,9 +120,7 @@ class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
 class IRBuilderBase;
 class Loop;
-class ScalarEvolution;
 class TargetTransformInfo;
-class Type;
 class Value;
 
 namespace Intrinsic {
@@ -223,6 +223,13 @@ void narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 bool widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                           SmallVectorImpl<int> &ScaledMask);
 
+/// Attempt to narrow/widen the \p Mask shuffle mask to the \p NumDstElts target
+/// width. Internally this will call narrowShuffleMaskElts/widenShuffleMaskElts.
+/// This will assert unless NumDstElts is a multiple of Mask.size (or vice-versa).
+/// Returns false on failure, and ScaledMask will be in an undefined state.
+bool scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                          SmallVectorImpl<int> &ScaledMask);
+
 /// Repetitively apply `widenShuffleMaskElts()` for as long as it succeeds,
 /// to get the shuffle mask with widest possible elements.
 void getShuffleMaskWithWidestElts(ArrayRef<int> Mask,
@@ -245,6 +252,23 @@ void processShuffleMasks(
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+
+/// Compute the demanded elements mask of horizontal binary operations. A
+/// horizontal operation combines two adjacent elements in a vector operand.
+/// This function returns a mask for the elements that correspond to the first
+/// operand of this horizontal combination. For example, for two vectors
+/// [X1, X2, X3, X4] and [Y1, Y2, Y3, Y4], the resulting mask can include the
+/// elements X1, X3, Y1, and Y3. To get the other operands, simply shift the
+/// result of this function to the left by 1.
+///
+/// \param VectorBitWidth the total bit width of the vector
+/// \param DemandedElts   the demanded elements mask for the operation
+/// \param DemandedLHS    the demanded elements mask for the left operand
+/// \param DemandedRHS    the demanded elements mask for the right operand
+void getHorizDemandedEltsForFirstOperand(unsigned VectorBitWidth,
+                                         const APInt &DemandedElts,
+                                         APInt &DemandedLHS,
+                                         APInt &DemandedRHS);
 
 /// Compute a map of integer instructions to their minimum legal type
 /// size.
@@ -301,7 +325,7 @@ MDNode *intersectAccessGroups(const Instruction *Inst1,
                               const Instruction *Inst2);
 
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group].
+/// MD_nontemporal, MD_access_group, MD_mmra].
 /// For K in Kinds, we get the MDNode for K from each of the
 /// elements of VL, compute their "intersection" (i.e., the most generic
 /// metadata value that covers all of the individual values), and set I's
@@ -714,11 +738,17 @@ private:
 
   /// Release the group and remove all the relationships.
   void releaseGroup(InterleaveGroup<Instruction> *Group) {
+    InterleaveGroups.erase(Group);
+    releaseGroupWithoutRemovingFromSet(Group);
+  }
+
+  /// Do everything necessary to release the group, apart from removing it from
+  /// the InterleaveGroups set.
+  void releaseGroupWithoutRemovingFromSet(InterleaveGroup<Instruction> *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
         InterleaveGroupMap.erase(Member);
 
-    InterleaveGroups.erase(Group);
     delete Group;
   }
 
@@ -795,9 +825,11 @@ private:
   void collectDependences() {
     if (!areDependencesValid())
       return;
-    auto *Deps = LAI->getDepChecker().getDependences();
+    const auto &DepChecker = LAI->getDepChecker();
+    auto *Deps = DepChecker.getDependences();
     for (auto Dep : *Deps)
-      Dependences[Dep.getSource(*LAI)].insert(Dep.getDestination(*LAI));
+      Dependences[Dep.getSource(DepChecker)].insert(
+          Dep.getDestination(DepChecker));
   }
 };
 

@@ -43,8 +43,8 @@ static __inline int rep_clz(rep_t a) { return clzsi(a); }
 // 32x32 --> 64 bit multiply
 static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
   const uint64_t product = (uint64_t)a * b;
-  *hi = product >> 32;
-  *lo = product;
+  *hi = (rep_t)(product >> 32);
+  *lo = (rep_t)product;
 }
 COMPILER_RT_ABI fp_t __addsf3(fp_t a, fp_t b);
 
@@ -58,16 +58,7 @@ typedef double fp_t;
 #define REP_C UINT64_C
 #define significandBits 52
 
-static __inline int rep_clz(rep_t a) {
-#if defined __LP64__
-  return __builtin_clzl(a);
-#else
-  if (a & REP_C(0xffffffff00000000))
-    return clzsi(a >> 32);
-  else
-    return 32 + clzsi(a & REP_C(0xffffffff));
-#endif
-}
+static inline int rep_clz(rep_t a) { return __builtin_clzll(a); }
 
 #define loWord(a) (a & 0xffffffffU)
 #define hiWord(a) (a >> 32)
@@ -180,8 +171,11 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
                          (sum2 & Word_FullMask) + ((sum3 << 32) & Word_HiMask);
 
   *lo = r0 + (r1 << 64);
+  // The addition above can overflow, in which case `*lo` will be less than
+  // `r0`. Carry any overflow into `hi`.
+  const bool carry = *lo < r0;
   *hi = (r1 >> 64) + (sum1 >> 96) + (sum2 >> 64) + (sum3 >> 32) + sum4 +
-        (sum5 << 32) + (sum6 << 64);
+        (sum5 << 32) + (sum6 << 64) + carry;
 }
 #undef Word_1
 #undef Word_2
@@ -239,7 +233,7 @@ static __inline int normalize(rep_t *significand) {
   return 1 - shift;
 }
 
-static __inline void wideLeftShift(rep_t *hi, rep_t *lo, int count) {
+static __inline void wideLeftShift(rep_t *hi, rep_t *lo, unsigned int count) {
   *hi = *hi << count | *lo >> (typeWidth - count);
   *lo = *lo << count;
 }
@@ -354,15 +348,6 @@ static __inline fp_t __compiler_rt_logbf(fp_t x) {
 }
 static __inline fp_t __compiler_rt_scalbnf(fp_t x, int y) {
   return __compiler_rt_scalbnX(x, y);
-}
-static __inline fp_t __compiler_rt_fmaxf(fp_t x, fp_t y) {
-#if defined(__aarch64__)
-  // Use __builtin_fmaxf which turns into an fmaxnm instruction on AArch64.
-  return __builtin_fmaxf(x, y);
-#else
-  // __builtin_fmaxf frequently turns into a libm call, so inline the function.
-  return __compiler_rt_fmaxX(x, y);
-#endif
 }
 
 #elif defined(DOUBLE_PRECISION)

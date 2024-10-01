@@ -11,12 +11,12 @@ target triple = "amdgcn-amd-amdhsa"
 @AS3OneKernelAtATime = internal addrspace(3) global i32 42, align 4
 
 ;.
-; CHECK: @[[REACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 3, align 4
-; CHECK: @[[UNREACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
-; CHECK: @[[REACHABLEKERNELAS0:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 7, align 4
-; CHECK: @[[AS3ONEKERNELATATIME:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
-; CHECK: @[[REACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
-; CHECK: @[[UNREACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
+; CHECK: @ReachableKernel = internal addrspace(3) global i32 3, align 4
+; CHECK: @UnreachableKernel = internal addrspace(3) global i32 42, align 4
+; CHECK: @ReachableKernelAS0 = internal global i32 7, align 4
+; CHECK: @AS3OneKernelAtATime = internal addrspace(3) global i32 42, align 4
+; CHECK: @ReachableNonKernel = internal addrspace(3) global i32 0, align 4
+; CHECK: @UnreachableNonKernel = internal addrspace(3) global i32 0, align 4
 ;.
 define dso_local void @kernel(i32 %C) norecurse "kernel" {
 ; TUNIT: Function Attrs: norecurse nosync nounwind
@@ -205,8 +205,9 @@ define internal void @level1(i32 %C) {
 ; TUNIT-LABEL: define {{[^@]+}}@level1
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[LOCAL:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    call void @level2all_early(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[LOCAL_ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; TUNIT-NEXT:    [[LOCAL:%.*]] = addrspacecast ptr addrspace(5) [[LOCAL_ALLOCA]] to ptr
+; TUNIT-NEXT:    call void @level2all_early(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TUNIT:       if.then:
@@ -216,29 +217,31 @@ define internal void @level1(i32 %C) {
 ; TUNIT-NEXT:    call void @level2b() #[[ATTR5]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @level2all_late(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR6]]
+; TUNIT-NEXT:    call void @level2all_late(ptr nocapture nofree noundef writeonly align 4 dereferenceable_or_null(4) [[LOCAL]]) #[[ATTR6]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@level1
 ; CGSCC-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[LOCAL:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @level2all_early(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[LOCAL_ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
+; CGSCC-NEXT:    [[LOCAL:%.*]] = addrspacecast ptr addrspace(5) [[LOCAL_ALLOCA]] to ptr
+; CGSCC-NEXT:    call void @level2all_early(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    call void @level2a(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @level2a(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       if.else:
-; CGSCC-NEXT:    call void @level2b(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @level2b(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @level2all_late(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR6]]
+; CGSCC-NEXT:    call void @level2all_late(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
-  %local = alloca i32
+  %local.alloca = alloca i32, addrspace(5)
+  %local = addrspacecast ptr addrspace(5) %local.alloca to ptr
   call void @level2all_early(ptr %local)
   %tobool = icmp ne i32 %C, 0
   br i1 %tobool, label %if.then, label %if.else
@@ -259,9 +262,10 @@ if.end:                                           ; preds = %if.else, %if.then
 define internal void @level2all_early(ptr %addr) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_early
-; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, ptr addrspace(3) @ReachableNonKernel, align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
@@ -337,14 +341,15 @@ entry:
 define internal void @level2all_late(ptr %addr) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_late
-; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
+; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, ptr addrspace(3) @UnreachableNonKernel, align 4
+; TUNIT-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[ADDR]] to ptr addrspace(5)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2all_late
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    store i32 1, ptr addrspace(3) @UnreachableNonKernel, align 4
 ; CGSCC-NEXT:    store i32 5, ptr [[ADDR]], align 4

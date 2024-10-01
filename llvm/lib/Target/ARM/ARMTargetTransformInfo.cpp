@@ -163,6 +163,22 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
 
+  case Intrinsic::arm_neon_vld1x2:
+  case Intrinsic::arm_neon_vld1x3:
+  case Intrinsic::arm_neon_vld1x4:
+  case Intrinsic::arm_neon_vst1x2:
+  case Intrinsic::arm_neon_vst1x3:
+  case Intrinsic::arm_neon_vst1x4: {
+    Align NewAlign =
+        getKnownAlignment(II.getArgOperand(0), IC.getDataLayout(), &II,
+                          &IC.getAssumptionCache(), &IC.getDominatorTree());
+    Align OldAlign = II.getParamAlign(0).valueOrOne();
+    if (NewAlign > OldAlign)
+      II.addParamAttr(0,
+                      Attribute::getWithAlignment(II.getContext(), NewAlign));
+    break;
+  }
+
   case Intrinsic::arm_mve_pred_i2v: {
     Value *Arg = II.getArgOperand(0);
     Value *ArgArg;
@@ -187,7 +203,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     KnownBits ScalarKnown(32);
     if (IC.SimplifyDemandedBits(&II, 0, APInt::getLowBitsSet(32, 16),
-                                ScalarKnown, 0)) {
+                                ScalarKnown)) {
       return &II;
     }
     break;
@@ -199,17 +215,21 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                        PatternMatch::m_Value(ArgArg)))) {
       return IC.replaceInstUsesWith(II, ArgArg);
     }
-    if (!II.getMetadata(LLVMContext::MD_range)) {
-      Type *IntTy32 = Type::getInt32Ty(II.getContext());
-      Metadata *M[] = {
-          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
-          ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0x10000))};
-      II.setMetadata(LLVMContext::MD_range, MDNode::get(II.getContext(), M));
-      II.setMetadata(LLVMContext::MD_noundef,
-                     MDNode::get(II.getContext(), std::nullopt));
-      return &II;
+
+    if (II.getMetadata(LLVMContext::MD_range))
+      break;
+
+    ConstantRange Range(APInt(32, 0), APInt(32, 0x10000));
+
+    if (auto CurrentRange = II.getRange()) {
+      Range = Range.intersectWith(*CurrentRange);
+      if (Range == CurrentRange)
+        break;
     }
-    break;
+
+    II.addRangeRetAttr(Range);
+    II.addRetAttr(Attribute::NoUndef);
+    return &II;
   }
   case Intrinsic::arm_mve_vadc:
   case Intrinsic::arm_mve_vadc_predicated: {
@@ -914,11 +934,10 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
 }
 
-InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                               Type *CondTy,
-                                               CmpInst::Predicate VecPred,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+InstructionCost ARMTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Thumb scalar code size cost for select.
@@ -1032,7 +1051,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
              VecValTy->getNumElements() *
                  getCmpSelInstrCost(Opcode, ValTy->getScalarType(),
                                     VecCondTy->getScalarType(), VecPred,
-                                    CostKind, I);
+                                    CostKind, Op1Info, Op2Info, I);
     }
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -1057,8 +1076,8 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   if (ST->hasMVEIntegerOps() && ValTy->isVectorTy())
     BaseCost = ST->getMVEVectorCostFactor(CostKind);
 
-  return BaseCost *
-         BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseCost * BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred,
+                                              CostKind, Op1Info, Op2Info, I);
 }
 
 InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
@@ -1212,7 +1231,8 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *Tp, ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;
@@ -1883,7 +1903,8 @@ ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 InstructionCost
 ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) {
-  switch (ICA.getID()) {
+  unsigned Opc = ICA.getID();
+  switch (Opc) {
   case Intrinsic::get_active_lane_mask:
     // Currently we make a somewhat optimistic assumption that
     // active_lane_mask's are always free. In reality it may be freely folded
@@ -1899,17 +1920,38 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat: {
+    bool IsAdd = (Opc == Intrinsic::sadd_sat || Opc == Intrinsic::ssub_sat);
+    bool IsSigned = (Opc == Intrinsic::sadd_sat || Opc == Intrinsic::ssub_sat);
+    Type *RetTy = ICA.getReturnType();
+
+    if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
+      if (IsSigned && ST->hasDSP() && ITy->getBitWidth() == 32)
+        return 1; // qadd / qsub
+      if (ST->hasDSP() && (ITy->getBitWidth() == 8 || ITy->getBitWidth() == 16))
+        return 2; // uqadd16 / qadd16 / uqsub16 / qsub16 + possible extend.
+      // Otherwise return the cost of expanding the node. Generally an add +
+      // icmp + sel.
+      CmpInst::Predicate Pred = CmpInst::ICMP_SGT;
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      return getArithmeticInstrCost(IsAdd ? Instruction::Add : Instruction::Sub,
+                                    RetTy, CostKind) +
+             2 * getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy, Pred,
+                                    CostKind) +
+             2 * getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy, Pred,
+                                    CostKind);
+    }
+
     if (!ST->hasMVEIntegerOps())
       break;
-    Type *VT = ICA.getReturnType();
 
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VT);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
     if (LT.second == MVT::v4i32 || LT.second == MVT::v8i16 ||
         LT.second == MVT::v16i8) {
       // This is a base cost of 1 for the vqadd, plus 3 extract shifts if we
       // need to extend the type, as it uses shr(qadd(shl, shl)).
       unsigned Instrs =
-          LT.second.getScalarSizeInBits() == VT->getScalarSizeInBits() ? 1 : 4;
+          LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1
+                                                                          : 4;
       return LT.first * ST->getMVEVectorCostFactor(CostKind) * Instrs;
     }
     break;
@@ -1943,7 +1985,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::fptoui_sat: {
     if (ICA.getArgTypes().empty())
       break;
-    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    bool IsSigned = Opc == Intrinsic::fptosi_sat;
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
     EVT MTy = TLI->getValueType(DL, ICA.getReturnType());
     // Check for the legal types, with the corect subtarget features.
@@ -1958,7 +2000,7 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         LT.second.getScalarSizeInBits() == MTy.getScalarSizeInBits())
       return LT.first * ST->getMVEVectorCostFactor(CostKind);
 
-    // Otherwise we use a legal convert followed by a min+max
+    // If we can we use a legal convert followed by a min+max
     if (((ST->hasVFP2Base() && LT.second == MVT::f32) ||
          (ST->hasFP64() && LT.second == MVT::f64) ||
          (ST->hasFullFP16() && LT.second == MVT::f16) ||
@@ -1979,7 +2021,25 @@ ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       Cost += getIntrinsicInstrCost(Attrs2, CostKind);
       return LT.first * Cost;
     }
-    break;
+    // Otherwise we need to follow the default expansion that clamps the value
+    // using a float min/max with a fcmp+sel for nan handling when signed.
+    Type *FPTy = ICA.getArgTypes()[0];
+    Type *RetTy = ICA.getReturnType();
+    IntrinsicCostAttributes Attrs1(Intrinsic::minnum, FPTy, {FPTy, FPTy});
+    InstructionCost Cost = getIntrinsicInstrCost(Attrs1, CostKind);
+    IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, FPTy, {FPTy, FPTy});
+    Cost += getIntrinsicInstrCost(Attrs2, CostKind);
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, FPTy, TTI::CastContextHint::None, CostKind);
+    if (IsSigned) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      Cost += getCmpSelInstrCost(BinaryOperator::FCmp, FPTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::FCMP_UNO, CostKind);
+    }
+    return Cost;
   }
   }
 
@@ -2570,14 +2630,15 @@ bool ARMTTIImpl::preferPredicatedReductionSelect(
 }
 
 InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                                 int64_t BaseOffset,
+                                                 StackOffset BaseOffset,
                                                  bool HasBaseReg, int64_t Scale,
                                                  unsigned AddrSpace) const {
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace)) {
     if (ST->hasFPAO())
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster

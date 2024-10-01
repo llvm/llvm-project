@@ -89,7 +89,11 @@ const CodeCompleteOptions::CodeCompletionRankingModel
 
 namespace {
 
-CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
+// Note: changes to this function should also be reflected in the
+// CodeCompletionResult overload where appropriate.
+CompletionItemKind
+toCompletionItemKind(index::SymbolKind Kind,
+                     const llvm::StringRef *Signature = nullptr) {
   using SK = index::SymbolKind;
   switch (Kind) {
   case SK::Unknown:
@@ -99,7 +103,10 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   case SK::NamespaceAlias:
     return CompletionItemKind::Module;
   case SK::Macro:
-    return CompletionItemKind::Text;
+    // Use macro signature (if provided) to tell apart function-like and
+    // object-like macros.
+    return Signature && Signature->contains('(') ? CompletionItemKind::Function
+                                                 : CompletionItemKind::Constant;
   case SK::Enum:
     return CompletionItemKind::Enum;
   case SK::Struct:
@@ -150,6 +157,8 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   llvm_unreachable("Unhandled clang::index::SymbolKind.");
 }
 
+// Note: changes to this function should also be reflected in the
+// index::SymbolKind overload where appropriate.
 CompletionItemKind toCompletionItemKind(const CodeCompletionResult &Res,
                                         CodeCompletionContext::Kind CtxKind) {
   if (Res.Declaration)
@@ -379,7 +388,8 @@ struct CodeCompletionBuilder {
       if (Completion.Scope.empty())
         Completion.Scope = std::string(C.IndexResult->Scope);
       if (Completion.Kind == CompletionItemKind::Missing)
-        Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind);
+        Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind,
+                                               &C.IndexResult->Signature);
       if (Completion.Name.empty())
         Completion.Name = std::string(C.IndexResult->Name);
       if (Completion.FilterText.empty())
@@ -1399,6 +1409,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   Clang->getPreprocessorOpts().SingleFileParseMode = CompletingInPreamble;
   Clang->setCodeCompletionConsumer(Consumer.release());
 
+  if (Input.Preamble.RequiredModules)
+    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(Clang->getHeaderSearchOpts());
+
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
     log("BeginSourceFile() failed when running codeComplete for {0}",
@@ -2112,7 +2125,7 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
   // When an is used, Sema is responsible for completing the main file,
   // the index can provide results from the preamble.
   // Tell Sema not to deserialize the preamble to look for results.
-  Result.LoadExternal = !Index;
+  Result.LoadExternal = ForceLoadPreamble || !Index;
   Result.IncludeFixIts = IncludeFixIts;
 
   return Result;

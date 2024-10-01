@@ -14,11 +14,13 @@
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE::cpp {
+namespace LIBC_NAMESPACE_DECL {
+namespace cpp {
 
 #if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
@@ -72,6 +74,14 @@ has_single_bit(T value) {
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_ctzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countr_zero(T value) {
+  return __builtin_ctzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countr_zero(T value) {
@@ -99,6 +109,7 @@ ADD_SPECIALIZATION(countr_zero, unsigned short, __builtin_ctzs)
 ADD_SPECIALIZATION(countr_zero, unsigned int, __builtin_ctz)
 ADD_SPECIALIZATION(countr_zero, unsigned long, __builtin_ctzl)
 ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
+#endif // __has_builtin(__builtin_ctzg)
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -106,6 +117,14 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
+// clang-19+, gcc-14+
+#if __has_builtin(__builtin_clzg)
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
+countl_zero(T value) {
+  return __builtin_clzg(value, cpp::numeric_limits<T>::digits);
+}
+#else
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_zero(T value) {
@@ -129,6 +148,7 @@ ADD_SPECIALIZATION(countl_zero, unsigned short, __builtin_clzs)
 ADD_SPECIALIZATION(countl_zero, unsigned int, __builtin_clz)
 ADD_SPECIALIZATION(countl_zero, unsigned long, __builtin_clzl)
 ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
+#endif // __has_builtin(__builtin_clzg)
 
 #undef ADD_SPECIALIZATION
 
@@ -253,9 +273,10 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 popcount(T value) {
   int count = 0;
-  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    if ((value >> i) & 0x1)
-      ++count;
+  while (value) {
+    value &= value - 1;
+    ++count;
+  }
   return count;
 }
 #define ADD_SPECIALIZATION(TYPE, BUILTIN)                                      \
@@ -271,6 +292,7 @@ ADD_SPECIALIZATION(unsigned long long, __builtin_popcountll)
 #endif // __builtin_popcountg
 #undef ADD_SPECIALIZATION
 
-} // namespace LIBC_NAMESPACE::cpp
+} // namespace cpp
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

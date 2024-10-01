@@ -149,8 +149,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-  MachineModuleInfo &MMI = MF.getMMI();
-  const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
+  const MCRegisterInfo *MRI = MF.getContext().getRegisterInfo();
   const ThumbRegisterInfo *RegInfo =
       static_cast<const ThumbRegisterInfo *>(STI.getRegisterInfo());
   const Thumb1InstrInfo &TII =
@@ -1044,9 +1043,9 @@ static void popRegsFromStack(MachineBasicBlock &MBB,
         continue;
 
       if (Reg == ARM::LR) {
-        if (!MBB.succ_empty() ||
-            MI->getOpcode() == ARM::TCRETURNdi ||
-            MI->getOpcode() == ARM::TCRETURNri)
+        if (!MBB.succ_empty() || MI->getOpcode() == ARM::TCRETURNdi ||
+            MI->getOpcode() == ARM::TCRETURNri ||
+            MI->getOpcode() == ARM::TCRETURNrinotr12)
           // LR may only be popped into PC, as part of return sequence.
           // If this isn't the return sequence, we'll need emitPopSpecialFixUp
           // to restore LR the hard way.

@@ -712,11 +712,13 @@ static bool canCreateThunkFor(Function *F) {
   return true;
 }
 
-/// Copy metadata from one function to another.
-static void copyMetadataIfPresent(Function *From, Function *To, StringRef Key) {
-  if (MDNode *MD = From->getMetadata(Key)) {
-    To->setMetadata(Key, MD);
-  }
+/// Copy all metadata of a specific kind from one function to another.
+static void copyMetadataIfPresent(Function *From, Function *To,
+                                  StringRef Kind) {
+  SmallVector<MDNode *, 4> MDs;
+  From->getMetadata(Kind, MDs);
+  for (MDNode *MD : MDs)
+    To->addMetadata(Kind, *MD);
 }
 
 // Replace G with a simple tail call to bitcast(F). Also (unless

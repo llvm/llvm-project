@@ -128,7 +128,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   StructuredData::Dictionary *breakpoint_dict = object_data->GetAsDictionary();
 
   if (!breakpoint_dict || !breakpoint_dict->IsValid()) {
-    error.SetErrorString("Can't deserialize from an invalid data object.");
+    error = Status::FromErrorString(
+        "Can't deserialize from an invalid data object.");
     return result_sp;
   }
 
@@ -136,7 +137,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   bool success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointResolver::GetSerializationKey(), resolver_dict);
   if (!success) {
-    error.SetErrorString("Breakpoint data missing toplevel resolver key");
+    error = Status::FromErrorString(
+        "Breakpoint data missing toplevel resolver key");
     return result_sp;
   }
 
@@ -145,9 +147,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
       BreakpointResolver::CreateFromStructuredData(*resolver_dict,
                                                    create_error);
   if (create_error.Fail()) {
-    error.SetErrorStringWithFormat(
-        "Error creating breakpoint resolver from data: %s.",
-        create_error.AsCString());
+    error = Status::FromErrorStringWithFormatv(
+        "Error creating breakpoint resolver from data: {0}.", create_error);
     return result_sp;
   }
 
@@ -162,7 +163,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
     filter_sp = SearchFilter::CreateFromStructuredData(target_sp, *filter_dict,
         create_error);
     if (create_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Error creating breakpoint filter from data: %s.",
           create_error.AsCString());
       return result_sp;
@@ -178,7 +179,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
     options_up = BreakpointOptions::CreateFromStructuredData(
         target, *options_dict, create_error);
     if (create_error.Fail()) {
-      error.SetErrorStringWithFormat(
+      error = Status::FromErrorStringWithFormat(
           "Error creating breakpoint options from data: %s.",
           create_error.AsCString());
       return result_sp;
@@ -885,7 +886,7 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
         s->Printf("Names:");
         s->EOL();
         s->IndentMore();
-        for (std::string name : m_name_list) {
+        for (const std::string &name : m_name_list) {
           s->Indent();
           s->Printf("%s\n", name.c_str());
         }
@@ -1126,7 +1127,7 @@ json::Value Breakpoint::GetStatistics() {
     llvm::raw_string_ostream ss(buffer);
     json::OStream json_os(ss);
     bp_data_sp->Serialize(json_os);
-    if (auto expected_value = llvm::json::parse(ss.str())) {
+    if (auto expected_value = llvm::json::parse(buffer)) {
       bp.try_emplace("details", std::move(*expected_value));
     } else {
       std::string details_error = toString(expected_value.takeError());

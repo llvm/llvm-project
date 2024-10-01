@@ -20,6 +20,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class QualType;
 class Stmt;
 class Type;
 
@@ -33,14 +34,26 @@ class Type;
 /// \returns CXXRecordDecl of the base if the type has ref as a public method,
 /// nullptr if not, std::nullopt if inconclusive.
 std::optional<const clang::CXXRecordDecl *>
-hasPublicMethodInBase(const CXXBaseSpecifier *Base, const char *NameToMatch);
+hasPublicMethodInBase(const CXXBaseSpecifier *Base,
+                      llvm::StringRef NameToMatch);
 
 /// \returns true if \p Class is ref-countable, false if not, std::nullopt if
 /// inconclusive.
-std::optional<bool> isRefCountable(const clang::CXXRecordDecl* Class);
+std::optional<bool> isRefCountable(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is checked-pointer compatible, false if not,
+/// std::nullopt if inconclusive.
+std::optional<bool> isCheckedPtrCapable(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is ref-counted, false if not.
 bool isRefCounted(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a CheckedPtr / CheckedRef, false if not.
+bool isCheckedPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is ref-countable AND not ref-counted, false if
+/// not, std::nullopt if inconclusive.
+std::optional<bool> isUncounted(const clang::QualType T);
 
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
@@ -50,12 +63,15 @@ std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncountedPtr(const clang::Type* T);
 
+/// \returns true if Name is a RefPtr, Ref, or its variant, false if not.
+bool isRefType(const std::string &Name);
+
 /// \returns true if \p F creates ref-countable object from uncounted parameter,
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
 
-/// \returns true if \p F returns a ref-counted object, false if not.
-bool isReturnValueRefCounted(const clang::FunctionDecl *F);
+/// \returns true if \p T is RefPtr, Ref, or its variant, false if not.
+bool isRefType(const clang::QualType T);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfRefCounted(const clang::CXXMethodDecl* Method);

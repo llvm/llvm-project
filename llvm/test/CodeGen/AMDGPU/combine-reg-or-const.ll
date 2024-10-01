@@ -5,12 +5,12 @@
 define protected amdgpu_kernel void @_Z11test_kernelPii(ptr addrspace(1) nocapture %Ad.coerce, i32 %s) local_unnamed_addr #5 {
 ; CHECK-LABEL: _Z11test_kernelPii:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x2
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 3
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
-; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[6:7], 0x0
 ; CHECK-NEXT:    s_and_b32 s4, s0, 0xffff
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mul_i32 s6, s4, 0xaaab

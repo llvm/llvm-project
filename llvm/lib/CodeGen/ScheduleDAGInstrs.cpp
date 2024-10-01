@@ -282,7 +282,7 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       } else {
         Dep.setLatency(0);
       }
-      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOpIdx, Dep);
+      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOpIdx, Dep, &SchedModel);
       UseSU->addPred(Dep);
     }
   }
@@ -323,7 +323,8 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
           Dep.setLatency(
               SchedModel.computeOutputLatency(MI, OperIdx, DefInstr));
         }
-        ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep);
+        ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep,
+                                 &SchedModel);
         DefSU->addPred(Dep);
       }
     }
@@ -453,7 +454,8 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
         SDep Dep(SU, SDep::Data, Reg);
         Dep.setLatency(SchedModel.computeOperandLatency(MI, OperIdx, Use,
                                                         I->OperandIndex));
-        ST.adjustSchedDependency(SU, OperIdx, UseSU, I->OperandIndex, Dep);
+        ST.adjustSchedDependency(SU, OperIdx, UseSU, I->OperandIndex, Dep,
+                                 &SchedModel);
         UseSU->addPred(Dep);
       }
 
@@ -619,7 +621,8 @@ void ScheduleDAGInstrs::initSUnits() {
   }
 }
 
-class ScheduleDAGInstrs::Value2SUsMap : public MapVector<ValueType, SUList> {
+class ScheduleDAGInstrs::Value2SUsMap
+    : public SmallMapVector<ValueType, SUList, 4> {
   /// Current total number of SUs in map.
   unsigned NumNodes = 0;
 
@@ -654,7 +657,7 @@ public:
 
   /// Clears map from all contents.
   void clear() {
-    MapVector<ValueType, SUList>::clear();
+    SmallMapVector<ValueType, SUList, 4>::clear();
     NumNodes = 0;
   }
 
@@ -1204,7 +1207,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
     oss << "<exit>";
   else
     SU->getInstr()->print(oss, /*IsStandalone=*/true);
-  return oss.str();
+  return s;
 }
 
 /// Return the basic block label. It is not necessarilly unique because a block

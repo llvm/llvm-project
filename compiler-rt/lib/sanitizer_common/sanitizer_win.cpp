@@ -276,8 +276,8 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name) {
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
     char mem_type[30];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", GetLastError());
   }
   return p;
@@ -308,8 +308,8 @@ void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size, const char *name) {
       MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
     char mem_type[30];
-    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
-                      fixed_addr);
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address %p",
+                      (void *)fixed_addr);
     return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate");
   }
   return p;
@@ -384,9 +384,8 @@ bool DontDumpShadowMemory(uptr addr, uptr length) {
 }
 
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
-                      uptr min_shadow_base_alignment,
-                      UNUSED uptr &high_mem_end) {
-  const uptr granularity = GetMmapGranularity();
+                      uptr min_shadow_base_alignment, UNUSED uptr &high_mem_end,
+                      uptr granularity) {
   const uptr alignment =
       Max<uptr>(granularity << shadow_scale, 1ULL << min_shadow_base_alignment);
   const uptr left_padding =
@@ -874,24 +873,18 @@ uptr GetTlsSize() {
   return 0;
 }
 
-void InitTlsSize() {
-}
-
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size) {
-#if SANITIZER_GO
-  *stk_addr = 0;
-  *stk_size = 0;
-  *tls_addr = 0;
-  *tls_size = 0;
-#else
-  uptr stack_top, stack_bottom;
-  GetThreadStackTopAndBottom(main, &stack_top, &stack_bottom);
-  *stk_addr = stack_bottom;
-  *stk_size = stack_top - stack_bottom;
-  *tls_addr = 0;
-  *tls_size = 0;
-#endif
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end) {
+#  if SANITIZER_GO
+  *stk_begin = 0;
+  *stk_end = 0;
+  *tls_begin = 0;
+  *tls_end = 0;
+#  else
+  GetThreadStackTopAndBottom(main, stk_end, stk_begin);
+  *tls_begin = 0;
+  *tls_end = 0;
+#  endif
 }
 
 void ReportFile::Write(const char *buffer, uptr length) {
@@ -993,8 +986,13 @@ void SignalContext::InitPcSpBp() {
   sp = (uptr)context_record->Rsp;
 #    endif
 #  else
+#    if SANITIZER_ARM
+  bp = (uptr)context_record->R11;
+  sp = (uptr)context_record->Sp;
+#    else
   bp = (uptr)context_record->Ebp;
   sp = (uptr)context_record->Esp;
+#    endif
 #  endif
 }
 

@@ -22,9 +22,9 @@
   ; ModuleID = 'tmp.ll'
   source_filename = "tmp.ll"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-  
+
   %struct.a = type { i32 }
-  
+
   ; Function Attrs: nounwind ssp
   define i32 @bar(ptr nocapture %b, i32 %shoes) !dbg !4 {
   entry:
@@ -32,33 +32,33 @@
     tail call void @llvm.dbg.value(metadata i32 %shoes, metadata !9, metadata !DIExpression()), !dbg !16
     %tmp1 = getelementptr inbounds %struct.a, ptr %b, i64 0, i32 0, !dbg !17
     br label %bb3
-  
+
   bb1:                                              ; preds = %bb2
     tail call void @llvm.dbg.value(metadata i32 %shoes, metadata !9, metadata !DIExpression()), !dbg !16
     %add = add nsw i32 %tmp2, 1, !dbg !18
     br label %exit
-  
+
   bb2:                                              ; preds = %bb3
     tail call void @llvm.dbg.value(metadata i32 %tmp2, metadata !14, metadata !DIExpression()), !dbg !17
     %call = tail call i32 (...) @foo(i32 %tmp2), !dbg !19
     br label %bb1
-  
+
   bb3:                                              ; preds = %entry
     %tmp2 = load i32, ptr %tmp1, align 4, !dbg !17
     br label %bb2
-  
+
   exit:                                             ; preds = %bb1
     ret i32 %shoes, !dbg !18
   }
-  
+
   declare i32 @foo(...)
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 2.9 (trunk 122997)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
   !1 = !DIFile(filename: "bar.c", directory: "/private/tmp")
   !2 = !{}
@@ -91,7 +91,7 @@ stack:
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-  
+
     %4:gr64= COPY $rsi
     %2:gr64 = COPY $rdi
     DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %2, %stack.0, debug-location !17
