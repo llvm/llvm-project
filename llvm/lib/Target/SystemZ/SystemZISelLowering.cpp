@@ -9855,7 +9855,7 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
   bool IsInternal = false;
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    if (CalleeFn = dyn_cast<Function>(G->getGlobal()))
+    if ((CalleeFn = dyn_cast<Function>(G->getGlobal())))
       IsInternal = isFullyInternal(CalleeFn);
   if (!verifyNarrowIntegerArgs(Outs, IsInternal)) {
     errs() << "ERROR: Missing extension attribute of passed "
