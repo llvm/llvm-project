@@ -13,6 +13,7 @@
 #include "polly/CodeGen/Utils.h"
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/ScopInfo.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -29,7 +30,7 @@ using namespace llvm;
 // The issue with llvm::SplitEdge is that it does not always create the middle
 // block, but reuses Prev/Succ if it can. We always want a new middle block.
 static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
-                             const char *Suffix, DominatorTree *DT,
+                             const char *Suffix, DomTreeUpdater *DTU,
                              LoopInfo *LI, RegionInfo *RI) {
   assert(Prev && Succ);
 
@@ -48,7 +49,7 @@ static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
   // either modify llvm::SplitCriticalEdge to allow skipping the critical edge
   // check; or Copy&Pase it here.
   BasicBlock *MiddleBlock = SplitBlockPredecessors(
-      Succ, ArrayRef<BasicBlock *>(Prev), Suffix, DT, LI);
+      Succ, ArrayRef<BasicBlock *>(Prev), Suffix, DTU, LI);
 
   if (RI) {
     Region *PrevRegion = RI->getRegionFor(Prev);
@@ -96,8 +97,9 @@ polly::executeScopConditionally(Scop &S, Value *RTC, DominatorTree &DT,
   BasicBlock *EnteringBB = S.getEnteringBlock();
   BasicBlock *EntryBB = S.getEntry();
   assert(EnteringBB && "Must be a simple region");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   BasicBlock *SplitBlock =
-      splitEdge(EnteringBB, EntryBB, ".split_new_and_old", &DT, &LI, &RI);
+      splitEdge(EnteringBB, EntryBB, ".split_new_and_old", &DTU, &LI, &RI);
   SplitBlock->setName("polly.split_new_and_old");
 
   // If EntryBB is the exit block of the region that includes Prev, exclude
@@ -117,7 +119,7 @@ polly::executeScopConditionally(Scop &S, Value *RTC, DominatorTree &DT,
   BasicBlock *ExitBB = S.getExit();
   assert(ExitingBB && "Must be a simple region");
   BasicBlock *MergeBlock =
-      splitEdge(ExitingBB, ExitBB, ".merge_new_and_old", &DT, &LI, &RI);
+      splitEdge(ExitingBB, ExitBB, ".merge_new_and_old", &DTU, &LI, &RI);
   MergeBlock->setName("polly.merge_new_and_old");
 
   // Exclude the join block from the region.
@@ -197,7 +199,7 @@ polly::executeScopConditionally(Scop &S, Value *RTC, DominatorTree &DT,
   //
 
   // Split the edge between SplitBlock and EntryBB, to avoid a critical edge.
-  splitEdge(SplitBlock, EntryBB, ".pre_entry_bb", &DT, &LI, &RI);
+  splitEdge(SplitBlock, EntryBB, ".pre_entry_bb", &DTU, &LI, &RI);
 
   //      \   /                    //
   //    EnteringBB                 //

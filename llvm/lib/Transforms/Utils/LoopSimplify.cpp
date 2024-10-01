@@ -48,6 +48,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -135,8 +136,9 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
 
   // Split out the loop pre-header.
   BasicBlock *PreheaderBB;
-  PreheaderBB = SplitBlockPredecessors(Header, OutsideBlocks, ".preheader", DT,
-                                       LI, MSSAU, PreserveLCSSA);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  PreheaderBB = SplitBlockPredecessors(Header, OutsideBlocks, ".preheader",
+                                       &DTU, LI, MSSAU, PreserveLCSSA);
   if (!PreheaderBB)
     return nullptr;
 
@@ -267,8 +269,9 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   if (SE)
     SE->forgetLoop(L);
 
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   BasicBlock *NewBB = SplitBlockPredecessors(Header, OuterLoopPreds, ".outer",
-                                             DT, LI, MSSAU, PreserveLCSSA);
+                                             &DTU, LI, MSSAU, PreserveLCSSA);
 
   // Make sure that NewBB is put someplace intelligent, which doesn't mess up
   // code layout too horribly.

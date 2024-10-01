@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -305,7 +306,8 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
         Preds.push_back(Pred);
     }
 
-    BB = SplitBlockPredecessors(BB, Preds, "endcf.split", DT, LI, nullptr,
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    BB = SplitBlockPredecessors(BB, Preds, "endcf.split", &DTU, LI, nullptr,
                                 false);
   }
 

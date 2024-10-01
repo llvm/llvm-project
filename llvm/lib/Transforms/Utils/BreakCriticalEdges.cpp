@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -293,8 +294,10 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
         if (!LoopPreds.empty()) {
           assert(!DestBB->isEHPad() && "We don't split edges to EH pads!");
-          BasicBlock *NewExitBB = SplitBlockPredecessors(
-              DestBB, LoopPreds, "split", DT, LI, MSSAU, Options.PreserveLCSSA);
+          DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+          BasicBlock *NewExitBB =
+              SplitBlockPredecessors(DestBB, LoopPreds, "split", &DTU, LI,
+                                     MSSAU, Options.PreserveLCSSA);
           if (Options.PreserveLCSSA)
             createPHIsForSplitLoopExit(LoopPreds, NewExitBB, DestBB);
         }
