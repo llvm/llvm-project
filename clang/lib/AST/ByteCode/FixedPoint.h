@@ -68,6 +68,7 @@ public:
                          bool *Overflow) const {
     return FixedPoint(V.convert(Sem, Overflow));
   }
+  llvm::FixedPointSemantics getSemantics() const { return V.getSemantics(); }
 
   llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
     return V.convertToFloat(*Sem);
@@ -120,6 +121,22 @@ public:
     *R = FixedPoint(A.V.div(B.V, &Overflow));
     return Overflow;
   }
+
+  static bool shiftLeft(const FixedPoint A, const FixedPoint B, unsigned OpBits,
+                        FixedPoint *R) {
+    unsigned Amt = B.V.getValue().getLimitedValue(OpBits);
+    bool Overflow;
+    *R = FixedPoint(A.V.shl(Amt, &Overflow));
+    return Overflow;
+  }
+  static bool shiftRight(const FixedPoint A, const FixedPoint B,
+                         unsigned OpBits, FixedPoint *R) {
+    unsigned Amt = B.V.getValue().getLimitedValue(OpBits);
+    bool Overflow;
+    *R = FixedPoint(A.V.shr(Amt, &Overflow));
+    return Overflow;
+  }
+
   static bool rem(const FixedPoint A, const FixedPoint B, unsigned Bits,
                   FixedPoint *R) {
     llvm_unreachable("Rem doesn't exist for fixed point values");
