@@ -1054,10 +1054,10 @@ static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
   // Collect dims for the padded shape.
   SmallVector<int64_t> paddedShape;
   for (int64_t dimIdx = 0; dimIdx < inputRank; ++dimIdx) {
-    int64_t inputDimSize = inputType.getDimSize(dimIdx);
     // 1. Non-tiled outer dims.
     // These dims should be 1 and we simply preserve them.
     if (!tileAndPosMapping.count(dimIdx)) {
+      int64_t inputDimSize = inputType.getDimSize(dimIdx);
       assert(inputDimSize == 1 &&
              "with all outer dims == 1, this non-tiled input dim should be 1!");
       paddedShape.push_back(inputDimSize);
@@ -1213,16 +1213,6 @@ LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
              llvm::interleaveComma(perm, DBGS() << "perm: "); DBGSNL(););
 
   applyPermutationToVector<OpFoldResult>(transShapeForEmpty, perm);
-
-  // If there's a tile with a dynamic size, retrieve its size. ATM only 1
-  // dynamic tile is allowed.
-  Value dynDimSize;
-  for (auto tile : packOp.getMixedTiles()) {
-    if (tile.is<Value>()) {
-      assert(!dynDimSize && "Only one scalable size is supported ATM.");
-      dynDimSize = cast<Value>(tile);
-    }
-  }
 
   Value empty =
       rewriter.create<tensor::EmptyOp>(loc, transShapeForEmpty, elemType);

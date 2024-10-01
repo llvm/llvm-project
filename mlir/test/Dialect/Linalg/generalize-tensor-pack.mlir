@@ -76,9 +76,9 @@ func.func @simple_pad_and_pack_scalable(%input: tensor<5x1xf32>, %output: tensor
 // CHECK-SAME:      %[[SRC:[a-zA-Z0-9]+]]: tensor<5x1xf32>,
 // CHECK-SAME:      %[[DEST:[a-zA-Z0-9]+]]: tensor<1x1x?x2xf32>,
 // CHECK-SAME:      %[[PAD_VAL:[a-zA-Z0-9]+]]: f32) -> tensor<1x1x?x2xf32> {
-// CHECK:           %[[C2:.+]] = arith.constant 2 : index
-// CHECK:           %[[C8:.+]] = arith.constant 8 : index
-// CHECK:           %[[VS:.+]] = vector.vscale
+// CHECK-DAG:       %[[C2:.+]] = arith.constant 2 : index
+// CHECK-DAG:       %[[C8:.+]] = arith.constant 8 : index
+// CHECK-DAG:       %[[VS:.+]] = vector.vscale
 // CHECK:           %[[C8_VS:.+]] = arith.muli %[[VS]], %[[C8]] : index
 // CHECK:           %[[PAD_HIGH:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[C8_VS]]]
 // CHECK:           %[[PAD:.+]] = tensor.pad %[[SRC]] low[0, 0] high{{\[}}%[[PAD_HIGH]], 1] {

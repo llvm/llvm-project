@@ -51,9 +51,8 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType resType, Value source,
     AffineExpr d0, d1;
     bindDims(b.getContext(), d0, d1);
     OpFoldResult sourceDim = tensor::getMixedSize(b, loc, source, idx);
-    Value outDim = isDimDynamic
-                       ? dynOutDims[outDimIdx++]
-                       : b.create<arith::ConstantIndexOp>(loc, val).getResult();
+    OpFoldResult outDim = isDimDynamic ? OpFoldResult(dynOutDims[outDimIdx++])
+                                       : OpFoldResult(b.getIndexAttr(val));
 
     high[idx] = affine::makeComposedFoldedAffineApply(b, loc, d0 - d1,
                                                       {outDim, sourceDim});
