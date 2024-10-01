@@ -1619,8 +1619,7 @@ class CatchReturnInst
 
 public:
   static CatchReturnInst *create(CatchPadInst *CatchPad, BasicBlock *BB,
-                                 BBIterator WhereIt, BasicBlock *WhereBB,
-                                 Context &Ctx);
+                                 InsertPosition Pos, Context &Ctx);
   CatchPadInst *getCatchPad() const;
   void setCatchPad(CatchPadInst *CatchPad);
   BasicBlock *getSuccessor() const;
@@ -1643,8 +1642,8 @@ class CleanupReturnInst
 
 public:
   static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
-                                   BasicBlock *UnwindBB, BBIterator WhereIt,
-                                   BasicBlock *WhereBB, Context &Ctx);
+                                   BasicBlock *UnwindBB, InsertPosition Pos,
+                                   Context &Ctx);
   bool hasUnwindDest() const {
     return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
   }
@@ -1678,13 +1677,7 @@ class GetElementPtrInst final
 
 public:
   static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &NameStr = "");
-  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                       Instruction *InsertBefore, Context &Ctx,
-                       const Twine &NameStr = "");
-  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       InsertPosition Pos, Context &Ctx,
                        const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
@@ -1756,9 +1749,8 @@ public:
                                   CSI, Ctx) {}
 
   static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
-                                 unsigned NumHandlers, BBIterator WhereIt,
-                                 BasicBlock *WhereBB, Context &Ctx,
-                                 const Twine &Name = "");
+                                 unsigned NumHandlers, InsertPosition Pos,
+                                 Context &Ctx, const Twine &Name = "");
 
   Value *getParentPad() const;
   void setParentPad(Value *ParentPad);
@@ -1844,8 +1836,7 @@ public:
   ResumeInst(llvm::ResumeInst *CSI, Context &Ctx)
       : SingleLLVMInstructionImpl(ClassID::Resume, Opcode::Resume, CSI, Ctx) {}
 
-  static ResumeInst *create(Value *Exn, BBIterator WhereIt, BasicBlock *WhereBB,
-                            Context &Ctx);
+  static ResumeInst *create(Value *Exn, InsertPosition Pos, Context &Ctx);
   Value *getValue() const;
   unsigned getNumSuccessors() const {
     return cast<llvm::ResumeInst>(Val)->getNumSuccessors();
@@ -1864,8 +1855,8 @@ public:
       llvm::SwitchInst::DefaultPseudoIndex;
 
   static SwitchInst *create(Value *V, BasicBlock *Dest, unsigned NumCases,
-                            BasicBlock::iterator WhereIt, BasicBlock *WhereBB,
-                            Context &Ctx, const Twine &Name = "");
+                            InsertPosition Pos, Context &Ctx,
+                            const Twine &Name = "");
 
   Value *getCondition() const;
   void setCondition(Value *V);
@@ -1955,25 +1946,10 @@ class UnaryOperator : public UnaryInstruction {
                          Ctx) {}
   friend Context; // for constructor.
 public:
-  static Value *create(Instruction::Opcode Op, Value *OpV, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Instruction::Opcode Op, Value *OpV,
-                       Instruction *InsertBefore, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Instruction::Opcode Op, Value *OpV,
-                       BasicBlock *InsertAtEnd, Context &Ctx,
-                       const Twine &Name = "");
+  static Value *create(Instruction::Opcode Op, Value *OpV, InsertPosition Pos,
+                       Context &Ctx, const Twine &Name = "");
   static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                      Value *CopyFrom, BBIterator WhereIt,
-                                      BasicBlock *WhereBB, Context &Ctx,
-                                      const Twine &Name = "");
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                      Value *CopyFrom,
-                                      Instruction *InsertBefore, Context &Ctx,
-                                      const Twine &Name = "");
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                      Value *CopyFrom, BasicBlock *InsertAtEnd,
+                                      Value *CopyFrom, InsertPosition Pos,
                                       Context &Ctx, const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
@@ -2034,26 +2010,12 @@ protected:
 
 public:
   static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                       Instruction *InsertBefore, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       InsertPosition Pos, Context &Ctx,
                        const Twine &Name = "");
 
   static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
                                       Value *RHS, Value *CopyFrom,
-                                      BBIterator WhereIt, BasicBlock *WhereBB,
-                                      Context &Ctx, const Twine &Name = "");
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                      Value *RHS, Value *CopyFrom,
-                                      Instruction *InsertBefore, Context &Ctx,
-                                      const Twine &Name = "");
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                      Value *RHS, Value *CopyFrom,
-                                      BasicBlock *InsertAtEnd, Context &Ctx,
+                                      InsertPosition Pos, Context &Ctx,
                                       const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
@@ -2133,18 +2095,7 @@ public:
 
   static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
                                MaybeAlign Align, AtomicOrdering Ordering,
-                               BBIterator WhereIt, BasicBlock *WhereBB,
-                               Context &Ctx,
-                               SyncScope::ID SSID = SyncScope::System,
-                               const Twine &Name = "");
-  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
-                               MaybeAlign Align, AtomicOrdering Ordering,
-                               Instruction *InsertBefore, Context &Ctx,
-                               SyncScope::ID SSID = SyncScope::System,
-                               const Twine &Name = "");
-  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
-                               MaybeAlign Align, AtomicOrdering Ordering,
-                               BasicBlock *InsertAtEnd, Context &Ctx,
+                               InsertPosition Pos, Context &Ctx,
                                SyncScope::ID SSID = SyncScope::System,
                                const Twine &Name = "");
 };
