@@ -1224,7 +1224,7 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
 }
 
-static TargetInfo *getTargetInfo() {
+TargetInfo *elf::getX86_64TargetInfo() {
   if (ctx.arg.zRetpolineplt) {
     if (ctx.arg.zNow) {
       static RetpolineZNow t;
@@ -1242,5 +1242,3 @@ static TargetInfo *getTargetInfo() {
   static X86_64 t;
   return &t;
 }
-
-TargetInfo *elf::getX86_64TargetInfo() { return getTargetInfo(); }
