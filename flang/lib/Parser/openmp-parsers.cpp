@@ -23,6 +23,55 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+template <typename Separator>
+struct MapModifiers {
+  constexpr MapModifiers(Separator sep,
+                         std::optional<MessageFixedText> msg = std::nullopt)
+      : sep_(sep), msg_(msg) {}
+  constexpr MapModifiers(const MapModifiers &) = default;
+  constexpr MapModifiers(MapModifiers &&) = default;
+
+  using resultType =
+      std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
+                 std::optional<OmpMapClause::Type>>;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto pmod{Parser<OmpMapClause::TypeModifier>{}};
+    auto ptype{Parser<OmpMapClause::Type>{}};
+    auto startLoc{state.GetLocation()};
+
+    auto &&[mods, type] = [&]() -> resultType {
+      // The 'maybe' will return optional<optional<list>>, and the outer
+      // optional will never be nullopt.
+      if (auto mods{
+              *maybe(attempt(nonemptySeparated(pmod, sep_))).Parse(state)}) {
+        // mods = optional<list>, and the list is nonempty.
+        return attempt(sep_).Parse(state)
+                   ? resultType(mods, *maybe(attempt(ptype)).Parse(state))
+                   : resultType(mods, std::nullopt);
+      }
+      return {std::nullopt, *maybe(attempt(ptype)).Parse(state)};
+    }();
+    auto endLoc{state.GetLocation()};
+
+    // The above always "succeeds", i.e. even if the input is junk, it will
+    // return a tuple with two nullopts. If any of the components is not a
+    // nullopt, expect a ":".
+    if ((mods.has_value() || type.has_value()) &&
+        !attempt(":"_tok).Parse(state)) {
+      return std::nullopt;
+    }
+    if (msg_) {
+      state.Say(CharBlock{startLoc, endLoc}, *msg_);
+    }
+    return resultType(mods, type);
+  }
+
+private:
+  const Separator sep_;
+  std::optional<MessageFixedText> msg_;
+};
+
 // OpenMP Clauses
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(
@@ -38,20 +87,41 @@ TYPE_PARSER(construct<OmpProcBindClause>(
     "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
     "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
 
-// 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
-//          map-type -> TO | FROM | TOFROM | ALLOC | RELEASE | DELETE
-TYPE_PARSER(construct<OmpMapType>(
-    maybe("ALWAYS" >> construct<OmpMapType::Always>() / maybe(","_tok)),
-    ("TO"_id >> pure(OmpMapType::Type::To) ||
-        "FROM" >> pure(OmpMapType::Type::From) ||
-        "TOFROM" >> pure(OmpMapType::Type::Tofrom) ||
-        "ALLOC" >> pure(OmpMapType::Type::Alloc) ||
-        "RELEASE" >> pure(OmpMapType::Type::Release) ||
-        "DELETE" >> pure(OmpMapType::Type::Delete)) /
-        ":"))
+// 2.15.5.1 map ->
+//    MAP ([ [map-type-modifiers [,] ] map-type : ] variable-name-list)
+// map-type-modifiers -> map-type-modifier [,] [...]
+// map-type-modifier -> ALWAYS | CLOSE | OMPX_HOLD | PRESENT
+// map-type -> ALLOC | DELETE | FROM | RELEASE | TO | TOFROM
+TYPE_PARSER(construct<OmpMapClause::TypeModifier>(
+    "ALWAYS" >> pure(OmpMapClause::TypeModifier::Always) ||
+    "CLOSE" >> pure(OmpMapClause::TypeModifier::Close) ||
+    "OMPX_HOLD" >> pure(OmpMapClause::TypeModifier::OmpxHold) ||
+    "PRESENT" >> pure(OmpMapClause::TypeModifier::Present)))
 
-TYPE_PARSER(construct<OmpMapClause>(
-    maybe(Parser<OmpMapType>{}), Parser<OmpObjectList>{}))
+TYPE_PARSER(construct<OmpMapClause::Type>(
+    "ALLOC" >> pure(OmpMapClause::Type::Alloc) ||
+    "DELETE" >> pure(OmpMapClause::Type::Delete) ||
+    "FROM" >> pure(OmpMapClause::Type::From) ||
+    "RELEASE" >> pure(OmpMapClause::Type::Release) ||
+    "TO"_id >> pure(OmpMapClause::Type::To) ||
+    "TOFROM" >> pure(OmpMapClause::Type::Tofrom)))
+
+static inline OmpMapClause
+makeMapClause(std::tuple<std::optional<std::list<OmpMapClause::TypeModifier>>,
+                         std::optional<OmpMapClause::Type>> &&mod,
+             OmpObjectList &&obj) {
+  return OmpMapClause{std::move(std::get<0>(mod)), std::move(std::get<1>(mod)),
+                      std::move(obj)};
+}
+
+TYPE_PARSER(construct<OmpMapClause>(applyFunction(
+    makeMapClause,
+    (MapModifiers(","_tok) ||
+     MapModifiers(
+         maybe(","_tok),
+         "the specification of modifiers without comma separators for the "
+         "'MAP' clause has been deprecated"_port_en_US)),
+    Parser<OmpObjectList>{})))
 
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
