@@ -79,8 +79,8 @@ __chpe_metadata:
         .word __arm64x_extra_rfe_table_size
         .rva __os_arm64x_dispatch_fptr
         .rva __hybrid_auxiliary_iat_copy
-        .word 0 // __hybrid_auxiliary_delayload_iat
-        .word 0 // __hybrid_auxiliary_delayload_iat_copy
+        .rva __hybrid_auxiliary_delayload_iat
+        .rva __hybrid_auxiliary_delayload_iat_copy
         .word 0 // __hybrid_image_info_bitfield
         .rva __os_arm64x_helper3
         .rva __os_arm64x_helper4

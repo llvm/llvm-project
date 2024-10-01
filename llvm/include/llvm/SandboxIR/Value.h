@@ -18,7 +18,7 @@ namespace llvm::sandboxir {
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #define DEF_USER(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 class Context;
 class FuncletPadInst;
 class Type;
@@ -63,7 +63,7 @@ public:
 #define DEF_USER(ID, CLASS) ID,
 #define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   };
 
 protected:
@@ -81,7 +81,7 @@ protected:
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return #ID;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
     }
     llvm_unreachable("Unimplemented ID");
   }

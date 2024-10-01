@@ -10,6 +10,7 @@
 #include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
 
@@ -466,45 +467,5 @@ GlobalValue *DSOLocalEquivalent::getGlobalValue() const {
   return cast<GlobalValue>(
       Ctx.getValue(cast<llvm::DSOLocalEquivalent>(Val)->getGlobalValue()));
 }
-
-FunctionType *Function::getFunctionType() const {
-  return cast<FunctionType>(
-      Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
-}
-
-#ifndef NDEBUG
-void Function::dumpNameAndArgs(raw_ostream &OS) const {
-  auto *F = cast<llvm::Function>(Val);
-  OS << *F->getReturnType() << " @" << F->getName() << "(";
-  interleave(
-      F->args(),
-      [this, &OS](const llvm::Argument &LLVMArg) {
-        auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&LLVMArg));
-        if (SBArg == nullptr)
-          OS << "NULL";
-        else
-          SBArg->printAsOperand(OS);
-      },
-      [&] { OS << ", "; });
-  OS << ")";
-}
-
-void Function::dumpOS(raw_ostream &OS) const {
-  dumpNameAndArgs(OS);
-  OS << " {\n";
-  auto *LLVMF = cast<llvm::Function>(Val);
-  interleave(
-      *LLVMF,
-      [this, &OS](const llvm::BasicBlock &LLVMBB) {
-        auto *BB = cast_or_null<BasicBlock>(Ctx.getValue(&LLVMBB));
-        if (BB == nullptr)
-          OS << "NULL";
-        else
-          OS << *BB;
-      },
-      [&OS] { OS << "\n"; });
-  OS << "}\n";
-}
-#endif // NDEBUG
 
 } // namespace llvm::sandboxir
