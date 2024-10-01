@@ -1180,6 +1180,45 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Idx = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Index = Idx.extractBitsAsZExtValue(8, 0);
+
+  if (Index < BitWidth)
+    Val.clearHighBits(BitWidth - Index);
+
+  pushInteger(S, Val, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countLeadingZeros(), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
+  pushInteger(S, Val.countTrailingZeros(), Call->getType());
+  return true;
+}
+
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
@@ -1770,6 +1809,26 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case clang::X86::BI__builtin_ia32_bextri_u32:
   case clang::X86::BI__builtin_ia32_bextri_u64:
     if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bzhi_si:
+  case clang::X86::BI__builtin_ia32_bzhi_di:
+    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_lzcnt_u16:
+  case clang::X86::BI__builtin_ia32_lzcnt_u32:
+  case clang::X86::BI__builtin_ia32_lzcnt_u64:
+    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_tzcnt_u16:
+  case clang::X86::BI__builtin_ia32_tzcnt_u32:
+  case clang::X86::BI__builtin_ia32_tzcnt_u64:
+    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
       return false;
     break;
 
