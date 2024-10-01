@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; NODVGPR: ; NumSgprs: 4
-; DVGPR: ; NumSgprs: 34
+; NODVGPR: ; TotalNumSgprs: 4
+; DVGPR: ; TotalNumSgprs: 34
 ; CHECK: ; NumVgprs: 2
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---

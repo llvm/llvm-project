@@ -4454,7 +4454,9 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
   auto *VecTy = getWidenedType(ScalarTy, NumScalars);
   int NumParts = TTI->getNumberOfParts(VecTy);
   if (NumParts == 0 || NumParts >= NumScalars ||
-      VecTy->getNumElements() % NumParts != 0)
+      VecTy->getNumElements() % NumParts != 0 ||
+      !hasFullVectorsOrPowerOf2(*TTI, VecTy->getElementType(),
+                                VecTy->getNumElements() / NumParts))
     NumParts = 1;
   SmallVector<int> ExtractMask;
   SmallVector<int> Mask;
@@ -5468,7 +5470,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         }
       return I1 < I2;
     };
-    DenseMap<unsigned, unsigned> PhiToId;
+    SmallDenseMap<unsigned, unsigned, 16> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
     OrdersType ResOrder(TE.Scalars.size());
@@ -6462,7 +6464,9 @@ static void gatherPossiblyVectorizableLoads(
     auto *VecTy = getWidenedType(ScalarTy, NumScalars);
     NumParts = TTI.getNumberOfParts(VecTy);
     if (NumParts == 0 || NumParts >= NumScalars ||
-        VecTy->getNumElements() % NumParts != 0)
+        VecTy->getNumElements() % NumParts != 0 ||
+        !hasFullVectorsOrPowerOf2(TTI, VecTy->getElementType(),
+                                  VecTy->getNumElements() / NumParts))
       NumParts = 1;
   }
   unsigned VF = PowerOf2Ceil(NumScalars / NumParts);
@@ -9365,10 +9369,18 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       bool NeedShuffle =
           count(VL, *It) > 1 &&
           (VL.front() != *It || !all_of(VL.drop_front(), IsaPred<UndefValue>));
-      if (!NeedShuffle)
+      if (!NeedShuffle) {
+        if (isa<FixedVectorType>(ScalarTy)) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          return TTI.getShuffleCost(
+              TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+              std::distance(VL.begin(), It) * getNumElements(ScalarTy),
+              cast<FixedVectorType>(ScalarTy));
+        }
         return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                       CostKind, std::distance(VL.begin(), It),
                                       PoisonValue::get(VecTy), *It);
+      }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
       transform(VL, ShuffleMask.begin(), [](Value *V) {
@@ -9961,7 +9973,9 @@ public:
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
     if (NumParts == 0 || NumParts >= Mask.size() ||
-        MaskVecTy->getNumElements() % NumParts != 0)
+        MaskVecTy->getNumElements() % NumParts != 0 ||
+        !hasFullVectorsOrPowerOf2(TTI, MaskVecTy->getElementType(),
+                                  MaskVecTy->getNumElements() / NumParts))
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -9979,7 +9993,9 @@ public:
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
     if (NumParts == 0 || NumParts >= Mask.size() ||
-        MaskVecTy->getNumElements() % NumParts != 0)
+        MaskVecTy->getNumElements() % NumParts != 0 ||
+        !hasFullVectorsOrPowerOf2(TTI, MaskVecTy->getElementType(),
+                                  MaskVecTy->getNumElements() / NumParts))
       NumParts = 1;
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It =
@@ -10303,7 +10319,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   if (E->CombinedOp != TreeEntry::NotCombinedOp)
     ShuffleOrOp = E->CombinedOp;
-  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
+  SmallSetVector<Value *, 16> UniqueValues(VL.begin(), VL.end());
   const unsigned Sz = UniqueValues.size();
   SmallBitVector UsedScalars(Sz, false);
   for (unsigned I = 0; I < Sz; ++I) {
@@ -13633,7 +13649,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
   unsigned NumParts = TTI->getNumberOfParts(VecTy);
   if (NumParts == 0 || NumParts >= GatheredScalars.size() ||
-      VecTy->getNumElements() % NumParts != 0)
+      VecTy->getNumElements() % NumParts != 0 ||
+      !hasFullVectorsOrPowerOf2(*TTI, VecTy->getElementType(),
+                                VecTy->getNumElements() / NumParts))
     NumParts = 1;
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
@@ -17995,7 +18013,7 @@ class HorizontalReduction {
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
   /// Maps reduced value to the corresponding reduction operation.
-  DenseMap<Value *, SmallVector<Instruction *>> ReducedValsToOps;
+  SmallDenseMap<Value *, SmallVector<Instruction *>, 16> ReducedValsToOps;
   WeakTrackingVH ReductionRoot;
   /// The type of reduction operation.
   RecurKind RdxKind;
@@ -18364,7 +18382,9 @@ public:
     // instruction op id and/or alternate op id, plus do extra analysis for
     // loads (grouping them by the distabce between pointers) and cmp
     // instructions (grouping them by the predicate).
-    MapVector<size_t, MapVector<size_t, MapVector<Value *, unsigned>>>
+    SmallMapVector<
+        size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
+        8>
         PossibleReducedVals;
     initReductionOps(Root);
     DenseMap<Value *, SmallVector<LoadInst *>> LoadsMap;

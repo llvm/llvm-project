@@ -394,10 +394,10 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
   return Reg;
 }
 
-void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
-  switch (RegNo) {
+  switch (Reg.id()) {
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
@@ -407,21 +407,21 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  unsigned PrintReg = getRegForPrinting(RegNo, MRI);
+  unsigned PrintReg = getRegForPrinting(Reg, MRI);
   O << getRegisterName(PrintReg);
 
-  if (PrintReg != RegNo)
-    O << " /*" << getRegisterName(RegNo) << "*/";
+  if (PrintReg != Reg.id())
+    O << " /*" << getRegisterName(Reg) << "*/";
 }
 
-void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, unsigned Opc,
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
                                         unsigned OpNo, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 
   if (MIA)
-    RegNo = getRegFromMIA(RegNo, OpNo, MII.get(Opc), MRI,
-                          *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
-  printRegOperand(RegNo, O, MRI);
+    Reg = getRegFromMIA(Reg, OpNo, MII.get(Opc), MRI,
+                        *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
+  printRegOperand(Reg, O, MRI);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,

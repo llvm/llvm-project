@@ -3050,8 +3050,6 @@ def note_is_deducible_constraint_evaluated_to_false : Note<
   "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
   "virtual function cannot have a requires clause">;
-def err_trailing_requires_clause_on_deduction_guide : Error<
-  "deduction guide cannot have a requires clause">;
 def err_constrained_non_templated_function
     : Error<"non-templated function cannot have a requires clause">;
 def err_non_temp_spec_requires_clause : Error<
@@ -12403,6 +12401,9 @@ def err_hlsl_operator_unsupported : Error<
 
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
+def err_hlsl_vector_compound_assignment_truncation : Error<
+  "left hand operand of type %0 to compound assignment cannot be truncated "
+  "when used with right hand operand of type %1">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;

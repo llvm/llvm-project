@@ -17,6 +17,12 @@
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("bmi2")))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 /// Copies the unsigned 32-bit integer \a __X and zeroes the upper bits
 ///    starting at bit number \a __Y.
 ///
@@ -37,7 +43,7 @@
 /// \param __Y
 ///    The lower 8 bits specify the bit number of the lowest bit to zero.
 /// \returns The partially zeroed 32-bit value.
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 _bzhi_u32(unsigned int __X, unsigned int __Y)
 {
   return __builtin_ia32_bzhi_si(__X, __Y);
@@ -153,7 +159,7 @@ _mulx_u32(unsigned int __X, unsigned int __Y, unsigned int *__P)
 /// \param __Y
 ///    The lower 8 bits specify the bit number of the lowest bit to zero.
 /// \returns The partially zeroed 64-bit value.
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 _bzhi_u64(unsigned long long __X, unsigned long long __Y)
 {
   return __builtin_ia32_bzhi_di(__X, __Y);
@@ -251,5 +257,6 @@ _mulx_u64 (unsigned long long __X, unsigned long long __Y,
 #endif /* __x86_64__  */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* __BMI2INTRIN_H */
