@@ -419,7 +419,8 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
         unsigned Opc = II->getOpcode();
         if (CoreOp->isDef() && Opc != AMDGPU::V_STORE_IDX)
           continue;
-        if (CoreOp->isUse() && Opc != AMDGPU::V_LOAD_IDX)
+        if (CoreOp->isUse() &&
+            !(CoreOp->isInternalRead() && Opc == AMDGPU::V_LOAD_IDX))
           continue;
         MachineOperand &DataOp = II->getOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));

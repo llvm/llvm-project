@@ -910,7 +910,28 @@ body:             |
       S_WAIT_LOADCNT 0
       S_WAIT_DSCNT 0
       S_WAIT_KMCNT 0
-      renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, undef $vgpr0, 0, implicit $exec
+      renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, internal $vgpr0, 0, implicit $exec
       V_STORE_IDX internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
+    }
+...
+
+# We should not get the reg allocation erroneously using $vgpr1 twice. But it is still lowerable.
+# ASM-LABEL: {{^}}internal_reg_reused
+# DIS-LABEL: <internal_reg_reused>:
+---
+name:            internal_reg_reused
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr2_sgpr3, $idx1, $vgpr1
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_frames 4
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: global_store_b32 v1, v0, s[2:3] offset:28 scale_offset
+    BUNDLE implicit-def dead $vgpr1, implicit $idx1, implicit $exec, implicit killed $vgpr1, implicit renamable $sgpr2_sgpr3 {
+      $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+      GLOBAL_STORE_DWORD_SADDR $vgpr1, internal $vgpr1, renamable $sgpr2_sgpr3, 28, 2048, implicit $exec :: (store (s32), addrspace 1)
     }
 ...
