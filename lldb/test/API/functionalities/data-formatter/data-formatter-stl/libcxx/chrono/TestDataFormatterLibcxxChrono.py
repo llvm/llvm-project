@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 class LibcxxChronoDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @skipIf(oslist=["linux"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         isNotWindowsHost = lldbplatformutil.getHostPlatform() != "windows"
