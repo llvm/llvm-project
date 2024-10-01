@@ -24,7 +24,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
