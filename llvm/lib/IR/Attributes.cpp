@@ -976,7 +976,7 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     if (ItBegin1 == ItEnd1)
       Attr0 = *ItBegin0++;
     else if (ItBegin0 == ItEnd0)
-      Attr1 = *ItBegin1++;
+      Attr0 = *ItBegin1++;
     else {
       int Cmp = ItBegin0->cmpKind(*ItBegin1);
       if (Cmp == 0) {
@@ -987,30 +987,19 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
       else
         Attr0 = *ItBegin1++;
     }
-    assert(Attr0.isValid() ||
-           Attr1.isValid() && "Iteration should never yield no valid attrs");
-
-    // If we don't have both attributes, then fail if the attribute is
-    // must-preserve or drop it otherwise.
-    if (!Attr0.isValid() || !Attr1.isValid()) {
-      // Non-enum assume we must preserve.
-      if (!Attr0.hasKindAsEnum())
-        return std::nullopt;
-      Attribute::AttrKind Kind = Attr0.getKindAsEnum();
-      if (Attribute::intersectMustPreserve(Kind))
-        return std::nullopt;
-      continue;
-    }
-    // We have both attributes so apply the intersection rule.
+    assert(Attr0.isValid() && "Iteration should always yield a valid attr");
 
     auto IntersectEq = [&]() {
+      if (!Attr1.isValid())
+        return false;
       if (Attr0 != Attr1)
         return false;
       Intersected.addAttribute(Attr0);
       return true;
     };
 
-    // Non-enum assume we must preserve
+    // Non-enum assume we must preserve. Handle early so we can unconditionally
+    // use Kind below.
     if (!Attr0.hasKindAsEnum()) {
       if (!IntersectEq())
         return std::nullopt;
@@ -1018,6 +1007,15 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
     }
 
     Attribute::AttrKind Kind = Attr0.getKindAsEnum();
+    // If we don't have both attributes, then fail if the attribute is
+    // must-preserve or drop it otherwise.
+    if (!Attr1.isValid()) {
+      if (Attribute::intersectMustPreserve(Kind))
+        return std::nullopt;
+      continue;
+    }
+
+    // We have both attributes so apply the intersection rule.
     assert(Attr1.hasKindAsEnum() && Kind == Attr1.getKindAsEnum() &&
            "Iterator picked up two different attributes in the same iteration");
 
