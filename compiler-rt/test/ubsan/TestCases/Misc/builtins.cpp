@@ -6,25 +6,25 @@
 // RUN: not %run %t.abort 2>&1 | FileCheck %s --check-prefix=ABORT
 
 void check_ctz(int n) {
-  // ABORT: builtins.cpp:[[@LINE+2]]:17: runtime error: passing zero to ctz(), which is not a valid argument
-  // RECOVER: builtins.cpp:[[@LINE+1]]:17: runtime error: passing zero to ctz(), which is not a valid argument
+  // ABORT: builtins.cpp:[[@LINE+2]]:17: runtime error: passing zero to __builtin_ctz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:17: runtime error: passing zero to __builtin_ctz(), which is not a valid argument
   __builtin_ctz(n);
 
-  // RECOVER: builtins.cpp:[[@LINE+1]]:18: runtime error: passing zero to ctz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:18: runtime error: passing zero to __builtin_ctz(), which is not a valid argument
   __builtin_ctzl(n);
 
-  // RECOVER: builtins.cpp:[[@LINE+1]]:19: runtime error: passing zero to ctz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:19: runtime error: passing zero to __builtin_ctz(), which is not a valid argument
   __builtin_ctzll(n);
 }
 
 void check_clz(int n) {
-  // RECOVER: builtins.cpp:[[@LINE+1]]:17: runtime error: passing zero to clz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:17: runtime error: passing zero to __builtin_clz(), which is not a valid argument
   __builtin_clz(n);
 
-  // RECOVER: builtins.cpp:[[@LINE+1]]:18: runtime error: passing zero to clz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:18: runtime error: passing zero to __builtin_clz(), which is not a valid argument
   __builtin_clzl(n);
 
-  // RECOVER: builtins.cpp:[[@LINE+1]]:19: runtime error: passing zero to clz(), which is not a valid argument
+  // RECOVER: builtins.cpp:[[@LINE+1]]:19: runtime error: passing zero to __builtin_clz(), which is not a valid argument
   __builtin_clzll(n);
 }
 
