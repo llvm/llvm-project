@@ -61,8 +61,6 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.FunctionSections = true;
   c.Options.DataSections = true;
 
-  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
-
   // Check if basic block sections must be used.
   // Allowed values for --lto-basic-block-sections are "all", "labels",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
@@ -71,7 +69,8 @@ static lto::Config createConfig(Ctx &ctx) {
     if (ctx.arg.ltoBasicBlockSections == "all") {
       c.Options.BBSections = BasicBlockSection::All;
     } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-      c.Options.BBSections = BasicBlockSection::Labels;
+      c.Options.BBAddrMap = true;
+      c.Options.BBSections = BasicBlockSection::None;
     } else if (ctx.arg.ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
@@ -86,6 +85,8 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::List;
     }
   }
+
+  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
 
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
