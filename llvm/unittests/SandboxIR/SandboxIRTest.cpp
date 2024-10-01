@@ -5843,7 +5843,7 @@ define void @foo(i32 %i0, i32 %i1) {
   }
   auto *NewCmp =
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
-                                 F.getArg(1), &*BB->begin(), Ctx, "NewCmp");
+                                 F.getArg(1), BB->begin(), Ctx, "NewCmp");
   EXPECT_EQ(NewCmp, &*BB->begin());
   EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
   EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
@@ -5907,7 +5907,7 @@ bb1:
 
   // create with default flags
   auto *NewFCmp = sandboxir::CmpInst::create(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), &*It1, Ctx, "NewFCmp");
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp");
   EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
   EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
   EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
@@ -5918,7 +5918,7 @@ bb1:
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
   auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, &*It1, Ctx,
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
       "NewFCmpFlags");
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
