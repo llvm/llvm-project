@@ -9,8 +9,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptionTable.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

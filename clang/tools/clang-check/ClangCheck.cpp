@@ -29,7 +29,7 @@
 #include "clang/Tooling/Syntax/Tree.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"

@@ -1,4 +1,4 @@
-//===--- OptParser.td - Common Option Parsing Interfaces ------------------===//
+//===--- OptionParser.td - Common Option Parsing Interfaces ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPTION_OPTPARSER_TD
-#define LLVM_OPTION_OPTPARSER_TD
+#ifndef LLVM_OPTION_OPTIONPARSER_TD
+#define LLVM_OPTION_OPTIONPARSER_TD
 
 // Define the kinds of options.
 
@@ -274,4 +274,4 @@ class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 def INPUT : Option<[], "<input>", KIND_INPUT>;
 def UNKNOWN : Option<[], "<unknown>", KIND_UNKNOWN>;
 
-#endif // LLVM_OPTION_OPTPARSER_TD
+#endif // LLVM_OPTION_OPTIONPARSER_TD

@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 // For LLVM-specific options, we prefer a two-dash prefix, but accept one for
 // compatibility with llvm-mc. For clear separation from ML.EXE compatible

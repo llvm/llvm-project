@@ -8,8 +8,8 @@
 
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptionTable.h"
 #include <cassert>
 
 using namespace clang::driver;

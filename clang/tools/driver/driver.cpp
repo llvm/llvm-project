@@ -31,8 +31,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"

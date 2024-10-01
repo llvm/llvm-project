@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 class F<string letter, string help> : Flag<["-", "--"], letter>, HelpText<help>;
 class FF<string name, string help> : Flag<["-", "--"], name>, HelpText<help>;

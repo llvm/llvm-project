@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 // All the switches can be preceded by either '/' or '-'.
 

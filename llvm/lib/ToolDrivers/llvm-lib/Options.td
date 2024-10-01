@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 // lib.exe accepts options starting with either a dash or a slash.
 

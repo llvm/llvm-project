@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 def help : Flag<["--"], "help">;
 def h : Flag<["-"], "h">, Alias<help>;

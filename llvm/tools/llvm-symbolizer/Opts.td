@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 multiclass B<string name, string help1, string help2> {
   def NAME: Flag<["--"], name>, HelpText<help1>;

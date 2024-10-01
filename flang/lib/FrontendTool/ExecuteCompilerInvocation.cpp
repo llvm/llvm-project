@@ -24,8 +24,8 @@
 #include "mlir/Pass/PassManager.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Driver/Options.h"
-#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 

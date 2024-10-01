@@ -1,4 +1,4 @@
-//===- OptSpecifier.h - Option Specifiers -----------------------*- C++ -*-===//
+//===- OptionSpecifier.h - Option Specifiers --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPTION_OPTSPECIFIER_H
-#define LLVM_OPTION_OPTSPECIFIER_H
+#ifndef LLVM_OPTION_OPTIONSPECIFIER_H
+#define LLVM_OPTION_OPTIONSPECIFIER_H
 
 namespace llvm {
 namespace opt {
@@ -35,4 +35,4 @@ public:
 } // end namespace opt
 } // end namespace llvm
 
-#endif // LLVM_OPTION_OPTSPECIFIER_H
+#endif // LLVM_OPTION_OPTIONSPECIFIER_H

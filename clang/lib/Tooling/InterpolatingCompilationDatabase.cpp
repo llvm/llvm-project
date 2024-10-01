@@ -51,7 +51,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"

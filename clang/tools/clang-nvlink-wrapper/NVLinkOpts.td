@@ -1,7 +1,7 @@
 // We try to create options similar to lld's.  That way, options passed to clang
 // -Xoffload-linker can be the same whether offloading to nvptx or amdgpu.
 
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 def WrapperOnlyOption : OptionFlag;
 

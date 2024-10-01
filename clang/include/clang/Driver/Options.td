@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // Include the common option parsing interfaces.
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 // When generating documentation, we expect there to be a GlobalDocumentation
 // def containing the program name that we are generating documentation for.

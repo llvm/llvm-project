@@ -11,8 +11,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Option/OptSpecifier.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionSpecifier.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 

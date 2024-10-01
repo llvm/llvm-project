@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 def unsupported : OptionGroup<"unsupported">;
 def manifest : Separate<["/", "-"], "manifest">, HelpText<"Used to specify each manifest that need to be processed">, MetaVarName<"manifest">;

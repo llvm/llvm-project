@@ -1,5 +1,5 @@
 // Include the common option parsing interfaces.
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 class FF<string name, string help>: Flag<["-", "--"], name>, HelpText<help>;
 multiclass JS<string name, string help, string var = ""> {

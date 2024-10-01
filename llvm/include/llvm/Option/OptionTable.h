@@ -1,4 +1,4 @@
-//===- OptTable.h - Option Table --------------------------------*- C++ -*-===//
+//===- OptionTable.h - Option Table -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPTION_OPTTABLE_H
-#define LLVM_OPTION_OPTTABLE_H
+#ifndef LLVM_OPTION_OPTIONTABLE_H
+#define LLVM_OPTION_OPTIONTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptionSpecifier.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <string>
@@ -145,9 +145,7 @@ public:
   }
 
   /// Get the kind of the given option.
-  unsigned getOptionKind(OptSpecifier id) const {
-    return getInfo(id).Kind;
-  }
+  unsigned getOptionKind(OptSpecifier id) const { return getInfo(id).Kind; }
 
   /// Get the group id for the given option.
   unsigned getOptionGroupID(OptSpecifier id) const {
@@ -329,7 +327,8 @@ public:
   /// \param OS - The stream to write the help text to.
   /// \param Usage - USAGE: Usage
   /// \param Title - OVERVIEW: Title
-  /// \param VisibilityMask - Only in                 Visibility VisibilityMask,clude options with any of these
+  /// \param VisibilityMask - Only in                 Visibility
+  /// VisibilityMask,clude options with any of these
   ///                         visibility flags set.
   /// \param ShowHidden     - If true, display options marked as HelpHidden
   /// \param ShowAllAliases - If true, display all options including aliases
@@ -409,4 +408,4 @@ protected:
       OPT_, PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,   \
       VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES)
 
-#endif // LLVM_OPTION_OPTTABLE_H
+#endif // LLVM_OPTION_OPTIONTABLE_H

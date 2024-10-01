@@ -1,4 +1,4 @@
-//===- OptEmitter.cpp - Helper for emitting options -------------*- C++ -*-===//
+//===- OptionEmitter.cpp - Helper for emitting options ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OptEmitter.h"
+#include "OptionEmitter.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/OptionStrCmp.h"
 #include "llvm/TableGen/Error.h"

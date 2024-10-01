@@ -13,7 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
 

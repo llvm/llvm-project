@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target machine">;
 def m_long : JoinedOrSeparate<["--"], "machine">, Alias<m>;

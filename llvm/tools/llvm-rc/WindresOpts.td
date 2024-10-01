@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 multiclass Long<string name, string help> {
   def NAME: Separate<["--"], name>;

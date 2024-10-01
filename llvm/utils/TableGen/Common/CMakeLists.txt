@@ -29,7 +29,7 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_
   CodeGenTarget.cpp
   DAGISelMatcher.cpp
   InfoByHwMode.cpp
-  OptEmitter.cpp
+  OptionEmitter.cpp
   PredicateExpander.cpp
   SubtargetFeatureInfo.cpp
   Types.cpp

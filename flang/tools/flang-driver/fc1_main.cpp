@@ -23,7 +23,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionTable.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <cstdio>

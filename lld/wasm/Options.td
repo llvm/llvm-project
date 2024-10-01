@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 // Convenience classes for long options which only accept two dashes. For lld
 // specific or newer long options, we prefer two dashes to avoid collision with

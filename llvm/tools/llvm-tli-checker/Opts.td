@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 class F<string name, string help> : Flag<["--"], name>, HelpText<help>;
 multiclass Eq<string name, string metavar, string help> {

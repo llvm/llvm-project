@@ -15,7 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptionSpecifier.h"
 
 namespace llvm {
 

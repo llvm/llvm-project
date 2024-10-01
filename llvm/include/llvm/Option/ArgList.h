@@ -11,14 +11,14 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Option/Arg.h"
-#include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptionSpecifier.h"
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>

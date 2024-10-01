@@ -1,4 +1,4 @@
-include "llvm/Option/OptParser.td"
+include "llvm/Option/OptionParser.td"
 
 def WrapperOnlyOption : OptionFlag;
 def DeviceOnlyOption : OptionFlag;

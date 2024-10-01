@@ -672,7 +672,7 @@ variable for the option value:
 
 Next, declare the command line interface of the option in the tablegen file
 ``clang/include/clang/Driver/Options.td``. This is done by instantiating the
-``Option`` class (defined in ``llvm/include/llvm/Option/OptParser.td``). The
+``Option`` class (defined in ``llvm/include/llvm/Option/OptionParser.td``). The
 instance is typically created through one of the helper classes that encode the
 acceptable ways to specify the option value on the command line:
 
