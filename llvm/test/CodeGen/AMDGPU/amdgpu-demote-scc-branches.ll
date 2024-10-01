@@ -359,7 +359,6 @@ if.end:
 
 declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8) nocapture writeonly, i32, i32, i32 immarg)
 declare void @llvm.amdgcn.s.waitcnt(i32)
-declare i32 @llvm.amdgcn.workitem.id.x()
 
 !0 = !{!"branch_weights", i32 1000, i32 1000}
 !1 = !{!"branch_weights", i32 2000, i32 1}
