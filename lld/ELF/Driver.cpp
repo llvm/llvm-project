@@ -2875,7 +2875,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   for (StringRef name : ctx.arg.undefined)
     ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
-  parseFiles(files, armCmseImpLib);
+  parseFiles(ctx, files);
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
@@ -3052,7 +3052,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     excludeLibs(ctx, args);
 
   // Record [__acle_se_<sym>, <sym>] pairs for later processing.
-  processArmCmseSymbols();
+  processArmCmseSymbols(ctx);
 
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(ctx, wrapped);
@@ -3144,7 +3144,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  splitSections<ELFT>();
+  splitSections<ELFT>(ctx);
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
@@ -3160,17 +3160,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  createSyntheticSections<ELFT>();
+  createSyntheticSections<ELFT>(ctx);
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
   if (!ctx.arg.relocatable)
-    combineEhSections();
+    combineEhSections(ctx);
 
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)
-    mergeRISCVAttributesSections();
+    mergeRISCVAttributesSections(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Assign sections");
