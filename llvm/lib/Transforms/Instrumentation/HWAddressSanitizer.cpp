@@ -1937,14 +1937,18 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
     SetFixed(0);
-  } else if (ClMappingOffset.getNumOccurrences() > 0) {
-    SetFixed(ClMappingOffset);
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;
-  } else if (ClMappingOffsetDynamic.getNumOccurrences() > 0) {
-    Kind = ClMappingOffsetDynamic;
   }
 
   WithFrameRecord = optOr(ClFrameRecords, WithFrameRecord);
+
+  // Apply the last of ClMappingOffset and ClMappingOffsetDynamic.
+  Kind = optOr(ClMappingOffsetDynamic, Kind);
+  if (ClMappingOffset.getNumOccurrences() > 0 &&
+      !(ClMappingOffsetDynamic.getNumOccurrences() > 0 &&
+        ClMappingOffsetDynamic.getPosition() > ClMappingOffset.getPosition())) {
+    SetFixed(ClMappingOffset);
+  }
 }
