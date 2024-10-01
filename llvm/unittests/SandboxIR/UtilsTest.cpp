@@ -138,8 +138,12 @@ define void @foo(ptr %ptr) {
 
 TEST_F(UtilsTest, GetNumBits) {
   parseIR(C, R"IR(
-define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3, ptr %arg4) {
 bb0:
+  %ld0 = load float, ptr %arg4
+  %ld1 = load double, ptr %arg4
+  %ld2 = load i8, ptr %arg4
+  %ld3 = load i64, ptr %arg4
   ret void
 }
 )IR");
@@ -155,17 +159,17 @@ bb0:
   EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
   EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
 
+  auto &BB = *F->begin();
+  auto It = BB.begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L2 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L3 = cast<sandboxir::LoadInst>(&*It++);
   // getNumBits for scalars via the Instruction overload
-  EXPECT_EQ(
-      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(0))),
-      DL.getTypeSizeInBits(Type::getFloatTy(C)));
-  EXPECT_EQ(
-      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(1))),
-      DL.getTypeSizeInBits(Type::getDoubleTy(C)));
-  EXPECT_EQ(
-      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(2))),
-      8u);
-  EXPECT_EQ(
-      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(3))),
-      64u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L0),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L1),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L2), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(L3), 64u);
 }
