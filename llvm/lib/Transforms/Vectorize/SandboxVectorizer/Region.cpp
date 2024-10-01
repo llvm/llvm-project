@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Region.h"
 
 namespace llvm::sandboxir {
 
