@@ -2367,6 +2367,14 @@ static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static inline bool CastFixedPointFloating(InterpState &S, CodePtr OpPC,
+                                          const llvm::fltSemantics *Sem) {
+  const auto &Fixed = S.Stk.pop<FixedPoint>();
+
+  S.Stk.push<Floating>(Fixed.toFloat(Sem));
+  return true;
+}
+
 static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
   const auto &Ptr = S.Stk.peek<Pointer>();
 

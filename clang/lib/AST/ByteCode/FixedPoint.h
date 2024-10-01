@@ -52,6 +52,10 @@ public:
   unsigned bitWidth() const { return V.getWidth(); }
   bool isSigned() const { return V.isSigned(); }
 
+  llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
+    return V.convertToFloat(*Sem);
+  }
+
   ComparisonCategoryResult compare(const FixedPoint &Other) const {
     if (Other.V == V)
       return ComparisonCategoryResult::Equal;
