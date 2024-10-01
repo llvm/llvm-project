@@ -105,28 +105,38 @@ void f3(char *S, FILE *F) {
 
 typedef int time_t;
 char *ctime(const time_t *Timer);
-struct tm *localtime(const struct tm *tm);
+struct tm *localtime(const time_t *Timer);
 
 void f4(const time_t *Timer) {
   ctime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
-  // no-warning WITHOUT-ANNEX-K
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:116: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:116: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:116: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
   localtime(Timer);
-  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
-  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:3: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
-  // no-warning WITHOUT-ANNEX-K
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:116: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:116: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:116: warning: function 'localtime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
-  char *(*F1)(const struct tm *) = &ctime;
+  char *(*F1)(const time_t *) = ctime;
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:36: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
+
+  char *(*F2)(const time_t *) = &ctime;
   // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:37: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
   // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:37: warning: function 'ctime' is not bounds-checking and non-reentrant; 'ctime_s' should be used instead
-  // no-warning WITHOUT-ANNEX-K
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:37: warning: function 'ctime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 
-  struct tm *(*F2)(const struct tm *) = &localtime;
+  struct tm *(*F4)(const time_t *) = localtime;
+  // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:36: warning: function 'localtime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
+
+  struct tm *(*F5)(const time_t *) = &localtime;
   // CHECK-MESSAGES-WITH-ANNEX-K:           :[[@LINE-1]]:37: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
   // CHECK-MESSAGES-WITH-ANNEX-K-CERT-ONLY: :[[@LINE-2]]:37: warning: function 'localtime' is not bounds-checking and non-reentrant; 'localtime_s' should be used instead
-  // no-warning WITHOUT-ANNEX-K
+  // CHECK-MESSAGES-WITHOUT-ANNEX-K:        :[[@LINE-3]]:37: warning: function 'localtime' is not bounds-checking and non-reentrant; 'strftime' should be used instead
 }
 
 #define BUFSIZ 128
@@ -171,8 +181,8 @@ void fOptional() {
 typedef int errno_t;
 typedef size_t rsize_t;
 errno_t asctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t ctime_s(char *S, rsize_t Maxsize, const struct tm *TimePtr);
-errno_t localtime_s(struct tm *TimePtr, time_t *Timep);
+errno_t ctime_s(char *S, rsize_t Maxsize, const time_t *Timep);
+errno_t localtime_s(const time_t *Timep, rsize_t Maxsize, const struct tm *TimePtr);
 errno_t strcat_s(char *S1, rsize_t S1Max, const char *S2);
 
 void fUsingSafeFunctions(const struct tm *Time, FILE *F, time_t *Timep) {
@@ -187,7 +197,7 @@ void fUsingSafeFunctions(const struct tm *Time, FILE *F, time_t *Timep) {
     return;
 
   // no-warning, safe function from annex K is used
-  if (localtime_s(Time, Timep) != 0)
+  if (localtime_s(Timep, BUFSIZ, Time) != 0)
     return;
 
   // no-warning, safe function from annex K is used
