@@ -1053,13 +1053,7 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
-    bool Enable = !ParamName.consume_front("no-");
-
-    if (ParamName == "load-store")
-      Result.ScalarizeLoadStore = Enable;
-    else if (ParamName == "variable-insert-extract")
-      Result.ScalarizeVariableInsertExtract = Enable;
-    else if (Enable && ParamName.consume_front("min-bits=")) {
+    if (ParamName.consume_front("min-bits=")) {
       if (ParamName.getAsInteger(0, Result.ScalarizeMinBits)) {
         return make_error<StringError>(
             formatv("invalid argument to Scalarizer pass min-bits "
@@ -1068,6 +1062,16 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
                 .str(),
             inconvertibleErrorCode());
       }
+
+      continue;
+    }
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "load-store")
+      Result.ScalarizeLoadStore = Enable;
+    else if (ParamName == "variable-insert-extract")
+      Result.ScalarizeVariableInsertExtract = Enable;
+    else
     } else {
       return make_error<StringError>(
           formatv("invalid Scalarizer pass parameter '{0}' ", ParamName).str(),
