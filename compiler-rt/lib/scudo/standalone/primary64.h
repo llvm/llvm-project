@@ -1326,7 +1326,9 @@ private:
       // This is the case that we didn't hit the release threshold but it has
       // been past a certain period of time. Thus we try to release some pages
       // and if it does release some additional pages, it's hint that we are
-      // able to lower the threshold.
+      // able to lower the threshold. Currently, this case happens when the
+      // `RegionPushedBytesDelta` is over half of the `TryReleaseThreshold`. As
+      // a result, we shrink the threshold to half accordingly.
       // TODO(chiahungduan): Apply the same adjustment strategy to small blocks.
       if (!isSmallBlock(BlockSize)) {
         if (RegionPushedBytesDelta < Region->ReleaseInfo.TryReleaseThreshold &&
@@ -1346,8 +1348,15 @@ private:
     Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
 
     if (Region->ReleaseInfo.PendingPushedBytesDelta > 0) {
+      // Instead of increasing the threshold by the amount of
+      // `PendingPushedBytesDelta`, we only increase half of the amount so that
+      // it won't be a leap (which may lead to higher memory pressure) because
+      // of certain memory usage bursts which don't happen frequently.
       Region->ReleaseInfo.TryReleaseThreshold +=
           Region->ReleaseInfo.PendingPushedBytesDelta / 2;
+      // This is another guard of avoiding the growth of threshold indefinitely.
+      // Note that we may consider to make this configurable if we have a better
+      // way to model this.
       Region->ReleaseInfo.TryReleaseThreshold = Min<uptr>(
           Region->ReleaseInfo.TryReleaseThreshold, (1UL << GroupSizeLog) / 2);
       Region->ReleaseInfo.PendingPushedBytesDelta = 0;
@@ -1404,18 +1413,23 @@ private:
       const u64 DiffSinceLastReleaseNs =
           CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
 
-      // When `RegionPushedBytesDelta` is more than half of
-      // `TryReleaseThreshold` and the last release was happened 2 release
-      // interval before, we will try to see if there's any chance to release
-      // some memory. If we do release additional memory, we decrease the
-      // threshold accodingly.
+      // At here, `RegionPushedBytesDelta` is more than half of
+      // `TryReleaseThreshold`. If the last release was happened 2 release
+      // interval before, we will still try to see if there's any chance to
+      // release some memory even it doesn't exceed the threshold.
       if (RegionPushedBytesDelta < Region->ReleaseInfo.TryReleaseThreshold) {
+        // We want the threshold to have a shorter response time to the variant
+        // memory usage patterns. By having some experiments (which was done
+        // with 1, 2, 4, 8 intervals), `2` strikes the better balance between
+        // the memory usage and number of page release attempts.
         if (DiffSinceLastReleaseNs < 2 * IntervalNs)
           return false;
       } else if (DiffSinceLastReleaseNs < IntervalNs) {
+        // In this case, we are over the threshold but we just did some page
+        // release in the same release interval. This is a hint that we may want
+        // a higher threshold so that we can release more memory at once.
         // `TryReleaseThreshold` will be adjusted according to how many bytes
-        // are not released due to the interval constraint and it will be
-        // increased so that we are likely to release them all in the next time.
+        // are not released, i.e., the `PendingPushedBytesdelta` here.
         // TODO(chiahungduan): Apply the same adjustment strategy to small
         // blocks.
         if (!isSmallBlock(BlockSize))
