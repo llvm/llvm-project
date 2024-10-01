@@ -63,6 +63,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
+  case Intrinsic::dx_radians:
     return true;
   }
   return false;
@@ -405,6 +406,16 @@ static Value *expandStepIntrinsic(CallInst *Orig) {
   return Builder.CreateSelect(Cond, Zero, One);
 }
 
+static Value *expandRadiansIntrinsic(CallInst *Orig) {
+  Value *X = Orig->getOperand(0);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+
+  Value *OneEightyOverPi = ConstantFP::get(Ty, llvm::numbers::pi / 180.0);
+  return Builder.CreateFMul(X, OneEightyOverPi);
+}
+
+
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
                                     Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
@@ -521,6 +532,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_step:
     Result = expandStepIntrinsic(Orig);
+  case Intrinsic::dx_radians:
+    Result = expandRadiansIntrinsic(Orig);
+    break;
   }
   if (Result) {
     Orig->replaceAllUsesWith(Result);
