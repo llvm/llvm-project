@@ -247,21 +247,22 @@ TargetInfo *getTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
-void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
-                      int64_t min, uint64_t max);
+void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
+                      const Twine &v, int64_t min, uint64_t max);
 void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                       const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
-    reportRangeError(loc, rel, Twine(v), llvm::minIntN(n), llvm::maxIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), llvm::minIntN(n),
+                     llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
 inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
   if ((v >> n) != 0)
-    reportRangeError(loc, rel, Twine(v), 0, llvm::maxUIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
@@ -270,7 +271,7 @@ inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
   if (v != (uint64_t)llvm::SignExtend64(v, n) && (v >> n) != 0)
-    reportRangeError(loc, rel, Twine((int64_t)v), llvm::minIntN(n),
+    reportRangeError(ctx, loc, rel, Twine((int64_t)v), llvm::minIntN(n),
                      llvm::maxUIntN(n));
 }
 
