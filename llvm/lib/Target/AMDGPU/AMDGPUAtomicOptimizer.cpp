@@ -785,52 +785,60 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   //     llvm_unreachable("Atomic Optimzer is disabled for None strategy");
   //   }
   // } else {
-  //   switch (Op) {
-  //   default:
-  //     llvm_unreachable("Unhandled atomic op");
+  // **************************************** Implement from here
+    switch (Op) {
+    // TODO --implement for floats
+    default:
+      llvm_unreachable("Unhandled atomic op");
 
-  //   case AtomicRMWInst::Add:
-  //   case AtomicRMWInst::Sub: {
-  //     // The new value we will be contributing to the atomic operation is the
-  //     // old value times the number of active lanes.
-  //     Value *const Ctpop = B.CreateIntCast(
-  //         B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
-  //     NewV = buildMul(B, V, Ctpop);
-  //     break;
-  //   }
-  //   case AtomicRMWInst::FAdd:
-  //   case AtomicRMWInst::FSub: {
-  //     Value *const Ctpop = B.CreateIntCast(
-  //         B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
-  //     Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
-  //     NewV = B.CreateFMul(V, CtpopFP);
-  //     break;
-  //   }
-  //   case AtomicRMWInst::And:
-  //   case AtomicRMWInst::Or:
-  //   case AtomicRMWInst::Max:
-  //   case AtomicRMWInst::Min:
-  //   case AtomicRMWInst::UMax:
-  //   case AtomicRMWInst::UMin:
-  //   case AtomicRMWInst::FMin:
-  //   case AtomicRMWInst::FMax:
-  //     // These operations with a uniform value are idempotent: doing the atomic
-  //     // operation multiple times has the same effect as doing it once.
-  //     NewV = V;
-  //     break;
+    case AtomicRMWInst::Add:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_add, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::Sub:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_sub, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::FAdd:
+    case AtomicRMWInst::FSub: {
+      Value *const Ctpop = B.CreateIntCast(
+          B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Int32Ty, false);
+      Value *const CtpopFP = B.CreateUIToFP(Ctpop, Ty);
+      NewV = B.CreateFMul(V, CtpopFP);
+      break;
+    }
+    case AtomicRMWInst::And:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_and, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::Or:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_or, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::Xor:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_xor, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::Max:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_max, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::Min:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_min, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::UMax:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::UMin:
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
+      break;
+    case AtomicRMWInst::FMin:
+    case AtomicRMWInst::FMax:
+      // These operations with a uniform value are idempotent: doing the atomic
+      // operation multiple times has the same effect as doing it once.
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
+      break;
 
-  //   case AtomicRMWInst::Xor:
-  //     // The new value we will be contributing to the atomic operation is the
-  //     // old value times the parity of the number of active lanes.
-  //     Value *const Ctpop = B.CreateIntCast(
-  //         B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
-  //     NewV = buildMul(B, V, B.CreateAnd(Ctpop, 1));
-  //     break;
-  //   }
-  // }
+    }
+  
+  // **************************************** Implement to here
 
 
-  NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
+  // NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wave_reduce_umin, Int32Ty, {V, B.getInt32(0)});
   // We only want a single lane to enter our new control flow, and we do this
   // by checking if there are any active lanes below us. Only one lane will
   // have 0 active lanes below us, so that will be the only one to progress.
