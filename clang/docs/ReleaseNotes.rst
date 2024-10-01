@@ -460,6 +460,7 @@ Bug Fixes to C++ Support
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
+- Fixed warnings for extra parentheses in fold expressions by eliminating them in single expansion cases. (#GH101863)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

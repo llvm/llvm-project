@@ -15598,6 +15598,9 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
     return getDerived().RebuildEmptyCXXFoldExpr(E->getEllipsisLoc(),
                                                 E->getOperator());
 
+  if (*NumExpansions == 1)
+    Result = Result.get()->IgnoreParens();
+
   return Result;
 }
 

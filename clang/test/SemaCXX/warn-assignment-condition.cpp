@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wparentheses -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wparentheses -std=c++2a -verify %s
 
 struct A {
   int foo();
@@ -142,5 +142,15 @@ void f(T t) {
 struct S { int g; };
 void test() {
   f(S()); // expected-note {{in instantiation}}
+}
+}
+
+namespace GH101863 {
+void foo(auto... args) {
+  if (((args == 0) or ...)) {} // ok
+}
+
+void bar() {
+  foo(3);
 }
 }
