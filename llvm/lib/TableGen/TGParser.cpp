@@ -2866,11 +2866,13 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     return ListInit::get(Vals, DeducedEltTy);
   }
-  case tgtok::l_paren: {         // Value ::= '(' IDValue DagArgList ')'
+  case tgtok::l_paren: { // Value ::= '(' IDValue DagArgList ')'
+                         // Value ::= '(' '[' ValueList ']' DagArgList ')'
     Lex.Lex();   // eat the '('
     if (Lex.getCode() != tgtok::Id && Lex.getCode() != tgtok::XCast &&
-        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp) {
-      TokError("expected identifier in dag init");
+        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp &&
+        Lex.getCode() != tgtok::l_square) {
+      TokError("expected identifier or list of value types in dag init");
       return nullptr;
     }
 
