@@ -135,3 +135,37 @@ define void @foo(ptr %ptr) {
   EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE, DL));
   EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE, DL));
 }
+
+TEST_F(UtilsTest, GetNumBits) {
+  parseIR(C, R"IR(
+define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
+bb0:
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+  const DataLayout &DL = M->getDataLayout();
+  // getNumBits for scalars via the Value overload
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
+            DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
+            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
+  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
+
+  // getNumBits for scalars via the Instruction overload
+  EXPECT_EQ(
+      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(0))),
+      DL.getTypeSizeInBits(Type::getFloatTy(C)));
+  EXPECT_EQ(
+      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(1))),
+      DL.getTypeSizeInBits(Type::getDoubleTy(C)));
+  EXPECT_EQ(
+      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(2))),
+      8u);
+  EXPECT_EQ(
+      sandboxir::Utils::getNumBits(cast<sandboxir::Instruction>(F->getArg(3))),
+      64u);
+}
