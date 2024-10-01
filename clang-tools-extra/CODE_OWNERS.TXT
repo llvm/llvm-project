@@ -23,7 +23,7 @@ D: clang-tidy
 
 N: Manuel Klimek
 E: klimek@google.com
-D: clang-rename, all parts of clang-tools-extra not covered by someone else
+D: all parts of clang-tools-extra not covered by someone else
 
 N: Sam McCall
 E: sammccall@google.com

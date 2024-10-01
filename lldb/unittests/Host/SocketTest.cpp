@@ -85,6 +85,43 @@ TEST_P(SocketTest, DomainListenConnectAccept) {
   std::unique_ptr<DomainSocket> socket_b_up;
   CreateDomainConnectedSockets(Path, &socket_a_up, &socket_b_up);
 }
+
+TEST_P(SocketTest, DomainMainLoopAccept) {
+  llvm::SmallString<64> Path;
+  std::error_code EC =
+      llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
+  ASSERT_FALSE(EC);
+  llvm::sys::path::append(Path, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (Path.size() > 107u)
+    return;
+
+  auto listen_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true, /*child_process_inherit=*/false);
+  Status error = listen_socket_up->Listen(Path, 5);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_TRUE(listen_socket_up->IsValid());
+
+  MainLoop loop;
+  std::unique_ptr<Socket> accepted_socket_up;
+  auto expected_handles = listen_socket_up->Accept(
+      loop, [&accepted_socket_up, &loop](std::unique_ptr<Socket> sock_up) {
+        accepted_socket_up = std::move(sock_up);
+        loop.RequestTermination();
+      });
+  ASSERT_THAT_EXPECTED(expected_handles, llvm::Succeeded());
+
+  auto connect_socket_up = std::make_unique<DomainSocket>(
+      /*should_close=*/true, /*child_process_inherit=*/false);
+  ASSERT_THAT_ERROR(connect_socket_up->Connect(Path).ToError(),
+                    llvm::Succeeded());
+  ASSERT_TRUE(connect_socket_up->IsValid());
+
+  loop.Run();
+  ASSERT_TRUE(accepted_socket_up);
+  ASSERT_TRUE(accepted_socket_up->IsValid());
+}
 #endif
 
 TEST_P(SocketTest, TCPListen0ConnectAccept) {
@@ -109,9 +146,9 @@ TEST_P(SocketTest, TCPMainLoopAccept) {
   ASSERT_TRUE(listen_socket_up->IsValid());
 
   MainLoop loop;
-  std::unique_ptr<TCPSocket> accepted_socket_up;
+  std::unique_ptr<Socket> accepted_socket_up;
   auto expected_handles = listen_socket_up->Accept(
-      loop, [&accepted_socket_up, &loop](std::unique_ptr<TCPSocket> sock_up) {
+      loop, [&accepted_socket_up, &loop](std::unique_ptr<Socket> sock_up) {
         accepted_socket_up = std::move(sock_up);
         loop.RequestTermination();
       });

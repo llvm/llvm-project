@@ -23,6 +23,7 @@
 using llvm::Clause;
 using llvm::ClauseVal;
 using llvm::raw_ostream;
+using llvm::Record;
 using llvm::RecordKeeper;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about
@@ -49,14 +50,11 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
                           "'--directives-dialect'");
   }
 
-  const auto &directiveLanguages =
+  const auto directiveLanguages =
       recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
   assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
 
-  const auto &clauses = recordKeeper.getAllDerivedDefinitions("Clause");
-
-  for (const auto &r : clauses) {
-    Clause c{r};
+  for (const Clause c : recordKeeper.getAllDerivedDefinitions("Clause")) {
     const auto &clauseVals = c.getClauseVals();
     if (clauseVals.empty())
       continue;
@@ -66,14 +64,13 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
 
     std::vector<std::string> cvDefs;
     for (const auto &it : llvm::enumerate(clauseVals)) {
-      ClauseVal cval{it.value()};
+      const ClauseVal cval{it.value()};
       if (!cval.isUserVisible())
         continue;
 
       std::string name = cval.getFormattedName();
       std::string enumValName(name.length(), ' ');
-      std::transform(name.begin(), name.end(), enumValName.begin(),
-                     llvm::toLower);
+      llvm::transform(name, enumValName.begin(), llvm::toLower);
       enumValName[0] = llvm::toUpper(enumValName[0]);
       std::string cvDef{(enumName + llvm::Twine(name)).str()};
       os << "def " << cvDef << " : I32EnumAttrCase<\"" << enumValName << "\", "
@@ -85,11 +82,7 @@ static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
     os << "  \"Clause" << enumName << "\",\n";
     os << "  \"" << enumName << " Clause\",\n";
     os << "  [";
-    for (unsigned int i = 0; i < cvDefs.size(); i++) {
-      os << cvDefs[i];
-      if (i != cvDefs.size() - 1)
-        os << ",";
-    }
+    llvm::interleaveComma(cvDefs, os);
     os << "]> {\n";
     os << "    let cppNamespace = \"::mlir::"
        << directiveLanguages[0]->getValueAsString("cppNamespace") << "\";\n";

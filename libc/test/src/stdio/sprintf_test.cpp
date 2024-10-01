@@ -10,6 +10,7 @@
 #include "src/stdio/sprintf.h"
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/errno/libc_errno.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include <inttypes.h>
@@ -20,12 +21,6 @@
 // namespace LIBC_NAMESPACE_DECL {
 // using ::sprintf;
 // }
-
-class LlvmLibcSPrintfTest : public LIBC_NAMESPACE::testing::Test {
-protected:
-  char buff[1000];
-  int written;
-};
 
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
@@ -805,7 +800,10 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
-TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
+TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
+  char buff[128];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1169,7 +1167,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
       " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
+TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1684,7 +1685,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // The long double tests are separated so that their performance can be directly
 // measured.
-TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -2021,7 +2025,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
+TEST(LlvmLibcSPrintfTest, FloatExponentConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -2507,7 +2514,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   ASSERT_STREQ_LEN(written, buff, "+1.256e-01    001.256e+03");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   // Length Modifier Tests.
 
@@ -2628,7 +2638,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 */
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
+TEST(LlvmLibcSPrintfTest, FloatAutoConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -3136,7 +3149,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001.26e+03");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -3291,7 +3307,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 
 #if defined(LIBC_COMPILER_HAS_FIXED_POINT) &&                                  \
     !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
-TEST_F(LlvmLibcSPrintfTest, FixedConv) {
+TEST(LlvmLibcSPrintfTest, FixedConv) {
+  char buff[1000];
+  int written;
 
   // These numeric tests are potentially a little weak, but the fuzz test is
   // more thorough than my handwritten tests tend to be.
@@ -3499,6 +3517,190 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
 }
 #endif // defined(LIBC_COMPILER_HAS_FIXED_POINT) &&
        // !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
+
+#ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
+TEST(LlvmLibcSPrintfTest, StrerrorConv) {
+  char buff[1000];
+  int written;
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%m");
+  ASSERT_STREQ_LEN(written, buff, "Success");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%m");
+  ASSERT_STREQ_LEN(written, buff, "Numerical result out of range");
+
+  // Check that it correctly consumes no arguments.
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%m %d", 1);
+  ASSERT_STREQ_LEN(written, buff, "Success 1");
+
+  // Width Tests
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%10m");
+  ASSERT_STREQ_LEN(written, buff, "   Success");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%10m");
+  ASSERT_STREQ_LEN(written, buff, "Numerical result out of range");
+
+  // Precision Tests
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%.10m");
+  ASSERT_STREQ_LEN(written, buff, "Success");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%.10m");
+  ASSERT_STREQ_LEN(written, buff, "Numerical ");
+
+  // Flag Tests (Only '-' since the others only affect ints)
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%-10m");
+  ASSERT_STREQ_LEN(written, buff, "Success   ");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%-10m");
+  ASSERT_STREQ_LEN(written, buff, "Numerical result out of range");
+
+  // Alt Mode Tests
+  // Since alt mode here is effectively a completely separate conversion, it
+  // gets separate tests.
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#m");
+  ASSERT_STREQ_LEN(written, buff, "0");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  // Alt Mode Width
+
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#10m");
+  ASSERT_STREQ_LEN(written, buff, "         0");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#10m");
+  ASSERT_STREQ_LEN(written, buff, "    ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#10m");
+  ASSERT_STREQ_LEN(written, buff, "     -9999");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#3m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#3m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  // Alt Mode Precision
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.10m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.10m");
+  ASSERT_STREQ_LEN(written, buff, "-0000009999");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.3m");
+  ASSERT_STREQ_LEN(written, buff, "ERA");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.3m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  // We don't test precision (or int flags) on errno = 0 because it behaves
+  // weirdly, see the docs for more information.
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#.1m");
+  ASSERT_STREQ_LEN(written, buff, "0");
+
+  // Alt Mode Flags
+
+  // '-' flag
+  LIBC_NAMESPACE::libc_errno = 0;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-10m");
+  ASSERT_STREQ_LEN(written, buff, "0         ");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-10m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE    ");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-10m");
+  ASSERT_STREQ_LEN(written, buff, "-9999     ");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-3m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#-3m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  // '+' flag
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#+m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#+m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  // Technically 9999 could be a valid error, since the standard just says errno
+  // macros are "distinct positive values". In practice I don't expect this to
+  // come up, but I've avoided it for the other %m tests for ease of
+  // refactoring if necessary. Here it needs to be positive to test that the
+  // flags that only affect positive signed integers are properly passed along.
+  LIBC_NAMESPACE::libc_errno = 9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#+m");
+  ASSERT_STREQ_LEN(written, buff, "+9999");
+
+  // ' ' flag
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%# m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%# m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+
+  LIBC_NAMESPACE::libc_errno = 9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%# m");
+  ASSERT_STREQ_LEN(written, buff, " 9999");
+
+  // '0' flag
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#010m");
+  ASSERT_STREQ_LEN(written, buff, "    ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#010m");
+  ASSERT_STREQ_LEN(written, buff, "-000009999");
+
+  LIBC_NAMESPACE::libc_errno = ERANGE;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#03m");
+  ASSERT_STREQ_LEN(written, buff, "ERANGE");
+
+  LIBC_NAMESPACE::libc_errno = -9999;
+  written = LIBC_NAMESPACE::sprintf(buff, "%#03m");
+  ASSERT_STREQ_LEN(written, buff, "-9999");
+}
+#endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 TEST(LlvmLibcSPrintfTest, WriteIntConv) {

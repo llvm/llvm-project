@@ -68,6 +68,22 @@ def ApplyRankReducingSubviewPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDropUnitDimWithShapeCastPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.drop_unit_dims_with_shape_cast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+     Apply vector patterns to fold unit dims with vector.shape_cast Ops:
+      - DropUnitDimFromElementwiseOps
+      - DropUnitDimsFromScfForOp
+      - DropUnitDimsFromTransposeOp
+
+    Excludes patterns for vector.transfer Ops. This is complemented by
+    shape_cast folding patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.transfer_permutation_patterns",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

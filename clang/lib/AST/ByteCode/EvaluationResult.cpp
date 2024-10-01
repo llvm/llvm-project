@@ -178,8 +178,8 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
 static void collectBlocks(const Pointer &Ptr,
                           llvm::SetVector<const Block *> &Blocks) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
-    return P.isLive() && !P.isZero() && !P.isDummy() &&
-           !P.isUnknownSizeArray() && !P.isOnePastEnd() && P.isBlockPointer();
+    return P.isLive() && !P.isZero() && !P.isDummy() && P.isDereferencable() &&
+           !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
   if (!isUsefulPtr(Ptr))

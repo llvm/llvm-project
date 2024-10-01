@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "BinaryOpSingleOutputPerf.h"
+#include "src/__support/FPUtil/generic/mul.h"
 #include "src/math/fmul.h"
 
 static constexpr size_t DOUBLE_ROUNDS = 40;
 
 float fmul_placeholder_binary(double x, double y) {
-  return static_cast<float>(x * y);
+  return LIBC_NAMESPACE::fputil::generic::mul<float>(x, y);
 }
 
 int main() {

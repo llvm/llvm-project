@@ -531,3 +531,13 @@ namespace constraints {
     template struct A<B>;
   } // namespace t11
 } // namespace constraints
+
+namespace regression2 {
+  template <class> struct D {};
+
+  template <class ET, template <class> class VT>
+  struct D<VT<ET>>;
+
+  template <typename, int> struct Matrix;
+  template struct D<Matrix<double, 3>>;
+} // namespace regression2

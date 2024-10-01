@@ -25,6 +25,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 #include <string>
@@ -1490,6 +1491,16 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 bool SemaRISCV::isAliasValid(unsigned BuiltinID, StringRef AliasName) {
   return BuiltinID >= RISCV::FirstRVVBuiltin &&
          BuiltinID <= RISCV::LastRVVBuiltin;
+}
+
+bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
+  if (Ext.empty())
+    return false;
+
+  if (!Ext.consume_front("+"))
+    return false;
+
+  return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
 }
 
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}

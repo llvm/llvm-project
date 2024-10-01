@@ -62,11 +62,12 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB1_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:    vlse8.v v8, (a1), a4, v0.t
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    vse8.v v8, (a0)
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
+; CHECK-NEXT:    vlse8.v v9, (a1), a4, v0.t
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    addi a1, a1, 160
 ; CHECK-NEXT:    bne a0, a2, .LBB1_1
@@ -343,11 +344,12 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
-; CHECK-NEXT:    vlse8.v v9, (a0), a4, v0.t
-; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    vsse8.v v8, (a0), a4, v0.t
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vlse8.v v10, (a0), a4, v0.t
+; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vsse8.v v9, (a0), a4, v0.t
 ; CHECK-NEXT:    addi a1, a1, 32
 ; CHECK-NEXT:    addi a0, a0, 160
 ; CHECK-NEXT:    bne a1, a2, .LBB7_1
@@ -734,18 +736,18 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; ZVE32F-NEXT:    li a5, 40
 ; ZVE32F-NEXT:  .LBB13_1: # %bb2
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    ld a6, 8(a1)
-; ZVE32F-NEXT:    ld a7, 0(a1)
-; ZVE32F-NEXT:    ld t0, 24(a1)
-; ZVE32F-NEXT:    ld t1, 16(a1)
+; ZVE32F-NEXT:    ld a6, 0(a1)
+; ZVE32F-NEXT:    ld a7, 8(a1)
+; ZVE32F-NEXT:    ld t0, 16(a1)
+; ZVE32F-NEXT:    ld t1, 24(a1)
 ; ZVE32F-NEXT:    mul t2, a4, a5
 ; ZVE32F-NEXT:    add t2, a0, t2
 ; ZVE32F-NEXT:    mul t3, a2, a5
 ; ZVE32F-NEXT:    add t3, a0, t3
-; ZVE32F-NEXT:    sd a7, 0(t3)
-; ZVE32F-NEXT:    sd a6, 0(t2)
-; ZVE32F-NEXT:    sd t1, 80(t3)
-; ZVE32F-NEXT:    sd t0, 80(t2)
+; ZVE32F-NEXT:    sd a6, 0(t3)
+; ZVE32F-NEXT:    sd a7, 0(t2)
+; ZVE32F-NEXT:    sd t0, 80(t3)
+; ZVE32F-NEXT:    sd t1, 80(t2)
 ; ZVE32F-NEXT:    addi a2, a2, 4
 ; ZVE32F-NEXT:    addi a1, a1, 32
 ; ZVE32F-NEXT:    addi a4, a4, 4

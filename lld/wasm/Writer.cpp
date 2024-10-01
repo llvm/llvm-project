@@ -1145,6 +1145,8 @@ void Writer::createSyntheticInitFunctions() {
 
   static WasmSignature nullSignature = {{}, {}};
 
+  createApplyDataRelocationsFunction();
+
   // Passive segments are used to avoid memory being reinitialized on each
   // thread's instantiation. These passive segments are initialized and
   // dropped in __wasm_init_memory, which is registered as the start function
@@ -1467,15 +1469,29 @@ void Writer::createApplyDataRelocationsFunction() {
   {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
+    bool generated = false;
     for (const OutputSegment *seg : segments)
       if (!config->sharedMemory || !seg->isTLS())
         for (const InputChunk *inSeg : seg->inputSegments)
-          inSeg->generateRelocationCode(os);
+          generated |= inSeg->generateRelocationCode(os);
 
+    if (!generated) {
+      LLVM_DEBUG(dbgs() << "skipping empty __wasm_apply_data_relocs\n");
+      return;
+    }
     writeU8(os, WASM_OPCODE_END, "END");
   }
 
-  createFunction(WasmSym::applyDataRelocs, bodyContent);
+  // __wasm_apply_data_relocs
+  // Function that applies relocations to data segment post-instantiation.
+  static WasmSignature nullSignature = {{}, {}};
+  auto def = symtab->addSyntheticFunction(
+      "__wasm_apply_data_relocs",
+      WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
+      make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
+  def->markLive();
+
+  createFunction(def, bodyContent);
 }
 
 void Writer::createApplyTLSRelocationsFunction() {
@@ -1771,8 +1787,6 @@ void Writer::run() {
 
   if (!config->relocatable) {
     // Create linker synthesized functions
-    if (WasmSym::applyDataRelocs)
-      createApplyDataRelocationsFunction();
     if (WasmSym::applyGlobalRelocs)
       createApplyGlobalRelocationsFunction();
     if (WasmSym::applyTLSRelocs)
@@ -1875,7 +1889,6 @@ void Writer::createHeader() {
   raw_string_ostream os(header);
   writeBytes(os, WasmMagic, sizeof(WasmMagic), "wasm magic");
   writeU32(os, WasmVersion, "wasm version");
-  os.flush();
   fileSize += header.size();
 }
 

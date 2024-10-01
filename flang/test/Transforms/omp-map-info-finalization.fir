@@ -20,7 +20,6 @@ module attributes {omp.is_target_device = false} {
     %8 = omp.map.info var_ptr(%4#1 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<i32>>>
     %9 = omp.map.info var_ptr(%7 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>) map_clauses(from) capture(ByRef) bounds(%bounds) -> !fir.ref<!fir.array<?xi32>>
     omp.target map_entries(%8 -> %arg1, %9 -> %arg2 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.array<?xi32>>) {
-    ^bb0(%arg1: !fir.ref<!fir.box<!fir.heap<i32>>>, %arg2: !fir.ref<!fir.array<?xi32>>):
       omp.terminator
     }
     return 
@@ -41,7 +40,6 @@ module attributes {omp.is_target_device = false} {
 // CHECK: %[[DESC_MEMBER_MAP_2:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.array<?xi32>) var_ptr_ptr(%[[BASE_ADDR_OFF_2]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(from) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 // CHECK: %[[DESC_PARENT_MAP_2:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(from) capture(ByRef) members(%[[DESC_MEMBER_MAP_2]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK: omp.target map_entries(%[[DESC_MEMBER_MAP]] -> %[[ARG1:.*]], %[[DESC_PARENT_MAP]] -> %[[ARG2:.*]], %[[DESC_MEMBER_MAP_2]] -> %[[ARG3:.*]], %[[DESC_PARENT_MAP_2]] -> %[[ARG4:.*]] : {{.*}}) {
-// CHECK: ^bb0(%[[ARG1]]: !fir.llvm_ptr<!fir.ref<i32>>, %[[ARG2]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[ARG3]]: !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, %[[ARG4]]: !fir.ref<!fir.array<?xi32>>):
 
 // -----
 
@@ -53,7 +51,6 @@ module attributes {omp.is_target_device = false} {
     %3 = omp.map.info var_ptr(%2 : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%ry"}
     %4 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%1, %3 : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
     omp.target map_entries(%4 -> %arg1 : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
-    ^bb0(%arg1: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>):
       omp.terminator
     }
     return
@@ -65,7 +62,6 @@ module attributes {omp.is_target_device = false} {
 // CHECK:   %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%ry"}
 // CHECK:   %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>, !fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>) map_clauses(from) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [1], [4] : !fir.ref<f32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>> {name = "scalar_struct", partial_map = true}
 // CHECK:   omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG2:.*]], %[[MAP_PARENT]] -> %[[ARG3:.*]] : !fir.ref<f32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
-// CHECK:     ^bb0(%[[ARG1]]: !fir.ref<f32>, %[[ARG2]]: !fir.ref<f32>, %[[ARG3]]: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:!fir.complex<4>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>):
 
 // -----
 
@@ -84,7 +80,6 @@ func.func @test_nested_derived_type_map_operand_and_block_addition(%arg0: !fir.r
     %10 = omp.map.info var_ptr(%9 : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "sa%n%r"}
     %11 = omp.map.info var_ptr(%0 : !fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTscalar_and_array{r:f32,n:!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTnested{i:i32,r:f32}>}>>, !fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTscalar_and_array{r:f32,n:!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTnested{i:i32,r:f32}>}>) map_clauses(tofrom) capture(ByRef) members(%5, %10 : [1,0], [1,1] : !fir.ref<i32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTscalar_and_array{r:f32,n:!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTnested{i:i32,r:f32}>}>> {name = "sa", partial_map = true}
     omp.target map_entries(%11 -> %arg1 : !fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTscalar_and_array{r:f32,n:!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTnested{i:i32,r:f32}>}>>) {
-    ^bb0(%arg1: !fir.ref<!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTscalar_and_array{r:f32,n:!fir.type<_QFmaptype_derived_nested_explicit_multiple_membersTnested{i:i32,r:f32}>}>>):
       omp.terminator
     }
     return
@@ -96,4 +91,3 @@ func.func @test_nested_derived_type_map_operand_and_block_addition(%arg0: !fir.r
 // CHECK:   %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "sa%n%r"}
 // CHECK:   %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [1,0], [1,1] : !fir.ref<i32>, !fir.ref<f32>) -> {{.*}} {name = "sa", partial_map = true}
 // CHECK:   omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG2:.*]], %[[MAP_PARENT]] -> %[[ARG3:.*]] : !fir.ref<i32>, !fir.ref<f32>, {{.*}}) {
-// CHECK:     ^bb0(%[[ARG1]]: !fir.ref<i32>, %[[ARG2]]: !fir.ref<f32>, %[[ARG3]]: {{.*}}):

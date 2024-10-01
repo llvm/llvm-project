@@ -32,19 +32,19 @@ case4:
 default2:
   ret void
 
-; CHECK-SPIRV:      %[[#CASE2]] = OpLabel
+; CHECK-SPIRV:      %[[#CASE1]] = OpLabel
 ; CHECK-SPIRV-NEXT: OpBranch %[[#DEFAULT1]]
 
-; CHECK-SPIRV:      %[[#CASE1]] = OpLabel
+; CHECK-SPIRV:      %[[#CASE2]] = OpLabel
 ; CHECK-SPIRV-NEXT: OpBranch %[[#DEFAULT1]]
 
 ; CHECK-SPIRV:      %[[#DEFAULT1]] = OpLabel
 ; CHECK-SPIRV-NEXT:      OpSwitch %[[#REGISTER]] %[[#DEFAULT2:]] 0 %[[#CASE3:]] 1 %[[#CASE4:]]
 
-; CHECK-SPIRV:      %[[#CASE4:]] = OpLabel
+; CHECK-SPIRV:      %[[#CASE3]] = OpLabel
 ; CHECK-SPIRV-NEXT: OpBranch %[[#DEFAULT2]]
 
-; CHECK-SPIRV:      %[[#CASE3]] = OpLabel
+; CHECK-SPIRV:      %[[#CASE4:]] = OpLabel
 ; CHECK-SPIRV-NEXT: OpBranch %[[#DEFAULT2]]
 
 ; CHECK-SPIRV:      %[[#DEFAULT2]] = OpLabel

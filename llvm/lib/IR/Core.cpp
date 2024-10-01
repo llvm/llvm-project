@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Core.h"
+#include "llvm-c/Types.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -2506,7 +2508,7 @@ const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
 }
 
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen) {
-  return Function::lookupIntrinsicID({Name, NameLen});
+  return Intrinsic::lookupIntrinsicID({Name, NameLen});
 }
 
 LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
@@ -2973,6 +2975,38 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst) {
 LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
   Instruction *I = dyn_cast<Instruction>(unwrap(Inst));
   return (I && I->isTerminator()) ? wrap(I) : nullptr;
+}
+
+LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst) {
+  Instruction *Instr = unwrap<Instruction>(Inst);
+  auto I = Instr->DebugMarker->StoredDbgRecords.begin();
+  if (I == Instr->DebugMarker->StoredDbgRecords.end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
+  Instruction *Instr = unwrap<Instruction>(Inst);
+  auto I = Instr->DebugMarker->StoredDbgRecords.rbegin();
+  if (I == Instr->DebugMarker->StoredDbgRecords.rend())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
+  DbgRecord *Record = unwrap<DbgRecord>(Rec);
+  simple_ilist<DbgRecord>::iterator I(Record);
+  if (++I == Record->getInstruction()->DebugMarker->StoredDbgRecords.end())
+    return nullptr;
+  return wrap(&*I);
+}
+
+LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef Rec) {
+  DbgRecord *Record = unwrap<DbgRecord>(Rec);
+  simple_ilist<DbgRecord>::iterator I(Record);
+  if (I == Record->getInstruction()->DebugMarker->StoredDbgRecords.begin())
+    return nullptr;
+  return wrap(&*--I);
 }
 
 unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
@@ -3931,6 +3965,10 @@ static AtomicRMWInst::BinOp mapFromLLVMRMWBinOp(LLVMAtomicRMWBinOp BinOp) {
       return AtomicRMWInst::UIncWrap;
     case LLVMAtomicRMWBinOpUDecWrap:
       return AtomicRMWInst::UDecWrap;
+    case LLVMAtomicRMWBinOpUSubCond:
+      return AtomicRMWInst::USubCond;
+    case LLVMAtomicRMWBinOpUSubSat:
+      return AtomicRMWInst::USubSat;
   }
 
   llvm_unreachable("Invalid LLVMAtomicRMWBinOp value!");
@@ -3957,6 +3995,10 @@ static LLVMAtomicRMWBinOp mapToLLVMRMWBinOp(AtomicRMWInst::BinOp BinOp) {
       return LLVMAtomicRMWBinOpUIncWrap;
     case AtomicRMWInst::UDecWrap:
       return LLVMAtomicRMWBinOpUDecWrap;
+    case AtomicRMWInst::USubCond:
+      return LLVMAtomicRMWBinOpUSubCond;
+    case AtomicRMWInst::USubSat:
+      return LLVMAtomicRMWBinOpUSubSat;
     default: break;
   }
 
@@ -4018,7 +4060,7 @@ LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name) {
-  return wrap(unwrap(B)->CreateGlobalStringPtr(Str, Name));
+  return wrap(unwrap(B)->CreateGlobalString(Str, Name));
 }
 
 LLVMBool LLVMGetVolatile(LLVMValueRef MemAccessInst) {

@@ -61,12 +61,12 @@ public:
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
 
-  static_assert(sizeof(BatchGroupT) <= sizeof(TransferBatchT),
-                "BatchGroupT uses the same class size as TransferBatchT");
-
+  // BachClass is used to store internal metadata so it needs to be at least as
+  // large as the largest data structure.
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
-               ? roundUp(sizeof(TransferBatchT), 1U << CompactPtrScale)
+               ? roundUp(Max(sizeof(TransferBatchT), sizeof(BatchGroupT)),
+                         1U << CompactPtrScale)
                : SizeClassMap::getSizeByClassId(ClassId);
   }
 
@@ -236,7 +236,7 @@ public:
     } else {
       while (true) {
         // When two threads compete for `Region->MMLock`, we only want one of
-        // them to call populateFreeListAndPopBatch(). To avoid both of them
+        // them to call populateFreeListAndPopBlocks(). To avoid both of them
         // doing that, always check the freelist before mapping new pages.
         ScopedLock ML(Region->MMLock);
         {
@@ -392,6 +392,18 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->MMLock);
       getRegionFragmentationInfo(Region, I, Str);
+    }
+  }
+
+  void getMemoryGroupFragmentationInfo(ScopedString *Str) {
+    Str->append(
+        "Fragmentation Stats: SizeClassAllocator64: page size = %zu bytes\n",
+        getPageSizeCached());
+
+    for (uptr I = 1; I < NumClasses; I++) {
+      RegionInfo *Region = getRegionInfo(I);
+      ScopedLock L(Region->MMLock);
+      getMemoryGroupFragmentationInfoInRegion(Region, I, Str);
     }
   }
 
@@ -678,9 +690,6 @@ private:
       // BatchClass hasn't enabled memory group. Use `0` to indicate there's no
       // memory group here.
       BG->CompactPtrGroupBase = 0;
-      // `BG` is also the block of BatchClassId. Note that this is different
-      // from `CreateGroup` in `pushBlocksImpl`
-      BG->PushedBlocks = 1;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch =
           CacheT::getMaxCached(getSizeByClassId(SizeClassMap::BatchClassId));
@@ -705,9 +714,6 @@ private:
       TB->add(
           compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(BG)));
       --Size;
-      DCHECK_EQ(BG->PushedBlocks, 1U);
-      // `TB` is also the block of BatchClassId.
-      BG->PushedBlocks += 1;
       BG->Batches.push_front(TB);
     }
 
@@ -734,8 +740,6 @@ private:
       CurBatch->appendFromArray(&Array[I], AppendSize);
       I += AppendSize;
     }
-
-    BG->PushedBlocks += Size;
   }
 
   // Push the blocks to their batch group. The layout will be like,
@@ -770,7 +774,6 @@ private:
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
       BG->Batches.push_front(TB);
-      BG->PushedBlocks = 0;
       BG->BytesInBGAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch = TransferBatchT::MaxNumCached;
 
@@ -798,8 +801,6 @@ private:
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;
       }
-
-      BG->PushedBlocks += Size;
     };
 
     Region->FreeListInfo.PushedBlocks += Size;
@@ -872,7 +873,7 @@ private:
     while (true) {
       // We only expect one thread doing the freelist refillment and other
       // threads will be waiting for either the completion of the
-      // `populateFreeListAndPopBatch()` or `pushBlocks()` called by other
+      // `populateFreeListAndPopBlocks()` or `pushBlocks()` called by other
       // threads.
       bool PopulateFreeList = false;
       {
@@ -910,7 +911,7 @@ private:
       // At here, there are two preconditions to be met before waiting,
       //   1. The freelist is empty.
       //   2. Region->isPopulatingFreeList == true, i.e, someone is still doing
-      //   `populateFreeListAndPopBatch()`.
+      //   `populateFreeListAndPopBlocks()`.
       //
       // Note that it has the chance that freelist is empty but
       // Region->isPopulatingFreeList == false because all the new populated
@@ -926,8 +927,8 @@ private:
 
       // Now the freelist is empty and someone's doing the refillment. We will
       // wait until anyone refills the freelist or someone finishes doing
-      // `populateFreeListAndPopBatch()`. The refillment can be done by
-      // `populateFreeListAndPopBatch()`, `pushBlocks()`,
+      // `populateFreeListAndPopBlocks()`. The refillment can be done by
+      // `populateFreeListAndPopBlocks()`, `pushBlocks()`,
       // `pushBatchClassBlocks()` and `mergeGroupsToReleaseBack()`.
       Region->FLLockCV.wait(Region->FLLock);
 
@@ -1107,8 +1108,8 @@ private:
 
     // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
     // the requests from `PushBlocks` and `PopBatch` which are external
-    // interfaces. `populateFreeListAndPopBatch` is the internal interface so we
-    // should set the values back to avoid incorrectly setting the stats.
+    // interfaces. `populateFreeListAndPopBlocks` is the internal interface so
+    // we should set the values back to avoid incorrectly setting the stats.
     Region->FreeListInfo.PushedBlocks -= NumberOfBlocks;
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
@@ -1191,6 +1192,50 @@ private:
                 "pages: %6zu/%6zu inuse bytes: %6zuK util: %3zu.%02zu%%\n",
                 ClassId, BlockSize, InUseBlocks, TotalBlocks, InUsePages,
                 AllocatedPagesCount, InUseBytes >> 10, Integral, Fractional);
+  }
+
+  void getMemoryGroupFragmentationInfoInRegion(RegionInfo *Region, uptr ClassId,
+                                               ScopedString *Str)
+      REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
+    const uptr BlockSize = getSizeByClassId(ClassId);
+    const uptr AllocatedUserEnd =
+        Region->MemMapInfo.AllocatedUser + Region->RegionBeg;
+
+    SinglyLinkedList<BatchGroupT> GroupsToRelease;
+    {
+      ScopedLock L(Region->FLLock);
+      GroupsToRelease = Region->FreeListInfo.BlockList;
+      Region->FreeListInfo.BlockList.clear();
+    }
+
+    constexpr uptr GroupSize = (1UL << GroupSizeLog);
+    constexpr uptr MaxNumGroups = RegionSize / GroupSize;
+
+    MemoryGroupFragmentationRecorder<GroupSize, MaxNumGroups> Recorder;
+    if (!GroupsToRelease.empty()) {
+      PageReleaseContext Context =
+          markFreeBlocks(Region, BlockSize, AllocatedUserEnd,
+                         getCompactPtrBaseByClassId(ClassId), GroupsToRelease);
+      auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
+      releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
+
+      mergeGroupsToReleaseBack(Region, GroupsToRelease);
+    }
+
+    Str->append("MemoryGroupFragmentationInfo in Region %zu (%zu)\n", ClassId,
+                BlockSize);
+
+    const uptr MaxNumGroupsInUse =
+        roundUp(Region->MemMapInfo.AllocatedUser, GroupSize) / GroupSize;
+    for (uptr I = 0; I < MaxNumGroupsInUse; ++I) {
+      uptr Integral;
+      uptr Fractional;
+      computePercentage(Recorder.NumPagesInOneGroup -
+                            Recorder.getNumFreePages(I),
+                        Recorder.NumPagesInOneGroup, &Integral, &Fractional);
+      Str->append("MemoryGroup #%zu (0x%zx): util: %3zu.%02zu%%\n", I,
+                  Region->RegionBeg + I * GroupSize, Integral, Fractional);
+    }
   }
 
   NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,
@@ -1633,7 +1678,6 @@ private:
       GroupsToRelease.pop_front();
 
       if (BG->CompactPtrGroupBase == Cur->CompactPtrGroupBase) {
-        BG->PushedBlocks += Cur->PushedBlocks;
         // We have updated `BatchGroup::BytesInBGAtLastCheckpoint` while
         // collecting the `GroupsToRelease`.
         BG->BytesInBGAtLastCheckpoint = Cur->BytesInBGAtLastCheckpoint;

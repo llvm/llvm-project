@@ -41,7 +41,7 @@ int main() {
   // CHECK: Allocated pointer {{.*}} in disabled context
   // CHECK: Allocated second pointer {{.*}} in disabled context
   // CHECK: Free'd second pointer in disabled context
-  // CHECK: {{.*Real-time violation.*}}
+  // CHECK: ==ERROR: RealtimeSanitizer: unsafe-library-call
   // CHECK-NOT: {{.*malloc*}}
   // CHECK-NEXT: {{.*free.*}}
 }

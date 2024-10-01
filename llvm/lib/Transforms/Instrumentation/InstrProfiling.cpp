@@ -50,9 +50,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include <algorithm>
@@ -1131,7 +1131,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
     BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
     // Bias doesn't change after startup.
     BiasLI->setMetadata(LLVMContext::MD_invariant_load,
-                        MDNode::get(M.getContext(), std::nullopt));
+                        MDNode::get(M.getContext(), {}));
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
@@ -1212,7 +1212,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
   // Assume BiasLI invariant (in the function at least)
   BiasLI->setMetadata(LLVMContext::MD_invariant_load,
-                      MDNode::get(M.getContext(), std::nullopt));
+                      MDNode::get(M.getContext(), {}));
 
   // Add Bias to Bitmaps and put it before the intrinsic.
   IRBuilder<> Builder(I);

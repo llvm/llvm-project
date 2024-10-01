@@ -63,16 +63,18 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   unsigned Align = 0;
   AlignStyle Where = AlignStyle::Right;
   StringRef Options;
-  unsigned Index = 0;
+  unsigned Index = ~0U;
   RepString = RepString.trim();
-  if (RepString.consumeInteger(0, Index)) {
-    assert(false && "Invalid replacement sequence index!");
-    return std::nullopt;
-  }
+
+  // If index is not specified, keep it ~0U to indicate unresolved index.
+  RepString.consumeInteger(0, Index);
   RepString = RepString.trim();
+
   if (RepString.consume_front(",")) {
-    if (!consumeFieldLayout(RepString, Where, Align, Pad))
+    if (!consumeFieldLayout(RepString, Where, Align, Pad)) {
       assert(false && "Invalid replacement field layout specification!");
+      return std::nullopt;
+    }
   }
   RepString = RepString.trim();
   if (RepString.consume_front(":")) {
@@ -80,8 +82,10 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
     RepString = StringRef();
   }
   RepString = RepString.trim();
-  assert(RepString.empty() &&
-         "Unexpected characters found in replacement string!");
+  if (!RepString.empty()) {
+    assert(0 && "Unexpected characters found in replacement string!");
+    return std::nullopt;
+  }
 
   return ReplacementItem(Spec, Index, Align, Where, Pad, Options);
 }
@@ -139,10 +143,12 @@ SmallVector<ReplacementItem, 2>
 formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
                                        bool Validate) {
   SmallVector<ReplacementItem, 2> Replacements;
+  unsigned NextAutomaticIndex = 0;
 
 #if ENABLE_VALIDATION
   const StringRef SavedFmtStr = Fmt;
   unsigned NumExpectedArgs = 0;
+  bool HasExplicitIndex = false;
 #endif
 
   while (!Fmt.empty()) {
@@ -150,11 +156,17 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
     std::tie(I, Fmt) = splitLiteralAndReplacement(Fmt);
     if (!I)
       continue;
-    Replacements.emplace_back(*I);
+    if (I->Type == ReplacementType::Format) {
+      if (I->Index == ~0U)
+        I->Index = NextAutomaticIndex++;
 #if ENABLE_VALIDATION
-    if (I->Type == ReplacementType::Format)
+      else
+        HasExplicitIndex = true;
       NumExpectedArgs = std::max(NumExpectedArgs, I->Index + 1);
 #endif
+    }
+
+    Replacements.emplace_back(*I);
   }
 
 #if ENABLE_VALIDATION
@@ -175,9 +187,8 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
   };
 
   if (NumExpectedArgs != NumArgs) {
-    errs() << formatv(
-        "Expected {0} Args, but got {1} for format string '{2}'\n",
-        NumExpectedArgs, NumArgs, SavedFmtStr);
+    errs() << formatv("Expected {} Args, but got {} for format string '{}'\n",
+                      NumExpectedArgs, NumArgs, SavedFmtStr);
     assert(0 && "Invalid formatv() call");
     return getErrorReplacements("Unexpected number of arguments");
   }
@@ -195,10 +206,19 @@ formatv_object_base::parseFormatString(StringRef Fmt, size_t NumArgs,
 
   if (Count != NumExpectedArgs) {
     errs() << formatv(
-        "Replacement field indices cannot have holes for format string '{0}'\n",
+        "Replacement field indices cannot have holes for format string '{}'\n",
         SavedFmtStr);
     assert(0 && "Invalid format string");
     return getErrorReplacements("Replacement indices have holes");
+  }
+
+  // Fail validation if we see both automatic index and explicit index.
+  if (NextAutomaticIndex != 0 && HasExplicitIndex) {
+    errs() << formatv(
+        "Cannot mix automatic and explicit indices for format string '{}'\n",
+        SavedFmtStr);
+    assert(0 && "Invalid format string");
+    return getErrorReplacements("Cannot mix automatic and explicit indices");
   }
 #endif // ENABLE_VALIDATION
   return Replacements;

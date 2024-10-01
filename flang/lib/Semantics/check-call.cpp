@@ -1363,6 +1363,14 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
     const auto &dummy{proc.dummyArguments.at(index++)};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
+        if (const auto *wholeSymbol{evaluate::UnwrapWholeSymbolDataRef(arg)}) {
+          wholeSymbol = &ResolveAssociations(*wholeSymbol);
+          if (IsAssumedSizeArray(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
+          }
+        }
         if (auto argShape{evaluate::GetShape(context, *expr)}) {
           if (GetRank(*argShape) > 0) {
             std::string argName{"actual argument ("s + expr->AsFortran() +
@@ -1589,6 +1597,18 @@ static void CheckMaxMin(const characteristics::Procedure &proc,
         }
       }
     }
+  }
+}
+
+static void CheckFree(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments.size() != 1) {
+    messages.Say("FREE expects a single argument"_err_en_US);
+  }
+  auto arg = arguments[0];
+  if (const Symbol * symbol{evaluate::UnwrapWholeSymbolDataRef(arg)};
+      !symbol || !symbol->test(Symbol::Flag::CrayPointer)) {
+    messages.Say("FREE should only be used with Cray pointers"_warn_en_US);
   }
 }
 
@@ -1877,6 +1897,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "transfer") {
     CheckTransfer(arguments, context, scope);
+  } else if (intrinsic.name == "free") {
+    CheckFree(arguments, context.foldingContext().messages());
   }
 }
 

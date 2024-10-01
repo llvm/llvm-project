@@ -104,6 +104,8 @@ public:
   /// argument-tracked functions.
   bool isArgumentTrackedFunction(Function *F);
 
+  const SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() const;
+
   /// Solve - Solve for constants and executable blocks.
   void solve();
 
@@ -191,6 +193,7 @@ public:
                               BasicBlock *&NewUnreachableBB) const;
 
   void inferReturnAttributes() const;
+  void inferArgAttributes() const;
 
   bool tryToReplaceWithConstant(Value *V);
 

@@ -25,7 +25,7 @@ body: |
     ; WAVE32-LABEL: name: copy
     ; WAVE32: liveins: $sgpr2_sgpr3
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr2_sgpr3
     ; WAVE32-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; WAVE32-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[DEF]], [[COPY]], 0, 0, implicit $exec :: (store (s32), addrspace 1)

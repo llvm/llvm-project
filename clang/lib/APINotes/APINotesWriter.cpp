@@ -129,13 +129,9 @@ class APINotesWriter::Implementation {
     if (Identifier.empty())
       return 0;
 
-    auto Known = IdentifierIDs.find(Identifier);
-    if (Known != IdentifierIDs.end())
-      return Known->second;
-
-    // Add to the identifier table.
-    Known = IdentifierIDs.insert({Identifier, IdentifierIDs.size() + 1}).first;
-    return Known->second;
+    // Add to the identifier table if missing.
+    return IdentifierIDs.try_emplace(Identifier, IdentifierIDs.size() + 1)
+        .first->second;
   }
 
   /// Retrieve the ID for the given selector.
@@ -147,14 +143,8 @@ class APINotesWriter::Implementation {
     for (auto piece : SelectorRef.Identifiers)
       Selector.Identifiers.push_back(getIdentifier(piece));
 
-    // Look for the stored selector.
-    auto Known = SelectorIDs.find(Selector);
-    if (Known != SelectorIDs.end())
-      return Known->second;
-
-    // Add to the selector table.
-    Known = SelectorIDs.insert({Selector, SelectorIDs.size()}).first;
-    return Known->second;
+    // Look for the stored selector.  Add to the selector table if missing.
+    return SelectorIDs.try_emplace(Selector, SelectorIDs.size()).first->second;
   }
 
 private:

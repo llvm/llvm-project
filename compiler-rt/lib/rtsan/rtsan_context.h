@@ -10,8 +10,6 @@
 
 #pragma once
 
-#include <sanitizer_common/sanitizer_internal_defs.h>
-
 namespace __rtsan {
 
 class Context {
@@ -38,9 +36,4 @@ private:
 };
 
 Context &GetContextForThisThread();
-
-void ExpectNotRealtime(Context &context, const char *intercepted_function_name);
-void PrintDiagnostics(const char *intercepted_function_name,
-                      __sanitizer::uptr pc, __sanitizer::uptr bp);
-
 } // namespace __rtsan

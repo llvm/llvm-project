@@ -375,6 +375,10 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   DP << Str;
 }
 
+void DiagnosticInfoInstrumentation::print(DiagnosticPrinter &DP) const {
+  DP << Msg;
+}
+
 void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {
   DP << "Instruction selection used fallback path for " << getFunction();
 }

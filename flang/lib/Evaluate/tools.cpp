@@ -1011,6 +1011,9 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const DescriptorInquiry &) const {
+    return {};
+  }
   semantics::UnorderedSymbolSet operator()(const Subscript &) const {
     return {};
   }
@@ -1697,7 +1700,7 @@ bool IsSaved(const Symbol &original) {
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
               symbol.size() > 32)) &&
-      Fortran::evaluate::CanCUDASymbolHasSave(symbol)) {
+      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and

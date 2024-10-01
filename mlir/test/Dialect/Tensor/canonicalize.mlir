@@ -1964,6 +1964,88 @@ func.func @dont_fold_pad_chains(%arg0: tensor<64x64xf32>,
 
 // -----
 
+// CHECK-LABEL: func @merge_constant_padding
+//  CHECK-SAME:   %[[ARG0:[A-Za-z0-9]+]]: tensor<2x3xf32>
+//  CHECK-SAME:   %[[PADVAL:[A-Za-z0-9]+]]: f32
+//       CHECK:   %[[PAD:.+]] = tensor.pad %[[ARG0]] low[1, 3] high[4, 2]
+//       CHECK:     tensor.yield %[[PADVAL]]
+//       CHECK:   return %[[PAD]]
+func.func @merge_constant_padding(%arg0: tensor<2x3xf32>, %pad_value: f32) -> tensor<7x8xf32> {
+  %pad0 = tensor.pad %arg0 low[1, 1] high[1, 0] {
+    ^bb0(%b0: index, %b1 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<2x3xf32> to tensor<4x4xf32>
+  %pad1 = tensor.pad %pad0 low[0, 2] high[3, 2] {
+    ^bb0(%b2: index, %b3 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<4x4xf32> to tensor<7x8xf32>
+  return %pad1 : tensor<7x8xf32>
+}
+
+// -----
+
+//       CHECK: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 + 1)>
+// CHECK-LABEL: func @merge_constant_padding_dynamic
+//  CHECK-SAME:   %[[ARG0:[A-Za-z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:   %[[IDX:[A-Za-z0-9]+]]: index
+//  CHECK-SAME:   %[[PADVAL:[A-Za-z0-9]+]]: f32
+//       CHECK:   %[[HIGH:.+]] = affine.apply #[[$MAP]]()[%[[IDX]]]
+//       CHECK:   %[[PAD:.+]] = tensor.pad %[[ARG0]] low[%[[IDX]], 3] high[%[[HIGH]], 2]
+//       CHECK:     tensor.yield %[[PADVAL]]
+//       CHECK:   return %[[PAD]]
+func.func @merge_constant_padding_dynamic(%arg0: tensor<?x?xf32>, %idx: index, %pad_value: f32) -> tensor<?x?xf32> {
+  %pad0 = tensor.pad %arg0 low[%idx, 1] high[1, 0] {
+    ^bb0(%b0: index, %b1 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32>
+  %pad1 = tensor.pad %pad0 low[0, 2] high[%idx, 2] {
+    ^bb0(%b2: index, %b3 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<?x?xf32> to tensor<?x?xf32>
+  return %pad1 : tensor<?x?xf32>
+}
+
+// -----
+
+// Verify that folding does not happen if it would drop a nofold attribute
+// CHECK-LABEL: func @dont_merge_constant_padding_nofold
+//       CHECK:   tensor.pad {{.*}} nofold
+//       CHECK:   tensor.pad
+func.func @dont_merge_constant_padding_nofold(%arg0: tensor<2x3xf32>, %pad_value: f32) -> tensor<7x8xf32> {
+  %pad0 = tensor.pad %arg0 nofold low[1, 1] high[1, 0] {
+    ^bb0(%b0: index, %b1 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<2x3xf32> to tensor<4x4xf32>
+  %pad1 = tensor.pad %pad0 low[0, 2] high[3, 2] {
+    ^bb0(%b2: index, %b3 : index):
+      tensor.yield %pad_value : f32
+    } : tensor<4x4xf32> to tensor<7x8xf32>
+  return %pad1 : tensor<7x8xf32>
+}
+
+// -----
+
+// Verify that folding does not happen if it would drop a nofold attribute
+// CHECK-LABEL: func @dont_merge_constant_padding_different_vals
+//       CHECK:   tensor.pad
+//       CHECK:   tensor.pad
+func.func @dont_merge_constant_padding_different_vals(
+    %arg0: tensor<2x3xf32>,
+    %pad_value0: f32,
+    %pad_value1: f32) -> tensor<7x8xf32> {
+  %pad0 = tensor.pad %arg0 low[1, 1] high[1, 0] {
+    ^bb0(%b0: index, %b1 : index):
+      tensor.yield %pad_value0 : f32
+    } : tensor<2x3xf32> to tensor<4x4xf32>
+  %pad1 = tensor.pad %pad0 low[0, 2] high[3, 2] {
+    ^bb0(%b2: index, %b3 : index):
+      tensor.yield %pad_value1 : f32
+    } : tensor<4x4xf32> to tensor<7x8xf32>
+  return %pad1 : tensor<7x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_collapse_shape_from_elements
 func.func @fold_collapse_shape_from_elements(%arg0: i32) -> tensor<i32> {
   // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<i32>

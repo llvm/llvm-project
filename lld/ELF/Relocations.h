@@ -16,6 +16,8 @@
 #include <vector>
 
 namespace lld::elf {
+struct Ctx;
+class Defined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -141,13 +143,13 @@ struct JumpInstrMod {
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations();
-template <class ELFT> void checkNoCrossRefs();
-void reportUndefinedSymbols();
-void postScanRelocations();
-void addGotEntry(Symbol &sym);
+template <class ELFT> void scanRelocations(Ctx &ctx);
+template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
+void reportUndefinedSymbols(Ctx &);
+void postScanRelocations(Ctx &ctx);
+void addGotEntry(Ctx &ctx, Symbol &sym);
 
-void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
+void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 class ThunkSection;
@@ -156,6 +158,7 @@ class InputSectionDescription;
 
 class ThunkCreator {
 public:
+  ThunkCreator(Ctx &ctx) : ctx(ctx) {}
   // Return true if Thunks have been added to OutputSections
   bool createThunks(uint32_t pass, ArrayRef<OutputSection *> outputSections);
 
@@ -173,10 +176,14 @@ private:
   std::pair<Thunk *, bool> getThunk(InputSection *isec, Relocation &rel,
                                     uint64_t src);
 
+  std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
+
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
                                 uint64_t off);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
+
+  Ctx &ctx;
 
   // Record all the available Thunks for a (Symbol, addend) pair, where Symbol
   // is represented as a (section, offset) pair. There may be multiple
@@ -197,8 +204,17 @@ private:
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
-  // The Mips LA25 Thunk is an example of an inline ThunkSection.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection, as is
+  // the AArch64BTLandingPadThunk.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+
+  // Record landing pads, generated for a section + offset destination.
+  // Landling pads are alternative entry points for destinations that need
+  // to be reached via thunks that use indirect branches. A destination
+  // needs at most one landing pad as that can be reused by all callers.
+  llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
+                 Thunk *>
+      landingPadsBySectionAndAddend;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the

@@ -484,6 +484,8 @@ add_perf_binary(
   DEPENDS
     .binary_op_single_output_diff
     libc.src.math.fmul
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.FPUtil.fp_bits
   COMPILE_OPTIONS
     -fno-builtin
 )
