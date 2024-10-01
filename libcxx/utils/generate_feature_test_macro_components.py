@@ -991,7 +991,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_ranges",
             "values": {
-                "c++20": 202207,
+                "c++20": 202110, # P2415R2 What is a view?
                 # "c++23": 202302,  # Relaxing Ranges Just A Smidge
                 # "c++26": 202406,  # P2997R1 Removing the common reference requirement from the indirectly invocable concepts (already implemented as a DR)
             },
