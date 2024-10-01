@@ -1247,7 +1247,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
         FindClause(llvm::omp::Clause::OMPC_link);
     if (!enterClause && !toClause && !linkClause) {
       context_.Say(x.source,
-          "If the DECLARE TARGET directive has a clause, it must contain at lease one ENTER clause or LINK clause"_err_en_US);
+          "If the DECLARE TARGET directive has a clause, it must contain at least one ENTER clause or LINK clause"_err_en_US);
     }
     if (toClause && context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
       context_.Say(toClause->source,
