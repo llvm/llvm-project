@@ -64,8 +64,8 @@ define void @func_mov_fi_i32_offset() #0 {
 ; GFX9-MUBUF:       v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT:  v_add_u32_e32 v0, 4, [[SCALED]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[ADD:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_add_u32_e32 v0, 4, [[ADD]]
+; FIXME: Should commute and shrink
+; GFX9-FLATSCR: v_add_u32_e64 v0, 4, s32
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -164,12 +164,12 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
 ; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4 glc{{$}}
 
 ; CI: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], s32, 6
-; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
+; CI: v_add_i32_e64 [[GEP:v[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
 
-; GFX9-MUBUF:   v_lshrrev_b32_e64 [[SP:v[0-9]+]], 6, s32
-; GFX9-FLATSCR: v_mov_b32_e32 [[SP:v[0-9]+]], s32
+; GFX9-MUBUF: v_lshrrev_b32_e64 [[SP:v[0-9]+]], 6, s32
+; GFX9-MUBUF: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
 
-; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
+; GFX9-FLATSCR: v_add_u32_e64 [[GEP:v[0-9]+]], 4, s32
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block(ptr addrspace(5) byval({ i8, i32 }) %arg0, i32 %arg2) #0 {
