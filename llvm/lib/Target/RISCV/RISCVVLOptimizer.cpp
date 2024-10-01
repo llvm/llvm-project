@@ -247,40 +247,6 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
     llvm_unreachable("Configuration setting instructions do not read or write "
                      "vector registers");
 
-  // 7.9. Vector Load/Store Whole Register Instructions
-  // EMUL=nr. EEW=eew. Since in-register byte layouts are idential to in-memory
-  // byte layouts, the same data is writen to destination register regardless
-  // of EEW. eew is just a hint to the hardware and has not functional impact.
-  // Therefore, it is be okay if we ignore eew and always use the same EEW to
-  // create more optimization opportunities.
-  // FIXME: Instead of using any SEW, we really ought to return the SEW in the
-  // instruction and add a field to OperandInfo that says the SEW is just a hint
-  // so that this optimization can use any sew to construct a ratio.
-  case RISCV::VL1RE8_V:
-  case RISCV::VL1RE16_V:
-  case RISCV::VL1RE32_V:
-  case RISCV::VL1RE64_V:
-  case RISCV::VS1R_V:
-    return OperandInfo(RISCVII::VLMUL::LMUL_1, 0);
-  case RISCV::VL2RE8_V:
-  case RISCV::VL2RE16_V:
-  case RISCV::VL2RE32_V:
-  case RISCV::VL2RE64_V:
-  case RISCV::VS2R_V:
-    return OperandInfo(RISCVII::VLMUL::LMUL_2, 0);
-  case RISCV::VL4RE8_V:
-  case RISCV::VL4RE16_V:
-  case RISCV::VL4RE32_V:
-  case RISCV::VL4RE64_V:
-  case RISCV::VS4R_V:
-    return OperandInfo(RISCVII::VLMUL::LMUL_4, 0);
-  case RISCV::VL8RE8_V:
-  case RISCV::VL8RE16_V:
-  case RISCV::VL8RE32_V:
-  case RISCV::VL8RE64_V:
-  case RISCV::VS8R_V:
-    return OperandInfo(RISCVII::VLMUL::LMUL_8, 0);
-
   // 11. Vector Integer Arithmetic Instructions
   // 11.1. Vector Single-Width Integer Add and Subtract
   case RISCV::VADD_VI:
@@ -351,6 +317,12 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
   case RISCV::VMADD_VX:
   case RISCV::VNMSUB_VV:
   case RISCV::VNMSUB_VX:
+  // 11.15. Vector Integer Merge Instructions
+  // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
+  // (EEW/SEW)*LMUL. Mask operand is handled before this switch.
+  case RISCV::VMERGE_VIM:
+  case RISCV::VMERGE_VVM:
+  case RISCV::VMERGE_VXM:
   // 11.16. Vector Integer Move Instructions
   // 12. Vector Fixed-Point Arithmetic Instructions
   // 12.1. Vector Single-Width Saturating Add and Subtract
@@ -505,16 +477,6 @@ static OperandInfo getOperandInfo(const MachineInstr &MI,
         TwoTimes ? RISCVVType::twoTimesVLMUL(MIVLMul) : MIVLMul;
     return OperandInfo(EMUL, Log2EEW);
   }
-
-  // 11.15. Vector Integer Merge Instructions
-  // EEW=SEW and EMUL=LMUL, except the mask operand has EEW=1 and EMUL=
-  // (EEW/SEW)*LMUL.
-  case RISCV::VMERGE_VIM:
-  case RISCV::VMERGE_VVM:
-  case RISCV::VMERGE_VXM:
-    if (MO.getOperandNo() == 3)
-      return OperandInfo(RISCVVType::getEMULEqualsEEWDivSEWTimesLMUL(0, MI), 0);
-    return OperandInfo(MIVLMul, MILog2SEW);
 
   default:
     return {};
@@ -700,11 +662,11 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
   // TODO: Use a better approach than a white-list, such as adding
   // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
-    LLVM_DEBUG(dbgs() << "  Not a candidate due to unsupported instruction\n");
+    LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  Found a candidate for VL reduction: " << MI << "\n");
+  LLVM_DEBUG(dbgs() << "Found a candidate for VL reduction: " << MI << "\n");
   return true;
 }
 
@@ -819,6 +781,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
       continue;
 
     // All our checks passed. We can reduce VL.
+    LLVM_DEBUG(dbgs() << "    Reducing VL for: " << MI << "\n");
     unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
     MachineOperand &VLOp = MI.getOperand(VLOpNum);
     VLOp.ChangeToRegister(*CommonVL, false);
