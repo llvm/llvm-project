@@ -13,6 +13,7 @@
 #include "rtsan/rtsan_diagnostics.h"
 #include "rtsan/rtsan_flags.h"
 #include "rtsan/rtsan_interceptors.h"
+#include "rtsan/rtsan_stats.h"
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -46,7 +47,10 @@ static InitializationState GetInitializationState() {
 
 static auto OnViolationAction(DiagnosticsInfo info) {
   return [info]() {
-    __rtsan::PrintDiagnostics(info);
+    IncrementTotalErrorCount();
+
+    PrintDiagnostics(info);
+
     if (flags().halt_on_error)
       Die();
   };
@@ -61,6 +65,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
   InitializeInterceptors();
+
+  if (flags().print_stats_on_exit)
+    Atexit(PrintStatisticsSummary);
 
   SetInitializationState(InitializationState::Initialized);
 }
