@@ -81,6 +81,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  iscanonicall
+  SRCS
+    iscanonicall.cpp
+  HDRS
+    ../iscanonicall.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   iscanonicalf16
   SRCS
     iscanonicalf16.cpp
@@ -103,17 +113,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
 )
-
-add_entrypoint_object(
-  iscanonicall
-  SRCS
-    iscanonicall.cpp
-  HDRS
-    ../iscanonicall.h
-  COMPILE_OPTIONS
-    -O3
-)
-
 
 add_entrypoint_object(
   ceil

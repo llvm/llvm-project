@@ -378,9 +378,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
-    libc.src.math.iscanonical
-    libc.src.math.iscanonicalf
-    libc.src.math.iscanonicall
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.ceil
@@ -479,6 +476,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.iscanonical
+    libc.src.math.iscanonicalf
+    libc.src.math.iscanonicall
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanl
@@ -594,7 +594,6 @@ if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
     libc.src.math.canonicalizef16
-    libc.src.math.iscanonicalf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     # TODO: aarch64 bug
@@ -641,6 +640,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
+    libc.src.math.iscanonicalf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
@@ -691,7 +691,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
-    libc.src.math.iscanonicalf128
     libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
@@ -725,6 +724,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
+    libc.src.math.iscanonicalf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.llrintf128

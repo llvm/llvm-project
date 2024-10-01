@@ -354,6 +354,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  iscanonicall_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    iscanonicall_test.cpp
+  HDRS
+    IsCanonicalTest.h
+  DEPENDS
+    libc.src.math.iscanonicall
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   iscanonicalf16_test
   SUITE
     libc-math-smoke-tests
@@ -376,19 +389,6 @@ add_fp_unittest(
     IsCanonicalTest.h
   DEPENDS
     libc.src.math.iscanonicalf128
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  iscanonicall_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    iscanonicall_test.cpp
-  HDRS
-    IsCanonicalTest.h
-  DEPENDS
-    libc.src.math.iscanonicall
     libc.src.__support.FPUtil.fp_bits
 )
 
