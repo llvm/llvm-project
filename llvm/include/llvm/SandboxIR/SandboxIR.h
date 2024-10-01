@@ -1942,7 +1942,13 @@ public:
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
 
-  // TODO: Missing function getOpcodeName().
+  const char *getOpcodeName() const { return getOpcodeName(Opc); }
+
+  // Note that these functions below are calling into llvm::Instruction.
+  // A sandbox IR instruction could introduce a new opcode that could change the
+  // behavior of one of these functions. It is better that these functions are
+  // only added as needed and new sandbox IR instructions must explicitly check
+  // if any of these functions could have a different behavior.
 
   bool isTerminator() const {
     return cast<llvm::Instruction>(Val)->isTerminator();
@@ -1954,6 +1960,41 @@ public:
   }
   bool isShift() const { return cast<llvm::Instruction>(Val)->isShift(); }
   bool isCast() const { return cast<llvm::Instruction>(Val)->isCast(); }
+  bool isFuncletPad() const {
+    return cast<llvm::Instruction>(Val)->isFuncletPad();
+  }
+  bool isSpecialTerminator() const {
+    return cast<llvm::Instruction>(Val)->isSpecialTerminator();
+  }
+  bool isOnlyUserOfAnyOperand() const {
+    return cast<llvm::Instruction>(Val)->isOnlyUserOfAnyOperand();
+  }
+  bool isLogicalShift() const {
+    return cast<llvm::Instruction>(Val)->isLogicalShift();
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Metadata manipulation.
+  //===--------------------------------------------------------------------===//
+
+  /// Return true if the instruction has any metadata attached to it.
+  bool hasMetadata() const {
+    return cast<llvm::Instruction>(Val)->hasMetadata();
+  }
+
+  /// Return true if this instruction has metadata attached to it other than a
+  /// debug location.
+  bool hasMetadataOtherThanDebugLoc() const {
+    return cast<llvm::Instruction>(Val)->hasMetadataOtherThanDebugLoc();
+  }
+
+  /// Return true if this instruction has the given type of metadata attached.
+  bool hasMetadata(unsigned KindID) const {
+    return cast<llvm::Instruction>(Val)->hasMetadata(KindID);
+  }
+
+  // TODO: Implement getMetadata and getAllMetadata after sandboxir::MDNode is
+  // available.
 
   // TODO: More missing functions
 
