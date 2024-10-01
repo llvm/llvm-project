@@ -1241,8 +1241,8 @@ define i64 @foo2(ptr %p) {
 define void @PR41129(ptr %p64) {
 ; RV32-LABEL: PR41129:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a2, 4(a0)
 ; RV32-NEXT:    lw a1, 0(a0)
+; RV32-NEXT:    lw a2, 4(a0)
 ; RV32-NEXT:    or a3, a1, a2
 ; RV32-NEXT:    beqz a3, .LBB37_2
 ; RV32-NEXT:  # %bb.1: # %false
