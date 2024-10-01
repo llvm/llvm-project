@@ -90,7 +90,6 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
@@ -103,7 +102,6 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
 )
 
 add_entrypoint_object(
