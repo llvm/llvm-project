@@ -2206,6 +2206,8 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
+  ExprResult BuiltinInvoke(CallExpr *TheCall);
+
   enum FormatStringType {
     FST_Scanf,
     FST_Printf,
@@ -15030,10 +15032,17 @@ public:
                                SourceLocation Loc);
   QualType BuiltinRemoveReference(QualType BaseType, UTTKind UKind,
                                   SourceLocation Loc);
+
+  QualType BuiltinRemoveCVRef(QualType BaseType, SourceLocation Loc) {
+    return BuiltinRemoveReference(BaseType, UTTKind::RemoveCVRef, Loc);
+  }
+
   QualType BuiltinChangeCVRQualifiers(QualType BaseType, UTTKind UKind,
                                       SourceLocation Loc);
   QualType BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
+
+  bool BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT, QualType RhsT);
 
   /// Ensure that the type T is a literal type.
   ///
