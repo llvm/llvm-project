@@ -38,6 +38,15 @@ functions:
     arguments:
       - type: const time_t *
       - type: char *
+  - name: ctime_s
+    standard:
+      - stdc
+    return_type: errno_t
+    arguments:
+      - type: char *
+      - type: rsize_t
+      - type: const time_t *
+    guard: __STDC_WANT_LIB_EXT1__
   - name: clock
     standard:
       - stdc
