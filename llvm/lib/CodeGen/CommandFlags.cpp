@@ -525,6 +525,8 @@ llvm::BasicBlockSection
 codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
   if (getBBSections() == "all")
     return BasicBlockSection::All;
+  else if (getBBSections() == "labels")
+    return BasicBlockSection::Labels;
   else if (getBBSections() == "none")
     return BasicBlockSection::None;
   else {
