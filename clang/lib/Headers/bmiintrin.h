@@ -172,7 +172,6 @@ _mm_tzcnt_64(unsigned long long __X)
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("bmi"))) constexpr
-constexpr
 #else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
