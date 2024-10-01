@@ -26,6 +26,7 @@ class GlobalValue;
 class GlobalObject;
 class Module;
 class UnaryInstruction;
+class CmpInst;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
