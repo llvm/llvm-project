@@ -10,10 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "offload_impl.hpp"
 #include <offload_api.h>
 #include <offload_print.hpp>
 
 #include <iostream>
+
+// Store details for the last error that occurred on this thread. It MAY be set
+// when an implementation function returns a result other than
+// OFFLOAD_RESULT_SUCCESS.
+std::optional<std::string> &LastErrorDetails() {
+  thread_local std::optional<std::string> Details;
+  return Details;
+}
 
 // Pull in the declarations for the implementation funtions. The actual entry
 // points in this file wrap these.

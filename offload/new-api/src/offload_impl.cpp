@@ -13,6 +13,7 @@
 
 #include "PluginManager.h"
 #include "helpers.hpp"
+#include "offload_impl.hpp"
 #include "llvm/Support/FormatVariadic.h"
 #include <offload_api.h>
 
@@ -66,9 +67,27 @@ void initPlugins() {
   }
 }
 
-offload_result_t offloadPlatformGet_impl(uint32_t NumEntries,
-                                         offload_platform_handle_t *phPlatforms,
-                                         uint32_t *pNumPlatforms) {
+offload_result_t offloadGetErrorDetails_impl(size_t *SizeRet,
+                                             const char **DetailStringRet) {
+  if (auto Details = LastErrorDetails()) {
+    if (SizeRet) {
+      *SizeRet = Details->size();
+    }
+    if (DetailStringRet) {
+      *DetailStringRet = Details->c_str();
+    }
+  } else {
+    if (SizeRet) {
+      *SizeRet = 0;
+    }
+  }
+  return OFFLOAD_RESULT_SUCCESS;
+}
+
+offload_impl_result_t
+offloadPlatformGet_impl(uint32_t NumEntries,
+                        offload_platform_handle_t *phPlatforms,
+                        uint32_t *pNumPlatforms) {
   // It is expected that offloadPlatformGet is the first function to be called.
   // In future it may make sense to have a specific entry point for Offload
   // initialization, or expose explicit initialization of plugins.
@@ -76,7 +95,9 @@ offload_result_t offloadPlatformGet_impl(uint32_t NumEntries,
   std::call_once(InitFlag, initPlugins);
 
   if (NumEntries > Platforms().size()) {
-    return OFFLOAD_RESULT_ERROR_INVALID_SIZE;
+    return {OFFLOAD_RESULT_ERROR_INVALID_SIZE,
+            formatv("{0} platform(s) available but {1} requested.",
+                    Platforms().size(), NumEntries)};
   }
 
   if (phPlatforms) {
@@ -93,7 +114,7 @@ offload_result_t offloadPlatformGet_impl(uint32_t NumEntries,
   return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_result_t
+offload_impl_result_t
 offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
                             offload_platform_info_t propName, size_t propSize,
                             void *pPropValue, size_t *pPropSizeRet) {
@@ -126,11 +147,11 @@ offloadPlatformGetInfo_impl(offload_platform_handle_t hPlatform,
   return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_result_t offloadDeviceGet_impl(offload_platform_handle_t hPlatform,
-                                       offload_device_type_t,
-                                       uint32_t NumEntries,
-                                       offload_device_handle_t *phDevices,
-                                       uint32_t *pNumDevices) {
+offload_impl_result_t offloadDeviceGet_impl(offload_platform_handle_t hPlatform,
+                                            offload_device_type_t,
+                                            uint32_t NumEntries,
+                                            offload_device_handle_t *phDevices,
+                                            uint32_t *pNumDevices) {
 
   if (phDevices) {
     for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
@@ -145,10 +166,11 @@ offload_result_t offloadDeviceGet_impl(offload_platform_handle_t hPlatform,
   return OFFLOAD_RESULT_SUCCESS;
 }
 
-offload_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
-                                           offload_device_info_t propName,
-                                           size_t propSize, void *pPropValue,
-                                           size_t *pPropSizeRet) {
+offload_impl_result_t offloadDeviceGetInfo_impl(offload_device_handle_t hDevice,
+                                                offload_device_info_t propName,
+                                                size_t propSize,
+                                                void *pPropValue,
+                                                size_t *pPropSizeRet) {
 
   ReturnHelper ReturnValue(propSize, pPropValue, pPropSizeRet);
 
