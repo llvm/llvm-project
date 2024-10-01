@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
-#include "src/__support/FPUtil/FPBits.h"
-
 #include "src/stdio/sscanf.h"
 
-#include <stdio.h> // For EOF
-
+#include "hdr/stdio_macros.h" // For EOF
+#include "src/__support/CPP/limits.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
