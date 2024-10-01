@@ -2129,6 +2129,11 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
   }
 }
 
+bool mlir::linalg::isVectorizable(Operation *op) {
+  return isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
+      op);
+}
+
 /// Emit a suitable vector form for an operation. If provided,
 /// `inputVectorSizes` are used to vectorize this operation.
 /// `inputVectorSizes` must match the rank of the iteration space of the

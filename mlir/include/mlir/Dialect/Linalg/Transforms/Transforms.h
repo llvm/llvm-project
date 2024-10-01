@@ -762,6 +762,13 @@ LogicalResult copyToGPUPrivateMemory(OpBuilder &b, Value src, Value dst);
 /// memory is freed when going outside of the scope.
 LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 
+/// Check if this Op is vectorizable. All Linalg Op are vectorizable, as well
+/// as selected Tensor Ops. Note that this is merely a high level check and
+/// that the vectorizer also requires various additional pre-conditions to be
+/// met for it to work. These are only checked for Ops that are supported,
+/// other Ops should be rejected early.
+bool isVectorizable(Operation *);
+
 /// Emit a suitable vector form for an operation. If provided,
 /// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
 /// must match the rank of the iteration space of the operation and the sizes

@@ -3411,11 +3411,11 @@ struct VectorizationPattern : public RewritePattern {
         flatten1DDepthwiseConv(flattenConv) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      return rewriter.notifyMatchFailure(op, "expected Linalg Op");
-    return vectorize(rewriter, linalgOp, /*inputVectorSizes=*/{},
-                     /*scalableVecDims=*/{}, vectorizeNDExtract,
+    if (!linalg::isVectorizable(op))
+      return rewriter.notifyMatchFailure(op,
+                                         "Unsupported Op, cannot vectorize");
+    return vectorize(rewriter, op, /*inputVectorSizes=*/{},
+                     /*inputScalableVecDims=*/{}, vectorizeNDExtract,
                      flatten1DDepthwiseConv);
   }
 
@@ -3496,8 +3496,7 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {
-    if (!isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
-            target)) {
+    if (!linalg::isVectorizable(target)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
