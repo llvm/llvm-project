@@ -605,8 +605,14 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
     if (end_line == LLDB_INVALID_LINE_NUMBER)
       range = sc.line_entry.range;
     else {
-      if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+      auto get_address_range_from_here_to_end_line_or_err =
+          sc.GetAddressRangeFromHereToEndLine(end_line, range);
+      if (!get_address_range_from_here_to_end_line_or_err) {
+        error = Status::FromErrorString(
+            toString(get_address_range_from_here_to_end_line_or_err.takeError())
+                .c_str());
         return;
+      }
     }
 
     const LazyBool step_out_avoids_code_without_debug_info =

@@ -489,11 +489,14 @@ protected:
         AddressRange range;
         SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
         if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER) {
-          Status error;
-          if (!sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range,
-                                                   error)) {
-            result.AppendErrorWithFormat("invalid end-line option: %s.",
-                                         error.AsCString());
+          auto get_address_range_from_here_to_end_line_or_err =
+              sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range);
+          if (!get_address_range_from_here_to_end_line_or_err) {
+            result.AppendErrorWithFormat(
+                "invalid end-line option: %s.",
+                toString(
+                    get_address_range_from_here_to_end_line_or_err.takeError())
+                    .c_str());
             return;
           }
         } else if (m_options.m_end_line_is_block_end) {
