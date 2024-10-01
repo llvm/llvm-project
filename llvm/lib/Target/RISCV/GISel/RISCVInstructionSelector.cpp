@@ -568,6 +568,18 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
 
+  // FIXME: We create a IMPLICIT_DEF and a G_CONSTANT in preISelLower when
+  // we encounter a G_SPLAT_VECTOR. We cannot select the G_CONSTANT until after
+  // the MI is lowered, since renderVLOp needs to see the G_CONSTANT. It would
+  // be nice if the InstructionSelector selected these instructions without
+  // needing to call select on them explicitly.
+  if (Opc == RISCV::G_VMV_V_X_VL || Opc == RISCV::G_VFMV_V_F_VL) {
+    MachineInstr *Passthru = MRI->getVRegDef(MI.getOperand(1).getReg());
+    MachineInstr *VL = MRI->getVRegDef(MI.getOperand(3).getReg());
+    if (selectImpl(MI, *CoverageInfo))
+      return select(*Passthru) && select(*VL);
+  }
+
   if (selectImpl(MI, *CoverageInfo))
     return true;
 
@@ -800,6 +812,33 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     replacePtrWithInt(MI.getOperand(1), MIB);
     MI.setDesc(TII.get(TargetOpcode::G_AND));
     MRI->setType(DstReg, sXLen);
+    break;
+  }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
+    // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
+    Register Scalar = MI.getOperand(1).getReg();
+    bool IsGPRSplat = isRegInGprb(Scalar);
+    const LLT sXLen = LLT::scalar(STI.getXLen());
+    if (IsGPRSplat && TypeSize::isKnownLT(MRI->getType(Scalar).getSizeInBits(),
+                                          sXLen.getSizeInBits()))
+      Scalar = MIB.buildAnyExt(sXLen, Scalar).getReg(0);
+
+    // Convert MI in place, since select function is trying to select this
+    // instruction.
+    unsigned Opc = IsGPRSplat ? RISCV::G_VMV_V_X_VL : RISCV::G_VFMV_V_F_VL;
+    MI.setDesc(TII.get(Opc));
+    MI.removeOperand(1);
+    LLT VecTy = MRI->getType(MI.getOperand(0).getReg());
+    auto Passthru = MIB.buildUndef(VecTy);
+    auto VLMax = MIB.buildConstant(sXLen, -1);
+    MRI->setRegBank(Passthru.getReg(0), RBI.getRegBank(RISCV::VRBRegBankID));
+    MRI->setRegBank(VLMax.getReg(0), RBI.getRegBank(RISCV::GPRBRegBankID));
+    MachineInstrBuilder(*MI.getMF(), &MI)
+        .addUse(Passthru.getReg(0))
+        .addUse(Scalar)
+        .addUse(VLMax.getReg(0));
+    break;
   }
   }
 }
