@@ -109,6 +109,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Tracker.h"
@@ -188,25 +189,6 @@ class AtomicCmpXchgInst;
 class CmpInst;
 class ICmpInst;
 class FCmpInst;
-
-/// Argument of a sandboxir::Function.
-class Argument : public sandboxir::Value {
-  Argument(llvm::Argument *Arg, sandboxir::Context &Ctx)
-      : sandboxir::Value(ClassID::Argument, Arg, Ctx) {}
-  friend class Context; // For constructor.
-
-public:
-  static bool classof(const sandboxir::Value *From) {
-    return From->getSubclassID() == ClassID::Argument;
-  }
-#ifndef NDEBUG
-  void verify() const final {
-    assert(isa<llvm::Argument>(Val) && "Expected Argument!");
-  }
-  void printAsOperand(raw_ostream &OS) const;
-  void dumpOS(raw_ostream &OS) const final;
-#endif
-};
 
 class Constant : public sandboxir::User {
 protected:
