@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
@@ -195,17 +196,11 @@ MemrefValue skipFullyAliasingOperations(MemrefValue source) {
 
 MemrefValue skipViewLikeOps(MemrefValue source) {
   while (auto op = source.getDefiningOp()) {
-    if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
-      source = cast<MemrefValue>(subView.getSource());
-    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
-      source = castOp.getSource();
-    } else if (auto collapse = dyn_cast<memref::CollapseShapeOp>(op)) {
-      source = cast<MemrefValue>(collapse.getSrc());
-    } else if (auto expand = dyn_cast<memref::ExpandShapeOp>(op)) {
-      source = cast<MemrefValue>(expand.getSrc());
-    } else {
-      return source;
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(op)) {
+      source = cast<MemrefValue>(viewLike.getViewSource());
+      continue;
     }
+    return source;
   }
   return source;
 }

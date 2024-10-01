@@ -114,8 +114,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<memref::SubViewOp, memref::CollapseShapeOp, memref::ExpandShapeOp,
-            memref::CastOp>(user)) {
+    if (isa<ViewLikeOpInterface>(user)) {
       users.append(user->getUsers().begin(), user->getUsers().end());
       continue;
     }
@@ -201,8 +200,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
     // If the user has already been processed skip.
     if (!processed.insert(user).second)
       continue;
-    if (isa<memref::SubViewOp, memref::CollapseShapeOp, memref::ExpandShapeOp,
-            memref::CastOp>(user)) {
+    if (isa<ViewLikeOpInterface>(user)) {
       users.append(user->getUsers().begin(), user->getUsers().end());
       continue;
     }

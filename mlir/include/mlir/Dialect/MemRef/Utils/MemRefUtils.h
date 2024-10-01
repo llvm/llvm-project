@@ -106,8 +106,8 @@ inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
   return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
 }
 
-/// Walk up the source chain until something an op other than a `memref.cast`,
-/// `memref.subview`, or `memref.expand/collapse_shape` is found.
+/// Walk up the source chain until we find an operation that is not a view of
+/// the source memref (i.e. implements ViewLikeOpInterface).
 MemrefValue skipViewLikeOps(MemrefValue source);
 
 } // namespace memref
