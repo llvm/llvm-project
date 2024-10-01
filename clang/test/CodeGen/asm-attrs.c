@@ -9,12 +9,15 @@
 // CHECK: call i32 asm "foo6", {{.*}} [[ARGWRITE:#[0-9]+]]
 // CHECK: call void asm sideeffect "foo7", {{.*}} [[INACCESSIBLEMEMONLY]]
 // CHECK: call i32 asm "foo8", {{.*}} [[READNONE]]
+// CHECK: call void asm "foo9", {{.*}} [[ARGREADWRITE:#[0-9]+]]
+// CHECK: call void asm "foo10", {{.*}} [[ARGREADWRITE]]
 
 // CHECK: attributes [[READNONE]] = { nounwind willreturn memory(none) }
 // CHECK: attributes [[NOATTRS]] = { nounwind willreturn }
 // CHECK: attributes [[INACCESSIBLEMEMONLY]] = { nounwind memory(inaccessiblemem: readwrite) }
 // CHECK: attributes [[ARGREAD]] = { nounwind willreturn memory(argmem: read) }
 // CHECK: attributes [[ARGWRITE]] = { nounwind willreturn memory(argmem: write) }
+// CHECK: attributes [[ARGREADWRITE]] = { nounwind willreturn memory(argmem: readwrite) }
 
 int g0, g1;
 
@@ -32,4 +35,6 @@ void test_attrs(int a) {
   __asm__ ("foo6" : "=r"(g1), "=m"(g0) : "r"(a));
   __asm__ ("foo7" : : "r"(a));
   __asm__ ("foo8" : "=r"(g2) : "r"(a));
+  __asm__ ("foo9" : "=m"(g1) : "m"(g0));
+  __asm__ ("foo10" : "+m"(g1));
 }

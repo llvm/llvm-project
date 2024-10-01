@@ -2826,7 +2826,9 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       Args.push_back(DestAddr.emitRawPointer(*this));
       Constraints += "=*";
       Constraints += OutputConstraint;
-      MemoryEffects |= llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Mod);
+      auto MRI =
+          Info.isReadWrite() ? llvm::ModRefInfo::ModRef : llvm::ModRefInfo::Mod;
+      MemoryEffects |= llvm::MemoryEffects::argMemOnly(MRI);
     }
 
     if (Info.isReadWrite()) {
