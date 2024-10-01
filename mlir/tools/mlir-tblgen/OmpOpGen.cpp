@@ -318,7 +318,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
     return;
 
   SmallVector<std::string> clauseNames;
-  for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+  for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
     clauseNames.push_back((extractOmpClauseName(clause) + "ClauseOps").str());
 
   StringRef opName = stripPrefixAndSuffix(
