@@ -28,6 +28,8 @@ static const std::map<std::string, SPIRV::Extension::Extension>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add},
         {"SPV_EXT_shader_atomic_float_min_max",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
+        {"SPV_EXT_arithmetic_fence",
+         SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
         {"SPV_INTEL_arbitrary_precision_integers",
          SPIRV::Extension::Extension::SPV_INTEL_arbitrary_precision_integers},
         {"SPV_INTEL_cache_controls",

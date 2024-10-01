@@ -73,7 +73,7 @@ _bzhi_u32(unsigned int __X, unsigned int __Y)
 /// \param __Y
 ///    The 32-bit mask specifying where to deposit source bits.
 /// \returns The 32-bit result.
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 _pdep_u32(unsigned int __X, unsigned int __Y)
 {
   return __builtin_ia32_pdep_si(__X, __Y);
@@ -103,7 +103,7 @@ _pdep_u32(unsigned int __X, unsigned int __Y)
 /// \param __Y
 ///    The 32-bit mask specifying which source bits to extract.
 /// \returns The 32-bit result.
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 _pext_u32(unsigned int __X, unsigned int __Y)
 {
   return __builtin_ia32_pext_si(__X, __Y);
@@ -189,7 +189,7 @@ _bzhi_u64(unsigned long long __X, unsigned long long __Y)
 /// \param __Y
 ///    The 64-bit mask specifying where to deposit source bits.
 /// \returns The 64-bit result.
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 _pdep_u64(unsigned long long __X, unsigned long long __Y)
 {
   return __builtin_ia32_pdep_di(__X, __Y);
@@ -219,7 +219,7 @@ _pdep_u64(unsigned long long __X, unsigned long long __Y)
 /// \param __Y
 ///    The 64-bit mask specifying which source bits to extract.
 /// \returns The 64-bit result.
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 _pext_u64(unsigned long long __X, unsigned long long __Y)
 {
   return __builtin_ia32_pext_di(__X, __Y);

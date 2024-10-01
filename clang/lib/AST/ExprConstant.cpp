@@ -13518,6 +13518,36 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     return Success(Val.countTrailingZeros(), E);
   }
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di: {
+    APSInt Val, Msk;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Msk, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    APInt Result = APInt::getZero(BitWidth);
+    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
+      if (Msk[I])
+        Result.setBitVal(I, Val[P++]);
+    return Success(Result, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di: {
+    APSInt Val, Msk;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Msk, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    APInt Result = APInt::getZero(BitWidth);
+    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
+      if (Msk[I])
+        Result.setBitVal(P++, Val[I]);
+    return Success(Result, E);
+  }
   }
 }
 
