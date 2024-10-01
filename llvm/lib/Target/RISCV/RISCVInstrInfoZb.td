@@ -599,15 +599,26 @@ def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 8)),
 def : Pat<(and (or (shl GPR:$rs2, (XLenVT 8)),
                    (zexti8 (XLenVT GPR:$rs1))), 0xFFFF),
           (PACKH GPR:$rs1, GPR:$rs2)>;
+def : Pat<(or (shl (zexti8 (XLenVT GPR:$rs2)), (XLenVT 24)),
+              (shl (zexti8 (XLenVT GPR:$rs1)), (XLenVT 16))),
+          (SLLI (PACKH GPR:$rs1, GPR:$rs2), (XLenVT 16))>;
 
 def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
                                (zexti8 (XLenVT GPR:$rs1))),
           (PACKH GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbkb]
 
-let Predicates = [HasStdExtZbkb, IsRV32] in
+let Predicates = [HasStdExtZbkb, IsRV32] in {
 def : Pat<(i32 (or (zexti16 (i32 GPR:$rs1)), (shl GPR:$rs2, (i32 16)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
+def : Pat<(or (or
+                  (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
+                  (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+              (or
+                  (shl (zexti8 (XLenVT GPR:$op0rs2)), (XLenVT 8)),
+                  (zexti8 (XLenVT GPR:$op0rs1)))),
+          (PACK (PACKH GPR:$op0rs1, GPR:$op0rs2), (PACKH GPR:$op1rs1, GPR:$op1rs2))>;
+}
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {
 def : Pat<(i64 (or (zexti32 (i64 GPR:$rs1)), (shl GPR:$rs2, (i64 32)))),

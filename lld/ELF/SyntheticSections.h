@@ -1426,11 +1426,11 @@ private:
   SmallVector<const Symbol *, 0> symbols;
 };
 
-template <class ELFT> void createSyntheticSections();
+template <class ELFT> void createSyntheticSections(Ctx &);
 InputSection *createInterpSection();
 MergeInputSection *createCommentSection();
-template <class ELFT> void splitSections();
-void combineEhSections();
+template <class ELFT> void splitSections(Ctx &);
+void combineEhSections(Ctx &);
 
 bool hasMemtag();
 bool canHaveMemtagGlobals();

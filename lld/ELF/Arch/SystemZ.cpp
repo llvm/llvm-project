@@ -23,7 +23,7 @@ using namespace lld::elf;
 namespace {
 class SystemZ : public TargetInfo {
 public:
-  SystemZ();
+  SystemZ(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -51,7 +51,7 @@ private:
 };
 } // namespace
 
-SystemZ::SystemZ() {
+SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_390_COPY;
   gotRel = R_390_GLOB_DAT;
   pltRel = R_390_JMP_SLOT;
@@ -601,7 +601,7 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo() {
-  static SystemZ t;
+TargetInfo *elf::getSystemZTargetInfo(Ctx &ctx) {
+  static SystemZ t(ctx);
   return &t;
 }

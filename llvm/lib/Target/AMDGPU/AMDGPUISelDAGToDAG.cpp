@@ -1911,7 +1911,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
                     0);
   }
 
-  Offset = CurDAG->getTargetConstant(COffsetVal, DL, MVT::i16);
+  Offset = CurDAG->getTargetConstant(COffsetVal, DL, MVT::i32);
 
   return true;
 }
@@ -1966,7 +1966,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
           return false;
         if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, SplitImmOffset))
           return false;
-        Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+        Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
         return true;
       }
     }
@@ -1999,7 +1999,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, ImmOffset))
     return false;
   SAddr = SelectSAddrFI(CurDAG, SAddr);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 

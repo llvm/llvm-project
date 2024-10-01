@@ -700,7 +700,7 @@ bool ScalarizerVisitor::splitBinary(Instruction &I, const Splitter &Split) {
 bool ScalarizerVisitor::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
-  return Function::isTargetIntrinsic(ID) &&
+  return Intrinsic::isTargetIntrinsic(ID) &&
          TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 

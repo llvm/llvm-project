@@ -5517,6 +5517,18 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return Res;
   }
 
+  if (T.isSPARC()) {
+    // Add "-i128:128"
+    std::string I64 = "-i64:64";
+    std::string I128 = "-i128:128";
+    if (!StringRef(Res).contains(I128)) {
+      size_t Pos = Res.find(I64);
+      assert(Pos != size_t(-1) && "no i64 data layout found!");
+      Res.insert(Pos + I64.size(), I128);
+    }
+    return Res;
+  }
+
   if (!T.isX86())
     return Res;
 

@@ -103,6 +103,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
+
+  Gives warnings for tagged unions, where the number of tags is
+  different from the number of data members inside the union.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

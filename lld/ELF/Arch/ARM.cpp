@@ -28,7 +28,7 @@ using namespace llvm::object;
 namespace {
 class ARM final : public TargetInfo {
 public:
-  ARM();
+  ARM(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -54,7 +54,7 @@ enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 
 static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
-ARM::ARM() {
+ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
@@ -1261,7 +1261,7 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // name with __acle_se_.
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
-void elf::processArmCmseSymbols() {
+void elf::processArmCmseSymbols(Ctx &ctx) {
   if (!ctx.arg.cmseImplib)
     return;
   // Only symbols with external linkage end up in ctx.symtab, so no need to do
@@ -1533,8 +1533,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
           "': " + toString(std::move(e)));
 }
 
-TargetInfo *elf::getARMTargetInfo() {
-  static ARM target;
+TargetInfo *elf::getARMTargetInfo(Ctx &ctx) {
+  static ARM target(ctx);
   return &target;
 }
 
