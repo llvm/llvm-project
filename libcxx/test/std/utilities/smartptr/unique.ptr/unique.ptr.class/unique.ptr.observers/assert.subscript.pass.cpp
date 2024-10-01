@@ -48,31 +48,24 @@ struct MyDeleter {
 
 template <class WithCookie, class NoCookie>
 void test() {
-  // For types with an array cookie, we can always detect OOB accesses.
+  // For types with an array cookie, we can always detect OOB accesses. Note that reliance on an array
+  // cookie is limited to the default deleter, since a unique_ptr with a custom deleter may not have
+  // been allocated with `new T[n]`.
   {
-    // Check with the default deleter
     {
-      {
-        std::unique_ptr<WithCookie[]> ptr(new WithCookie[5]);
-        TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
-      }
-      {
-        std::unique_ptr<WithCookie[]> ptr = std::make_unique<WithCookie[]>(5);
-        TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
-      }
-#if TEST_STD_VER >= 20
-      {
-        std::unique_ptr<WithCookie[]> ptr = std::make_unique_for_overwrite<WithCookie[]>(5);
-        TEST_LIBCPP_ASSERT_FAILURE(ptr[6] = WithCookie(), "unique_ptr<T[]>::operator[](index): index out of range");
-      }
-#endif
-    }
-
-    // Check with a custom deleter
-    {
-      std::unique_ptr<WithCookie[], MyDeleter> ptr(new WithCookie[5]);
+      std::unique_ptr<WithCookie[]> ptr(new WithCookie[5]);
       TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
+    {
+      std::unique_ptr<WithCookie[]> ptr = std::make_unique<WithCookie[]>(5);
+      TEST_LIBCPP_ASSERT_FAILURE(ptr[6], "unique_ptr<T[]>::operator[](index): index out of range");
+    }
+#if TEST_STD_VER >= 20
+    {
+      std::unique_ptr<WithCookie[]> ptr = std::make_unique_for_overwrite<WithCookie[]>(5);
+      TEST_LIBCPP_ASSERT_FAILURE(ptr[6] = WithCookie(), "unique_ptr<T[]>::operator[](index): index out of range");
+    }
+#endif
   }
 
   // For types that don't have an array cookie, things are a bit more complicated. We can detect OOB accesses

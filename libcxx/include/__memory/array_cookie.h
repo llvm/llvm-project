@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Trait representing whether a type requires an array cookie at the start of its allocation when
-// allocated as `new T[n]` and deallocated as `delete array`.
+// allocated as `new T[n]` and deallocated as `delete[] array`.
 //
 // Under the Itanium C++ ABI [1], we know that an array cookie is available unless `T` is trivially
 // destructible and the call to `operator delete[]` is not a sized operator delete. Under ABIs other
