@@ -174,9 +174,11 @@ int utimensat(int dirfd, const char *pathname, const struct timespec times[2], i
 int utimes(const char *filename, const struct timeval times[2]);
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 struct tm *localtime(const time_t *tp);
-struct tm *localtime_r(const time_t *restrict timer, struct tm *restrict result);
+struct tm *localtime_r(const time_t *timer, struct tm *result);
+struct tm *localtime_s(const time_t *restrict timer, struct tm *restrict result);
 char *asctime_r(const struct tm *restrict tm, char *restrict buf);
 char *ctime_r(const time_t *timep, char *buf);
+char *ctime_s(char *buf, rsize_t buf_size, const time_t *timep);
 struct tm *gmtime_r(const time_t *restrict timer, struct tm *restrict result);
 struct tm *gmtime(const time_t *tp);
 int clock_gettime(clockid_t clock_id, struct timespec *tp);
