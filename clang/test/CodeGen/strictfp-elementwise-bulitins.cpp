@@ -257,6 +257,16 @@ float4 strict_elementwise_tanh(float4 a) {
   return __builtin_elementwise_tanh(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_atan2Dv4_fS_
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_ATAN2:%.*]] = tail call <4 x float> @llvm.atan2.v4f32(<4 x float> [[A]], <4 x float> [[B]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_ATAN2]]
+//
+float4 strict_elementwise_atan2(float4 a, float4 b) {
+  return __builtin_elementwise_atan2(a, b);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_truncDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:
