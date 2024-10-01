@@ -1095,8 +1095,6 @@ public:
     return Visit(E->getBase());
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
-    if (E->getCastKind() == CK_LValueToRValue)
-      return E;
     return Visit(E->getSubExpr());
   }
   const Expr *VisitParenExpr(const ParenExpr *E) {
@@ -1162,10 +1160,24 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
   if (!StructBase || StructBase->HasSideEffects(getContext()))
     return nullptr;
 
-  LValueBaseInfo BaseInfo;
-  TBAAAccessInfo TBAAInfo;
-  Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
-  llvm::Value *Res = Addr.emitRawPointer(*this);
+  llvm::Value *Res = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
+    Res = EmitDeclRefLValue(DRE).getPointer(*this);
+    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
+                                    getPointerAlign(), "dre.load");
+  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(StructBase)) {
+    LValue LV = EmitMemberExpr(ME);
+    Address Addr = LV.getAddress();
+    Res = Addr.emitRawPointer(*this);
+    Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign());
+  } else if (StructBase->getType()->isPointerType()) {
+    LValueBaseInfo BaseInfo;
+    TBAAAccessInfo TBAAInfo;
+    Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.emitRawPointer(*this);
+  } else {
+    return nullptr;
+  }
 
   RecIndicesTy Indices;
   getGEPIndicesToField(*this, RD, CountDecl, Indices);

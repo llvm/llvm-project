@@ -1015,7 +1015,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Build a load of the counted_by field.
   bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-  Value *CountedByInst = EmitLoadOfCountedByField(E, FAMDecl, CountedByFD);
+  Value *CountedByInst = EmitLoadOfCountedByField(Base, FAMDecl, CountedByFD);
   if (!CountedByInst)
     return getDefaultBuiltinObjectSizeResult(Type, ResType);
 

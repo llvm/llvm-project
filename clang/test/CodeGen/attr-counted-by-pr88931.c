@@ -15,7 +15,7 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
-// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef -1) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef -1) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test1(struct bar *p) {
@@ -32,14 +32,7 @@ struct bux { struct mux x; };
 // CHECK-LABEL: define dso_local void @test2(
 // CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOT_COUNTED_BY_LOAD:%.*]] = load i32, ptr [[P]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[DOT_COUNTED_BY_LOAD]] to i64
-// CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP1]], i64 0)
-// CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[DOT_COUNTED_BY_LOAD]], -1
-// CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
-// CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[P]], i64 noundef [[TMP5]]) #[[ATTR3]]
+// CHECK-NEXT:    tail call void @init(ptr noundef [[P]], i64 noundef -1) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 //
 void test2(struct bux *p) {
