@@ -181,13 +181,6 @@
 #  define _LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING
 #endif
 
-// Tracks the bounds of the array owned by std::unique_ptr<T[]>, allowing it to trap when accessed out-of-bounds.
-// Note that limited bounds checking is also available outside of this ABI configuration, but only some categories
-// of types can be checked.
-//
-// ABI impact: This causes the layout of std::unique_ptr<T[]> to change and its size to increase.
-// #define _LIBCPP_ABI_BOUNDED_UNIQUE_PTR
-
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #  if defined(__APPLE__)
 #    if defined(__i386__) || defined(__x86_64__)
