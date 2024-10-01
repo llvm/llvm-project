@@ -79,8 +79,8 @@ struct ELFLinuxSigInfo {
   int32_t si_signo; // Order matters for the first 3.
   int32_t si_errno;
   int32_t si_code;
-  lldb::addr_t addr;       /* faulting insn/memory ref. */
-  int32_t addr_lsb; /* Valid LSB of the reported address.  */
+  lldb::addr_t addr; /* faulting insn/memory ref. */
+  int32_t addr_lsb;  /* Valid LSB of the reported address.  */
 
   ELFLinuxSigInfo();
 

@@ -573,7 +573,7 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
     addr = data.GetAddress(&offset);
     addr_lsb = data.GetU16(&offset);
   }
-  
+
   return error;
 }
 
@@ -582,7 +582,6 @@ std::string ELFLinuxSigInfo::GetDescription() {
     return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
         si_signo, si_code, reinterpret_cast<uintptr_t>(addr));
 
-
   return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
-        si_signo, si_code);
+      si_signo, si_code);
 }
