@@ -1600,6 +1600,18 @@ static void CheckMaxMin(const characteristics::Procedure &proc,
   }
 }
 
+static void CheckFree(evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (arguments.size() != 1) {
+    messages.Say("FREE expects a single argument"_err_en_US);
+  }
+  auto arg = arguments[0];
+  if (const Symbol * symbol{evaluate::UnwrapWholeSymbolDataRef(arg)};
+      !symbol || !symbol->test(Symbol::Flag::CrayPointer)) {
+    messages.Say("FREE should only be used with Cray pointers"_warn_en_US);
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1885,6 +1897,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckReduce(arguments, context.foldingContext());
   } else if (intrinsic.name == "transfer") {
     CheckTransfer(arguments, context, scope);
+  } else if (intrinsic.name == "free") {
+    CheckFree(arguments, context.foldingContext().messages());
   }
 }
 
@@ -2026,22 +2040,6 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
       assert(false && "vector type is expected");
   }
   return false;
-}
-
-bool CheckWindowsIntrinsic(
-    const Symbol &intrinsic, evaluate::FoldingContext &foldingContext) {
-  parser::ContextualMessages &messages{foldingContext.messages()};
-  // TODO: there are other intrinsics that are unsupported on Windows that
-  // should be added here.
-  if (intrinsic.name() == "getuid") {
-    messages.Say(
-        "User IDs do not exist on Windows. This function will always return 1"_warn_en_US);
-  }
-  if (intrinsic.name() == "getgid") {
-    messages.Say(
-        "Group IDs do not exist on Windows. This function will always return 1"_warn_en_US);
-  }
-  return true;
 }
 
 bool CheckArguments(const characteristics::Procedure &proc,

@@ -3432,6 +3432,60 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  issignaling
+  SRCS
+    issignaling.cpp
+  HDRS
+    ../issignaling.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  issignalingf
+  SRCS
+    issignalingf.cpp
+  HDRS
+    ../issignalingf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  issignalingl
+  SRCS
+    issignalingl.cpp
+  HDRS
+    ../issignalingl.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  issignalingf16
+  SRCS
+    issignalingf16.cpp
+  HDRS
+    ../issignalingf16.h
+  COMPILE_OPTIONS
+      -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  issignalingf128
+  SRCS
+    issignalingf128.cpp
+  HDRS
+    ../issignalingf128.h
+  COMPILE_OPTIONS
+      -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
   isnan
   SRCS
     isnan.cpp

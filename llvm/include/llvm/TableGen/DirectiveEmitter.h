@@ -247,7 +247,7 @@ private:
 
 class ClauseVal : public BaseRecord {
 public:
-  explicit ClauseVal(const Record *Def) : BaseRecord(Def) {}
+  ClauseVal(const Record *Def) : BaseRecord(Def) {}
 
   int getValue() const { return Def->getValueAsInt("value"); }
 

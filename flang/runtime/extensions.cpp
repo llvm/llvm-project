@@ -58,24 +58,6 @@ extern "C" {
 
 namespace Fortran::runtime {
 
-gid_t RTNAME(GetGID)() {
-#ifdef _WIN32
-  // Group IDs don't exist on Windows, return 1 to avoid errors
-  return 1;
-#else
-  return getgid();
-#endif
-}
-
-uid_t RTNAME(GetUID)() {
-#ifdef _WIN32
-  // User IDs don't exist on Windows, return 1 to avoid errors
-  return 1;
-#else
-  return getuid();
-#endif
-}
-
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
       1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
@@ -84,7 +66,6 @@ void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   RTNAME(GetEnvVariable)
   (name, &value, nullptr, false, nullptr, __FILE__, __LINE__);
 }
-
 namespace io {
 // SUBROUTINE FLUSH(N)
 //   FLUSH N
@@ -115,6 +96,10 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   CopyAndPad(arg, str, length, 24);
 }
 
+std::intptr_t RTNAME(Malloc)(std::size_t size) {
+  return reinterpret_cast<std::intptr_t>(std::malloc(size));
+}
+
 // RESULT = IARGC()
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
@@ -141,6 +126,10 @@ void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #else
   GetUsernameEnvVar("LOGNAME", arg, length);
 #endif
+}
+
+void RTNAME(Free)(std::intptr_t ptr) {
+  std::free(reinterpret_cast<void *>(ptr));
 }
 
 std::int64_t RTNAME(Signal)(std::int64_t number, void (*handler)(int)) {

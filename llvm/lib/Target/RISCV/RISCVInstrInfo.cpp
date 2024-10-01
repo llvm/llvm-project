@@ -804,8 +804,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
           MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
       switch (Log2SEW) {
       case 4:
-        // TODO: Support f16/bf16
-        return nullptr;
+        LoadOpc = RISCV::FLH;
+        break;
       case 5:
         LoadOpc = RISCV::FLW;
         break;

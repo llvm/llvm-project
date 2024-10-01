@@ -112,7 +112,7 @@ Availability::Availability(const llvm::Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<Record *, 1> parentClass;
+  SmallVector<const Record *, 1> parentClass;
   def->getDirectSuperClasses(parentClass);
   if (parentClass.size() != 1) {
     PrintFatalError(def->getLoc(),
@@ -166,7 +166,8 @@ std::vector<Availability> getAvailabilities(const Record &def) {
   std::vector<Availability> availabilities;
 
   if (def.getValue("availability")) {
-    std::vector<Record *> availDefs = def.getValueAsListOfDefs("availability");
+    std::vector<const Record *> availDefs =
+        def.getValueAsListOfConstDefs("availability");
     availabilities.reserve(availDefs.size());
     for (const Record *avail : availDefs)
       availabilities.emplace_back(avail);
@@ -203,7 +204,7 @@ static bool emitInterfaceDefs(const RecordKeeper &recordKeeper,
   auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<Record *, 1> parent;
+    SmallVector<const Record *, 1> parent;
     def->getDirectSuperClasses(parent);
     if (parent.size() != 1) {
       PrintFatalError(def->getLoc(),
@@ -293,7 +294,7 @@ static bool emitInterfaceDecls(const RecordKeeper &recordKeeper,
   auto defs = recordKeeper.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<Record *, 1> parent;
+    SmallVector<const Record *, 1> parent;
     def->getDirectSuperClasses(parent);
     if (parent.size() != 1) {
       PrintFatalError(def->getLoc(),
@@ -1449,7 +1450,8 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
     if (!def.getValue("implies"))
       continue;
 
-    std::vector<Record *> impliedCapsDefs = def.getValueAsListOfDefs("implies");
+    std::vector<const Record *> impliedCapsDefs =
+        def.getValueAsListOfConstDefs("implies");
     os << "  case spirv::Capability::" << enumerant.getSymbol()
        << ": {static const spirv::Capability implies[" << impliedCapsDefs.size()
        << "] = {";

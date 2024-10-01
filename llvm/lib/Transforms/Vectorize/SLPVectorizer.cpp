@@ -5470,7 +5470,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         }
       return I1 < I2;
     };
-    DenseMap<unsigned, unsigned> PhiToId;
+    SmallDenseMap<unsigned, unsigned, 16> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
     OrdersType ResOrder(TE.Scalars.size());
@@ -10319,7 +10319,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   if (E->CombinedOp != TreeEntry::NotCombinedOp)
     ShuffleOrOp = E->CombinedOp;
-  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
+  SmallSetVector<Value *, 16> UniqueValues(VL.begin(), VL.end());
   const unsigned Sz = UniqueValues.size();
   SmallBitVector UsedScalars(Sz, false);
   for (unsigned I = 0; I < Sz; ++I) {
@@ -11571,6 +11571,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   DenseSet<std::pair<const TreeEntry *, Type *>> VectorCasts;
   std::optional<DenseMap<Value *, unsigned>> ValueToExtUses;
   DenseMap<const TreeEntry *, DenseSet<Value *>> ExtractsCount;
+  SmallPtrSet<Value *, 4> ScalarOpsFromCasts;
   for (ExternalUser &EU : ExternalUses) {
     // Uses by ephemeral values are free (because the ephemeral value will be
     // removed prior to code generation, and so the extraction will be
@@ -11706,7 +11707,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
       // Can use original instruction, if no operands vectorized or they are
       // marked as externally used already.
       auto *Inst = cast<Instruction>(EU.Scalar);
-      bool CanBeUsedAsScalar = all_of(Inst->operands(), [&](Value *V) {
+      InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
+      auto OperandIsScalar = [&](Value *V) {
         if (!getTreeEntry(V)) {
           // Some extractelements might be not vectorized, but
           // transformed into shuffle and removed from the function,
@@ -11716,9 +11718,23 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           return true;
         }
         return ValueToExtUses->contains(V);
-      });
+      };
+      bool CanBeUsedAsScalar = all_of(Inst->operands(), OperandIsScalar);
+      bool CanBeUsedAsScalarCast = false;
+      if (auto *CI = dyn_cast<CastInst>(Inst); CI && !CanBeUsedAsScalar) {
+        if (auto *Op = dyn_cast<Instruction>(CI->getOperand(0));
+            Op && all_of(Op->operands(), OperandIsScalar)) {
+          InstructionCost OpCost =
+              (getTreeEntry(Op) && !ValueToExtUses->contains(Op))
+                  ? TTI->getInstructionCost(Op, CostKind)
+                  : 0;
+          if (ScalarCost + OpCost <= ExtraCost) {
+            CanBeUsedAsScalar = CanBeUsedAsScalarCast = true;
+            ScalarCost += OpCost;
+          }
+        }
+      }
       if (CanBeUsedAsScalar) {
-        InstructionCost ScalarCost = TTI->getInstructionCost(Inst, CostKind);
         bool KeepScalar = ScalarCost <= ExtraCost;
         // Try to keep original scalar if the user is the phi node from the same
         // block as the root phis, currently vectorized. It allows to keep
@@ -11774,11 +11790,33 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           ExtraCost = ScalarCost;
           if (!IsPhiInLoop(EU))
             ExtractsCount[Entry].insert(Inst);
+          if (CanBeUsedAsScalarCast) {
+            ScalarOpsFromCasts.insert(Inst->getOperand(0));
+            // Update the users of the operands of the cast operand to avoid
+            // compiler crash.
+            if (auto *IOp = dyn_cast<Instruction>(Inst->getOperand(0))) {
+              for_each(IOp->operands(), [&](Value *V) {
+                auto It = ValueToExtUses->find(V);
+                if (It != ValueToExtUses->end()) {
+                  // Replace all uses to avoid compiler crash.
+                  ExternalUses[It->second].User = nullptr;
+                }
+              });
+            }
+          }
         }
       }
     }
 
     ExtractCost += ExtraCost;
+  }
+  // Insert externals for extract of operands of casts to be emitted as scalars
+  // instead of extractelement.
+  for (Value *V : ScalarOpsFromCasts) {
+    ExternalUsesAsOriginalScalar.insert(V);
+    if (const TreeEntry *E = getTreeEntry(V)) {
+      ExternalUses.emplace_back(V, nullptr, E->findLaneForValue(V));
+    }
   }
   // Add reduced value cost, if resized.
   if (!VectorizedVals.empty()) {
@@ -11786,7 +11824,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto BWIt = MinBWs.find(&Root);
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
-      unsigned OriginalSz = DL->getTypeSizeInBits(DstTy);
+      unsigned OriginalSz = DL->getTypeSizeInBits(DstTy->getScalarType());
       unsigned SrcSz =
           ReductionBitWidth == 0 ? BWIt->second.first : ReductionBitWidth;
       if (OriginalSz != SrcSz) {
@@ -11794,6 +11832,10 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         if (OriginalSz > SrcSz)
           Opcode = BWIt->second.second ? Instruction::SExt : Instruction::ZExt;
         Type *SrcTy = IntegerType::get(DstTy->getContext(), SrcSz);
+        if (auto *VecTy = dyn_cast<FixedVectorType>(DstTy)) {
+          assert(SLPReVec && "Only supported by REVEC.");
+          SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
+        }
         Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
                                       TTI::CastContextHint::None,
                                       TTI::TCK_RecipThroughput);
@@ -13091,7 +13133,8 @@ public:
       UniqueBases.insert(VecBase);
       // If the only one use is vectorized - can delete the extractelement
       // itself.
-      if (!EI->hasOneUse() || (NumParts != 1 && count(E->Scalars, EI) > 1) ||
+      if (!EI->hasOneUse() || R.ExternalUsesAsOriginalScalar.contains(EI) ||
+          (NumParts != 1 && count(E->Scalars, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
             const TreeEntry *UTE = R.getTreeEntry(U);
             return !UTE || R.MultiNodeScalars.contains(U) ||
@@ -18013,7 +18056,7 @@ class HorizontalReduction {
   /// List of possibly reduced values.
   SmallVector<SmallVector<Value *>> ReducedVals;
   /// Maps reduced value to the corresponding reduction operation.
-  DenseMap<Value *, SmallVector<Instruction *>> ReducedValsToOps;
+  SmallDenseMap<Value *, SmallVector<Instruction *>, 16> ReducedValsToOps;
   WeakTrackingVH ReductionRoot;
   /// The type of reduction operation.
   RecurKind RdxKind;
@@ -18382,7 +18425,9 @@ public:
     // instruction op id and/or alternate op id, plus do extra analysis for
     // loads (grouping them by the distabce between pointers) and cmp
     // instructions (grouping them by the predicate).
-    MapVector<size_t, MapVector<size_t, MapVector<Value *, unsigned>>>
+    SmallMapVector<
+        size_t, SmallMapVector<size_t, SmallMapVector<Value *, unsigned, 2>, 2>,
+        8>
         PossibleReducedVals;
     initReductionOps(Root);
     DenseMap<Value *, SmallVector<LoadInst *>> LoadsMap;

@@ -15,6 +15,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Utils.h"
@@ -6113,5 +6114,5 @@ define void @foo() {
 TEST_F(SandboxIRTest, CheckClassof) {
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 }

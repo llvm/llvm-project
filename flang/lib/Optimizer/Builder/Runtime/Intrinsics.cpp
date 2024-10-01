@@ -120,20 +120,24 @@ void fir::runtime::genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<fir::CallOp>(loc, runtimeFunc, args);
 }
 
-mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
-  auto runtimeFunc =
-      fir::runtime::getRuntimeFunc<mkRTKey(GetGID)>(loc, builder);
+void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value ptr) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Free)>(loc, builder);
+  mlir::Type intPtrTy = builder.getIntPtrType();
 
-  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+  builder.create<fir::CallOp>(loc, runtimeFunc,
+                              builder.createConvert(loc, intPtrTy, ptr));
 }
 
-mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
-                                    mlir::Location loc) {
+mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value size) {
   auto runtimeFunc =
-      fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
-
-  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+      fir::runtime::getRuntimeFunc<mkRTKey(Malloc)>(loc, builder);
+  auto argTy = runtimeFunc.getArgumentTypes()[0];
+  return builder
+      .create<fir::CallOp>(loc, runtimeFunc,
+                           builder.createConvert(loc, argTy, size))
+      .getResult(0);
 }
 
 void fir::runtime::genRandomInit(fir::FirOpBuilder &builder, mlir::Location loc,

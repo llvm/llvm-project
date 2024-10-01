@@ -308,6 +308,12 @@ add_math_entrypoint_object(isnan)
 add_math_entrypoint_object(isnanf)
 add_math_entrypoint_object(isnanl)
 
+add_math_entrypoint_object(issignaling)
+add_math_entrypoint_object(issignalingf)
+add_math_entrypoint_object(issignalingl)
+add_math_entrypoint_object(issignalingf16)
+add_math_entrypoint_object(issignalingf128)
+
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
 add_math_entrypoint_object(llogbl)
