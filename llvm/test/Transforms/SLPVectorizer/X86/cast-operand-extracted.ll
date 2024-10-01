@@ -23,13 +23,16 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[ADD651]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP13]], <2 x i32> [[TMP10]], i64 2)
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr <4 x i32> [[TMP14]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[SHR685:%.*]] = lshr i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc <4 x i32> [[TMP15]] to <4 x i16>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i16> [[TMP16]], <4 x i16> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    store <2 x i16> [[TMP17]], ptr [[ARRAYIDX689]], align 8
+; CHECK-NEXT:    [[CONV686:%.*]] = trunc i32 [[SHR685]] to i16
+; CHECK-NEXT:    store i16 [[CONV686]], ptr [[ARRAYIDX689]], align 8
+; CHECK-NEXT:    [[ARRAYIDX727:%.*]] = getelementptr i8, ptr [[TMP4]], i64 7818
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i16> [[TMP16]], i32 2
+; CHECK-NEXT:    store i16 [[TMP17]], ptr [[ARRAYIDX727]], align 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i16> [[TMP16]], i32 3
 ; CHECK-NEXT:    store i16 [[TMP18]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <4 x i16> [[TMP16]], ptr [[ARRAYIDX660]], align 8
