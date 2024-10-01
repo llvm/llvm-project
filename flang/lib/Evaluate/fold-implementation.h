@@ -1736,8 +1736,9 @@ Expr<TO> FoldOperation(
                   msvcWorkaround.context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingException)) {
                 ctx.messages().Say(
-                    "INTEGER(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
-                    Operand::kind, TO::kind);
+                    "conversion of %s_%d to INTEGER(%d) overflowed; result is %s"_warn_en_US,
+                    value->SignedDecimal(), Operand::kind, TO::kind,
+                    converted.value.SignedDecimal());
               }
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {

@@ -1804,9 +1804,12 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
+  if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT))
+    return SDValue();
+
   // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT) ||
-      !(TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) || VT.isScalableVector()))
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
+      !VT.isScalableVector())
     return SDValue();
 
   SDLoc DL(Node);
@@ -1821,8 +1824,12 @@ SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
-  // FIXME: We shouldn't restrict this to scalable vectors.
-  if (!TLI.isOperationLegalOrCustom(ISD::AND, IntVT) || !VT.isScalableVector())
+  if (!TLI.isOperationLegalOrCustom(ISD::AND, IntVT))
+    return SDValue();
+
+  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
+      !VT.isScalableVector())
     return SDValue();
 
   SDLoc DL(Node);
@@ -1837,10 +1844,14 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
   EVT VT = Node->getValueType(0);
   EVT IntVT = VT.changeVectorElementTypeToInteger();
 
-  // FIXME: We shouldn't restrict this to scalable vectors.
   if (VT != Node->getOperand(1).getValueType() ||
       !TLI.isOperationLegalOrCustom(ISD::AND, IntVT) ||
-      !TLI.isOperationLegalOrCustom(ISD::OR, IntVT) || !VT.isScalableVector())
+      !TLI.isOperationLegalOrCustom(ISD::OR, IntVT))
+    return SDValue();
+
+  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
+      !VT.isScalableVector())
     return SDValue();
 
   SDLoc DL(Node);

@@ -1,4 +1,7 @@
 // RUN: %clang -O0 %s -o %t && %run %t
+//
+// This test fails under x86_64, freadlink can't read the current symlink path.
+// XFAIL: x86_64-darwin
 
 #include <assert.h>
 #include <fcntl.h>
