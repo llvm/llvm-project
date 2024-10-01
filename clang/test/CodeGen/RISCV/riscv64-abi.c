@@ -1710,7 +1710,7 @@ struct float16_int64_s f_ret_float16_int64_s(void) {
 // LP64:  entry:
 //
 // LP64F-LP64D-LABEL: define dso_local void @f_float16_int64bf_s_arg
-// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
+// LP64F-LP64D-SAME: (half [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR0]] {
 // LP64F-LP64D:  entry:
 //
 void f_float16_int64bf_s_arg(struct float16_int64bf_s a) {}
@@ -1719,7 +1719,7 @@ void f_float16_int64bf_s_arg(struct float16_int64bf_s a) {}
 // LP64-SAME: () #[[ATTR0]] {
 // LP64:  entry:
 //
-// LP64F-LP64D-LABEL: define dso_local <{ half, i64 }> @f_ret_float16_int64bf_s
+// LP64F-LP64D-LABEL: define dso_local <{ half, i32 }> @f_ret_float16_int64bf_s
 // LP64F-LP64D-SAME: () #[[ATTR0]] {
 // LP64F-LP64D:  entry:
 //

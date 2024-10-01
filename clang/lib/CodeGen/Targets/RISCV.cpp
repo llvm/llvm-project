@@ -251,6 +251,13 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
           QTy = getContext().getIntTypeForBitwidth(XLen, false);
+        // Trim type to bitwidth if possible
+        else if (getContext().getTypeSize(QTy) > BitWidth) {
+          bool IsSigned =
+              FD->getType().getTypePtr()->hasSignedIntegerRepresentation();
+          unsigned Bits = std::max(8U, (unsigned)llvm::PowerOf2Ceil(BitWidth));
+          QTy = getContext().getIntTypeForBitwidth(Bits, IsSigned);
+        }
         if (BitWidth == 0) {
           ZeroWidthBitFieldCount++;
           continue;
