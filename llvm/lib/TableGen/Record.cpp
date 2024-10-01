@@ -3047,22 +3047,8 @@ ListInit *Record::getValueAsListInit(StringRef FieldName) const {
                                 "' exists but does not have a list value");
 }
 
-std::vector<Record*>
-Record::getValueAsListOfDefs(StringRef FieldName) const {
-  ListInit *List = getValueAsListInit(FieldName);
-  std::vector<Record*> Defs;
-  for (Init *I : List->getValues()) {
-    if (DefInit *DI = dyn_cast<DefInit>(I))
-      Defs.push_back(DI->getDef());
-    else
-      PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
-        FieldName + "' list is not entirely DefInit!");
-  }
-  return Defs;
-}
-
 std::vector<const Record *>
-Record::getValueAsListOfConstDefs(StringRef FieldName) const {
+Record::getValueAsListOfDefs(StringRef FieldName) const {
   ListInit *List = getValueAsListInit(FieldName);
   std::vector<const Record *> Defs;
   for (const Init *I : List->getValues()) {
