@@ -1607,7 +1607,6 @@ add_fp_unittest(
     IsSignalingTest.h
   DEPENDS
     libc.src.math.issignaling
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1620,7 +1619,6 @@ add_fp_unittest(
     IsSignalingTest.h
   DEPENDS
     libc.src.math.issignalingf
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1633,7 +1631,6 @@ add_fp_unittest(
     IsSignalingTest.h
   DEPENDS
     libc.src.math.issignalingl
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1646,7 +1643,6 @@ add_fp_unittest(
     IsSignalingTest.h
   DEPENDS
     libc.src.math.issignalingf16
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1659,7 +1655,6 @@ add_fp_unittest(
     IsSignalingTest.h
   DEPENDS
     libc.src.math.issignalingf128
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
