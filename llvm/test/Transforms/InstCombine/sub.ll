@@ -2801,8 +2801,8 @@ if.else:
 define i32 @fold_sub_and_into_andn(i32 %x) {
 ; CHECK-LABEL: @fold_sub_and_into_andn(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 63, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 63
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 63
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
 entry:
@@ -2814,9 +2814,8 @@ entry:
 define i1 @fold_sub_and_into_andn_icmp(i32 %x) {
 ; CHECK-LABEL: @fold_sub_and_into_andn_icmp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 63, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 63
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -2829,8 +2828,8 @@ entry:
 define i32 @fold_sub_and_into_andn_subset(i32 %x) {
 ; CHECK-LABEL: @fold_sub_and_into_andn_subset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 31, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP0]], 31
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
 entry:
