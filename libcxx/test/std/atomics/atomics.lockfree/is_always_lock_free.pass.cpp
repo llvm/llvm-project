@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: !has-1024-bit-atomics
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <atomic>
 //
