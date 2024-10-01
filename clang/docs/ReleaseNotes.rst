@@ -362,6 +362,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses cases where a dangling ``GSLOwner<GSLPointer>`` object is constructed, e.g. ``std::vector<string_view> v = {std::string()};`` (#GH100526).
 
+- Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -522,7 +524,7 @@ X86 Support
 
 - All intrinsics in bmiintrin.h can now be used in constant expressions.
 
-- All bzhi/pdep/pext intrinsics in bmi2intrin.h can now be used in constant expressions.
+- All intrinsics in bmi2intrin.h can now be used in constant expressions.
 
 - All intrinsics in tbmintrin.h can now be used in constant expressions.
 

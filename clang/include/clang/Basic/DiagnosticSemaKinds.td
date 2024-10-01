@@ -12606,6 +12606,9 @@ def note_acc_construct_here : Note<"'%0' construct is here">;
 def err_acc_loop_spec_conflict
     : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
             "data dependence clause">;
+def err_acc_collapse_loop_count
+    : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
+            "expression|positive integer value, evaluated to %1}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
