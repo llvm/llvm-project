@@ -11725,7 +11725,9 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         if (auto *Op = dyn_cast<Instruction>(CI->getOperand(0));
             Op && all_of(Op->operands(), OperandIsScalar)) {
           InstructionCost OpCost =
-              getTreeEntry(Op) ? TTI->getInstructionCost(Op, CostKind) : 0;
+              (getTreeEntry(Op) && !ValueToExtUses->contains(Op))
+                  ? TTI->getInstructionCost(Op, CostKind)
+                  : 0;
           if (ScalarCost + OpCost <= ExtraCost) {
             CanBeUsedAsScalar = CanBeUsedAsScalarCast = true;
             ScalarCost += OpCost;
@@ -11788,8 +11790,20 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           ExtraCost = ScalarCost;
           if (!IsPhiInLoop(EU))
             ExtractsCount[Entry].insert(Inst);
-          if (CanBeUsedAsScalarCast)
+          if (CanBeUsedAsScalarCast) {
             ScalarOpsFromCasts.insert(Inst->getOperand(0));
+            // Update the users of the operands of the cast operand to avoid
+            // compiler crash.
+            if (auto *IOp = dyn_cast<Instruction>(Inst->getOperand(0))) {
+              for_each(IOp->operands(), [&](Value *V) {
+                auto It = ValueToExtUses->find(V);
+                if (It != ValueToExtUses->end()) {
+                  // Replace all uses to avoid compiler crash.
+                  ExternalUses[It->second].User = nullptr;
+                }
+              });
+            }
+          }
         }
       }
     }
@@ -11799,8 +11813,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   // Insert externals for extract of operands of casts to be emitted as scalars
   // instead of extractelement.
   for (Value *V : ScalarOpsFromCasts) {
+    ExternalUsesAsOriginalScalar.insert(V);
     if (const TreeEntry *E = getTreeEntry(V)) {
-      ExternalUsesAsOriginalScalar.insert(V);
       ExternalUses.emplace_back(V, nullptr, E->findLaneForValue(V));
     }
   }
@@ -11810,7 +11824,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto BWIt = MinBWs.find(&Root);
     if (BWIt != MinBWs.end()) {
       Type *DstTy = Root.Scalars.front()->getType();
-      unsigned OriginalSz = DL->getTypeSizeInBits(DstTy);
+      unsigned OriginalSz = DL->getTypeSizeInBits(DstTy->getScalarType());
       unsigned SrcSz =
           ReductionBitWidth == 0 ? BWIt->second.first : ReductionBitWidth;
       if (OriginalSz != SrcSz) {
@@ -11818,6 +11832,10 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         if (OriginalSz > SrcSz)
           Opcode = BWIt->second.second ? Instruction::SExt : Instruction::ZExt;
         Type *SrcTy = IntegerType::get(DstTy->getContext(), SrcSz);
+        if (auto *VecTy = dyn_cast<FixedVectorType>(DstTy)) {
+          assert(SLPReVec && "Only supported by REVEC.");
+          SrcTy = getWidenedType(SrcTy, VecTy->getNumElements());
+        }
         Cost += TTI->getCastInstrCost(Opcode, DstTy, SrcTy,
                                       TTI::CastContextHint::None,
                                       TTI::TCK_RecipThroughput);
@@ -13115,7 +13133,8 @@ public:
       UniqueBases.insert(VecBase);
       // If the only one use is vectorized - can delete the extractelement
       // itself.
-      if (!EI->hasOneUse() || (NumParts != 1 && count(E->Scalars, EI) > 1) ||
+      if (!EI->hasOneUse() || R.ExternalUsesAsOriginalScalar.contains(EI) ||
+          (NumParts != 1 && count(E->Scalars, EI) > 1) ||
           any_of(EI->users(), [&](User *U) {
             const TreeEntry *UTE = R.getTreeEntry(U);
             return !UTE || R.MultiNodeScalars.contains(U) ||

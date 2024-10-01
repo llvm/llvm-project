@@ -472,17 +472,26 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
 /// \param [in] infoAccessor       - for a private variable, this returns the
 /// data we want to merge: type or location.
 /// \param [out] allRegionArgsInfo - the merged list of region info.
+/// \param [in] addBeforePrivate - `true` if the passed information goes before
+/// private information.
 template <typename OMPOp, typename InfoTy>
 static void
 mergePrivateVarsInfo(OMPOp op, llvm::ArrayRef<InfoTy> currentList,
                      llvm::function_ref<InfoTy(mlir::Value)> infoAccessor,
-                     llvm::SmallVectorImpl<InfoTy> &allRegionArgsInfo) {
+                     llvm::SmallVectorImpl<InfoTy> &allRegionArgsInfo,
+                     bool addBeforePrivate) {
   mlir::OperandRange privateVars = op.getPrivateVars();
 
-  llvm::transform(currentList, std::back_inserter(allRegionArgsInfo),
-                  [](InfoTy i) { return i; });
+  if (addBeforePrivate)
+    llvm::transform(currentList, std::back_inserter(allRegionArgsInfo),
+                    [](InfoTy i) { return i; });
+
   llvm::transform(privateVars, std::back_inserter(allRegionArgsInfo),
                   infoAccessor);
+
+  if (!addBeforePrivate)
+    llvm::transform(currentList, std::back_inserter(allRegionArgsInfo),
+                    [](InfoTy i) { return i; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -868,12 +877,12 @@ static void genBodyOfTargetOp(
   mergePrivateVarsInfo(targetOp, mapSymTypes,
                        llvm::function_ref<mlir::Type(mlir::Value)>{
                            [](mlir::Value v) { return v.getType(); }},
-                       allRegionArgTypes);
+                       allRegionArgTypes, /*addBeforePrivate=*/true);
 
   mergePrivateVarsInfo(targetOp, mapSymLocs,
                        llvm::function_ref<mlir::Location(mlir::Value)>{
                            [](mlir::Value v) { return v.getLoc(); }},
-                       allRegionArgLocs);
+                       allRegionArgLocs, /*addBeforePrivate=*/true);
 
   mlir::Block *regionBlock = firOpBuilder.createBlock(
       &region, {}, allRegionArgTypes, allRegionArgLocs);
@@ -1478,21 +1487,21 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     mergePrivateVarsInfo(parallelOp, reductionTypes,
                          llvm::function_ref<mlir::Type(mlir::Value)>{
                              [](mlir::Value v) { return v.getType(); }},
-                         allRegionArgTypes);
+                         allRegionArgTypes, /*addBeforePrivate=*/false);
 
     llvm::SmallVector<mlir::Location> allRegionArgLocs;
     mergePrivateVarsInfo(parallelOp, llvm::ArrayRef(reductionLocs),
                          llvm::function_ref<mlir::Location(mlir::Value)>{
                              [](mlir::Value v) { return v.getLoc(); }},
-                         allRegionArgLocs);
+                         allRegionArgLocs, /*addBeforePrivate=*/false);
 
     mlir::Region &region = parallelOp.getRegion();
     firOpBuilder.createBlock(&region, /*insertPt=*/{}, allRegionArgTypes,
                              allRegionArgLocs);
 
-    llvm::SmallVector<const semantics::Symbol *> allSymbols(reductionSyms);
-    allSymbols.append(dsp->getDelayedPrivSymbols().begin(),
-                      dsp->getDelayedPrivSymbols().end());
+    llvm::SmallVector<const semantics::Symbol *> allSymbols(
+        dsp->getDelayedPrivSymbols());
+    allSymbols.append(reductionSyms.begin(), reductionSyms.end());
 
     unsigned argIdx = 0;
     for (const semantics::Symbol *arg : allSymbols) {

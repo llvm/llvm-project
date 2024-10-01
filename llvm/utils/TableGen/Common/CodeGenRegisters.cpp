@@ -651,7 +651,7 @@ struct TupleExpander : SetTheory::Expander {
 
     // Precompute some types.
     Record *RegisterCl = Def->getRecords().getClass("Register");
-    RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
+    const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
 
