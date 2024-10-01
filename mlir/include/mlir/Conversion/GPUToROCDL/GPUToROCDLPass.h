@@ -42,7 +42,7 @@ void configureGpuToROCDLConversionLegality(ConversionTarget &target);
 /// is configurable.
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 createLowerGpuOpsToROCDLOpsPass(
-    const std::string &chipset = "gfx900",
+    const std::string &chipset = "infer",
     unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
     bool useBarePtrCallConv = false,
     gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);

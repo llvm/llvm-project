@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl | FileCheck %s --check-prefixes=CHECK,ROCDL
+// RUN: mlir-opt %s -split-input-file -convert-gpu-to-rocdl='chipset=gfx900' | FileCheck %s --check-prefixes=CHECK,ROCDL
 // RUN: mlir-opt %s -split-input-file -convert-gpu-to-nvvm | FileCheck %s --check-prefixes=CHECK,NVVM
 
 gpu.module @kernel {

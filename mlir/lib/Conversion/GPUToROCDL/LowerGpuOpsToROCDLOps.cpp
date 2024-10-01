@@ -219,6 +219,29 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
+    ArrayAttr targets = m.getTargetsAttr();
+    if (chipset == "infer") {
+      if (!targets) {
+        emitError(UnknownLoc::get(ctx),
+                  "ROCDLTargetAttr is empty on GPU module");
+        return signalPassFailure();
+      }
+      if (targets.size() != 1) {
+        emitError(UnknownLoc::get(ctx), "ROCDLTargetAttrs has more specified "
+                                        "more than one gpu-arch on GPU module");
+        return signalPassFailure();
+      }
+      const ROCDL::ROCDLTargetAttr targetAttr =
+          mlir::dyn_cast<ROCDL::ROCDLTargetAttr>(targets.getValue().front());
+      chipset = targetAttr.getChip().str();
+    }
+
+    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
+    if (failed(maybeChipset)) {
+      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+      return signalPassFailure();
+    }
+
     auto llvmDataLayout = m->getAttrOfType<StringAttr>(
         LLVM::LLVMDialect::getDataLayoutAttrName());
     if (!llvmDataLayout) {
@@ -229,12 +252,6 @@ struct LowerGpuOpsToROCDLOpsPass
     for (auto func : m.getOps<func::FuncOp>()) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
                     UnitAttr::get(ctx));
-    }
-
-    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
-    if (failed(maybeChipset)) {
-      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
-      return signalPassFailure();
     }
 
     /// Customize the bitwidth used for the device side index computations.

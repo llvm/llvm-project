@@ -592,8 +592,8 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
   ];
   let options = [
     Option<"chipset", "chipset", "std::string",
-           /*default=*/"\"gfx000\"",
-           "Chipset that these operations will run on">,
+           /*default=*/"\"infer\"",
+           "Chipset that these operations will run on. By Default it will infer target from attached target attribute on GPU module on which it operates">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
