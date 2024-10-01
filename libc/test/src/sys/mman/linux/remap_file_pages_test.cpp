@@ -13,6 +13,7 @@
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <fcntl.h>
 
 #include <sys/mman.h>
 
@@ -23,11 +24,15 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   size_t page_size = sysconf(_SC_PAGE_SIZE);
   ASSERT_GT(page_size, size_t(0));
 
+  // Create a file-backed mapping
+  int fd = open("/dev/zero", O_RDWR);
+  ASSERT_GT(fd, 0);
+
   // First, allocate some memory using mmap
   size_t alloc_size = 2 * page_size;
   LIBC_NAMESPACE::libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
-                                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                                    MAP_SHARED, fd, 0);
   ASSERT_ERRNO_SUCCESS();
   EXPECT_NE(addr, MAP_FAILED);
 
@@ -35,8 +40,7 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   LIBC_NAMESPACE::libc_errno = 0;
 
   // Now try to remap the pages
-  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ,
-                                               page_size, 0),
+  EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, 0, 1, 0),
               Succeeds());
 
   // Reset error number for the new function
@@ -47,12 +51,20 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
 }
 
 TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
-  size_t page_size = sysconf(_SC_PAGESIZE);
+  size_t page_size = sysconf(_SC_PAGE_SIZE);
   ASSERT_GT(page_size, size_t(0));
 
-  void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
-                                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  ASSERT_NE(addr, MAP_FAILED);
+  // Create a file-backed mapping
+  int fd = open("/dev/zero", O_RDWR);
+  ASSERT_GT(fd, 0);
+
+  // First, allocate some memory using mmap
+  size_t alloc_size = 2 * page_size;
+  LIBC_NAMESPACE::libc_errno = 0;
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+                                    MAP_SHARED, fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  EXPECT_NE(addr, MAP_FAILED);
 
   // Try to remap pages with an invalid flag MAP_PRIVATE
   EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, PROT_READ, 0,
