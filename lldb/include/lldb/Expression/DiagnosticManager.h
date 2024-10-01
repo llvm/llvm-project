@@ -39,6 +39,7 @@ struct DiagnosticDetail {
     unsigned line = 0;
     uint16_t column = 0;
     uint16_t length = 0;
+    bool hidden = false;
     bool in_user_input = false;
   };
   /// Contains {{}, 1, 3, 3, true} in the example above.
