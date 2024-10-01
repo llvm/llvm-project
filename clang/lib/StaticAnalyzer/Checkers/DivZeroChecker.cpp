@@ -33,7 +33,7 @@ class DivZeroChecker : public Checker<check::PreStmt<BinaryOperator>> {
                       llvm::ArrayRef<SymbolRef> TaintedSyms) const;
 
 public:
-  /// This checker class implements multiple user facing checker
+  /// This checker class implements several user facing checkers
   enum CheckKind { CK_DivideZero, CK_TaintedDivChecker, CK_NumCheckKinds };
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
   CheckerNameRef CheckNames[CK_NumCheckKinds];

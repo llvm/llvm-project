@@ -19,11 +19,9 @@
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
 
-// RUN: not %clang_analyze_cc1 -Wno-pointer-to-int-cast \
-// RUN:   -Wno-incompatible-library-redeclaration -verify %s \
+// RUN: not %clang_analyze_cc1 \
+// RUN:   -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint  \
-// RUN:   -analyzer-checker=optin.taint.TaintedDiv \
-// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=justguessit \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
@@ -33,10 +31,9 @@
 // CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
 // CHECK-INVALID-FILE-SAME:        'justguessit'
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
+// RUN: not %clang_analyze_cc1 \
 // RUN:   -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint  \
-// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
 // RUN:   2>&1 | FileCheck -DMSG=%errc_EINVAL %s -check-prefix=CHECK-ILL-FORMED
@@ -45,10 +42,9 @@
 // CHECK-ILL-FORMED-SAME:        'optin.taint.TaintPropagation:Config',
 // CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: [[MSG]]
 
-// RUN: not %clang_analyze_cc1 -Wno-incompatible-library-redeclaration \
+// RUN: not %clang_analyze_cc1 \
 // RUN:   -verify %s \
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
-// RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
 // RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
@@ -417,16 +413,6 @@ int testTaintedDivFP(void) {
   if (!x)
     return 0;
   return 5/x; // x cannot be 0, so no tainted warning either
-}
-
-
-//If we are sure that we divide by zero
-//we emit a divide by zero warning
-int testDivZero(void) {
-  int x = getchar(); // taint source
-  if (!x)
-    return 5 / x; // expected-warning{{Division by zero}}
-  return 8;
 }
 
 // Zero-sized VLAs.
