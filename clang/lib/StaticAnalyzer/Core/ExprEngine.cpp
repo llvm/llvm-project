@@ -2822,7 +2822,8 @@ void ExprEngine::processBranch(
     ProgramStateRef StTrue, StFalse;
     StTrue = StFalse = PrevState;
 
-    if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN)) {
+    if (const auto KnownCondValueAssumption =
+            assumeCondition(Condition, PredN)) {
       std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
 
       if (!StTrue)
