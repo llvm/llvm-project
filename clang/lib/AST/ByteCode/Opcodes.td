@@ -626,6 +626,10 @@ def CastFP : Opcode {
   let Args = [ArgFltSemantics, ArgRoundingMode];
 }
 
+def CastFixedPoint : Opcode {
+  let Args = [ArgUint32];
+}
+
 def FixedSizeIntegralTypes : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
 }
