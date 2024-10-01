@@ -117,12 +117,12 @@ TEST_F(SymbolFileDWARFTests, ParseArangesWithMultipleTerminators) {
   // DWARFDebugArangeSet header using the remaining segment + address pairs
   // from the remaining bytes.
   unsigned char binary_data[] = {
-      0, 0, 0, 0, // unit_length that will be set correctly after this
-      0, 2,       // DWARF version number (uint16_t)
-      0, 0, 0, 255, // CU offset (ignored for the purposes of this test)
-      4,          // address size
-      0,          // segment size
-      0, 0, 0, 0, // alignment for the first tuple
+      0, 0, 0, 0,   // unit_length that will be set correctly after this
+      0, 2,         // DWARF version number (uint16_t)
+      0, 0, 0, 255, // CU offset
+      4,            // address size
+      0,            // segment size
+      0, 0, 0, 0,   // alignment for the first tuple
       // BEGIN TUPLES
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // premature terminator
       0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, // [0x1000-0x1100)

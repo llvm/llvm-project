@@ -23,15 +23,14 @@ DWARFDebugAranges::DWARFDebugAranges() : m_aranges() {}
 
 // Extract
 void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
-  llvm::DWARFDataExtractor llvm_dwarf_data =
-      debug_aranges_data.GetAsLLVMDWARF();
+  llvm::DWARFDataExtractor dwarf_data = debug_aranges_data.GetAsLLVMDWARF();
   lldb::offset_t offset = 0;
 
   DWARFDebugArangeSet set;
   Range range;
-  while (llvm_dwarf_data.isValidOffset(offset)) {
+  while (dwarf_data.isValidOffset(offset)) {
     const lldb::offset_t set_offset = offset;
-    if (llvm::Error error = set.extract(llvm_dwarf_data, &offset)) {
+    if (llvm::Error error = set.extract(dwarf_data, &offset)) {
       Log *log = GetLog(DWARFLog::DebugInfo);
       LLDB_LOG_ERROR(log, std::move(error),
                      "DWARFDebugAranges::extract failed to extract "
