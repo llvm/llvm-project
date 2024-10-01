@@ -139,36 +139,39 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, Expr origin, Expr length, uint32_t flags,
-               uint32_t invFlags, uint32_t negFlags, uint32_t negInvFlags)
-      : name(std::string(name)), origin(origin), length(length), flags(flags),
-        invFlags(invFlags), negFlags(negFlags), negInvFlags(negInvFlags) {}
+  // A collection of attributes that match a set of sections.
+  struct Attrs {
+    // Match if any of these ELF section flags are present.
+    uint32_t flags = 0;
+    // Match if any of these ELF section flags are absent.
+    // For example, the memory region attribute "r" maps to SHF_WRITE.
+    uint32_t invFlags = 0;
+    // Match if the section type isn't SHT_NOBITS.
+    bool initialized = false;
+
+    bool matches(OutputSection *sec) const;
+  };
+
+  MemoryRegion(StringRef name, Expr origin, Expr length, Attrs attrs,
+               Attrs negAttrs)
+      : name(std::string(name)), origin(origin), length(length), attrs(attrs),
+        negAttrs(negAttrs) {}
 
   std::string name;
   Expr origin;
   Expr length;
-  // A section can be assigned to the region if any of these ELF section flags
-  // are set...
-  uint32_t flags;
-  // ... or any of these flags are not set.
-  // For example, the memory region attribute "r" maps to SHF_WRITE.
-  uint32_t invFlags;
-  // A section cannot be assigned to the region if any of these ELF section
-  // flags are set...
-  uint32_t negFlags;
-  // ... or any of these flags are not set.
-  // For example, the memory region attribute "!r" maps to SHF_WRITE.
-  uint32_t negInvFlags;
+
+  // Attributes that cause a section to match the region.
+  Attrs attrs;
+  // Attributes that cause a section not to match the region.
+  Attrs negAttrs;
+
   uint64_t curPos = 0;
 
   uint64_t getOrigin() const { return origin().getValue(); }
   uint64_t getLength() const { return length().getValue(); }
 
-  bool compatibleWith(uint32_t secFlags) const {
-    if ((secFlags & negFlags) || (~secFlags & negInvFlags))
-      return false;
-    return (secFlags & flags) || (~secFlags & invFlags);
-  }
+  bool compatibleWith(OutputSection *sec) const;
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
