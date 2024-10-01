@@ -167,7 +167,7 @@ std::vector<Availability> getAvailabilities(const Record &def) {
 
   if (def.getValue("availability")) {
     std::vector<const Record *> availDefs =
-        def.getValueAsListOfConstDefs("availability");
+        def.getValueAsListOfDefs("availability");
     availabilities.reserve(availDefs.size());
     for (const Record *avail : availDefs)
       availabilities.emplace_back(avail);
@@ -1451,7 +1451,7 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
       continue;
 
     std::vector<const Record *> impliedCapsDefs =
-        def.getValueAsListOfConstDefs("implies");
+        def.getValueAsListOfDefs("implies");
     os << "  case spirv::Capability::" << enumerant.getSymbol()
        << ": {static const spirv::Capability implies[" << impliedCapsDefs.size()
        << "] = {";
