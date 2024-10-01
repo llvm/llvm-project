@@ -1261,7 +1261,7 @@ Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {
 
 Thunk::~Thunk() = default;
 
-static Thunk *addThunkAArch64(RelType type, Symbol &s, int64_t a) {
+static Thunk *addThunkAArch64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     fatal("unrecognized relocation type");
@@ -1357,8 +1357,8 @@ static Thunk *addThunkV6M(const InputSection &isec, RelType reloc, Symbol &s,
 }
 
 // Creates a thunk for Thumb-ARM interworking or branch range extension.
-static Thunk *addThunkArm(const InputSection &isec, RelType reloc, Symbol &s,
-                          int64_t a) {
+static Thunk *addThunkArm(Ctx &ctx, const InputSection &isec, RelType reloc,
+                          Symbol &s, int64_t a) {
   // Decide which Thunk is needed based on:
   // Available instruction set
   // - An Arm Thunk can only be used if Arm state is available.
@@ -1430,7 +1430,7 @@ static Thunk *addThunkPPC32(const InputSection &isec, const Relocation &rel,
   return make<PPC32LongThunk>(s, rel.addend);
 }
 
-static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
+static Thunk *addThunkPPC64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   assert((type == R_PPC64_REL14 || type == R_PPC64_REL24 ||
           type == R_PPC64_REL24_NOTOC) &&
          "unexpected relocation type for thunk");
@@ -1460,15 +1460,15 @@ static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
   return make<PPC64PDLongBranchThunk>(s, a);
 }
 
-Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
+Thunk *elf::addThunk(Ctx &ctx, const InputSection &isec, Relocation &rel) {
   Symbol &s = *rel.sym;
   int64_t a = rel.addend;
 
   switch (ctx.arg.emachine) {
   case EM_AARCH64:
-    return addThunkAArch64(rel.type, s, a);
+    return addThunkAArch64(ctx, rel.type, s, a);
   case EM_ARM:
-    return addThunkArm(isec, rel.type, s, a);
+    return addThunkArm(ctx, isec, rel.type, s, a);
   case EM_AVR:
     return addThunkAVR(rel.type, s, a);
   case EM_MIPS:
@@ -1476,7 +1476,7 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
   case EM_PPC:
     return addThunkPPC32(isec, rel, s);
   case EM_PPC64:
-    return addThunkPPC64(rel.type, s, a);
+    return addThunkPPC64(ctx, rel.type, s, a);
   default:
     llvm_unreachable("add Thunk only supported for ARM, AVR, Mips and PowerPC");
   }
