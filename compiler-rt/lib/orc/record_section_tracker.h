@@ -1,5 +1,4 @@
-//===- sections_tracker.h - RecordSectionsTracker utilities for the ORC runtime
-//----------*- C++ -*-===//
+//===- record_section_tracker.h -- for fixed-sized record sects -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SECTIONSTRACKER_H
-#define ORC_RT_SECTIONSTRACKER_H
+#ifndef ORC_RT_RECORD_SECTION_TRACKER_H
+#define ORC_RT_RECORD_SECTION_TRACKER_H
 
 #include "error.h"
 #include "executor_address.h"
@@ -111,4 +110,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SECTIONSTRACKER_H
+#endif // ORC_RT_RECORD_SECTION_TRACKER_H
