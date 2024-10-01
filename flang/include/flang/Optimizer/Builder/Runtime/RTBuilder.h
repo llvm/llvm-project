@@ -400,17 +400,33 @@ constexpr TypeBuilderFunc getModel<bool &>() {
     return fir::ReferenceType::get(f(context));
   };
 }
+
+// Note about getModel<std::complex<T>>
+// Prefer passing/returning the complex by reference in the runtime to
+// avoid ABI issues.
+// C++ std::complex is not an intrinsic type, and it while it is storage
+// compatible with C/Fortran complex type, it follows the struct value passing
+// ABI rule, which may differ from how C complex are passed on some platforms.
 template <>
 constexpr TypeBuilderFunc getModel<std::complex<float>>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::ComplexType::get(mlir::FloatType::getF32(context));
+    mlir::Type floatTy = getModel<float>()(context);
+    return mlir::TupleType::get(context, {floatTy, floatTy});
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<std::complex<double>>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    mlir::Type floatTy = getModel<double>()(context);
+    return mlir::TupleType::get(context, {floatTy, floatTy});
+  };
+}
+
+template <>
 constexpr TypeBuilderFunc getModel<std::complex<float> &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    TypeBuilderFunc f{getModel<std::complex<float>>()};
-    return fir::ReferenceType::get(f(context));
+    mlir::Type floatTy = getModel<float>()(context);
+    return fir::ReferenceType::get(mlir::ComplexType::get(floatTy));
   };
 }
 template <>
@@ -422,16 +438,10 @@ constexpr TypeBuilderFunc getModel<const std::complex<float> *>() {
   return getModel<std::complex<float> *>();
 }
 template <>
-constexpr TypeBuilderFunc getModel<std::complex<double>>() {
-  return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::ComplexType::get(mlir::FloatType::getF64(context));
-  };
-}
-template <>
 constexpr TypeBuilderFunc getModel<std::complex<double> &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    TypeBuilderFunc f{getModel<std::complex<double>>()};
-    return fir::ReferenceType::get(f(context));
+    mlir::Type floatTy = getModel<double>()(context);
+    return fir::ReferenceType::get(mlir::ComplexType::get(floatTy));
   };
 }
 template <>

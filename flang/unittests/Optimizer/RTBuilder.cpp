@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include <complex>
 
 // Check that it is possible to make a difference between complex runtime
 // function using C99 complex and C++ std::complex. This is important since
@@ -18,6 +19,7 @@
 
 // Fake runtime header to be introspected.
 c_float_complex_t c99_cacosf(c_float_complex_t);
+std::complex<float> cpp_runtime(std::complex<float>);
 
 TEST(RTBuilderTest, ComplexRuntimeInterface) {
   mlir::DialectRegistry registry;
@@ -33,4 +35,22 @@ TEST(RTBuilderTest, ComplexRuntimeInterface) {
   auto cplx_ty = fir::ComplexType::get(&ctx, 4);
   EXPECT_EQ(c99_cacosf_funcTy.getInput(0), cplx_ty);
   EXPECT_EQ(c99_cacosf_funcTy.getResult(0), cplx_ty);
+}
+
+TEST(RTBuilderTest, CppComplexRuntimeInterface) {
+  mlir::DialectRegistry registry;
+  fir::support::registerDialects(registry);
+  mlir::MLIRContext ctx(registry);
+  fir::support::loadDialects(ctx);
+  mlir::Type cpp_runtime_signature{
+      fir::runtime::RuntimeTableKey<decltype(cpp_runtime)>::getTypeModel()(
+          &ctx)};
+  auto cpp_runtime_funcTy =
+      mlir::cast<mlir::FunctionType>(cpp_runtime_signature);
+  EXPECT_EQ(cpp_runtime_funcTy.getNumInputs(), 1u);
+  EXPECT_EQ(cpp_runtime_funcTy.getNumResults(), 1u);
+  auto fp = mlir::FloatType::getF32(&ctx);
+  auto cplx_ty = mlir::TupleType::get(&ctx, {fp, fp});
+  EXPECT_EQ(cpp_runtime_funcTy.getInput(0), cplx_ty);
+  EXPECT_EQ(cpp_runtime_funcTy.getResult(0), cplx_ty);
 }
