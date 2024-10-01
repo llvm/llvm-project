@@ -8,7 +8,6 @@
 
 // CIR:      #fn_attr[[CONV_NOINLINE_ATTR:[0-9]*]] = #cir<extra({convergent = #cir.convergent, inline = #cir.inline<no>
 // CIR-NEXT: #fn_attr[[CONV_DECL_ATTR:[0-9]*]] = #cir<extra({convergent = #cir.convergent
-// CIR-NEXT: #fn_attr[[CONV_NOTHROW_ATTR:[0-9]*]] = #cir<extra({convergent = #cir.convergent, nothrow = #cir.nothrow
 
 __attribute__((noinline))
 void non_convfun(void) {
@@ -37,7 +36,7 @@ void test_merge_if(int a) {
     g();
   }
 }
-// CIR: cir.func @test_merge_if{{.*}} extra(#fn_attr[[CONV_NOTHROW_ATTR]])
+// CIR: cir.func @test_merge_if{{.*}} extra(#fn_attr[[CONV_DECL_ATTR]])
 
 // The LLVM IR below is equivalent to:
 //    if (a) {
@@ -81,7 +80,7 @@ void test_no_merge_if(int a) {
     g();
   }
 }
-// CIR: cir.func @test_no_merge_if{{.*}} extra(#fn_attr[[CONV_NOTHROW_ATTR]])
+// CIR: cir.func @test_no_merge_if{{.*}} extra(#fn_attr[[CONV_DECL_ATTR]])
 
 // LLVM-LABEL: define{{.*}} spir_func void @test_no_merge_if
 // LLVM:         %[[tobool:.+]] = icmp eq i32 %[[ARG:.+]], 0

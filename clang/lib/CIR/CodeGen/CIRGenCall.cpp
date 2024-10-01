@@ -1591,6 +1591,16 @@ static void getTrivialDefaultFunctionAttributes(
     auto convgt = mlir::cir::ConvergentAttr::get(CGM.getBuilder().getContext());
     funcAttrs.set(convgt.getMnemonic(), convgt);
   }
+
+  // TODO: NoThrow attribute should be added for other GPU modes CUDA, SYCL,
+  // HIP, OpenMP offload.
+  // AFAIK, neither of them support exceptions in device code.
+  if ((langOpts.CUDA && langOpts.CUDAIsDevice) || langOpts.SYCLIsDevice)
+    llvm_unreachable("NYI");
+  if (langOpts.OpenCL) {
+    auto noThrow = mlir::cir::NoThrowAttr::get(CGM.getBuilder().getContext());
+    funcAttrs.set(noThrow.getMnemonic(), noThrow);
+  }
 }
 
 void CIRGenModule::getTrivialDefaultFunctionAttributes(
