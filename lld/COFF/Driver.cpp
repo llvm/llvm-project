@@ -37,6 +37,7 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Parallel.h"
@@ -702,6 +703,24 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
     ctx.config.gcroot.push_back(b);
   }
   return b;
+}
+
+void LinkerDriver::addUndefinedGlob(StringRef arg) {
+  Expected<GlobPattern> pat = GlobPattern::create(arg);
+  if (!pat) {
+    error("/includeglob: " + toString(pat.takeError()));
+    return;
+  }
+
+  SmallVector<Symbol *, 0> syms;
+  ctx.symtab.forEachSymbol([&syms, &pat](Symbol *sym) {
+    if (pat->match(sym->getName())) {
+      syms.push_back(sym);
+    }
+  });
+
+  for (Symbol *sym : syms)
+    addUndefined(sym->getName());
 }
 
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
@@ -2446,6 +2465,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata", 0);
     ctx.symtab.addAbsolute("__arm64x_redirection_metadata_count", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat_copy", 0);
+    ctx.symtab.addAbsolute("__hybrid_auxiliary_delayload_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat", 0);
     ctx.symtab.addAbsolute("__hybrid_auxiliary_iat_copy", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
@@ -2523,6 +2544,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       }
     } while (run());
   }
+
+  // Handle /includeglob
+  for (StringRef pat : args::getStrings(args, OPT_incl_glob))
+    addUndefinedGlob(pat);
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);

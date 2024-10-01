@@ -181,11 +181,13 @@ static unsigned conjugateICmpMask(unsigned Mask) {
 // Adapts the external decomposeBitTestICmp for local use.
 static bool decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate &Pred,
                                  Value *&X, Value *&Y, Value *&Z) {
-  APInt Mask;
-  if (!llvm::decomposeBitTestICmp(LHS, RHS, Pred, X, Mask))
+  auto Res = llvm::decomposeBitTestICmp(LHS, RHS, Pred);
+  if (!Res)
     return false;
 
-  Y = ConstantInt::get(X->getType(), Mask);
+  Pred = Res->Pred;
+  X = Res->X;
+  Y = ConstantInt::get(X->getType(), Res->Mask);
   Z = ConstantInt::get(X->getType(), 0);
   return true;
 }
@@ -870,11 +872,15 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
                            APInt &UnsetBitsMask) -> bool {
     CmpInst::Predicate Pred = ICmp->getPredicate();
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
-    if (llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
-                                   Pred, X, UnsetBitsMask,
-                                   /*LookThroughTrunc=*/false) &&
-        Pred == ICmpInst::ICMP_EQ)
+    auto Res =
+        llvm::decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
+                                   Pred, /*LookThroughTrunc=*/false);
+    if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
+      X = Res->X;
+      UnsetBitsMask = Res->Mask;
       return true;
+    }
+
     // Is it  icmp eq (X & Mask), 0  already?
     const APInt *Mask;
     if (match(ICmp, m_ICmp(Pred, m_And(m_Value(X), m_APInt(Mask)), m_Zero())) &&
@@ -4699,11 +4705,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   // (X | Y) ^ M -> (Y ^ M) ^ X
   if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))),
                         m_Value(M)))) {
-    if (Value *XorAC =
-            simplifyBinOp(Instruction::Xor, X, M, SQ.getWithInstruction(&I)))
+    if (Value *XorAC = simplifyXorInst(X, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorAC, Y);
 
-    if (Value *XorBC = simplifyBinOp(Instruction::Xor, Y, M, SQ))
+    if (Value *XorBC = simplifyXorInst(Y, M, SQ.getWithInstruction(&I)))
       return BinaryOperator::CreateXor(XorBC, X);
   }
 
