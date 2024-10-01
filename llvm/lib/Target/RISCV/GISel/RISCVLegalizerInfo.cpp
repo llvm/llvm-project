@@ -965,7 +965,6 @@ static LLT getLMUL1Ty(LLT VecTy) {
 }
 
 bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
-                                                  LegalizerHelper &Helper,
                                                   MachineIRBuilder &MIB) const {
   GExtractSubvector &ES = cast<GExtractSubvector>(MI);
 
@@ -1126,7 +1125,7 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SPLAT_VECTOR:
     return legalizeSplatVector(MI, MIRBuilder);
   case TargetOpcode::G_EXTRACT_SUBVECTOR:
-    return legalizeExtractSubvector(MI, Helper, MIRBuilder);
+    return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
