@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMMCJIT
   intrinsics_gen
 
   LINK_COMPONENTS
+  CodeGen
   Core
   ExecutionEngine
   Object
