@@ -2056,9 +2056,11 @@ void mlir::vector::populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  // TODO: Consider either including DropInnerMostUnitDimsTransferRead,
-  // DropInnerMostUnitDimsTransferWrite or better naming to distinguish this
-  // and populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
+  // TODO: Consider either:
+  //  * including DropInnerMostUnitDimsTransferRead and
+  //    DropInnerMostUnitDimsTransferWrite, or
+  //  * better naming to distinguish this and
+  //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
                DropUnitDimsFromTransposeOp, ShapeCastOpFolder>(
       patterns.getContext(), benefit);
