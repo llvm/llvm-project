@@ -134,6 +134,19 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp*
   static_assert(sizeof(_Tp) == 1 && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
                 "Calling memchr on non-trivially equality comparable types is unsafe.");
 
+  if (__builtin_constant_p(__count) && __builtin_constant_p(__value)) {
+    for (; __count; --__count) {
+      if (!__builtin_constant_p(*__str))
+        break;
+      if (*__str == __value)
+        return __str;
+      ++__str;
+    }
+  }
+
+  if (__builtin_constant_p(__count) && __count == 0)
+    return nullptr;
+
   if (__libcpp_is_constant_evaluated()) {
 // use __builtin_char_memchr to optimize constexpr evaluation if we can
 #if _LIBCPP_STD_VER >= 17 && __has_builtin(__builtin_char_memchr)
