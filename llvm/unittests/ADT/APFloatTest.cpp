@@ -616,7 +616,9 @@ TEST(APFloatTest, Minimum) {
   EXPECT_TRUE(std::isnan(minimum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(minimum(nan, f1).convertToDouble()));
   EXPECT_TRUE(maximum(snan, f1).isNaN());
+  EXPECT_TRUE(maximum(f1, snan).isNaN());
   EXPECT_FALSE(maximum(snan, f1).isSignaling());
+  EXPECT_FALSE(maximum(f1, snan).isSignaling());
 }
 
 TEST(APFloatTest, Maximum) {
@@ -634,7 +636,9 @@ TEST(APFloatTest, Maximum) {
   EXPECT_TRUE(std::isnan(maximum(f1, nan).convertToDouble()));
   EXPECT_TRUE(std::isnan(maximum(nan, f1).convertToDouble()));
   EXPECT_TRUE(maximum(snan, f1).isNaN());
+  EXPECT_TRUE(maximum(f1, snan).isNaN());
   EXPECT_FALSE(maximum(snan, f1).isSignaling());
+  EXPECT_FALSE(maximum(f1, snan).isSignaling());
 }
 
 TEST(APFloatTest, MinimumNumber) {
