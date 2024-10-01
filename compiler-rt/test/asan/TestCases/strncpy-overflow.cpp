@@ -7,8 +7,8 @@
 // REQUIRES: stable-runtime
 
 #include "defines.h"
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 // We need a way to prevent the optimize from eliminating the
 // strncpy below (which otherwises writes to dead storage).  We

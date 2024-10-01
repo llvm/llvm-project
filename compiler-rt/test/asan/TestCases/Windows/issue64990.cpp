@@ -5,7 +5,7 @@
 // UNSUPPORTED: target={{.*-windows-gnu}}
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#include <string.h>
+#  include <string.h>
 #endif
 
 char buff1[6] = "hello";

@@ -3,8 +3,8 @@
 // RUN: not %run %t write 2>&1 | FileCheck %s --check-prefix=WRITE
 
 #include "../defines.h"
-#include <windows.h>
 #include <stdio.h>
+#include <windows.h>
 
 static volatile int sink;
 ATTRIBUTE_NOINLINE void Read(int *ptr) { sink = *ptr; }

@@ -4,9 +4,7 @@
 #include "defines.h"
 
 struct IntHolder {
-  ATTRIBUTE_NOINLINE const IntHolder &Self() const {
-    return *this;
-  }
+  ATTRIBUTE_NOINLINE const IntHolder &Self() const { return *this; }
   int val = 3;
 };
 

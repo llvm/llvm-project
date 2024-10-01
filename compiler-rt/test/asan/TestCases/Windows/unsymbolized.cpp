@@ -9,8 +9,8 @@
 // REQUIRES: lld-available
 
 #include "../defines.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 int ATTRIBUTE_NOINLINE do_uaf(void);
 int main() {
   int r = do_uaf();

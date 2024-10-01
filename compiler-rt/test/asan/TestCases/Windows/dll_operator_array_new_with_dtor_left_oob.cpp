@@ -11,9 +11,11 @@ struct C {
 
 int ATTRIBUTE_NOINLINE
 #if defined(__clang__) || !defined(_MSC_VER)
-__attribute__((optnone))
+    __attribute__((optnone))
 #endif
-hide(int x) { return x; }
+    hide(int x) {
+  return x;
+}
 
 extern "C" __declspec(dllexport)
 int test_function() {

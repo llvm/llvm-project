@@ -4,7 +4,6 @@
 // Investigate why it fails with NDK 21.
 // UNSUPPORTED: android, MSVC
 
-
 #include "defines.h"
 #include <stdio.h>
 static volatile int zero = 0;
