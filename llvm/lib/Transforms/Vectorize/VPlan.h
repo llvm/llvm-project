@@ -1609,7 +1609,7 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPSingleDefRecipe {
+class VPWidenCallRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to call when widening the call. If set the
   /// Intrinsic::not_intrinsic, a library call will be used instead.
   Intrinsic::ID VectorIntrinsicID;
@@ -1624,7 +1624,8 @@ public:
   VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
                     Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
+                            *cast<Instruction>(UV)),
         VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
