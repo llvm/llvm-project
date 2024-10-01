@@ -1753,7 +1753,8 @@ namespace {
         for (const TemplateArgument &TA : Iter->Args)
           assert(TA.getKind() != TemplateArgument::Pack || TA.pack_size() == 1);
 #endif
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, /*NewSubstitutionIndex=*/0);
+      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
+          SemaRef, /*NewSubstitutionIndex=*/0);
       Decl *NewPack = TransformDecl(PackLoc, Pack);
       if (!NewPack)
         return ExprError();
