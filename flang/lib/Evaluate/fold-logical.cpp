@@ -9,8 +9,8 @@
 #include "fold-implementation.h"
 #include "fold-matmul.h"
 #include "fold-reduction.h"
-#include "flang/Evaluate/check-expression.h"
 #include "flang/Common/magic-numbers.h"
+#include "flang/Evaluate/check-expression.h"
 
 namespace Fortran::evaluate {
 
