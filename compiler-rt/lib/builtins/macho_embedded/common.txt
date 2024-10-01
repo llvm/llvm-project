@@ -60,6 +60,7 @@ divsf3
 divsi3
 extendsfdf2
 extendhfsf2
+extendhfxf2
 ffssi2
 fixdfsi
 fixsfsi
