@@ -17,7 +17,11 @@ define float @foo(float %arg) {
 ; RV32-NEXT:    call callee
 ; RV32-NEXT:    fmv.s fa0, fs0
 ; RV32-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    cm.popret {ra}, 32
+; RV32-NEXT:    cm.pop {ra}, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore fs0
+; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: foo:
 ; RV64:       # %bb.0: # %entry
@@ -30,7 +34,11 @@ define float @foo(float %arg) {
 ; RV64-NEXT:    call callee
 ; RV64-NEXT:    fmv.s fa0, fs0
 ; RV64-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
-; RV64-NEXT:    cm.popret {ra}, 32
+; RV64-NEXT:    cm.pop {ra}, 32
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore fs0
+; RV64-NEXT:    ret
 entry:
   call void @callee()
   ret float %arg
@@ -52,6 +60,10 @@ define void @foo2(i32 %x, float %y) {
 ; RV32-NEXT:    fmv.s fa0, fs0
 ; RV32-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    cm.pop {ra, s0}, 32
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    .cfi_restore ra
+; RV32-NEXT:    .cfi_restore s0
+; RV32-NEXT:    .cfi_restore fs0
 ; RV32-NEXT:    tail func
 ;
 ; RV64-LABEL: foo2:
@@ -69,6 +81,10 @@ define void @foo2(i32 %x, float %y) {
 ; RV64-NEXT:    fmv.s fa0, fs0
 ; RV64-NEXT:    flw fs0, 12(sp) # 4-byte Folded Reload
 ; RV64-NEXT:    cm.pop {ra, s0}, 32
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    .cfi_restore ra
+; RV64-NEXT:    .cfi_restore s0
+; RV64-NEXT:    .cfi_restore fs0
 ; RV64-NEXT:    tail func
 entry:
   tail call void @bar()

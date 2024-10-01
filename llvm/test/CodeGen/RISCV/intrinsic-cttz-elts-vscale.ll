@@ -100,8 +100,11 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    slli a2, a2, 1
 ; RV32-NEXT:    add sp, sp, a2
+; RV32-NEXT:    .cfi_def_cfa sp, 48
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; RV32-NEXT:    .cfi_restore ra
 ; RV32-NEXT:    addi sp, sp, 48
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_nxv8i1_no_range:

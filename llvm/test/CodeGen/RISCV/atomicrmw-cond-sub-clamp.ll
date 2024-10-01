@@ -51,7 +51,12 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_cond_i8:
@@ -129,7 +134,12 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_cond_i8:
@@ -216,7 +226,13 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
+; RV32I-NEXT:    .cfi_restore s3
 ; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_cond_i16:
@@ -300,7 +316,13 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
+; RV64I-NEXT:    .cfi_restore s3
 ; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_cond_i16:
@@ -378,7 +400,11 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_cond_i32:
@@ -442,7 +468,12 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_cond_i32:
@@ -529,7 +560,12 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_cond_i64:
@@ -586,7 +622,12 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    .cfi_restore ra
+; RV32IA-NEXT:    .cfi_restore s0
+; RV32IA-NEXT:    .cfi_restore s1
+; RV32IA-NEXT:    .cfi_restore s2
 ; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_usub_cond_i64:
@@ -621,7 +662,11 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_cond_i64:
@@ -686,7 +731,11 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_sat_i8:
@@ -759,7 +808,11 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_sat_i8:
@@ -841,7 +894,12 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_sat_i16:
@@ -920,7 +978,12 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
+; RV64I-NEXT:    .cfi_restore s2
 ; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_sat_i16:
@@ -997,7 +1060,11 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_sat_i32:
@@ -1057,7 +1124,11 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_sat_i32:
@@ -1142,7 +1213,12 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    .cfi_restore ra
+; RV32I-NEXT:    .cfi_restore s0
+; RV32I-NEXT:    .cfi_restore s1
+; RV32I-NEXT:    .cfi_restore s2
 ; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IA-LABEL: atomicrmw_usub_sat_i64:
@@ -1198,7 +1274,12 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32IA-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
+; RV32IA-NEXT:    .cfi_restore ra
+; RV32IA-NEXT:    .cfi_restore s0
+; RV32IA-NEXT:    .cfi_restore s1
+; RV32IA-NEXT:    .cfi_restore s2
 ; RV32IA-NEXT:    addi sp, sp, 32
+; RV32IA-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_usub_sat_i64:
@@ -1233,7 +1314,11 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    .cfi_restore s0
+; RV64I-NEXT:    .cfi_restore s1
 ; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ;
 ; RV64IA-LABEL: atomicrmw_usub_sat_i64:

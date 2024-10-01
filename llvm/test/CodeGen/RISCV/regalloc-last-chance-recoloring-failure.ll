@@ -62,9 +62,13 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 32
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; SUBREGLIVENESS-LABEL: last_chance_recoloring_failure:
@@ -118,9 +122,13 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4
 ; SUBREGLIVENESS-NEXT:    add sp, sp, a0
+; SUBREGLIVENESS-NEXT:    .cfi_def_cfa sp, 32
 ; SUBREGLIVENESS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; SUBREGLIVENESS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; SUBREGLIVENESS-NEXT:    .cfi_restore ra
+; SUBREGLIVENESS-NEXT:    .cfi_restore s0
 ; SUBREGLIVENESS-NEXT:    addi sp, sp, 32
+; SUBREGLIVENESS-NEXT:    .cfi_def_cfa_offset 0
 ; SUBREGLIVENESS-NEXT:    ret
 entry:
   %i = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55, i64 4)

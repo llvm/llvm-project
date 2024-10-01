@@ -53,6 +53,7 @@ define void @splat_v2i64(ptr %x, i64 %y) {
 ; RV32-NEXT:    vlse64.v v8, (a1), zero
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: splat_v2i64:
@@ -119,6 +120,7 @@ define void @splat_v4i64(ptr %x, i64 %y) {
 ; RV32-NEXT:    vlse64.v v8, (a1), zero
 ; RV32-NEXT:    vse64.v v8, (a0)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: splat_v4i64:
@@ -412,6 +414,7 @@ define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
 ; RV32-NEXT:    vadd.vv v8, v8, v16
 ; RV32-NEXT:    vse64.v v8, (a3)
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vadd_vx_v16i64:

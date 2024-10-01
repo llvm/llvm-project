@@ -20,6 +20,7 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBFWMA-NEXT:    vle32.v v10, (a0)
 ; ZVFBFWMA-NEXT:    vfmacc.vv v8, v9, v10
 ; ZVFBFWMA-NEXT:    addi sp, sp, 16
+; ZVFBFWMA-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBMIN32-LABEL: vfwmaccbf16_vv_v1f32:
@@ -58,10 +59,15 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN32-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
 ; ZVFBMIN32-NEXT:    add sp, sp, a0
+; ZVFBMIN32-NEXT:    .cfi_def_cfa sp, 32
 ; ZVFBMIN32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; ZVFBMIN32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; ZVFBMIN32-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
+; ZVFBMIN32-NEXT:    .cfi_restore ra
+; ZVFBMIN32-NEXT:    .cfi_restore s0
+; ZVFBMIN32-NEXT:    .cfi_restore fs0
 ; ZVFBMIN32-NEXT:    addi sp, sp, 32
+; ZVFBMIN32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBMIN32-NEXT:    ret
 ;
 ; ZVFBMIN64-LABEL: vfwmaccbf16_vv_v1f32:
@@ -102,10 +108,15 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN64-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
 ; ZVFBMIN64-NEXT:    add sp, sp, a0
+; ZVFBMIN64-NEXT:    .cfi_def_cfa sp, 64
 ; ZVFBMIN64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; ZVFBMIN64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; ZVFBMIN64-NEXT:    fld fs0, 40(sp) # 8-byte Folded Reload
+; ZVFBMIN64-NEXT:    .cfi_restore ra
+; ZVFBMIN64-NEXT:    .cfi_restore s0
+; ZVFBMIN64-NEXT:    .cfi_restore fs0
 ; ZVFBMIN64-NEXT:    addi sp, sp, 64
+; ZVFBMIN64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBMIN64-NEXT:    ret
   %b.ext = fpext <1 x bfloat> %b to <1 x float>
   %c.ext = fpext <1 x bfloat> %c to <1 x float>
@@ -129,6 +140,7 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBFWMA-NEXT:    vle32.v v10, (a0)
 ; ZVFBFWMA-NEXT:    vfmacc.vv v8, v9, v10
 ; ZVFBFWMA-NEXT:    addi sp, sp, 16
+; ZVFBFWMA-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBFWMA-NEXT:    ret
 ;
 ; ZVFBMIN32-LABEL: vfwmaccbf16_vf_v1f32:
@@ -163,9 +175,13 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN32-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
 ; ZVFBMIN32-NEXT:    add sp, sp, a0
+; ZVFBMIN32-NEXT:    .cfi_def_cfa sp, 48
 ; ZVFBMIN32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; ZVFBMIN32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
+; ZVFBMIN32-NEXT:    .cfi_restore ra
+; ZVFBMIN32-NEXT:    .cfi_restore fs0
 ; ZVFBMIN32-NEXT:    addi sp, sp, 48
+; ZVFBMIN32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBMIN32-NEXT:    ret
 ;
 ; ZVFBMIN64-LABEL: vfwmaccbf16_vf_v1f32:
@@ -202,9 +218,13 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN64-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
 ; ZVFBMIN64-NEXT:    add sp, sp, a0
+; ZVFBMIN64-NEXT:    .cfi_def_cfa sp, 48
 ; ZVFBMIN64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; ZVFBMIN64-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
+; ZVFBMIN64-NEXT:    .cfi_restore ra
+; ZVFBMIN64-NEXT:    .cfi_restore fs0
 ; ZVFBMIN64-NEXT:    addi sp, sp, 48
+; ZVFBMIN64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFBMIN64-NEXT:    ret
   %b.head = insertelement <1 x bfloat> poison, bfloat %b, i32 0
   %b.splat = shufflevector <1 x bfloat> %b.head, <1 x bfloat> poison, <1 x i32> zeroinitializer

@@ -241,7 +241,9 @@ define void @test_compresstore_v256i8(ptr %p, <256 x i1> %mask, <256 x i8> %data
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
+; RV64-NEXT:    .cfi_def_cfa sp, 16
 ; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; RV32-LABEL: test_compresstore_v256i8:

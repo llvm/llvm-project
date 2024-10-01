@@ -1645,6 +1645,7 @@ define <vscale x 1 x i64> @vmadd_vx_nxv1i64(<vscale x 1 x i64> %a, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv1i64:
@@ -1675,6 +1676,7 @@ define <vscale x 1 x i64> @vmadd_vx_nxv1i64_unmasked(<vscale x 1 x i64> %a, i64 
 ; RV32-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv1i64_unmasked:
@@ -1717,6 +1719,7 @@ define <vscale x 1 x i64> @vmadd_vx_nxv1i64_ta(<vscale x 1 x i64> %a, i64 %b, <v
 ; RV32-NEXT:    vmadd.vv v10, v8, v9
 ; RV32-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv1i64_ta:
@@ -1780,6 +1783,7 @@ define <vscale x 2 x i64> @vmadd_vx_nxv2i64(<vscale x 2 x i64> %a, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv2i64:
@@ -1810,6 +1814,7 @@ define <vscale x 2 x i64> @vmadd_vx_nxv2i64_unmasked(<vscale x 2 x i64> %a, i64 
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, tu, ma
 ; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv2i64_unmasked:
@@ -1852,6 +1857,7 @@ define <vscale x 2 x i64> @vmadd_vx_nxv2i64_ta(<vscale x 2 x i64> %a, i64 %b, <v
 ; RV32-NEXT:    vmadd.vv v12, v8, v10
 ; RV32-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv2i64_ta:
@@ -1915,6 +1921,7 @@ define <vscale x 4 x i64> @vmadd_vx_nxv4i64(<vscale x 4 x i64> %a, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv4i64:
@@ -1945,6 +1952,7 @@ define <vscale x 4 x i64> @vmadd_vx_nxv4i64_unmasked(<vscale x 4 x i64> %a, i64 
 ; RV32-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
 ; RV32-NEXT:    vmv.v.v v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv4i64_unmasked:
@@ -1987,6 +1995,7 @@ define <vscale x 4 x i64> @vmadd_vx_nxv4i64_ta(<vscale x 4 x i64> %a, i64 %b, <v
 ; RV32-NEXT:    vmadd.vv v16, v8, v12
 ; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv4i64_ta:
@@ -2052,6 +2061,7 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64(<vscale x 8 x i64> %a, i64 %b, <vsca
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv8i64:
@@ -2082,6 +2092,7 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64_unmasked(<vscale x 8 x i64> %a, i64 
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV32-NEXT:    vmv.v.v v8, v24
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv8i64_unmasked:
@@ -2125,6 +2136,7 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64_ta(<vscale x 8 x i64> %a, i64 %b, <v
 ; RV32-NEXT:    vmadd.vv v24, v8, v16
 ; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vmadd_vx_nxv8i64_ta:

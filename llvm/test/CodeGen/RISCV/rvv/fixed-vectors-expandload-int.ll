@@ -611,6 +611,7 @@ define <1 x i64> @expandload_v1i64(ptr %base, <1 x i64> %src0, <1 x i1> %mask) {
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:  .LBB12_2: # %else
 ; RV32-NEXT:    ret
 ;

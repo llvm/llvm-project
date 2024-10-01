@@ -59,6 +59,7 @@ define <vscale x 4 x i64> @test_mulhs_expand(<vscale x 4 x i64> %broadcast.splat
 ; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vnmsub.vx v8, a0, v16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %broadcast.splat = shufflevector <vscale x 4 x i64> %broadcast.splatinsert, <vscale x 4 x i64> zeroinitializer, <vscale x 4 x i32> zeroinitializer
@@ -85,6 +86,7 @@ define <vscale x 4 x i64> @test_mulhu_expand(<vscale x 4 x i64> %broadcast.splat
 ; CHECK-NEXT:    li a0, 3
 ; CHECK-NEXT:    vnmsub.vx v8, a0, v16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %broadcast.splat = shufflevector <vscale x 4 x i64> %broadcast.splatinsert, <vscale x 4 x i64> zeroinitializer, <vscale x 4 x i32> zeroinitializer
