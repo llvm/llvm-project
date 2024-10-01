@@ -1472,15 +1472,6 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
     return AliasTy;
   }
 
-  // Disable PrintCanonicalTypes here because we want
-  // the DW_AT_name to benefit from the TypePrinter's ability
-  // to skip defaulted template arguments.
-  //
-  // FIXME: Once -gsimple-template-names is enabled by default
-  // and we attach template parameters to alias template DIEs
-  // we don't need to worry about customizing the PrintingPolicy
-  // here anymore.
-  PP.PrintCanonicalTypes = false;
   printTemplateArgumentList(OS, Ty->template_arguments(), PP,
                             TD->getTemplateParameters());
   return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
