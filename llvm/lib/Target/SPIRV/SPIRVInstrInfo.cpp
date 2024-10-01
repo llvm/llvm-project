@@ -197,9 +197,9 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   } else if (MI->getOpcode() == SPIRV::OpBranchConditional) {
     Cond.push_back(MI->getOperand(0));
     TBB = MI->getOperand(1).getMBB();
-    if (MI->getNumOperands() == 3) {
-      FBB = MI->getOperand(2).getMBB();
-    }
+    FBB = MI->getOperand(2).getMBB();
+    for (unsigned I = 3, E = MI->getNumOperands(); I < E; ++I)
+      Cond.push_back(MI->getOperand(I));
     return false;
   } else {
     return true;
@@ -212,9 +212,17 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 // If \p BytesRemoved is non-null, report the change in code size from the
 // removed instructions.
 unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
-  report_fatal_error("Branch removal not supported, as MBB info not propagated"
-                     " to OpPhi instructions. Try using -O0 instead.");
+                                      int * /*BytesRemoved*/) const {
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return 0;
+
+  unsigned Opcode = I->getOpcode();
+  if (Opcode == SPIRV::OpBranch || Opcode == SPIRV::OpBranchConditional) {
+    I->eraseFromParent();
+    return 1;
+  }
+  return 0;
 }
 
 // Insert branch code into the end of the specified MachineBasicBlock. The
@@ -230,12 +238,25 @@ unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
 //
 // The CFG information in MBB.Predecessors and MBB.Successors must be valid
 // before calling this function.
-unsigned SPIRVInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
-  report_fatal_error("Branch insertion not supported, as MBB info not "
-                     "propagated to OpPhi instructions. Try using "
-                     "-O0 instead.");
+unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL,
+                                      int * /*BytesAdded*/) const {
+  if (!TBB)
+    return 0;
+  if (Cond.empty()) {
+    BuildMI(&MBB, DL, get(SPIRV::OpBranch)).addMBB(TBB);
+  } else {
+    auto MIB = BuildMI(&MBB, DL, get(SPIRV::OpBranchConditional))
+                   .add(Cond[0])
+                   .addMBB(TBB)
+                   .addMBB(FBB);
+    for (unsigned i = 1; i < Cond.size(); ++i)
+      MIB.add(Cond[i]);
+  }
+  return 1;
 }
 
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
