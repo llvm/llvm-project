@@ -87,3 +87,7 @@ Revert: breaks hipBlender*
 0e73bbd3450c   [AMDGPU][PromoteAlloca] Don't stop when an alloca is too big to promote (#93466) 
 contact: Pierre
 ---
+Janek breaks aomp smoke red_bug_51. revert:
+c897c13dde3b [AMDGPU] Convert AMDGPUResourceUsageAnalysis pass
+---
+
