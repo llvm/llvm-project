@@ -504,9 +504,11 @@ void SwiftLanguageRuntimeImpl::ProcessModulesToAdd() {
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
   modules_to_add_snapshot.ForEach([&](const ModuleSP &module_sp) -> bool {
-    AddModuleToReflectionContext(module_sp);
-    progress.Increment(++completion,
-                       module_sp->GetFileSpec().GetFilename().AsCString());
+    if (module_sp) {
+      AddModuleToReflectionContext(module_sp);
+      progress.Increment(++completion,
+                         module_sp->GetFileSpec().GetFilename().GetString());
+    }
     return true;
   });
 }
