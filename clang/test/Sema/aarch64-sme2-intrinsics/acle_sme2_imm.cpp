@@ -350,8 +350,3 @@ void test_svdot_multi_za32_bad_lane(uint32_t slice_base, svuint16_t z_u16,
   svsudot_lane_za32_s8_vg1x2(slice_base, z_s8x2, z_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   svsudot_lane_za32_s8_vg1x4(slice_base, z_s8x4, z_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
-
-void test_luti4_zt_x4(svuint8x2_t op) __arm_streaming __arm_in("zt0") {
-  // Check Zt tile 0
-  svluti4_zt_u8_x4(1, op);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-}
