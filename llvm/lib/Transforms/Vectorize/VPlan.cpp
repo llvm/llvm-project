@@ -886,7 +886,7 @@ VPlanPtr VPlan::createInitialVPlan(Type *InductionTy,
   // uncountable exits whilst also ensuring the symbolic maximum and known
   // back-edge taken count remain identical for loops with countable exits.
   const SCEV *BackedgeTakenCountSCEV = PSE.getSymbolicMaxBackedgeTakenCount();
-  assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCountSCEV) &&
+  assert(BackedgeTakenCountSCEV == PSE.getBackedgeTakenCount() &&
          "Invalid loop count");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *TripCount = SE.getTripCountFromExitCount(BackedgeTakenCountSCEV,

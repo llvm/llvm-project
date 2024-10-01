@@ -4059,7 +4059,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // uncountable exits whilst also ensuring the symbolic maximum and known
     // back-edge taken count remain identical for loops with countable exits.
     const SCEV *BackedgeTakenCount = PSE.getSymbolicMaxBackedgeTakenCount();
-    assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) &&
+    assert(BackedgeTakenCount == PSE.getBackedgeTakenCount() &&
            "Invalid loop count");
     const SCEV *ExitCount = SE->getAddExpr(
         BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
