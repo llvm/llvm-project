@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
+#include "clang/Basic/CFProtectionOptions.h"
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
