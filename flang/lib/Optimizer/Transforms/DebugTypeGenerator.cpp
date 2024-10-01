@@ -78,6 +78,8 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
+// Helper function to create DILocalVariableAttr and DbgValueOp when information
+// about the size or dimension of a variable etc lives in an mlir::Value.
 mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
     mlir::MLIRContext *context, mlir::Value Val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
