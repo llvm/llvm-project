@@ -155,9 +155,11 @@ public:
     return Def->getValueAsListOfDefs("leafConstructs");
   }
 
-  Record *getAssociation() const { return Def->getValueAsDef("association"); }
+  const Record *getAssociation() const {
+    return Def->getValueAsDef("association");
+  }
 
-  Record *getCategory() const { return Def->getValueAsDef("category"); }
+  const Record *getCategory() const { return Def->getValueAsDef("category"); }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td
