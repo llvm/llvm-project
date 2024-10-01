@@ -254,26 +254,27 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
 }
 
 SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
-  static const struct {
-    // Named by
-    // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
-    // We don't need aliases for Invocation and CrossDevice, as we already have
-    // them covered by "singlethread" and "" strings respectively (see
-    // implementation of LLVMContext::LLVMContext()).
-    llvm::SyncScope::ID SubGroup = Ctx.getOrInsertSyncScopeID("subgroup");
-    llvm::SyncScope::ID WorkGroup = Ctx.getOrInsertSyncScopeID("workgroup");
-    llvm::SyncScope::ID Device = Ctx.getOrInsertSyncScopeID("device");
-  } SSIDs{};
+  // Named by
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
+  // We don't need aliases for Invocation and CrossDevice, as we already have
+  // them covered by "singlethread" and "" strings respectively (see
+  // implementation of LLVMContext::LLVMContext()).
+  static const llvm::SyncScope::ID SubGroup =
+      Ctx.getOrInsertSyncScopeID("subgroup");
+  static const llvm::SyncScope::ID WorkGroup =
+      Ctx.getOrInsertSyncScopeID("workgroup");
+  static const llvm::SyncScope::ID Device =
+      Ctx.getOrInsertSyncScopeID("device");
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
   else if (Id == llvm::SyncScope::System)
     return SPIRV::Scope::CrossDevice;
-  else if (Id == SSIDs.SubGroup)
+  else if (Id == SubGroup)
     return SPIRV::Scope::Subgroup;
-  else if (Id == SSIDs.WorkGroup)
+  else if (Id == WorkGroup)
     return SPIRV::Scope::Workgroup;
-  else if (Id == SSIDs.Device)
+  else if (Id == Device)
     return SPIRV::Scope::Device;
   return SPIRV::Scope::CrossDevice;
 }
