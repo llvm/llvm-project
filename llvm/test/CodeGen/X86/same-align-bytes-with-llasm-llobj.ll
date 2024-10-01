@@ -7,7 +7,7 @@
 ; ASM:        # %bb.0:
 ; ASM-NEXT:   pushq   %rax
 ; ASM-NEXT:   .cfi_def_cfa_offset 16
-; ASM-NEXT:   .p2align        4
+; ASM-NEXT:   .p2align 4{{$}}
 
 ;; When we assemble the file, either using the built-in asssembler or going
 ;; via a textual assembly file, we should get the same padding between the
