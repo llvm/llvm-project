@@ -95,7 +95,7 @@ define amdgpu_kernel void @test_preload_hint_kernel_18(i32 %0, i64 %1, <2 x floa
 ; PRELOAD-16-NEXT:    ret void
 ;
 ; PRELOAD-20-LABEL: define {{[^@]+}}@test_preload_hint_kernel_18
-; PRELOAD-20-SAME: (i32 inreg [[TMP0:%.*]], i64 inreg [[TMP1:%.*]], <2 x float> inreg [[TMP2:%.*]], ptr inreg [[TMP3:%.*]], i32 inreg [[TMP4:%.*]], i32 inreg [[TMP5:%.*]], i32 inreg [[TMP6:%.*]], i32 inreg [[TMP7:%.*]], i32 inreg [[TMP8:%.*]], i32 inreg [[TMP9:%.*]], i32 inreg [[TMP10:%.*]], i32 inreg [[TMP11:%.*]], i32 inreg [[TMP12:%.*]], i32 inreg [[TMP13:%.*]], i32 inreg [[TMP14:%.*]], i32 inreg [[TMP15:%.*]], i32 [[TMP16:%.*]], i32 [[TMP17:%.*]]) #[[ATTR0]] {
+; PRELOAD-20-SAME: (i32 inreg [[TMP0:%.*]], i64 inreg [[TMP1:%.*]], <2 x float> inreg [[TMP2:%.*]], ptr inreg [[TMP3:%.*]], i32 inreg [[TMP4:%.*]], i32 inreg [[TMP5:%.*]], i32 inreg [[TMP6:%.*]], i32 inreg [[TMP7:%.*]], i32 inreg [[TMP8:%.*]], i32 inreg [[TMP9:%.*]], i32 inreg [[TMP10:%.*]], i32 inreg [[TMP11:%.*]], i32 inreg [[TMP12:%.*]], i32 inreg [[TMP13:%.*]], i32 inreg [[TMP14:%.*]], i32 inreg [[TMP15:%.*]], i32 inreg [[TMP16:%.*]], i32 inreg [[TMP17:%.*]]) #[[ATTR0]] {
 ; PRELOAD-20-NEXT:    ret void
 ;
   ret void

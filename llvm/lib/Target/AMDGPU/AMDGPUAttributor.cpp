@@ -1017,12 +1017,49 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
+static unsigned getMaxNumPreloadArgs(const Function &F, const DataLayout &DL,
+                                     const TargetMachine &TM) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  unsigned Offset = 0;
+  unsigned ArgsToPreload = 0;
+  for (const auto &Arg : F.args()) {
+    if (Arg.hasByRefAttr())
+      break;
+
+    Type *Ty = Arg.getType();
+    Align ArgAlign = DL.getABITypeAlign(Ty);
+    auto Size = DL.getTypeAllocSize(Ty);
+    Offset = alignTo(Offset, ArgAlign);
+    if (((Offset + Size) / 4) > ST.getMaxNumUserSGPRs())
+      break;
+
+    Offset += Size;
+    ArgsToPreload++;
+  }
+
+  return ArgsToPreload;
+}
+
 static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  for (unsigned I = 0;
-       I < F.arg_size() &&
-       I < std::min(KernargPreloadCount.getValue(), ST.getMaxNumUserSGPRs());
-       ++I) {
+  if (!ST.hasKernargPreload())
+    return;
+
+  // Enable kernarg preloading by default on GFX940+.
+  size_t PreloadCount;
+  if (KernargPreloadCount.getNumOccurrences() > 0) {
+    // Override default behavior if CL option is present.
+    PreloadCount = std::min<size_t>(KernargPreloadCount, F.arg_size());
+  } else {
+    // Defaults with no CL option.
+    if (ST.hasGFX940Insts())
+      PreloadCount =
+          getMaxNumPreloadArgs(F, F.getParent()->getDataLayout(), TM);
+    else
+      PreloadCount = 0;
+  }
+
+  for (unsigned I = 0; I < PreloadCount; ++I) {
     Argument &Arg = *F.getArg(I);
     // Check for incompatible attributes.
     if (Arg.hasByRefAttr() || Arg.hasNestAttr())
