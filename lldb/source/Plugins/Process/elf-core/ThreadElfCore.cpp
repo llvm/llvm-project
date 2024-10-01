@@ -542,6 +542,14 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
   }
 }
 
+static bool IsSignalWithAddrValue(int signo) {
+  // SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGTRAP
+  // We can't use the enum here because it may not be available on windows or
+  // other platforms. We should make an LLDB platform agnostic enum for this
+  // in the future.
+  return signo == 8 || signo == 4 || signo == 11 || signo == 7 || signo == 5;
+}
+
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   Status error;
   uint64_t size = GetSize(arch);
@@ -561,31 +569,20 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   // 64b ELF have a 4 byte pad.
   if (data.GetAddressByteSize() == 8)
     offset += 4;
-  switch (si_signo) {
-  case SIGFPE:
-  case SIGILL:
-  case SIGSEGV:
-  case SIGBUS:
-  case SIGTRAP:
-    addr = (void *)data.GetAddress(&offset);
+  if (IsSignalWithAddrValue(si_signo)) {
+    addr = data.GetAddress(&offset);
     addr_lsb = data.GetU16(&offset);
-    return error;
-  default:
-    return error;
   }
+  
+  return error;
 }
 
 std::string ELFLinuxSigInfo::GetDescription() {
-  switch (si_signo) {
-  case SIGFPE:
-  case SIGILL:
-  case SIGSEGV:
-  case SIGBUS:
-  case SIGTRAP:
+  if (IsSignalWithAddrValue(si_signo))
     return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
         si_signo, si_code, reinterpret_cast<uintptr_t>(addr));
-  default:
-    return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+
+
+  return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
         si_signo, si_code);
-  }
 }
