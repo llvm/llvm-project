@@ -2538,7 +2538,19 @@ public:
 
   unsigned getNumberOfParts(Type *Tp) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-    return LT.first.isValid() ? *LT.first.getValue() : 0;
+    if (!LT.first.isValid())
+      return 0;
+    // Try to find actual number of parts for non-power-of-2 elements as
+    // ceil(num-of-elements/num-of-subtype-elements).
+    if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
+        Tp && LT.second.isFixedLengthVector() &&
+        !has_single_bit(FTp->getNumElements())) {
+      if (auto *SubTp = dyn_cast_if_present<FixedVectorType>(
+              EVT(LT.second).getTypeForEVT(Tp->getContext()));
+          SubTp && SubTp->getElementType() == FTp->getElementType())
+        return divideCeil(FTp->getNumElements(), SubTp->getNumElements());
+    }
+    return *LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
