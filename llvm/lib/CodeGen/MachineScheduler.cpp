@@ -477,7 +477,7 @@ bool MachineScheduler::runOnMachineFunction(MachineFunction &mf) {
 }
 
 bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
-  if (mf.hasFakeUses() || skipFunction(mf.getFunction()))
+  if (skipFunction(mf.getFunction()))
     return false;
 
   if (EnablePostRAMachineSched.getNumOccurrences()) {
