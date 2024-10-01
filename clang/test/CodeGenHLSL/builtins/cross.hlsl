@@ -19,8 +19,9 @@
 
 // NATIVE_HALF: define [[FNATTRS]] <3 x half> @
 // NATIVE_HALF: call <3 x half> @llvm.[[TARGET]].cross.v3f16(<3 x half>
-// NO_HALF: call <3 x float> @llvm.[[TARGET]].cross.v3f32(<3 x float>
 // NATIVE_HALF: ret <3 x half> %hlsl.cross
+// NO_HALF: define [[FNATTRS]] <3 x float> @
+// NO_HALF: call <3 x float> @llvm.[[TARGET]].cross.v3f32(<3 x float>
 // NO_HALF: ret <3 x float> %hlsl.cross
 half3 test_cross_half3(half3 p0, half3 p1)
 {

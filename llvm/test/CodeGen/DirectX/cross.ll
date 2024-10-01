@@ -15,17 +15,17 @@ entry:
   ; CHECK: %y2 = extractelement <3 x half> %p1, i64 2
   ; CHECK: %0 = fmul half %x1, %y2
   ; CHECK: %1 = fmul half %x2, %y1
-  ; CHECK: %2 = fsub half %0, %1
-  ; CHECK: %3 = fmul half %x2, %y0
-  ; CHECK: %4 = fmul half %x0, %y2
-  ; CHECK: %5 = fsub half %3, %4
-  ; CHECK: %6 = fmul half %x0, %y1
-  ; CHECK: %7 = fmul half %x1, %y0
-  ; CHECK: %8 = fsub half %6, %7
-  ; CHECK: %9 = insertelement <3 x half> undef, half %2, i64 0
-  ; CHECK: %10 = insertelement <3 x half> %9, half %5, i64 1
-  ; CHECK: %11 = insertelement <3 x half> %10, half %8, i64 2
-  ; CHECK: ret <3 x half> %11
+  ; CHECK: %hlsl.cross1 = fsub half %0, %1
+  ; CHECK: %2 = fmul half %x2, %y0
+  ; CHECK: %3 = fmul half %x0, %y2
+  ; CHECK: %hlsl.cross2 = fsub half %2, %3
+  ; CHECK: %4 = fmul half %x0, %y1
+  ; CHECK: %5 = fmul half %x1, %y0
+  ; CHECK: %hlsl.cross3 = fsub half %4, %5
+  ; CHECK: %6 = insertelement <3 x half> undef, half %hlsl.cross1, i64 0
+  ; CHECK: %7 = insertelement <3 x half> %6, half %hlsl.cross2, i64 1
+  ; CHECK: %8 = insertelement <3 x half> %7, half %hlsl.cross3, i64 2
+  ; CHECK: ret <3 x half> %8
   %hlsl.cross = call <3 x half> @llvm.dx.cross.v3f16(<3 x half> %p0, <3 x half> %p1)
   ret <3 x half> %hlsl.cross
 }
@@ -40,17 +40,17 @@ entry:
   ; CHECK: %y2 = extractelement <3 x float> %p1, i64 2
   ; CHECK: %0 = fmul float %x1, %y2
   ; CHECK: %1 = fmul float %x2, %y1
-  ; CHECK: %2 = fsub float %0, %1
-  ; CHECK: %3 = fmul float %x2, %y0
-  ; CHECK: %4 = fmul float %x0, %y2
-  ; CHECK: %5 = fsub float %3, %4
-  ; CHECK: %6 = fmul float %x0, %y1
-  ; CHECK: %7 = fmul float %x1, %y0
-  ; CHECK: %8 = fsub float %6, %7
-  ; CHECK: %9 = insertelement <3 x float> undef, float %2, i64 0
-  ; CHECK: %10 = insertelement <3 x float> %9, float %5, i64 1
-  ; CHECK: %11 = insertelement <3 x float> %10, float %8, i64 2
-  ; CHECK: ret <3 x float> %11
+  ; CHECK: %hlsl.cross1 = fsub float %0, %1
+  ; CHECK: %2 = fmul float %x2, %y0
+  ; CHECK: %3 = fmul float %x0, %y2
+  ; CHECK: %hlsl.cross2 = fsub float %2, %3
+  ; CHECK: %4 = fmul float %x0, %y1
+  ; CHECK: %5 = fmul float %x1, %y0
+  ; CHECK: %hlsl.cross3 = fsub float %4, %5
+  ; CHECK: %6 = insertelement <3 x float> undef, float %hlsl.cross1, i64 0
+  ; CHECK: %7 = insertelement <3 x float> %6, float %hlsl.cross2, i64 1
+  ; CHECK: %8 = insertelement <3 x float> %7, float %hlsl.cross3, i64 2
+  ; CHECK: ret <3 x float> %8
   %hlsl.cross = call <3 x float> @llvm.dx.cross.v3f32(<3 x float> %p0, <3 x float> %p1)
   ret <3 x float> %hlsl.cross
 }

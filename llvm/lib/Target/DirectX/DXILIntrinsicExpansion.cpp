@@ -97,7 +97,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
   auto MulSub = [&](Value *x0, Value *y0, Value *x1, Value *y1) -> Value * {
     Value *xy = Builder.CreateFMul(x0, y1);
     Value *yx = Builder.CreateFMul(y0, x1);
-    return Builder.CreateFSub(xy, yx);
+    return Builder.CreateFSub(xy, yx, Orig->getName());
   };
 
   Value *yz_zy = MulSub(op0_y, op0_z, op1_y, op1_z);

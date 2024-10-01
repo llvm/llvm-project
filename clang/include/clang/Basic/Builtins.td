@@ -4709,12 +4709,6 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_create_handle"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void*(unsigned char)";
-}
-
 def HLSLCross: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_cross"];
   let Attributes = [NoThrow, Const];

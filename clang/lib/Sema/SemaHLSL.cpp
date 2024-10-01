@@ -1844,16 +1844,16 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (NumElementsArg1 != 3) {
       int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
       SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << LessOrMore << 3 << NumElementsArg1 << 1;
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg1 << /*operand*/ 1;
       return true;
     }
     if (NumElementsArg2 != 3) {
-      int LessOrMore = NumElementsArg1 > 3 ? 1 : 0;
+      int LessOrMore = NumElementsArg2 > 3 ? 1 : 0;
 
       SemaRef.Diag(TheCall->getBeginLoc(),
-                   diag::err_vector_incorrect_num_initializers)
-          << LessOrMore << 3 << NumElementsArg2 << 1;
+                   diag::err_vector_incorrect_num_elements)
+          << LessOrMore << 3 << NumElementsArg2 << /*operand*/ 1;
       return true;
     }
 
