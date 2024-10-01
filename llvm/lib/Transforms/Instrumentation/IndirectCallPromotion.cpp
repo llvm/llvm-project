@@ -132,10 +132,13 @@ static cl::opt<int> ICPMaxNumVTableLastCandidate(
     "icp-max-num-vtable-last-candidate", cl::init(1), cl::Hidden,
     cl::desc("The maximum number of vtable for the last candidate."));
 
-static cl::opt<std::string> ICPKnownUnrepresentativeVTables(
-    "icp-known-unrepresentative-vtables", cl::init(""), cl::Hidden,
-    cl::desc("A comma-separated list of mangled vtable names for which instrumented
-    profiles are not representative. For instance, the instantiated class is arch or micro-arch specific, while instrumented profiles are collected on one arch."));
+static cl::opt<DenseSet<StringRef>> ICPIgnoredBaseTypes(
+    "icp-ignored-base-types", cl::Hidden, cl::init(DenseSet<StringRef>()),
+    cl::desc("A comma-separated list of mangled vtable names. Classes "
+             "specified by the vtables and their derived ones will not be "
+             "vtable-ICP'ed. Useful when the profiled types and actual types "
+             "in the optimized binary could be different due to profiling "
+             "limitations."));
 
 namespace {
 
@@ -321,8 +324,6 @@ private:
 
   OptimizationRemarkEmitter &ORE;
 
-  const DenseSet<StringRef> &KnownUnrepresentativeBaseTypes;
-
   // A struct that records the direct target and it's call count.
   struct PromotionCandidate {
     Function *const TargetFunction;
@@ -398,12 +399,10 @@ public:
       Function &Func, Module &M, InstrProfSymtab *Symtab, bool SamplePGO,
       const VirtualCallSiteTypeInfoMap &VirtualCSInfo,
       VTableAddressPointOffsetValMap &VTableAddressPointOffsetVal,
-      DenseSet<StringRef> &KnownUnrepresentativeTypes,
       OptimizationRemarkEmitter &ORE)
       : F(Func), M(M), Symtab(Symtab), SamplePGO(SamplePGO),
         VirtualCSInfo(VirtualCSInfo),
-        VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE),
-        KnownUnrepresentativeBaseTypes(KnownUnrepresentativeTypes) {}
+        VTableAddressPointOffsetVal(VTableAddressPointOffsetVal), ORE(ORE) {}
   IndirectCallPromoter(const IndirectCallPromoter &) = delete;
   IndirectCallPromoter &operator=(const IndirectCallPromoter &) = delete;
 
@@ -871,12 +870,13 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
       Types.clear();
       VTableVar->getMetadata(LLVMContext::MD_type, Types);
 
+      const DenseSet<StringRef> &VTableSet = ICPIgnoredBaseTypes.getValue();
       for (auto *Type : Types)
         if (auto *TypeId = dyn_cast<MDString>(Type->getOperand(1).get()))
-          if (KnownUnrepresentativeBaseTypes.contains(TypeId->getString())) {
+          if (VTableSet.contains(TypeId->getString().str())) {
             LLVM_DEBUG(dbgs()
                        << "    vtable profiles are known to be "
-                          "unrepresentative. Bail out vtable comparison.")
+                          "unrepresentative. Bail out vtable comparison.");
             return false;
           }
     }
@@ -983,18 +983,8 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   bool Changed = false;
   VirtualCallSiteTypeInfoMap VirtualCSInfo;
 
-  DenseSet<StringRef> KnownUnrepresentativeTypeSet;
-
-  if (EnableVTableProfileUse) {
+  if (EnableVTableProfileUse)
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
-
-    SmallVector<StringRef> KnownUnrepresentativeTypes;
-    llvm::SplitString(ICPKnownUnrepresentativeVTables,
-                      KnownUnrepresentativeTypes);
-
-    for (const StringRef Str : KnownUnrepresentativeTypes)
-      KnownUnrepresentativeTypeSet.insert(Str);
-  }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable
   // address point of a given <vtable, address point offset> is static (doesn't
@@ -1014,8 +1004,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     IndirectCallPromoter CallPromoter(F, M, &Symtab, SamplePGO, VirtualCSInfo,
-                                      VTableAddressPointOffsetVal,
-                                      KnownUnrepresentativeTypeSet, ORE);
+                                      VTableAddressPointOffsetVal, ORE);
     bool FuncChanged = CallPromoter.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
