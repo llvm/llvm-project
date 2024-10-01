@@ -17,6 +17,17 @@
 
 // TODO: Add a comment here explaining the printf format string.
 
+// #include <stdio.h>
+// namespace LIBC_NAMESPACE_DECL {
+// using ::sprintf;
+// }
+
+class LlvmLibcSPrintfTest : public LIBC_NAMESPACE::testing::Test {
+protected:
+  char buff[1000];
+  int written;
+};
+
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
@@ -795,10 +806,7 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
-TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
-  char buff[128];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1162,10 +1170,7 @@ TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
       " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
-TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1680,10 +1685,7 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // The long double tests are separated so that their performance can be directly
 // measured.
-TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -2020,10 +2022,7 @@ TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
-TEST(LlvmLibcSPrintfTest, FloatExponentConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -2509,10 +2508,7 @@ TEST(LlvmLibcSPrintfTest, FloatExponentConv) {
   ASSERT_STREQ_LEN(written, buff, "+1.256e-01    001.256e+03");
 }
 
-TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   // Length Modifier Tests.
 
@@ -2633,10 +2629,7 @@ TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 */
 }
 
-TEST(LlvmLibcSPrintfTest, FloatAutoConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -3144,10 +3137,7 @@ TEST(LlvmLibcSPrintfTest, FloatAutoConv) {
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001.26e+03");
 }
 
-TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -3302,9 +3292,7 @@ TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 
 #if defined(LIBC_COMPILER_HAS_FIXED_POINT) &&                                  \
     !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
-TEST(LlvmLibcSPrintfTest, FixedConv) {
-  char buff[1000];
-  int written;
+TEST_F(LlvmLibcSPrintfTest, FixedConv) {
 
   // These numeric tests are potentially a little weak, but the fuzz test is
   // more thorough than my handwritten tests tend to be.
@@ -3514,10 +3502,7 @@ TEST(LlvmLibcSPrintfTest, FixedConv) {
        // !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
-TEST(LlvmLibcSPrintfTest, StrerrorConv) {
-  char buff[1000];
-  int written;
-
+TEST_F(LlvmLibcSPrintfTest, StrerrorConv) {
   LIBC_NAMESPACE::libc_errno = 0;
   written = LIBC_NAMESPACE::sprintf(buff, "%m");
   ASSERT_STREQ_LEN(written, buff, "Success");
