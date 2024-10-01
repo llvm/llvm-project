@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(int, remap_file_pages,
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
   if (ret < 0) {
-    libc_errno = ret;
+    libc_errno = -ret;
     return -1;
   }
 

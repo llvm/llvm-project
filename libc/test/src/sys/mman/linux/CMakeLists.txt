@@ -137,7 +137,6 @@ add_libc_unittest(
   DEPENDS
     libc.include.sys_mman
     libc.src.unistd.sysconf
-    libc.test.UnitTest.Test
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.src.sys.mman.remap_file_pages
     libc.src.errno.errno
