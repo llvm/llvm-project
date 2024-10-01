@@ -336,7 +336,8 @@ ArchSpec ProcessMinidump::GetArchitecture() {
 }
 
 DynamicLoader *ProcessMinidump::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
+  if (m_dyld_up.get() == nullptr 
+    && GetArchitecture().GetTriple().isOSLinux())
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
   return m_dyld_up.get();

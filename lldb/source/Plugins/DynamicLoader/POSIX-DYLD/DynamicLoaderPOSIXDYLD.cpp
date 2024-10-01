@@ -109,7 +109,7 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
   bool rebase_exec = load_offset != LLDB_INVALID_ADDRESS;
 
   // if the target executable should be re-based
-  if (rebase_exec || IsCoreFile()) {
+  if (rebase_exec) {
     ModuleList module_list;
 
     module_list.Append(executable_sp);

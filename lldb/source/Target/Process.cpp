@@ -6539,7 +6539,7 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                 CreateCoreFileMemoryRange(region));
 }
 
-static void AddRegisterSections(Process &process, ThreadSP &thread_sp,
+static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
                                 CoreFileMemoryRanges &ranges,
                                 lldb::addr_t range_end) {
   lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
@@ -6577,8 +6577,7 @@ static void AddRegisterSections(Process &process, ThreadSP &thread_sp,
   AddRegion(register_region, true, ranges);
 }
 
-static void AddModuleSections(Process &process, CoreFileMemoryRanges &ranges,
-                              std::set<addr_t> &stack_ends) {
+static void AddLinkMapSections(Process &process, CoreFileMemoryRanges &ranges) {
   ModuleList &module_list = process.GetTarget().GetImages();
   Target *target = &process.GetTarget();
   for (size_t idx = 0; idx < module_list.GetSize(); idx++) {
@@ -6597,10 +6596,6 @@ static void AddModuleSections(Process &process, CoreFileMemoryRanges &ranges,
     MemoryRegionInfo tls_storage_region;
     Status err = process.GetMemoryRegionInfo(load_addr, tls_storage_region);
     if (err.Fail())
-      continue;
-
-    // We already saved off this truncated stack range.
-    if (stack_ends.count(tls_storage_region.GetRange().GetRangeEnd()) > 0)
       continue;
 
     AddRegion(tls_storage_region, true, ranges);
@@ -6644,7 +6639,7 @@ static void SaveOffRegionsWithStackPointers(Process &process,
       // or contains the thread id from thread_sp.
       if (core_options.ShouldThreadBeSaved(thread_sp->GetID())) {
         AddRegion(sp_region, try_dirty_pages, ranges);
-        AddRegisterSections(process, thread_sp, ranges, range_end);
+        AddSegmentRegisterSections(process, thread_sp, ranges, range_end);
       }
     }
   }
@@ -6758,8 +6753,8 @@ Status Process::CalculateCoreFileSaveRanges(const SaveCoreOptions &options,
       options.HasSpecifiedThreads()) {
     SaveOffRegionsWithStackPointers(*this, options, regions, ranges,
                                     stack_ends);
-    // Save off the load sections for the TLS data.
-    AddModuleSections(*this, ranges, stack_ends);
+    // We need the link map for TLS data.
+    AddLinkMapSections(*this, ranges);
   }
 
   switch (core_style) {
