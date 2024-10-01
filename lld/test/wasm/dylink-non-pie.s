@@ -1,11 +1,8 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.lib.o %p/Inputs/ret32.s
 # RUN: wasm-ld -m wasm32 --experimental-pic -shared --no-entry %t.lib.o -o %t.lib.so
-# RUN: llvm-mc -filetype=obj -mattr=+reference-types -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -m wasm32 --features=mutable-globals -Bdynamic --export-table --growable-table --export-memory --export=__stack_pointer --export=__heap_base --export=__heap_end --entry=_start %t.o %t.lib.so -o %t.wasm
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
+# RUN: wasm-ld -m wasm32 -Bdynamic %t.o %t.lib.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
-
-	.tabletype	__indirect_function_table, funcref
-	.globaltype	__memory_base, i32, immutable
 
 	.functype	ret32 (f32) -> (i32)
 	.functype	_start () -> ()
@@ -13,12 +10,7 @@
 	.type	_start,@function
 _start:
 	.functype	_start () -> ()
-	f32.const   0.0
-	global.get	__memory_base
-	i32.const	f_p@MBREL
-	i32.add
-	i32.load	0
-	call_indirect	 __indirect_function_table, (f32) -> (i32)
+	i32.const   f_p
 	drop
 	end_function
 
