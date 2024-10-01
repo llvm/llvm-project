@@ -1996,8 +1996,8 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
-         VT != MVT::v2i32;
+  return VT != MVT::nxv4i64 && VT != MVT::nxv4i32 && VT != MVT::nxv2i64 &&
+         VT != MVT::v4i64 && VT != MVT::v4i32 && VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -21918,8 +21918,10 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (!(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
+  if (!(ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) &&
+      !(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
       !(ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) &&
+      !(ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8) &&
       !(ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) &&
       !(ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
     return SDValue();
@@ -21932,7 +21934,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
     bool Scalable = N->getValueType(0).isScalableVT();
     // There's no nxv2i64 version of usdot
-    if (Scalable && ReducedType != MVT::nxv4i32)
+    if (Scalable && ReducedType != MVT::nxv4i32 && ReducedType != MVT::nxv4i64)
       return SDValue();
 
     Opcode = AArch64ISD::USDOT;
@@ -21943,6 +21945,20 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
     Opcode = AArch64ISD::SDOT;
   else
     Opcode = AArch64ISD::UDOT;
+
+  // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
+  // product followed by a zero / sign extension
+  if ((ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) ||
+      (ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8)) {
+    EVT ReducedTypeI32 =
+        (ReducedType.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+
+    auto DotI32 = DAG.getNode(Opcode, DL, ReducedTypeI32,
+                              DAG.getConstant(0, DL, ReducedTypeI32), A, B);
+    auto Extended = DAG.getSExtOrTrunc(DotI32, DL, ReducedType);
+    return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(), NarrowOp,
+                       Extended);
+  }
 
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }
