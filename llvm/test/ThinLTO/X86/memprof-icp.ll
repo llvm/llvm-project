@@ -70,6 +70,17 @@
 ; RUN: opt -thinlto-bc %t/main.ll >%t/main.o
 ; RUN: opt -thinlto-bc %t/foo.ll >%t/foo.o
 
+;; Check that we get the synthesized callsite records. There should be 2, one
+;; for each profiled target in the VP metadata. They will have the same stackIds
+;; since the debug information for the callsite is the same.
+; RUN: llvm-dis %t/foo.o -o - | FileCheck %s --check-prefix=CALLSITES
+; CALLSITES: gv: (name: "_Z3fooR2B0j", {{.*}} callsites: ((callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235)), (callee: ^{{[0-9]+}}, clones: (0), stackIds: (16345663650247127235)))
+
+;; Make sure that we don't get the synthesized callsite records if the
+;; -enable-memprof-indirect-call-support flag is false.
+; RUN: opt -thinlto-bc %t/foo.ll -enable-memprof-indirect-call-support=false -o - \
+; RUN: 	| llvm-dis -o - | FileCheck %s --implicit-check-not callsites
+
 ;; First perform in-process ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
