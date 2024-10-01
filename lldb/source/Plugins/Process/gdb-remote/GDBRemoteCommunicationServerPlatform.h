@@ -41,8 +41,8 @@ public:
 
 protected:
   const Socket::SocketProtocol m_socket_protocol;
-  static std::mutex g_spawned_pids_mutex;
-  static std::set<lldb::pid_t> g_spawned_pids;
+  std::recursive_mutex m_spawned_pids_mutex;
+  std::set<lldb::pid_t> m_spawned_pids;
 
   uint16_t m_gdbserver_port;
   std::optional<std::string> m_pending_gdb_server_socket_name;
@@ -66,11 +66,11 @@ protected:
   PacketResult Handle_jSignalsInfo(StringExtractorGDBRemote &packet);
 
 private:
-  static bool KillSpawnedProcess(lldb::pid_t pid);
-  static bool SpawnedProcessFinished(lldb::pid_t pid);
-  static void AddSpawnedProcess(lldb::pid_t pid);
+  bool KillSpawnedProcess(lldb::pid_t pid);
+  bool SpawnedProcessFinished(lldb::pid_t pid);
+  void AddSpawnedProcess(lldb::pid_t pid);
 
-  static void DebugserverProcessReaped(lldb::pid_t pid, int signal, int status);
+  void DebugserverProcessReaped(lldb::pid_t pid);
 
   static const FileSpec &GetDomainSocketDir();
 

@@ -44,9 +44,6 @@ using namespace lldb;
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 
-std::mutex GDBRemoteCommunicationServerPlatform::g_spawned_pids_mutex;
-std::set<lldb::pid_t> GDBRemoteCommunicationServerPlatform::g_spawned_pids;
-
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, uint16_t gdbserver_port)
@@ -127,7 +124,7 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   // closes.
   debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
   debugserver_launch_info.SetMonitorProcessCallback(
-      &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped);
+      [](lldb::pid_t, int, int) {});
 
   Status error = StartDebugserverProcess(
       url.str().c_str(), nullptr, debugserver_launch_info, nullptr, &args, fd);
@@ -249,14 +246,14 @@ GDBRemoteCommunicationServerPlatform::Handle_qKillSpawnedProcess(
 
 void GDBRemoteCommunicationServerPlatform::AddSpawnedProcess(lldb::pid_t pid) {
   assert(pid != LLDB_INVALID_PROCESS_ID);
-  std::lock_guard<std::mutex> guard(g_spawned_pids_mutex);
-  g_spawned_pids.insert(pid);
+  std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
+  m_spawned_pids.insert(pid);
 }
 
 bool GDBRemoteCommunicationServerPlatform::SpawnedProcessFinished(
     lldb::pid_t pid) {
-  std::lock_guard<std::mutex> guard(g_spawned_pids_mutex);
-  return (g_spawned_pids.find(pid) == g_spawned_pids.end());
+  std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
+  return (m_spawned_pids.find(pid) == m_spawned_pids.end());
 }
 
 bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
@@ -428,9 +425,9 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
 }
 
 void GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped(
-    lldb::pid_t pid, int signal, int status) {
-  std::lock_guard<std::mutex> guard(g_spawned_pids_mutex);
-  g_spawned_pids.erase(pid);
+    lldb::pid_t pid) {
+  std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
+  m_spawned_pids.erase(pid);
 }
 
 Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
@@ -441,8 +438,9 @@ Status GDBRemoteCommunicationServerPlatform::LaunchProcess() {
   // specify the process monitor if not already set.  This should generally be
   // what happens since we need to reap started processes.
   if (!m_process_launch_info.GetMonitorProcessCallback())
-    m_process_launch_info.SetMonitorProcessCallback(
-        &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped);
+    m_process_launch_info.SetMonitorProcessCallback(std::bind(
+        &GDBRemoteCommunicationServerPlatform::DebugserverProcessReaped, this,
+        std::placeholders::_1));
 
   Status error = Host::LaunchProcess(m_process_launch_info);
   if (!error.Success()) {
