@@ -47,13 +47,26 @@ public:
   void print(llvm::raw_ostream &OS) const { OS << V; }
 
   APValue toAPValue(const ASTContext &) const { return APValue(V); }
-  APSInt toAPSInt(unsigned BitWidth) const { return V.getValue(); }
+  APSInt toAPSInt(unsigned BitWidth = 0) const { return V.getValue(); }
 
   unsigned bitWidth() const { return V.getWidth(); }
   bool isSigned() const { return V.isSigned(); }
+  bool isZero() const { return V.getValue().isZero(); }
+  bool isNegative() const { return V.getValue().isNegative(); }
+  bool isPositive() const { return V.getValue().isNonNegative(); }
+  bool isMin() const {
+    return V.getValue() == APSInt::getMinValue(V.getSemantics().getWidth(),
+                                               !V.getSemantics().isSigned());
+  }
+
+  FixedPoint truncate(unsigned BitWidth) const { return *this; }
 
   llvm::APFloat toFloat(const llvm::fltSemantics *Sem) const {
     return V.convertToFloat(*Sem);
+  }
+
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    return V.toString();
   }
 
   ComparisonCategoryResult compare(const FixedPoint &Other) const {
@@ -67,6 +80,27 @@ public:
     *R = FixedPoint(A.V.negate(&Overflow));
     return Overflow;
   }
+
+  static bool add(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                  FixedPoint *R) {
+    bool Overflow = false;
+    *R = FixedPoint(A.V.add(B.V, &Overflow));
+    return Overflow;
+  }
+  static bool sub(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                  FixedPoint *R) {
+    return true;
+  }
+  static bool mul(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                  FixedPoint *R) {
+    return true;
+  }
+  static bool div(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                  FixedPoint *R) {
+    return true;
+  }
+  static bool increment(const FixedPoint &A, FixedPoint *R) { return true; }
+  static bool decrement(const FixedPoint &A, FixedPoint *R) { return true; }
 };
 
 inline FixedPoint getSwappedBytes(FixedPoint F) { return F; }
