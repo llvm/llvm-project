@@ -3147,7 +3147,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   splitSections<ELFT>();
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  markLive<ELFT>();
+  markLive<ELFT>(ctx);
 
   // Make copies of any input sections that need to be copied into each
   // partition.
