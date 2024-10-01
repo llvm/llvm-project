@@ -29,6 +29,9 @@ private:
   KnownBits(APInt Zero, APInt One)
       : Zero(std::move(Zero)), One(std::move(One)) {}
 
+  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
+  static KnownBits flipSignBit(const KnownBits &Val);
+
 public:
   // Default construct Zero and One.
   KnownBits() = default;

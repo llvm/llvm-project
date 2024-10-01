@@ -18,6 +18,15 @@
 
 using namespace llvm;
 
+KnownBits KnownBits::flipSignBit(const KnownBits &Val) {
+  unsigned SignBitPosition = Val.getBitWidth() - 1;
+  APInt Zero = Val.Zero;
+  APInt One = Val.One;
+  Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
+  One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
+  return KnownBits(Zero, One);
+}
+
 static KnownBits computeForAddCarry(const KnownBits &LHS, const KnownBits &RHS,
                                     bool CarryZero, bool CarryOne) {
 
@@ -200,16 +209,7 @@ KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::smax(const KnownBits &LHS, const KnownBits &RHS) {
-  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
-  auto Flip = [](const KnownBits &Val) {
-    unsigned SignBitPosition = Val.getBitWidth() - 1;
-    APInt Zero = Val.Zero;
-    APInt One = Val.One;
-    Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
-    One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
-    return KnownBits(Zero, One);
-  };
-  return Flip(umax(Flip(LHS), Flip(RHS)));
+  return flipSignBit(umax(flipSignBit(LHS), flipSignBit(RHS)));
 }
 
 KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
