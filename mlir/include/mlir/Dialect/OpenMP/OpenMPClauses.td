@@ -1209,18 +1209,28 @@ class OpenMP_UseDeviceAddrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$use_device_addr_vars
   );
 
-  let optAssemblyFormat = [{
-    `use_device_addr` `(` $use_device_addr_vars `:` type($use_device_addr_vars) `)`
+  let extraClassDeclaration = [{
+    unsigned numUseDeviceAddrBlockArgs() {
+      return getUseDeviceAddrVars().size();
+    }
   }];
 
   let description = [{
     The optional `use_device_addr_vars` specifies the address of the objects in
     the device data environment.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_UseDeviceAddrClause : OpenMP_UseDeviceAddrClauseSkip<>;
@@ -1234,18 +1244,28 @@ class OpenMP_UseDevicePtrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$use_device_ptr_vars
   );
 
-  let optAssemblyFormat = [{
-    `use_device_ptr` `(` $use_device_ptr_vars `:` type($use_device_ptr_vars) `)`
+  let extraClassDeclaration = [{
+    unsigned numUseDevicePtrBlockArgs() {
+      return getUseDevicePtrVars().size();
+    }
   }];
 
   let description = [{
     The optional `use_device_ptr_vars` specifies the device pointers to the
     corresponding list items in the device data environment.
   }];
+
+  // Assembly format not defined because this clause must be processed together
+  // with the first region of the operation, as it defines entry block
+  // arguments.
 }
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;

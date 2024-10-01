@@ -429,13 +429,14 @@ func.func @_QPopenmp_target_data_region() {
 
 func.func @_QPomp_target_data_empty() {
   %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_data_emptyEa"}
-  omp.target_data use_device_addr(%0 : !fir.ref<!fir.array<1024xi32>>) {
+  omp.target_data use_device_addr(%0 -> %arg0 : !fir.ref<!fir.array<1024xi32>>) {
+    omp.terminator
   }
   return
 }
 
 // CHECK-LABEL:   llvm.func @_QPomp_target_data_empty
-// CHECK: omp.target_data   use_device_addr(%1 : !llvm.ptr) {
+// CHECK: omp.target_data   use_device_addr(%1 -> %{{.*}} : !llvm.ptr) {
 // CHECK: }
 
 // -----

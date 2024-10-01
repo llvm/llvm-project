@@ -2462,8 +2462,8 @@ static void collectMapDataFromMapOperands(
     }
   };
 
-  addDevInfos(useDevPtrOperands, llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer);
   addDevInfos(useDevAddrOperands, llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
+  addDevInfos(useDevPtrOperands, llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer);
 }
 
 static int getMapDataMemberIdx(MapInfoData &mapData, omp::MapInfoOp memberOp) {
@@ -3069,6 +3069,31 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     return combinedInfo;
   };
 
+  // Define a lambda to apply mappings between use_device_addr and
+  // use_device_ptr base pointers, and their associated block arguments.
+  auto mapUseDevice =
+      [&moduleTranslation](
+          llvm::OpenMPIRBuilder::DeviceInfoTy type,
+          llvm::ArrayRef<BlockArgument> blockArgs,
+          llvm::OpenMPIRBuilder::MapValuesArrayTy &basePointers,
+          llvm::OpenMPIRBuilder::MapDeviceInfoArrayTy &devicePointers,
+          llvm::function_ref<llvm::Value *(llvm::Value *)> mapper = nullptr) {
+        // Get a range to iterate over `basePointers` after filtering based on
+        // `devicePointers` and the given device info type.
+        auto basePtrRange = llvm::map_range(
+            llvm::make_filter_range(
+                llvm::zip_equal(basePointers, devicePointers),
+                [type](auto x) { return std::get<1>(x) == type; }),
+            [](auto x) { return std::get<0>(x); });
+
+        // Map block arguments to the corresponding processed base pointer. If
+        // a mapper is not specified, map the block argument to the base pointer
+        // directly.
+        for (auto [arg, basePointer] : llvm::zip_equal(blockArgs, basePtrRange))
+          moduleTranslation.mapValue(arg, mapper ? mapper(basePointer)
+                                                 : basePointer);
+      };
+
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
                                              /*SeparateBeginEndCalls=*/true);
 
@@ -3077,29 +3102,28 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType) {
     assert(isa<omp::TargetDataOp>(op) &&
            "BodyGen requested for non TargetDataOp");
+    auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(op);
     Region &region = cast<omp::TargetDataOp>(op).getRegion();
     switch (bodyGenType) {
     case BodyGenTy::Priv:
       // Check if any device ptr/addr info is available
       if (!info.DevicePtrInfoMap.empty()) {
         builder.restoreIP(codeGenIP);
-        unsigned argIndex = 0;
-        for (auto [basePointer, devicePointer] : llvm::zip_equal(
-                 combinedInfo.BasePointers, combinedInfo.DevicePointers)) {
-          if (devicePointer == llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer) {
-            const auto &arg = region.front().getArgument(argIndex);
-            moduleTranslation.mapValue(
-                arg, info.DevicePtrInfoMap[basePointer].second);
-            argIndex++;
-          } else if (devicePointer ==
-                     llvm::OpenMPIRBuilder::DeviceInfoTy::Address) {
-            const auto &arg = region.front().getArgument(argIndex);
-            auto *loadInst = builder.CreateLoad(
-                builder.getPtrTy(), info.DevicePtrInfoMap[basePointer].second);
-            moduleTranslation.mapValue(arg, loadInst);
-            argIndex++;
-          }
-        }
+
+        mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
+                     blockArgIface.getUseDeviceAddrBlockArgs(),
+                     combinedInfo.BasePointers, combinedInfo.DevicePointers,
+                     [&](llvm::Value *basePointer) -> llvm::Value * {
+                       return builder.CreateLoad(
+                           builder.getPtrTy(),
+                           info.DevicePtrInfoMap[basePointer].second);
+                     });
+        mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
+                     blockArgIface.getUseDevicePtrBlockArgs(),
+                     combinedInfo.BasePointers, combinedInfo.DevicePointers,
+                     [&](llvm::Value *basePointer) {
+                       return info.DevicePtrInfoMap[basePointer].second;
+                     });
 
         bodyGenStatus = inlineConvertOmpRegions(region, "omp.data.region",
                                                 builder, moduleTranslation);
@@ -3114,17 +3138,14 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
         // For device pass, if use_device_ptr(addr) mappings were present,
         // we need to link them here before codegen.
         if (ompBuilder->Config.IsTargetDevice.value_or(false)) {
-          unsigned argIndex = 0;
-          for (auto [basePointer, devicePointer] :
-               llvm::zip_equal(mapData.BasePointers, mapData.DevicePointers)) {
-            if (devicePointer == llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer ||
-                devicePointer == llvm::OpenMPIRBuilder::DeviceInfoTy::Address) {
-              const auto &arg = region.front().getArgument(argIndex);
-              moduleTranslation.mapValue(arg, basePointer);
-              argIndex++;
-            }
-          }
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
+                       blockArgIface.getUseDeviceAddrBlockArgs(),
+                       mapData.BasePointers, mapData.DevicePointers);
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
+                       blockArgIface.getUseDevicePtrBlockArgs(),
+                       mapData.BasePointers, mapData.DevicePointers);
         }
+
         bodyGenStatus = inlineConvertOmpRegions(region, "omp.data.region",
                                                 builder, moduleTranslation);
       }
