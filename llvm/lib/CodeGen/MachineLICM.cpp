@@ -239,7 +239,7 @@ namespace {
 
     bool IsCheapInstruction(MachineInstr &MI) const;
 
-    bool CanCauseHighRegPressure(const SmallDenseMap<unsigned, int> &Cost,
+    bool CanCauseHighRegPressure(const DenseMap<unsigned, int> &Cost,
                                  bool Cheap);
 
     void UpdateBackTraceRegPressure(const MachineInstr *MI);
@@ -264,9 +264,9 @@ namespace {
 
     void InitRegPressure(MachineBasicBlock *BB);
 
-    SmallDenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
-                                                  bool ConsiderSeen,
-                                                  bool ConsiderUnseenAsDef);
+    DenseMap<unsigned, int> calcRegisterCost(const MachineInstr *MI,
+                                             bool ConsiderSeen,
+                                             bool ConsiderUnseenAsDef);
 
     void UpdateRegPressure(const MachineInstr *MI,
                            bool ConsiderUnseenAsDef = false);
@@ -977,10 +977,10 @@ void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
 /// If 'ConsiderSeen' is true, updates 'RegSeen' and uses the information to
 /// figure out which usages are live-ins.
 /// FIXME: Figure out a way to consider 'RegSeen' from all code paths.
-SmallDenseMap<unsigned, int>
+DenseMap<unsigned, int>
 MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
                                   bool ConsiderUnseenAsDef) {
-  SmallDenseMap<unsigned, int> Cost;
+  DenseMap<unsigned, int> Cost;
   if (MI->isImplicitDef())
     return Cost;
   for (unsigned i = 0, e = MI->getDesc().getNumOperands(); i != e; ++i) {
@@ -1248,7 +1248,7 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// Visit BBs from header to current BB, check if hoisting an instruction of the
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
-    const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
+    const DenseMap<unsigned, int> &Cost, bool CheapInstr) {
   for (const auto &RPIdAndCost : Cost) {
     if (RPIdAndCost.second <= 0)
       continue;

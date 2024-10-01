@@ -2255,7 +2255,7 @@ const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
 static bool
-CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
+CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
                              SmallVectorImpl<const SCEV *> &NewOps,
                              APInt &AccumulatedConstant,
                              ArrayRef<const SCEV *> Ops, const APInt &Scale,
@@ -2753,7 +2753,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   // operands multiplied by constant values.
   if (Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx])) {
     uint64_t BitWidth = getTypeSizeInBits(Ty);
-    SmallDenseMap<const SCEV *, APInt, 16> M;
+    DenseMap<const SCEV *, APInt> M;
     SmallVector<const SCEV *, 8> NewOps;
     APInt AccumulatedConstant(BitWidth, 0);
     if (CollectAddOperandsWithScales(M, NewOps, AccumulatedConstant,
