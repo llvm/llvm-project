@@ -11,13 +11,16 @@
 #include "src/__support/freetrie.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::FreeTrie;
+using LIBC_NAMESPACE::cpp::byte;
+using LIBC_NAMESPACE::cpp::optional;
 
 TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
   FreeTrie trie({0, 4096});
   EXPECT_EQ(trie.find_best_fit(123), static_cast<FreeTrie::Node *>(nullptr));
 
-  cpp::byte mem[1024];
+  byte mem[1024];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *block = *maybeBlock;
@@ -33,7 +36,7 @@ TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
 }
 
 TEST(LlvmLibcFreeTrie, FindBestFitLower) {
-  cpp::byte mem[4096];
+  byte mem[4096];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *lower = *maybeBlock;
@@ -49,7 +52,7 @@ TEST(LlvmLibcFreeTrie, FindBestFitLower) {
 }
 
 TEST(LlvmLibcFreeTrie, FindBestFitUpper) {
-  cpp::byte mem[4096];
+  byte mem[4096];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *root = *maybeBlock;
@@ -67,7 +70,7 @@ TEST(LlvmLibcFreeTrie, FindBestFitUpper) {
 }
 
 TEST(LlvmLibcFreeTrie, FindBestFitLowerAndUpper) {
-  cpp::byte mem[4096];
+  byte mem[4096];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *root = *maybeBlock;
@@ -91,7 +94,7 @@ TEST(LlvmLibcFreeTrie, FindBestFitLowerAndUpper) {
 }
 
 TEST(LlvmLibcFreeTrie, Remove) {
-  cpp::byte mem[4096];
+  byte mem[4096];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *small1 = *maybeBlock;
@@ -120,5 +123,3 @@ TEST(LlvmLibcFreeTrie, Remove) {
   trie.remove(trie.find_best_fit(small1->inner_size()));
   EXPECT_EQ(trie.find_best_fit(large->inner_size())->block(), large);
 }
-
-} // namespace LIBC_NAMESPACE_DECL

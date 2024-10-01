@@ -11,15 +11,18 @@
 #include "src/__support/freelist.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::FreeList;
+using LIBC_NAMESPACE::cpp::byte;
+using LIBC_NAMESPACE::cpp::optional;
 
 TEST(LlvmLibcFreeList, FreeList) {
-  cpp::byte mem1[1024];
+  byte mem1[1024];
   optional<Block<> *> maybeBlock = Block<>::init(mem1);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *block1 = *maybeBlock;
 
-  cpp::byte mem2[1024];
+  byte mem2[1024];
   maybeBlock = Block<>::init(mem2);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *block2 = *maybeBlock;
@@ -46,5 +49,3 @@ TEST(LlvmLibcFreeList, FreeList) {
   list.pop();
   ASSERT_TRUE(list.empty());
 }
-
-} // namespace LIBC_NAMESPACE_DECL

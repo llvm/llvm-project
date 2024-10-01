@@ -28,7 +28,7 @@ extern "C" cpp::byte __llvm_libc_heap_limit;
 using cpp::optional;
 using cpp::span;
 
-inline constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
+LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
 class FreeListHeap {
 public:
@@ -74,7 +74,7 @@ private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
-inline void FreeListHeap::init() {
+LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = Block<>::init(region());
   Block<> *block = *result;
@@ -83,7 +83,7 @@ inline void FreeListHeap::init() {
   is_initialized = true;
 }
 
-inline void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
+LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
 
@@ -111,11 +111,12 @@ inline void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   return block_info.block->usable_space();
 }
 
-inline void *FreeListHeap::allocate(size_t size) {
+LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
   return allocate_impl(alignof(max_align_t), size);
 }
 
-inline void *FreeListHeap::aligned_allocate(size_t alignment, size_t size) {
+LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
+                                                 size_t size) {
   // The alignment must be an integral power of two.
   if (!IsPow2(alignment))
     return nullptr;
@@ -127,7 +128,7 @@ inline void *FreeListHeap::aligned_allocate(size_t alignment, size_t size) {
   return allocate_impl(alignment, size);
 }
 
-inline void FreeListHeap::free(void *ptr) {
+LIBC_INLINE void FreeListHeap::free(void *ptr) {
   cpp::byte *bytes = static_cast<cpp::byte *>(ptr);
 
   LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
@@ -157,7 +158,7 @@ inline void FreeListHeap::free(void *ptr) {
 
 // Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
-inline void *FreeListHeap::realloc(void *ptr, size_t size) {
+LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   if (size == 0) {
     free(ptr);
     return nullptr;
@@ -192,7 +193,7 @@ inline void *FreeListHeap::realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-inline void *FreeListHeap::calloc(size_t num, size_t size) {
+LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
   void *ptr = allocate(num * size);
   if (ptr != nullptr)
     LIBC_NAMESPACE::inline_memset(ptr, 0, num * size);

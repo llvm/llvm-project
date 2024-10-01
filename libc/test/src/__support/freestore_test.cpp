@@ -11,11 +11,16 @@
 #include "src/__support/freestore.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::FreeList;
+using LIBC_NAMESPACE::FreeStore;
+using LIBC_NAMESPACE::FreeTrie;
+using LIBC_NAMESPACE::cpp::byte;
+using LIBC_NAMESPACE::cpp::optional;
 
 // Inserting or removing blocks too small to be tracked does nothing.
 TEST(LlvmLibcFreeStore, TooSmall) {
-  cpp::byte mem[1024];
+  byte mem[1024];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   Block<> *too_small = *maybeBlock;
@@ -33,7 +38,7 @@ TEST(LlvmLibcFreeStore, TooSmall) {
 }
 
 TEST(LlvmLibcFreeStore, RemoveBestFit) {
-  cpp::byte mem[1024];
+  byte mem[1024];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
 
@@ -72,7 +77,7 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
 }
 
 TEST(LlvmLibcFreeStore, Remove) {
-  cpp::byte mem[1024];
+  byte mem[1024];
   optional<Block<> *> maybeBlock = Block<>::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
 
@@ -94,5 +99,3 @@ TEST(LlvmLibcFreeStore, Remove) {
   ASSERT_EQ(store.remove_best_fit(small->inner_size()),
             static_cast<Block<> *>(nullptr));
 }
-
-} // namespace LIBC_NAMESPACE_DECL
