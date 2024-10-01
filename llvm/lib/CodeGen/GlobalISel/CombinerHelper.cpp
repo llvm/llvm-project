@@ -4301,12 +4301,11 @@ void CombinerHelper::applyCombineExtractToShuffle(
   }
 
   // We could reuse the same vector register and shuffle them both together
-  // but it is nicer for later optimizations to explicitely make it undef.
+  // but it is nicer for later optimizations to explicitly make it undef.
   const GBuildVector *BuildVector = cast<GBuildVector>(&MI);
   Register SecondRegister = VectorRegisters.second;
   if (FirstRegister == SecondRegister) {
-    SecondRegister = MRI.createGenericVirtualRegister(FirstRegisterType);
-    Builder.buildUndef(SecondRegister);
+    SecondRegister = Builder.buildUndef(FirstRegisterType).getReg(0);
   }
 
   Builder.buildShuffleVector(BuildVector->getOperand(0), FirstRegister,
