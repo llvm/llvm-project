@@ -89,10 +89,6 @@ CompilerInstance::~CompilerInstance() {
 void CompilerInstance::setInvocation(
     std::shared_ptr<CompilerInvocation> Value) {
   Invocation = std::move(Value);
-
-  /// Initialize the input from CAS when setting the invocation to preserve
-  /// the same behavior when perform all kinds of FrontendActions.
-  initializeDelayedInputFileFromCAS();
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -1001,6 +997,8 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
   // Return if no need to initialize or already initialized.
   if (Opts.CASIncludeTreeID.empty() || !Opts.Inputs.empty())
     return;
+
+  assert(hasDiagnostics() && "need diagnostics engine for CAS loading");
 
   // If there is include tree, initialize the inputs from CAS.
   auto reportError = [&](llvm::Error &&E) {
