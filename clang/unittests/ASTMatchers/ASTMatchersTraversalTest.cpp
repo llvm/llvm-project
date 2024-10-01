@@ -5666,7 +5666,6 @@ TEST(HasParent, MatchesAllParents) {
 TEST(HasParent, NoDuplicateParents) {
   class HasDuplicateParents : public BoundNodesCallback {
   public:
-    bool run(const BoundNodes *Nodes) override { return false; }
     bool run(const BoundNodes *Nodes, ASTContext *Context) override {
       const Stmt *Node = Nodes->getNodeAs<Stmt>("node");
       std::set<const void *> Parents;
@@ -5875,16 +5874,14 @@ template <typename T> class VerifyMatchOnNode : public BoundNodesCallback {
 public:
   VerifyMatchOnNode(StringRef Id, const internal::Matcher<T> &InnerMatcher,
                     StringRef InnerId)
-    : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {
-  }
-
-  bool run(const BoundNodes *Nodes) override { return false; }
+      : Id(Id), InnerMatcher(InnerMatcher), InnerId(InnerId) {}
 
   bool run(const BoundNodes *Nodes, ASTContext *Context) override {
     const T *Node = Nodes->getNodeAs<T>(Id);
     return selectFirst<T>(InnerId, match(InnerMatcher, *Node, *Context)) !=
-      nullptr;
+           nullptr;
   }
+
 private:
   std::string Id;
   internal::Matcher<T> InnerMatcher;
@@ -6078,7 +6075,7 @@ namespace {
 class ForCallablePreservesBindingWithMultipleParentsTestCallback
     : public BoundNodesCallback {
 public:
-  bool run(const BoundNodes *BoundNodes) override {
+  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
     FunctionDecl const *FunDecl =
         BoundNodes->getNodeAs<FunctionDecl>("funDecl");
     // Validate test assumptions. This would be expressed as ASSERT_* in
@@ -6113,10 +6110,6 @@ public:
 
     // This value does not really matter: the EXPECT_* will set the exit code.
     return true;
-  }
-
-  bool run(const BoundNodes *BoundNodes, ASTContext *Context) override {
-    return run(BoundNodes);
   }
 
 private:
