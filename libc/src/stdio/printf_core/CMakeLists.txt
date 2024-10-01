@@ -141,7 +141,6 @@ add_header_library(
   HDRS
     vfprintf_internal.h
   DEPENDS
-    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
