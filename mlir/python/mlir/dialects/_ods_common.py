@@ -3,6 +3,7 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 from typing import (
+    Any as _Any,
     List as _List,
     Optional as _Optional,
     Sequence as _Sequence,
@@ -12,7 +13,7 @@ from typing import (
 )
 
 from .._mlir_libs import _mlir as _cext
-from ..ir import (
+from ..ir import ( # type: ignore
     ArrayAttr,
     Attribute,
     BoolAttr,
@@ -143,7 +144,7 @@ def get_op_result_or_op_results(
         else op
     )
 
-ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
+ResultValueTypeTuple = _Tuple[_cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value]
 ResultValueT = _Union[ResultValueTypeTuple]
 VariadicResultValueT = _Union[ResultValueT, _Sequence[ResultValueT]]
 
@@ -244,8 +245,8 @@ def _dispatch_mixed_values(
 
 
 def _get_value_or_attribute_value(
-    value_or_attr: _Union[any, Attribute, ArrayAttr]
-) -> any:
+    value_or_attr: _Union[_Any, Attribute, ArrayAttr]
+) -> _Any:
     if isinstance(value_or_attr, Attribute) and hasattr(value_or_attr, "value"):
         return value_or_attr.value
     if isinstance(value_or_attr, ArrayAttr):
@@ -254,8 +255,8 @@ def _get_value_or_attribute_value(
 
 
 def _get_value_list(
-    sequence_or_array_attr: _Union[_Sequence[any], ArrayAttr]
-) -> _Sequence[any]:
+    sequence_or_array_attr: _Union[_Sequence[_Any], ArrayAttr]
+) -> _Sequence[_Any]:
     return [_get_value_or_attribute_value(v) for v in sequence_or_array_attr]
 
 
