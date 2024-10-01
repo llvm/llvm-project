@@ -64,6 +64,9 @@ namespace llvm {
     List,   // Get list of functions & BBs from a file. Selectively enables
             // basic block sections for a subset of basic blocks which can be
             // used to control object size bloats from creating sections.
+    Labels, // Do not use Basic Block Sections but label basic blocks.  This
+            // is useful when associating profile counts from virtual addresses
+            // to basic blocks.
     Preset, // Similar to list but the blocks are identified by passes which
             // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
             // This option cannot be set via the command line.
