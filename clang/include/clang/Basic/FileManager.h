@@ -84,7 +84,7 @@ class FileManager : public RefCountedBase<FileManager> {
   /// VirtualDirectoryEntries/VirtualFileEntries above.
   ///
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
-  SeenDirEntries;
+      SeenDirEntries;
 
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
@@ -190,6 +190,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning DirectoryEntry are deprecated.",
+                  "getOptionalDirectoryRef()")
   llvm::ErrorOr<const DirectoryEntry *>
   getDirectory(StringRef DirName, bool CacheFailure = true);
 
@@ -207,6 +209,8 @@ public:
   ///
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getOptionalFileRef()")
   llvm::ErrorOr<const FileEntry *>
   getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
 
@@ -269,6 +273,8 @@ public:
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
 
+  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
+                  "getVirtualFileRef()")
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 
