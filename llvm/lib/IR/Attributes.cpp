@@ -1804,7 +1804,6 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
     return std::nullopt;
 
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  //  AttributeList IntersectedAttrs{};
   for (unsigned Idx : indexes()) {
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
