@@ -997,8 +997,8 @@ define i1 @shr_to_rotate_eq_i32_s5(i32 %x) {
 define i32 @issue108722(i32 %0) {
 ; CHECK-NOBMI-LABEL: issue108722:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movzbl %dil, %ecx
-; CHECK-NOBMI-NEXT:    shrl $24, %edi
+; CHECK-NOBMI-NEXT:    movl %edi, %ecx
+; CHECK-NOBMI-NEXT:    roll $24, %ecx
 ; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    cmpl %edi, %ecx
 ; CHECK-NOBMI-NEXT:    sete %al
