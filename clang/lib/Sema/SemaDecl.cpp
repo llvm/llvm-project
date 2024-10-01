@@ -9085,6 +9085,11 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
 
   SemaRef.Diag(NewFD->getLocation(), DiagMsg)
       << Name << NewDC << IsDefinition << NewFD->getLocation();
+  if (CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD)) {
+    CXXRecordDecl *RD = NewMD->getParent();
+    SemaRef.Diag(RD->getLocation(), diag::note_defined_here)
+        << RD->getName() << RD->getLocation();
+  }
 
   bool NewFDisConst = false;
   if (CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD))
