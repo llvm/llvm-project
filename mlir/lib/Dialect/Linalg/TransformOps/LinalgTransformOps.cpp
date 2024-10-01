@@ -3482,6 +3482,9 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
+  // Add misc. vectorization patterns (e.g. for tensor.insert_slice)
+  linalg::populateInsertSliceVectorizationPatterns(patterns);
+
   if (getVectorizePadding())
     linalg::populatePadOpVectorizationPatterns(patterns);
 
