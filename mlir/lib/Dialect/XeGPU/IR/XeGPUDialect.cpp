@@ -161,7 +161,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
         sg_map = attr;
         continue;
       }
-      if (mlir::isa<BlockTensorDescAttr>(attr)) {
+      if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
         encoding = attr;
         continue;
       }
@@ -207,24 +207,20 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int array_length,
                                    bool boundary_check,
                                    MemorySpace memory_space,
-                                   llvm::ArrayRef<uint32_t> wi_layout,
-                                   llvm::ArrayRef<uint32_t> wi_data) {
+                                   mlir::Attribute sg_map) {
   auto context = elementType.getContext();
   auto attr = BlockTensorDescAttr::get(context, memory_space, array_length,
                                        boundary_check);
-  auto sgMapAttr = SGMapAttr::get(context, wi_layout, wi_data);
-  return Base::get(context, shape, elementType, attr, sgMapAttr);
+  return Base::get(context, shape, elementType, attr, sg_map);
 }
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int chunk_size,
                                    MemorySpace memory_space,
-                                   llvm::ArrayRef<uint32_t> wi_layout,
-                                   llvm::ArrayRef<uint32_t> wi_data) {
+                                   mlir::Attribute sg_map) {
   auto context = elementType.getContext();
   auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  auto sgMapAttr = SGMapAttr::get(context, wi_layout, wi_data);
-  return Base::get(context, shape, elementType, attr, sgMapAttr);
+  return Base::get(context, shape, elementType, attr, sg_map);
 }
 
 } // namespace xegpu
