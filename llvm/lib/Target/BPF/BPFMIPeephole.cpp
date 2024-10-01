@@ -620,10 +620,8 @@ static void collectBPFFastCalls(const TargetRegisterInfo *TRI,
       unsigned LiveCallerSavedRegs = 0;
       for (MCRegister R : CallerSavedRegs) {
         bool DoSpillFill = false;
-        for (MCSubRegIndexIterator SRI(R, TRI); SRI.isValid(); ++SRI) {
-          MCRegister SR = SRI.getSubReg();
+        for (MCPhysReg SR : TRI->subregs(R))
           DoSpillFill |= !MI.definesRegister(SR, TRI) && LiveRegs.contains(SR);
-        }
         if (!DoSpillFill)
           continue;
         LiveCallerSavedRegs |= 1 << R;
