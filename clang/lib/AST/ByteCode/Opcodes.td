@@ -698,6 +698,9 @@ def CastFixedPointIntegral : Opcode {
   let Types = [FixedSizeIntegralTypes];
   let HasGroup = 1;
 }
+def ShiftFixedPoint : Opcode {
+  let Args = [ArgBool];
+}
 
 def PtrPtrCast : Opcode {
   let Args = [ArgBool];

@@ -1563,6 +1563,10 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
     return ConvertResult(this->emitMulFixedPoint(E));
   case BO_Div:
     return ConvertResult(this->emitDivFixedPoint(E));
+  case BO_Shl:
+    return ConvertResult(this->emitShiftFixedPoint(/*Left=*/true, E));
+  case BO_Shr:
+    return ConvertResult(this->emitShiftFixedPoint(/*Left=*/false, E));
 
   default:
     return this->emitInvalid(E);
