@@ -8,9 +8,7 @@ struct IntHolder {
 
 const IntHolder *saved;
 
-ATTRIBUTE_NOINLINE void save(const IntHolder &holder) {
-  saved = &holder;
-}
+ATTRIBUTE_NOINLINE void save(const IntHolder &holder) { saved = &holder; }
 
 int main(int argc, char *argv[]) {
   save({argc});

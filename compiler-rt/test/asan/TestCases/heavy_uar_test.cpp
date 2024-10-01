@@ -17,8 +17,8 @@
 
 #include "defines.h"
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #  include <windows.h>
 #endif
@@ -36,9 +36,8 @@ char *LeakStack() {
   return pretend_to_do_something(x);
 }
 
-template<size_t kFrameSize>
-ATTRIBUTE_NOINLINE
-void RecursiveFunctionWithStackFrame(int depth) {
+template <size_t kFrameSize>
+ATTRIBUTE_NOINLINE void RecursiveFunctionWithStackFrame(int depth) {
   if (depth <= 0) return;
   char x[kFrameSize];
   x[0] = depth;

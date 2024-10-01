@@ -8,13 +8,13 @@ struct C {
   ~C() {}
 };
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma optimize("", off)
+#  pragma optimize("", off)
 #else
 __attribute__((optnone))
 #endif
 int ATTRIBUTE_NOINLINE hide(int x) { return x; }
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma optimize("", on)
+#  pragma optimize("", on)
 #endif
 int main() {
   C *buffer = new C[42];

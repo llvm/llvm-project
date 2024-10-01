@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stdint.h>
 #if defined(_MSC_VER) && !defined(__clang__)
-#include <malloc.h>
+#  include <malloc.h>
 #endif
 
 struct A {
@@ -18,7 +18,7 @@ ATTRIBUTE_NOINLINE void foo(int index, int len) {
 #if !defined(_MSC_VER) || defined(__clang__)
   volatile struct A str[len] ATTRIBUTE_ALIGNED(32);
 #else
-  volatile struct A *str = (volatile struct A*)_alloca(len * sizeof(struct A));
+  volatile struct A *str = (volatile struct A *)_alloca(len * sizeof(struct A));
 #endif
   assert(!(reinterpret_cast<uintptr_t>(str) & 31L));
   str[index].a[0] = '1'; // BOOM

@@ -7,10 +7,10 @@
 // UNSUPPORTED: MSVC
 
 #include "defines.h"
+#include "sanitizer/asan_interface.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "sanitizer/asan_interface.h"
 
 // MSVC provides _alloca instead of alloca.
 #if defined(_MSC_VER) && !defined(alloca)

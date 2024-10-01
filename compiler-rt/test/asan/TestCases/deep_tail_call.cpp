@@ -7,7 +7,7 @@
 #include "defines.h"
 int global[10];
 // CHECK: {{#0.*call4}}
-void ATTRIBUTE_NOINLINE call4(int i) { global[i+10]++; }
+void ATTRIBUTE_NOINLINE call4(int i) { global[i + 10]++; }
 // CHECK: {{#1.*call3}}
 void ATTRIBUTE_NOINLINE call3(int i) { call4(i); }
 // CHECK: {{#2.*call2}}

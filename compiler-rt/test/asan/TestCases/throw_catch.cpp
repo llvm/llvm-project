@@ -2,8 +2,8 @@
 
 #include "defines.h"
 #include <assert.h>
-#include <stdio.h>
 #include <sanitizer/asan_interface.h>
+#include <stdio.h>
 
 ATTRIBUTE_NOINLINE
 void Throw() {

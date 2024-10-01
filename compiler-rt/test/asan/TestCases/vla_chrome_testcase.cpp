@@ -7,16 +7,15 @@
 // See http://reviews.llvm.org/D6055?vs=on&id=15616&whitespace=ignore-all#toc.
 
 #include "defines.h"
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 
 int a = 7;
 int b;
 int c;
 int *p;
 
-ATTRIBUTE_NOINLINE void fn3(int *first, int second) {
-}
+ATTRIBUTE_NOINLINE void fn3(int *first, int second) {}
 
 int main() {
   int d = b && c;

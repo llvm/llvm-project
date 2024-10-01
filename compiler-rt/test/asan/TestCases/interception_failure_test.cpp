@@ -19,7 +19,7 @@
 // XFAIL: target={{.*netbsd.*}} && !asan-dynamic-runtime
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma warning(disable : 4273)
+#  pragma warning(disable : 4273)
 #endif
 
 #include <stdlib.h>

@@ -12,9 +12,7 @@ static void ErrorReportCallbackOneToZ(const char *report) {
 
 int main(int argc, char **argv) {
   __asan_set_error_report_callback(ErrorReportCallbackOneToZ);
-  __asan_report_error(
-      (void *)EXTRACT_RETURN_ADDRESS, 0, 0,
-      0, true, 1);
+  __asan_report_error((void *)EXTRACT_RETURN_ADDRESS, 0, 0, 0, true, 1);
   // CHECK: ABCDEF
   // CHECK: ERROR: AddressSanitizer
   // CHECK: GHIJKL
