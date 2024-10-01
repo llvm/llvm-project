@@ -84,6 +84,11 @@ def IntegerTypeClass : TypeClass {
                Uint32, Sint64, Uint64, IntAP, IntAPS];
 }
 
+def IntegerAndFixedTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
+               Uint32, Sint64, Uint64, IntAP, IntAPS, FixedPoint];
+}
+
 def FixedSizeIntegralTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
                Uint32, Sint64, Uint64, Bool];
@@ -146,7 +151,7 @@ class FloatOpcode : Opcode {
 }
 
 class IntegerOpcode : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegerAndFixedTypeClass];
   let HasGroup = 1;
 }
 

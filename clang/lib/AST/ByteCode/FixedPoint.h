@@ -58,9 +58,9 @@ public:
   bool isNegative() const { return V.getValue().isNegative(); }
   bool isPositive() const { return V.getValue().isNonNegative(); }
   bool isMin() const {
-    return V.getValue() == APSInt::getMinValue(V.getSemantics().getWidth(),
-                                               !V.getSemantics().isSigned());
+    return V == llvm::APFixedPoint::getMin(V.getSemantics());
   }
+  bool isMinusOne() const { return V.isSigned() && V.getValue() == -1; }
 
   FixedPoint truncate(unsigned BitWidth) const { return *this; }
 
@@ -82,9 +82,12 @@ public:
   }
 
   ComparisonCategoryResult compare(const FixedPoint &Other) const {
-    if (Other.V == V)
+    int c = V.compare(Other.V);
+    if (c == 0)
       return ComparisonCategoryResult::Equal;
-    return ComparisonCategoryResult::Unordered;
+    else if (c < 0)
+      return ComparisonCategoryResult::Less;
+    return ComparisonCategoryResult::Greater;
   }
 
   static bool neg(const FixedPoint &A, FixedPoint *R) {
@@ -101,16 +104,40 @@ public:
   }
   static bool sub(const FixedPoint A, const FixedPoint B, unsigned Bits,
                   FixedPoint *R) {
-    return true;
+    bool Overflow = false;
+    *R = FixedPoint(A.V.sub(B.V, &Overflow));
+    return Overflow;
   }
   static bool mul(const FixedPoint A, const FixedPoint B, unsigned Bits,
                   FixedPoint *R) {
-    return true;
+    bool Overflow = false;
+    *R = FixedPoint(A.V.mul(B.V, &Overflow));
+    return Overflow;
   }
   static bool div(const FixedPoint A, const FixedPoint B, unsigned Bits,
                   FixedPoint *R) {
+    bool Overflow = false;
+    *R = FixedPoint(A.V.div(B.V, &Overflow));
+    return Overflow;
+  }
+  static bool rem(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                  FixedPoint *R) {
+    llvm_unreachable("Rem doesn't exist for fixed point values");
     return true;
   }
+  static bool bitAnd(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                     FixedPoint *R) {
+    return true;
+  }
+  static bool bitOr(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                    FixedPoint *R) {
+    return true;
+  }
+  static bool bitXor(const FixedPoint A, const FixedPoint B, unsigned Bits,
+                     FixedPoint *R) {
+    return true;
+  }
+
   static bool increment(const FixedPoint &A, FixedPoint *R) { return true; }
   static bool decrement(const FixedPoint &A, FixedPoint *R) { return true; }
 };
