@@ -18,6 +18,8 @@
 
 #include "hdr/fenv_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 // TODO: Strengthen errno,exception checks and remove these assert macros
 // after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \

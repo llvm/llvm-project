@@ -19,6 +19,8 @@
 #include "hdr/math_macros.h"
 #include <stdio.h>
 
+using LIBC_NAMESPACE::Sign;
+
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
