@@ -11,5 +11,6 @@ add_llvm_component_library(LLVMSandboxIR
   LINK_COMPONENTS
   Core
   Support
+  Analysis
   )
 
