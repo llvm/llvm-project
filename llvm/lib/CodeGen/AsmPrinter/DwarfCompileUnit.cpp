@@ -1216,7 +1216,7 @@ void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
-  return DD->getDwarfVersion() == 4 && !DD->tuneForLLDB();
+  return DD->getDwarfVersion() <= 4 && !DD->tuneForLLDB();
 }
 
 dwarf::Tag DwarfCompileUnit::getDwarf5OrGNUTag(dwarf::Tag Tag) const {
