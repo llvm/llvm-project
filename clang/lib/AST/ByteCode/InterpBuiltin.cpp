@@ -136,16 +136,17 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC, APValue &Result,
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
+  unsigned Depth = S.Current->getDepth();
+  auto isStdCall = [](const FunctionDecl *F) -> bool {
+    return F && F->isInStdNamespace() && F->getIdentifier() &&
+           F->getIdentifier()->isStr("is_constant_evaluated");
+  };
+  const InterpFrame *Caller = Frame->Caller;
   // The current frame is the one for __builtin_is_constant_evaluated.
   // The one above that, potentially the one for std::is_constant_evaluated().
   if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
-      Frame->Caller && S.getEvalStatus().Diag) {
-    auto isStdCall = [](const FunctionDecl *F) -> bool {
-      return F && F->isInStdNamespace() && F->getIdentifier() &&
-             F->getIdentifier()->isStr("is_constant_evaluated");
-    };
-    const InterpFrame *Caller = Frame->Caller;
-
+      S.getEvalStatus().Diag &&
+      (Depth == 1 || (Depth == 2 && isStdCall(Caller->getCallee())))) {
     if (Caller->Caller && isStdCall(Caller->getCallee())) {
       const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
