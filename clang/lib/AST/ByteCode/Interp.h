@@ -2573,6 +2573,7 @@ inline bool ArrayElem(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
+  assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;
 }
@@ -2584,6 +2585,7 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
+  assert(Ptr.atIndex(Index).getFieldDesc()->getPrimType() == Name);
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
   return true;
 }
