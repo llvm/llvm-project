@@ -1866,7 +1866,7 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
   auto *LAPK = Attr->getValueAsDef(LateParsedStr);
 
   // Typecheck the `LateParsed` field.
-  SmallVector<Record *, 1> SuperClasses;
+  SmallVector<const Record *, 1> SuperClasses;
   LAPK->getDirectSuperClasses(SuperClasses);
   if (SuperClasses.size() != 1)
     PrintFatalError(Attr, "Field `" + Twine(LateParsedStr) +
