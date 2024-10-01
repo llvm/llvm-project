@@ -1435,7 +1435,7 @@ static void finalizeSynthetic(SyntheticSection *sec) {
 // in Writer<ELFT>::finalizeSections().
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
-  ThunkCreator tc;
+  ThunkCreator tc(ctx);
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
   ctx.script->assignAddresses();
@@ -1804,9 +1804,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // that we can correctly decide if a dynamic relocation is needed. This is
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
-    scanRelocations<ELFT>();
+    scanRelocations<ELFT>(ctx);
     reportUndefinedSymbols();
-    postScanRelocations();
+    postScanRelocations(ctx);
 
     if (ctx.in.plt && ctx.in.plt->isNeeded())
       ctx.in.plt->addSymbols();
