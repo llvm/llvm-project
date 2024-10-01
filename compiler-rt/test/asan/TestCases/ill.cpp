@@ -8,6 +8,8 @@
 #include <windows.h>
 #endif
 
+// note: test is limited to i386 only ("asan-32-bits") when using "real" MSVC
+//  see the requires clause above
 #if defined(_MSC_VER) && !defined(__clang__)
 #define __builtin_trap() __asm ud2;
 #endif
