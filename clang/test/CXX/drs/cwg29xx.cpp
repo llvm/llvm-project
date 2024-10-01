@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected %s
 
-namespace cwg2913 { // cwg2913: 20
+namespace cwg2913 { // cwg2913: 20 tentatively ready 2024-08-16
 
 #if __cplusplus >= 202002L
 
