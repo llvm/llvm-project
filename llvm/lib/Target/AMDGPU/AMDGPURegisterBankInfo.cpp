@@ -3460,7 +3460,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingMAD_64_32(B, OpdMapper);
     return;
   case AMDGPU::G_PREFETCH: {
-    if (!Subtarget.hasPrefetch()) {
+    if (!Subtarget.hasPrefetch() || !Subtarget.hasSafeSmemPrefetch()) {
       MI.eraseFromParent();
       return;
     }

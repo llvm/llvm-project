@@ -17,7 +17,12 @@
 /* Allow using the tzcnt intrinsics even for non-BMI targets. Since the TZCNT
    instruction behaves as BSF on non-BMI targets, there is code that expects
    to use it as a potentially faster version of BSF. */
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __RELAXED_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__)) constexpr
+#else
 #define __RELAXED_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#endif
 
 /// Counts the number of trailing zero bits in the operand.
 ///
@@ -610,6 +615,7 @@ __blsr_u64(unsigned long long __X)
 #endif /* __x86_64__ */
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* !defined(__SCE__) || __has_feature(modules) || defined(__BMI__) */
 

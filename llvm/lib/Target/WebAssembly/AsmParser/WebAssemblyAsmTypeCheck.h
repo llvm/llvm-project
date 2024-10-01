@@ -40,17 +40,21 @@ class WebAssemblyAsmTypeCheck final {
   bool Unreachable = false;
   bool Is64;
 
+  // checkTypes checks 'Types' against the value stack. popTypes checks 'Types'
+  // against the value stack and also pops them.
+  //
   // If ExactMatch is true, 'Types' will be compared against not only the top of
   // the value stack but the whole remaining value stack
   // (TODO: This should be the whole remaining value stack "at the the current
   // block level", which has not been implemented yet)
   bool checkTypes(SMLoc ErrorLoc, ArrayRef<wasm::ValType> Types,
-                  bool ExactMatch);
-  bool checkTypes(SMLoc ErrorLoc, ArrayRef<StackType> Types, bool ExactMatch);
-  bool checkAndPopTypes(SMLoc ErrorLoc, ArrayRef<wasm::ValType> Types,
-                        bool ExactMatch);
-  bool checkAndPopTypes(SMLoc ErrorLoc, ArrayRef<StackType> Types,
-                        bool ExactMatch);
+                  bool ExactMatch = false);
+  bool checkTypes(SMLoc ErrorLoc, ArrayRef<StackType> Types,
+                  bool ExactMatch = false);
+  bool popTypes(SMLoc ErrorLoc, ArrayRef<wasm::ValType> Types,
+                bool ExactMatch = false);
+  bool popTypes(SMLoc ErrorLoc, ArrayRef<StackType> Types,
+                bool ExactMatch = false);
   bool popType(SMLoc ErrorLoc, StackType Type);
   bool popRefType(SMLoc ErrorLoc);
   bool popAnyType(SMLoc ErrorLoc);

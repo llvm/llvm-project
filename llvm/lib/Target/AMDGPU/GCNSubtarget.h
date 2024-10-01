@@ -230,6 +230,7 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -959,6 +960,8 @@ public:
   }
 
   bool hasPrefetch() const { return GFX12Insts; }
+
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }

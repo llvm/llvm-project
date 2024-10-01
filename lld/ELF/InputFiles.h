@@ -43,9 +43,8 @@ class Symbol;
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
-void parseFile(InputFile *file);
-void parseFiles(const std::vector<InputFile *> &files,
-                InputFile *armCmseImpLib);
+void parseFile(Ctx &, InputFile *file);
+void parseFiles(Ctx &, const std::vector<InputFile *> &files);
 
 // The root class of input files.
 class InputFile {
