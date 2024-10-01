@@ -1845,6 +1845,18 @@ LogicalResult TeamsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SectionOp
+//===----------------------------------------------------------------------===//
+
+unsigned SectionOp::numPrivateBlockArgs() {
+  return getParentOp().numPrivateBlockArgs();
+}
+
+unsigned SectionOp::numReductionBlockArgs() {
+  return getParentOp().numReductionBlockArgs();
+}
+
+//===----------------------------------------------------------------------===//
 // SectionsOp
 //===----------------------------------------------------------------------===//
 
