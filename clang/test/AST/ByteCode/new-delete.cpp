@@ -594,6 +594,10 @@ namespace std {
                                     // both-note {{used to delete a null pointer}}
     }
   };
+  template<typename T, typename ...Args>
+  constexpr void construct_at(void *p, Args &&...args) { // #construct
+    new (p) T((Args&&)args...);
+  }
 }
 
 /// Specialization for float, using operator new/delete.
@@ -762,6 +766,16 @@ namespace Placement {
   }
   static_assert(ok1()); // both-error {{not an integral constant expression}} \
                         // both-note {{in call to}}
+
+  /// placement-new should be supported before C++26 in std functions.
+  constexpr int ok2() {
+    int *I = new int;
+    std::construct_at<int>(I);
+    int r = *I;
+    delete I;
+    return r;
+  }
+  static_assert(ok2()== 0);
 }
 
 #else

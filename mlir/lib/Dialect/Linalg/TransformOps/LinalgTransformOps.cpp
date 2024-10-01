@@ -2000,7 +2000,7 @@ transform::HoistPadOp::applyToOne(transform::TransformRewriter &rewriter,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   tensor::PadOp hoistedPadOp;
-  SmallVector<GenericOp> transposeOps;
+  SmallVector<TransposeOp> transposeOps;
   FailureOr<Value> result =
       hoistPaddingOnTensors(rewriter, target, getNumLoops(), getTranspose(),
                             hoistedPadOp, transposeOps);
@@ -3504,9 +3504,7 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
     if (failed(linalg::vectorize(rewriter, target, vectorSizes,
                                  getScalableSizes(),
-                                 getVectorizeNdExtract().has_value()
-                                     ? getVectorizeNdExtract().value()
-                                     : false))) {
+                                 getVectorizeNdExtract().value_or(false)))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }

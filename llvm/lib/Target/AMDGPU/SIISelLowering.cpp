@@ -753,7 +753,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
-    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
+    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
+                        ISD::FMAXIMUMNUM},
                        {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
                        Custom);
 
@@ -5842,6 +5843,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -6797,8 +6800,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   LHS = DAG.getNode(ExtOp, DL, ExtTy, {LHS});
 
   // Special case: for shifts, the RHS always needs a zext.
-  if (Op.getOpcode() == ISD::SRA || Op.getOpcode() == ISD::SRL ||
-      Op.getOpcode() == ISD::SRA)
+  if (Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA)
     RHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtTy, {RHS});
   else
     RHS = DAG.getNode(ExtOp, DL, ExtTy, {RHS});
@@ -8210,9 +8212,17 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);
-  Ops.push_back(Op.getOperand(ArgOffset + Intr->RsrcIndex));
-  if (BaseOpcode->Sampler)
-    Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
+  SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
+  EVT RsrcVT = Rsrc.getValueType();
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+    return Op;
+  Ops.push_back(Rsrc);
+  if (BaseOpcode->Sampler) {
+    SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
+    if (Samp.getValueType() != MVT::v4i32)
+      return Op;
+    Ops.push_back(Samp);
+  }
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
@@ -9365,6 +9375,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
+      Ops.push_back(Chain);
     } else {
       Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
       SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
@@ -9967,7 +9978,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                         0);
       }
       Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
-    } else if (!IsInlinableBarID) {
+    } else if (IsInlinableBarID) {
+      Ops.push_back(Chain);
+    } else {
       Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 
@@ -16142,11 +16155,8 @@ static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
 
 static OptimizationRemark emitAtomicRMWLegalRemark(const AtomicRMWInst *RMW) {
   LLVMContext &Ctx = RMW->getContext();
-  SmallVector<StringRef> SSNs;
-  Ctx.getSyncScopeNames(SSNs);
-  StringRef MemScope = SSNs[RMW->getSyncScopeID()].empty()
-                           ? "system"
-                           : SSNs[RMW->getSyncScopeID()];
+  StringRef SS = Ctx.getSyncScopeName(RMW->getSyncScopeID()).value_or("");
+  StringRef MemScope = SS.empty() ? StringRef("system") : SS;
 
   return OptimizationRemark(DEBUG_TYPE, "Passed", RMW)
          << "Hardware instruction generated for atomic "

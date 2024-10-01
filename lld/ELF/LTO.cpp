@@ -61,8 +61,6 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.FunctionSections = true;
   c.Options.DataSections = true;
 
-  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
-
   // Check if basic block sections must be used.
   // Allowed values for --lto-basic-block-sections are "all", "labels",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
@@ -71,7 +69,8 @@ static lto::Config createConfig(Ctx &ctx) {
     if (ctx.arg.ltoBasicBlockSections == "all") {
       c.Options.BBSections = BasicBlockSection::All;
     } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-      c.Options.BBSections = BasicBlockSection::Labels;
+      c.Options.BBAddrMap = true;
+      c.Options.BBSections = BasicBlockSection::None;
     } else if (ctx.arg.ltoBasicBlockSections == "none") {
       c.Options.BBSections = BasicBlockSection::None;
     } else {
@@ -86,6 +85,8 @@ static lto::Config createConfig(Ctx &ctx) {
       c.Options.BBSections = BasicBlockSection::List;
     }
   }
+
+  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
 
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
@@ -280,7 +281,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // If LazyObjFile has not been added to link, emit empty index files.
 // This is needed because this is what GNU gold plugin does and we have a
 // distributed build system that depends on that behavior.
-static void thinLTOCreateEmptyIndexFiles() {
+static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
   DenseSet<StringRef> linkedBitCodeFiles;
   for (BitcodeFile *f : ctx.bitcodeFiles)
     linkedBitCodeFiles.insert(f->getName());
@@ -344,7 +345,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (ctx.arg.thinLTOEmitIndexFiles)
-    thinLTOCreateEmptyIndexFiles();
+    thinLTOCreateEmptyIndexFiles(ctx);
 
   if (ctx.arg.thinLTOIndexOnly) {
     if (!ctx.arg.ltoObjPath.empty())

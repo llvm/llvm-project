@@ -321,7 +321,7 @@ define i32 @funnel_shift_right_32(i32 %a, i32 %b, i32 %c) {
 ; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_right_32_param_0];
 ; SM35-NEXT:    ld.param.u32 %r2, [funnel_shift_right_32_param_1];
 ; SM35-NEXT:    ld.param.u32 %r3, [funnel_shift_right_32_param_2];
-; SM35-NEXT:    shf.r.wrap.b32 %r4, %r1, %r2, %r3;
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, %r3;
 ; SM35-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; SM35-NEXT:    ret;
   %val = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %c)
@@ -355,7 +355,7 @@ define i32 @funnel_shift_left_32(i32 %a, i32 %b, i32 %c) {
 ; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_left_32_param_0];
 ; SM35-NEXT:    ld.param.u32 %r2, [funnel_shift_left_32_param_1];
 ; SM35-NEXT:    ld.param.u32 %r3, [funnel_shift_left_32_param_2];
-; SM35-NEXT:    shf.l.wrap.b32 %r4, %r1, %r2, %r3;
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, %r3;
 ; SM35-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; SM35-NEXT:    ret;
   %val = call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %c)

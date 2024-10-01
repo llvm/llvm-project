@@ -843,7 +843,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
   // Return a minimum gep stride, greatest common divisor of consective gep
   // index scales(c.f. Bézout's identity).
   while (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-    MapVector<Value *, APInt> VarOffsets;
+    SmallMapVector<Value *, APInt, 4> VarOffsets;
     if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset))
       break;
 

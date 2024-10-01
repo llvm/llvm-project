@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2,optin.taint.TaintedAlloc -analyzer-output=text -verify %s
+// RUN: %clang_cc1 -analyze -analyzer-checker=optin.taint,core,alpha.security.ArrayBoundV2,optin.taint.TaintedAlloc -analyzer-output=text -verify %s
 
 // This file is for testing enhanced diagnostics produced by the GenericTaintChecker
 

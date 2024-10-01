@@ -78,6 +78,12 @@ namespace Intrinsic {
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
 
+  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
+  /// certain target. If it is a generic intrinsic false is returned.
+  bool isTargetIntrinsic(ID IID);
+
+  ID lookupIntrinsicID(StringRef Name);
+
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
 
@@ -95,7 +101,7 @@ namespace Intrinsic {
   /// match for Name or a prefix of Name followed by a dot, its index in
   /// NameTable is returned. Otherwise, -1 is returned.
   int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
-                                StringRef Name);
+                                StringRef Name, StringRef Target = "");
 
   /// Map a Clang builtin name to an intrinsic ID.
   ID getIntrinsicForClangBuiltin(StringRef TargetPrefix, StringRef BuiltinName);

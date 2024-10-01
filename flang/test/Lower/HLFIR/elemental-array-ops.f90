@@ -182,7 +182,7 @@ end subroutine char_return
 ! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : index
 ! CHECK:             %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_22]], %[[VAL_23]] : index
-! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_25]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
 ! CHECK:             %[[MustFree:.*]] = arith.constant false
 ! CHECK:             %[[ResultTemp:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[MustFree]] : (!fir.ref<!fir.char<1,3>>, i1) -> !hlfir.expr<!fir.char<1,3>>

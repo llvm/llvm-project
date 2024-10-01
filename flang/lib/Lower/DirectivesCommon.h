@@ -74,34 +74,6 @@ struct AddrAndBoundsInfo {
   }
 };
 
-/// Checks if the assignment statement has a single variable on the RHS.
-static inline bool checkForSingleVariableOnRHS(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const Fortran::parser::Expr &expr{
-      std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
-      std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
-          &expr.u);
-  return designator != nullptr;
-}
-
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-static inline bool
-checkForSymbolMatch(const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
-  for (const Fortran::semantics::Symbol &symbol :
-       Fortran::evaluate::GetSymbolVector(*e))
-    if (varSymbol == symbol)
-      return true;
-  return false;
-}
-
 /// Populates \p hint and \p memoryOrder with appropriate clause information
 /// if present on atomic construct.
 static inline void genOmpAtomicHintAndMemoryOrderClauses(
@@ -537,7 +509,7 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   stmt2LHSArg = fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
 
   // Operation specific RHS evaluations
-  if (checkForSingleVariableOnRHS(stmt1)) {
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
     // Atomic capture construct is of the form [capture-stmt, update-stmt] or
     // of the form [capture-stmt, write-stmt]
     stmt1RHSArg = fir::getBase(converter.genExprAddr(assign1.rhs, stmtCtx));
@@ -573,8 +545,8 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (checkForSingleVariableOnRHS(stmt1)) {
-    if (checkForSymbolMatch(stmt2)) {
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
