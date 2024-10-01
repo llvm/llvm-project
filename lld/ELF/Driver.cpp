@@ -109,7 +109,7 @@ void Ctx::reset() {
 
   in.reset();
   sym = ElfSym{};
-  symtab = std::make_unique<SymbolTable>();
+  symtab = std::make_unique<SymbolTable>(*this);
 
   memoryBuffers.clear();
   objectFiles.clear();
@@ -167,7 +167,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
   ctx.partitions.clear();
   ctx.partitions.emplace_back();
@@ -3201,7 +3201,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (ctx.arg.icf != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(ctx, args);
-    doIcf<ELFT>();
+    doIcf<ELFT>(ctx);
   }
 
   // Read the callgraph now that we know what was gced or icfed
