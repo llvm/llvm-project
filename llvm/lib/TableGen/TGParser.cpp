@@ -2866,11 +2866,13 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
 
     return ListInit::get(Vals, DeducedEltTy);
   }
-  case tgtok::l_paren: {         // Value ::= '(' IDValue DagArgList ')'
+  case tgtok::l_paren: { // Value ::= '(' IDValue DagArgList ')'
+                         // Value ::= '(' '[' ValueList ']' DagArgList ')'
     Lex.Lex();   // eat the '('
     if (Lex.getCode() != tgtok::Id && Lex.getCode() != tgtok::XCast &&
-        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp) {
-      TokError("expected identifier in dag init");
+        Lex.getCode() != tgtok::question && Lex.getCode() != tgtok::XGetDagOp &&
+        Lex.getCode() != tgtok::l_square) {
+      TokError("expected identifier or list of value types in dag init");
       return nullptr;
     }
 
@@ -3004,9 +3006,9 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
           DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
         } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
           if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
-            for (Record *R : RecTy->getClasses())
+            for (const Record *R : RecTy->getClasses())
               if (auto *RV = R->getValue(FieldName))
-                RV->addReferenceLoc(FieldNameLoc);
+                const_cast<RecordVal *>(RV)->addReferenceLoc(FieldNameLoc);
           }
         }
       }

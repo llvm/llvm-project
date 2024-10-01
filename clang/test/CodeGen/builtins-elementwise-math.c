@@ -607,6 +607,26 @@ void test_builtin_elementwise_popcount(si8 vi1, si8 vi2,
   si = __builtin_elementwise_popcount(si);
 }
 
+void test_builtin_elementwise_fmod(float f1, float f2, double d1, double d2,
+                                      float4 vf1, float4 vf2) {
+
+  // CHECK-LABEL: define void @test_builtin_elementwise_fmod(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK:      [[F2:%.+]] = load float, ptr %f2.addr, align 4
+  // CHECK-NEXT:  frem float [[F1]], [[F2]]
+  f2 = __builtin_elementwise_fmod(f1, f2);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK:      [[D2:%.+]] = load double, ptr %d2.addr, align 8
+  // CHECK-NEXT: frem double [[D1]], [[D2]]
+  d2 = __builtin_elementwise_fmod(d1, d2);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK:      [[VF2:%.+]] = load <4 x float>, ptr %vf2.addr, align 16
+  // CHECK-NEXT: frem <4 x float> [[VF1]], [[VF2]]
+  vf2 = __builtin_elementwise_fmod(vf1, vf2);
+}
+
 void test_builtin_elementwise_pow(float f1, float f2, double d1, double d2,
                                       float4 vf1, float4 vf2) {
 

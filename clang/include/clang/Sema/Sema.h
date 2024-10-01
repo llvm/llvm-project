@@ -7423,7 +7423,8 @@ public:
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                      SourceLocation Loc);
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
 
   /// Context in which we're performing a usual arithmetic conversion.
   enum ArithConvKind {
@@ -11252,6 +11253,7 @@ public:
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
+                            QualType ConstrainedType,
                             SourceLocation EllipsisLoc);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,

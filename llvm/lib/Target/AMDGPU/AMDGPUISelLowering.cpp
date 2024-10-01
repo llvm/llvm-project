@@ -900,6 +900,10 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     unsigned IntrID = N->getConstantOperandVal(0);
     return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntrID = N->getConstantOperandVal(1);
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
+  }
   case ISD::LOAD:
     if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
         AMDGPUAS::CONSTANT_ADDRESS_32BIT)

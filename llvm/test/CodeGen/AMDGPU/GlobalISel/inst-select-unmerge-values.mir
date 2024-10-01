@@ -171,9 +171,11 @@ body: |
     ; GCN-LABEL: name: test_unmerge_values_s_s64_s_s64_s64_s_s192
     ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:sgpr(s192) = G_IMPLICIT_DEF
-    ; GCN-NEXT: [[UV:%[0-9]+]]:sgpr(s64), [[UV1:%[0-9]+]]:sgpr(s64), [[UV2:%[0-9]+]]:sgpr(s64) = G_UNMERGE_VALUES [[DEF]](s192)
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[UV]](s64), implicit [[UV1]](s64), implicit [[UV2]](s64)
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:sgpr_192 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub0_sub1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub2_sub3
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub4_sub5
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]]
     %0:sgpr(s192) = G_IMPLICIT_DEF
     %1:sgpr(s64), %2:sgpr(s64), %3:sgpr(s64) = G_UNMERGE_VALUES %0
     S_ENDPGM 0, implicit %1, implicit %2, implicit %3
@@ -292,11 +294,11 @@ body: |
     ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr_384(<12 x s32>) = G_CONCAT_VECTORS [[COPY]](<3 x s32>), [[COPY1]](<3 x s32>), [[COPY2]](<3 x s32>), [[COPY3]](<3 x s32>)
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:sgpr_96(<3 x s32>) = COPY [[CONCAT_VECTORS]].sub0_sub1_sub2(<12 x s32>)
     ; GCN-NEXT: [[COPY5:%[0-9]+]]:sgpr_96(<3 x s32>) = COPY [[CONCAT_VECTORS]].sub3_sub4_sub5(<12 x s32>)
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:sgpr_96(<3 x s32>), [[COPY5:%[0-9]+]]:sgpr_96(<3 x s32>), [[UV:%[0-9]+]]:sgpr_96(<3 x s32>), [[UV1:%[0-9]+]]:sgpr_96(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
-    ; GCN-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[COPY4]](<3 x s32>)
-    ; GCN-NEXT: $sgpr4_sgpr5_sgpr6 = COPY [[COPY5]](<3 x s32>)
-    ; GCN-NEXT: $sgpr8_sgpr9_sgpr10 = COPY [[UV]](<3 x s32>)
-    ; GCN-NEXT: $sgpr12_sgpr13_sgpr14 = COPY [[UV1]](<3 x s32>)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:sgpr_96(<3 x s32>), [[UV1:%[0-9]+]]:sgpr_96(<3 x s32>), [[UV2:%[0-9]+]]:sgpr_96(<3 x s32>), [[UV3:%[0-9]+]]:sgpr_96(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s32>)
+    ; GCN-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[UV]](<3 x s32>)
+    ; GCN-NEXT: $sgpr4_sgpr5_sgpr6 = COPY [[UV1]](<3 x s32>)
+    ; GCN-NEXT: $sgpr8_sgpr9_sgpr10 = COPY [[UV2]](<3 x s32>)
+    ; GCN-NEXT: $sgpr12_sgpr13_sgpr14 = COPY [[UV3]](<3 x s32>)
     %0:sgpr(<3 x s32>) = COPY $sgpr0_sgpr1_sgpr2
     %1:sgpr(<3 x s32>) = COPY $sgpr4_sgpr5_sgpr6
     %2:sgpr(<3 x s32>) = COPY $sgpr8_sgpr9_sgpr10

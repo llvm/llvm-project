@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-int-to-pointer-cast -analyzer-checker=alpha.security.taint,debug.TaintTest %s -verify
+// RUN: %clang_analyze_cc1 -Wno-int-to-pointer-cast -analyzer-checker=optin.taint,debug.TaintTest %s -verify
 
 #include "Inputs/system-header-simulator.h"
 
