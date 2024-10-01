@@ -1161,11 +1161,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(StructBase)) {
-    Res = EmitDeclRefLValue(DRE).getPointer(*this);
-    Res = Builder.CreateAlignedLoad(ConvertType(DRE->getType()), Res,
-                                    getPointerAlign(), "dre.load");
-  } else if (StructBase->getType()->isPointerType()) {
+  if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
