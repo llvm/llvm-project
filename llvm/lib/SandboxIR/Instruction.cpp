@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
 
