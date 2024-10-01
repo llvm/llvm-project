@@ -126,6 +126,7 @@ static_library("builtins") {
     "divsi3.c",
     "divti3.c",
     "extendhfsf2.c",
+    "extendhfxf2.c"
     "extendsfdf2.c",
     "ffsdi2.c",
     "ffssi2.c",

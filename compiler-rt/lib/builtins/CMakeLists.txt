@@ -104,6 +104,7 @@ set(GENERIC_SOURCES
   divti3.c
   extendsfdf2.c
   extendhfsf2.c
+  extendhfxf2.c
   ffsdi2.c
   ffssi2.c
   ffsti2.c
