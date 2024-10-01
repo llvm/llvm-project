@@ -26,6 +26,7 @@ endif()
 target_include_directories(offload_new PUBLIC
                             ${CMAKE_CURRENT_BINARY_DIR}
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include)
 

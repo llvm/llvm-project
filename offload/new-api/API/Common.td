@@ -73,3 +73,19 @@ def : Enum {
     Etor<"ERROR_UNKNOWN", "Unknown or internal error">
   ];
 }
+
+def : Function {
+  let name = "offloadGetErrorDetails";
+  let desc = "Get a detailed error message for the last error that occurred on this thread, if it exists";
+  let details = [
+    "When an Offload API call returns a return value other than OFFLOAD_RESULT_SUCCESS, the implementation *may* set an additional error message.",
+    "If a further Offload call (excluding this function) is made on the same thread without checking "
+    "its detailed error message with this function, that message should be considered lost.",
+    "The returned char* is only valid until the next Offload function call on the same thread (excluding further calls to this function.)"
+  ];
+  let params = [
+    Param<"size_t*", "SizeRet", "Pointer to return the size of the available error message. A size of 0 indicates no message.", PARAM_OUT_OPTIONAL>,
+    Param<"const char**", "DetailStringRet", "Pointer to return the error message string.", PARAM_OUT_OPTIONAL>
+  ];
+  let returns = []; // Only SUCCESS is expected
+}
