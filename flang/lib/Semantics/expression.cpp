@@ -2916,9 +2916,6 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   } else {
     resolution = symbol;
   }
-  if (resolution && context_.targetCharacteristics().isOSWindows()) {
-    semantics::CheckWindowsIntrinsic(*resolution, GetFoldingContext());
-  }
   if (!resolution || resolution->attrs().test(semantics::Attr::INTRINSIC)) {
     auto name{resolution ? resolution->name() : ultimate.name()};
     if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
