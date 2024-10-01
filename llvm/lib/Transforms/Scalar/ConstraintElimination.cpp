@@ -385,7 +385,7 @@ struct Decomposition {
 struct OffsetResult {
   Value *BasePtr;
   APInt ConstantOffset;
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   bool AllInbounds;
 
   OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
@@ -410,7 +410,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
   // If we have a nested GEP, check if we can combine the constant offset of the
   // inner GEP with the outer GEP.
   if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Result.BasePtr)) {
-    MapVector<Value *, APInt> VariableOffsets2;
+    SmallMapVector<Value *, APInt, 4> VariableOffsets2;
     APInt ConstantOffset2(BitWidth, 0);
     bool CanCollectInner = InnerGEP->collectOffset(
         DL, BitWidth, VariableOffsets2, ConstantOffset2);

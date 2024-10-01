@@ -82,6 +82,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMemoryUtils.cpp
   AMDGPUIGroupLP.cpp
   AMDGPULowerVGPREncoding.cpp
+  AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp
   AMDGPUMIRFormatter.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
@@ -95,6 +96,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegBankSelect.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURemoveIncompatibleFunctions.cpp
+  AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp

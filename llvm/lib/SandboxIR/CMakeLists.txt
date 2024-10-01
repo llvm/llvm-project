@@ -3,15 +3,16 @@ add_llvm_component_library(LLVMSandboxIR
   BasicBlock.cpp
   Constant.cpp
   Context.cpp
+  Function.cpp
   Instruction.cpp
   Module.cpp
   Pass.cpp
   PassManager.cpp
   Region.cpp
-  SandboxIR.cpp
   Tracker.cpp
   Type.cpp
   User.cpp
+  Use.cpp
   Value.cpp
 
   ADDITIONAL_HEADER_DIRS

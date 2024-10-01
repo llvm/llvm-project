@@ -700,6 +700,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
                                              of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
+ T __builtin_elementwise_fmod(T x, T y)      return The floating-point remainder of (x/y) whose sign          floating point types
+                                             matches the sign of x.
  T __builtin_elementwise_max(T x, T y)       return x or y, whichever is larger                               integer and floating point types
  T __builtin_elementwise_min(T x, T y)       return x or y, whichever is smaller                              integer and floating point types
  T __builtin_elementwise_add_sat(T x, T y)   return the sum of x and y, clamped to the range of               integer types

@@ -26,7 +26,7 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   };
 
 protected:
@@ -365,7 +365,7 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
 
   // All instructions are friends with this so they can call the constructor.
 #define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   friend class UnaryInstruction;
   friend class CallBase;
   friend class FuncletPadInst;

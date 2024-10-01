@@ -290,11 +290,6 @@ def PointerArithChecker : Checker<"PointerArithm">,
            "elements">,
   Documentation<HasDocumentation>;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -1001,6 +996,11 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
 
 def MmapWriteExecChecker : Checker<"MmapWriteExec">,
   HelpText<"Warn on mmap() calls with both writable and executable access">,
+  Documentation<HasDocumentation>;
+
+def PointerSubChecker : Checker<"PointerSub">,
+  HelpText<"Check for pointer subtractions on two pointers pointing to "
+           "different memory chunks">,
   Documentation<HasDocumentation>;
 
 def PutenvStackArray : Checker<"PutenvStackArray">,

@@ -13,6 +13,10 @@ class Test_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
+class Test_Attr<string name, string attrMnemonic> : AttrDef<Test_Dialect, name> {
+  let mnemonic = attrMnemonic;
+}
+
 class Test_Op<string mnemonic, list<Trait> traits = []>
     : Op<Test_Dialect, mnemonic, traits>;
 
@@ -22,6 +26,8 @@ def Test_SingletonAType : Test_Type<"SingletonAType", "singleton_a"> {}
 def Test_SingletonBType : Test_Type<"SingletonBType", "singleton_b"> {}
 // CHECK: irdl.type @"!singleton_c"
 def Test_SingletonCType : Test_Type<"SingletonCType", "singleton_c"> {}
+// CHECK: irdl.attribute @"#test"
+def Test_TestAttr : Test_Attr<"Test", "test"> {}
 
 
 // Check that AllOfType is converted correctly.
@@ -43,6 +49,17 @@ def Test_AnyOp : Test_Op<"any"> {
 // CHECK-LABEL: irdl.operation @any {
 // CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.any
 // CHECK-NEXT:    irdl.operands(%[[v0]])
+// CHECK-NEXT:  }
+
+// Check attributes are converted correctly.
+def Test_AttributesOp : Test_Op<"attributes"> {
+  let arguments = (ins I16Attr:$int_attr,
+                       Test_TestAttr:$test_attr);
+}
+// CHECK-LABEL: irdl.operation @attributes {
+// CHECK-NEXT:    %[[v0:[^ ]*]] = irdl.base "!builtin.integer"
+// CHECK-NEXT:    %[[v1:[^ ]*]] = irdl.base @test::@"#test"
+// CHECK-NEXT:    irdl.attributes {"int_attr" = %[[v0]], "test_attr" = %[[v1]]}
 // CHECK-NEXT:  }
 
 // Check confined types are converted correctly.

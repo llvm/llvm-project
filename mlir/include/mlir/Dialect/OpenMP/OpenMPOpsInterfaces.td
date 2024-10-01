@@ -106,6 +106,15 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
       }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Interface verifier imlementation.
+    llvm::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::llvm::cast<::mlir::omp::LoopWrapperInterface>($_op).verifyImpl();
+  }];
 }
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {

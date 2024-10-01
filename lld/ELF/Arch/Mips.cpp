@@ -23,7 +23,7 @@ using namespace lld::elf;
 namespace {
 template <class ELFT> class MIPS final : public TargetInfo {
 public:
-  MIPS();
+  MIPS(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -42,7 +42,7 @@ public:
 };
 } // namespace
 
-template <class ELFT> MIPS<ELFT>::MIPS() {
+template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;
   defaultMaxPageSize = 65536;
   pltEntrySize = 16;
@@ -778,15 +778,28 @@ template <class ELFT> bool elf::isMipsPIC(const Defined *sym) {
   return cast<ObjFile<ELFT>>(file)->getObj().getHeader().e_flags & EF_MIPS_PIC;
 }
 
-template <class ELFT> TargetInfo *elf::getMipsTargetInfo() {
-  static MIPS<ELFT> target;
-  return &target;
+TargetInfo *elf::getMipsTargetInfo(Ctx &ctx) {
+  switch (ctx.arg.ekind) {
+  case ELF32LEKind: {
+    static MIPS<ELF32LE> t(ctx);
+    return &t;
+  }
+  case ELF32BEKind: {
+    static MIPS<ELF32BE> t(ctx);
+    return &t;
+  }
+  case ELF64LEKind: {
+    static MIPS<ELF64LE> t(ctx);
+    return &t;
+  }
+  case ELF64BEKind: {
+    static MIPS<ELF64BE> t(ctx);
+    return &t;
+  }
+  default:
+    llvm_unreachable("unsupported target");
+  }
 }
-
-template TargetInfo *elf::getMipsTargetInfo<ELF32LE>();
-template TargetInfo *elf::getMipsTargetInfo<ELF32BE>();
-template TargetInfo *elf::getMipsTargetInfo<ELF64LE>();
-template TargetInfo *elf::getMipsTargetInfo<ELF64BE>();
 
 template bool elf::isMipsPIC<ELF32LE>(const Defined *);
 template bool elf::isMipsPIC<ELF32BE>(const Defined *);
