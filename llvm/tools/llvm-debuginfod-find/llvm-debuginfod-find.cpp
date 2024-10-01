@@ -81,13 +81,11 @@ static void parseArgs(int argc, char **argv) {
         llvm::outs(), "llvm-debuginfod-find [options] <input build_id>",
         "llvm-debuginfod-find: Fetch debuginfod artifacts\n\n"
         "This program is a frontend to the debuginfod client library. The "
-        "cache "
-        "directory, request timeout (in seconds), and debuginfod server urls "
-        "are "
-        "set by these environment variables:\n"
+        "cache directory, request timeout (in seconds), and debuginfod server "
+        "urls are set by these environment variables:\n"
         "DEBUGINFOD_CACHE_PATH (default set by sys::path::cache_directory)\n"
         "DEBUGINFOD_TIMEOUT (defaults to 90s)\n"
-        "DEBUGINFOD_URLS=[comma separated URLs] (defaults to empty)\n");
+        "DEBUGINFOD_URLS=[comma separated URLs] (defaults to empty)");
     std::exit(0);
   }
 
