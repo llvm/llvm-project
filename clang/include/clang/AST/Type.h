@@ -6206,7 +6206,9 @@ private:
 
   HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
                              QualType Contained, const Attributes &Attrs)
-      : Type(HLSLAttributedResource, Canon, Wrapped->getDependence()),
+      : Type(HLSLAttributedResource, Canon,
+             Contained.isNull() ? TypeDependence::None
+                                : Contained->getDependence()),
         WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
 
 public:
