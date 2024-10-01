@@ -204,13 +204,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
-    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
-    // Widen s32 rotate amount to s64 so SDAG patterns will match.
-    if (ST.is64Bit())
-      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
-                                  changeTo(1, sXLen));
-  }
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
+    RotateActions.legalFor({{s32, s32}, {sXLen, sXLen}});
   RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
