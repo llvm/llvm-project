@@ -105,17 +105,14 @@ void func() {
 #pragma acc loop collapse(force:)
   for(;;){}
 
-  // expected-error@+2{{invalid tag 'unknown' on 'collapse' clause}}
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(unknown:5)
+  // expected-error@+1{{invalid tag 'unknown' on 'collapse' clause}}
+#pragma acc loop collapse(unknown:1)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(force:5)
+#pragma acc loop collapse(force:1)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-#pragma acc loop collapse(5)
+#pragma acc loop collapse(1)
   for(;;){}
 
   // expected-error@+2{{expected ')'}}
