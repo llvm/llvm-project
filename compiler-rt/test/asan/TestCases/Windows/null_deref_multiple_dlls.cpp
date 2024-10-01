@@ -28,6 +28,7 @@ extern "C" {
 __declspec(dllexport) void foo1() {}
 }
 #elif defined(DLL2)
+extern "C" {
 ATTRIBUTE_NOINLINE
 static void NullDeref(int *ptr) {
   // CHECK: ERROR: AddressSanitizer: access-violation on unknown address
