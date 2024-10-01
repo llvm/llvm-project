@@ -339,7 +339,7 @@ bool X86_64::relaxOnce(int pass) const {
           continue;
         if (rel.sym->auxIdx == 0) {
           rel.sym->allocateAux();
-          addGotEntry(*rel.sym);
+          addGotEntry(ctx, *rel.sym);
           changed = true;
         }
         rel.expr = R_GOT_PC;
