@@ -987,6 +987,12 @@ def TargetDataOp: OpenMP_Op<"target_data", traits = [
     OpBuilder<(ins CArg<"const TargetDataOperands &">:$clauses)>
   ];
 
+  let assemblyFormat = clausesAssemblyFormat # [{
+    custom<UseDeviceAddrUseDevicePtrRegion>(
+        $region, $use_device_addr_vars, type($use_device_addr_vars),
+        $use_device_ptr_vars, type($use_device_ptr_vars)) attr-dict
+  }];
+
   let hasVerifier = 1;
 }
 
