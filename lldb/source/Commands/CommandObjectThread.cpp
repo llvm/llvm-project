@@ -622,7 +622,7 @@ protected:
         result.SetStatus(eReturnStatusSuccessContinuingNoResult);
       }
     } else {
-      result.SetError(new_plan_status);
+      result.SetError(std::move(new_plan_status));
     }
   }
 
@@ -1046,7 +1046,7 @@ protected:
           new_plan_sp->SetIsControllingPlan(true);
           new_plan_sp->SetOkayToDiscard(false);
         } else {
-          result.SetError(new_plan_status);
+          result.SetError(std::move(new_plan_status));
           return;
         }
       } else {
@@ -1734,7 +1734,7 @@ protected:
       Status err = thread->JumpToLine(file, line, m_options.m_force, &warnings);
 
       if (err.Fail()) {
-        result.SetError(err);
+        result.SetError(std::move(err));
         return;
       }
 
