@@ -99,7 +99,7 @@ static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
 
 void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
                            int64_t min, uint64_t max) {
-  ErrorPlace errPlace = getErrorPlace(loc);
+  ErrorPlace errPlace = getErrorPlace(ctx, loc);
   std::string hint;
   if (rel.sym) {
     if (!rel.sym->isSection())
@@ -130,7 +130,7 @@ void elf::reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                            const Symbol &sym, const Twine &msg) {
-  ErrorPlace errPlace = getErrorPlace(loc);
+  ErrorPlace errPlace = getErrorPlace(ctx, loc);
   std::string hint;
   if (!sym.getName().empty())
     hint = "; references '" + lld::toString(sym) + '\'' +
