@@ -800,7 +800,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
   std::fill(activePMs.begin(), activePMs.end(), false);
   std::atomic<bool> hasFailure = false;
-  auto processFn = [&](OpPMInfo &opInfo) {
+  parallelForEach(context, opInfos, [&](OpPMInfo &opInfo) {
     // Find an executor for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
       bool expectedInactive = false;
@@ -818,8 +818,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
 
     // Reset the active bit for this pass manager.
     activePMs[pmIndex].store(false);
-  };
-  parallelForEach(context, opInfos, processFn);
+  });
 
   // Signal a failure if any of the executors failed.
   if (hasFailure)
