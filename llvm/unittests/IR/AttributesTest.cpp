@@ -172,8 +172,9 @@ TEST(Attributes, EmptyGet) {
 
 TEST(Attributes, OverflowGet) {
   LLVMContext C;
-  std::pair<unsigned, Attribute> Attrs[] = { { AttributeList::ReturnIndex, Attribute::get(C, Attribute::SExt) },
-                                             { AttributeList::FunctionIndex, Attribute::get(C, Attribute::ReadOnly) } };
+  std::pair<unsigned, Attribute> Attrs[] = {
+      {AttributeList::ReturnIndex, Attribute::get(C, Attribute::SExt)},
+      {AttributeList::FunctionIndex, Attribute::get(C, Attribute::ReadOnly)}};
   AttributeList AL = AttributeList::get(C, Attrs);
   EXPECT_EQ(2U, AL.getNumAttrSets());
 }
