@@ -857,12 +857,13 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 void VPIRInstruction::execute(VPTransformState &State) {
   assert((isa<PHINode>(&I) || getNumOperands() == 0) &&
          "Only PHINodes can have extra operands");
-  if (getNumOperands() == 1) {
-    VPValue *ExitValue = getOperand(0);
+  for (const auto &[Idx, Op] : enumerate(operands())) {
+    VPValue *ExitValue = Op;
     auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                     ? VPLane::getFirstLane()
                     : VPLane::getLastLaneForVF(State.VF);
-    auto *PredVPBB = cast<VPBasicBlock>(getParent()->getSinglePredecessor());
+    VPBlockBase *Pred = getParent()->getPredecessors()[Idx];
+    auto *PredVPBB = Pred->getExitingBasicBlock();
     BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
     // Set insertion point in PredBB in case an extract needs to be generated.
     // TODO: Model extracts explicitly.
@@ -890,7 +891,7 @@ void VPIRInstruction::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "IR " << I;
 
   if (getNumOperands() != 0) {
-    assert(getNumOperands() == 1 && "can have at most 1 operand");
+    // assert(getNumOperands() == 1 && "can have at most 1 operand");
     O << " (extra operand: ";
     printOperands(O, SlotTracker);
     O << ")";

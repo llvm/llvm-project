@@ -1056,7 +1056,10 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
 
   // Generate code in the loop pre-header and body.
-  for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Entry);
+
+  for (VPBlockBase *Block : RPOT)
     Block->execute(State);
 
   VPBasicBlock *LatchVPBB = getVectorLoopRegion()->getExitingBasicBlock();
