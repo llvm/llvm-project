@@ -35,7 +35,7 @@ llvm.func @parallel_op_1_private(%arg0: !llvm.ptr) {
 // CHECK: }
 
 llvm.func @parallel_op_2_privates(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.parallel private(@x.privatizer %arg0 -> %arg2 : !llvm.ptr, @y.privatizer %arg1 -> %arg3 : !llvm.ptr) {
+  omp.parallel private(@x.privatizer %arg0 -> %arg2, @y.privatizer %arg1 -> %arg3 : !llvm.ptr, !llvm.ptr) {
     %0 = llvm.load %arg2 : !llvm.ptr -> f32
     %1 = llvm.load %arg3 : !llvm.ptr -> i32
     omp.terminator
