@@ -1624,6 +1624,32 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  issignalingf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignalingf16_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignalingf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  issignalingf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    issignalingf128_test.cpp
+  HDRS
+    IsSignalingTest.h
+  DEPENDS
+    libc.src.math.issignalingf128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   issignalingl_test
   SUITE
     libc-math-smoke-tests
