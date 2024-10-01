@@ -58,19 +58,19 @@ namespace test2 {
     // CHECK: call {{.*}}@_ZN5test21AIiEF1fEzQ4TrueIT_E(
     // CLANG17: call {{.*}}@_ZN5test21fEz(
     f(ai);
-    // CHECK: call {{.*}}@_ZN5test2F1gIvEEvzQaa4TrueIT_E4TrueITL0__E(
+    // CHECK: call {{.*}}@_ZN5test21AIiEF1gIvEEvzQaa4TrueIT_E4TrueITL0__E(
     // CLANG17: call {{.*}}@_ZN5test21gIvEEvz(
     g(ai);
     // CHECK: call {{.*}}@_ZN5test21hIvEEvzQ4TrueITL0__E(
     // CLANG17: call {{.*}}@_ZN5test21hIvEEvz(
     h(ai);
-    // CHECK: call {{.*}}@_ZN5test2F1iIvQaa4TrueIT_E4TrueITL0__EEEvz(
+    // CHECK: call {{.*}}@_ZN5test21AIiEF1iIvQaa4TrueIT_E4TrueITL0__EEEvz(
     // CLANG17: call {{.*}}@_ZN5test21iIvEEvz(
     i(ai);
     // CHECK: call {{.*}}@_ZN5test21jIvQ4TrueITL0__EEEvz(
     // CLANG17: call {{.*}}@_ZN5test21jIvEEvz(
     j(ai);
-    // CHECK: call {{.*}}@_ZN5test2F1kITk4TruevQ4TrueIT_EEEvz(
+    // CHECK: call {{.*}}@_ZN5test21AIiEF1kITk4TruevQ4TrueIT_EEEvz(
     // CLANG17: call {{.*}}@_ZN5test21kIvEEvz(
     k(ai);
     // CHECK: call {{.*}}@_ZN5test21lITk4TruevEEvz(
