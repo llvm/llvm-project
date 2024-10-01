@@ -968,17 +968,8 @@ struct BinaryOp {};
                                            fir::FirOpBuilder &builder,         \
                                            const Op &, hlfir::Entity lhs,      \
                                            hlfir::Entity rhs) {                \
-      if constexpr (std::is_same_v<GenBinFirOp, mlir::arith::AddIOp> ||        \
-                    std::is_same_v<GenBinFirOp, mlir::arith::SubIOp> ||        \
-                    std::is_same_v<GenBinFirOp, mlir::arith::MulIOp>) {        \
-        auto iofAttr = mlir::arith::IntegerOverflowFlagsAttr::get(             \
-            builder.getContext(), builder.getIntegerOverflowFlags());          \
-        return hlfir::EntityWithAttributes{                                    \
-            builder.create<GenBinFirOp>(loc, lhs, rhs, iofAttr)};              \
-      } else {                                                                 \
-        return hlfir::EntityWithAttributes{                                    \
-            builder.create<GenBinFirOp>(loc, lhs, rhs)};                       \
-      }                                                                        \
+      return hlfir::EntityWithAttributes{                                      \
+          builder.create<GenBinFirOp>(loc, lhs, rhs)};                         \
     }                                                                          \
   };
 
