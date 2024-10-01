@@ -22,23 +22,17 @@
 #include <memory>
 
 namespace llvm::sandboxir {
-class Instruction;
-class StoreInst;
-class BasicBlock;
 
-/// An ordered set of Instructions that can be vectorized.
+/// A set of candidate Instructions for vectorizing together.
 class SeedBundle {
 public:
   using SeedList = SmallVector<sandboxir::Instruction *>;
   /// Initialize a bundle with \p I.
-  explicit SeedBundle(sandboxir::Instruction *I, const DataLayout &DL) {
-    insertAt(begin(), I, DL);
-  }
-  explicit SeedBundle(SeedList &&L, const DataLayout &DL)
-      : Seeds(std::move(L)) {
-    for (auto &S : Seeds) {
-      NumUnusedBits += sandboxir::Utils::getNumBits(S, DL);
-    }
+  explicit SeedBundle(sandboxir::Instruction *I) { insertAt(begin(), I); }
+  explicit SeedBundle(SeedList &&L) : Seeds(std::move(L)) {
+    for (auto &S : Seeds)
+      NumUnusedBits +=
+          Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout());
   }
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
@@ -57,14 +51,15 @@ public:
   /// Insert \p I into position \p P. Clients should choose Pos
   /// by symbol, symbol-offset, and program order (which depends if scheduling
   /// bottom-up or top-down).
-  void insertAt(iterator Pos, sandboxir::Instruction *I, const DataLayout &DL) {
+  void insertAt(iterator Pos, sandboxir::Instruction *I) {
 #ifdef EXPENSIVE_CHECKS
     for (auto Itr : Seeds) {
       assert(*Itr != I && "Attempt to insert an instruction twice.");
     }
 #endif
     Seeds.insert(Pos, I);
-    NumUnusedBits += sandboxir::Utils::getNumBits(I, DL);
+    NumUnusedBits +=
+        Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout());
   }
 
   unsigned getFirstUnusedElementIdx() const {
@@ -84,7 +79,9 @@ public:
       UsedLanes.set(Idx);
       UsedLaneCount++;
     }
-    NumUnusedBits -= sandboxir::Utils::getNumBits(Seeds[ElementIdx], DL);
+    NumUnusedBits -= sandboxir::Utils::getNumBits(
+        Seeds[ElementIdx],
+        Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout()););
   }
 
   void setUsed(sandboxir::Instruction *V, const DataLayout &DL) {
@@ -94,7 +91,8 @@ public:
     setUsed(Idx, DL, 1, /*VerifyUnused=*/false);
   }
   bool isUsed(unsigned Element) const {
-    return Element >= UsedLanes.size() ? false : UsedLanes.test(Element);
+    // return Element >= UsedLanes.size() ? false : UsedLanes.test(Element);
+    return Element < UsedLanes.size() && UsedLanes.test(Element);
   }
   bool allUsed() const { return UsedLaneCount == Seeds.size(); }
   unsigned getNumUnusedBits() const { return NumUnusedBits; }
@@ -103,7 +101,7 @@ public:
   /// with a total size <= \p MaxVecRegBits. If \p ForcePowOf2 is true, then the
   /// returned slice should have a total number of bits that is a power of 2.
   MutableArrayRef<SeedList> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                     bool ForcePowOf2, const DataLayout &DL);
+                                     bool ForcePowOf2);
 
 protected:
   SeedList Seeds;

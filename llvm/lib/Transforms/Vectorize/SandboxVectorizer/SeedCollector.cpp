@@ -21,7 +21,7 @@ using namespace llvm;
 
 MutableArrayRef<sandboxir::SeedBundle::SeedList>
 sandboxir::SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                bool ForcePowerOf2, const DataLayout &DL) {
+                                bool ForcePowerOf2) {
   // Use uint32_t for counts to make it clear we are also using the proper
   // isPowerOf2_[32|64].
 
@@ -44,7 +44,7 @@ sandboxir::SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
     // Stop if we found a used element.
     if (isUsed(FirstGoodElementIdx + ElementCnt))
       break;
-    BitsSum += sandboxir::Utils::getNumBits(S, DL);
+    BitsSum += sandboxir::Utils::getNumBits(S);
     // Stop if the bits sum is over the limit.
     if (BitsSum > MaxVecRegBits)
       break;
