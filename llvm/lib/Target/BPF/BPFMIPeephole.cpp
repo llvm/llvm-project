@@ -614,7 +614,6 @@ static void collectBPFFastCalls(const TargetRegisterInfo *TRI,
   LiveRegs.init(*TRI);
   LiveRegs.addLiveOuts(BB);
   Calls.clear();
-
   for (MachineInstr &MI : llvm::reverse(BB)) {
     if (MI.isCall()) {
       unsigned LiveCallerSavedRegs = 0;
