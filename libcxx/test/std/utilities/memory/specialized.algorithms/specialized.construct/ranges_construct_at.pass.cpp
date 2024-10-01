@@ -99,6 +99,16 @@ constexpr bool test() {
     alloc.deallocate(out, 2);
   }
 
+  // Works with const pointers.
+  {
+    int x = 1;
+    const int* ptr = &x;
+
+    const int* result = std::ranges::construct_at(ptr, 42);
+    assert(result == ptr);
+    assert(x == 42);
+  }
+
   return true;
 }
 
