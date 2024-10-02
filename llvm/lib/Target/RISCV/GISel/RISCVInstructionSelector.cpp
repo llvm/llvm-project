@@ -387,10 +387,10 @@ RISCVInstructionSelector::selectVLOp(MachineOperand &Root) const {
 
   if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
     auto C = RootDef->getOperand(1).getCImm();
-    if (C->getSExtValue() == RISCV::VLMaxSentinel || C->getValue().isAllOnes())
-      // If the operand is a G_CONSTANT with value VLMaxSentinel or all ones,
-      // convert it to an immediate with value VLMaxSentinel. This is recognized
-      // specially by the vsetvli insertion pass.
+    if (C->getValue().isAllOnes())
+      // If the operand is a G_CONSTANT with value of all ones it is larger than
+      // VLMAX. We convert it to an immediate with value VLMaxSentinel. This is
+      // recognized specially by the vsetvli insertion pass.
       return {{[=](MachineInstrBuilder &MIB) {
         MIB.addImm(RISCV::VLMaxSentinel);
       }}};
