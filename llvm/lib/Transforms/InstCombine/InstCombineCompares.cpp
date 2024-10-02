@@ -5273,32 +5273,46 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   {
     // Try to remove shared multiplier from comparison:
-    // X * Z u{lt/le/gt/ge}/eq/ne Y * Z
+    // X * Z pred Y * Z
     Value *X, *Y, *Z;
-    if (Pred == ICmpInst::getUnsignedPredicate(Pred) &&
-        ((match(Op0, m_Mul(m_Value(X), m_Value(Z))) &&
-          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))) ||
-         (match(Op0, m_Mul(m_Value(Z), m_Value(X))) &&
-          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))))) {
-      bool NonZero;
-      if (ICmpInst::isEquality(Pred)) {
-        KnownBits ZKnown = computeKnownBits(Z, 0, &I);
-        // if Z % 2 != 0
-        //    X * Z eq/ne Y * Z -> X eq/ne Y
-        if (ZKnown.countMaxTrailingZeros() == 0)
-          return new ICmpInst(Pred, X, Y);
-        NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, Q);
-        // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
-        //    X * Z eq/ne Y * Z -> X eq/ne Y
-        if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
-          return new ICmpInst(Pred, X, Y);
-      } else
-        NonZero = isKnownNonZero(Z, Q);
+    if ((match(Op0, m_Mul(m_Value(X), m_Value(Z))) &&
+         match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))) ||
+        (match(Op0, m_Mul(m_Value(Z), m_Value(X))) &&
+         match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y))))) {
+      if (ICmpInst::isSigned(Pred)) {
+        if (Op0HasNSW && Op1HasNSW) {
+          KnownBits ZKnown = computeKnownBits(Z, 0, &I);
+          if (ZKnown.isStrictlyPositive())
+            return new ICmpInst(Pred, X, Y);
+          if (ZKnown.isNegative())
+            return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), X, Y);
+        }
+      } else {
+        bool NonZero;
+        if (ICmpInst::isEquality(Pred)) {
+          // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
+          if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
+              isKnownNonEqual(X, Y, DL, &AC, &I, &DT))
+            return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
 
-      // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
-      //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
-      if (NonZero && BO0 && BO1 && Op0HasNUW && Op1HasNUW)
-        return new ICmpInst(Pred, X, Y);
+          KnownBits ZKnown = computeKnownBits(Z, 0, &I);
+          // if Z % 2 != 0
+          //    X * Z eq/ne Y * Z -> X eq/ne Y
+          if (ZKnown.countMaxTrailingZeros() == 0)
+            return new ICmpInst(Pred, X, Y);
+          NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, Q);
+          // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
+          //    X * Z eq/ne Y * Z -> X eq/ne Y
+          if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
+            return new ICmpInst(Pred, X, Y);
+        } else
+          NonZero = isKnownNonZero(Z, Q);
+
+        // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
+        //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
+        if (NonZero && BO0 && BO1 && Op0HasNUW && Op1HasNUW)
+          return new ICmpInst(Pred, X, Y);
+      }
     }
   }
 

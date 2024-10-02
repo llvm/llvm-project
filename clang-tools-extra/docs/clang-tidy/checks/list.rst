@@ -145,6 +145,7 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
+   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,

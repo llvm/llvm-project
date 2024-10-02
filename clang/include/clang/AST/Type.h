@@ -3050,7 +3050,7 @@ public:
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // AMDGPU types
-#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) Id,
 #include "clang/Basic/AMDGPUTypes.def"
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
@@ -6191,7 +6191,9 @@ private:
 
   HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
                              QualType Contained, const Attributes &Attrs)
-      : Type(HLSLAttributedResource, Canon, Wrapped->getDependence()),
+      : Type(HLSLAttributedResource, Canon,
+             Contained.isNull() ? TypeDependence::None
+                                : Contained->getDependence()),
         WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
 
 public:

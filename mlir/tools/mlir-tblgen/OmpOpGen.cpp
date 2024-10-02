@@ -72,7 +72,7 @@ static StringRef extractOmpClauseName(const Record *clause) {
   assert(ompClause && "base OpenMP records expected to be defined");
 
   StringRef clauseClassName;
-  SmallVector<Record *, 1> clauseSuperClasses;
+  SmallVector<const Record *, 1> clauseSuperClasses;
   clause->getDirectSuperClasses(clauseSuperClasses);
 
   // Check if OpenMP_Clause is a direct superclass.
@@ -318,7 +318,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
     return;
 
   SmallVector<std::string> clauseNames;
-  for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+  for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
     clauseNames.push_back((extractOmpClauseName(clause) + "ClauseOps").str());
 
   StringRef opName = stripPrefixAndSuffix(

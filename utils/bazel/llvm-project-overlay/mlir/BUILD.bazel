@@ -13320,6 +13320,7 @@ cc_library(
         ":ArithUtils",
         ":MemRefDialect",
         ":VectorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
