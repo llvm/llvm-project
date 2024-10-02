@@ -1386,8 +1386,10 @@ bool TargetTransformInfo::useWidenGlobalStrings() const {
   return TTIImpl->useWidenGlobalStrings();
 }
 
-unsigned TargetTransformInfo::getNumBytesToPad(unsigned Size) const {
-  return TTIImpl->getNumBytesToPad(Size);
+unsigned
+TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
+                                                 Type *ArrayType) const {
+  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 TargetTransformInfo::Concept::~Concept() = default;

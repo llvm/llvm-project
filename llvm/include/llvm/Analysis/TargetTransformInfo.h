@@ -1821,7 +1821,7 @@ public:
 
   /// \return For an array of given Size, return alignment boundary to
   /// pad to. Default is no padding.
-  unsigned getNumBytesToPad(unsigned Size) const;
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
 
   /// @}
 
@@ -2229,7 +2229,8 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const = 0;
   virtual bool hasArmWideBranch(bool Thumb) const = 0;
   virtual unsigned getMaxNumArgs() const = 0;
-  virtual unsigned getNumBytesToPad(unsigned Size) const = 0;
+  virtual unsigned getNumBytesToPadGlobalArray(unsigned Size,
+                                               Type *ArrayType) const = 0;
 };
 
 template <typename T>
@@ -3032,8 +3033,9 @@ public:
     return Impl.getMaxNumArgs();
   }
 
-  unsigned getNumBytesToPad(unsigned Size) const override {
-    return Impl.getNumBytesToPad(Size);
+  unsigned getNumBytesToPadGlobalArray(unsigned Size,
+                                       Type *ArrayType) const override {
+    return Impl.getNumBytesToPadGlobalArray(Size, ArrayType);
   }
 };
 

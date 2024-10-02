@@ -9,7 +9,6 @@ define hidden i32 @f() {
 ; CHECK-LABEL: define hidden i32 @f() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[STRING1:%.*]] = alloca [48 x i8], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [45 x i8], align 1
 ; CHECK-NEXT:    [[POS:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TOKEN:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 45, ptr [[STRING1]])
@@ -54,6 +53,3 @@ entry:
 }
 
 declare ptr @strchr(ptr, i32)
-declare void @llvm.lifetime.start.p0i8(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, ptr nocapture)
-declare void @llvm.memcpy.p0i8.p0i8.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)

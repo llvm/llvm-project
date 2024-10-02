@@ -27,6 +27,3 @@ entry:
 }
 
 declare i32 @bar(...) local_unnamed_addr #2
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
-declare void @llvm.memcpy.p0i8.p0i8.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1) #1

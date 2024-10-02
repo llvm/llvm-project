@@ -1006,7 +1006,9 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
-  unsigned getNumBytesToPad(unsigned Size) const { return 0; }
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
+    return 0;
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

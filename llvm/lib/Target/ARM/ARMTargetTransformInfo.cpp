@@ -2664,6 +2664,7 @@ bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
   }
 }
 
+<<<<<<< HEAD
 /// Check if Ext1 and Ext2 are extends of the same type, doubling the bitwidth
 /// of the vector elements.
 static bool areExtractExts(Value *Ext1, Value *Ext2) {
@@ -2812,8 +2813,14 @@ bool ARMTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
 bool ARMTTIImpl::useWidenGlobalStrings() const { return UseWidenGlobalStrings; }
 
-unsigned ARMTTIImpl::getNumBytesToPad(unsigned Size) const {
-  // We pad to 4 byte boundaries;
+unsigned ARMTTIImpl::getNumBytesToPadGlobalArray(unsigned Size,
+                                                 Type *ArrayType) const {
+  // Don't modify none integer array types
+  if (!ArrayType || !ArrayType->isArrayTy() ||
+      !ArrayType->getArrayElementType()->isIntegerTy())
+    return 0;
+
+  // We pad to 4 byte boundaries
   if (Size % 4 == 0)
     return 0;
 

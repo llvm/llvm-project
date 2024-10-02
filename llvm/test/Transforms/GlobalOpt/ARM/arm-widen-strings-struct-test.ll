@@ -30,9 +30,6 @@ entry:
 }
 
 declare i32 @puts(ptr nocapture readonly) #2
-declare void @llvm.lifetime.start(i64, ptr nocapture) #1
-declare void @llvm.lifetime.end(i64, ptr nocapture) #1
-declare void @llvm.memcpy.p0i8.p0i8.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1) #1
 
 !1 = !{!2, !3, i64 0}
 !2 = !{!"P", !3, i64 0, !4, i64 4}
