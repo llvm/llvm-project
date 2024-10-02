@@ -569,9 +569,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
     llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    for (StringRef Feat : {"sve", "sve2", "sve2p1", "sve2-aes", "sve2-sha3",
-                           "sve2-sm4", "sve2-bitperm"})
-      CallerFeatureMapWithoutSVE[Feat] = false;
+    CallerFeatureMapWithoutSVE["sve"] = false;
 
     // Avoid emitting diagnostics for a function that can never compile.
     if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
@@ -579,10 +577,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 
     llvm::StringMap<bool> CallerFeatureMapWithoutSME;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    for (StringRef Feat :
-         {"sme", "sme2", "sme2p1", "sme-f64f64", "sme-i16i64", "sme-b16b16",
-          "sme-f16f16", "sme-f8f32", "sme-f8f16"})
-      CallerFeatureMapWithoutSME[Feat] = false;
+    CallerFeatureMapWithoutSME["sme"] = false;
 
     // We know the builtin requires either some combination of SVE flags, or
     // some combination of SME flags, but we need to figure out which part
