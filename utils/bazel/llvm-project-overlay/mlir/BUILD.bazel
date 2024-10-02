@@ -3745,11 +3745,13 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":VectorOpsIncGen",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
