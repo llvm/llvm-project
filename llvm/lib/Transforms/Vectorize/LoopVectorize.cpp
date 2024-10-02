@@ -6551,14 +6551,17 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }
     auto Op2Info = TTI.getOperandInfo(Op2);
-    auto IsInvariant = [this](Value *Op) {
+    std::function<bool(Value *)> IsInvariant =
+        [this, &IsInvariant](Value *Op) -> bool {
       if (!Legal->isInvariant(Op))
         return false;
-      // Consider Op2 invariant, if it is not a predicated instruction in the
-      // loop. In that case, it is not trivially hoistable.
+      // Consider Op2invariant, if it or its operands aren't predicated
+      // instruction in the loop. In that case, it is not trivially hoistable.
       return !isa<Instruction>(Op) ||
              !TheLoop->contains(cast<Instruction>(Op)) ||
-             !isPredicatedInst(cast<Instruction>(Op));
+             (!isPredicatedInst(cast<Instruction>(Op)) &&
+              all_of(cast<Instruction>(Op)->operands(),
+                     [&IsInvariant](Value *Op) { return IsInvariant(Op); }));
     };
     if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && IsInvariant(Op2))
       Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
