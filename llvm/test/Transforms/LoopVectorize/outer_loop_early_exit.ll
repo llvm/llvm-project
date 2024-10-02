@@ -14,28 +14,28 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv21 = phi i64 [ 0, %entry ], [ %indvars.iv.next22, %for.inc ]
-  %arrayidx = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, i64 %indvars.iv21
+  %iv.outer = phi i64 [ 0, %entry ], [%iv.outer.next, %for.inc ]
+  %arrayidx = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, i64 %iv.outer
   %ld1 = load i32, ptr %arrayidx, align 4
-  %0 = trunc i64 %indvars.iv21 to i32
+  %0 = trunc i64 %iv.outer to i32
   store i32 %0, ptr %arrayidx, align 4
-  %1 = trunc i64 %indvars.iv21 to i32
+  %1 = trunc i64 %iv.outer to i32
   %add = add nsw i32 %1, %n
   %cmp.early = icmp eq i32 %ld1, 3
   br i1 %cmp.early, label %for.early, label %for.body.inner
 
 for.body.inner:
-  %indvars.iv = phi i64 [ 0, %for.body ], [ %indvars.iv.next, %for.body.inner ]
-  %arrayidx7 = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, i64 %indvars.iv, i64 %indvars.iv21
+  %iv.inner = phi i64 [ 0, %for.body ], [ %iv.inner.next, %for.body.inner ]
+  %arrayidx7 = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, i64 %iv.inner, i64 %iv.outer
   store i32 %add, ptr %arrayidx7, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp eq i64 %indvars.iv.next, 8
-  br i1 %exitcond, label %for.inc, label %for.body.inner
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %cmp.inner = icmp eq i64 %iv.inner.next, 8
+  br i1 %cmp.inner, label %for.inc, label %for.body.inner
 
 for.inc:
-  %indvars.iv.next22 = add nuw nsw i64 %indvars.iv21, 1
-  %exitcond23 = icmp eq i64 %indvars.iv.next22, 8
-  br i1 %exitcond23, label %for.end, label %for.body, !llvm.loop !1
+  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
+  %cmp.outer = icmp eq i64%iv.outer.next, 8
+  br i1 %cmp.outer, label %for.end, label %for.body, !llvm.loop !1
 
 for.early:
   ret i32 1
