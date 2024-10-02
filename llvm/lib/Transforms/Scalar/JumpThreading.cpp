@@ -102,6 +102,11 @@ static cl::opt<unsigned> PhiDuplicateThreshold(
     cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
     cl::Hidden);
 
+static cl::opt<unsigned> FreeInstDuplicateThreshold(
+    "jump-threading-free-inst-threshold",
+    cl::desc("Max free instructions in BB to duplicate for jump threading"),
+    cl::init(500), cl::Hidden);
+
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
@@ -467,6 +472,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
   // terminator-based Size adjustment at the end.
   Threshold += Bonus;
 
+  unsigned Free = 0;
   // Sum up the cost of each instruction until we get to the terminator.  Don't
   // include the terminator because the copy won't include it.
   unsigned Size = 0;
@@ -488,8 +494,14 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
         return ~0U;
 
     if (TTI->getInstructionCost(&*I, TargetTransformInfo::TCK_SizeAndLatency) ==
-        TargetTransformInfo::TCC_Free)
+        TargetTransformInfo::TCC_Free) {
+      // Do not duplicate the BB if it has a lot of free instructions.
+      // In edge cases they can add up and significantly increase compile time
+      // of later passes by bloating the IR.
+      if (Free++ > FreeInstDuplicateThreshold)
+        return ~0U;
       continue;
+    }
 
     // All other instructions count for at least one unit.
     ++Size;
