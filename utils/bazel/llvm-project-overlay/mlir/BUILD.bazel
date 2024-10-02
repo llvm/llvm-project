@@ -3751,6 +3751,7 @@ cc_library(
         ":IR",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         ":VectorOpsIncGen",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
