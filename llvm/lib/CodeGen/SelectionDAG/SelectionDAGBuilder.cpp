@@ -4426,15 +4426,10 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
       SDNodeFlags AddFlags;
 
-      // The successive addition of each offset (without adding the base
-      // address) does not wrap the pointer index type in a signed sense (add
-      // nsw).
-      if (NW.hasNoUnsignedSignedWrap())
-        AddFlags.setNoSignedWrap(true);
-
-      // The successive addition of each offset (without adding the base
-      // address) does not wrap the pointer index type in an unsigned sense (add
-      // nuw).
+      // The successive addition of the current address, truncated to the
+      // pointer index type and interpreted as an unsigned number, and each
+      // offset, also interpreted as an unsigned number, does not wrap the
+      // pointer index type (add nuw).
       if (NW.hasNoUnsignedWrap())
         AddFlags.setNoUnsignedWrap(true);
 
