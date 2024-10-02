@@ -277,6 +277,12 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
       .setOptLevel(llvm::CodeGenOptLevel::Less);
 
+  // Resulted jitted code can be placed too far from the code in the binary
+  // and thus can contain more than +-2GB jumps, that are not available
+  // in RISC-V without large code model.
+  if (triple.isRISCV64())
+    builder.setCodeModel(llvm::CodeModel::Large);
+
   llvm::StringRef mArch;
   llvm::StringRef mCPU;
   llvm::SmallVector<std::string, 0> mAttrs;
