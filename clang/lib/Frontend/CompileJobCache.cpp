@@ -782,6 +782,7 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
   bool HasMissingOutput = false;
   std::optional<llvm::cas::ObjectProxy> SerialDiags;
+  llvm::vfs::OnDiskOutputBackend Backend;
 
   auto processOutput = [&](clang::cas::CompileJobCacheResult::Output O,
                            std::optional<llvm::cas::ObjectProxy> Obj) -> Error {
@@ -815,12 +816,12 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
 
     bool IsOutputFile = O.Kind == OutputKind::MainOutput;
 
-    std::optional<StringRef> Contents;
-    SmallString<50> ContentsStorage;
     if (IsOutputFile && ComputedJobNeedsReplay) {
-      llvm::raw_svector_ostream OS(ContentsStorage);
+      auto Output = Backend.createFile(Path);
+      if (!Output)
+        return Output.takeError();
       if (WriteOutputAsCASID)
-        llvm::cas::writeCASIDBuffer(CAS.getID(O.Object), OS);
+        llvm::cas::writeCASIDBuffer(CAS.getID(O.Object), *Output);
       else if (UseCASBackend) {
         // Replay by write out object file.
         // When the environmental variable is set, save the backend CASID for
@@ -828,34 +829,35 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
         if (llvm::sys::Process::GetEnv("CLANG_CAS_BACKEND_SAVE_CASID_FILE")) {
           std::string CASIDPath = Path + ".casid";
           std::error_code EC;
-          llvm::raw_fd_ostream IDOS(CASIDPath, EC);
-          if (EC)
-            return llvm::errorCodeToError(EC);
-          writeCASIDBuffer(CAS.getID(O.Object), IDOS);
+          auto IDOut = Backend.createFile(CASIDPath);
+          if (!IDOut)
+            return IDOut.takeError();
+          writeCASIDBuffer(CAS.getID(O.Object), *IDOut);
+          if (auto E = IDOut->keep())
+            return E;
         }
         auto Schema = std::make_unique<llvm::mccasformats::v1::MCSchema>(CAS);
-        if (auto E = Schema->serializeObjectFile(*Obj, OS))
+        if (auto E = Schema->serializeObjectFile(*Obj, *Output))
           return E;
       }
-      Contents = ContentsStorage;
-    } else if (JustComputedResult) {
-      return Error::success(); // continue
-    } else if (O.Kind == OutputKind::Dependencies) {
-      llvm::raw_svector_ostream OS(ContentsStorage);
-      if (auto E = CASDependencyCollector::replay(
-              Clang.getDependencyOutputOpts(), CAS, *Obj, OS))
-        return E;
-      Contents = ContentsStorage;
-    } else {
-      Contents = Obj->getData();
+      return Output->keep();
     }
 
-    std::unique_ptr<llvm::FileOutputBuffer> Output;
-    if (Error E = llvm::FileOutputBuffer::create(Path, Contents->size())
-                      .moveInto(Output))
-      return E;
-    llvm::copy(*Contents, Output->getBufferStart());
-    return Output->commit();
+    if (JustComputedResult)
+      return Error::success(); // continue
+
+    auto Output = Backend.createFile(Path);
+    if (!Output)
+      return Output.takeError();
+    if (O.Kind == OutputKind::Dependencies) {
+      if (auto E = CASDependencyCollector::replay(
+              Clang.getDependencyOutputOpts(), CAS, *Obj, *Output))
+        return E;
+    } else {
+      *Output << Obj->getData();
+    }
+
+    return Output->keep();
   };
 
   if (auto Err = Result.forEachLoadedOutput(processOutput))
