@@ -509,9 +509,8 @@ bool TosaValidation::isValidElementType(Type type) {
   if (isa<FloatType>(type)) {
     if (profile == TosaProfileEnum::BaseInference)
       return false;
-    return type.isF32() || type.isF16() || type.isBF16() ||
-           type.isFloat8E4M3FNUZ() || type.isFloat8E5M2FNUZ() ||
-           type.isFloat8E4M3FN() || type.isFloat8E5M2();
+    return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNUZType,
+               Float8E5M2FNUZType, Float8E4M3FNType, Float8E5M2Type>(type);
   }
   if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isUnsigned()) {
