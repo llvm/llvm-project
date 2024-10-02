@@ -313,11 +313,6 @@ ADDITIONAL OPTIONS
 
  List all of the discovered tests and exit.
 
-.. option:: --update-tests
-
- Pass failing tests to functions in the ``lit_config.update_tests`` list to
- check whether any of them know how to update the test to make it pass.
-
 EXIT STATUS
 -----------
 
