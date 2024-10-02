@@ -15,7 +15,7 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         "__pstl/.+",
         "__support/.+",
         "__utility/private_constructor_tag.h",
-        "__cxx03/.+", # FIXME: Workaround for https://github.com/llvm/llvm-project/pull/108999
+        "__cxx03/.+",  # FIXME: Workaround for https://github.com/llvm/llvm-project/pull/108999
     ]
     if any(re.match(pattern, header) for pattern in ignore):
         return None
