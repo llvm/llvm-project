@@ -350,6 +350,82 @@ unsigned AffineDimExpr::getPosition() const {
   return static_cast<ImplType *>(expr)->position;
 }
 
+/// A manually managed stack used to convert recursive function calls into
+/// looping utility classes during the access tree structure process. This has
+/// two benefits: one is to access the current stack, and the other is to avoid
+/// stack explosion when the recursion depth is too deep. Typically, recursive
+/// calls take the form of the following:
+/// push node
+/// visit tree node
+/// push node->left_node
+/// ...
+/// pop left_node
+/// check result and do something
+/// push node->right_node
+/// pop right_node
+/// pop node
+/// ...
+/// This form can be converted into the following form:
+/// push node
+/// visit tree node
+/// push node->left_node
+/// ...
+/// pop left_node and do {
+///  check result and do something
+///  push node->right_node
+///  pop right_node and do { pop node  }
+/// }
+/// ...
+/// so we need to perform some operations
+/// after an element is pushed out of the stack. We use the `scope_exit`
+/// structure to invoke these operations.
+template <typename RetT, typename... ArgsT>
+class CallStack {
+public:
+  using value_type =
+      std::tuple<ArgsT..., llvm::detail::scope_exit<std::function<void(void)>>>;
+  CallStack(ArgsT... args) {
+    stack_.emplace_back(args..., []() {});
+  }
+
+  /// Push the parameters into the stack and record the operation to be executed
+  /// when the node access ends. By default, the previous stack element will pop
+  /// up. If you need to check the result of the current push to the stack, you
+  /// need to pass in a function and manually perform the push operation after
+  /// the function ends.
+  void pushArgs(ArgsT... args, const std::function<void(void)> &onExit = {}) {
+    if (onExit)
+      stack_.emplace_back(args..., onExit);
+    else
+      stack_.emplace_back(args..., [this]() { pop(); });
+  }
+
+  RetT getResult() const { return value_; }
+
+  void returnValue(RetT value) {
+    value_ = value;
+    pop();
+  }
+
+  value_type &top() { return stack_.back(); }
+
+  auto begin() const { return stack_.begin(); }
+
+  auto end() const { return stack_.end(); }
+
+  bool empty() const { return stack_.empty(); }
+
+private:
+  ///  Note: We must move the top element of the stack and then perform the
+  ///  stack pop operation. If we directly pop the stack, the `scope_exit` may
+  ///  modify the stack, which may cause the program on the Windows platform to
+  ///  crash, but it works normally on Ubuntu.git
+  void pop() { value_type _(stack_.pop_back_val()); }
+
+  SmallVector<value_type> stack_;
+  RetT value_;
+};
+
 /// Returns true if the expression is divisible by the given symbol with
 /// position `symbolPos`. The argument `opKind` specifies here what kind of
 /// division or mod operation called this division. It helps in implementing the
@@ -363,60 +439,40 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
   assert((opKind == AffineExprKind::Mod || opKind == AffineExprKind::FloorDiv ||
           opKind == AffineExprKind::CeilDiv) &&
          "unexpected opKind");
-  SmallVector<std::tuple<AffineExpr, unsigned, AffineExprKind,
-                         llvm::detail::scope_exit<std::function<void(void)>>>>
-      stack;
-  stack.emplace_back(expr, symbolPos, opKind, []() {});
-  bool result = false;
+  CallStack<bool, AffineExpr, unsigned, AffineExprKind> stack(expr, symbolPos,
+                                                              opKind);
 
   while (!stack.empty()) {
-    AffineExpr expr = std::get<0>(stack.back());
-    unsigned symbolPos = std::get<1>(stack.back());
-    AffineExprKind opKind = std::get<2>(stack.back());
+    AffineExpr expr = std::get<0>(stack.top());
+    unsigned symbolPos = std::get<1>(stack.top());
+    AffineExprKind opKind = std::get<2>(stack.top());
 
     switch (expr.getKind()) {
     case AffineExprKind::Constant: {
       // Note: Assignment must occur before pop, which will affect whether it
       // enters other execution branches.
-      result = cast<AffineConstantExpr>(expr).getValue() == 0;
-      llvm::detail::scope_exit<std::function<void(void)>> sexit(
-          std::move(std::get<3>(stack.back())));
-      stack.pop_back();
+      stack.returnValue(cast<AffineConstantExpr>(expr).getValue() == 0);
       break;
     }
     case AffineExprKind::DimId: {
-      result = false;
-      llvm::detail::scope_exit<std::function<void(void)>> sexit(
-          std::move(std::get<3>(stack.back())));
-      stack.pop_back();
+      stack.returnValue(false);
       break;
     }
     case AffineExprKind::SymbolId: {
-      result = cast<AffineSymbolExpr>(expr).getPosition() == symbolPos;
-      llvm::detail::scope_exit<std::function<void(void)>> sexit(
-          std::move(std::get<3>(stack.back())));
-      stack.pop_back();
+      stack.returnValue(cast<AffineSymbolExpr>(expr).getPosition() ==
+                        symbolPos);
       break;
     }
     // Checks divisibility by the given symbol for both operands.
     case AffineExprKind::Add: {
       AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-      stack.emplace_back(
-          binaryExpr.getLHS(), symbolPos, opKind,
-          [&stack, &result, binaryExpr, symbolPos, opKind]() {
-            if (result) {
-              stack.emplace_back(
-                  binaryExpr.getRHS(), symbolPos, opKind, [&stack]() {
-                    llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                        std::move(std::get<3>(stack.back())));
-                    stack.pop_back();
-                  });
-            } else {
-              llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                  std::move(std::get<3>(stack.back())));
-              stack.pop_back();
-            }
-          });
+      stack.pushArgs(binaryExpr.getLHS(), symbolPos, opKind,
+                     [&stack, binaryExpr, symbolPos, opKind]() {
+                       if (stack.getResult())
+                         stack.pushArgs(binaryExpr.getRHS(), symbolPos, opKind);
+                       else
+                         stack.returnValue(stack.getResult());
+                     });
       break;
     }
     // Checks divisibility by the given symbol for both operands. Consider the
@@ -426,44 +482,26 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
     // is `AffineExprKind::Mod` for this reason.
     case AffineExprKind::Mod: {
       AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-      stack.emplace_back(
-          binaryExpr.getLHS(), symbolPos, AffineExprKind::Mod,
-          [&stack, &result, binaryExpr, symbolPos]() {
-            if (result) {
-              stack.emplace_back(
-                  binaryExpr.getRHS(), symbolPos, AffineExprKind::Mod,
-                  [&stack]() {
-                    llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                        std::move(std::get<3>(stack.back())));
-                    stack.pop_back();
-                  });
-            } else {
-              llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                  std::move(std::get<3>(stack.back())));
-              stack.pop_back();
-            }
-          });
+      stack.pushArgs(binaryExpr.getLHS(), symbolPos, AffineExprKind::Mod,
+                     [&stack, binaryExpr, symbolPos]() {
+                       if (stack.getResult())
+                         stack.pushArgs(binaryExpr.getRHS(), symbolPos,
+                                        AffineExprKind::Mod);
+                       else
+                         stack.returnValue(stack.getResult());
+                     });
       break;
     }
     // Checks if any of the operand divisible by the given symbol.
     case AffineExprKind::Mul: {
       AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
-      stack.emplace_back(
-          binaryExpr.getLHS(), symbolPos, opKind,
-          [&stack, &result, binaryExpr, symbolPos, opKind]() {
-            if (!result) {
-              stack.emplace_back(
-                  binaryExpr.getRHS(), symbolPos, opKind, [&stack]() {
-                    llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                        std::move(std::get<3>(stack.back())));
-                    stack.pop_back();
-                  });
-            } else {
-              llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                  std::move(std::get<3>(stack.back())));
-              stack.pop_back();
-            }
-          });
+      stack.pushArgs(binaryExpr.getLHS(), symbolPos, opKind,
+                     [&stack, binaryExpr, symbolPos, opKind]() {
+                       if (!stack.getResult())
+                         stack.pushArgs(binaryExpr.getRHS(), symbolPos, opKind);
+                       else
+                         stack.returnValue(stack.getResult());
+                     });
       break;
     }
     // Floordiv and ceildiv are divisible by the given symbol when the first
@@ -480,34 +518,22 @@ static bool isDivisibleBySymbol(AffineExpr expr, unsigned symbolPos,
     case AffineExprKind::CeilDiv: {
       AffineBinaryOpExpr binaryExpr = cast<AffineBinaryOpExpr>(expr);
       if (opKind != expr.getKind()) {
-        result = false;
-        llvm::detail::scope_exit<std::function<void(void)>> sexit(
-            std::move(std::get<3>(stack.back())));
-        stack.pop_back();
+        stack.returnValue(false);
         break;
       }
       if (llvm::any_of(stack, [](auto &it) {
             return std::get<0>(it).getKind() == AffineExprKind::Mul;
           })) {
-        result = false;
-        llvm::detail::scope_exit<std::function<void(void)>> sexit(
-            std::move(std::get<3>(stack.back())));
-        stack.pop_back();
+        stack.returnValue(false);
         break;
       }
-
-      stack.emplace_back(
-          binaryExpr.getLHS(), symbolPos, expr.getKind(), [&stack]() {
-            llvm::detail::scope_exit<std::function<void(void)>> sexit(
-                std::move(std::get<3>(stack.back())));
-            stack.pop_back();
-          });
+      stack.pushArgs(binaryExpr.getLHS(), symbolPos, expr.getKind());
       break;
     }
       llvm_unreachable("Unknown AffineExpr");
     }
   }
-  return result;
+  return stack.getResult();
 }
 
 /// Divides the given expression by the given symbol at position `symbolPos`. It
