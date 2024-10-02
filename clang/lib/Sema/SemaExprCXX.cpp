@@ -9537,7 +9537,7 @@ Sema::ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
       //
       // The parameter-declaration-list of a requires-expression is not such
       // a context.
-      Diag(Param->getBeginLoc(),
+      Diag(Param->getExplicitObjectParamThisLoc(),
            diag::err_requires_expr_explicit_object_parameter);
       Param->setExplicitObjectParameterLoc(SourceLocation());
     }
