@@ -824,7 +824,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool RestoreFP = RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
                    !hasReservedCallFrame(MF);
-
   if (RVVStackSize) {
     // If RestoreFP the stack pointer will be restored using the frame pointer
     // value.
@@ -887,6 +886,19 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, LastFrameDestroy, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameDestroy);
+  }
+
+  if (getLibCallID(MF, CSI) != -1) {
+    // tail __riscv_restore_[0-12] instruction is considered as a terminator,
+    // therefor it is unnecessary to place any CFI instructions after it. Just
+    // deallocate stack if needed and return.
+    if (StackSize != 0)
+      deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                      RVFI->getLibCallStackSize());
+
+    // Emit epilogue for shadow call stack.
+    emitSCSEpilogue(MF, MBB, MBBI, DL);
+    return;
   }
 
   bool ApplyPop = RVFI->isPushable(MF) && MBBI != MBB.end() &&
