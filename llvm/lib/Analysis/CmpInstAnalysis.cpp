@@ -78,8 +78,8 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
                            bool LookThruTrunc) {
   using namespace PatternMatch;
 
-  const APInt *C;
-  if (!ICmpInst::isRelational(Pred) || !match(RHS, m_APIntAllowPoison(C)))
+  const APInt *OrigC;
+  if (!ICmpInst::isRelational(Pred) || !match(RHS, m_APIntAllowPoison(OrigC)))
     return std::nullopt;
 
   bool Inverted = false;
@@ -88,36 +88,30 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     Pred = ICmpInst::getInversePredicate(Pred);
   }
 
+  APInt C = *OrigC;
+  if (ICmpInst::isLE(Pred)) {
+    if (ICmpInst::isSigned(Pred) ? C.isMaxSignedValue() : C.isMaxValue())
+      return std::nullopt;
+    ++C;
+    Pred = ICmpInst::getStrictPredicate(Pred);
+  }
+
   DecomposedBitTest Result;
   switch (Pred) {
   default:
     llvm_unreachable("Unexpected predicate");
   case ICmpInst::ICMP_SLT:
     // X < 0 is equivalent to (X & SignMask) != 0.
-    if (!C->isZero())
+    if (!C.isZero())
       return std::nullopt;
-    Result.Mask = APInt::getSignMask(C->getBitWidth());
-    Result.Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_SLE:
-    // X <= -1 is equivalent to (X & SignMask) != 0.
-    if (!C->isAllOnes())
-      return std::nullopt;
-    Result.Mask = APInt::getSignMask(C->getBitWidth());
+    Result.Mask = APInt::getSignMask(C.getBitWidth());
     Result.Pred = ICmpInst::ICMP_NE;
     break;
   case ICmpInst::ICMP_ULT:
     // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
-    if (!C->isPowerOf2())
+    if (!C.isPowerOf2())
       return std::nullopt;
-    Result.Mask = -*C;
-    Result.Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_ULE:
-    // X <=u 2^n-1 is equivalent to (X & ~(2^n-1)) == 0.
-    if (!(*C + 1).isPowerOf2())
-      return std::nullopt;
-    Result.Mask = ~*C;
+    Result.Mask = -C;
     Result.Pred = ICmpInst::ICMP_EQ;
     break;
   }

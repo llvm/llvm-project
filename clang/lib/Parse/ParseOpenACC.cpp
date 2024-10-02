@@ -1461,8 +1461,8 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
     return StmtError();
 
   StmtResult AssocStmt;
-  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(getActions().OpenACC(),
-                                                DirInfo.DirKind);
+  SemaOpenACC::AssociatedStmtRAII AssocStmtRAII(
+      getActions().OpenACC(), DirInfo.DirKind, {}, DirInfo.Clauses);
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
     ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));

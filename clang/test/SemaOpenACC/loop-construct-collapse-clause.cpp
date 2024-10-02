@@ -115,3 +115,160 @@ void negative_constexpr(int i) {
   negative_constexpr_templ<int, 1>(); // #NCET1
 }
 
+template<typename T, unsigned Three>
+void not_single_loop_templ() {
+  T Arr[5];
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(auto x : Arr) {
+    for(auto y : Arr){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Three)
+  for(;;) {
+    for(;;){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(Three)
+  for(;;) {
+    for(;;){
+      for(;;){
+        do{}while(true);
+      }
+    }
+  }
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(Three)
+  for(auto x : Arr) {
+    for(auto y: Arr) {
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(Three)
+  for(auto x : Arr) {
+    for(auto y: Arr) {
+      for(auto z: Arr) {
+        do{}while(true);
+      }
+    }
+  }
+}
+
+void not_single_loop() {
+  not_single_loop_templ<int, 3>(); // expected-note{{in instantiation of function template}}
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      for(;;);
+    }
+    while(true); // expected-error{{while loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      for(;;);
+    }
+    do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      while(true); // expected-error{{while loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(;;) {
+    for(;;){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+      do{}while(true);
+    }
+  }
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;){
+      while(true);
+    }
+  }
+
+  int Arr[5];
+
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3)
+  for(auto x : Arr) {
+    for(auto y : Arr){
+      do{}while(true); // expected-error{{do loop cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+    }
+  }
+
+}
+
+template<unsigned Two, unsigned Three>
+void no_other_directives() {
+#pragma acc loop collapse(Two)
+  for(;;) {
+    for (;;) { // last loop associated with the top level.
+#pragma acc loop collapse(Three) // expected-note{{active 'collapse' clause defined here}}
+      for(;;) {
+        for(;;) {
+    // expected-error@+1{{OpenACC 'serial' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc serial
+          ;
+        }
+      }
+    }
+  }
+#pragma acc loop collapse(Two)// expected-note{{active 'collapse' clause defined here}}
+  for(;;) {
+    for (;;) { // last loop associated with the top level.
+#pragma acc loop collapse(Three)
+      for(;;) {
+        for(;;) {
+        }
+      }
+    }
+    // expected-error@+1{{OpenACC 'serial' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc serial
+          ;
+  }
+}
+
+void no_other_directives() {
+  no_other_directives<2,3>(); // expected-note{{in instantiation of function template specialization}}
+
+  // Ok, not inside the intervening list
+#pragma acc loop collapse(2)
+  for(;;) {
+    for(;;) {
+#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    }
+  }
+  // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2)
+  for(;;) {
+    // expected-error@+1{{OpenACC 'data' construct cannot appear in intervening code of a 'loop' with a 'collapse' clause}}
+#pragma acc data // expected-warning{{OpenACC construct 'data' not yet implemented}}
+    for(;;) {
+    }
+  }
+}
+
