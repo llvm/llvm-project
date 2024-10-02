@@ -56,10 +56,6 @@ extern "C" {
 #endif // OFFLOAD_DLLEXPORT
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief compiler-independent type
-typedef uint8_t offload_bool_t;
-
-///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of a platform instance
 typedef struct offload_platform_handle_t_ *offload_platform_handle_t;
 
@@ -74,35 +70,40 @@ typedef struct offload_context_handle_t_ *offload_context_handle_t;
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Defines Return/Error codes
 typedef enum offload_result_t {
-  OFFLOAD_RESULT_SUCCESS = 0,                ///< Success
-  OFFLOAD_RESULT_ERROR_INVALID_VALUE = 1,    ///< Invalid Value
-  OFFLOAD_RESULT_ERROR_INVALID_PLATFORM = 2, ///< Invalid platform
-  OFFLOAD_RESULT_ERROR_DEVICE_NOT_FOUND = 3, ///< Device not found
-  OFFLOAD_RESULT_ERROR_INVALID_DEVICE = 4,   ///< Invalid device
-  OFFLOAD_RESULT_ERROR_DEVICE_LOST =
-      5, ///< Device hung, reset, was removed, or driver update occurred
-  OFFLOAD_RESULT_ERROR_UNINITIALIZED =
-      6, ///< plugin is not initialized or specific entry-point is not
-         ///< implemented
-  OFFLOAD_RESULT_ERROR_OUT_OF_RESOURCES = 7, ///< Out of resources
-  OFFLOAD_RESULT_ERROR_UNSUPPORTED_VERSION =
-      8, ///< [Validation] generic error code for unsupported versions
-  OFFLOAD_RESULT_ERROR_UNSUPPORTED_FEATURE =
-      9, ///< [Validation] generic error code for unsupported features
-  OFFLOAD_RESULT_ERROR_INVALID_ARGUMENT =
-      10, ///< [Validation] generic error code for invalid arguments
-  OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE =
-      11, ///< [Validation] handle argument is not valid
-  OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER =
-      12, ///< [Validation] pointer argument may not be nullptr
-  OFFLOAD_RESULT_ERROR_INVALID_SIZE =
-      13, ///< [Validation] invalid size or dimensions (e.g., must not be zero,
-          ///< or is out of bounds)
-  OFFLOAD_RESULT_ERROR_INVALID_ENUMERATION =
-      14, ///< [Validation] enumerator argument is not valid
-  OFFLOAD_RESULT_ERROR_UNSUPPORTED_ENUMERATION =
-      15, ///< [Validation] enumerator argument is not supported by the device
-  OFFLOAD_RESULT_ERROR_UNKNOWN = 16, ///< Unknown or internal error
+  /// Success
+  OFFLOAD_RESULT_SUCCESS = 0,
+  /// Invalid Value
+  OFFLOAD_RESULT_ERROR_INVALID_VALUE = 1,
+  /// Invalid platform
+  OFFLOAD_RESULT_ERROR_INVALID_PLATFORM = 2,
+  /// Device not found
+  OFFLOAD_RESULT_ERROR_DEVICE_NOT_FOUND = 3,
+  /// Invalid device
+  OFFLOAD_RESULT_ERROR_INVALID_DEVICE = 4,
+  /// Device hung, reset, was removed, or driver update occurred
+  OFFLOAD_RESULT_ERROR_DEVICE_LOST = 5,
+  /// plugin is not initialized or specific entry-point is not implemented
+  OFFLOAD_RESULT_ERROR_UNINITIALIZED = 6,
+  /// Out of resources
+  OFFLOAD_RESULT_ERROR_OUT_OF_RESOURCES = 7,
+  /// generic error code for unsupported versions
+  OFFLOAD_RESULT_ERROR_UNSUPPORTED_VERSION = 8,
+  /// generic error code for unsupported features
+  OFFLOAD_RESULT_ERROR_UNSUPPORTED_FEATURE = 9,
+  /// generic error code for invalid arguments
+  OFFLOAD_RESULT_ERROR_INVALID_ARGUMENT = 10,
+  /// handle argument is not valid
+  OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE = 11,
+  /// pointer argument may not be nullptr
+  OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER = 12,
+  /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
+  OFFLOAD_RESULT_ERROR_INVALID_SIZE = 13,
+  /// enumerator argument is not valid
+  OFFLOAD_RESULT_ERROR_INVALID_ENUMERATION = 14,
+  /// enumerator argument is not supported by the device
+  OFFLOAD_RESULT_ERROR_UNSUPPORTED_ENUMERATION = 15,
+  /// Unknown or internal error
+  OFFLOAD_RESULT_ERROR_UNKNOWN = 16,
   /// @cond
   OFFLOAD_RESULT_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -130,12 +131,11 @@ typedef enum offload_result_t {
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadGetErrorDetails(
-    size_t *
-        SizeRet, ///< [out][optional] Pointer to return the size of the
-                 ///< available error message. A size of 0 indicates no message.
-    const char **DetailStringRet ///< [out][optional] Pointer to return the
-                                 ///< error message string.
-);
+    // [out][optional] Pointer to return the size of the available error
+    // message. A size of 0 indicates no message.
+    size_t *SizeRet,
+    // [out][optional] Pointer to return the error message string.
+    const char **DetailStringRet);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Retrieves all available platforms
@@ -153,35 +153,32 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadGetErrorDetails(
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGet(
-    uint32_t
-        NumEntries, ///< [in] The number of platforms to be added to
-                    ///< phPlatforms. If phPlatforms is not NULL, thenNumEntries
-                    ///< should be greater than zero, otherwise
-                    ///< OFFLOAD_RESULT_ERROR_INVALID_SIZEwill be returned.
-    offload_platform_handle_t
-        *phPlatforms, ///< [out][optional] Array of handle of platforms. If
-                      ///< NumEntries isless than the number of platforms
-                      ///< available, then offloadPlatformGetshall only retrieve
-                      ///< that number of platforms.
-    uint32_t *pNumPlatforms ///< [out][optional] returns the total number of
-                            ///< platforms available.
-);
+    // [in] The number of platforms to be added to phPlatforms. If phPlatforms
+    // is not NULL, then NumEntries should be greater than zero, otherwise
+    // OFFLOAD_RESULT_ERROR_INVALID_SIZE will be returned.
+    uint32_t NumEntries,
+    // [out][optional] Array of handle of platforms. If NumEntries is less than
+    // the number of platforms available, then offloadPlatformGet shall only
+    // retrieve that number of platforms.
+    offload_platform_handle_t *phPlatforms,
+    // [out][optional] returns the total number of platforms available.
+    uint32_t *pNumPlatforms);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported platform info
 typedef enum offload_platform_info_t {
-  OFFLOAD_PLATFORM_INFO_NAME =
-      0, ///< The string denoting name of the platform. The size of the info
-         ///< needs to be dynamically queried.
-  OFFLOAD_PLATFORM_INFO_VENDOR_NAME =
-      1, ///< The string denoting name of the vendor of the platform. The size
-         ///< of the info needs to be dynamically queried.
-  OFFLOAD_PLATFORM_INFO_VERSION =
-      2, ///< The string denoting the version of the platform. The size of the
-         ///< info needs to be dynamically queried.
-  OFFLOAD_PLATFORM_INFO_BACKEND =
-      3, ///< The backend of the platform. Identifies the native backend adapter
-         ///< implementing this platform.
+  /// The string denoting name of the platform. The size of the info needs to be
+  /// dynamically queried.
+  OFFLOAD_PLATFORM_INFO_NAME = 0,
+  /// The string denoting name of the vendor of the platform. The size of the
+  /// info needs to be dynamically queried.
+  OFFLOAD_PLATFORM_INFO_VENDOR_NAME = 1,
+  /// The string denoting the version of the platform. The size of the info
+  /// needs to be dynamically queried.
+  OFFLOAD_PLATFORM_INFO_VERSION = 2,
+  /// The backend of the platform. Identifies the native backend adapter
+  /// implementing this platform.
+  OFFLOAD_PLATFORM_INFO_BACKEND = 3,
   /// @cond
   OFFLOAD_PLATFORM_INFO_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -191,9 +188,12 @@ typedef enum offload_platform_info_t {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Identifies the native backend of the platform
 typedef enum offload_platform_backend_t {
-  OFFLOAD_PLATFORM_BACKEND_UNKNOWN = 0, ///< The backend is not recognized
-  OFFLOAD_PLATFORM_BACKEND_CUDA = 1,    ///< The backend is CUDA
-  OFFLOAD_PLATFORM_BACKEND_AMDGPU = 2,  ///< The backend is AMDGPU
+  /// The backend is not recognized
+  OFFLOAD_PLATFORM_BACKEND_UNKNOWN = 0,
+  /// The backend is CUDA
+  OFFLOAD_PLATFORM_BACKEND_CUDA = 1,
+  /// The backend is AMDGPU
+  OFFLOAD_PLATFORM_BACKEND_AMDGPU = 2,
   /// @cond
   OFFLOAD_PLATFORM_BACKEND_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -226,26 +226,32 @@ typedef enum offload_platform_backend_t {
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE
 ///         + `NULL == hPlatform`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadPlatformGetInfo(
-    offload_platform_handle_t hPlatform, ///< [in] handle of the platform
-    offload_platform_info_t propName,    ///< [in] type of the info to retrieve
-    size_t propSize,  ///< [in] the number of bytes pointed to by pPlatformInfo.
-    void *pPropValue, ///< [out][optional] array of bytes holding the info.If
-                      ///< Size is not equal to or greater to the real number of
-                      ///< bytes needed to return the infothen the
-                      ///< OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned
-                      ///< and pPlatformInfo is not used.
-    size_t *pPropSizeRet ///< [out][optional] pointer to the actual number of
-                         ///< bytes being queried by pPlatformInfo.
-);
+    // [in] handle of the platform
+    offload_platform_handle_t hPlatform,
+    // [in] type of the info to retrieve
+    offload_platform_info_t propName,
+    // [in] the number of bytes pointed to by pPlatformInfo.
+    size_t propSize,
+    // [out][optional] array of bytes holding the info. If Size is not equal to
+    // or greater to the real number of bytes needed to return the info then the
+    // OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned and pPlatformInfo is
+    // not used.
+    void *pPropValue,
+    // [out][optional] pointer to the actual number of bytes being queried by
+    // pPlatformInfo.
+    size_t *pPropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported device types
 typedef enum offload_device_type_t {
-  OFFLOAD_DEVICE_TYPE_DEFAULT =
-      0, ///< The default device type as preferred by the runtime
-  OFFLOAD_DEVICE_TYPE_ALL = 1, ///< Devices of all types
-  OFFLOAD_DEVICE_TYPE_GPU = 2, ///< GPU device type
-  OFFLOAD_DEVICE_TYPE_CPU = 3, ///< CPU device type
+  /// The default device type as preferred by the runtime
+  OFFLOAD_DEVICE_TYPE_DEFAULT = 0,
+  /// Devices of all types
+  OFFLOAD_DEVICE_TYPE_ALL = 1,
+  /// GPU device type
+  OFFLOAD_DEVICE_TYPE_GPU = 2,
+  /// CPU device type
+  OFFLOAD_DEVICE_TYPE_CPU = 3,
   /// @cond
   OFFLOAD_DEVICE_TYPE_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -255,11 +261,16 @@ typedef enum offload_device_type_t {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported device info
 typedef enum offload_device_info_t {
-  OFFLOAD_DEVICE_INFO_TYPE = 0,     ///< type of the device
-  OFFLOAD_DEVICE_INFO_PLATFORM = 1, ///< the platform associated with the device
-  OFFLOAD_DEVICE_INFO_NAME = 2,     ///< Device name
-  OFFLOAD_DEVICE_INFO_VENDOR = 3,   ///< Device vendor
-  OFFLOAD_DEVICE_INFO_DRIVER_VERSION = 4, ///< Driver version
+  /// type of the device
+  OFFLOAD_DEVICE_INFO_TYPE = 0,
+  /// the platform associated with the device
+  OFFLOAD_DEVICE_INFO_PLATFORM = 1,
+  /// Device name
+  OFFLOAD_DEVICE_INFO_NAME = 2,
+  /// Device vendor
+  OFFLOAD_DEVICE_INFO_VENDOR = 3,
+  /// Driver version
+  OFFLOAD_DEVICE_INFO_DRIVER_VERSION = 4,
   /// @cond
   OFFLOAD_DEVICE_INFO_FORCE_UINT32 = 0x7fffffff
   /// @endcond
@@ -292,21 +303,21 @@ typedef enum offload_device_info_t {
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE
 ///         + `NULL == hPlatform`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGet(
-    offload_platform_handle_t
-        hPlatform,                    ///< [in] handle of the platform instance
-    offload_device_type_t DeviceType, ///< [in] the type of the devices.
-    uint32_t NumEntries, ///< [in] the number of devices to be added to
-                         ///< phDevices.If phDevices is not NULL, then
-                         ///< NumEntries should be greater than zero. Otherwise
-                         ///< OFFLOAD_RESULT_ERROR_INVALID_SIZEwill be returned.
-    offload_device_handle_t *
-        phDevices, ///< [out][optional] array of handle of devices.If NumEntries
-                   ///< is less than the number of devices available, then
-                   ///< platform shall only retrieve that number of devices.
-    uint32_t *pNumDevices ///< [out][optional] pointer to the number of
-                          ///< devices.pNumDevices will be updated with the
-                          ///< total number of devices available.
-);
+    // [in] handle of the platform instance
+    offload_platform_handle_t hPlatform,
+    // [in] the type of the devices.
+    offload_device_type_t DeviceType,
+    // [in] the number of devices to be added to phDevices. If phDevices is not
+    // NULL, then NumEntries should be greater than zero. Otherwise
+    // OFFLOAD_RESULT_ERROR_INVALID_SIZE will be returned.
+    uint32_t NumEntries,
+    // [out][optional] Array of device handles. If NumEntries is less than the
+    // number of devices available, then platform shall only retrieve that
+    // number of devices.
+    offload_device_handle_t *phDevices,
+    // [out][optional] pointer to the number of devices. pNumDevices will be
+    // updated with the total number of devices available.
+    uint32_t *pNumDevices);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Retrieves various information about device
@@ -334,17 +345,20 @@ OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGet(
 ///     - ::OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE
 ///         + `NULL == hDevice`
 OFFLOAD_APIEXPORT offload_result_t OFFLOAD_APICALL offloadDeviceGetInfo(
-    offload_device_handle_t hDevice, ///< [in] handle of the device instance
-    offload_device_info_t propName,  ///< [in] type of the info to retrieve
-    size_t propSize,  ///< [in] the number of bytes pointed to by pPropValue.
-    void *pPropValue, ///< [out][optional] array of bytes holding the info. If
-                      ///< propSize is not equal to or greater than the real
-                      ///< number of bytes needed to return the info then the
-                      ///< OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned
-                      ///< and pPropValue is not used.
-    size_t *pPropSizeRet ///< [out][optional] pointer to the actual size in
-                         ///< bytes of the queried propName.
-);
+    // [in] handle of the device instance
+    offload_device_handle_t hDevice,
+    // [in] type of the info to retrieve
+    offload_device_info_t propName,
+    // [in] the number of bytes pointed to by pPropValue.
+    size_t propSize,
+    // [out][optional] array of bytes holding the info. If propSize is not equal
+    // to or greater than the real number of bytes needed to return the info
+    // then the OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned and
+    // pPropValue is not used.
+    void *pPropValue,
+    // [out][optional] pointer to the actual size in bytes of the queried
+    // propName.
+    size_t *pPropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for offloadGetErrorDetails

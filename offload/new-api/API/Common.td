@@ -29,12 +29,6 @@ def : Macro {
   let alt_value = "";
 }
 
-def : Typedef {
-  let name = "offload_bool_t";
-  let value = "uint8_t";
-  let desc = "compiler-independent type";
-}
-
 def : Handle {
   let name = "offload_platform_handle_t";
   let desc = "Handle of a platform instance";
@@ -62,14 +56,14 @@ def : Enum {
     Etor<"ERROR_DEVICE_LOST", "Device hung, reset, was removed, or driver update occurred">,
     Etor<"ERROR_UNINITIALIZED", "plugin is not initialized or specific entry-point is not implemented">,
     Etor<"ERROR_OUT_OF_RESOURCES", "Out of resources">,
-    Etor<"ERROR_UNSUPPORTED_VERSION", "[Validation] generic error code for unsupported versions">,
-    Etor<"ERROR_UNSUPPORTED_FEATURE", "[Validation] generic error code for unsupported features">,
-    Etor<"ERROR_INVALID_ARGUMENT", "[Validation] generic error code for invalid arguments">,
-    Etor<"ERROR_INVALID_NULL_HANDLE", "[Validation] handle argument is not valid">,
-    Etor<"ERROR_INVALID_NULL_POINTER", "[Validation] pointer argument may not be nullptr">,
-    Etor<"ERROR_INVALID_SIZE", "[Validation] invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
-    Etor<"ERROR_INVALID_ENUMERATION", "[Validation] enumerator argument is not valid">,
-    Etor<"ERROR_UNSUPPORTED_ENUMERATION", "[Validation] enumerator argument is not supported by the device">,
+    Etor<"ERROR_UNSUPPORTED_VERSION", "generic error code for unsupported versions">,
+    Etor<"ERROR_UNSUPPORTED_FEATURE", "generic error code for unsupported features">,
+    Etor<"ERROR_INVALID_ARGUMENT", "generic error code for invalid arguments">,
+    Etor<"ERROR_INVALID_NULL_HANDLE", "handle argument is not valid">,
+    Etor<"ERROR_INVALID_NULL_POINTER", "pointer argument may not be nullptr">,
+    Etor<"ERROR_INVALID_SIZE", "invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
+    Etor<"ERROR_INVALID_ENUMERATION", "enumerator argument is not valid">,
+    Etor<"ERROR_UNSUPPORTED_ENUMERATION", "enumerator argument is not supported by the device">,
     Etor<"ERROR_UNKNOWN", "Unknown or internal error">
   ];
 }

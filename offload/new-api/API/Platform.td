@@ -17,13 +17,13 @@ def : Function {
   ];
   let params = [
     Param<"uint32_t", "NumEntries",
-      "The number of platforms to be added to phPlatforms. If phPlatforms is not NULL, then"
-      "NumEntries should be greater than zero, otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE"
+      "The number of platforms to be added to phPlatforms. If phPlatforms is not NULL, then "
+      "NumEntries should be greater than zero, otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE "
       "will be returned.", PARAM_IN>,
     RangedParam<"offload_platform_handle_t*", "phPlatforms", 
-      "Array of handle of platforms. If NumEntries is"
-      "less than the number of platforms available, then offloadPlatformGet"
-      "shall only retrieve that number of platforms.",
+      "Array of handle of platforms. If NumEntries is less than the number of "
+      "platforms available, then offloadPlatformGet shall only retrieve that "
+      "number of platforms.",
       PARAM_OUT_OPTIONAL, Range<"0", "NumEntries">>,
     Param<"uint32_t*",
       "pNumPlatforms", "returns the total number of platforms available.",
@@ -69,8 +69,8 @@ def : Function {
     Param<"offload_platform_handle_t", "hPlatform", "handle of the platform", PARAM_IN>,
     Param<"offload_platform_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "propSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
-    TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info."
-      "If Size is not equal to or greater to the real number of bytes needed to return the info"
+    TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. "
+      "If Size is not equal to or greater to the real number of bytes needed to return the info "
       "then the OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT_OPTIONAL,
       TypeInfo<"propName" , "propSize">>,
     Param<"size_t*", "pPropSizeRet", "pointer to the actual number of bytes being queried by pPlatformInfo.", PARAM_OUT_OPTIONAL>

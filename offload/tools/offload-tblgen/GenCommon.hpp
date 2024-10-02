@@ -61,7 +61,7 @@ constexpr auto PrefixUpper = "OFFLOAD";
 
 inline std::string
 MakeParamComment(const llvm::offload::tblgen::ParamRec &Param) {
-  return llvm::formatv("///< {0}{1}{2} {3}", (Param.isIn() ? "[in]" : ""),
+  return llvm::formatv("// {0}{1}{2} {3}", (Param.isIn() ? "[in]" : ""),
                        (Param.isOut() ? "[out]" : ""),
                        (Param.isOpt() ? "[optional]" : ""), Param.getDesc());
 }
