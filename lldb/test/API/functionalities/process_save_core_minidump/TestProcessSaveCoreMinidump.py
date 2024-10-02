@@ -567,7 +567,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 os.unlink(custom_file)
 
     def minidump_deterministic_difference(self):
-            """Test that verifies that two minidumps produced are identical."""
+        """Test that verifies that two minidumps produced are identical."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
 
             core_styles = [
                 lldb.eSaveCoreStackOnly,
@@ -596,7 +603,6 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 self.assertEqual(file_one, file_two)
                 self.assertTrue(os.unlink(spec_one.GetFileName()))
                 self.assertTrue(os.unlink(spec_two.GetFileName()))
-
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
 
