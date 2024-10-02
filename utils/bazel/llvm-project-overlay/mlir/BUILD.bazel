@@ -11719,25 +11719,6 @@ gentbl_cc_library(
     ],
 )
 
-cc_library(
-    name = "VectorOps",
-    hdrs = [
-        "include/mlir/Dialect/Vector/IR/VectorAttributes.h.inc",
-        "include/mlir/Dialect/Vector/IR/VectorDialect.h.inc",
-        "include/mlir/Dialect/Vector/IR/VectorEnums.h.inc",
-        "include/mlir/Dialect/Vector/IR/VectorOps.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":BytecodeOpInterface",
-        ":MaskableOpInterface",
-        ":VectorAttributesIncGen",
-        ":VectorDialectIncGen",
-        ":VectorOpsIncGen",
-    ],
-)
-
 gentbl_cc_library(
     name = "VectorAttributesIncGen",
     tbl_outs = [
