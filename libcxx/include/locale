@@ -2459,7 +2459,7 @@ _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>&
   if (__t == 0)
     __throw_bad_alloc();
   if (__owns)
-    __b.release();
+    (void)__b.release();
   __b = unique_ptr<_Tp, void (*)(void*)>(__t, free);
   __new_cap /= sizeof(_Tp);
   __n = __b.get() + __n_off;

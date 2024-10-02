@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // <memory>
-
+//
 // unique_ptr
-
-// test release
+//
+// constexpr pointer release() noexcept;
 
 #include <memory>
 #include <cassert>

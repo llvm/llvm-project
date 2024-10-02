@@ -2187,7 +2187,7 @@ void deque<_Tp, _Allocator>::__add_back_capacity() {
     typedef __allocator_destructor<_Allocator> _Dp;
     unique_ptr<pointer, _Dp> __hold(__alloc_traits::allocate(__a, __block_size), _Dp(__a, __block_size));
     __buf.push_back(__hold.get());
-    __hold.release();
+    (void)__hold.release();
 
     for (__map_pointer __i = __map_.end(); __i != __map_.begin();)
       __buf.push_front(*--__i);

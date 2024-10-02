@@ -278,7 +278,7 @@ public:
     return __ptr_ != nullptr;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer release() _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer release() _NOEXCEPT {
     pointer __t = __ptr_;
     __ptr_      = pointer();
     return __t;
