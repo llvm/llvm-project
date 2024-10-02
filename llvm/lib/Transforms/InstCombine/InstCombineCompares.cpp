@@ -5015,6 +5015,22 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     }
   }
 
+  // (icmp eq/ne (X, -P2), INT_MIN)
+  //	-> (icmp slt/sge X, INT_MIN + P2)
+  if (ICmpInst::isEquality(Pred) && BO0 &&
+      match(I.getOperand(1), m_SignMask())) {
+    Value *X;
+    if (match(BO0, m_And(m_Value(X), m_CheckedInt([](const APInt &C) {
+                           return C.isZero() || C.isNegatedPowerOf2();
+                         })))) {
+      // Will Constant fold.
+      Value *NewC = Builder.CreateSub(I.getOperand(1), BO0->getOperand(1));
+      return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SLT
+                                                    : ICmpInst::ICMP_SGE,
+                          X, NewC);
+    }
+  }
+
   {
     // Similar to above: an unsigned overflow comparison may use offset + mask:
     // ((Op1 + C) & C) u<  Op1 --> Op1 != 0
