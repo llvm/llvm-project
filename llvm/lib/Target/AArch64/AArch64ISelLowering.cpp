@@ -5549,13 +5549,12 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
          "Only expect to cast between legal scalable predicate types!");
 
   // Return the operand if the cast isn't changing type,
-  // e.g. <n x 16 x i1> -> <n x 16 x i1>
   if (InVT == VT)
     return Op;
 
-  // Look through casts to <n x 16 x i1> when their input has more lanes than
-  // VT. This will increase the chances of removing casts that introduce new
-  // lanes, which have to be explicitly zero'd.
+  // Look through casts to <vscale x 16 x i1> when their input has more lanes
+  // than VT. This will increase the chances of removing casts that introduce
+  // new lanes, which have to be explicitly zero'd.
   if (Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
       Op.getConstantOperandVal(0) == Intrinsic::aarch64_sve_convert_to_svbool &&
       Op.getOperand(1).getValueType().bitsGT(VT))

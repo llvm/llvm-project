@@ -4092,11 +4092,16 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
 
   // The original intrinsics incorrectly used a predicate based on the smallest
   // element type rather than the largest.
-  Type *PredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+
+  if (Args[1]->getType() != BadPredTy)
+    llvm_unreachable("Unexpected predicate type!");
+
   Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
-                                    Args[1]->getType(), Args[1]);
+                                    BadPredTy, Args[1]);
   Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                    PredTy, Args[1]);
+                                    GoodPredTy, Args[1]);
 
   Function *NewF = Intrinsic::getDeclaration(CI->getModule(), NewID);
   return Builder.CreateCall(NewF, Args, CI->getName());
