@@ -785,8 +785,9 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                      .addImm(Opcode);
       const unsigned NumOps = I.getNumOperands();
       unsigned Index = 1;
-      if (I.getOperand(Index).getType() ==
-          MachineOperand::MachineOperandType::MO_IntrinsicID)
+      if (Index < NumOps &&
+          I.getOperand(Index).getType() ==
+              MachineOperand::MachineOperandType::MO_IntrinsicID)
         Index = 2;
       for (; Index < NumOps; ++Index)
         MIB.add(I.getOperand(Index));
