@@ -90,4 +90,6 @@ contact: Pierre
 Janek breaks aomp smoke red_bug_51. revert:
 c897c13dde3b [AMDGPU] Convert AMDGPUResourceUsageAnalysis pass
 ---
-
+hangs ocl at -O0
+735a5f67e351 [AMDGPU] When allocating VGPRs, VGPR spills are not part of the prologue (#109439)
+---
