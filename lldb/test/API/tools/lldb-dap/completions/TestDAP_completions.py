@@ -132,7 +132,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
     def test_variable_completions(self):
         """
-        Tests completion requests in "repl-mode=command"
+        Tests completion requests in "repl-mode=variable"
         """
         self.setup_debugee()
         self.continue_to_next_stop()
