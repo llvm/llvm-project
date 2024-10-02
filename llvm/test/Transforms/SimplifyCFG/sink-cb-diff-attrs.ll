@@ -9,17 +9,13 @@ declare void @side.effect()
 define ptr @test_sink_no_args_oneside(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test_sink_no_args_oneside
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @side.effect()
-; CHECK-NEXT:    [[R:%.*]] = call ptr @foo0()
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo0() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PR:%.*]] = phi ptr [ [[R]], [[IF]] ], [ [[R2]], [[ELSE]] ]
-; CHECK-NEXT:    ret ptr [[PR]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo0()
+; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
 if:
@@ -44,7 +40,7 @@ define ptr @test_sink_no_args_oneside_fail(i1 %c) {
 ; CHECK-NEXT:    [[R:%.*]] = call ptr @foo0()
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo0() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo0() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[PR:%.*]] = phi ptr [ [[R]], [[IF]] ], [ [[R2]], [[ELSE]] ]
@@ -72,7 +68,7 @@ define ptr @test_sink_int_attrs(i1 %c, ptr %p, ptr %p2, i64 %x) {
 ; CHECK-NEXT:    call void @side.effect()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo2(ptr align 32 dereferenceable_or_null(100) [[P]], ptr align 32 dereferenceable(50) [[P2]], i64 range(i64 10, 100000) [[X]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo2(ptr align 32 dereferenceable_or_null(100) [[P]], ptr align 32 dereferenceable(50) [[P2]], i64 range(i64 10, 100000) [[X]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
@@ -97,7 +93,7 @@ define ptr @test_sink_int_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    call void @side.effect()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr dereferenceable(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr dereferenceable(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
@@ -277,9 +273,9 @@ end:
 }
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { memory(read) }
-; CHECK: attributes #[[ATTR1]] = { alwaysinline memory(read) }
-; CHECK: attributes #[[ATTR2]] = { memory(readwrite) }
+; CHECK: attributes #[[ATTR0]] = { alwaysinline memory(read) }
+; CHECK: attributes #[[ATTR1]] = { memory(readwrite) }
+; CHECK: attributes #[[ATTR2]] = { memory(read) }
 ; CHECK: attributes #[[ATTR3]] = { mustprogress nocallback nofree willreturn }
 ; CHECK: attributes #[[ATTR4]] = { alwaysinline nosync willreturn }
 ; CHECK: attributes #[[ATTR5]] = { alwaysinline cold nocallback nofree nosync willreturn }

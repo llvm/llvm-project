@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1800,14 +1801,20 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   if (*this == Other)
     return *this;
 
-  // At least for now, only intersect lists with same number of params.
-  if (getNumAttrSets() != Other.getNumAttrSets())
-    return std::nullopt;
-
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  for (unsigned Idx : indexes()) {
-    auto IntersectedAS =
-        getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
+  SmallSet<unsigned, 8> AllIndexes{};
+  AllIndexes.insert(indexes().begin(), indexes().end());
+  AllIndexes.insert(Other.indexes().begin(), Other.indexes().end());
+
+  for (unsigned Idx : AllIndexes) {
+    AttributeSet ThisSet = {};
+    AttributeSet OtherSet = {};
+    if (hasAttributesAtIndex(Idx))
+      ThisSet = getAttributes(Idx);
+    if (Other.hasAttributesAtIndex(Idx))
+      OtherSet = Other.getAttributes(Idx);
+
+    auto IntersectedAS = ThisSet.intersectWith(C, OtherSet);
     // If any index fails to intersect, fail.
     if (!IntersectedAS)
       return std::nullopt;
