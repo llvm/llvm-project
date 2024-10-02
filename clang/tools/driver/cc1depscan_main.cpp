@@ -370,7 +370,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
 static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &NewArgs,
-    StringRef &DiagnosticOutput, StringRef Path,
+    std::string &DiagnosticOutput, StringRef Path,
     const DepscanSharing &Sharing,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
     llvm::cas::ObjectStore &CAS) {
@@ -397,9 +397,13 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
   CC1DepScanDProtocol::ResultKind Result;
   StringRef FailedReason;
   StringRef RootID;
+  StringRef DiagOut;
   if (auto E = Comms.getScanResult(Saver, Result, FailedReason, RootID,
-                                   RawNewArgs, DiagnosticOutput))
+                                   RawNewArgs, DiagOut)) {
+    DiagnosticOutput = DiagOut;
     return std::move(E);
+  }
+  DiagnosticOutput = DiagOut;
 
   if (Result != CC1DepScanDProtocol::SuccessResult)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -504,7 +508,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   if (ProduceIncludeTree)
     Sharing.CASArgs.push_back("-fdepscan-include-tree");
 
-  StringRef DiagnosticOutput;
+  std::string DiagnosticOutput;
   bool DiagnosticErrorOccurred = false;
   auto ScanAndUpdate = [&]() {
     if (std::optional<std::string> DaemonPath =
