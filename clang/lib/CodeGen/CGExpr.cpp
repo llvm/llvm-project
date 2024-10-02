@@ -5830,9 +5830,12 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 // This function implements trivial copy assignment for HLSL's
 // assignable constant arrays.
 LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
-  LValue TrivialAssignmentRHS = EmitLValue(E->getRHS());
+  // Don't emit an LValue for the RHS because it might not be an LValue
   LValue LHS = EmitLValue(E->getLHS());
-  EmitAggregateAssign(LHS, TrivialAssignmentRHS, E->getLHS()->getType());
+  // In C assignment operator RHS is often an RValue.
+  // EmitAggregateAssign expects an LValue for the RHS so call the below
+  // function instead.
+  EmitInitializationToLValue(E->getRHS(), LHS);
   return LHS;
 }
 

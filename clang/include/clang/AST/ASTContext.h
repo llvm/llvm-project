@@ -1480,6 +1480,10 @@ public:
   /// type to the decayed type.
   QualType getDecayedType(QualType Orig, QualType Decayed) const;
 
+  /// Return the uniqued reference to a constant array type from the
+  /// original array parameter type.
+  QualType getConstantArrayFromArrayParameterType(QualType Ty) const;
+
   /// Return the uniqued reference to a specified array parameter type from the
   /// original array type.
   QualType getArrayParameterType(QualType Ty) const;

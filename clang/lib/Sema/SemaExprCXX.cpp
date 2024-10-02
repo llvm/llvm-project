@@ -4431,10 +4431,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_HLSL_Array_RValue:
-    FromType = Context.getArrayParameterType(FromType);
-    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                             /*BasePath=*/nullptr, CCK)
+    if (ToType->isArrayParameterType()) {
+      FromType = Context.getArrayParameterType(FromType);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
                .get();
+    } else { // FromType must be ArrayParameterType
+      FromType = Context.getConstantArrayFromArrayParameterType(FromType);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+			       /*BasePath=*/nullptr, CCK)
+               .get();
+    }
     break;
 
   case ICK_Function_To_Pointer:

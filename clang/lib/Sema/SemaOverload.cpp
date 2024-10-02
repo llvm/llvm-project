@@ -2242,12 +2242,35 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       return false;
     }
   }
-  // Lvalue-to-rvalue conversion (C++11 4.1):
-  //   A glvalue (3.10) of a non-function, non-array type T can
-  //   be converted to a prvalue.
+
   bool argIsLValue = From->isGLValue();
-  if (argIsLValue && !FromType->canDecayToPointerType() &&
+  if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+             ToType->isConstantArrayType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else if (FromType->isArrayParameterType()) {
+      FromType = S.Context.getConstantArrayFromArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.setAllToTypes(ToType);
+    return true;
+  } else if (argIsLValue && !FromType->canDecayToPointerType() &&
       S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+    // Lvalue-to-rvalue conversion (C++11 4.1):
+    //   A glvalue (3.10) of a non-function, non-array type T can
+    //   be converted to a prvalue.
+
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -2261,24 +2284,6 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
-  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isConstantArrayType()) {
-    // HLSL constant array parameters do not decay, so if the argument is a
-    // constant array and the parameter is an ArrayParameterType we have special
-    // handling here.
-    if (ToType->isArrayParameterType()) {
-      FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
-    }
-
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
-      return false;
-
-    SCS.setAllToTypes(ToType);
-    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
