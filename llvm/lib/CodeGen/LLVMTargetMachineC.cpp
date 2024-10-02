@@ -100,3 +100,4 @@ LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T,
       LLVMCreateMemoryBufferWithMemoryRangeCopy(Data.data(), Data.size(), "");
   return Result;
 }
+
