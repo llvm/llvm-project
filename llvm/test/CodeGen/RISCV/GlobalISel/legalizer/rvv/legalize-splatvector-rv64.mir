@@ -8,8 +8,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 1 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -25,8 +26,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv1i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 1 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -72,8 +74,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 2 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -89,8 +92,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv2i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 2 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -136,8 +140,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 4 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -153,8 +158,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv4i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 4 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -200,8 +206,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 8 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -217,8 +224,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv8i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 8 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -264,8 +272,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 16 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -281,8 +290,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv16i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 16 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 16 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -328,8 +338,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -345,8 +356,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv32i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 32 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 32 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
@@ -392,8 +404,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_0
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMCLR_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMCLR_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMCLR_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMCLR_VL]](<vscale x 64 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 0
@@ -409,8 +422,9 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: splatvector_nxv64i1_1
-    ; CHECK: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
-    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
+    ; CHECK-NEXT: [[VMSET_VL1:%[0-9]+]]:_(<vscale x 64 x s1>) = G_VMSET_VL [[C]](s64)
     ; CHECK-NEXT: $v0 = COPY [[VMSET_VL1]](<vscale x 64 x s1>)
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:_(s1) = G_CONSTANT i1 1
