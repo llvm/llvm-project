@@ -13,7 +13,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int iscanonical(double x) {
+#undef iscanonical
+LLVM_LIBC_FUNCTION(int, iscanonical, (double x)) {
   double temp;
   return fputil::canonicalize(temp, x) == 0;
 }
