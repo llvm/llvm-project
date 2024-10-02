@@ -232,16 +232,16 @@ GDBRemoteCommunicationServerPlatform::Handle_qKillSpawnedProcess(
   lldb::pid_t pid = packet.GetU64(LLDB_INVALID_PROCESS_ID);
 
   // verify that we know anything about this pid.
-  if (SpawnedProcessFinished(pid)) {
+  if (!SpawnedProcessIsRunning(pid)) {
     // not a pid we know about
-    return SendErrorResponse(10); // ECHILD
+    return SendErrorResponse(10);
   }
 
   // go ahead and attempt to kill the spawned process
   if (KillSpawnedProcess(pid))
     return SendOKResponse();
   else
-    return SendErrorResponse(11); // EDEADLK
+    return SendErrorResponse(11);
 }
 
 void GDBRemoteCommunicationServerPlatform::AddSpawnedProcess(lldb::pid_t pid) {
@@ -250,15 +250,15 @@ void GDBRemoteCommunicationServerPlatform::AddSpawnedProcess(lldb::pid_t pid) {
   m_spawned_pids.insert(pid);
 }
 
-bool GDBRemoteCommunicationServerPlatform::SpawnedProcessFinished(
+bool GDBRemoteCommunicationServerPlatform::SpawnedProcessIsRunning(
     lldb::pid_t pid) {
   std::lock_guard<std::recursive_mutex> guard(m_spawned_pids_mutex);
-  return (m_spawned_pids.find(pid) == m_spawned_pids.end());
+  return (m_spawned_pids.find(pid) != m_spawned_pids.end());
 }
 
 bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
   // make sure we know about this process
-  if (SpawnedProcessFinished(pid)) {
+  if (!SpawnedProcessIsRunning(pid)) {
     // it seems the process has been finished recently
     return true;
   }
@@ -268,14 +268,14 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
 
   // check if that worked
   for (size_t i = 0; i < 10; ++i) {
-    if (SpawnedProcessFinished(pid)) {
+    if (!SpawnedProcessIsRunning(pid)) {
       // it is now killed
       return true;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  if (SpawnedProcessFinished(pid))
+  if (!SpawnedProcessIsRunning(pid))
     return true;
 
   // the launched process still lives.  Now try killing it again, this time
@@ -283,7 +283,7 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
   Host::Kill(pid, SIGKILL);
 
   for (size_t i = 0; i < 10; ++i) {
-    if (SpawnedProcessFinished(pid)) {
+    if (!SpawnedProcessIsRunning(pid)) {
       // it is now killed
       return true;
     }
@@ -291,7 +291,7 @@ bool GDBRemoteCommunicationServerPlatform::KillSpawnedProcess(lldb::pid_t pid) {
   }
 
   // check one more time after the final sleep
-  return SpawnedProcessFinished(pid);
+  return !SpawnedProcessIsRunning(pid);
 }
 
 GDBRemoteCommunication::PacketResult

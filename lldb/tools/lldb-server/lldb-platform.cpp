@@ -193,46 +193,39 @@ static Status ListenGdbConnectionsIfNeeded(
   return Status();
 }
 
-static Status AcceptGdbConnectionsIfNeeded(
-    const Socket::SocketProtocol protocol, std::unique_ptr<TCPSocket> &gdb_sock,
-    std::vector<MainLoopBase::ReadHandleUP> &handles, MainLoop &main_loop,
-    const uint16_t gdbserver_port, const lldb_private::Args &args) {
+static llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>>
+AcceptGdbConnectionsIfNeeded(const Socket::SocketProtocol protocol,
+                             std::unique_ptr<TCPSocket> &gdb_sock,
+                             MainLoop &main_loop, const uint16_t gdbserver_port,
+                             const lldb_private::Args &args) {
   if (protocol != Socket::ProtocolTcp)
-    return Status();
+    return std::vector<MainLoopBase::ReadHandleUP>();
 
-  llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> handles_or_err =
-      gdb_sock->Accept(
-          main_loop, [gdbserver_port, &args](std::unique_ptr<Socket> sock_up) {
-            Log *log = GetLog(LLDBLog::Platform);
-            Status error;
-            SharedSocket shared_socket(sock_up.get(), error);
-            if (error.Fail()) {
-              LLDB_LOGF(log, "gdbserver SharedSocket failed: %s",
-                        error.AsCString());
-              return;
-            }
-            lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
-            std::string socket_name;
-            GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
-                                                          gdbserver_port);
-            error = platform.LaunchGDBServer(args, child_pid, socket_name,
-                                             shared_socket.GetSendableFD());
-            if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
-              error = shared_socket.CompleteSending(child_pid);
-              if (error.Fail()) {
-                Host::Kill(child_pid, SIGTERM);
-                LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
-                          error.AsCString());
-                return;
-              }
-            }
-          });
-  if (!handles_or_err)
-    return Status::FromError(handles_or_err.takeError());
-
-  handles = std::move(*handles_or_err);
-
-  return Status();
+  return gdb_sock->Accept(main_loop, [gdbserver_port,
+                                      &args](std::unique_ptr<Socket> sock_up) {
+    Log *log = GetLog(LLDBLog::Platform);
+    Status error;
+    SharedSocket shared_socket(sock_up.get(), error);
+    if (error.Fail()) {
+      LLDB_LOGF(log, "gdbserver SharedSocket failed: %s", error.AsCString());
+      return;
+    }
+    lldb::pid_t child_pid = LLDB_INVALID_PROCESS_ID;
+    std::string socket_name;
+    GDBRemoteCommunicationServerPlatform platform(Socket::ProtocolTcp,
+                                                  gdbserver_port);
+    error = platform.LaunchGDBServer(args, child_pid, socket_name,
+                                     shared_socket.GetSendableFD());
+    if (error.Success() && child_pid != LLDB_INVALID_PROCESS_ID) {
+      error = shared_socket.CompleteSending(child_pid);
+      if (error.Fail()) {
+        Host::Kill(child_pid, SIGTERM);
+        LLDB_LOGF(log, "gdbserver CompleteSending failed: %s",
+                  error.AsCString());
+        return;
+      }
+    }
+  });
 }
 
 static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
@@ -588,12 +581,12 @@ int main_platform(int argc, char *argv[]) {
       return socket_error;
     }
 
-    std::vector<MainLoopBase::ReadHandleUP> gdb_handles;
-    error =
-        AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, gdb_handles, main_loop,
+    llvm::Expected<std::vector<MainLoopBase::ReadHandleUP>> gdb_handles =
+        AcceptGdbConnectionsIfNeeded(protocol, gdb_sock, main_loop,
                                      gdbserver_port, inferior_arguments);
-    if (error.Fail()) {
-      printf("Failed to accept gdb: %s\n", error.AsCString());
+    if (!gdb_handles) {
+      printf("Failed to accept gdb: %s\n",
+             llvm::toString(gdb_handles.takeError()).c_str());
       return socket_error;
     }
 

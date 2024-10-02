@@ -67,7 +67,7 @@ protected:
 
 private:
   bool KillSpawnedProcess(lldb::pid_t pid);
-  bool SpawnedProcessFinished(lldb::pid_t pid);
+  bool SpawnedProcessIsRunning(lldb::pid_t pid);
   void AddSpawnedProcess(lldb::pid_t pid);
 
   void DebugserverProcessReaped(lldb::pid_t pid);
