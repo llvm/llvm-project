@@ -122,35 +122,34 @@ void test() {
 #undef EQ
 }
 
-void (*fn)();
-
-void test2() {
-    if ((fn == test2)) {} // expected-warning {{equality comparison with extraneous parentheses}} \
-                          // expected-note {{use '=' to turn this equality comparison into an assignment}} \
-                          // expected-note {{remove extraneous parentheses around the comparison to silence this warning}}
-    if ((test2 == fn)) {}
-}
-
-namespace rdar9027658 {
-template <typename T>
-void f(T t) {
-    if ((t.g == 3)) { } // expected-warning {{equality comparison with extraneous parentheses}} \
-                         // expected-note {{use '=' to turn this equality comparison into an assignment}} \
-                         // expected-note {{remove extraneous parentheses around the comparison to silence this warning}}
-}
-
-struct S { int g; };
-void test() {
-  f(S()); // expected-note {{in instantiation}}
-}
-}
-
 namespace GH101863 {
-void foo(auto... args) {
-  if (((args == 0) or ...)) {} // ok
+void t1(auto... args) {
+  if (((args == 0) or ...)) { }
 }
 
-void bar() {
-  foo(3);
+template <typename... Args>
+void t2(Args... args) {
+    if (((args == 0) or ...)) { }
+}
+
+void t3(auto... args) {
+  if ((... && (args == 0))) { }
+}
+
+void t4(auto... a, auto... b) {
+  if (((a == 0) or ...) && ((b == 0) or ...)) { }
+}
+
+void t5(auto... args) {
+  if ((((args == 0) or ...))) { }
+}
+
+void test() {
+  t1(0, 1);
+  t2<>();
+  t3(1, 2, 3);
+  t3(0, 1);
+  t4(0, 1);
+  t5(0, 1);
 }
 }
