@@ -1563,7 +1563,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   for (const Clause &clause : item->clauses) {
     if (clause.id == llvm::omp::Clause::OMPC_lastprivate) {
-      lastprivates.push_back(&std::get<clause::Lastprivate>(clause.u));
+      auto &lastp = std::get<clause::Lastprivate>(clause.u);
+      lastprivateModifierNotSupported(lastp, converter.getCurrentLocation());
+      lastprivates.push_back(&lastp);
     } else {
       switch (clause.id) {
       case llvm::omp::Clause::OMPC_firstprivate:
