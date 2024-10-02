@@ -2357,9 +2357,8 @@ DefInit *VarDefInit::instantiate() {
   NewRec->resolveReferences(R);
 
   // Add superclasses.
-  ArrayRef<std::pair<Record *, SMRange>> SCs = Class->getSuperClasses();
-  for (const auto &SCPair : SCs)
-    NewRec->addSuperClass(SCPair.first, SCPair.second);
+  for (const auto &[SC, Loc] : Class->getSuperClasses())
+    NewRec->addSuperClass(SC, Loc);
 
   NewRec->addSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
@@ -2869,7 +2868,7 @@ void Record::setName(Init *NewName) {
 // so we can step through the direct superclasses in reverse order.
 
 bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
@@ -2883,10 +2882,10 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
 
 void Record::getDirectSuperClasses(
     SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   while (!SCs.empty()) {
-    Record *SC = SCs.back().first;
+    const Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
     Classes.push_back(SC);
   }
@@ -2965,11 +2964,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<Record *, SMRange>> SC = R.getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
   if (!SC.empty()) {
     OS << "\t//";
-    for (const auto &SuperPair : SC)
-      OS << " " << SuperPair.first->getNameInitAsString();
+    for (const auto &[SC, _] : SC)
+      OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";
 
