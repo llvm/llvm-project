@@ -196,8 +196,7 @@ int main(int, char**) {
 
   {
     int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    test_non_forward_operator_increment(
-        SizedInputIter(arr), SizedInputIter(arr + 3), SizedInputIter(arr + 10));
+    test_non_forward_operator_increment(SizedInputIter(arr), SizedInputIter(arr + 3), SizedInputIter(arr + 10));
   }
 
   test_properly_handling_missing();
