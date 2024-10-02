@@ -3170,11 +3170,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_lastprivate);
 
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "LASTPRIVATE");
+  const auto &objectList{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckIsVarPartOfAnotherVar(
+      GetContext().clauseSource, objectList, "LASTPRIVATE");
 
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
-  GetSymbolsInObjectList(x.v, currSymbols);
+  GetSymbolsInObjectList(objectList, currSymbols);
   CheckDefinableObjects(currSymbols, GetClauseKindForParserClass(x));
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
@@ -3189,6 +3191,21 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, GetClauseKindForParserClass(x));
+
+  using LastprivateModifier = parser::OmpLastprivateClause::LastprivateModifier;
+  const auto &maybeMod{std::get<std::optional<LastprivateModifier>>(x.v.t)};
+  if (maybeMod) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    unsigned allowedInVersion = 50;
+    if (version < allowedInVersion) {
+      std::string thisVersion{
+          std::to_string(version / 10) + "." + std::to_string(version % 10)};
+      context_.Say(GetContext().clauseSource,
+          "LASTPRIVATE clause with CONDITIONAL modifier is not "
+          "allowed in OpenMP v%s, try -fopenmp-version=%d"_err_en_US,
+          thisVersion, allowedInVersion);
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
@@ -3608,18 +3625,17 @@ const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
     const parser::OmpClause &clause) {
 
   // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses =
-      std::tuple<parser::OmpClause::Copyprivate, parser::OmpClause::Copyin,
-          parser::OmpClause::Firstprivate, parser::OmpClause::From,
-          parser::OmpClause::Lastprivate, parser::OmpClause::Link,
-          parser::OmpClause::Private, parser::OmpClause::Shared,
-          parser::OmpClause::To, parser::OmpClause::Enter,
-          parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
+  using MemberObjectListClauses = std::tuple<parser::OmpClause::Copyprivate,
+      parser::OmpClause::Copyin, parser::OmpClause::Firstprivate,
+      parser::OmpClause::From, parser::OmpClause::Link,
+      parser::OmpClause::Private, parser::OmpClause::Shared,
+      parser::OmpClause::To, parser::OmpClause::Enter,
+      parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
 
   // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses =
-      std::tuple<parser::OmpClause::Allocate, parser::OmpClause::Map,
-          parser::OmpClause::Reduction, parser::OmpClause::Aligned>;
+  using TupleObjectListClauses = std::tuple<parser::OmpClause::Allocate,
+      parser::OmpClause::Lastprivate, parser::OmpClause::Map,
+      parser::OmpClause::Reduction, parser::OmpClause::Aligned>;
 
   // TODO:: Generate the tuples using TableGen.
   // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.
