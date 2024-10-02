@@ -2123,13 +2123,13 @@ bool MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
             continue;
           }
 
-          if (!VMEMLookup.contains(MI)) {
+          auto [It, Inserted] = VMEMLookup.try_emplace(MI, *I);
+          if (Inserted) {
             MissedAny = true;
-            VMEMLookup[MI] = *I;
             continue;
           }
 
-          Cand = VMEMLookup[MI];
+          Cand = It->second;
           if (llvm::is_contained(Counted, Cand)) {
             MissedAny = true;
             break;
