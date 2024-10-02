@@ -59,7 +59,7 @@ llvm::Error decodeBase64(llvm::StringRef Input, std::vector<char> &Output);
 // General-purpose Base64 encoder/decoder class wrapper.
 class Base64 {
 public:
-  using byte = uint8_t;
+  using byte = std::byte;
 
   // Get the size of the encoded byte sequence of given size.
   static size_t getEncodedSize(size_t SrcSize);

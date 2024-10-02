@@ -40,6 +40,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include <variant>
 
 namespace llvm {
 namespace util {
@@ -52,7 +53,7 @@ public:
   // value data in some cases for later reading at runtime, so size_t is not
   // suitable as its size varies.
   using SizeTy = uint64_t;
-  using byte = uint8_t;
+  using byte = std::byte;
 
   // Defines supported property types
   enum Type { first = 0, NONE = first, UINT32, BYTE_ARRAY, last = BYTE_ARRAY };
@@ -68,8 +69,10 @@ public:
   }
 
   ~PropertyValue() {
-    if ((getType() == BYTE_ARRAY) && Val.ByteArrayVal)
-      delete[] Val.ByteArrayVal;
+    if (std::holds_alternative<byte *>(Val)) {
+      byte *ByteArrayVal = std::get<byte *>(Val);
+      delete ByteArrayVal;
+    }
   }
 
   PropertyValue() = default;
@@ -95,7 +98,7 @@ public:
   uint32_t asUint32() const {
     if (Ty != UINT32)
       llvm_unreachable("must be UINT32 value");
-    return Val.UInt32Val;
+    return std::get<uint32_t>(Val);
   }
 
   // Get raw data size in bits.
@@ -104,8 +107,10 @@ public:
       llvm_unreachable("must be BYTE_ARRAY value");
     SizeTy Res = 0;
 
-    for (size_t I = 0; I < sizeof(SizeTy); ++I)
-      Res |= (SizeTy)Val.ByteArrayVal[I] << (8 * I);
+    for (size_t I = 0; I < sizeof(SizeTy); ++I) {
+      auto ByteArrayVal = std::get<byte *>(Val);
+      Res |= (SizeTy)ByteArrayVal[I] << (8 * I);
+    }
     return Res;
   }
 
@@ -126,14 +131,17 @@ public:
   const byte *asRawByteArray() const {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("must be BYTE_ARRAY value");
-    return Val.ByteArrayVal;
+    auto &ByteArrayVal = std::get<byte *>(Val);
+    return ByteArrayVal;
   }
 
   // Get byte array data excluding the leading bytes encoding the size.
   const byte *asByteArray() const {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("must be BYTE_ARRAY value");
-    return Val.ByteArrayVal + sizeof(SizeTy);
+
+    auto ByteArrayVal = std::get<byte *>(Val);
+    return ByteArrayVal + sizeof(SizeTy);
   }
 
   bool isValid() const { return getType() != NONE; }
@@ -150,7 +158,7 @@ public:
   SizeTy size() const {
     switch (Ty) {
     case UINT32:
-      return sizeof(Val.UInt32Val);
+      return sizeof(std::get<uint32_t>(Val));
     case BYTE_ARRAY:
       return getRawByteArraySize();
     default:
@@ -163,12 +171,7 @@ private:
   void copy(const PropertyValue &P);
 
   Type Ty = NONE;
-  // TODO: replace this union with std::variant when uplifting to C++17
-  union {
-    uint32_t UInt32Val;
-    // Holds first sizeof(size_t) bytes of size followed by actual raw data.
-    byte *ByteArrayVal;
-  } Val;
+  std::variant<uint32_t, byte *> Val;
 };
 
 /// Structure for specialization of DenseMap in PropertySetRegistry.

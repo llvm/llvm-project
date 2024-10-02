@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-using byte = Base64::byte;
+using byte = std::byte;
 
 ::llvm::Error makeError(const Twine &Msg) {
   return createStringError(std::error_code{}, Msg);
@@ -135,11 +135,12 @@ namespace llvm {
 namespace util {
 
 template <> uint32_t &PropertyValue::getValueRef<uint32_t>() {
-  return Val.UInt32Val;
+  return std::get<uint32_t>(Val);
 }
 
 template <> byte *&PropertyValue::getValueRef<byte *>() {
-  return Val.ByteArrayVal;
+  auto &ByteArrayVal = std::get<byte *>(Val);
+  return ByteArrayVal;
 }
 
 template <> PropertyValue::Type PropertyValue::getTypeTag<uint32_t>() {
@@ -157,15 +158,17 @@ PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize) {
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
 
   // Allocate space for size and data.
-  Val.ByteArrayVal = new byte[SizeFieldSize + DataSize];
+  Val = new byte[SizeFieldSize + DataSize];
 
   // Write the size into first bytes.
   for (size_t I = 0; I < SizeFieldSize; ++I) {
-    Val.ByteArrayVal[I] = (byte)DataBitSize;
+    auto ByteArrayVal = std::get<byte *>(Val);
+    ByteArrayVal[I] = (byte)DataBitSize;
     DataBitSize >>= ByteSizeInBits;
   }
   // Append data.
-  std::memcpy(Val.ByteArrayVal + SizeFieldSize, Data, DataSize);
+  auto ByteArrayVal = std::get<byte *>(Val);
+  std::memcpy(ByteArrayVal + SizeFieldSize, Data, DataSize);
 }
 
 PropertyValue::PropertyValue(const PropertyValue &P) { *this = P; }
@@ -175,8 +178,10 @@ PropertyValue::PropertyValue(PropertyValue &&P) { *this = std::move(P); }
 PropertyValue &PropertyValue::operator=(PropertyValue &&P) {
   copy(P);
 
-  if (P.getType() == BYTE_ARRAY)
-    P.Val.ByteArrayVal = nullptr;
+  if (P.getType() == BYTE_ARRAY) {
+    auto &ByteArrayVal = std::get<byte *>(P.Val);
+    ByteArrayVal = nullptr;
+  }
   P.Ty = NONE;
   return *this;
 }
