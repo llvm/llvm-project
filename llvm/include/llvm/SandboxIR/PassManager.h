@@ -73,8 +73,7 @@ public:
   bool runOnFunction(Function &F) final;
 };
 
-class RegionPassManager final
-    : public PassManager<RegionPass, RegionPass> {
+class RegionPassManager final : public PassManager<RegionPass, RegionPass> {
 public:
   RegionPassManager(StringRef Name) : PassManager(Name) {}
   bool runOnRegion(Region &R) final;
