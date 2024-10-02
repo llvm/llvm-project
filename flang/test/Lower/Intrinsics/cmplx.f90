@@ -27,9 +27,9 @@ subroutine cmplx_test_scalar_ptr(x, y)
 ! CHECK:    %[[VAL_17:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:    fir.result %[[VAL_17]] : f32
 ! CHECK:  }
-! CHECK:  %[[VAL_18:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_19:.*]] = fir.insert_value %[[VAL_18]], %[[VAL_7]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   fir.insert_value %[[VAL_19]], %[[VAL_21:.*]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_18:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_19:.*]] = fir.insert_value %[[VAL_18]], %[[VAL_7]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:   fir.insert_value %[[VAL_19]], %[[VAL_21:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 end subroutine
 
 ! CHECK-LABEL: func @_QPcmplx_test_scalar_optional(
@@ -48,9 +48,9 @@ subroutine cmplx_test_scalar_optional(x, y)
 ! CHECK:    %[[VAL_11:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:    fir.result %[[VAL_11]] : f32
 ! CHECK:  }
-! CHECK:  %[[VAL_12:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_13:.*]] = fir.insert_value %[[VAL_12]], %[[VAL_7]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  fir.insert_value %[[VAL_13]], %[[VAL_15:.*]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_12:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_13:.*]] = fir.insert_value %[[VAL_12]], %[[VAL_7]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  fir.insert_value %[[VAL_13]], %[[VAL_15:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 end subroutine
 
 ! CHECK-LABEL: func @_QPcmplx_test_scalar_alloc_optional(
@@ -76,9 +76,9 @@ subroutine cmplx_test_scalar_alloc_optional(x, y)
 ! CHECK:    fir.result %[[VAL_17]] : i64
 ! CHECK:  }
 ! CHECK:  %[[VAL_18:.*]] = fir.convert %[[VAL_19:.*]] : (i64) -> f32
-! CHECK:  %[[VAL_20:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_7]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  fir.insert_value %[[VAL_21]], %[[VAL_18]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_20:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_7]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  fir.insert_value %[[VAL_21]], %[[VAL_18]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 end subroutine
 
 ! CHECK-LABEL: func @_QPcmplx_test_pointer_result(
@@ -108,9 +108,9 @@ subroutine cmplx_test_pointer_result(x, y)
 ! CHECK:    %[[VAL_19:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:    fir.result %[[VAL_19]] : f32
 ! CHECK:  }
-! CHECK:  %[[VAL_20:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_8]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  fir.insert_value %[[VAL_21]], %[[VAL_23:.*]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:  %[[VAL_20:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_8]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  fir.insert_value %[[VAL_21]], %[[VAL_23:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 end subroutine
 
 ! CHECK-LABEL: func @_QPcmplx_array(
@@ -132,13 +132,13 @@ subroutine cmplx_array(x, y)
 ! CHECK:  %[[VAL_14:.*]] = fir.embox %[[VAL_11]](%[[VAL_13]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_15:.*]] = arith.select %[[VAL_10]], %[[VAL_1]], %[[VAL_14]] : !fir.box<!fir.array<?xf32>>
 ! CHECK:  %[[VAL_16:.*]] = fir.array_load %[[VAL_15]] {fir.optional} : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
-! CHECK:  %[[VAL_17:.*]] = fir.allocmem !fir.array<?x!fir.complex<4>>, %[[VAL_8]]#1 {uniq_name = ".array.expr"}
+! CHECK:  %[[VAL_17:.*]] = fir.allocmem !fir.array<?xcomplex<f32>>, %[[VAL_8]]#1 {uniq_name = ".array.expr"}
 ! CHECK:  %[[VAL_18:.*]] = fir.shape %[[VAL_8]]#1 : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_19:.*]] = fir.array_load %[[VAL_17]](%[[VAL_18]]) : (!fir.heap<!fir.array<?x!fir.complex<4>>>, !fir.shape<1>) -> !fir.array<?x!fir.complex<4>>
+! CHECK:  %[[VAL_19:.*]] = fir.array_load %[[VAL_17]](%[[VAL_18]]) : (!fir.heap<!fir.array<?xcomplex<f32>>>, !fir.shape<1>) -> !fir.array<?xcomplex<f32>>
 ! CHECK:  %[[VAL_20:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_21:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_22:.*]] = arith.subi %[[VAL_8]]#1, %[[VAL_20]] : index
-! CHECK:  %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_19]]) -> (!fir.array<?x!fir.complex<4>>) {
+! CHECK:  %[[VAL_23:.*]] = fir.do_loop %[[VAL_24:.*]] = %[[VAL_21]] to %[[VAL_22]] step %[[VAL_20]] unordered iter_args(%[[VAL_25:.*]] = %[[VAL_19]]) -> (!fir.array<?xcomplex<f32>>) {
   ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %[[VAL_9]], %[[VAL_24]] : (!fir.array<?xf32>, index) -> f32
   ! CHECK:  %[[VAL_27:.*]] = fir.if %[[VAL_10]] -> (f32) {
     ! CHECK:  %[[VAL_28:.*]] = fir.array_fetch %[[VAL_16]], %[[VAL_24]] : (!fir.array<?xf32>, index) -> f32
@@ -147,11 +147,11 @@ subroutine cmplx_array(x, y)
     ! CHECK:  %[[VAL_29:.*]] = arith.constant 0.000000e+00 : f32
     ! CHECK:  fir.result %[[VAL_29]] : f32
   ! CHECK:  }
-  ! CHECK:  %[[VAL_30:.*]] = fir.undefined !fir.complex<4>
-  ! CHECK:  %[[VAL_31:.*]] = fir.insert_value %[[VAL_30]], %[[VAL_26]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  ! CHECK:  %[[VAL_32:.*]] = fir.insert_value %[[VAL_31]], %[[VAL_33:.*]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  ! CHECK:  %[[VAL_34:.*]] = fir.array_update %[[VAL_25]], %[[VAL_32]], %[[VAL_24]] : (!fir.array<?x!fir.complex<4>>, !fir.complex<4>, index) -> !fir.array<?x!fir.complex<4>>
-  ! CHECK:  fir.result %[[VAL_34]] : !fir.array<?x!fir.complex<4>>
+  ! CHECK:  %[[VAL_30:.*]] = fir.undefined complex<f32>
+  ! CHECK:  %[[VAL_31:.*]] = fir.insert_value %[[VAL_30]], %[[VAL_26]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+  ! CHECK:  %[[VAL_32:.*]] = fir.insert_value %[[VAL_31]], %[[VAL_33:.*]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+  ! CHECK:  %[[VAL_34:.*]] = fir.array_update %[[VAL_25]], %[[VAL_32]], %[[VAL_24]] : (!fir.array<?xcomplex<f32>>, complex<f32>, index) -> !fir.array<?xcomplex<f32>>
+  ! CHECK:  fir.result %[[VAL_34]] : !fir.array<?xcomplex<f32>>
 ! CHECK:  }
 ! CHECK:  fir.array_merge_store
 end subroutine
