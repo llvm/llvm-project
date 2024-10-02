@@ -155,11 +155,6 @@ static cl::opt<bool>
                       cl::desc("print profile quality/bias analysis"),
                       cl::cat(BoltCategory));
 
-static cl::opt<bool> PrintContinuityStats(
-    "print-continuity-stats",
-    cl::desc("print profile function CFG continuity stats"),
-    cl::cat(BoltCategory));
-
 static cl::opt<bool>
     PrintRegReAssign("print-regreassign",
                      cl::desc("print functions after regreassign pass"),
@@ -379,8 +374,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
-  if (opts::PrintContinuityStats)
-    Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
+  Manager.registerPass(std::make_unique<PrintContinuityStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 

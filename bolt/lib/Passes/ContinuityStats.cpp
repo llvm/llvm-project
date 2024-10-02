@@ -1,5 +1,4 @@
-//===- bolt/Passes/ContinuityStats.cpp - function cfg continuity analysis ---*-
-// C++ -*-===//
+//===- bolt/Passes/ContinuityStats.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Conduct function CFG continuity analysis.
+// This file implements the continuity stats calculation pass.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,29 +26,11 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned>
-    NumTopFunctions("num-top-functions",
-                    cl::desc("number of hottest functions to print aggregated "
-                             "CFG discontinuity stats of."),
-                    cl::init(1000), cl::ZeroOrMore, cl::Hidden,
-                    cl::cat(BoltOptCategory));
-cl::opt<bool>
-    PrintBucketedStats("print-bucketed-stats",
-                       cl::desc("print CFG discontinuity stats for the top "
-                                "functions divided into buckets "
-                                "based on their execution counts."),
-                       cl::Hidden, cl::cat(BoltCategory));
-cl::opt<unsigned>
-    NumFunctionsPerBucket("num-functions-per-bucket",
-                          cl::desc("maximum number of functions per bucket."),
-                          cl::init(500), cl::ZeroOrMore, cl::Hidden,
-                          cl::cat(BoltOptCategory));
-cl::opt<unsigned>
-    MinNumFunctions("min-num-functions",
-                    cl::desc("minimum number of hot functions in the binary to "
-                             "trigger profile CFG continuity check."),
-                    cl::init(5), cl::ZeroOrMore, cl::Hidden,
-                    cl::cat(BoltOptCategory));
+cl::opt<unsigned> NumFunctionsForContinuityCheck(
+    "num-functions-for-continuity-check",
+    cl::desc("number of hottest functions to print aggregated "
+             "CFG discontinuity stats of."),
+    cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -159,8 +140,7 @@ void printCFGContinuityStats(raw_ostream &OS,
     size_t SumUnreachableBBEC = SumAllBBEC - SumReachableBBEC;
     double FractionECUnreachable = (double)SumUnreachableBBEC / SumAllBBEC;
 
-    if (opts::Verbosity >= 2 && FractionECUnreachable > 0.1 &&
-        SumUnreachableBBEC > 50) {
+    if (opts::Verbosity >= 2 && FractionECUnreachable >= 0.05) {
       OS << "Non-trivial CFG discontinuity observed in function "
          << Function->getPrintName() << "\n";
       LLVM_DEBUG(Function->dump());
@@ -171,15 +151,17 @@ void printCFGContinuityStats(raw_ostream &OS,
     FractionECUnreachables.push_back(FractionECUnreachable);
   }
 
+  if (FractionECUnreachables.empty())
+    return;
+
+  size_t NumConsideredFunctions =
+      std::distance(Functions.begin(), Functions.end());
   if (!Verbose) {
-    if (FractionECUnreachables.empty()) {
-      OS << "no functions have more than 1 basic block and hence no CFG "
-            "discontinuity.\n";
-      return;
-    }
     std::sort(FractionECUnreachables.begin(), FractionECUnreachables.end());
     int Rank = int(FractionECUnreachables.size() * 0.95);
-    OS << format("the TOP 5%% function CFG discontinuity is %.2lf%%",
+    OS << format("BOLT-INFO: among the hottest %zu functions ",
+                 NumConsideredFunctions)
+       << format("the top 5%% function CFG discontinuity is %.2lf%%",
                  FractionECUnreachables[Rank] * 100)
        << "\n";
     return;
@@ -189,27 +171,23 @@ void printCFGContinuityStats(raw_ostream &OS,
                "least 2 basic blocks\n",
                SumECUnreachables.size(),
                100.0 * (double)SumECUnreachables.size() /
-                   (std::distance(Functions.begin(), Functions.end())));
+                   NumConsideredFunctions);
 
-  if (!NumUnreachables.empty()) {
-    OS << "- Distribution of NUM(unreachable POS BBs) among all focal "
-          "functions\n";
-    printDistribution(OS, NumUnreachables);
-  }
-  if (!SumECUnreachables.empty()) {
-    OS << "- Distribution of SUM(unreachable POS BBs) among all focal "
-          "functions\n";
-    printDistribution(OS, SumECUnreachables);
-  }
-  if (!FractionECUnreachables.empty()) {
-    OS << "- Distribution of [(SUM(unreachable POS BBs) / SUM(all "
-          "POS BBs))] among all focal functions\n";
-    printDistribution(OS, FractionECUnreachables, /*Fraction=*/true);
-  }
+  OS << "- Distribution of NUM(unreachable POS BBs) among all focal "
+        "functions\n";
+  printDistribution(OS, NumUnreachables);
+
+  OS << "- Distribution of SUM(unreachable POS BBs) among all focal "
+        "functions\n";
+  printDistribution(OS, SumECUnreachables);
+
+  OS << "- Distribution of [(SUM(unreachable POS BBs) / SUM(all "
+        "POS BBs))] among all focal functions\n";
+  printDistribution(OS, FractionECUnreachables, /*Fraction=*/true);
 }
 
 void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
-              size_t NumFunctionsPerBucket, size_t NumTopFunctions) {
+              size_t NumTopFunctions) {
   // Sort the list of functions by execution counts (reverse).
   llvm::sort(ValidFunctions,
              [&](const BinaryFunction *A, const BinaryFunction *B) {
@@ -217,25 +195,17 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
              });
 
   size_t RealNumTopFunctions = std::min(NumTopFunctions, ValidFunctions.size());
-  if (RealNumTopFunctions <= opts::MinNumFunctions)
-    return;
-  BC.outs() << format("BOLT-INFO: among the hottest %zu functions ",
-                      RealNumTopFunctions);
+
   iterator_range<function_iterator> Functions(
       ValidFunctions.begin(), ValidFunctions.begin() + RealNumTopFunctions);
   printCFGContinuityStats(BC.outs(), Functions, /*Verbose=*/false);
 
   // Print more detailed bucketed stats if requested.
-  if (opts::PrintBucketedStats) {
-    size_t PerBucketSize =
-        std::min(NumFunctionsPerBucket, ValidFunctions.size());
-    if (PerBucketSize == 0)
-      return;
-    size_t NumBuckets = RealNumTopFunctions / PerBucketSize +
-                        (RealNumTopFunctions % PerBucketSize != 0);
+  if (opts::Verbosity >= 1 && RealNumTopFunctions >= 5) {
+    size_t PerBucketSize = RealNumTopFunctions / 5;
     BC.outs() << format(
-        "Detailed stats for %zu buckets, each with at most %zu functions:\n",
-        NumBuckets, PerBucketSize);
+        "Detailed stats for 5 buckets, each with  %zu functions:\n",
+        PerBucketSize);
     BC.outs() << "For each considered function, identify positive "
                  "execution-count basic blocks\n"
               << "(abbr. POS BBs) that are *unreachable* from the function "
@@ -244,10 +214,9 @@ void printAll(BinaryContext &BC, FunctionListType &ValidFunctions,
 
     // For each bucket, print the CFG continuity stats of the functions in the
     // bucket.
-    for (size_t BucketIndex = 0; BucketIndex < NumBuckets; ++BucketIndex) {
+    for (size_t BucketIndex = 0; BucketIndex < 5; ++BucketIndex) {
       const size_t StartIndex = BucketIndex * PerBucketSize;
-      size_t EndIndex = std::min(StartIndex + PerBucketSize, NumTopFunctions);
-      EndIndex = std::min(EndIndex, ValidFunctions.size());
+      size_t EndIndex = StartIndex + PerBucketSize;
       iterator_range<function_iterator> Functions(
           ValidFunctions.begin() + StartIndex,
           ValidFunctions.begin() + EndIndex);
@@ -282,7 +251,9 @@ Error PrintContinuityStats::runOnFunctions(BinaryContext &BC) {
     if (PrintContinuityStats::shouldOptimize(*Function))
       ValidFunctions.push_back(Function);
   }
-  printAll(BC, ValidFunctions, opts::NumFunctionsPerBucket,
-           opts::NumTopFunctions);
+  if (ValidFunctions.empty() || opts::NumFunctionsForContinuityCheck == 0)
+    return Error::success();
+
+  printAll(BC, ValidFunctions, opts::NumFunctionsForContinuityCheck);
   return Error::success();
 }

@@ -1,5 +1,4 @@
 ## Check profile discontinuity reporting
 RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
-RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
-RUN:   --print-continuity-stats --min-num-functions=1 | FileCheck %s
-CHECK: among the hottest 5 functions the TOP 5% function CFG discontinuity is 100.00%
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt | FileCheck %s
+CHECK: among the hottest 5 functions the top 5% function CFG discontinuity is 100.00%

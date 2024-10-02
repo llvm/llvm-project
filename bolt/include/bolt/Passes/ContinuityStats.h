@@ -1,5 +1,4 @@
-//===- bolt/Passes/ContinuityStats.h - function cfg continuity analysis ---*-
-// C++ -*-===//
+//===- bolt/Passes/ContinuityStats.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Conduct function CFG continuity analysis.
+// This pass checks how well the BOLT input profile satisfies the following
+// "CFG continuity" property of a perfect profile:
+//
+//        Each positive-execution-count block in the function’s CFG
+//        should be *reachable* from a positive-execution-count function
+//        entry block through a positive-execution-count path.
+//
+// More specifically, for each of the hottest 1000 functions, the pass
+// calculates the function’s fraction of basic block execution counts
+// that is *unreachable*. It then reports the 95th percentile of the
+// distribution of the 1000 unreachable fractions in a single BOLT-INFO line.
+// The smaller the reported value is, the better the BOLT profile
+// satisfies the CFG continuity property.
+
+// The default value of 1000 above can be changed via the hidden BOLT option
+// `-num-hottest-functions-for-continuity-check=[N]`.
+// If more detailed stats are needed, `-v=1` can be used: the hottest N
+// functions will be grouped into 5 equally-sized buckets, from the hottest
+// to the coldest; for each bucket, various summary statistics of the
+// distribution of the unreachable fractions and the raw unreachable execution
+// counts will be reported.
 //
 //===----------------------------------------------------------------------===//
 
