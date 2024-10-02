@@ -33,11 +33,11 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
-  def : Pat<(type (load GPR:$rs1)),
+  def : Pat<(type (load (XLenVT GPR:$rs1))),
             (load_instr (type (IMPLICIT_DEF)), GPR:$rs1, avl,
                         log2sew, TA_MA)>;
   // Store
-  def : Pat<(store type:$rs2, GPR:$rs1),
+  def : Pat<(store type:$rs2, (XLenVT GPR:$rs1)),
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 

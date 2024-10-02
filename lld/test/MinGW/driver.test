@@ -249,6 +249,9 @@ REQUIRE-DEFINED: -include:_foo -include:_bar -include:_baz -include:_foo2
 RUN: ld.lld -### foo.o -m i386pe -u _foo --undefined _bar -undefined=_baz --undefined=_foo2 -u_foo3 2>&1 | FileCheck -check-prefix=UNDEFINED %s
 UNDEFINED: -includeoptional:_foo -includeoptional:_bar -includeoptional:_baz -includeoptional:_foo2 -includeoptional:_foo3
 
+RUN: ld.lld -### foo.o -m i386pe --undefined-glob="_foo*" 2>&1 | FileCheck -check-prefix=UNDEFINED-GLOB %s
+UNDEFINED-GLOB: -includeglob:_foo*
+
 RUN: ld.lld -### -m i386pep foo.o -Llibpath 2>&1 | FileCheck -check-prefix LIBPATH %s
 LIBPATH: -libpath:libpath
 

@@ -9,13 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
+#include "hdr/types/wint_t.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
-
-#define __need_wint_t
-#define __need_wchar_t
-#include <stddef.h> // needed for wint_t and wchar_t
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

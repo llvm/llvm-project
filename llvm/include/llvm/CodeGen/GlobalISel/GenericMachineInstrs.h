@@ -800,6 +800,17 @@ public:
   }
 };
 
+/// Represents an extract subvector.
+class GExtractSubvector : public GenericMachineInstr {
+public:
+  Register getSrcVec() const { return getOperand(1).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(2).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_EXTRACT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:

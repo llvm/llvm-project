@@ -32,37 +32,36 @@ define void @pr59074(ptr %0) {
 ; LE32-NEXT:    li 7, 0
 ; LE32-NEXT:    li 8, 12
 ; LE32-NEXT:    xxswapd 0, 0
+; LE32-NEXT:    rlwimi 5, 6, 0, 30, 28
 ; LE32-NEXT:    addi 4, 4, -12
-; LE32-NEXT:    rlwinm 9, 4, 29, 28, 31
-; LE32-NEXT:    stxvd2x 0, 6, 5
+; LE32-NEXT:    rlwinm 9, 4, 29, 28, 29
+; LE32-NEXT:    stxvd2x 0, 0, 5
 ; LE32-NEXT:    stw 7, 44(1)
 ; LE32-NEXT:    stw 7, 40(1)
 ; LE32-NEXT:    stw 7, 36(1)
 ; LE32-NEXT:    stw 8, 16(1)
+; LE32-NEXT:    clrlwi 4, 4, 27
 ; LE32-NEXT:    lwzux 5, 9, 6
-; LE32-NEXT:    li 6, 7
-; LE32-NEXT:    lwz 7, 8(9)
-; LE32-NEXT:    nand 6, 4, 6
-; LE32-NEXT:    lwz 8, 4(9)
-; LE32-NEXT:    clrlwi 4, 4, 29
-; LE32-NEXT:    lwz 9, 12(9)
-; LE32-NEXT:    clrlwi 6, 6, 27
+; LE32-NEXT:    lwz 6, 8(9)
+; LE32-NEXT:    lwz 7, 4(9)
+; LE32-NEXT:    lwz 8, 12(9)
+; LE32-NEXT:    xori 9, 4, 31
 ; LE32-NEXT:    subfic 11, 4, 32
 ; LE32-NEXT:    srw 5, 5, 4
-; LE32-NEXT:    slwi 10, 7, 1
-; LE32-NEXT:    srw 7, 7, 4
-; LE32-NEXT:    slw 6, 10, 6
-; LE32-NEXT:    srw 10, 8, 4
-; LE32-NEXT:    slw 8, 8, 11
-; LE32-NEXT:    slw 11, 9, 11
-; LE32-NEXT:    srw 4, 9, 4
-; LE32-NEXT:    or 5, 8, 5
-; LE32-NEXT:    or 7, 11, 7
-; LE32-NEXT:    or 6, 10, 6
+; LE32-NEXT:    slwi 10, 6, 1
+; LE32-NEXT:    srw 6, 6, 4
+; LE32-NEXT:    slw 9, 10, 9
+; LE32-NEXT:    srw 10, 7, 4
+; LE32-NEXT:    slw 7, 7, 11
+; LE32-NEXT:    slw 11, 8, 11
+; LE32-NEXT:    srw 4, 8, 4
+; LE32-NEXT:    or 5, 7, 5
+; LE32-NEXT:    or 6, 11, 6
+; LE32-NEXT:    or 7, 10, 9
 ; LE32-NEXT:    stw 4, 12(3)
-; LE32-NEXT:    stw 7, 8(3)
+; LE32-NEXT:    stw 6, 8(3)
 ; LE32-NEXT:    stw 5, 0(3)
-; LE32-NEXT:    stw 6, 4(3)
+; LE32-NEXT:    stw 7, 4(3)
 ; LE32-NEXT:    addi 1, 1, 80
 ; LE32-NEXT:    blr
 ;
@@ -89,37 +88,33 @@ define void @pr59074(ptr %0) {
 ; BE32-NEXT:    li 6, 12
 ; BE32-NEXT:    li 7, 0
 ; BE32-NEXT:    addi 8, 1, -48
-; BE32-NEXT:    li 10, 7
 ; BE32-NEXT:    stxvw4x 0, 0, 5
-; BE32-NEXT:    addi 4, 4, -12
 ; BE32-NEXT:    stw 6, -36(1)
+; BE32-NEXT:    addi 4, 4, -12
 ; BE32-NEXT:    stw 7, -40(1)
 ; BE32-NEXT:    stw 7, -44(1)
-; BE32-NEXT:    rlwinm 9, 4, 29, 28, 31
 ; BE32-NEXT:    stw 7, -48(1)
+; BE32-NEXT:    rlwinm 9, 4, 29, 28, 29
+; BE32-NEXT:    clrlwi 4, 4, 27
 ; BE32-NEXT:    sub 5, 8, 9
-; BE32-NEXT:    nand 6, 4, 10
-; BE32-NEXT:    clrlwi 4, 4, 29
-; BE32-NEXT:    clrlwi 6, 6, 27
-; BE32-NEXT:    lwz 7, 4(5)
-; BE32-NEXT:    lwz 8, 8(5)
-; BE32-NEXT:    lwz 9, 0(5)
-; BE32-NEXT:    lwz 5, 12(5)
-; BE32-NEXT:    slwi 10, 7, 1
-; BE32-NEXT:    srw 11, 8, 4
-; BE32-NEXT:    srw 7, 7, 4
-; BE32-NEXT:    srw 5, 5, 4
-; BE32-NEXT:    slw 6, 10, 6
+; BE32-NEXT:    lwz 6, 4(5)
+; BE32-NEXT:    lwz 7, 0(5)
+; BE32-NEXT:    lwz 8, 12(5)
+; BE32-NEXT:    lwz 5, 8(5)
 ; BE32-NEXT:    subfic 10, 4, 32
-; BE32-NEXT:    srw 4, 9, 4
-; BE32-NEXT:    slw 8, 8, 10
-; BE32-NEXT:    slw 10, 9, 10
-; BE32-NEXT:    or 6, 11, 6
-; BE32-NEXT:    or 7, 10, 7
-; BE32-NEXT:    or 5, 8, 5
+; BE32-NEXT:    srw 9, 6, 4
+; BE32-NEXT:    slw 11, 7, 10
+; BE32-NEXT:    srw 8, 8, 4
+; BE32-NEXT:    slw 6, 6, 10
+; BE32-NEXT:    slw 10, 5, 10
+; BE32-NEXT:    srw 5, 5, 4
+; BE32-NEXT:    srw 4, 7, 4
+; BE32-NEXT:    or 7, 11, 9
+; BE32-NEXT:    or 8, 10, 8
+; BE32-NEXT:    or 5, 6, 5
 ; BE32-NEXT:    stw 4, 0(3)
-; BE32-NEXT:    stw 6, 8(3)
-; BE32-NEXT:    stw 5, 12(3)
+; BE32-NEXT:    stw 5, 8(3)
+; BE32-NEXT:    stw 8, 12(3)
 ; BE32-NEXT:    stw 7, 4(3)
 ; BE32-NEXT:    blr
 entry:

@@ -395,6 +395,9 @@ typedef enum {
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
                                the input value when decremented below zero */
+  LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
+                                 overflow */
+  LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -2792,7 +2795,7 @@ void LLVMSetPersonalityFn(LLVMValueRef Fn, LLVMValueRef PersonalityFn);
 /**
  * Obtain the intrinsic ID number which matches the given function name.
  *
- * @see llvm::Function::lookupIntrinsicID()
+ * @see llvm::Intrinsic::lookupIntrinsicID()
  */
 unsigned LLVMLookupIntrinsicID(const char *Name, size_t NameLen);
 
@@ -3683,6 +3686,41 @@ LLVMValueRef LLVMInstructionClone(LLVMValueRef Inst);
 LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst);
 
 /**
+ * Obtain the first debug record attached to an instruction.
+ *
+ * Use LLVMGetNextDbgRecord() and LLVMGetPreviousDbgRecord() to traverse the
+ * sequence of DbgRecords.
+ *
+ * Return the first DbgRecord attached to Inst or NULL if there are none.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst);
+
+/**
+ * Obtain the last debug record attached to an instruction.
+ *
+ * Return the last DbgRecord attached to Inst or NULL if there are none.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst);
+
+/**
+ * Obtain the next DbgRecord in the sequence or NULL if there are no more.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef DbgRecord);
+
+/**
+ * Obtain the previous DbgRecord in the sequence or NULL if there are no more.
+ *
+ * @see llvm::Instruction::getDbgRecordRange()
+ */
+LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
+
+/**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
  *
  * Functions in this group apply to instructions that refer to call
@@ -4488,6 +4526,9 @@ LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  const char *Name);
 LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
                                    const char *Name);
+/**
+ * Deprecated: Use LLVMBuildGlobalString instead, which has identical behavior.
+ */
 LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B, const char *Str,
                                       const char *Name);
 LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);

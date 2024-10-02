@@ -38,6 +38,8 @@ try:
 except ImportError:
     if not tags.has("builder-man"):
         raise
+else:
+    myst_enable_extensions = ["substitution"]
 
 # Automatic anchors for markdown titles
 myst_heading_anchors = 6

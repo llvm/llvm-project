@@ -60,6 +60,7 @@
 // CHECK-NEXT: ConsumableSetOnRead (SubjectMatchRule_record)
 // CHECK-NEXT: Convergent (SubjectMatchRule_function)
 // CHECK-NEXT: CoroAwaitElidable (SubjectMatchRule_record)
+// CHECK-NEXT: CoroAwaitElidableArgument (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: CoroDisableLifetimeBound (SubjectMatchRule_function)
 // CHECK-NEXT: CoroLifetimeBound (SubjectMatchRule_record)
 // CHECK-NEXT: CoroOnlyDestroyWhenComplete (SubjectMatchRule_record)

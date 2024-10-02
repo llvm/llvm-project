@@ -29,5 +29,6 @@ if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 
 # Add substitutions for bootstrapping the test suite configuration
-config.substitutions.append(('%{include}', '@LIBUNWIND_SOURCE_DIR@/include'))
-config.substitutions.append(('%{lib}', '@LIBUNWIND_LIBRARY_DIR@'))
+config.substitutions.append(('%{install-prefix}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@'))
+config.substitutions.append(('%{include}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/include'))
+config.substitutions.append(('%{lib}', '@LIBUNWIND_TESTING_INSTALL_PREFIX@/lib'))

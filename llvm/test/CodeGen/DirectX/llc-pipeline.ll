@@ -5,8 +5,10 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: ModulePass Manager
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
+; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Scalarize vector operations

@@ -52,7 +52,7 @@ define i64 @load_unscaled_zext_i16_to_i64(i64 %a) {
 define i64 @load_unscaled_zext_i32_to_i64(i64 %a) {
 ; CHECK-LABEL: load_unscaled_zext_i32_to_i64
 ; CHECK:       ldur w[[REG:[0-9]+]], [x0, #-8]
-; CHECK:       ubfx x0, x[[REG]], #0, #32
+; CHECK:       lsr w0, w[[REG]], #0
   %1 = sub i64 %a, 8
   %2 = inttoptr i64 %1 to ptr addrspace(256)
   %3 = load i32, ptr addrspace(256) %2

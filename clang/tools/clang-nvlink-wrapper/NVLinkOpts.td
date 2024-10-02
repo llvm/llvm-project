@@ -39,7 +39,7 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
-def plugin : Joined<["--", "-"], "plugin">, 
+def plugin : JoinedOrSeparate<["--", "-"], "plugin">,
   Flags<[HelpHidden, WrapperOnlyOption]>;
 
 def arch : Separate<["--", "-"], "arch">,

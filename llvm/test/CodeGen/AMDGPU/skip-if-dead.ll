@@ -1027,8 +1027,8 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ;
 ; GFX10-WAVE32-LABEL: test_kill_divergent_loop:
 ; GFX10-WAVE32:       ; %bb.0: ; %entry
-; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-WAVE32-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_xor_b32 s1, exec_lo, s1
 ; GFX10-WAVE32-NEXT:    s_cbranch_execz .LBB10_3

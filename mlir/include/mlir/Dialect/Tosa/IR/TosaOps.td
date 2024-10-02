@@ -881,7 +881,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor: $input,
+    Tosa_Tensor: $input1,
     Tosa_Tensor1D: $table
   );
 
@@ -890,7 +890,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
   );
 
   let assemblyFormat = [{
-    $input `,` $table attr-dict `:` `(` type($input) `,` type($table) `)` `->` type($output)
+    $input1 `,` $table attr-dict `:` `(` type($input1) `,` type($table) `)` `->` type($output)
   }];
 
   let hasVerifier = 1;
@@ -1640,7 +1640,7 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_Tensor:$input1,
     I32Attr:$axis
   );
 
@@ -1667,7 +1667,7 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_Tensor:$input1,
     DenseI64ArrayAttr:$start,
     DenseI64ArrayAttr:$size
   );

@@ -9,7 +9,7 @@
 
 #include "complex-math.h"
 
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 
 CFloat128Type RTDEF(CAbsF128)(CFloat128ComplexType x) { return CAbs(x); }
 CFloat128ComplexType RTDEF(CAcosF128)(CFloat128ComplexType x) {
@@ -52,4 +52,4 @@ CFloat128ComplexType RTDEF(CTanhF128)(CFloat128ComplexType x) {
   return CTanh(x);
 }
 
-#endif // LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#endif // HAS_LDBL128 || HAS_FLOAT128

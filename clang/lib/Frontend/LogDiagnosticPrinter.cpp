@@ -129,8 +129,7 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   DE.DiagnosticLevel = Level;
 
   DE.WarningOption =
-      std::string(Info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
-          DE.DiagnosticID));
+      std::string(DiagnosticIDs::getWarningOptionForDiag(DE.DiagnosticID));
 
   // Format the message.
   SmallString<100> MessageStr;
@@ -161,3 +160,4 @@ void LogDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
   // Record the diagnostic entry.
   Entries.push_back(DE);
 }
+

@@ -297,9 +297,8 @@ int main(int argc, char **argv) {
           Function *CF = CB->getCalledFunction();
           if (!CF)
             continue;
-          if (CF->isDeclaration() || GVs.count(CF))
+          if (CF->isDeclaration() || !GVs.insert(CF))
             continue;
-          GVs.insert(CF);
           Workqueue.push_back(CF);
         }
       }

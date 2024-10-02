@@ -751,7 +751,8 @@ PrintIRInstrumentation::~PrintIRInstrumentation() {
 static SmallString<32> getIRFileDisplayName(Any IR) {
   SmallString<32> Result;
   raw_svector_ostream ResultStream(Result);
-  const Module *M = unwrapModule(IR);
+  const Module *M = unwrapModule(IR, /*Force=*/true);
+  assert(M && "should have unwrapped module");
   uint64_t NameHash = xxh3_64bits(M->getName());
   unsigned MaxHashWidth = sizeof(uint64_t) * 2;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);

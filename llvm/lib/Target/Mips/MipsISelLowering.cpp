@@ -124,7 +124,7 @@ unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
 unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
-  if (VT.isPow2VectorType()) {
+  if (VT.isPow2VectorType() && VT.getVectorElementType().isRound()) {
     IntermediateVT = getRegisterTypeForCallingConv(Context, CC, VT);
     RegisterVT = IntermediateVT.getSimpleVT();
     NumIntermediates = getNumRegistersForCallingConv(Context, CC, VT);

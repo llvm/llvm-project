@@ -3,24 +3,10 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define <4 x half> @interleave2_v4f16(<2 x half> %vec0, <2 x half> %vec1) {
-; CHECK-SD-LABEL: interleave2_v4f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: interleave2_v4f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    dup v2.4s, w8
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    xtn v0.4h, v2.4s
-; CHECK-GI-NEXT:    mov v1.s[0], w8
-; CHECK-GI-NEXT:    mov v2.s[0], w9
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    mov v2.s[1], w8
-; CHECK-GI-NEXT:    zip1 v0.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: interleave2_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
   %retval = call <4 x half> @llvm.vector.interleave2.v4f16(<2 x half> %vec0, <2 x half> %vec1)
   ret <4 x half> %retval
 }

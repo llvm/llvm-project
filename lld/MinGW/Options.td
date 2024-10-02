@@ -139,6 +139,8 @@ defm threads
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
     "No longer include all object files for following archives">;

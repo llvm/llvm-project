@@ -541,12 +541,6 @@ TARGET_BUILTIN(__builtin_altivec_vprtybw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybd, "V2ULLiV2ULLi", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybq, "V1ULLLiV1ULLLi", "", "power9-vector")
 
-// Vector population count built-ins
-TARGET_BUILTIN(__builtin_altivec_vpopcntb, "V16UcV16Uc", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcnth, "V8UsV8Us", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcntw, "V4UiV4Ui", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcntd, "V2ULLiV2ULLi", "", "power8-vector")
-
 // Absolute difference built-ins
 TARGET_BUILTIN(__builtin_altivec_vabsdub, "V16UcV16UcV16Uc", "",
                "power9-vector")

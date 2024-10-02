@@ -167,8 +167,7 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
     StringRef symName = sym->getName();
-    if (!symName.empty() && symName[0] == '_')
-      symName = symName.substr(1);
+    symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
             dwarf->getVariableLoc(symName))

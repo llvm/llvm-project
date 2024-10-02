@@ -343,6 +343,18 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
 
+  case OpenACCClauseKind::Collapse: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -1037,6 +1049,26 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
       ValidVars, Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  // Duplicates here are not really sensible.  We could possible permit
+  // multiples if they all had the same value, but there isn't really a good
+  // reason to do so. Also, this simplifies the suppression of duplicates, in
+  // that we know if we 'find' one after instantiation, that it is the same
+  // clause, which simplifies instantiation/checking/etc.
+  if (checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
+    return nullptr;
+
+  ExprResult LoopCount = SemaRef.CheckCollapseLoopCount(Clause.getLoopCount());
+
+  if (!LoopCount.isUsable())
+    return nullptr;
+
+  return OpenACCCollapseClause::Create(Ctx, Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(), Clause.isForce(),
+                                       LoopCount.get(), Clause.getEndLoc());
+}
+
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -1100,51 +1132,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         << Clause.getClauseKind();
 
   return Result;
-
-  //  switch (Clause.getClauseKind()) {
-  //  case OpenACCClauseKind::PresentOrCopy:
-  //  case OpenACCClauseKind::PCopy:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Copy;
-  //    LLVM_FALLTHROUGH;
-  //  case OpenACCClauseKind::PresentOrCreate:
-  //  case OpenACCClauseKind::PCreate:
-  //    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
-  //        << Clause.getClauseKind() << OpenACCClauseKind::Create;
-  //    LLVM_FALLTHROUGH;
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::DType:
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //  case OpenACCClauseKind::Gang:
-  //  case OpenACCClauseKind::Worker:
-  //  case OpenACCClauseKind::Vector: {
-  //    // OpenACC 3.3 2.9:
-  //    // A 'gang', 'worker', or 'vector' clause may not appear if a 'seq'
-  //    clause
-  //    // appears.
-  //    const auto *Itr =
-  //        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCSeqClause>);
-  //
-  //    if (Itr != ExistingClauses.end()) {
-  //      Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
-  //          << Clause.getClauseKind() << (*Itr)->getClauseKind();
-  //      Diag((*Itr)->getBeginLoc(), diag::note_acc_previous_clause_here);
-  //    }
-  //    // Not yet implemented, so immediately drop to the 'not yet implemented'
-  //    // diagnostic.
-  //    break;
-  //  }
-  //  */
 
 }
 
@@ -1317,6 +1304,9 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
       llvm_unreachable("conversion functions are permitted");
     }
   } IntExprDiagnoser(DK, CK, IntExpr);
+
+  if (!IntExpr)
+    return ExprError();
 
   ExprResult IntExprResult = SemaRef.PerformContextualImplicitConversion(
       Loc, IntExpr, IntExprDiagnoser);
@@ -1626,6 +1616,34 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   return new (Context)
       ArraySectionExpr(Base, LowerBound, Length, ArrayExprTy, VK_LValue,
                        OK_Ordinary, ColonLoc, RBLoc);
+}
+
+ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
+  if (!LoopCount)
+    return ExprError();
+
+  assert((LoopCount->isInstantiationDependent() ||
+          LoopCount->getType()->isIntegerType()) &&
+         "Loop argument non integer?");
+
+  // If this is dependent, there really isn't anything we can check.
+  if (LoopCount->isInstantiationDependent())
+    return ExprResult{LoopCount};
+
+  std::optional<llvm::APSInt> ICE =
+      LoopCount->getIntegerConstantExpr(getASTContext());
+
+  // OpenACC 3.3: 2.9.1
+  // The argument to the collapse clause must be a constant positive integer
+  // expression.
+  if (!ICE || *ICE <= 0) {
+    Diag(LoopCount->getBeginLoc(), diag::err_acc_collapse_loop_count)
+        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+    return ExprError();
+  }
+
+  return ExprResult{
+      ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

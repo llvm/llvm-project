@@ -83,7 +83,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa $x8, 0
   ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -272
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
-  ; CHECK-NEXT:   $x11 = frame-setup ADDI $x0, 52
+  ; CHECK-NEXT:   $x11 = frame-setup ADDI $x0, 51
   ; CHECK-NEXT:   $x10 = frame-setup MUL killed $x10, killed $x11
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
   ; CHECK-NEXT:   $x2 = frame-setup ANDI $x2, -128

@@ -1,0 +1,13 @@
+# Tests that we show the first non-STL frame when
+# a verbose_trap triggers from within the STL.
+
+# UNSUPPORTED: system-windows
+#
+# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap-in-stl-nested.cpp -o %t.out
+# RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK
+
+run
+# CHECK: thread #{{.*}}stop reason = Bounds error: out-of-bounds access
+frame info
+# CHECK: frame #{{.*}}`g() at verbose_trap-in-stl-nested.cpp
+q

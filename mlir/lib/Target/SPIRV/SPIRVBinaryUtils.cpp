@@ -12,6 +12,7 @@
 
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_VERSION_MAJOR
 
 using namespace mlir;
 

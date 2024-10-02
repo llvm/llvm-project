@@ -2519,7 +2519,7 @@ void CheckHelper::CheckProcBinding(
                 ? "A NOPASS type-bound procedure may not override a passed-argument procedure"_err_en_US
                 : "A passed-argument type-bound procedure may not override a NOPASS procedure"_err_en_US);
       } else {
-        const auto *bindingChars{Characterize(binding.symbol())};
+        const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
           if (isNopass) {

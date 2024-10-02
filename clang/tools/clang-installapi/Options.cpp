@@ -554,7 +554,7 @@ bool Options::processFrontendOptions(InputArgList &Args) {
 bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
                            OptSpecifier ID) {
   for (const StringRef Path : Args.getAllArgValues(ID)) {
-    if ((bool)FM->getDirectory(Path, /*CacheFailure=*/false)) {
+    if ((bool)FM->getOptionalDirectoryRef(Path, /*CacheFailure=*/false)) {
       auto InputHeadersOrErr = enumerateFiles(*FM, Path);
       if (!InputHeadersOrErr) {
         Diags->Report(diag::err_cannot_open_file)

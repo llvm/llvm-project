@@ -299,7 +299,7 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
     }
 
     tensor::PadOp hoistedOp;
-    SmallVector<GenericOp> transposeOps;
+    SmallVector<TransposeOp> transposeOps;
     SmallVector<int64_t> transposeVector =
         en.index() < options.transposePaddings.size()
             ? options.transposePaddings[en.index()]

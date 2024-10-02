@@ -337,6 +337,10 @@ static std::optional<std::string> printReferrer(const MemRegion *Referrer) {
       // warn_bind_ref_member_to_parameter or
       // warn_init_ptr_member_to_parameter_addr
       return std::nullopt;
+    } else if (isa<AllocaRegion>(Referrer)) {
+      // Skip alloca() regions, they indicate advanced memory management
+      // and higher likelihood of CSA false positives.
+      return std::nullopt;
     } else {
       assert(false && "Unexpected referrer region type.");
       return std::nullopt;

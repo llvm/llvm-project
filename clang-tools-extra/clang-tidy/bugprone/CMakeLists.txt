@@ -73,6 +73,7 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
   SwappedArgumentsCheck.cpp
+  TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
   TooSmallLoopVariableCheck.cpp

@@ -36,6 +36,7 @@ using namespace llvm;
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
+  case Intrinsic::atan2:
   case Intrinsic::exp:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -307,6 +308,54 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, MultiplicandVec);
 }
 
+static Value *expandAtan2Intrinsic(CallInst *Orig) {
+  Value *Y = Orig->getOperand(0);
+  Value *X = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+  Builder.setFastMathFlags(Orig->getFastMathFlags());
+
+  Value *Tan = Builder.CreateFDiv(Y, X);
+
+  CallInst *Atan =
+      Builder.CreateIntrinsic(Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
+  Atan->setTailCall(Orig->isTailCall());
+  Atan->setAttributes(Orig->getAttributes());
+
+  // Modify atan result based on https://en.wikipedia.org/wiki/Atan2.
+  Constant *Pi = ConstantFP::get(Ty, llvm::numbers::pi);
+  Constant *HalfPi = ConstantFP::get(Ty, llvm::numbers::pi / 2);
+  Constant *NegHalfPi = ConstantFP::get(Ty, -llvm::numbers::pi / 2);
+  Constant *Zero = ConstantFP::get(Ty, 0);
+  Value *AtanAddPi = Builder.CreateFAdd(Atan, Pi);
+  Value *AtanSubPi = Builder.CreateFSub(Atan, Pi);
+
+  // x > 0 -> atan.
+  Value *Result = Atan;
+  Value *XLt0 = Builder.CreateFCmpOLT(X, Zero);
+  Value *XEq0 = Builder.CreateFCmpOEQ(X, Zero);
+  Value *YGe0 = Builder.CreateFCmpOGE(Y, Zero);
+  Value *YLt0 = Builder.CreateFCmpOLT(Y, Zero);
+
+  // x < 0, y >= 0 -> atan + pi.
+  Value *XLt0AndYGe0 = Builder.CreateAnd(XLt0, YGe0);
+  Result = Builder.CreateSelect(XLt0AndYGe0, AtanAddPi, Result);
+
+  // x < 0, y < 0 -> atan - pi.
+  Value *XLt0AndYLt0 = Builder.CreateAnd(XLt0, YLt0);
+  Result = Builder.CreateSelect(XLt0AndYLt0, AtanSubPi, Result);
+
+  // x == 0, y < 0 -> -pi/2
+  Value *XEq0AndYLt0 = Builder.CreateAnd(XEq0, YLt0);
+  Result = Builder.CreateSelect(XEq0AndYLt0, NegHalfPi, Result);
+
+  // x == 0, y > 0 -> pi/2
+  Value *XEq0AndYGe0 = Builder.CreateAnd(XEq0, YGe0);
+  Result = Builder.CreateSelect(XEq0AndYGe0, HalfPi, Result);
+
+  return Result;
+}
+
 static Value *expandPowIntrinsic(CallInst *Orig) {
 
   Value *X = Orig->getOperand(0);
@@ -417,6 +466,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   switch (IntrinsicId) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
+    break;
+  case Intrinsic::atan2:
+    Result = expandAtan2Intrinsic(Orig);
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);

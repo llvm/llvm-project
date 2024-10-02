@@ -1,0 +1,5 @@
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding %s 2>&1 | FileCheck -check-prefixes=CHECK %s
+
+0x00,0x00,0x00,0x7e
+
+0xfd,0xb8,0x0a,0x7f

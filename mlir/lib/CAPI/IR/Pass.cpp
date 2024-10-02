@@ -44,8 +44,21 @@ MlirLogicalResult mlirPassManagerRunOnOp(MlirPassManager passManager,
   return wrap(unwrap(passManager)->run(unwrap(op)));
 }
 
-void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {
-  return unwrap(passManager)->enableIRPrinting();
+void mlirPassManagerEnableIRPrinting(MlirPassManager passManager,
+                                     bool printBeforeAll, bool printAfterAll,
+                                     bool printModuleScope,
+                                     bool printAfterOnlyOnChange,
+                                     bool printAfterOnlyOnFailure) {
+  auto shouldPrintBeforePass = [printBeforeAll](Pass *, Operation *) {
+    return printBeforeAll;
+  };
+  auto shouldPrintAfterPass = [printAfterAll](Pass *, Operation *) {
+    return printAfterAll;
+  };
+  return unwrap(passManager)
+      ->enableIRPrinting(shouldPrintBeforePass, shouldPrintAfterPass,
+                         printModuleScope, printAfterOnlyOnChange,
+                         printAfterOnlyOnFailure);
 }
 
 void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {

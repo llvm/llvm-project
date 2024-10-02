@@ -221,8 +221,10 @@ if( ENABLE_RUNTIME_SUBNORMAL )
        TARGET ${file}
        INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/${file}.ll
     )
-    install( FILES $<TARGET_PROPERTY:${file},TARGET_FILE> ARCHIVE
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
+    install(
+      FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
+      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+    )
   endforeach()
 endif()
 
@@ -426,9 +428,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       add_custom_target( ${builtins_opt_lib_tgt}
         ALL DEPENDS ${builtins_opt_lib_tgt}.bc
       )
-      set_target_properties( ${builtins_opt_lib_tgt}
-        PROPERTIES TARGET_FILE ${builtins_opt_lib_tgt}.bc
-                   FOLDER "libclc/Device IR/Opt"
+      set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
+        TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
+        FOLDER "libclc/Device IR/Opt"
       )
 
       set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )

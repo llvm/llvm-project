@@ -1,5 +1,5 @@
 ; AIX doesn't currently support DWARF 5 section .debug_rnglists
-; XFAIL: target={{.*}}-aix{{.*}}
+; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;

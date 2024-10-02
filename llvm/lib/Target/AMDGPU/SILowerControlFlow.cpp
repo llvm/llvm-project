@@ -270,7 +270,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   I = skipToUncondBrOrEnd(MBB, I);
 
   // Insert the S_CBRANCH_EXECZ instruction which will be optimized later
-  // during SIRemoveShortExecBranches.
+  // during SIPreEmitPeephole.
   MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
                             .add(MI.getOperand(2));
 

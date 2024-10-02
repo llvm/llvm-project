@@ -8,7 +8,6 @@ add_object_library(
     lseekImpl.h
   DEPENDS
     libc.include.fcntl
-    libc.include.stdio
     libc.include.sys_syscall
     libc.include.sys_stat
     libc.src.__support.CPP.new

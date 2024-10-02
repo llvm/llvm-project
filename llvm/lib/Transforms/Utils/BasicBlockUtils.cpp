@@ -503,7 +503,8 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 static bool
 DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   SmallVector<DbgVariableRecord *, 8> ToBeRemoved;
-  DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
+  SmallDenseMap<DebugVariable,
+                std::pair<SmallVector<Value *, 4>, DIExpression *>, 4>
       VariableMap;
   for (auto &I : *BB) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
@@ -584,7 +585,8 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
     return DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BB);
 
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
-  DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
+  SmallDenseMap<DebugVariable,
+                std::pair<SmallVector<Value *, 4>, DIExpression *>, 4>
       VariableMap;
   for (auto &I : *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {

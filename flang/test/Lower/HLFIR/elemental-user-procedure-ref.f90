@@ -18,7 +18,7 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:    %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
-! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#1, %[[VAL_8]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
+! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#1, %[[VAL_8]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_9]] : f32
 ! CHECK:  }
 ! CHECK: fir.call
@@ -43,7 +43,7 @@ end subroutine
 ! CHECK:  ^bb0(%[[VAL_9:.*]]: index, %[[VAL_10:.*]]: index):
 ! CHECK:    %[[VAL_11:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_10]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_12:.*]] = fir.load %[[VAL_11]] : !fir.ref<f32>
-! CHECK:    %[[VAL_13:.*]] = fir.call @_QPelem_val(%[[VAL_7]], %[[VAL_12]]) fastmath<contract> : (i32, f32) -> f32
+! CHECK:    %[[VAL_13:.*]] = fir.call @_QPelem_val(%[[VAL_7]], %[[VAL_12]]) proc_attrs<elemental, pure>  fastmath<contract> : (i32, f32) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_13]] : f32
 ! CHECK:  }
 ! CHECK: fir.call
@@ -67,7 +67,7 @@ end subroutine
 ! CHECK:  %[[VAL_9:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_10:.*]]: index):
 ! CHECK:    %[[VAL_11:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  typeparams %[[VAL_4]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_12:.*]] = fir.call @_QPchar_elem(%[[VAL_3]]#0, %[[VAL_11]]) fastmath<contract> : (!fir.boxchar<1>, !fir.boxchar<1>) -> f32
+! CHECK:    %[[VAL_12:.*]] = fir.call @_QPchar_elem(%[[VAL_3]]#0, %[[VAL_11]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.boxchar<1>, !fir.boxchar<1>) -> f32
 ! CHECK:    hlfir.yield_element %[[VAL_12]] : f32
 ! CHECK:  }
 ! CHECK: fir.call
@@ -93,7 +93,7 @@ end subroutine
 ! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] unordered {
 ! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] unordered {
 ! CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#1, %[[VAL_10]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
+! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#1, %[[VAL_10]]) proc_attrs<elemental, pure>  fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
 ! CHECK:    }
 ! CHECK:  }
 
@@ -116,7 +116,7 @@ end subroutine
 ! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
 ! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
 ! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:               fir.call @_QPimpure_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:               fir.call @_QPimpure_elem(%[[VAL_8]]) proc_attrs<elemental> fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           return
@@ -141,7 +141,7 @@ end subroutine
 ! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
 ! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
 ! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:               fir.call @_QPordered_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:               fir.call @_QPordered_elem(%[[VAL_8]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           return
@@ -174,7 +174,7 @@ end subroutine
 ! CHECK:           fir.do_loop %[[VAL_14:.*]] = %[[VAL_13]] to %[[VAL_2]] step %[[VAL_13]] {
 ! CHECK:             fir.do_loop %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_1]] step %[[VAL_13]] {
 ! CHECK:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_15]], %[[VAL_14]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
-! CHECK:               fir.call @_QPimpure_elem(%[[VAL_16]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:               fir.call @_QPimpure_elem(%[[VAL_16]]) proc_attrs<elemental> fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           hlfir.end_associate %[[VAL_11]]#1, %[[VAL_11]]#2 : !fir.ref<!fir.array<10x20xf32>>, i1

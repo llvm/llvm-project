@@ -30,11 +30,6 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[TMP25]], 2
-; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], 0
-; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
-; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i64, ptr [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = call i64 @llvm.vscale.i64()

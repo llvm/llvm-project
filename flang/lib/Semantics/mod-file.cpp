@@ -1626,8 +1626,8 @@ void SubprogramSymbolCollector::Collect() {
         // &/or derived type that it shadows may be needed.
         const Symbol *spec{generic->specific()};
         const Symbol *dt{generic->derivedType()};
-        needed = needed || (spec && useSet_.count(*spec) > 0) ||
-            (dt && useSet_.count(*dt) > 0);
+        needed = needed || (spec && useSet_.count(spec->GetUltimate()) > 0) ||
+            (dt && useSet_.count(dt->GetUltimate()) > 0);
       } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
         const Symbol *interface { subp->moduleInterface() };
         needed = needed || (interface && useSet_.count(*interface) > 0);

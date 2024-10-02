@@ -310,6 +310,9 @@ defm build_id: B<
      "Generate build ID (always on when generating PDB)",
      "Do not Generate build ID">;
 
+def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
+    HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;

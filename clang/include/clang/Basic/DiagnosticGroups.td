@@ -1549,6 +1549,9 @@ def DXILValidation : DiagGroup<"dxil-validation">;
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
+// Warnings specifically for DXC incompatabilities.
+def HLSLDXCCompat : DiagGroup<"hlsl-dxc-compatability">;
+
 // Warnings for legacy binding behavior
 def LegacyConstantRegisterBinding : DiagGroup<"legacy-constant-register-binding">;
 

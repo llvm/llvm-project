@@ -25,11 +25,11 @@ namespace {
 /// DAGISelEmitter - The top-level class which coordinates construction
 /// and emission of the instruction selector.
 class DAGISelEmitter {
-  RecordKeeper &Records; // Just so we can get at the timing functions.
-  CodeGenDAGPatterns CGP;
+  const RecordKeeper &Records; // Just so we can get at the timing functions.
+  const CodeGenDAGPatterns CGP;
 
 public:
-  explicit DAGISelEmitter(RecordKeeper &R) : Records(R), CGP(R) {}
+  explicit DAGISelEmitter(const RecordKeeper &R) : Records(R), CGP(R) {}
   void run(raw_ostream &OS);
 };
 } // End anonymous namespace
@@ -81,8 +81,8 @@ namespace {
 // In particular, we want to match maximal patterns first and lowest cost within
 // a particular complexity first.
 struct PatternSortingPredicate {
-  PatternSortingPredicate(CodeGenDAGPatterns &cgp) : CGP(cgp) {}
-  CodeGenDAGPatterns &CGP;
+  PatternSortingPredicate(const CodeGenDAGPatterns &cgp) : CGP(cgp) {}
+  const CodeGenDAGPatterns &CGP;
 
   bool operator()(const PatternToMatch *LHS, const PatternToMatch *RHS) {
     const TreePatternNode &LT = LHS->getSrcPattern();

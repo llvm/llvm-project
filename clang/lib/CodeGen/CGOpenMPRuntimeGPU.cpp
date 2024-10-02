@@ -1073,9 +1073,8 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
         CGM.getContext().getTargetInfo().getNewAlign() / 8));
 
     // Cast the void pointer and get the address of the globalized variable.
-    llvm::PointerType *VarPtrTy = CGF.ConvertTypeForMem(VarTy)->getPointerTo();
     llvm::Value *CastedVoidPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        VoidPtr, VarPtrTy, VD->getName() + "_on_stack");
+        VoidPtr, Bld.getPtrTy(0), VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
     Rec.second.PrivateAddr = VarAddr.getAddress();
@@ -1930,7 +1929,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   if (isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
     Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+        Src, Bld.getPtrTy(0), CGF.SizeTy);
     llvm::Value *LB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -1939,8 +1938,8 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
     Args.emplace_back(LB);
     ++Idx;
     Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
-    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(Src, Bld.getPtrTy(0),
+                                                           CGF.SizeTy);
     llvm::Value *UB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -2079,7 +2078,7 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     GV->setAlignment(Align.getAsAlign());
     return Address(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            GV, VarTy->getPointerTo(CGM.getContext().getTargetAddressSpace(
+            GV, CGF.Builder.getPtrTy(CGM.getContext().getTargetAddressSpace(
                     VD->getType().getAddressSpace()))),
         VarTy, Align);
   }

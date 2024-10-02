@@ -10,7 +10,7 @@ define float @call_ldexpf(float %a, i32 %b) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    clrldi r4, r4, 32
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
@@ -29,7 +29,7 @@ define double @call_ldexp(double %a, i32 %b) {
 ; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    clrldi r4, r4, 32
+; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

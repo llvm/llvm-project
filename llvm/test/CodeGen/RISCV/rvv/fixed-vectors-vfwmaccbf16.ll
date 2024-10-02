@@ -33,9 +33,8 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN32-NEXT:    .cfi_offset s0, -8
 ; ZVFBMIN32-NEXT:    .cfi_offset fs0, -16
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
-; ZVFBMIN32-NEXT:    slli a0, a0, 1
 ; ZVFBMIN32-NEXT:    sub sp, sp, a0
-; ZVFBMIN32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
+; ZVFBMIN32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
 ; ZVFBMIN32-NEXT:    fmv.s fs0, fa0
 ; ZVFBMIN32-NEXT:    addi a0, sp, 16
 ; ZVFBMIN32-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -58,7 +57,6 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN32-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; ZVFBMIN32-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
-; ZVFBMIN32-NEXT:    slli a0, a0, 1
 ; ZVFBMIN32-NEXT:    add sp, sp, a0
 ; ZVFBMIN32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; ZVFBMIN32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -77,9 +75,8 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN64-NEXT:    .cfi_offset s0, -16
 ; ZVFBMIN64-NEXT:    .cfi_offset fs0, -24
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
-; ZVFBMIN64-NEXT:    slli a0, a0, 1
 ; ZVFBMIN64-NEXT:    sub sp, sp, a0
-; ZVFBMIN64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 2 * vlenb
+; ZVFBMIN64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 1 * vlenb
 ; ZVFBMIN64-NEXT:    fmv.s fs0, fa0
 ; ZVFBMIN64-NEXT:    addi a0, sp, 32
 ; ZVFBMIN64-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -104,7 +101,6 @@ define <1 x float> @vfwmaccbf16_vv_v1f32(<1 x float> %a, <1 x bfloat> %b, <1 x b
 ; ZVFBMIN64-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; ZVFBMIN64-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
-; ZVFBMIN64-NEXT:    slli a0, a0, 1
 ; ZVFBMIN64-NEXT:    add sp, sp, a0
 ; ZVFBMIN64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; ZVFBMIN64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -144,9 +140,8 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN32-NEXT:    .cfi_offset ra, -4
 ; ZVFBMIN32-NEXT:    .cfi_offset fs0, -16
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
-; ZVFBMIN32-NEXT:    slli a0, a0, 1
 ; ZVFBMIN32-NEXT:    sub sp, sp, a0
-; ZVFBMIN32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
+; ZVFBMIN32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
 ; ZVFBMIN32-NEXT:    fmv.s fs0, fa0
 ; ZVFBMIN32-NEXT:    addi a0, sp, 32
 ; ZVFBMIN32-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -167,7 +162,6 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN32-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; ZVFBMIN32-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN32-NEXT:    csrr a0, vlenb
-; ZVFBMIN32-NEXT:    slli a0, a0, 1
 ; ZVFBMIN32-NEXT:    add sp, sp, a0
 ; ZVFBMIN32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; ZVFBMIN32-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload
@@ -183,9 +177,8 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN64-NEXT:    .cfi_offset ra, -8
 ; ZVFBMIN64-NEXT:    .cfi_offset fs0, -16
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
-; ZVFBMIN64-NEXT:    slli a0, a0, 1
 ; ZVFBMIN64-NEXT:    sub sp, sp, a0
-; ZVFBMIN64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 2 * vlenb
+; ZVFBMIN64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
 ; ZVFBMIN64-NEXT:    fmv.s fs0, fa0
 ; ZVFBMIN64-NEXT:    addi a0, sp, 32
 ; ZVFBMIN64-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -208,7 +201,6 @@ define <1 x float> @vfwmaccbf16_vf_v1f32(<1 x float> %a, bfloat %b, <1 x bfloat>
 ; ZVFBMIN64-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
 ; ZVFBMIN64-NEXT:    vfmacc.vv v8, v10, v9
 ; ZVFBMIN64-NEXT:    csrr a0, vlenb
-; ZVFBMIN64-NEXT:    slli a0, a0, 1
 ; ZVFBMIN64-NEXT:    add sp, sp, a0
 ; ZVFBMIN64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; ZVFBMIN64-NEXT:    fld fs0, 32(sp) # 8-byte Folded Reload

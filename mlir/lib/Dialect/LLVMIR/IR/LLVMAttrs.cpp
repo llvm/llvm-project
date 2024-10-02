@@ -326,7 +326,7 @@ std::string TargetFeaturesAttr::getFeaturesString() const {
   llvm::raw_string_ostream ss(featuresString);
   llvm::interleave(
       getFeatures(), ss, [&](auto &feature) { ss << feature.strref(); }, ",");
-  return ss.str();
+  return featuresString;
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {

@@ -32,7 +32,7 @@ define dso_local void @test1(ptr%buf) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movabsq $64, %rax
@@ -92,7 +92,7 @@ define dso_local void @test1(ptr%buf) nounwind {
 ; EGPR-NEXT:    movq %rdi, %rbx # encoding: [0x48,0x89,0xfb]
 ; EGPR-NEXT:    xorl %r14d, %r14d # encoding: [0x45,0x31,0xf6]
 ; EGPR-NEXT:    movl $32, %r15d # encoding: [0x41,0xbf,0x20,0x00,0x00,0x00]
-; EGPR-NEXT:    .p2align 4, 0x90
+; EGPR-NEXT:    .p2align 4
 ; EGPR-NEXT:  .LBB0_2: # %loop.header
 ; EGPR-NEXT:    # =>This Inner Loop Header: Depth=1
 ; EGPR-NEXT:    movabsq $64, %rax # encoding: [0x48,0xb8,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
@@ -179,7 +179,7 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    tilezero %tmm0
@@ -231,7 +231,7 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; EGPR-NEXT:    movq %rdi, %rbx # encoding: [0x48,0x89,0xfb]
 ; EGPR-NEXT:    xorl %r14d, %r14d # encoding: [0x45,0x31,0xf6]
 ; EGPR-NEXT:    movl $32, %r15d # encoding: [0x41,0xbf,0x20,0x00,0x00,0x00]
-; EGPR-NEXT:    .p2align 4, 0x90
+; EGPR-NEXT:    .p2align 4
 ; EGPR-NEXT:  .LBB1_2: # %loop.header
 ; EGPR-NEXT:    # =>This Inner Loop Header: Depth=1
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]

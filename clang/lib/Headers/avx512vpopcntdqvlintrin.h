@@ -27,7 +27,7 @@
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_popcnt_epi64(__m128i __A) {
-  return (__m128i)__builtin_ia32_vpopcntq_128((__v2di)__A);
+  return (__m128i)__builtin_elementwise_popcount((__v2du)__A);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -43,7 +43,7 @@ _mm_maskz_popcnt_epi64(__mmask8 __U, __m128i __A) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_popcnt_epi32(__m128i __A) {
-  return (__m128i)__builtin_ia32_vpopcntd_128((__v4si)__A);
+  return (__m128i)__builtin_elementwise_popcount((__v4su)__A);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -59,7 +59,7 @@ _mm_maskz_popcnt_epi32(__mmask8 __U, __m128i __A) {
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi64(__m256i __A) {
-  return (__m256i)__builtin_ia32_vpopcntq_256((__v4di)__A);
+  return (__m256i)__builtin_elementwise_popcount((__v4du)__A);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -75,7 +75,7 @@ _mm256_maskz_popcnt_epi64(__mmask8 __U, __m256i __A) {
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_popcnt_epi32(__m256i __A) {
-  return (__m256i)__builtin_ia32_vpopcntd_256((__v8si)__A);
+  return (__m256i)__builtin_elementwise_popcount((__v8su)__A);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256

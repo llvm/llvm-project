@@ -40,23 +40,14 @@ void g() {
 
   template_param_kinds_1<0>(); // ok, from cxx-templates-a.h
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
-
-  template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function}}
-  // expected-note@Inputs/cxx-templates-a.h:11 {{invalid explicitly-specified argument}}
-  // expected-note@Inputs/cxx-templates-b.h:11 {{invalid explicitly-specified argument}}
+  template_param_kinds_2<Tmpl_T_C>(); // ok, from cxx-templates-b.h
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
   // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
-  // FIXME: This should be valid, but we incorrectly match the template template
-  // argument against both template template parameters.
-  template_param_kinds_3<Tmpl_T_T_A>(); // expected-error {{ambiguous}}
-  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
-  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
-  template_param_kinds_3<Tmpl_T_T_B>(); // expected-error {{ambiguous}}
-  // expected-note@Inputs/cxx-templates-a.h:12 {{candidate}}
-  // expected-note@Inputs/cxx-templates-b.h:12 {{candidate}}
+  template_param_kinds_3<Tmpl_T_T_A>();
+  template_param_kinds_3<Tmpl_T_T_B>();
 
   // Trigger the instantiation of a template in 'a' that uses a type defined in
   // 'common'. That type is not visible here.

@@ -9509,13 +9509,38 @@ Sema::ActOnStartRequiresExpr(SourceLocation RequiresKWLoc,
   PushDeclContext(BodyScope, Body);
 
   for (ParmVarDecl *Param : LocalParameters) {
-    if (Param->hasDefaultArg())
+    if (Param->getType()->isVoidType()) {
+      if (LocalParameters.size() > 1) {
+        Diag(Param->getBeginLoc(), diag::err_void_only_param);
+        Param->setType(Context.IntTy);
+      } else if (Param->getIdentifier()) {
+        Diag(Param->getBeginLoc(), diag::err_param_with_void_type);
+        Param->setType(Context.IntTy);
+      } else if (Param->getType().hasQualifiers()) {
+        Diag(Param->getBeginLoc(), diag::err_void_param_qualified);
+      }
+    } else if (Param->hasDefaultArg()) {
       // C++2a [expr.prim.req] p4
       //     [...] A local parameter of a requires-expression shall not have a
       //     default argument. [...]
       Diag(Param->getDefaultArgRange().getBegin(),
            diag::err_requires_expr_local_parameter_default_argument);
-    // Ignore default argument and move on
+      // Ignore default argument and move on
+    } else if (Param->isExplicitObjectParameter()) {
+      // C++23 [dcl.fct]p6:
+      //   An explicit-object-parameter-declaration is a parameter-declaration
+      //   with a this specifier. An explicit-object-parameter-declaration
+      //   shall appear only as the first parameter-declaration of a
+      //   parameter-declaration-list of either:
+      //   - a member-declarator that declares a member function, or
+      //   - a lambda-declarator.
+      //
+      // The parameter-declaration-list of a requires-expression is not such
+      // a context.
+      Diag(Param->getExplicitObjectParamThisLoc(),
+           diag::err_requires_expr_explicit_object_parameter);
+      Param->setExplicitObjectParameterLoc(SourceLocation());
+    }
 
     Param->setDeclContext(Body);
     // If this has an identifier, add it to the scope stack.

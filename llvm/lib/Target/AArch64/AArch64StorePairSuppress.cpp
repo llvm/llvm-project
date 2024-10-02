@@ -96,8 +96,8 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
       SingleSCDesc->isValid() && !SingleSCDesc->isVariant()) {
     // Compute the new critical resource length after replacing 2 separate
     // STRDui with one STPDi.
-    unsigned ResLenWithSTP = BBTrace.getResourceLength(
-        std::nullopt, PairSCDesc, {SingleSCDesc, SingleSCDesc});
+    unsigned ResLenWithSTP =
+        BBTrace.getResourceLength({}, PairSCDesc, {SingleSCDesc, SingleSCDesc});
     if (ResLenWithSTP > ResLength) {
       LLVM_DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
                         << " resources " << ResLength << " -> " << ResLenWithSTP

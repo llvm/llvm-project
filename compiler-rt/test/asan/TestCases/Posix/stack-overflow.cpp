@@ -16,6 +16,9 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 
+// Issue #109771
+// XFAIL: target={{sparc.*-.*-linux.*}}
+
 // UNSUPPORTED: ios
 
 #include <assert.h>

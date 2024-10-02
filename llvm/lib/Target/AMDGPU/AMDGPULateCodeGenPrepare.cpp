@@ -296,9 +296,8 @@ bool LiveRegOptimizer::optimizeLiveType(
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!Defs.count(II) && !isa<PHINode>(II)) {
+        if (!isa<PHINode>(II))
           Defs.insert(II);
-        }
       }
     }
   }

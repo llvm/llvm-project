@@ -202,7 +202,7 @@ private:
 
   /// Emit the string information for diagnostic flags.
   unsigned getEmitDiagnosticFlag(DiagnosticsEngine::Level DiagLevel,
-                                 const Diagnostic *Diag = nullptr);
+                                 unsigned DiagID = 0);
 
   unsigned getEmitDiagnosticFlag(StringRef DiagName);
 
@@ -536,13 +536,11 @@ unsigned SDiagsWriter::getEmitCategory(unsigned int category) {
 }
 
 unsigned SDiagsWriter::getEmitDiagnosticFlag(DiagnosticsEngine::Level DiagLevel,
-                                             const Diagnostic *Diag) {
-  if (!Diag || DiagLevel == DiagnosticsEngine::Note)
+                                             unsigned DiagID) {
+  if (DiagLevel == DiagnosticsEngine::Note)
     return 0; // No flag for notes.
 
-  StringRef FlagName =
-      Diag->getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
-          Diag->getID());
+  StringRef FlagName = DiagnosticIDs::getWarningOptionForDiag(DiagID);
   return getEmitDiagnosticFlag(FlagName);
 }
 
@@ -657,7 +655,7 @@ void SDiagsWriter::EmitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
     unsigned DiagID = DiagnosticIDs::getCategoryNumberForDiag(Info->getID());
     Record.push_back(getEmitCategory(DiagID));
     // Emit the diagnostic flag string lazily and get the mapped ID.
-    Record.push_back(getEmitDiagnosticFlag(Level, Info));
+    Record.push_back(getEmitDiagnosticFlag(Level, Info->getID()));
   } else {
     Record.push_back(getEmitCategory());
     Record.push_back(getEmitDiagnosticFlag(Level));

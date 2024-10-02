@@ -75,9 +75,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI3:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; SSE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 2
 ; SSE-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[TMP0]]
-; SSE-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP1]]
 ; SSE-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP2]], i32 0
 ; SSE-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP2]], i32 2
 ; SSE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
@@ -132,13 +130,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI8:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI9:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; AVX-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 4
-; AVX-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 8
-; AVX-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 12
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[TMP0]]
-; AVX-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP1]]
-; AVX-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP2]]
-; AVX-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[ARR]], i32 [[TMP3]]
 ; AVX-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[TMP4]], i32 0
 ; AVX-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP4]], i32 4
 ; AVX-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[TMP4]], i32 8

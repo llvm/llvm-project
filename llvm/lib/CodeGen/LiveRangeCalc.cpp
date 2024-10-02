@@ -208,7 +208,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
 #ifndef NDEBUG
     if (MBB->pred_empty()) {
-      MBB->getParent()->verify();
+      MBB->getParent()->verify(nullptr, nullptr, &errs());
       errs() << "Use of " << printReg(PhysReg, MRI->getTargetRegisterInfo())
              << " does not have a corresponding definition on every path:\n";
       const MachineInstr *MI = Indexes->getInstructionFromIndex(Use);
@@ -223,7 +223,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)
         IsLiveIn = MBB->isLiveIn(*Alias);
       if (!IsLiveIn) {
-        MBB->getParent()->verify();
+        MBB->getParent()->verify(nullptr, nullptr, &errs());
         errs() << "The register " << printReg(PhysReg, TRI)
                << " needs to be live in to " << printMBBReference(*MBB)
                << ", but is missing from the live-in list.\n";

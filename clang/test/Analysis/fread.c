@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -triple x86_64-linux-gnu  \
-// RUN:   -analyzer-checker=core,unix.Stream,alpha.security.taint \
+// RUN:   -analyzer-checker=core,unix.Stream,optin.taint \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-for-simple-stream.h"

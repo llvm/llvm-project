@@ -21,6 +21,7 @@ set(RTSAN_INST_TEST_SOURCES
 
 set(RTSAN_NOINST_TEST_SOURCES
     ../rtsan_preinit.cpp
+    rtsan_test_assertions.cpp
     rtsan_test_context.cpp
     rtsan_test_main.cpp)
 
@@ -75,6 +76,18 @@ foreach(arch ${RTSAN_TEST_ARCH})
     DEPS rtsan
     CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
     LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+
+  check_symbol_exists(__GLIBC__ stdio.h RTSAN_USING_GLIBC)
+  if (RTSAN_USING_GLIBC)
+    set(RtsanTestObjects_FileOffset64)
+    generate_compiler_rt_tests(RtsanTestObjects_FileOffset64
+      RtsanUnitTests "Rtsan-${arch}-FileOffset64-Test" ${arch}
+      COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+      SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
+      DEPS rtsan
+      CFLAGS ${RTSAN_UNITTEST_CFLAGS} -D_FILE_OFFSET_BITS=64 -fsanitize=realtime
+      LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
+  endif()
 
   set(RTSAN_TEST_RUNTIME RTRtsanTest.${arch})
   if(APPLE)

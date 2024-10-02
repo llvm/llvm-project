@@ -236,7 +236,7 @@ entry:
 ; R600-VECT: MOVA_INT
 
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
-; SI-PROMOTE-VECT-DAG: v_lshrrev
+; SI-PROMOTE-VECT-DAG: s_lshr_b32
 
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x60,0xe0
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:1 ; encoding: [0x01,0x00,0x60,0xe0

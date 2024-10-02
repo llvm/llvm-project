@@ -138,7 +138,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop auto reduction(+:Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop auto collapse(1)
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -277,7 +276,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) auto
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop collapse(1) auto
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -417,7 +415,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop independent reduction(+:Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop independent collapse(1)
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -556,7 +553,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) independent
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop collapse(1) independent
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -705,7 +701,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop seq reduction(+:Var)
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop seq collapse(1)
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
@@ -853,7 +848,6 @@ void uses() {
   // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented}}
 #pragma acc loop reduction(+:Var) seq
   for(;;);
-  // expected-warning@+1{{OpenACC clause 'collapse' not yet implemented}}
 #pragma acc loop collapse(1) seq
   for(;;);
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}

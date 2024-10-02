@@ -930,6 +930,12 @@ void COFFDumper::printCOFFLoadConfig() {
     W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
     W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
     W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+
+    if (CHPE->Version >= 2) {
+      W.printHex("AuxiliaryDelayloadIAT", CHPE->AuxiliaryDelayloadIAT);
+      W.printHex("AuxiliaryDelayloadIATCopy", CHPE->AuxiliaryDelayloadIATCopy);
+      W.printHex("HybridImageInfoBitfield", CHPE->HybridImageInfoBitfield);
+    }
   }
 
   if (Tables.SEHTableVA) {

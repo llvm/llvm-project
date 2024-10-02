@@ -25,8 +25,8 @@ static const char StandardSpecClassName[] = "StandardSpec";
 static const char PublicAPIClassName[] = "PublicAPI";
 
 static bool isa(const llvm::Record *Def, const llvm::Record *TypeClass) {
-  llvm::RecordRecTy *RecordType = Def->getType();
-  llvm::ArrayRef<llvm::Record *> Classes = RecordType->getClasses();
+  const llvm::RecordRecTy *RecordType = Def->getType();
+  llvm::ArrayRef<const llvm::Record *> Classes = RecordType->getClasses();
   // We want exact types. That is, we don't want the classes listed in
   // spec.td to be subclassed. Hence, we do not want the record |Def|
   // to be of more than one class type..
@@ -81,22 +81,22 @@ std::string APIIndexer::getTypeAsString(const llvm::Record *TypeRecord) {
 
 void APIIndexer::indexStandardSpecDef(const llvm::Record *StandardSpec) {
   auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
-  for (llvm::Record *HeaderSpec : HeaderSpecList) {
+  for (const llvm::Record *HeaderSpec : HeaderSpecList) {
     llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
     if (!StdHeader.has_value() || Header == StdHeader) {
       PublicHeaders.emplace(Header);
       auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
       // TODO: Trigger a fatal error on duplicate specs.
-      for (llvm::Record *MacroSpec : MacroSpecList)
+      for (const llvm::Record *MacroSpec : MacroSpecList)
         MacroSpecMap[std::string(MacroSpec->getValueAsString("Name"))] =
             MacroSpec;
 
       auto TypeSpecList = HeaderSpec->getValueAsListOfDefs("Types");
-      for (llvm::Record *TypeSpec : TypeSpecList)
+      for (const llvm::Record *TypeSpec : TypeSpecList)
         TypeSpecMap[std::string(TypeSpec->getValueAsString("Name"))] = TypeSpec;
 
       auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
-      for (llvm::Record *FunctionSpec : FunctionSpecList) {
+      for (const llvm::Record *FunctionSpec : FunctionSpecList) {
         auto FunctionName = std::string(FunctionSpec->getValueAsString("Name"));
         FunctionSpecMap[FunctionName] = FunctionSpec;
         FunctionToHeaderMap[FunctionName] = std::string(Header);
@@ -104,13 +104,13 @@ void APIIndexer::indexStandardSpecDef(const llvm::Record *StandardSpec) {
 
       auto EnumerationSpecList =
           HeaderSpec->getValueAsListOfDefs("Enumerations");
-      for (llvm::Record *EnumerationSpec : EnumerationSpecList) {
+      for (const llvm::Record *EnumerationSpec : EnumerationSpecList) {
         EnumerationSpecMap[std::string(
             EnumerationSpec->getValueAsString("Name"))] = EnumerationSpec;
       }
 
       auto ObjectSpecList = HeaderSpec->getValueAsListOfDefs("Objects");
-      for (llvm::Record *ObjectSpec : ObjectSpecList) {
+      for (const llvm::Record *ObjectSpec : ObjectSpecList) {
         auto ObjectName = std::string(ObjectSpec->getValueAsString("Name"));
         ObjectSpecMap[ObjectName] = ObjectSpec;
         ObjectToHeaderMap[ObjectName] = std::string(Header);
@@ -124,7 +124,7 @@ void APIIndexer::indexPublicAPIDef(const llvm::Record *PublicAPI) {
   // requested is from an included standard. Such a check is done while
   // generating the API.
   auto MacroDefList = PublicAPI->getValueAsListOfDefs("Macros");
-  for (llvm::Record *MacroDef : MacroDefList)
+  for (const llvm::Record *MacroDef : MacroDefList)
     MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
 
   auto TypeList = PublicAPI->getValueAsListOfStrings("Types");

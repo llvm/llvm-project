@@ -23,7 +23,7 @@ using namespace lld::elf;
 namespace {
 class SystemZ : public TargetInfo {
 public:
-  SystemZ();
+  SystemZ(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -51,7 +51,7 @@ private:
 };
 } // namespace
 
-SystemZ::SystemZ() {
+SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_390_COPY;
   gotRel = R_390_GLOB_DAT;
   pltRel = R_390_JMP_SLOT;
@@ -187,7 +187,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64be(buf, s.getVA());
 }
 
@@ -417,7 +417,7 @@ void SystemZ::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 RelExpr SystemZ::adjustGotPcExpr(RelType type, int64_t addend,
                                  const uint8_t *loc) const {
   // Only R_390_GOTENT with addend 2 can be relaxed.
-  if (!config->relax || addend != 2 || type != R_390_GOTENT)
+  if (!ctx.arg.relax || addend != 2 || type != R_390_GOTENT)
     return R_GOT_PC;
   const uint16_t op = read16be(loc - 2);
 
@@ -453,7 +453,7 @@ bool SystemZ::relaxOnce(int pass) const {
           continue;
         if (rel.sym->auxIdx == 0) {
           rel.sym->allocateAux();
-          addGotEntry(*rel.sym);
+          addGotEntry(ctx, *rel.sym);
           changed = true;
         }
         rel.expr = R_GOT_PC;
@@ -601,7 +601,7 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo() {
-  static SystemZ t;
+TargetInfo *elf::getSystemZTargetInfo(Ctx &ctx) {
+  static SystemZ t(ctx);
   return &t;
 }

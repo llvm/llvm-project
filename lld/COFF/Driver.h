@@ -172,6 +172,8 @@ private:
 
   Symbol *addUndefined(StringRef sym);
 
+  void addUndefinedGlob(StringRef arg);
+
   StringRef mangleMaybe(Symbol *s);
 
   // Windows specific -- "main" is not the only main function in Windows.

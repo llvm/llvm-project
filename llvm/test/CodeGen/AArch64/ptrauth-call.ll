@@ -167,6 +167,27 @@ define i32 @test_tailcall_ib_var(ptr %arg0, ptr %arg1) #0 {
   ret i32 %tmp1
 }
 
+define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
+; CHECK-LABEL: test_tailcall_omit_mov_x16_x16:
+; CHECK:         ldr     x16, [x0]
+; CHECK:         mov     x17, x0
+; CHECK:         movk    x17, #6503, lsl #48
+; CHECK:         autda   x16, x17
+; CHECK:         ldr     x1, [x16]
+; CHECK:         movk    x16, #54167, lsl #48
+; CHECK:         braa    x1, x16
+  %vtable.signed = load ptr, ptr %objptr, align 8
+  %objptr.int = ptrtoint ptr %objptr to i64
+  %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
+  %vtable.signed.int = ptrtoint ptr %vtable.signed to i64
+  %vtable.unsigned.int = tail call i64 @llvm.ptrauth.auth(i64 %vtable.signed.int, i32 2, i64 %vtable.discr)
+  %vtable.unsigned = inttoptr i64 %vtable.unsigned.int to ptr
+  %virt.func.signed = load ptr, ptr %vtable.unsigned, align 8
+  %virt.func.discr = tail call i64 @llvm.ptrauth.blend(i64 %vtable.unsigned.int, i64 54167)
+  tail call void %virt.func.signed(ptr %objptr) [ "ptrauth"(i32 0, i64 %virt.func.discr) ]
+  ret void
+}
+
 define i32 @test_call_ia_arg(ptr %arg0, i64 %arg1) #0 {
 ; DARWIN-LABEL: test_call_ia_arg:
 ; DARWIN-NEXT:    stp x29, x30, [sp, #-16]!

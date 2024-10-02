@@ -62,6 +62,8 @@ def fir_FortranVariableFlagsAttr : fir_Attr<"FortranVariableFlags"> {
 /// Fortran procedure attributes (F2023 15.6.2.1). BIND attribute (18.3.7)
 /// is also tracked in the same enum. Recursive (resp. Impure) attribute
 /// is implied by the absence of opposite NonRecursive (resp. Pure) attribute.
+/// Beware that "elemental" does not implicitly imply "pure" as it does in
+/// Fortran, "pure" must be made explicit when generating the FIR attribute.
 def FIRfuncNoAttributes  : I32BitEnumAttrCaseNone<"none">;
 def FIRfuncElemental     : I32BitEnumAttrCaseBit<"elemental", 0>;
 def FIRfuncPure          : I32BitEnumAttrCaseBit<"pure", 1>;

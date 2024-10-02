@@ -1,9 +1,8 @@
-from typing import List
 
 globals: "_Globals"
 
 class _Globals:
-    dialect_search_modules: List[str]
+    dialect_search_modules: list[str]
     def _register_dialect_impl(self, dialect_namespace: str, dialect_class: type) -> None: ...
     def _register_operation_impl(self, operation_name: str, operation_class: type) -> None: ...
     def append_dialect_search_prefix(self, module_name: str) -> None: ...

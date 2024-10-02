@@ -85,6 +85,11 @@ void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
   vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
 }
 
+void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateDropUnitDimWithShapeCastPatterns(patterns);
+}
+
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorBitCastLoweringPatterns(patterns);

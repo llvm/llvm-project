@@ -21,6 +21,7 @@ namespace clang {
 namespace interp {
 class Block;
 class Record;
+class SourceInfo;
 struct InitMap;
 struct Descriptor;
 enum PrimType : unsigned;
@@ -194,6 +195,7 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   SourceLocation getLocation() const;
+  SourceInfo getLoc() const;
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }

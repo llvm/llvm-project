@@ -75,12 +75,15 @@ struct TestGpuSubgroupReduceLoweringPass
 
     // Since both pattern sets match on the same ops, set higher benefit to
     // perform fewer failing matches.
-    populateGpuBreakDownSubgrupReducePatterns(patterns,
-                                              /*maxShuffleBitwidth=*/32,
-                                              PatternBenefit(2));
-    if (expandToShuffles)
-      populateGpuLowerSubgroupReduceToShufflePattenrs(
+    populateGpuBreakDownSubgroupReducePatterns(patterns,
+                                               /*maxShuffleBitwidth=*/32,
+                                               PatternBenefit(2));
+    if (expandToShuffles) {
+      populateGpuLowerSubgroupReduceToShufflePatterns(
           patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);
+      populateGpuLowerClusteredSubgroupReduceToShufflePatterns(
+          patterns, /*subgroupSize=*/32, /*shuffleBitwidth=*/32);
+    }
 
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }

@@ -478,8 +478,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       return existingPrivatizer;
 
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
-                                   moduleOp.getBodyRegion().front().begin());
+    firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate

@@ -589,10 +589,6 @@ template <class T>
 
 #include <__config>
 
-#if _LIBCPP_STD_VER < 23 && defined(_LIBCPP_STDATOMIC_H)
-#  error <atomic> is incompatible with <stdatomic.h> before C++23. Please compile with -std=c++23.
-#endif
-
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
 #include <__atomic/atomic_base.h>

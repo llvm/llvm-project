@@ -10,4 +10,3 @@ static_library("CodeGenTypes") {
   ]
   sources = [ "LowLevelType.cpp" ]
 }
-

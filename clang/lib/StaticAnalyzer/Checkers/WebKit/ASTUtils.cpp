@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include <optional>
 
 namespace clang {
@@ -33,6 +34,12 @@ bool tryToFindPtrOrigin(
         if (auto *Class = C->getParent(); Class && isRefCounted(Class))
           return callback(E, true);
         break;
+      }
+    }
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (auto *RF = POE->getResultExpr()) {
+        E = RF;
+        continue;
       }
     }
     if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
@@ -88,7 +95,7 @@ bool tryToFindPtrOrigin(
           continue;
         }
 
-        if (isReturnValueRefCounted(callee))
+        if (isRefType(callee->getReturnType()))
           return callback(E, true);
 
         if (isSingleton(callee))
@@ -98,6 +105,12 @@ bool tryToFindPtrOrigin(
           E = call->getArg(0);
           continue;
         }
+      }
+    }
+    if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
+      if (auto *Method = ObjCMsgExpr->getMethodDecl()) {
+        if (isRefType(Method->getReturnType()))
+          return callback(E, true);
       }
     }
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {

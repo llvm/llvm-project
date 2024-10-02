@@ -181,11 +181,11 @@ private:
 };
 
 /// Determine whether a (non-clang-tidy) diagnostic is suppressed by config.
-bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
-                            const llvm::StringSet<> &Suppressed,
-                            const LangOptions &);
+bool isBuiltinDiagnosticSuppressed(unsigned ID,
+                                   const llvm::StringSet<> &Suppressed,
+                                   const LangOptions &);
 /// Take a user-specified diagnostic code, and convert it to a normalized form
-/// stored in the config and consumed by isDiagnosticsSuppressed.
+/// stored in the config and consumed by isBuiltinDiagnosticsSuppressed.
 ///
 /// (This strips err_ and -W prefix so we can match with or without them.)
 llvm::StringRef normalizeSuppressedCode(llvm::StringRef);

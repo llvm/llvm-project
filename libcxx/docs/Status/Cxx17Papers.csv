@@ -81,7 +81,7 @@
 "`P0503R0 <https://wg21.link/P0503R0>`__","Correcting library usage of ""literal type""","2016-11 (Issaquah)","|Complete|","4.0",""
 "`P0504R0 <https://wg21.link/P0504R0>`__","Revisiting in-place tag types for any/optional/variant","2016-11 (Issaquah)","|Complete|","4.0",""
 "`P0505R0 <https://wg21.link/P0505R0>`__","Wording for GB 50 - constexpr for chrono","2016-11 (Issaquah)","|Complete|","4.0",""
-"`P0508R0 <https://wg21.link/P0508R0>`__","Wording for GB 58 - structured bindings for node_handles","2016-11 (Issaquah)","","",""
+"`P0508R0 <https://wg21.link/P0508R0>`__","Wording for GB 58 - structured bindings for node_handles","2016-11 (Issaquah)","|Complete|","7.0",""
 "`P0509R1 <https://wg21.link/P0509R1>`__","Updating ""Restrictions on exception handling""","2016-11 (Issaquah)","|Nothing To Do|","n/a",""
 "`P0510R0 <https://wg21.link/P0510R0>`__","Disallowing references, incomplete types, arrays, and empty variants","2016-11 (Issaquah)","|Complete|","4.0",""
 "`P0513R0 <https://wg21.link/P0513R0>`__","Poisoning the Hash","2016-11 (Issaquah)","|Complete|","5.0",""

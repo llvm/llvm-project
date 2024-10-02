@@ -1600,7 +1600,6 @@ bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
     // If we have "jstopinfo" then we have stop descriptions for all threads
     // that have stop reasons, and if there is no entry for a thread, then it
     // has no stop reason.
-    thread->GetRegisterContext()->InvalidateIfNeeded(true);
     if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
       // If a thread is stopped at a breakpoint site, set that as the stop
       // reason even if it hasn't executed the breakpoint instruction yet.
@@ -4717,9 +4716,14 @@ bool ParseRegisters(
               reg_info.encoding = eEncodingIEEE754;
             } else if (gdb_type == "aarch64v" ||
                        llvm::StringRef(gdb_type).starts_with("vec") ||
-                       gdb_type == "i387_ext" || gdb_type == "uint128") {
+                       gdb_type == "i387_ext" || gdb_type == "uint128" ||
+                       reg_info.byte_size > 16) {
               // lldb doesn't handle 128-bit uints correctly (for ymm*h), so
-              // treat them as vector (similarly to xmm/ymm)
+              // treat them as vector (similarly to xmm/ymm).
+              // We can fall back to handling anything else <= 128 bit as an
+              // unsigned integer, more than that, call it a vector of bytes.
+              // This can happen if we don't recognise the type for AArc64 SVE
+              // registers.
               reg_info.format = eFormatVectorOfUInt8;
               reg_info.encoding = eEncodingVector;
             } else {

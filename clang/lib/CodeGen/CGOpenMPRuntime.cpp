@@ -1490,7 +1490,7 @@ llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
   return llvm::PointerType::getUnqual(Kmpc_MicroTy);
 }
 
-llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
+static llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
 convertDeviceClause(const VarDecl *VD) {
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
       OMPDeclareTargetDeclAttr::getDeviceType(VD);
@@ -1513,7 +1513,7 @@ convertDeviceClause(const VarDecl *VD) {
   }
 }
 
-llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind
+static llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind
 convertCaptureClause(const VarDecl *VD) {
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> MapType =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
@@ -8836,7 +8836,7 @@ static ValueDecl *getDeclFromThisExpr(const Expr *E) {
 
 /// Emit a string constant containing the names of the values mapped to the
 /// offloading runtime library.
-llvm::Constant *
+static llvm::Constant *
 emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
                        MappableExprsHandler::MappingExprInfo &MapExprs) {
 
@@ -9450,8 +9450,8 @@ static llvm::Value *emitDeviceID(
   return DeviceID;
 }
 
-llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
-                               CodeGenFunction &CGF) {
+static llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
+                                      CodeGenFunction &CGF) {
   llvm::Value *DynCGroupMem = CGF.Builder.getInt32(0);
 
   if (auto *DynMemClause = D.getSingleClause<OMPXDynCGroupMemClause>()) {

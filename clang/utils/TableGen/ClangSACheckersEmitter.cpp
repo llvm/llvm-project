@@ -229,9 +229,8 @@ void clang::EmitClangSACheckers(const RecordKeeper &Records, raw_ostream &OS) {
     if (Package->isValueUnset("PackageOptions"))
       continue;
 
-    std::vector<Record *> PackageOptions = Package
-                                       ->getValueAsListOfDefs("PackageOptions");
-    for (Record *PackageOpt : PackageOptions) {
+    for (const Record *PackageOpt :
+         Package->getValueAsListOfDefs("PackageOptions")) {
       OS << "PACKAGE_OPTION(";
       printOption(OS, getPackageFullName(Package), *PackageOpt);
       OS << ")\n";
@@ -325,13 +324,11 @@ void clang::EmitClangSACheckers(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n"
         "#ifdef GET_CHECKER_OPTIONS\n";
   for (const Record *Checker : checkers) {
-
     if (Checker->isValueUnset("CheckerOptions"))
       continue;
 
-    std::vector<Record *> CheckerOptions = Checker
-                                       ->getValueAsListOfDefs("CheckerOptions");
-    for (Record *CheckerOpt : CheckerOptions) {
+    for (const Record *CheckerOpt :
+         Checker->getValueAsListOfDefs("CheckerOptions")) {
       OS << "CHECKER_OPTION(";
       printOption(OS, getCheckerFullName(Checker), *CheckerOpt);
       OS << ")\n";

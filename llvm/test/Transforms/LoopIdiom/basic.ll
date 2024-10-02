@@ -481,7 +481,7 @@ define void @test10(ptr %X) nounwind ssp {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_INC10:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC12:%.*]], [[FOR_INC10]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i64 [[INDVAR]], 100
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[X]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY5:%.*]]
 ; CHECK:       for.body5:
 ; CHECK-NEXT:    [[J_02:%.*]] = phi i32 [ 0, [[BB_NPH]] ], [ [[INC:%.*]], [[FOR_BODY5]] ]
@@ -682,7 +682,7 @@ define void @PR14241(ptr %s, i64 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[END_IDX:%.*]] = add i64 [[SIZE:%.*]], -1
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, ptr [[S:%.*]], i64 [[END_IDX]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[S]], i64 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[S]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2

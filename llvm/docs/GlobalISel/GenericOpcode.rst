@@ -633,8 +633,8 @@ G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
 
 These correspond to the standard C functions of the same name.
 
-G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C trigonometry functions of the same name.
 
@@ -705,6 +705,8 @@ scaled by the runtime scaling factor. The indices extracted from the source
 vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
+
+Mixing scalable vectors and fixed vectors are not allowed.
 
 .. code-block:: none
 

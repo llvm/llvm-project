@@ -1,5 +1,5 @@
 # REQUIRES: x86
-## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
+## Test R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX/R_X86_64_REX2_GOTPCRELX GOT optimization.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t1 --no-apply-dynamic-relocs
@@ -15,16 +15,16 @@
 
 ## In our implementation, .got is retained even if all GOT-generating relocations are optimized.
 # CHECK:      Name              Type            Address          Off    Size   ES Flg Lk Inf Al
-# CHECK:      .iplt             PROGBITS        0000000000201280 000280 000010 00  AX  0   0 16
-# CHECK-NEXT: .got              PROGBITS        0000000000202290 000290 000000 00  WA  0   0  8
+# CHECK:      .iplt             PROGBITS        00000000002012e0 0002e0 000010 00  AX  0   0 16
+# CHECK-NEXT: .got              PROGBITS        00000000002022f0 0002f0 000000 00  WA  0   0  8
 
 ## There is one R_X86_64_IRELATIVE relocations.
 # RELOC-LABEL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entry:
 # CHECK:           Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# CHECK:       0000000000203290  0000000000000025 R_X86_64_IRELATIVE                        2011e2
+# CHECK:       00000000002032f0  0000000000000025 R_X86_64_IRELATIVE                        2011e2
 # CHECK-LABEL: Hex dump of section '.got.plt':
-# NOAPPLY-NEXT:  0x00203290 00000000 00000000
-# APPLY-NEXT:    0x00203290 e2112000 00000000
+# NOAPPLY-NEXT:  0x002032f0 00000000 00000000
+# APPLY-NEXT:    0x002032f0 e2112000 00000000
 
 # 0x201173 + 7 - 10 = 0x201170
 # 0x20117a + 7 - 17 = 0x201170
@@ -43,20 +43,20 @@
 # DISASM-NEXT: leaq -17(%rip), %rax
 # DISASM-NEXT: leaq -23(%rip), %rax
 # DISASM-NEXT: leaq -30(%rip), %rax
-# DISASM-NEXT: movq 8330(%rip), %rax
-# DISASM-NEXT: movq 8323(%rip), %rax
+# DISASM-NEXT: movq 8426(%rip), %rax
+# DISASM-NEXT: movq 8419(%rip), %rax
 # DISASM-NEXT: leaq -52(%rip), %rax
 # DISASM-NEXT: leaq -59(%rip), %rax
 # DISASM-NEXT: leaq -65(%rip), %rax
 # DISASM-NEXT: leaq -72(%rip), %rax
-# DISASM-NEXT: movq 8288(%rip), %rax
-# DISASM-NEXT: movq 8281(%rip), %rax
+# DISASM-NEXT: movq 8384(%rip), %rax
+# DISASM-NEXT: movq 8377(%rip), %rax
 # DISASM-NEXT: callq 0x2011e0 <foo>
 # DISASM-NEXT: callq 0x2011e0 <foo>
 # DISASM-NEXT: callq 0x2011e1 <hid>
 # DISASM-NEXT: callq 0x2011e1 <hid>
-# DISASM-NEXT: callq *8251(%rip)
-# DISASM-NEXT: callq *8245(%rip)
+# DISASM-NEXT: callq *8347(%rip)
+# DISASM-NEXT: callq *8341(%rip)
 # DISASM-NEXT: jmp   0x2011e0 <foo>
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmp   0x2011e0 <foo>
@@ -65,13 +65,26 @@
 # DISASM-NEXT: nop
 # DISASM-NEXT: jmp   0x2011e1 <hid>
 # DISASM-NEXT: nop
-# DISASM-NEXT: jmpq  *8215(%rip)
-# DISASM-NEXT: jmpq  *8209(%rip)
+# DISASM-NEXT: jmpq  *8311(%rip)
+# DISASM-NEXT: jmpq  *8305(%rip)
+# DISASM-NEXT: leaq -167(%rip), %r16
+# DISASM-NEXT: leaq -175(%rip), %r16
+# DISASM-NEXT: leaq -182(%rip), %r16
+# DISASM-NEXT: leaq -190(%rip), %r16
+# DISASM-NEXT: movq 8265(%rip), %r16
+# DISASM-NEXT: movq 8257(%rip), %r16
+# DISASM-NEXT: leaq -215(%rip), %r16
+# DISASM-NEXT: leaq -223(%rip), %r16
+# DISASM-NEXT: leaq -230(%rip), %r16
+# DISASM-NEXT: leaq -238(%rip), %r16
+# DISASM-NEXT: movq 8217(%rip), %r16
+# DISASM-NEXT: movq 8209(%rip), %r16
 
 # NORELAX-LABEL: <_start>:
 # NORELAX-COUNT-12: movq
 # NORELAX-COUNT-6:  callq *
 # NORELAX-COUNT-6:  jmpq *
+# NORELAX-COUNT-12: movq
 
 .text
 .globl foo
@@ -120,3 +133,16 @@ _start:
  jmp *hid@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
  jmp *ifunc@GOTPCREL(%rip)
+
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq foo@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq hid@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16
+ movq ifunc@GOTPCREL(%rip), %r16

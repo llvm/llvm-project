@@ -50,14 +50,44 @@ enum class ABI {
 // Holds structural Coroutine Intrinsics for a particular function and other
 // values used during CoroSplit pass.
 struct LLVM_LIBRARY_VISIBILITY Shape {
-  CoroBeginInst *CoroBegin;
+  CoroBeginInst *CoroBegin = nullptr;
   SmallVector<AnyCoroEndInst *, 4> CoroEnds;
   SmallVector<CoroSizeInst *, 2> CoroSizes;
   SmallVector<CoroAlignInst *, 2> CoroAligns;
   SmallVector<AnyCoroSuspendInst *, 4> CoroSuspends;
-  SmallVector<CallInst *, 2> SwiftErrorOps;
   SmallVector<CoroAwaitSuspendInst *, 4> CoroAwaitSuspends;
   SmallVector<CallInst *, 2> SymmetricTransfers;
+
+  // Values invalidated by replaceSwiftErrorOps()
+  SmallVector<CallInst *, 2> SwiftErrorOps;
+
+  void clear() {
+    CoroBegin = nullptr;
+    CoroEnds.clear();
+    CoroSizes.clear();
+    CoroAligns.clear();
+    CoroSuspends.clear();
+    CoroAwaitSuspends.clear();
+    SymmetricTransfers.clear();
+
+    SwiftErrorOps.clear();
+
+    FrameTy = nullptr;
+    FramePtr = nullptr;
+    AllocaSpillBlock = nullptr;
+  }
+
+  // Scan the function and collect the above intrinsics for later processing
+  void analyze(Function &F, SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+               SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
+  // If for some reason, we were not able to find coro.begin, bailout.
+  void invalidateCoroutine(Function &F,
+                           SmallVectorImpl<CoroFrameInst *> &CoroFrames);
+  // Perform ABI related initial transformation
+  void initABI();
+  // Remove orphaned and unnecessary intrinsics
+  void cleanCoroutine(SmallVectorImpl<CoroFrameInst *> &CoroFrames,
+                      SmallVectorImpl<CoroSaveInst *> &UnusedCoroSaves);
 
   // Field indexes for special fields in the switch lowering.
   struct SwitchFieldIndex {
@@ -76,11 +106,11 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
 
   coro::ABI ABI;
 
-  StructType *FrameTy;
+  StructType *FrameTy = nullptr;
   Align FrameAlign;
-  uint64_t FrameSize;
-  Value *FramePtr;
-  BasicBlock *AllocaSpillBlock;
+  uint64_t FrameSize = 0;
+  Value *FramePtr = nullptr;
+  BasicBlock *AllocaSpillBlock = nullptr;
 
   /// This would only be true if optimization are enabled.
   bool OptimizeFrame;
@@ -237,9 +267,17 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   Shape() = default;
   explicit Shape(Function &F, bool OptimizeFrame = false)
       : OptimizeFrame(OptimizeFrame) {
-    buildFrom(F);
+    SmallVector<CoroFrameInst *, 8> CoroFrames;
+    SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
+
+    analyze(F, CoroFrames, UnusedCoroSaves);
+    if (!CoroBegin) {
+      invalidateCoroutine(F, CoroFrames);
+      return;
+    }
+    initABI();
+    cleanCoroutine(CoroFrames, UnusedCoroSaves);
   }
-  void buildFrom(Function &F);
 };
 
 } // end namespace coro

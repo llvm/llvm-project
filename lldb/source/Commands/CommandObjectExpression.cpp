@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
-
 #include "CommandObjectExpression.h"
+#include "DiagnosticRendering.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
@@ -486,19 +486,34 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        const char *error_cstr = result_valobj_sp->GetError().AsCString();
-        if (error_cstr && error_cstr[0]) {
-          const size_t error_cstr_len = strlen(error_cstr);
-          const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';
-          if (strstr(error_cstr, "error:") != error_cstr)
-            error_stream.PutCString("error: ");
-          error_stream.Write(error_cstr, error_cstr_len);
-          if (!ends_with_newline)
-            error_stream.EOL();
-        } else {
-          error_stream.PutCString("error: unknown error\n");
-        }
+        // Retrieve the diagnostics.
+        std::vector<DiagnosticDetail> details;
+        llvm::consumeError(llvm::handleErrors(
+            result_valobj_sp->GetError().ToError(),
+            [&](ExpressionError &error) { details = error.GetDetails(); }));
+        // Find the position of the expression in the command.
+        std::optional<uint16_t> expr_pos;
+        size_t nchar = m_original_command.find(expr);
+        if (nchar != std::string::npos)
+          expr_pos = nchar + GetDebugger().GetPrompt().size();
 
+        if (!details.empty()) {
+          bool show_inline =
+              GetDebugger().GetShowInlineDiagnostics() && !expr.contains('\n');
+          RenderDiagnosticDetails(error_stream, expr_pos, show_inline, details);
+        } else {
+          const char *error_cstr = result_valobj_sp->GetError().AsCString();
+          llvm::StringRef error(error_cstr);
+          if (!error.empty()) {
+            if (!error.starts_with("error:"))
+              error_stream << "error: ";
+            error_stream << error;
+            if (!error.ends_with('\n'))
+              error_stream.EOL();
+          } else {
+            error_stream << "error: unknown error\n";
+          }
+        }
         result.SetStatus(eReturnStatusFailed);
       }
     }

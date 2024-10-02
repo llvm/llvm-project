@@ -16,6 +16,9 @@
     },
     "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE": {
       "value": false
+    },
+    "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
+      "value": true
     }
   },
   "qsort": {

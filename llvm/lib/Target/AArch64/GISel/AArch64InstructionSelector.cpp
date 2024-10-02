@@ -1994,7 +1994,106 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
 
 bool AArch64InstructionSelector::selectVaStartAAPCS(
     MachineInstr &I, MachineFunction &MF, MachineRegisterInfo &MRI) const {
-  return false;
+
+  if (STI.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                             MF.getFunction().isVarArg()))
+    return false;
+
+  // The layout of the va_list struct is specified in the AArch64 Procedure Call
+  // Standard, section 10.1.5.
+
+  const AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+  const unsigned PtrSize = STI.isTargetILP32() ? 4 : 8;
+  const auto *PtrRegClass =
+      STI.isTargetILP32() ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass;
+
+  const MCInstrDesc &MCIDAddAddr =
+      TII.get(STI.isTargetILP32() ? AArch64::ADDWri : AArch64::ADDXri);
+  const MCInstrDesc &MCIDStoreAddr =
+      TII.get(STI.isTargetILP32() ? AArch64::STRWui : AArch64::STRXui);
+
+  /*
+   * typedef struct va_list {
+   *  void * stack; // next stack param
+   *  void * gr_top; // end of GP arg reg save area
+   *  void * vr_top; // end of FP/SIMD arg reg save area
+   *  int gr_offs; // offset from gr_top to next GP register arg
+   *  int vr_offs; // offset from vr_top to next FP/SIMD register arg
+   * } va_list;
+   */
+  const auto VAList = I.getOperand(0).getReg();
+
+  // Our current offset in bytes from the va_list struct (VAList).
+  unsigned OffsetBytes = 0;
+
+  // Helper function to store (FrameIndex + Imm) to VAList at offset OffsetBytes
+  // and increment OffsetBytes by PtrSize.
+  const auto PushAddress = [&](const int FrameIndex, const int64_t Imm) {
+    const Register Top = MRI.createVirtualRegister(PtrRegClass);
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), MCIDAddAddr)
+                   .addDef(Top)
+                   .addFrameIndex(FrameIndex)
+                   .addImm(Imm)
+                   .addImm(0);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+    const auto *MMO = *I.memoperands_begin();
+    MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), MCIDStoreAddr)
+              .addUse(Top)
+              .addUse(VAList)
+              .addImm(OffsetBytes / PtrSize)
+              .addMemOperand(MF.getMachineMemOperand(
+                  MMO->getPointerInfo().getWithOffset(OffsetBytes),
+                  MachineMemOperand::MOStore, PtrSize, MMO->getBaseAlign()));
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+    OffsetBytes += PtrSize;
+  };
+
+  // void* stack at offset 0
+  PushAddress(FuncInfo->getVarArgsStackIndex(), 0);
+
+  // void* gr_top at offset 8 (4 on ILP32)
+  const unsigned GPRSize = FuncInfo->getVarArgsGPRSize();
+  PushAddress(FuncInfo->getVarArgsGPRIndex(), GPRSize);
+
+  // void* vr_top at offset 16 (8 on ILP32)
+  const unsigned FPRSize = FuncInfo->getVarArgsFPRSize();
+  PushAddress(FuncInfo->getVarArgsFPRIndex(), FPRSize);
+
+  // Helper function to store a 4-byte integer constant to VAList at offset
+  // OffsetBytes, and increment OffsetBytes by 4.
+  const auto PushIntConstant = [&](const int32_t Value) {
+    constexpr int IntSize = 4;
+    const Register Temp = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+    auto MIB =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::MOVi32imm))
+            .addDef(Temp)
+            .addImm(Value);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+
+    const auto *MMO = *I.memoperands_begin();
+    MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::STRWui))
+              .addUse(Temp)
+              .addUse(VAList)
+              .addImm(OffsetBytes / IntSize)
+              .addMemOperand(MF.getMachineMemOperand(
+                  MMO->getPointerInfo().getWithOffset(OffsetBytes),
+                  MachineMemOperand::MOStore, IntSize, MMO->getBaseAlign()));
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    OffsetBytes += IntSize;
+  };
+
+  // int gr_offs at offset 24 (12 on ILP32)
+  PushIntConstant(-static_cast<int32_t>(GPRSize));
+
+  // int vr_offs at offset 28 (16 on ILP32)
+  PushIntConstant(-static_cast<int32_t>(FPRSize));
+
+  assert(OffsetBytes == (STI.isTargetILP32() ? 20 : 32) && "Unexpected offset");
+
+  I.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::selectVaStartDarwin(

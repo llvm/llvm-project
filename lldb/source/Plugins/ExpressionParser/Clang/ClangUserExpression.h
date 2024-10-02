@@ -177,6 +177,8 @@ public:
   /// Returns true iff this expression is using any imported C++ modules.
   bool DidImportCxxModules() const { return !m_imported_cpp_modules.empty(); }
 
+  llvm::StringRef GetFilename() const { return m_filename; }
+
 private:
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
   /// environment.

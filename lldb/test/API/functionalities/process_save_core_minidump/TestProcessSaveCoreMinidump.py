@@ -522,3 +522,46 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))
+
+    def minidump_deterministic_difference(self):
+        """Test that verifies that two minidumps produced are identical."""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            core_styles = [
+                lldb.eSaveCoreStackOnly,
+                lldb.eSaveCoreDirtyOnly,
+                lldb.eSaveCoreFull,
+            ]
+            for style in core_styles:
+                spec_one = lldb.SBFileSpec(self.getBuildArtifact("core.one.dmp"))
+                spec_two = lldb.SBFileSpec(self.getBuildArtifact("core.two.dmp"))
+                options = lldb.SBSaveCoreOptions()
+                options.SetOutputFile(spec_one)
+                options.SetPluginName("minidump")
+                options.SetStyle(style)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+                options.SetOutputFile(spec_two)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+
+                file_one = None
+                file_two = None
+                with open(spec_one.GetFileName(), mode="rb") as file:
+                    file_one = file.read()
+                with open(spec_two.GetFileName(), mode="rb") as file:
+                    file_two = file.read()
+                self.assertEqual(file_one, file_two)
+                self.assertTrue(os.unlink(spec_one.GetFileName()))
+                self.assertTrue(os.unlink(spec_two.GetFileName()))
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))

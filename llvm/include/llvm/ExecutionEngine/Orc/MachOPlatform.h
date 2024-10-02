@@ -202,9 +202,6 @@ private:
                           jitlink::LinkGraph &G,
                           jitlink::PassConfiguration &Config) override;
 
-    SyntheticSymbolDependenciesMap
-    getSyntheticSymbolDependencies(MaterializationResponsibility &MR) override;
-
     // FIXME: We should be tentatively tracking scraped sections and discarding
     // if the MR fails.
     Error notifyFailed(MaterializationResponsibility &MR) override {
@@ -219,9 +216,6 @@ private:
                                      ResourceKey SrcKey) override {}
 
   private:
-    using InitSymbolDepMap =
-        DenseMap<MaterializationResponsibility *, JITLinkSymbolSet>;
-
     struct UnwindSections {
       SmallVector<ExecutorAddrRange> CodeRanges;
       ExecutorAddrRange DwarfSection;
@@ -282,7 +276,6 @@ private:
     // JITDylibs are removed.
     DenseMap<JITDylib *, ObjCImageInfo> ObjCImageInfos;
     DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
-    InitSymbolDepMap InitSymbolDeps;
   };
 
   using GetJITDylibHeaderSendResultFn =

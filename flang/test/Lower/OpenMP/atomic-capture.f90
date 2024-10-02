@@ -2,8 +2,8 @@
 
 ! This test checks the lowering of atomic capture
 
-! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+! RUN: bbc %openmp_flags -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
 
 program OmpAtomicCapture

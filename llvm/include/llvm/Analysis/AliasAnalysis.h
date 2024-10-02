@@ -315,7 +315,7 @@ class AAResults {
 public:
   // Make these results default constructable and movable. We have to spell
   // these out because MSVC won't synthesize them.
-  AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+  AAResults(const TargetLibraryInfo &TLI);
   AAResults(AAResults &&Arg);
   ~AAResults();
 

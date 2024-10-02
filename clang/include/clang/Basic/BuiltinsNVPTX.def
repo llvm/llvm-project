@@ -139,6 +139,7 @@ TARGET_BUILTIN(__nvvm_is_explicit_cluster, "b", "nc", AND(SM_90, PTX78))
 BUILTIN(__nvvm_read_ptx_sreg_laneid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_warpid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nwarpid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_warpsize, "i", "nc")
 
 BUILTIN(__nvvm_read_ptx_sreg_smid, "i", "nc")
 BUILTIN(__nvvm_read_ptx_sreg_nsmid, "i", "nc")
@@ -598,14 +599,6 @@ TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
 TARGET_BUILTIN(__nvvm_e4m3x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
 TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn, "V2hs", "", AND(SM_89,PTX81))
 TARGET_BUILTIN(__nvvm_e5m2x2_to_f16x2_rn_relu, "V2hs", "", AND(SM_89,PTX81))
-
-// Bitcast
-
-BUILTIN(__nvvm_bitcast_f2i, "if", "")
-BUILTIN(__nvvm_bitcast_i2f, "fi", "")
-
-BUILTIN(__nvvm_bitcast_ll2d, "dLLi", "")
-BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
 
 // FNS
 TARGET_BUILTIN(__nvvm_fns, "UiUiUii", "n", PTX60)

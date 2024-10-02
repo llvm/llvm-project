@@ -2464,11 +2464,16 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
            (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
   };
   auto MatchDecomposableConstantBitMask = [&]() {
-    APInt Mask;
-    return llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred, CurrX, Mask) &&
-           ICmpInst::isEquality(Pred) && Mask.isPowerOf2() &&
-           (BitMask = ConstantInt::get(CurrX->getType(), Mask)) &&
-           (BitPos = ConstantInt::get(CurrX->getType(), Mask.logBase2()));
+    auto Res = llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
+    if (Res && Res->Mask.isPowerOf2()) {
+      assert(ICmpInst::isEquality(Res->Pred));
+      Pred = Res->Pred;
+      CurrX = Res->X;
+      BitMask = ConstantInt::get(CurrX->getType(), Res->Mask);
+      BitPos = ConstantInt::get(CurrX->getType(), Res->Mask.logBase2());
+      return true;
+    }
+    return false;
   };
 
   if (!MatchVariableBitMask() && !MatchConstantBitMask() &&

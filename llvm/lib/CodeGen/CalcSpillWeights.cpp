@@ -222,7 +222,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   bool IsExiting = false;
   std::set<CopyHint> CopyHints;
-  DenseMap<unsigned, float> Hint;
+  SmallDenseMap<unsigned, float, 8> Hint;
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
            I = MRI.reg_instr_nodbg_begin(LI.reg()),
            E = MRI.reg_instr_nodbg_end();

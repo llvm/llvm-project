@@ -402,7 +402,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VarOffsets;
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
       !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))
@@ -1043,7 +1043,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   Value *GEPZU = Builder.CreateConstInBoundsGEP1_64(I32Ty, DispatchPtr, 2);
   LoadInst *LoadZU = Builder.CreateAlignedLoad(I32Ty, GEPZU, Align(4));
 
-  MDNode *MD = MDNode::get(Mod->getContext(), std::nullopt);
+  MDNode *MD = MDNode::get(Mod->getContext(), {});
   LoadXY->setMetadata(LLVMContext::MD_invariant_load, MD);
   LoadZU->setMetadata(LLVMContext::MD_invariant_load, MD);
   ST.makeLIDRangeMetadata(LoadZU);

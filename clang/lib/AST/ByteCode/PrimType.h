@@ -26,6 +26,7 @@ class Boolean;
 class Floating;
 class FunctionPointer;
 class MemberPointer;
+class FixedPoint;
 template <bool Signed> class IntegralAP;
 template <unsigned Bits, bool Signed> class Integral;
 
@@ -42,10 +43,11 @@ enum PrimType : unsigned {
   PT_IntAP = 8,
   PT_IntAPS = 9,
   PT_Bool = 10,
-  PT_Float = 11,
-  PT_Ptr = 12,
-  PT_FnPtr = 13,
-  PT_MemberPtr = 14,
+  PT_FixedPoint = 11,
+  PT_Float = 12,
+  PT_Ptr = 13,
+  PT_FnPtr = 14,
+  PT_MemberPtr = 15,
 };
 
 inline constexpr bool isPtrType(PrimType T) {
@@ -69,7 +71,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-constexpr bool isIntegralType(PrimType T) { return T <= PT_Bool; }
+constexpr bool isIntegralType(PrimType T) { return T <= PT_FixedPoint; }
 
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
@@ -118,6 +120,9 @@ template <> struct PrimConv<PT_FnPtr> {
 template <> struct PrimConv<PT_MemberPtr> {
   using T = MemberPointer;
 };
+template <> struct PrimConv<PT_FixedPoint> {
+  using T = FixedPoint;
+};
 
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
@@ -163,6 +168,7 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
       TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
       TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
+      TYPE_SWITCH_CASE(PT_FixedPoint, B)                                       \
     }                                                                          \
   } while (0)
 

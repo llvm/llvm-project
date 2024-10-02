@@ -439,6 +439,5 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   OS << '\'';
   N.print(OS, PrintingPolicy(LO));
   OS << '\'';
-  OS.flush();
   return DB << NameStr;
 }

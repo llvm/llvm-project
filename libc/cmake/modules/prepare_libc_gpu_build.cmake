@@ -21,10 +21,10 @@ if(LIBC_TARGET_TRIPLE)
   set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
 endif()
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib -nostdlib")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
 elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument -nostdlib")
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.

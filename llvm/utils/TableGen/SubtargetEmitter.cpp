@@ -284,7 +284,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS,
        << "\"" << CommandLineName << "\", "
        << "\"" << Desc << "\", " << Target << "::" << Name << ", ";
 
-    RecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
+    ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
     printFeatureMask(OS, ImpliesList, FeatureMap);
 
@@ -320,8 +320,9 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
 
   for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
-    RecVec FeatureList = Processor->getValueAsListOfDefs("Features");
-    RecVec TuneFeatureList = Processor->getValueAsListOfDefs("TuneFeatures");
+    ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
+    ConstRecVec TuneFeatureList =
+        Processor->getValueAsListOfDefs("TuneFeatures");
 
     // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
     OS << " { "
@@ -353,7 +354,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
                                                 std::string &ItinString,
                                                 unsigned &NStages) {
   // Get states list
-  ConstRecVec StageList = ItinData->getValueAsListOfConstDefs("Stages");
+  ConstRecVec StageList = ItinData->getValueAsListOfDefs("Stages");
 
   // For each stage
   unsigned N = NStages = StageList.size();
@@ -366,7 +367,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
     ItinString += "  { " + itostr(Cycles) + ", ";
 
     // Get unit list
-    RecVec UnitList = Stage->getValueAsListOfDefs("Units");
+    ConstRecVec UnitList = Stage->getValueAsListOfDefs("Units");
 
     // For each unit
     for (unsigned j = 0, M = UnitList.size(); j < M;) {
@@ -414,7 +415,7 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
                                                  const Record *ItinData,
                                                  std::string &ItinString,
                                                  unsigned NOperandCycles) {
-  ConstRecVec BypassList = ItinData->getValueAsListOfConstDefs("Bypasses");
+  ConstRecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
   ListSeparator LS;
@@ -444,7 +445,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
     if (!ItinsDefSet.insert(ProcModel.ItinsDef).second)
       continue;
 
-    RecVec FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
+    ConstRecVec FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
     if (FUs.empty())
       continue;
 
@@ -458,7 +459,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
 
     OS << "} // end namespace " << Name << "FU\n";
 
-    RecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
+    ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
       OS << "\n// Pipeline forwarding paths for itineraries \"" << Name
          << "\"\n"
@@ -682,8 +683,7 @@ void SubtargetEmitter::EmitProcessorResourceSubUnits(
     const Record *PRDef = ProcModel.ProcResourceDefs[i];
     if (!PRDef->isSubClassOf("ProcResGroup"))
       continue;
-    RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
-    for (const Record *RUDef : ResUnits) {
+    for (const Record *RUDef : PRDef->getValueAsListOfDefs("Resources")) {
       const Record *RU =
           SchedModels.findProcResUnits(RUDef, ProcModel, PRDef->getLoc());
       for (unsigned J = 0; J < RU->getValueAsInt("NumUnits"); ++J) {
@@ -842,8 +842,7 @@ void SubtargetEmitter::EmitProcessorResources(const CodeGenProcModel &ProcModel,
     const unsigned SubUnitsBeginOffset = SubUnitsOffset;
     int BufferSize = PRDef->getValueAsInt("BufferSize");
     if (PRDef->isSubClassOf("ProcResGroup")) {
-      RecVec ResUnits = PRDef->getValueAsListOfDefs("Resources");
-      for (const Record *RU : ResUnits) {
+      for (const Record *RU : PRDef->getValueAsListOfDefs("Resources")) {
         NumUnits += RU->getValueAsInt("NumUnits");
         SubUnitsOffset += RU->getValueAsInt("NumUnits");
       }
@@ -1006,7 +1005,7 @@ void SubtargetEmitter::ExpandProcResources(
     const Record *PRDef = PRVec[i];
     ConstRecVec SubResources;
     if (PRDef->isSubClassOf("ProcResGroup"))
-      SubResources = PRDef->getValueAsListOfConstDefs("Resources");
+      SubResources = PRDef->getValueAsListOfDefs("Resources");
     else {
       SubResources.push_back(PRDef);
       PRDef = SchedModels.findProcResUnits(PRDef, PM, PRDef->getLoc());
@@ -1028,7 +1027,7 @@ void SubtargetEmitter::ExpandProcResources(
     for (const Record *PR : PM.ProcResourceDefs) {
       if (PR == PRDef || !PR->isSubClassOf("ProcResGroup"))
         continue;
-      RecVec SuperResources = PR->getValueAsListOfDefs("Resources");
+      ConstRecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       ConstRecIter SubI = SubResources.begin(), SubE = SubResources.end();
       for (; SubI != SubE; ++SubI) {
         if (!is_contained(SuperResources, *SubI)) {
@@ -1112,7 +1111,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
     if (Writes.empty()) {
       // Check this processor's itinerary class resources.
       for (const Record *I : ProcModel.ItinRWDefs) {
-        RecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
+        ConstRecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
         if (is_contained(Matched, SC.ItinClassDef)) {
           SchedModels.findRWs(I->getValueAsListOfDefs("OperandReadWrites"),
                               Writes, Reads);
@@ -1164,8 +1163,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
 
         // Create an entry for each ProcResource listed in WriteRes.
-        ConstRecVec PRVec =
-            WriteRes->getValueAsListOfConstDefs("ProcResources");
+        ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
         std::vector<int64_t> ReleaseAtCycles =
             WriteRes->getValueAsListOfInts("ReleaseAtCycles");
 
@@ -1274,7 +1272,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
         break;
       }
-      RecVec ValidWrites = ReadAdvance->getValueAsListOfDefs("ValidWrites");
+      ConstRecVec ValidWrites =
+          ReadAdvance->getValueAsListOfDefs("ValidWrites");
       IdxVec WriteIDs;
       if (ValidWrites.empty())
         WriteIDs.push_back(0);
@@ -1574,13 +1573,13 @@ static void emitPredicates(const CodeGenSchedTransition &T,
   unsigned NumNonTruePreds =
       T.PredTerm.size() - count_if(T.PredTerm, isTruePredicate);
 
-  SS.indent(PE.getIndentLevel() * 2);
+  SS << PE.getIndent();
 
   if (NumNonTruePreds) {
     bool FirstNonTruePredicate = true;
     SS << "if (";
 
-    PE.setIndentLevel(PE.getIndentLevel() + 2);
+    PE.getIndent() += 2;
 
     for (const Record *Rec : T.PredTerm) {
       // Skip predicates that evaluate to "true".
@@ -1591,7 +1590,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         FirstNonTruePredicate = false;
       } else {
         SS << "\n";
-        SS.indent(PE.getIndentLevel() * 2);
+        SS << PE.getIndent();
         SS << "&& ";
       }
 
@@ -1608,9 +1607,9 @@ static void emitPredicates(const CodeGenSchedTransition &T,
     }
 
     SS << ")\n"; // end of if-stmt
-    PE.decreaseIndentLevel();
-    SS.indent(PE.getIndentLevel() * 2);
-    PE.decreaseIndentLevel();
+    --PE.getIndent();
+    SS << PE.getIndent();
+    --PE.getIndent();
   }
 
   SS << "return " << T.ToClassIdx << "; // " << SC.Name << '\n';
@@ -1734,7 +1733,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
           FinalT = &T;
           continue;
         }
-        PE.setIndentLevel(3);
+        PE.getIndent() = 3;
         emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
       }
       if (FinalT)
@@ -1778,11 +1777,10 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
-  STIPredicateExpander PE(Target);
+  STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setClassPrefix(ClassName);
   PE.setExpandDefinition(true);
   PE.setByRef(false);
-  PE.setIndentLevel(0);
 
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
@@ -1960,7 +1958,7 @@ void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {
   OS << "\n#ifdef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n";
   OS << "#undef GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS\n\n";
 
-  STIPredicateExpander PE(Target);
+  STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setExpandForMC(true);
   PE.setByRef(true);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
@@ -1974,7 +1972,6 @@ void SubtargetEmitter::EmitMCInstrAnalysisPredicateFunctions(raw_ostream &OS) {
   std::string ClassPrefix = Target + "MCInstrAnalysis";
   PE.setExpandDefinition(true);
   PE.setClassPrefix(ClassPrefix);
-  PE.setIndentLevel(0);
   for (const STIPredicateFunction &Fn : SchedModels.getSTIPredicates())
     PE.expandSTIPredicate(OS, Fn);
 
@@ -2019,11 +2016,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumFeatures)
     OS << Target << "FeatureKV, ";
   else
-    OS << "std::nullopt, ";
+    OS << "{}, ";
   if (NumProcs)
     OS << Target << "SubTypeKV, ";
   else
-    OS << "std::nullopt, ";
+    OS << "{}, ";
   OS << '\n';
   OS.indent(22);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2125,11 +2122,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   if (NumFeatures)
     OS << "ArrayRef(" << Target << "FeatureKV, " << NumFeatures << "), ";
   else
-    OS << "std::nullopt, ";
+    OS << "{}, ";
   if (NumProcs)
     OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
   else
-    OS << "std::nullopt, ";
+    OS << "{}, ";
   OS << '\n';
   OS.indent(24);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "

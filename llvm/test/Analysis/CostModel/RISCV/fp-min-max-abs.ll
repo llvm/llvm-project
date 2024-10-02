@@ -473,9 +473,9 @@ define void @copysign_f16() {
 ;
 ; ZVFHMIN-LABEL: 'copysign_f16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call half @llvm.copysign.f16(half undef, half undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %2 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %3 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %4 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %3 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: %5 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %6 = call <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half> undef, <vscale x 1 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Invalid cost for instruction: %7 = call <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)

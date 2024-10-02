@@ -289,9 +289,9 @@ void AsmParserState::finalizeRegionDefinition() {
 }
 
 void AsmParserState::addDefinition(Block *block, SMLoc location) {
-  auto it = impl->blocksToIdx.find(block);
-  if (it == impl->blocksToIdx.end()) {
-    impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  auto [it, inserted] =
+      impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  if (inserted) {
     impl->blocks.emplace_back(std::make_unique<BlockDefinition>(
         block, convertIdLocToRange(location)));
     return;
@@ -379,11 +379,10 @@ void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
 }
 
 void AsmParserState::addUses(Block *block, ArrayRef<SMLoc> locations) {
-  auto it = impl->blocksToIdx.find(block);
-  if (it == impl->blocksToIdx.end()) {
-    it = impl->blocksToIdx.try_emplace(block, impl->blocks.size()).first;
+  auto [it, inserted] =
+      impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  if (inserted)
     impl->blocks.emplace_back(std::make_unique<BlockDefinition>(block));
-  }
 
   BlockDefinition &def = *impl->blocks[it->second];
   for (SMLoc loc : locations)

@@ -2128,14 +2128,10 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   TypeSystemClang::BuildIndirectFields(clang_type);
   TypeSystemClang::CompleteTagDeclarationDefinition(clang_type);
 
-  if (type)
-    layout_info.bit_size = type->GetByteSize(nullptr).value_or(0) * 8;
-  if (layout_info.bit_size == 0)
-    layout_info.bit_size =
-        die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
-  if (layout_info.alignment == 0)
-    layout_info.alignment =
-        die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
+  layout_info.bit_size =
+      die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  layout_info.alignment =
+      die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
   clang::CXXRecordDecl *record_decl =
       m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());

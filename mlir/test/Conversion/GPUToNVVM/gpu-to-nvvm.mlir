@@ -610,6 +610,13 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello, world\n"
+
+    // Make sure that the same global is reused.
+    // CHECK: %[[FORMATSTR2:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr
+    // CHECK: %[[FORMATSTART2:.*]] = llvm.getelementptr %[[FORMATSTR2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
+    // CHECK: llvm.call @vprintf(%[[FORMATSTART2]], %{{.*}}) : (!llvm.ptr, !llvm.ptr) -> i32
+    gpu.printf "Hello, world\n"
+
     gpu.return
   }
 
@@ -940,6 +947,25 @@ gpu.module @test_module_49 {
     %2 = gpu.lane_id upper_bound 16
 
     return %0, %1, %2 : index, index, index
+  }
+}
+
+gpu.module @test_module_50 {
+// CHECK-LABEL: func @kernel_with_grid_size(
+  gpu.func @kernel_with_grid_size(%arg0: !llvm.ptr) kernel attributes {known_grid_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 32> : i32
+    %0 = gpu.block_id x
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.y range <i32, 0, 4> : i32
+    %1 = gpu.block_id y
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.z range <i32, 0, 2> : i32
+    %2 = gpu.block_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
+    gpu.return
   }
 }
 

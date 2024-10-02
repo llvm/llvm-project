@@ -1096,6 +1096,7 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
   ];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 #endif // AFFINE_OPS

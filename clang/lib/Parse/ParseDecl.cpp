@@ -5439,18 +5439,20 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
-      if (!getLangOpts().ObjC && !getLangOpts().C23) {
+      if (!getLangOpts().ObjC) {
         if (getLangOpts().CPlusPlus11)
           Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
               << BaseRange;
         else if (getLangOpts().CPlusPlus)
           Diag(ColonLoc, diag::ext_cxx11_enum_fixed_underlying_type)
               << BaseRange;
-        else if (getLangOpts().MicrosoftExt)
+        else if (getLangOpts().MicrosoftExt && !getLangOpts().C23)
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
               << BaseRange;
         else
-          Diag(ColonLoc, diag::ext_clang_c_enum_fixed_underlying_type)
+          Diag(ColonLoc, getLangOpts().C23
+                             ? diag::warn_c17_compat_enum_fixed_underlying_type
+                             : diag::ext_c23_enum_fixed_underlying_type)
               << BaseRange;
       }
     }
@@ -7948,21 +7950,8 @@ void Parser::ParseParameterDeclarationClause(
     // Parse a C++23 Explicit Object Parameter
     // We do that in all language modes to produce a better diagnostic.
     SourceLocation ThisLoc;
-    if (getLangOpts().CPlusPlus && Tok.is(tok::kw_this)) {
+    if (getLangOpts().CPlusPlus && Tok.is(tok::kw_this))
       ThisLoc = ConsumeToken();
-      // C++23 [dcl.fct]p6:
-      //   An explicit-object-parameter-declaration is a parameter-declaration
-      //   with a this specifier. An explicit-object-parameter-declaration
-      //   shall appear only as the first parameter-declaration of a
-      //   parameter-declaration-list of either:
-      //   - a member-declarator that declares a member function, or
-      //   - a lambda-declarator.
-      //
-      // The parameter-declaration-list of a requires-expression is not such
-      // a context.
-      if (DeclaratorCtx == DeclaratorContext::RequiresExpr)
-        Diag(ThisLoc, diag::err_requires_expr_explicit_object_parameter);
-    }
 
     ParsedTemplateInfo TemplateInfo;
     ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none,

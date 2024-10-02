@@ -36,7 +36,7 @@ DAP::DAP()
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
-      enable_display_extended_backtrace(false),
+      display_extended_backtrace(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -822,7 +822,7 @@ void Variables::Clear() {
   locals.Clear();
   globals.Clear();
   registers.Clear();
-  expandable_variables.clear();
+  referenced_variables.clear();
 }
 
 int64_t Variables::GetNewVariableReference(bool is_permanent) {
@@ -837,24 +837,23 @@ bool Variables::IsPermanentVariableReference(int64_t var_ref) {
 
 lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
   if (IsPermanentVariableReference(var_ref)) {
-    auto pos = expandable_permanent_variables.find(var_ref);
-    if (pos != expandable_permanent_variables.end())
+    auto pos = referenced_permanent_variables.find(var_ref);
+    if (pos != referenced_permanent_variables.end())
       return pos->second;
   } else {
-    auto pos = expandable_variables.find(var_ref);
-    if (pos != expandable_variables.end())
+    auto pos = referenced_variables.find(var_ref);
+    if (pos != referenced_variables.end())
       return pos->second;
   }
   return lldb::SBValue();
 }
 
-int64_t Variables::InsertExpandableVariable(lldb::SBValue variable,
-                                            bool is_permanent) {
+int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
   int64_t var_ref = GetNewVariableReference(is_permanent);
   if (is_permanent)
-    expandable_permanent_variables.insert(std::make_pair(var_ref, variable));
+    referenced_permanent_variables.insert(std::make_pair(var_ref, variable));
   else
-    expandable_variables.insert(std::make_pair(var_ref, variable));
+    referenced_variables.insert(std::make_pair(var_ref, variable));
   return var_ref;
 }
 

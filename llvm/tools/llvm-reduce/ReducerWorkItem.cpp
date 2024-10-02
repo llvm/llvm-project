@@ -52,6 +52,11 @@ extern cl::OptionCategory LLVMReduceOptions;
 static cl::opt<std::string> TargetTriple("mtriple",
                                          cl::desc("Set the target triple"),
                                          cl::cat(LLVMReduceOptions));
+static cl::opt<bool> PrintInvalidMachineReductions(
+    "print-invalid-reduction-machine-verifier-errors",
+    cl::desc(
+        "Print machine verifier errors on invalid reduction attempts triple"),
+    cl::cat(LLVMReduceOptions));
 
 static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
@@ -417,7 +422,7 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
 
   DstMRI->freezeReservedRegs();
 
-  DstMF->verify(nullptr, "", /*AbortOnError=*/true);
+  DstMF->verify(nullptr, "", &errs(), /*AbortOnError=*/true);
   return DstMF;
 }
 
@@ -450,8 +455,21 @@ bool ReducerWorkItem::verify(raw_fd_ostream *OS) const {
 
   for (const Function &F : getModule()) {
     if (const MachineFunction *MF = MMI->getMachineFunction(F)) {
-      if (!MF->verify(nullptr, "", /*AbortOnError=*/false))
+      // With the current state of quality, most reduction attempts fail the
+      // machine verifier. Avoid spamming large function dumps on nearly every
+      // attempt until the situation is better.
+      if (!MF->verify(nullptr, "",
+                      /*OS=*/PrintInvalidMachineReductions ? &errs() : nullptr,
+                      /*AbortOnError=*/false)) {
+
+        if (!PrintInvalidMachineReductions) {
+          WithColor::warning(errs())
+              << "reduction attempt on function '" << MF->getName()
+              << "' failed machine verifier (debug with "
+                 "-print-invalid-reduction-machine-verifier-errors)\n";
+        }
         return true;
+      }
     }
   }
 

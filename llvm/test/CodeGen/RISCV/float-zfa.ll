@@ -310,3 +310,20 @@ define float @fma_neg_addend_multiplicand(float %x) nounwind {
   %a = call float @llvm.fma.f32(float %x, float -0.5, float -0.25)
   ret float %a
 }
+
+define float @select_loadfpimm(float %x) nounwind {
+; CHECK-LABEL: select_loadfpimm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    fle.s a0, fa5, fa0
+; CHECK-NEXT:    fli.s fa0, 0.5
+; CHECK-NEXT:    bnez a0, .LBB30_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    fneg.s fa0, fa0
+; CHECK-NEXT:  .LBB30_2: # %entry
+; CHECK-NEXT:    ret
+entry:
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select i1 %cmp, float -5.000000e-01, float 5.000000e-01
+  ret float %sel
+}

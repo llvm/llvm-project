@@ -2,11 +2,6 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i4
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v16i1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v2i128
-
 declare <1 x i8> @llvm.sadd.sat.v1i8(<1 x i8>, <1 x i8>)
 declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8>, <4 x i8>)
@@ -190,23 +185,39 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 }
 
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
-; CHECK-LABEL: v2i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    add x9, x1, #1
-; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-NEXT:    ld1 { v1.b }[4], [x9]
-; CHECK-NEXT:    shl v1.2s, v1.2s, #24
-; CHECK-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-NEXT:    sqadd v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #24
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x2]
-; CHECK-NEXT:    strb w8, [x2, #1]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: v2i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-SD-NEXT:    ld1 { v1.b }[0], [x1]
+; CHECK-SD-NEXT:    add x8, x0, #1
+; CHECK-SD-NEXT:    add x9, x1, #1
+; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
+; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #24
+; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #24
+; CHECK-SD-NEXT:    sqadd v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #24
+; CHECK-SD-NEXT:    mov w8, v0.s[1]
+; CHECK-SD-NEXT:    fmov w9, s0
+; CHECK-SD-NEXT:    strb w9, [x2]
+; CHECK-SD-NEXT:    strb w8, [x2, #1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ldr b1, [x1]
+; CHECK-GI-NEXT:    add x8, x2, #1
+; CHECK-GI-NEXT:    ldr b2, [x0, #1]
+; CHECK-GI-NEXT:    ldr b3, [x1, #1]
+; CHECK-GI-NEXT:    mov v0.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov v1.b[0], v1.b[0]
+; CHECK-GI-NEXT:    mov v0.b[1], v2.b[0]
+; CHECK-GI-NEXT:    mov v1.b[1], v3.b[0]
+; CHECK-GI-NEXT:    sqadd v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    st1 { v0.b }[0], [x2]
+; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
+; CHECK-GI-NEXT:    ret
   %x = load <2 x i8>, ptr %px
   %y = load <2 x i8>, ptr %py
   %z = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %y)
@@ -256,10 +267,10 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-GI-NEXT:    add x9, x1, #2
 ; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x9]
+; CHECK-GI-NEXT:    add x8, x2, #2
 ; CHECK-GI-NEXT:    sqadd v0.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    str h0, [x2]
-; CHECK-GI-NEXT:    str h1, [x2, #2]
+; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]
 ; CHECK-GI-NEXT:    ret
   %x = load <2 x i16>, ptr %px
   %y = load <2 x i16>, ptr %py

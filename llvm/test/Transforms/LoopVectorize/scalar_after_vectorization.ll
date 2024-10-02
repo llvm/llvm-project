@@ -22,13 +22,9 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; NO-IC:   %offset.idx = add i64 1, %index
 ; NO-IC:   %[[T2:.+]] = add i64 %offset.idx, 0
-; NO-IC:   %[[T3:.+]] = add i64 %offset.idx, 4
 ; NO-IC:   %[[T4:.+]] = add nuw nsw i64 %[[T2]], %tmp0
-; NO-IC:   %[[T5:.+]] = add nuw nsw i64 %[[T3]], %tmp0
 ; NO-IC:   %[[T6:.+]] = sub nsw i64 %[[T4]], %x
-; NO-IC:   %[[T7:.+]] = sub nsw i64 %[[T5]], %x
 ; NO-IC:   %[[T8:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T6]]
-; NO-IC:   %[[T9:.+]] = getelementptr inbounds i32, ptr %a, i64 %[[T7]]
 ; NO-IC:   %[[T10:.+]] = getelementptr inbounds i32, ptr %[[T8]], i32 0
 ; NO-IC:   %[[T12:.+]] = getelementptr inbounds i32, ptr %[[T8]], i32 4
 ; NO-IC:   load <4 x i32>, ptr %[[T10]], align 4

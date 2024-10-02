@@ -3223,7 +3223,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, callStmt);
       Say("Internal error: Expression analysis failed on CALL statement: %s"_err_en_US,
-          dump.str());
+          buf);
     }
   }
 }
@@ -3847,8 +3847,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       std::string buf;
       llvm::raw_string_ostream dump{buf};
       parser::DumpTree(dump, x);
-      Say("Internal error: Expression analysis failed on: %s"_err_en_US,
-          dump.str());
+      Say("Internal error: Expression analysis failed on: %s"_err_en_US, buf);
     }
     return std::nullopt;
   }

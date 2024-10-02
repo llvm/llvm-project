@@ -757,8 +757,8 @@ public:
       OutInfo.addTypeInfo(idx++, N);
     audited = Nullability.size() > 0 || ReturnNullability;
     if (audited)
-      OutInfo.addTypeInfo(0, ReturnNullability ? *ReturnNullability
-                                               : NullabilityKind::NonNull);
+      OutInfo.addTypeInfo(0,
+                          ReturnNullability.value_or(NullabilityKind::NonNull));
     if (!audited)
       return;
     OutInfo.NullabilityAudited = audited;

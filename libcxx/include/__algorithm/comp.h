@@ -43,9 +43,6 @@ struct __less<void, void> {
 };
 
 template <class _Tp>
-inline const bool __desugars_to_v<__less_tag, __less<>, _Tp, _Tp> = true;
-
-template <class _Tp>
 inline const bool __desugars_to_v<__totally_ordered_less_tag, __less<>, _Tp, _Tp> = is_integral<_Tp>::value;
 
 _LIBCPP_END_NAMESPACE_STD

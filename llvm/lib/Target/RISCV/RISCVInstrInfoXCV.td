@@ -792,17 +792,18 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
   def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
   def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xff), (CV_EXTBZ GPR:$rs1)>;
 
   defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
   defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
-  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addn>;
-  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addun>;
-  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addrn>;
-  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_addurn>;
-  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subn>;
-  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subun>;
-  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subrn>;
-  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_suburn>;
+  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addN>;
+  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduN>;
+  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addRN>;
+  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_adduRN>;
+  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subN>;
+  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuN>;
+  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subRN>;
+  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_subuRN>;
 } // Predicates = [HasVendorXCValu, IsRV32]
 
 //===----------------------------------------------------------------------===//

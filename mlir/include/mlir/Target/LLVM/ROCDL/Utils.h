@@ -71,14 +71,18 @@ public:
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
   loadBitcodeFiles(llvm::Module &module) override;
 
-  /// Adds `oclc` control variables to the LLVM module.
+  /// Determines required Device Libraries and adds `oclc` control variables to
+  /// the LLVM Module if needed. Also sets
+  /// `amdhsa_code_object_version` module flag.
   void handleModulePreLink(llvm::Module &module) override;
 
   /// Removes unnecessary metadata from the loaded bitcode files.
   LogicalResult handleBitcodeFile(llvm::Module &module) override;
 
 protected:
-  /// Adds `oclc` control variables to the LLVM module.
+  /// Adds `oclc` control variables to the LLVM Module if needed. It also sets
+  /// `amdhsa_code_object_version` module flag which is equal to ABI version and
+  /// it uses "llvm::Module::Error" to set that flag.
   void addControlVariables(llvm::Module &module, AMDGCNLibraries libs,
                            bool wave64, bool daz, bool finiteOnly,
                            bool unsafeMath, bool fastMath, bool correctSqrt,

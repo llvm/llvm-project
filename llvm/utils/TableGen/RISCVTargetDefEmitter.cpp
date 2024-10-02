@@ -172,7 +172,7 @@ static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
   // Iterate on all definition records.
   for (const Record *Rec :
        RK.getAllDerivedDefinitionsIfDefined("RISCVProcessorModel")) {
-    const std::vector<Record *> &Features =
+    const std::vector<const Record *> &Features =
         Rec->getValueAsListOfDefs("Features");
     bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
       return Feature->getValueAsString("Name") == "unaligned-scalar-mem";

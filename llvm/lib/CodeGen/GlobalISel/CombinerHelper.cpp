@@ -3320,6 +3320,112 @@ static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
          isConstTrueVal(TLI, Cst, IsVector, IsFP);
 }
 
+// This combine tries to reduce the number of scalarised G_TRUNC instructions by
+// using vector truncates instead
+//
+// EXAMPLE:
+// %a(i32), %b(i32) = G_UNMERGE_VALUES %src(<2 x i32>)
+// %T_a(i16) = G_TRUNC %a(i32)
+// %T_b(i16) = G_TRUNC %b(i32)
+// %Undef(i16) = G_IMPLICIT_DEF(i16)
+// %dst(v4i16) = G_BUILD_VECTORS %T_a(i16), %T_b(i16), %Undef(i16), %Undef(i16)
+//
+// ===>
+// %Undef(<2 x i32>) = G_IMPLICIT_DEF(<2 x i32>)
+// %Mid(<4 x s32>) = G_CONCAT_VECTORS %src(<2 x i32>), %Undef(<2 x i32>)
+// %dst(<4 x s16>) = G_TRUNC %Mid(<4 x s32>)
+//
+// Only matches sources made up of G_TRUNCs followed by G_IMPLICIT_DEFs
+bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
+                                            Register &MatchInfo) {
+  auto BuildMI = cast<GBuildVector>(&MI);
+  unsigned NumOperands = BuildMI->getNumSources();
+  LLT DstTy = MRI.getType(BuildMI->getReg(0));
+
+  // Check the G_BUILD_VECTOR sources
+  unsigned I;
+  MachineInstr *UnmergeMI = nullptr;
+
+  // Check all source TRUNCs come from the same UNMERGE instruction
+  for (I = 0; I < NumOperands; ++I) {
+    auto SrcMI = MRI.getVRegDef(BuildMI->getSourceReg(I));
+    auto SrcMIOpc = SrcMI->getOpcode();
+
+    // Check if the G_TRUNC instructions all come from the same MI
+    if (SrcMIOpc == TargetOpcode::G_TRUNC) {
+      if (!UnmergeMI) {
+        UnmergeMI = MRI.getVRegDef(SrcMI->getOperand(1).getReg());
+        if (UnmergeMI->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+          return false;
+      } else {
+        auto UnmergeSrcMI = MRI.getVRegDef(SrcMI->getOperand(1).getReg());
+        if (UnmergeMI != UnmergeSrcMI)
+          return false;
+      }
+    } else {
+      break;
+    }
+  }
+  if (I < 2)
+    return false;
+
+  // Check the remaining source elements are only G_IMPLICIT_DEF
+  for (; I < NumOperands; ++I) {
+    auto SrcMI = MRI.getVRegDef(BuildMI->getSourceReg(I));
+    auto SrcMIOpc = SrcMI->getOpcode();
+
+    if (SrcMIOpc != TargetOpcode::G_IMPLICIT_DEF)
+      return false;
+  }
+
+  // Check the size of unmerge source
+  MatchInfo = cast<GUnmerge>(UnmergeMI)->getSourceReg();
+  LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  if (!DstTy.getElementCount().isKnownMultipleOf(UnmergeSrcTy.getNumElements()))
+    return false;
+
+  // Only generate legal instructions post-legalizer
+  if (!IsPreLegalize) {
+    LLT MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());
+
+    if (DstTy.getElementCount() != UnmergeSrcTy.getElementCount() &&
+        !isLegal({TargetOpcode::G_CONCAT_VECTORS, {MidTy, UnmergeSrcTy}}))
+      return false;
+
+    if (!isLegal({TargetOpcode::G_TRUNC, {DstTy, MidTy}}))
+      return false;
+  }
+
+  return true;
+}
+
+void CombinerHelper::applyUseVectorTruncate(MachineInstr &MI,
+                                            Register &MatchInfo) {
+  Register MidReg;
+  auto BuildMI = cast<GBuildVector>(&MI);
+  Register DstReg = BuildMI->getReg(0);
+  LLT DstTy = MRI.getType(DstReg);
+  LLT UnmergeSrcTy = MRI.getType(MatchInfo);
+  unsigned DstTyNumElt = DstTy.getNumElements();
+  unsigned UnmergeSrcTyNumElt = UnmergeSrcTy.getNumElements();
+
+  // No need to pad vector if only G_TRUNC is needed
+  if (DstTyNumElt / UnmergeSrcTyNumElt == 1) {
+    MidReg = MatchInfo;
+  } else {
+    Register UndefReg = Builder.buildUndef(UnmergeSrcTy).getReg(0);
+    SmallVector<Register> ConcatRegs = {MatchInfo};
+    for (unsigned I = 1; I < DstTyNumElt / UnmergeSrcTyNumElt; ++I)
+      ConcatRegs.push_back(UndefReg);
+
+    auto MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());
+    MidReg = Builder.buildConcatVectors(MidTy, ConcatRegs).getReg(0);
+  }
+
+  Builder.buildTrunc(DstReg, MidReg);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchNotCmp(MachineInstr &MI,
                                  SmallVectorImpl<Register> &RegsToNegate) {
   assert(MI.getOpcode() == TargetOpcode::G_XOR);

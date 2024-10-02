@@ -43,8 +43,8 @@ static void PrintRecords(const RecordKeeper &Records, raw_ostream &OS) {
   OS << Records; // No argument, dump all contents
 }
 
-static void PrintEnums(RecordKeeper &Records, raw_ostream &OS) {
-  for (Record *Rec : Records.getAllDerivedDefinitions(Class))
+static void PrintEnums(const RecordKeeper &Records, raw_ostream &OS) {
+  for (const Record *Rec : Records.getAllDerivedDefinitions(Class))
     OS << Rec->getName() << ", ";
   OS << "\n";
 }

@@ -770,11 +770,13 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
   } else if (IsInfinite()) {
     return NotANumber();
   } else if (IsZero() || IsSubnormal()) {
-    return TINY(); // mandated by standard
+    return TINY(); // standard & 100% portable
   } else {
     Real result;
     result.Normalize(false, Exponent(), Fraction::MASKR(1));
-    return result.IsZero() ? TINY() : result;
+    // Can the result be less than TINY()?  No, with five commonly
+    // used compilers; yes, with two less commonly used ones.
+    return result.IsZero() || result.IsSubnormal() ? TINY() : result;
   }
 }
 

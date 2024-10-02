@@ -20,6 +20,7 @@
 
 name: fred
 tracksRegLiveness: true
+isSSA: false
 registers:
   - { id: 0, class: intregs }
   - { id: 1, class: intregs }
@@ -35,7 +36,6 @@ body: |
   bb.0:
     liveins: $r0, $r1, $p0
         %0 = COPY $r0
-        %0 = COPY $r0  ; Force isSSA = false.
         %1 = COPY $r1
         %2 = COPY $p0
         ; Check that %3 was coalesced into %4.

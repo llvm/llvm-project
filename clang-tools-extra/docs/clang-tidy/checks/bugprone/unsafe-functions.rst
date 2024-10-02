@@ -19,6 +19,8 @@ The check implements the following rules from the CERT C Coding Standard:
 Unsafe functions
 ----------------
 
+The following functions are reported if :option:`ReportDefaultFunctions` is enabled.
+
 If *Annex K.* is available, a replacement from *Annex K.* is suggested for the
 following functions:
 
@@ -45,8 +47,7 @@ The following functions are always checked, regardless of *Annex K* availability
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
 
-If `ReportMoreUnsafeFunctions
-<unsafe-functions.html#cmdoption-arg-ReportMoreUnsafeFunctions>`_ is enabled,
+If :option:`ReportMoreUnsafeFunctions` is enabled,
 the following functions are also checked:
 
  - ``bcmp``, suggested replacement: ``memcmp``
@@ -74,6 +75,44 @@ Both macros have to be defined to suggest replacement functions from *Annex K.*
 ``__STDC_WANT_LIB_EXT1__`` must be defined to ``1`` by the user **before**
 including any system headers.
 
+.. _CustomFunctions:
+
+Custom functions
+----------------
+
+The option :option:`CustomFunctions` allows the user to define custom functions to be
+checked. The format is the following, without newlines:
+
+.. code::
+
+   bugprone-unsafe-functions.CustomFunctions="
+     functionRegex1[, replacement1[, reason1]]; 
+     functionRegex2[, replacement2[, reason2]];
+     ...
+   "
+
+The functions are matched using POSIX extended regular expressions.
+*(Note: The regular expressions do not support negative* ``(?!)`` *matches.)*
+
+The `reason` is optional and is used to provide additional information about the
+reasoning behind the replacement. The default reason is `is marked as unsafe`.
+
+If `replacement` is empty, the text `it should not be used` will be shown
+instead of the suggestion for a replacement.
+
+As an example, the configuration `^original$, replacement, is deprecated;`
+will produce the following diagnostic message.
+
+.. code:: c
+  
+   original(); // warning: function 'original' is deprecated; 'replacement' should be used instead.
+   ::std::original(); // no-warning
+   original_function(); // no-warning
+
+If the regular expression contains the character `:`, it is matched against the
+qualified name (i.e. ``std::original``), otherwise the regex is matched against the unqualified name (``original``).
+If the regular expression starts with `::` (or `^::`), it is matched against the
+fully qualified name (``::std::original``).
 
 Options
 -------
@@ -86,6 +125,19 @@ Options
    this option enables.
    Default is `true`.
 
+.. option:: ReportDefaultFunctions
+
+    When `true`, the check reports the default set of functions.
+    Consider changing the setting to false if you only want to see custom
+    functions matched via :ref:`custom functions<CustomFunctions>`.
+    Default is `true`.
+
+.. option:: CustomFunctions
+
+    A semicolon-separated list of custom functions to be matched. A matched
+    function contains a regular expression, an optional name of the replacement
+    function, and an optional reason, separated by comma. For more information,
+    see :ref:`Custom functions<CustomFunctions>`.
 
 Examples
 --------

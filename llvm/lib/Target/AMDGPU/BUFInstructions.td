@@ -1132,7 +1132,7 @@ let OtherPredicates = [HasGFX10_BEncoding] in {
   >;
 }
 
-let SubtargetPredicate = isGFX8GFX9 in {
+let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1214,7 +1214,7 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
-let SubtargetPredicate = isNotGFX12Plus in
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
 >;
@@ -1297,6 +1297,7 @@ let SubtargetPredicate = isGFX7Plus in {
 // Instruction definitions for CI and newer.
 //===----------------------------------------------------------------------===//
 
+let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 

@@ -77,7 +77,6 @@ void __init_cpu_features_resolver(void) {
     CHECK_BIT(CAP_BIT_FEAT_RDM, FEAT_RDM);
     CHECK_BIT(CAP_BIT_FEAT_LSE, FEAT_LSE);
     CHECK_BIT(CAP_BIT_FEAT_SHA256, FEAT_SHA2);
-    CHECK_BIT(CAP_BIT_FEAT_SHA1, FEAT_SHA1);
     CHECK_BIT(CAP_BIT_FEAT_AES, FEAT_AES);
     CHECK_BIT(CAP_BIT_FEAT_PMULL, FEAT_PMULL);
     CHECK_BIT(CAP_BIT_FEAT_SPECRES, FEAT_PREDRES);
@@ -123,7 +122,6 @@ void __init_cpu_features_resolver(void) {
       {"hw.optional.arm.FEAT_LSE", FEAT_LSE},
       {"hw.optional.AdvSIMD", FEAT_SIMD},
       {"hw.optional.armv8_crc32", FEAT_CRC},
-      {"hw.optional.arm.FEAT_SHA1", FEAT_SHA1},
       {"hw.optional.arm.FEAT_SHA256", FEAT_SHA2},
       {"hw.optional.arm.FEAT_SHA3", FEAT_SHA3},
       {"hw.optional.arm.FEAT_AES", FEAT_AES},

@@ -68,6 +68,13 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
                                     "loongarch64"),
             "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
 
+  // Check that SPARC targets add -i128:128.
+  EXPECT_EQ(
+      UpgradeDataLayoutString("E-m:e-p:32:32-i64:64-f128:64-n32-S64", "sparc"),
+      "E-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64");
+  EXPECT_EQ(UpgradeDataLayoutString("E-m:e-i64:64-n32:64-S128", "sparcv9"),
+            "E-m:e-i64:64-i128:128-n32:64-S128");
+
   // Check that SPIR && SPIRV targets add -G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir"), "e-p:32:32-G1");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spir64"), "e-p:32:32-G1");

@@ -19,6 +19,13 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), Current(nullptr) {}
 
+bool InterpState::inConstantContext() const {
+  if (ConstantContextOverride)
+    return *ConstantContextOverride;
+
+  return Parent.InConstantContext;
+}
+
 InterpState::~InterpState() {
   while (Current) {
     InterpFrame *Next = Current->Caller;

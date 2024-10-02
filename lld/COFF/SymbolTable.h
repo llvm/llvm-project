@@ -105,8 +105,8 @@ public:
                     CommonChunk *c = nullptr);
   DefinedImportData *addImportData(StringRef n, ImportFile *f,
                                    Chunk *&location);
-  Symbol *addImportThunk(StringRef name, DefinedImportData *s,
-                         ImportThunkChunk *chunk);
+  Defined *addImportThunk(StringRef name, DefinedImportData *s,
+                          ImportThunkChunk *chunk);
   void addLibcall(StringRef name);
   void addEntryThunk(Symbol *from, Symbol *to);
   void addExitThunk(Symbol *from, Symbol *to);

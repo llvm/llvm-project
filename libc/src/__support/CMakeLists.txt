@@ -117,6 +117,8 @@ add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
+  DEPENDS
+    libc.hdr.types.wint_t
 )
 
 add_header_library(

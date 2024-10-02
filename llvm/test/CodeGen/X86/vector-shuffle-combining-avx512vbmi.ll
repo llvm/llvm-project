@@ -146,3 +146,18 @@ define <64 x i8> @combine_permi2q_pshufb_as_permi2d_mask(<8 x i64> %a0, <8 x i64
   %res2 = call <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8> %res1, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15, i8 12, i8 13, i8 14, i8 15>, <64 x i8> zeroinitializer, i64 %m)
   ret <64 x i8> %res2
 }
+
+; PR109272
+define <64 x i8> @combine_vpermi2var_v64i8_with_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2) {
+; CHECK-LABEL: combine_vpermi2var_v64i8_with_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpermt2b %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpmovb2m %zmm1, %k0
+; CHECK-NEXT:    vpmovm2b %k0, %zmm1
+; CHECK-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %perm = tail call <64 x i8> @llvm.x86.avx512.vpermi2var.qi.512(<64 x i8> %a0, <64 x i8> %a1, <64 x i8> %a2)
+  %cmp = icmp slt <64 x i8> %a1, zeroinitializer
+  %sel = select <64 x i1> %cmp, <64 x i8> zeroinitializer, <64 x i8> %perm
+  ret <64 x i8> %sel
+}

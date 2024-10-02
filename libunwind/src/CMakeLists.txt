@@ -105,15 +105,6 @@ if (LIBUNWIND_ENABLE_SHARED AND
           "on C++ ABI library is not supported.")
 endif()
 
-if (APPLE)
-  add_compile_flags("-U__STRICT_ANSI__")
-  add_link_flags("-compatibility_version 1" "-install_name /usr/lib/libunwind.1.dylib")
-
-  if (CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6")
-    add_link_flags("-current_version ${LIBUNWIND_VERSION}" "/usr/lib/libSystem.B.dylib")
-  endif ()
-endif ()
-
 if (HAIKU)
   add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
 
@@ -170,8 +161,8 @@ if (LIBUNWIND_ENABLE_SHARED)
       LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
       LINKER_LANGUAGE C
       OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-      VERSION "1.0"
-      SOVERSION "1"
+      VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+      SOVERSION   "1"
   )
 
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")

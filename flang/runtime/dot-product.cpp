@@ -21,11 +21,6 @@ namespace Fortran::runtime {
 // Beware: DOT_PRODUCT of COMPLEX data uses the complex conjugate of the first
 // argument; MATMUL does not.
 
-// Suppress the warnings about calling __host__-only std::complex operators,
-// defined in C++ STD header files, from __device__ code.
-RT_DIAG_PUSH
-RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
-
 // General accumulator for any type and stride; this is not used for
 // contiguous numeric vectors.
 template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
@@ -42,7 +37,7 @@ public:
       const XT &xElement{*x_.Element<XT>(&xAt)};
       const YT &yElement{*y_.Element<YT>(&yAt)};
       if constexpr (RCAT == TypeCategory::Complex) {
-        sum_ += std::conj(static_cast<Result>(xElement)) *
+        sum_ += rtcmplx::conj(static_cast<Result>(xElement)) *
             static_cast<Result>(yElement);
       } else {
         sum_ += static_cast<Result>(xElement) * static_cast<Result>(yElement);
@@ -77,9 +72,9 @@ static inline RT_API_ATTRS CppTypeFor<RCAT, RKIND> DoDotProduct(
           // TODO: call BLAS-1 SDOT or SDSDOT
         } else if constexpr (std::is_same_v<XT, double>) {
           // TODO: call BLAS-1 DDOT
-        } else if constexpr (std::is_same_v<XT, std::complex<float>>) {
+        } else if constexpr (std::is_same_v<XT, rtcmplx::complex<float>>) {
           // TODO: call BLAS-1 CDOTC
-        } else if constexpr (std::is_same_v<XT, std::complex<double>>) {
+        } else if constexpr (std::is_same_v<XT, rtcmplx::complex<double>>) {
           // TODO: call BLAS-1 ZDOTC
         }
       }
@@ -89,12 +84,12 @@ static inline RT_API_ATTRS CppTypeFor<RCAT, RKIND> DoDotProduct(
       AccumType accum{};
       if constexpr (RCAT == TypeCategory::Complex) {
         for (SubscriptValue j{0}; j < n; ++j) {
-          // std::conj() may instantiate its argument twice,
+          // conj() may instantiate its argument twice,
           // so xp has to be incremented separately.
           // This is a workaround for an alleged bug in clang,
           // that shows up as:
           //   warning: multiple unsequenced modifications to 'xp'
-          accum += std::conj(static_cast<AccumType>(*xp)) *
+          accum += rtcmplx::conj(static_cast<AccumType>(*xp)) *
               static_cast<AccumType>(*yp++);
           xp++;
         }
@@ -116,8 +111,6 @@ static inline RT_API_ATTRS CppTypeFor<RCAT, RKIND> DoDotProduct(
   }
   return static_cast<Result>(accumulator.GetResult());
 }
-
-RT_DIAG_POP
 
 template <TypeCategory RCAT, int RKIND> struct DotProduct {
   using Result = CppTypeFor<RCAT, RKIND>;
@@ -197,13 +190,13 @@ CppTypeFor<TypeCategory::Real, 8> RTDEF(DotProductReal8)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 8>{}(x, y, source, line);
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 CppTypeFor<TypeCategory::Real, 10> RTDEF(DotProductReal10)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(DotProductReal16)(
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   return DotProduct<TypeCategory::Real, 16>{}(x, y, source, line);
@@ -218,14 +211,14 @@ void RTDEF(CppDotProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
     const Descriptor &x, const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 8>{}(x, y, source, line);
 }
-#if LDBL_MANT_DIG == 64
+#if HAS_FLOAT80
 void RTDEF(CppDotProductComplex10)(
     CppTypeFor<TypeCategory::Complex, 10> &result, const Descriptor &x,
     const Descriptor &y, const char *source, int line) {
   result = DotProduct<TypeCategory::Complex, 10>{}(x, y, source, line);
 }
 #endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#if HAS_LDBL128 || HAS_FLOAT128
 void RTDEF(CppDotProductComplex16)(
     CppTypeFor<TypeCategory::Complex, 16> &result, const Descriptor &x,
     const Descriptor &y, const char *source, int line) {

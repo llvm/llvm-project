@@ -335,11 +335,11 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 template <typename OpTy>
 static void populateOpPatterns(LLVMTypeConverter &converter,
                                RewritePatternSet &patterns, StringRef f32Func,
-                               StringRef f64Func,
-                               StringRef f32ApproxFunc = "") {
+                               StringRef f64Func, StringRef f32ApproxFunc = "",
+                               StringRef f16Func = "") {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
   patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func,
-                                           f32ApproxFunc);
+                                           f32ApproxFunc, f16Func);
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
@@ -377,7 +377,7 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVVM::ClusterDimZOp>>(converter, IndexKind::Other, IntrType::Dim);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
-      converter, IndexKind::Block, IntrType::Id);
+      converter, IndexKind::Grid, IntrType::Id);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::GridDimOp, NVVM::GridDimXOp, NVVM::GridDimYOp, NVVM::GridDimZOp>>(
       converter, IndexKind::Grid, IntrType::Dim);

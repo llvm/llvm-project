@@ -217,8 +217,8 @@ struct LocationFileChecker {
                       SmallVector<std::pair<SmallString<32>, bool>> &KnownFiles)
       : CI(CI), KnownFiles(KnownFiles), ExternalFileEntries() {
     for (const auto &KnownFile : KnownFiles)
-      if (auto FileEntry = CI.getFileManager().getFile(KnownFile.first))
-        KnownFileEntries.insert(*FileEntry);
+      if (auto FE = CI.getFileManager().getOptionalFileRef(KnownFile.first))
+        KnownFileEntries.insert(*FE);
   }
 
 private:

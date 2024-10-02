@@ -421,3 +421,43 @@ define i8 @caller16_not_intersecting_ranges() {
   call void @use.val(i8 %r)
   ret i8 %r
 }
+
+
+define ptr @caller_bad_ret_prop(ptr %p1, ptr %p2, i64 %x, ptr %other) {
+; CHECK-LABEL: define ptr @caller_bad_ret_prop
+; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]], ptr [[OTHER:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call noundef ptr [[P1]](i64 [[X]], ptr [[P2]])
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[TMP1]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[T_I:%.*]], label [[F_I:%.*]]
+; CHECK:       T.i:
+; CHECK-NEXT:    br label [[CALLEE_BAD_RET_PROP_EXIT:%.*]]
+; CHECK:       F.i:
+; CHECK-NEXT:    br label [[CALLEE_BAD_RET_PROP_EXIT]]
+; CHECK:       callee_bad_ret_prop.exit:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[OTHER]], [[T_I]] ], [ [[TMP1]], [[F_I]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
+;
+  %1 = call noundef ptr %p1(i64 %x, ptr %p2)
+  %2 = call nonnull ptr @callee_bad_ret_prop(ptr %1, ptr %other)
+  ret ptr %2
+}
+
+define ptr @callee_bad_ret_prop(ptr %x, ptr %other) {
+; CHECK-LABEL: define ptr @callee_bad_ret_prop
+; CHECK-SAME: (ptr [[X:%.*]], ptr [[OTHER:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret ptr [[OTHER]]
+; CHECK:       F:
+; CHECK-NEXT:    [[R:%.*]] = tail call ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 -1)
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %cmp = icmp eq ptr %x, null
+  br i1 %cmp, label %T, label %F
+T:
+  ret ptr %other
+F:
+  %r = tail call ptr @llvm.ptrmask(ptr %x, i64 -1)
+  ret ptr %r
+}

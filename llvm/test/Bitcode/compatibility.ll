@@ -1122,6 +1122,26 @@ define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <
   ret void
 }
 
+declare { float, float } @fmf_struct_f32()
+declare { double, double, double } @fmf_struct_f64()
+declare { <4 x double> } @fmf_struct_v4f64()
+
+; CHECK-LABEL: fastMathFlagsForStructCalls(
+define void @fastMathFlagsForStructCalls() {
+  %call.fast = call fast { float, float } @fmf_struct_f32()
+  ; CHECK: %call.fast = call fast { float, float } @fmf_struct_f32()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp { double, double, double } @fmf_struct_f64()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc { <4 x double> } @fmf_struct_v4f64()
+
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {
@@ -1590,7 +1610,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #53
+  ; CHECK: call void @f.nobuiltin() #54
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2020,6 +2040,9 @@ declare void @f.sanitize_numerical_stability() sanitize_numerical_stability
 declare void @f.sanitize_realtime() sanitize_realtime
 ; CHECK: declare void @f.sanitize_realtime() #52
 
+declare void @f.sanitize_realtime_unsafe() sanitize_realtime_unsafe
+; CHECK: declare void @f.sanitize_realtime_unsafe() #53
+
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 
@@ -2074,9 +2097,14 @@ declare nofpclass(sub zero) float @nofpclass_sub_zero(float nofpclass(sub zero))
 ; CHECK: declare nofpclass(inf sub) float @nofpclass_sub_inf(float nofpclass(inf sub))
 declare nofpclass(sub inf) float @nofpclass_sub_inf(float nofpclass(sub inf))
 
+; CHECK: declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+declare nofpclass(nan) { float, float } @nofpclass_struct({ double } nofpclass(nan))
+
 declare float @unknown_fpclass_func(float)
 
-define float @nofpclass_callsites(float %arg) {
+declare { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float })
+
+define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ; CHECK: %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
   %call0 = call nofpclass(nan) float @unknown_fpclass_func(float nofpclass(ninf) %arg)
 
@@ -2085,6 +2113,10 @@ define float @nofpclass_callsites(float %arg) {
 
   ; CHECK: %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
   %call2 = call nofpclass(zero) float @unknown_fpclass_func(float nofpclass(norm) %arg)
+
+  ; CHECK: %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+  %call3 = call nofpclass(pinf) { <4 x double>, <4 x double>, <4 x double> } @unknown_fpclass_struct_func({ float } nofpclass(all) %arg1)
+
   %add0 = fadd float %call0, %call1
   %add1 = fadd float %add0, %call2
   ret float %add1
@@ -2143,7 +2175,8 @@ define float @nofpclass_callsites(float %arg) {
 ; CHECK: attributes #50 = { allockind("alloc,uninitialized") }
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
-; CHECK: attributes #53 = { builtin }
+; CHECK: attributes #53 = { sanitize_realtime_unsafe }
+; CHECK: attributes #54 = { builtin }
 
 ;; Metadata
 

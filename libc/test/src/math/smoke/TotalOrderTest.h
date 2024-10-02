@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class TotalOrderTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 

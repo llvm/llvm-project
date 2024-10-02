@@ -32,14 +32,14 @@ public:
   Generator(raw_ostream &output) : output(output) {}
 
   /// Returns whether successfully emitted attribute/type parsers.
-  void emitParse(StringRef kind, Record &x);
+  void emitParse(StringRef kind, const Record &x);
 
   /// Returns whether successfully emitted attribute/type printers.
   void emitPrint(StringRef kind, StringRef type,
-                 ArrayRef<std::pair<int64_t, Record *>> vec);
+                 ArrayRef<std::pair<int64_t, const Record *>> vec);
 
   /// Emits parse dispatch table.
-  void emitParseDispatch(StringRef kind, ArrayRef<Record *> vec);
+  void emitParseDispatch(StringRef kind, ArrayRef<const Record *> vec);
 
   /// Emits print dispatch table.
   void emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec);
@@ -51,8 +51,9 @@ private:
                        StringRef failure, mlir::raw_indented_ostream &ios);
 
   /// Emits print instructions.
-  void emitPrintHelper(Record *memberRec, StringRef kind, StringRef parent,
-                       StringRef name, mlir::raw_indented_ostream &ios);
+  void emitPrintHelper(const Record *memberRec, StringRef kind,
+                       StringRef parent, StringRef name,
+                       mlir::raw_indented_ostream &ios);
 
   raw_ostream &output;
 };
@@ -75,7 +76,7 @@ static std::string capitalize(StringRef str) {
 }
 
 /// Return the C++ type for the given record.
-static std::string getCType(Record *def) {
+static std::string getCType(const Record *def) {
   std::string format = "{0}";
   if (def->isSubClassOf("Array")) {
     def = def->getValueAsDef("elemT");
@@ -92,7 +93,8 @@ static std::string getCType(Record *def) {
   return formatv(format.c_str(), cType.str());
 }
 
-void Generator::emitParseDispatch(StringRef kind, ArrayRef<Record *> vec) {
+void Generator::emitParseDispatch(StringRef kind,
+                                  ArrayRef<const Record *> vec) {
   mlir::raw_indented_ostream os(output);
   char const *head =
       R"(static {0} read{0}(MLIRContext* context, DialectBytecodeReader &reader))";
@@ -126,7 +128,7 @@ void Generator::emitParseDispatch(StringRef kind, ArrayRef<Record *> vec) {
   os << "return " << capitalize(kind) << "();\n";
 }
 
-void Generator::emitParse(StringRef kind, Record &x) {
+void Generator::emitParse(StringRef kind, const Record &x) {
   if (x.getNameInitAsString() == "ReservedOrDead")
     return;
 
@@ -293,7 +295,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
 }
 
 void Generator::emitPrint(StringRef kind, StringRef type,
-                          ArrayRef<std::pair<int64_t, Record *>> vec) {
+                          ArrayRef<std::pair<int64_t, const Record *>> vec) {
   if (type == "ReservedOrDead")
     return;
 
@@ -304,7 +306,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   auto funScope = os.scope("{\n", "}\n\n");
 
   // Check that predicates specified if multiple bytecode instances.
-  for (llvm::Record *rec : make_second_range(vec)) {
+  for (const llvm::Record *rec : make_second_range(vec)) {
     StringRef pred = rec->getValueAsString("printerPredicate");
     if (vec.size() > 1 && pred.empty()) {
       for (auto [index, rec] : vec) {
@@ -344,7 +346,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   }
 }
 
-void Generator::emitPrintHelper(Record *memberRec, StringRef kind,
+void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
                                 StringRef parent, StringRef name,
                                 mlir::raw_indented_ostream &ios) {
   std::string getter;
@@ -423,7 +425,7 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
 namespace {
 /// Container of Attribute or Type for Dialect.
 struct AttrOrType {
-  std::vector<Record *> attr, type;
+  std::vector<const Record *> attr, type;
 };
 } // namespace
 
@@ -452,7 +454,7 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   auto it = dialectAttrOrType.front();
   Generator gen(os);
 
-  SmallVector<std::vector<Record *> *, 2> vecs;
+  SmallVector<std::vector<const Record *> *, 2> vecs;
   SmallVector<std::string, 2> kinds;
   vecs.push_back(&it.second.attr);
   kinds.push_back("attribute");
@@ -460,7 +462,8 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   kinds.push_back("type");
   for (auto [vec, kind] : zip(vecs, kinds)) {
     // Handle Attribute/Type emission.
-    std::map<std::string, std::vector<std::pair<int64_t, Record *>>> perType;
+    std::map<std::string, std::vector<std::pair<int64_t, const Record *>>>
+        perType;
     for (auto kt : llvm::enumerate(*vec))
       perType[getCType(kt.value())].emplace_back(kt.index(), kt.value());
     for (const auto &jt : perType) {

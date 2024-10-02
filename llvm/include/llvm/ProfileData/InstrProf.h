@@ -959,7 +959,7 @@ private:
   ArrayRef<InstrProfValueSiteRecord>
   getValueSitesForKind(uint32_t ValueKind) const {
     if (!ValueData)
-      return std::nullopt;
+      return {};
     assert(IPVK_First <= ValueKind && ValueKind <= IPVK_Last &&
            "Unknown value kind!");
     return (*ValueData)[ValueKind - IPVK_First];

@@ -233,10 +233,10 @@ define void @trunc_fp16() {
 ;
 ; ZVFHMIN-LABEL: 'trunc_fp16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %1 = call half @llvm.trunc.f16(half undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %2 = call <2 x half> @llvm.trunc.v2f16(<2 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 39 for instruction: %3 = call <4 x half> @llvm.trunc.v4f16(<4 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: %4 = call <8 x half> @llvm.trunc.v8f16(<8 x half> undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 159 for instruction: %5 = call <16 x half> @llvm.trunc.v16f16(<16 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <2 x half> @llvm.trunc.v2f16(<2 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <4 x half> @llvm.trunc.v4f16(<4 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <8 x half> @llvm.trunc.v8f16(<8 x half> undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <16 x half> @llvm.trunc.v16f16(<16 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 1 x half> @llvm.trunc.nxv1f16(<vscale x 1 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 2 x half> @llvm.trunc.nxv2f16(<vscale x 2 x half> undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = call <vscale x 4 x half> @llvm.trunc.nxv4f16(<vscale x 4 x half> undef)
@@ -1108,10 +1108,10 @@ define void @vp_roundtozero_f16() {
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZVFHMIN-LABEL: 'vp_roundtozero_f16'
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %1 = call <2 x half> @llvm.vp.roundtozero.v2f16(<2 x half> undef, <2 x i1> undef, i32 undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %2 = call <4 x half> @llvm.vp.roundtozero.v4f16(<4 x half> undef, <4 x i1> undef, i32 undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %3 = call <8 x half> @llvm.vp.roundtozero.v8f16(<8 x half> undef, <8 x i1> undef, i32 undef)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 190 for instruction: %4 = call <16 x half> @llvm.vp.roundtozero.v16f16(<16 x half> undef, <16 x i1> undef, i32 undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call <2 x half> @llvm.vp.roundtozero.v2f16(<2 x half> undef, <2 x i1> undef, i32 undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call <4 x half> @llvm.vp.roundtozero.v4f16(<4 x half> undef, <4 x i1> undef, i32 undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = call <8 x half> @llvm.vp.roundtozero.v8f16(<8 x half> undef, <8 x i1> undef, i32 undef)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <16 x half> @llvm.vp.roundtozero.v16f16(<16 x half> undef, <16 x i1> undef, i32 undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <vscale x 1 x half> @llvm.vp.roundtozero.nxv1f16(<vscale x 1 x half> undef, <vscale x 1 x i1> undef, i32 undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 2 x half> @llvm.vp.roundtozero.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x i1> undef, i32 undef)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = call <vscale x 4 x half> @llvm.vp.roundtozero.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x i1> undef, i32 undef)

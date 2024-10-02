@@ -78,12 +78,9 @@
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv116__enum_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv116__shim_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv117__array_type_infoE', 'type': 'U'}
-{'is_defined': False, 'name': '__ZTIN10__cxxabiv117__class_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv117__pbase_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv119__pointer_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv120__function_type_infoE', 'type': 'U'}
-{'is_defined': False, 'name': '__ZTIN10__cxxabiv120__si_class_type_infoE', 'type': 'U'}
-{'is_defined': False, 'name': '__ZTIN10__cxxabiv121__vmi_class_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv123__fundamental_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIN10__cxxabiv129__pointer_to_member_type_infoE', 'type': 'U'}
 {'is_defined': False, 'name': '__ZTIPDh', 'type': 'U'}
@@ -2002,12 +1999,9 @@
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv116__enum_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv116__shim_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv117__array_type_infoE', 'type': 'I'}
-{'is_defined': True, 'name': '__ZTIN10__cxxabiv117__class_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv117__pbase_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv119__pointer_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv120__function_type_infoE', 'type': 'I'}
-{'is_defined': True, 'name': '__ZTIN10__cxxabiv120__si_class_type_infoE', 'type': 'I'}
-{'is_defined': True, 'name': '__ZTIN10__cxxabiv121__vmi_class_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv123__fundamental_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTIN10__cxxabiv129__pointer_to_member_type_infoE', 'type': 'I'}
 {'is_defined': True, 'name': '__ZTINSt12experimental15fundamentals_v112bad_any_castE', 'size': 0, 'type': 'OBJECT'}
@@ -2615,7 +2609,6 @@
 {'is_defined': True, 'name': '___cxa_new_handler', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_pure_virtual', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_rethrow', 'type': 'I'}
-{'is_defined': True, 'name': '___cxa_rethrow_primary_exception', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_terminate_handler', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_throw', 'type': 'I'}
 {'is_defined': True, 'name': '___cxa_throw_bad_array_new_length', 'type': 'I'}

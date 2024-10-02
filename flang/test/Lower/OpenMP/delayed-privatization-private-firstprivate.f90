@@ -33,5 +33,6 @@ end subroutine
 ! CHECK:  %[[VAR2_DECL:.*]]:2 = hlfir.declare %[[VAR2_ALLOC]]
 
 ! CHECK:  omp.parallel private(
-! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM]] %[[VAR1_DECL]]#0 -> %{{.*}} : !fir.ref<i32>, 
-! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM]] %[[VAR2_DECL]]#0 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK-SAME: @[[VAR1_PRIVATIZER_SYM]] %[[VAR1_DECL]]#0 -> %{{[^,]+}}, 
+! CHECK-SAME: @[[VAR2_PRIVATIZER_SYM]] %[[VAR2_DECL]]#0 -> %{{.*}} :
+! CHECK-SAME: !fir.ref<i32>, !fir.ref<i32>) {

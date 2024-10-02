@@ -92,9 +92,9 @@ void ARMTargetStreamer::emitCantUnwind() {}
 void ARMTargetStreamer::emitPersonality(const MCSymbol *Personality) {}
 void ARMTargetStreamer::emitPersonalityIndex(unsigned Index) {}
 void ARMTargetStreamer::emitHandlerData() {}
-void ARMTargetStreamer::emitSetFP(unsigned FpReg, unsigned SpReg,
+void ARMTargetStreamer::emitSetFP(MCRegister FpReg, MCRegister SpReg,
                                   int64_t Offset) {}
-void ARMTargetStreamer::emitMovSP(unsigned Reg, int64_t Offset) {}
+void ARMTargetStreamer::emitMovSP(MCRegister Reg, int64_t Offset) {}
 void ARMTargetStreamer::emitPad(int64_t Offset) {}
 void ARMTargetStreamer::emitRegSave(const SmallVectorImpl<MCRegister> &RegList,
                                     bool isVector) {}

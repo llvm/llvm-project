@@ -16,9 +16,12 @@ if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB OR NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
 endif()
 
 add_clang_library(clangdSupport
+  Bracket.cpp
   Cancellation.cpp
   Context.cpp
+  DirectiveTree.cpp
   FileCache.cpp
+  Lex.cpp
   Logger.cpp
   Markup.cpp
   MemoryTree.cpp
@@ -27,9 +30,16 @@ add_clang_library(clangdSupport
   ThreadCrashReporter.cpp
   Threading.cpp
   ThreadsafeFS.cpp
+  Token.cpp
   Trace.cpp
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
   ${CLANGD_ATOMIC_LIB}
+  )
+
+clang_target_link_libraries(clangdSupport
+  PRIVATE
+  clangBasic
+  clangLex
   )

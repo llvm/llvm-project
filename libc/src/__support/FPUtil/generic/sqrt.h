@@ -14,6 +14,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -96,7 +97,7 @@ sqrt(InType x) {
       // sqrt(-0) = -0
       // sqrt(NaN) = NaN
       // sqrt(-NaN) = -NaN
-      return static_cast<OutType>(x);
+      return cast<OutType>(x);
     } else if (bits.is_neg()) {
       // sqrt(-Inf) = NaN
       // sqrt(-x) = NaN

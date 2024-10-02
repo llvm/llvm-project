@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdio_macros.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fopen.h"
 #include "src/stdio/fread.h"
@@ -16,8 +17,6 @@
 #include "src/stdio/fwrite.h"
 #include "src/stdio/setvbuf.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdio.h>
 
 class LlvmLibcFTellTest : public LIBC_NAMESPACE::testing::Test {
 protected:

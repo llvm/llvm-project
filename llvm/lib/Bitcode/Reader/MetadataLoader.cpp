@@ -222,7 +222,7 @@ Metadata *BitcodeReaderMetadataList::getMetadataFwdRef(unsigned Idx) {
 
   // Create and return a placeholder, which will later be RAUW'd.
   ++NumMDNodeTemporary;
-  Metadata *MD = MDNode::getTemporary(Context, std::nullopt).release();
+  Metadata *MD = MDNode::getTemporary(Context, {}).release();
   MetadataPtrs[Idx].reset(MD);
   return MD;
 }
@@ -304,7 +304,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRef(Metadata *MaybeUUID) {
 
   auto &Ref = OldTypeRefs.Unknown[UUID];
   if (!Ref)
-    Ref = MDNode::getTemporary(Context, std::nullopt);
+    Ref = MDNode::getTemporary(Context, {});
   return Ref.get();
 }
 
@@ -321,7 +321,7 @@ Metadata *BitcodeReaderMetadataList::upgradeTypeRefArray(Metadata *MaybeTuple) {
   // resolveTypeRefArrays() will be resolve this forward reference.
   OldTypeRefs.Arrays.emplace_back(
       std::piecewise_construct, std::forward_as_tuple(Tuple),
-      std::forward_as_tuple(MDTuple::getTemporary(Context, std::nullopt)));
+      std::forward_as_tuple(MDTuple::getTemporary(Context, {})));
   return OldTypeRefs.Arrays.back().second.get();
 }
 
@@ -1331,8 +1331,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // If this isn't a LocalAsMetadata record, we're dropping it.  This used
     // to be legal, but there's no upgrade path.
     auto dropRecord = [&] {
-      MetadataList.assignValue(MDNode::get(Context, std::nullopt),
-                               NextMetadataNo);
+      MetadataList.assignValue(MDNode::get(Context, {}), NextMetadataNo);
       NextMetadataNo++;
     };
     if (Record.size() != 2) {

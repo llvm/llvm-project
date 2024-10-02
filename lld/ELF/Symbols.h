@@ -365,7 +365,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->exportDynamic;
+    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const;
 
@@ -403,7 +403,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->exportDynamic;
+    exportDynamic = ctx.arg.exportDynamic;
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);

@@ -21,7 +21,7 @@ using namespace lld::elf;
 namespace {
 class SPARCV9 final : public TargetInfo {
 public:
-  SPARCV9();
+  SPARCV9(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -31,7 +31,7 @@ public:
 };
 } // namespace
 
-SPARCV9::SPARCV9() {
+SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_SPARC_COPY;
   gotRel = R_SPARC_GLOB_DAT;
   pltRel = R_SPARC_JMP_SLOT;
@@ -193,7 +193,7 @@ void SPARCV9::writePlt(uint8_t *buf, const Symbol & /*sym*/,
   relocateNoSym(buf + 4, R_SPARC_WDISP19, -(off + 4 - pltEntrySize));
 }
 
-TargetInfo *elf::getSPARCV9TargetInfo() {
-  static SPARCV9 target;
+TargetInfo *elf::getSPARCV9TargetInfo(Ctx &ctx) {
+  static SPARCV9 target(ctx);
   return &target;
 }

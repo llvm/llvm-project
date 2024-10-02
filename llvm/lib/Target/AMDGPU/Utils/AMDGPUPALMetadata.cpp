@@ -215,15 +215,15 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
       Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
     }
-    ExprIt->getSecond() = Val;
   } else if (N.getKind() == msgpack::Type::UInt) {
     const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
     Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
-    int64_t Unused;
-    if (!Val->evaluateAsAbsolute(Unused))
-      REM[Reg] = Val;
-    (void)Unused;
+  } else {
+    // Default to uint64_t 0 so additional calls to setRegister will allow
+    // propagate ORs.
+    N = (uint64_t)0;
   }
+  REM[Reg] = Val;
   DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 

@@ -64,9 +64,6 @@ namespace llvm {
     List,   // Get list of functions & BBs from a file. Selectively enables
             // basic block sections for a subset of basic blocks which can be
             // used to control object size bloats from creating sections.
-    Labels, // Do not use Basic Block Sections but label basic blocks.  This
-            // is useful when associating profile counts from virtual addresses
-            // to basic blocks.
     Preset, // Similar to list but the blocks are identified by passes which
             // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
             // This option cannot be set via the command line.
@@ -155,6 +152,7 @@ namespace llvm {
           XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
+          VerifyArgABICompliance(true),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -380,6 +378,12 @@ namespace llvm {
     /// When set to true, const objects with relocatable address values are put
     /// into the RO data section.
     unsigned XCOFFReadOnlyPointers : 1;
+
+    /// When set to true, call/return argument extensions of narrow integers
+    /// are verified in the target backend if it cares about them. This is
+    /// not done with internal tools like llc that run many tests that ignore
+    /// (lack) these extensions.
+    unsigned VerifyArgABICompliance : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not

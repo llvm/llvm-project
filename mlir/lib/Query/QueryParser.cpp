@@ -123,7 +123,7 @@ makeInvalidQueryFromDiagnostics(const matcher::internal::Diagnostics &diag) {
   std::string errStr;
   llvm::raw_string_ostream os(errStr);
   diag.print(os);
-  return new InvalidQuery(os.str());
+  return new InvalidQuery(errStr);
 }
 } // namespace
 

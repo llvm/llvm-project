@@ -1031,6 +1031,9 @@ const char *Prescanner::IsFreeFormComment(const char *p) const {
 }
 
 std::optional<std::size_t> Prescanner::IsIncludeLine(const char *start) const {
+  if (!expandIncludeLines_) {
+    return std::nullopt;
+  }
   const char *p{SkipWhiteSpace(start)};
   if (*p == '0' && inFixedForm_ && p == start + 5) {
     // Accept "     0INCLUDE" in fixed form.
@@ -1098,7 +1101,7 @@ void Prescanner::FortranInclude(const char *firstQuote) {
   const SourceFile *included{
       allSources_.Open(path, error, std::move(prependPath))};
   if (!included) {
-    Say(provenance, "INCLUDE: %s"_err_en_US, error.str());
+    Say(provenance, "INCLUDE: %s"_err_en_US, buf);
   } else if (included->bytes() > 0) {
     ProvenanceRange includeLineRange{
         provenance, static_cast<std::size_t>(p - nextLine_)};

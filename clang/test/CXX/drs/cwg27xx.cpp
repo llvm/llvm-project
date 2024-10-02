@@ -201,3 +201,31 @@ static_assert(false, f().s);
 #endif
 } // namespace cwg2798
 
+namespace cwg2707 { // cwg2707: 20
+
+#if __cplusplus >= 202002L
+
+template <class T, unsigned N> struct A {
+  T value[N];
+};
+
+template <typename... T>
+A(T...) -> A<int, sizeof...(T)> requires (sizeof...(T) == 2);
+
+// Brace elision is not allowed for synthesized CTAD guides if the array size
+// is value-dependent.
+// So this should pick up our explicit deduction guide.
+A a = {1, 2};
+
+A b = {3, 4, 5};
+// expected-error@-1 {{no viable constructor or deduction guide}} \
+// expected-note@-13 {{candidate function template not viable}} \
+// expected-note@-13 {{implicit deduction guide}} \
+// expected-note@-8 {{constraints not satisfied}} \
+// expected-note@-8 {{because 'sizeof...(T) == 2' (3 == 2) evaluated to false}} \
+// expected-note@-13 {{candidate function template not viable}} \
+// expected-note@-13 {{implicit deduction guide}}
+
+#endif
+
+} // namespace cwg2707

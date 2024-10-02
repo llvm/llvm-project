@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
-#include <cstddef>
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include <optional>
 
 namespace lldb_private::plugin {
@@ -21,17 +21,7 @@ class DWARFDIE;
 
 class DWARFFormValue {
 public:
-  typedef struct ValueTypeTag {
-    ValueTypeTag() : value() { value.uval = 0; }
-
-    union {
-      uint64_t uval;
-      int64_t sval;
-      const char *cstr;
-    } value;
-    const uint8_t *data = nullptr;
-  } ValueType;
-
+  typedef llvm::DWARFFormValue::ValueType ValueType;
   enum {
     eValueTypeInvalid = 0,
     eValueTypeUnsigned,
@@ -67,11 +57,11 @@ public:
   std::pair<DWARFUnit *, uint64_t> ReferencedUnitAndOffset() const;
 
   uint64_t Reference(dw_offset_t offset) const;
-  bool Boolean() const { return m_value.value.uval != 0; }
-  uint64_t Unsigned() const { return m_value.value.uval; }
-  void SetUnsigned(uint64_t uval) { m_value.value.uval = uval; }
-  int64_t Signed() const { return m_value.value.sval; }
-  void SetSigned(int64_t sval) { m_value.value.sval = sval; }
+  bool Boolean() const { return m_value.uval != 0; }
+  uint64_t Unsigned() const { return m_value.uval; }
+  void SetUnsigned(uint64_t uval) { m_value.uval = uval; }
+  int64_t Signed() const { return m_value.sval; }
+  void SetSigned(int64_t sval) { m_value.sval = sval; }
   const char *AsCString() const;
   dw_addr_t Address() const;
   bool IsValid() const { return m_form != 0; }

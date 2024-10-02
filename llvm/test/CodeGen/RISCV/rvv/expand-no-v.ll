@@ -8,14 +8,14 @@ declare i32 @llvm.vp.reduce.add.v4i32(i32, <4 x i32>, <4 x i1>, i32)
 define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV32-LABEL: vpreduce_add_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a4, 4(a1)
-; RV32-NEXT:    lw a5, 12(a1)
+; RV32-NEXT:    lw a4, 0(a1)
+; RV32-NEXT:    lw a5, 4(a1)
 ; RV32-NEXT:    lw a6, 8(a1)
-; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    lw a7, 0(a2)
-; RV32-NEXT:    lw t0, 8(a2)
-; RV32-NEXT:    lw t1, 12(a2)
-; RV32-NEXT:    lw a2, 4(a2)
+; RV32-NEXT:    lw t0, 4(a2)
+; RV32-NEXT:    lw t1, 8(a2)
+; RV32-NEXT:    lw a2, 12(a2)
 ; RV32-NEXT:    snez t2, a3
 ; RV32-NEXT:    sltiu t3, a3, 3
 ; RV32-NEXT:    xori t3, t3, 1
@@ -23,34 +23,34 @@ define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV32-NEXT:    xori t4, t4, 1
 ; RV32-NEXT:    sltiu a3, a3, 2
 ; RV32-NEXT:    xori a3, a3, 1
-; RV32-NEXT:    and a2, a3, a2
-; RV32-NEXT:    and a3, t4, t1
-; RV32-NEXT:    and t0, t3, t0
+; RV32-NEXT:    and a3, a3, t0
+; RV32-NEXT:    and a2, t4, a2
+; RV32-NEXT:    and t0, t3, t1
 ; RV32-NEXT:    and a7, t2, a7
 ; RV32-NEXT:    neg a7, a7
-; RV32-NEXT:    and a1, a7, a1
+; RV32-NEXT:    and a4, a7, a4
 ; RV32-NEXT:    neg a7, t0
 ; RV32-NEXT:    and a6, a7, a6
-; RV32-NEXT:    neg a3, a3
-; RV32-NEXT:    and a3, a3, a5
 ; RV32-NEXT:    neg a2, a2
-; RV32-NEXT:    and a2, a2, a4
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a1, a1, a6
-; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    neg a2, a3
+; RV32-NEXT:    and a2, a2, a5
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    add a4, a4, a6
+; RV32-NEXT:    add a1, a4, a1
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpreduce_add_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a4, 8(a1)
-; RV64-NEXT:    lw a5, 24(a1)
+; RV64-NEXT:    lw a4, 0(a1)
+; RV64-NEXT:    lw a5, 8(a1)
 ; RV64-NEXT:    lw a6, 16(a1)
-; RV64-NEXT:    lw a1, 0(a1)
+; RV64-NEXT:    lw a1, 24(a1)
 ; RV64-NEXT:    ld a7, 0(a2)
-; RV64-NEXT:    ld t0, 16(a2)
-; RV64-NEXT:    ld t1, 24(a2)
-; RV64-NEXT:    ld a2, 8(a2)
+; RV64-NEXT:    ld t0, 8(a2)
+; RV64-NEXT:    ld t1, 16(a2)
+; RV64-NEXT:    ld a2, 24(a2)
 ; RV64-NEXT:    sext.w a3, a3
 ; RV64-NEXT:    snez t2, a3
 ; RV64-NEXT:    sltiu t3, a3, 3
@@ -59,21 +59,21 @@ define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV64-NEXT:    xori t4, t4, 1
 ; RV64-NEXT:    sltiu a3, a3, 2
 ; RV64-NEXT:    xori a3, a3, 1
-; RV64-NEXT:    and a2, a3, a2
-; RV64-NEXT:    and a3, t4, t1
-; RV64-NEXT:    and t0, t3, t0
+; RV64-NEXT:    and a3, a3, t0
+; RV64-NEXT:    and a2, t4, a2
+; RV64-NEXT:    and t0, t3, t1
 ; RV64-NEXT:    and a7, t2, a7
 ; RV64-NEXT:    negw a7, a7
-; RV64-NEXT:    and a1, a7, a1
+; RV64-NEXT:    and a4, a7, a4
 ; RV64-NEXT:    negw a7, t0
 ; RV64-NEXT:    and a6, a7, a6
-; RV64-NEXT:    negw a3, a3
-; RV64-NEXT:    and a3, a3, a5
 ; RV64-NEXT:    negw a2, a2
-; RV64-NEXT:    and a2, a2, a4
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a1, a1, a6
-; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    and a1, a2, a1
+; RV64-NEXT:    negw a2, a3
+; RV64-NEXT:    and a2, a2, a5
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    add a4, a4, a6
+; RV64-NEXT:    add a1, a4, a1
 ; RV64-NEXT:    addw a0, a1, a0
 ; RV64-NEXT:    ret
   %r = call i32 @llvm.vp.reduce.add.v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl)

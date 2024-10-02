@@ -3283,10 +3283,21 @@ class sme2_movt_zt_to_zt<string mnemonic, bits<7> opc>
   let Inst{4-0}   = Zt;
 }
 
-multiclass sme2_movt_zt_to_zt<string mnemonic, bits<7> opc> {
+multiclass sme2_movt_zt_to_zt<string mnemonic, bits<7> opc, SDPatternOperator intrinsic_lane, SDPatternOperator intrinsic> {
   def NAME : sme2_movt_zt_to_zt<mnemonic, opc>;
+  def NAME # _PSEUDO
+      : Pseudo<(outs), (ins ZTR:$ZT, sme_elm_idx0_3:$off2, ZPRAny:$Zt), []>, Sched<[]> {
+    let usesCustomInserter = 1;
+  }
   def : InstAlias<mnemonic # "\t$ZTt, $Zt",
                  (!cast<Instruction>(NAME) ZTR:$ZTt, 0, ZPRAny:$Zt), 1>;
+
+  foreach vt = [nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16] in {
+    def : Pat<(intrinsic_lane (imm_to_zt untyped:$zt), vt:$zn, sme_elm_idx0_3:$imm),
+              (!cast<Instruction>(NAME # _PSEUDO) $zt, $imm, $zn)>;
+    def : Pat<(intrinsic (imm_to_zt untyped:$zt), vt:$zn),
+              (!cast<Instruction>(NAME # _PSEUDO) $zt, 0, $zn)>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -12,6 +12,8 @@
 
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 
@@ -68,4 +70,15 @@ bool NVPTXSubtarget::hasImageHandles() const {
 
 bool NVPTXSubtarget::allowFP16Math() const {
   return hasFP16Math() && NoF16Math == false;
+}
+
+void NVPTXSubtarget::failIfClustersUnsupported(
+    std::string const &FailureMessage) const {
+  if (hasClusters())
+    return;
+
+  report_fatal_error(formatv(
+      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
+      "Requires SM >= 90 and PTX >= 78.",
+      getFullSmVersion(), PTXVersion, FailureMessage));
 }

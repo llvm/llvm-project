@@ -227,7 +227,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
                                           ".pcm");
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
-    if (getFileMgr().getFile(Result.str()))
+    if (getFileMgr().getOptionalFileRef(Result))
       return std::string(Result);
   }
 
@@ -246,7 +246,7 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
     llvm::sys::path::append(CachePath, ModuleCacheHash);
     std::string FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
-    if (!FileName.empty() && getFileMgr().getFile(FileName))
+    if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
       return FileName;
   }
   return {};
@@ -655,7 +655,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     ++NumFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
-    auto Dir = FileMgr.getDirectory(FrameworkName);
+    auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkName);
     if (!Dir)
       return std::nullopt;
 
@@ -718,7 +718,7 @@ OptionalFileEntryRef DirectoryLookup::DoFrameworkLookup(
     bool FoundFramework = false;
     do {
       // Determine whether this directory exists.
-      auto Dir = FileMgr.getDirectory(FrameworkPath);
+      auto Dir = FileMgr.getOptionalDirectoryRef(FrameworkPath);
       if (!Dir)
         break;
 

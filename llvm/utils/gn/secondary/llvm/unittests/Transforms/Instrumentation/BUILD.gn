@@ -5,10 +5,10 @@ unittest("InstrumentationTests") {
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
-    "//llvm/lib/Transforms/Instrumentation",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
+    "//llvm/lib/Transforms/Instrumentation",
   ]
   sources = [ "PGOInstrumentationTest.cpp" ]
 }

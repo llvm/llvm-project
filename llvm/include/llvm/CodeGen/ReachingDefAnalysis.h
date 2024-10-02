@@ -65,6 +65,50 @@ struct PointerLikeTypeTraits<ReachingDef> {
   }
 };
 
+// The storage for all reaching definitions.
+class MBBReachingDefsInfo {
+public:
+  void init(unsigned NumBlockIDs) { AllReachingDefs.resize(NumBlockIDs); }
+
+  unsigned numBlockIDs() const { return AllReachingDefs.size(); }
+
+  void startBasicBlock(unsigned MBBNumber, unsigned NumRegUnits) {
+    AllReachingDefs[MBBNumber].resize(NumRegUnits);
+  }
+
+  void append(unsigned MBBNumber, unsigned Unit, int Def) {
+    AllReachingDefs[MBBNumber][Unit].push_back(Def);
+  }
+
+  void prepend(unsigned MBBNumber, unsigned Unit, int Def) {
+    auto &Defs = AllReachingDefs[MBBNumber][Unit];
+    Defs.insert(Defs.begin(), Def);
+  }
+
+  void replaceFront(unsigned MBBNumber, unsigned Unit, int Def) {
+    assert(!AllReachingDefs[MBBNumber][Unit].empty());
+    *AllReachingDefs[MBBNumber][Unit].begin() = Def;
+  }
+
+  void clear() { AllReachingDefs.clear(); }
+
+  ArrayRef<ReachingDef> defs(unsigned MBBNumber, unsigned Unit) const {
+    if (AllReachingDefs[MBBNumber].empty())
+      // Block IDs are not necessarily dense.
+      return ArrayRef<ReachingDef>();
+    return AllReachingDefs[MBBNumber][Unit];
+  }
+
+private:
+  /// All reaching defs of a given RegUnit for a given MBB.
+  using MBBRegUnitDefs = TinyPtrVector<ReachingDef>;
+  /// All reaching defs of all reg units for a given MBB
+  using MBBDefsInfo = std::vector<MBBRegUnitDefs>;
+
+  /// All reaching defs of all reg units for all MBBs
+  SmallVector<MBBDefsInfo, 4> AllReachingDefs;
+};
+
 /// This class provides the reaching def analysis.
 class ReachingDefAnalysis : public MachineFunctionPass {
 private:
@@ -93,12 +137,6 @@ private:
   /// their basic blocks.
   DenseMap<MachineInstr *, int> InstIds;
 
-  /// All reaching defs of a given RegUnit for a given MBB.
-  using MBBRegUnitDefs = TinyPtrVector<ReachingDef>;
-  /// All reaching defs of all reg units for a given MBB
-  using MBBDefsInfo = std::vector<MBBRegUnitDefs>;
-  /// All reaching defs of all reg units for a all MBBs
-  using MBBReachingDefsInfo = SmallVector<MBBDefsInfo, 4>;
   MBBReachingDefsInfo MBBReachingDefs;
 
   /// Default values are 'nothing happened a long time ago'.

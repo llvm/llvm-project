@@ -118,7 +118,7 @@
 "`P1361R2 <https://wg21.link/P1361R2>`__","Integration of chrono with text formatting","2019-07 (Cologne)","|Partial|","",""
 "`P1423R3 <https://wg21.link/P1423R3>`__","char8_t backward compatibility remediation","2019-07 (Cologne)","|Complete|","15.0",""
 "`P1424R1 <https://wg21.link/P1424R1>`__","'constexpr' feature macro concerns","2019-07 (Cologne)","|Nothing To Do|","","Superseded by `P1902 <https://wg21.link/P1902>`__"
-"`P1466R3 <https://wg21.link/P1466R3>`__","Miscellaneous minor fixes for chrono","2019-07 (Cologne)","","",""
+"`P1466R3 <https://wg21.link/P1466R3>`__","Miscellaneous minor fixes for chrono","2019-07 (Cologne)","|Partial|","",""
 "`P1474R1 <https://wg21.link/P1474R1>`__","Helpful pointers for ContiguousIterator","2019-07 (Cologne)","|Complete|","15.0",""
 "`P1502R1 <https://wg21.link/P1502R1>`__","Standard library header units for C++20","2019-07 (Cologne)","","",""
 "`P1522R1 <https://wg21.link/P1522R1>`__","Iterator Difference Type and Integer Overflow","2019-07 (Cologne)","|Complete|","15.0",""

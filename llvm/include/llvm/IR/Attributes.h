@@ -117,6 +117,11 @@ public:
   static bool canUseAsParamAttr(AttrKind Kind);
   static bool canUseAsRetAttr(AttrKind Kind);
 
+  static bool intersectMustPreserve(AttrKind Kind);
+  static bool intersectWithAnd(AttrKind Kind);
+  static bool intersectWithMin(AttrKind Kind);
+  static bool intersectWithCustom(AttrKind Kind);
+
 private:
   AttributeImpl *pImpl = nullptr;
 
@@ -208,8 +213,12 @@ public:
   /// Return true if the target-dependent attribute is present.
   bool hasAttribute(StringRef Val) const;
 
+  /// Returns true if the attribute's kind can be represented as an enum (Enum,
+  /// Integer, Type, ConstantRange, or ConstantRangeList attribute).
+  bool hasKindAsEnum() const { return !isStringAttribute(); }
+
   /// Return the attribute's kind as an enum (Attribute::AttrKind). This
-  /// requires the attribute to be an enum, integer, or type attribute.
+  /// requires the attribute be representable as an enum (see: `hasKindAsEnum`).
   Attribute::AttrKind getKindAsEnum() const;
 
   /// Return the attribute's value as an integer. This requires that the
@@ -294,6 +303,9 @@ public:
   /// Equality and non-equality operators.
   bool operator==(Attribute A) const { return pImpl == A.pImpl; }
   bool operator!=(Attribute A) const { return pImpl != A.pImpl; }
+
+  /// Used to sort attribute by kind.
+  int cmpKind(Attribute A) const;
 
   /// Less-than operator. Useful for sorting the attributes list.
   bool operator<(Attribute A) const;
@@ -382,6 +394,12 @@ public:
   /// attribute sets are immutable.
   [[nodiscard]] AttributeSet
   removeAttributes(LLVMContext &C, const AttributeMask &AttrsToRemove) const;
+
+  /// Try to intersect this AttributeSet with Other. Returns std::nullopt if
+  /// the two lists are inherently incompatible (imply different behavior, not
+  /// just analysis).
+  [[nodiscard]] std::optional<AttributeSet>
+  intersectWith(LLVMContext &C, AttributeSet Other) const;
 
   /// Return the number of attributes in this set.
   unsigned getNumAttributes() const;
@@ -773,7 +791,13 @@ public:
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] AttributeList
   addAllocSizeParamAttr(LLVMContext &C, unsigned ArgNo, unsigned ElemSizeArg,
-                        const std::optional<unsigned> &NumElemsArg);
+                        const std::optional<unsigned> &NumElemsArg) const;
+
+  /// Try to intersect this AttributeList with Other. Returns std::nullopt if
+  /// the two lists are inherently incompatible (imply different behavior, not
+  /// just analysis).
+  [[nodiscard]] std::optional<AttributeList>
+  intersectWith(LLVMContext &C, AttributeList Other) const;
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors

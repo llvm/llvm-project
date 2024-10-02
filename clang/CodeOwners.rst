@@ -120,7 +120,7 @@ OpenBSD driver
 Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Fangrui Song
-| maskray\@google.com (email), MaskRay (Phabricator), MaskRay (GitHub)
+| i\@maskray.me (email), MaskRay (Phabricator), MaskRay (GitHub)
 
 
 Tools

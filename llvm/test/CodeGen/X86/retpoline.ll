@@ -426,7 +426,7 @@ latch:
 ; X64-NEXT:          pause
 ; X64-NEXT:          lfence
 ; X64-NEXT:          jmp     [[CAPTURE_SPEC]]
-; X64-NEXT:          .p2align        4, 0x90
+; X64-NEXT:          .p2align        4
 ; X64-NEXT:  {{.*}}                                  # Block address taken
 ; X64-NEXT:                                          # %entry
 ; X64-NEXT:  [[CALL_TARGET]]:
@@ -445,7 +445,7 @@ latch:
 ; X86-NEXT:          pause
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
-; X86-NEXT:          .p2align        4, 0x90
+; X86-NEXT:          .p2align        4
 ; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
 ; X86-NEXT:  [[CALL_TARGET]]:
@@ -464,7 +464,7 @@ latch:
 ; X86-NEXT:          pause
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
-; X86-NEXT:          .p2align        4, 0x90
+; X86-NEXT:          .p2align        4
 ; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
 ; X86-NEXT:  [[CALL_TARGET]]:
@@ -483,7 +483,7 @@ latch:
 ; X86-NEXT:          pause
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
-; X86-NEXT:          .p2align        4, 0x90
+; X86-NEXT:          .p2align        4
 ; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
 ; X86-NEXT:  [[CALL_TARGET]]:
@@ -502,7 +502,7 @@ latch:
 ; X86-NEXT:          pause
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
-; X86-NEXT:          .p2align        4, 0x90
+; X86-NEXT:          .p2align        4
 ; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
 ; X86-NEXT:  [[CALL_TARGET]]:

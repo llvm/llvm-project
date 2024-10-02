@@ -17,8 +17,8 @@ target triple = "nvptx64-nvidia-cuda"
 ; CHECK: st.param.b16   [param2+0], %rs1;
 ; CHECK: st.param.b16   [param2+2], %rs2;
 ; CHECK: .param .align 2 .b8 retval0[4];
-; CHECK: call.uni (retval0),
-; CHECK-NEXT: _Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE,
+; CHECK-NEXT: prototype_0 : .callprototype (.param .align 2 .b8 _[4]) _ (.param .b32 _, .param .b32 _, .param .align 2 .b8 _[4]);
+; CHECK-NEXT: call (retval0),
 define weak_odr void @foo() {
 entry:
   %call.i.i.i = tail call %"class.complex" @_Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE(i32 0, i32 0, ptr byval(%"class.complex") null)

@@ -522,10 +522,10 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-LABEL: test_urem_vec:
 ; RV32MV:       # %bb.0:
 ; RV32MV-NEXT:    lw a1, 0(a0)
-; RV32MV-NEXT:    andi a2, a1, 2047
-; RV32MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32MV-NEXT:    vmv.v.x v8, a2
 ; RV32MV-NEXT:    lbu a2, 4(a0)
+; RV32MV-NEXT:    andi a3, a1, 2047
+; RV32MV-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32MV-NEXT:    vmv.v.x v8, a3
 ; RV32MV-NEXT:    slli a3, a1, 10
 ; RV32MV-NEXT:    srli a3, a3, 21
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a3

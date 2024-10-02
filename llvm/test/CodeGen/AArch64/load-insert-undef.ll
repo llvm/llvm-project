@@ -170,8 +170,7 @@ define <16 x i8> @loadv16i8_offset(ptr %p) {
 define <4 x i16> @loadv4i16_offset(ptr %p) {
 ; CHECK-LABEL: loadv4i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -182,8 +181,7 @@ define <4 x i16> @loadv4i16_offset(ptr %p) {
 define <8 x i16> @loadv8i16_offset(ptr %p) {
 ; CHECK-LABEL: loadv8i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -194,8 +192,7 @@ define <8 x i16> @loadv8i16_offset(ptr %p) {
 define <2 x i32> @loadv2i32_offset(ptr %p) {
 ; CHECK-LABEL: loadv2i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
@@ -206,8 +203,7 @@ define <2 x i32> @loadv2i32_offset(ptr %p) {
 define <4 x i32> @loadv4i32_offset(ptr %p) {
 ; CHECK-LABEL: loadv4i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
@@ -218,8 +214,7 @@ define <4 x i32> @loadv4i32_offset(ptr %p) {
 define <2 x i64> @loadv2i64_offset(ptr %p) {
 ; CHECK-LABEL: loadv2i64_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur x8, [x0, #1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i64, ptr %g
@@ -309,8 +304,7 @@ define <2 x double> @loadv2f64_offset(ptr %p) {
 define <8 x i8> @loadv8i8_noffset(ptr %p) {
 ; CHECK-LABEL: loadv8i8_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurb w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur b0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i8, ptr %g
@@ -321,8 +315,7 @@ define <8 x i8> @loadv8i8_noffset(ptr %p) {
 define <16 x i8> @loadv16i8_noffset(ptr %p) {
 ; CHECK-LABEL: loadv16i8_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurb w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur b0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i8, ptr %g
@@ -333,8 +326,7 @@ define <16 x i8> @loadv16i8_noffset(ptr %p) {
 define <4 x i16> @loadv4i16_noffset(ptr %p) {
 ; CHECK-LABEL: loadv4i16_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurh w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur h0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i16, ptr %g
@@ -345,8 +337,7 @@ define <4 x i16> @loadv4i16_noffset(ptr %p) {
 define <8 x i16> @loadv8i16_noffset(ptr %p) {
 ; CHECK-LABEL: loadv8i16_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurh w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur h0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i16, ptr %g
@@ -357,8 +348,7 @@ define <8 x i16> @loadv8i16_noffset(ptr %p) {
 define <2 x i32> @loadv2i32_noffset(ptr %p) {
 ; CHECK-LABEL: loadv2i32_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur s0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i32, ptr %g
@@ -369,8 +359,7 @@ define <2 x i32> @loadv2i32_noffset(ptr %p) {
 define <4 x i32> @loadv4i32_noffset(ptr %p) {
 ; CHECK-LABEL: loadv4i32_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur w8, [x0, #-1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur s0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i32, ptr %g
@@ -381,8 +370,7 @@ define <4 x i32> @loadv4i32_noffset(ptr %p) {
 define <2 x i64> @loadv2i64_noffset(ptr %p) {
 ; CHECK-LABEL: loadv2i64_noffset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur x8, [x0, #-1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldur d0, [x0, #-1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 -1
   %l = load i64, ptr %g
@@ -798,8 +786,7 @@ define <vscale x 8 x i8> @loadnxv8i8(ptr %p) {
 define <vscale x 16 x i8> @loadnxv16i8(ptr %p) {
 ; CHECK-LABEL: loadnxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i8, ptr %p
   %v = insertelement <vscale x 16 x i8> poison, i8 %l, i32 0
@@ -820,8 +807,7 @@ define <vscale x 4 x i16> @loadnxv4i16(ptr %p) {
 define <vscale x 8 x i16> @loadnxv8i16(ptr %p) {
 ; CHECK-LABEL: loadnxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr h0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i16, ptr %p
   %v = insertelement <vscale x 8 x i16> poison, i16 %l, i32 0
@@ -842,8 +828,7 @@ define <vscale x 2 x i32> @loadnxv2i32(ptr %p) {
 define <vscale x 4 x i32> @loadnxv4i32(ptr %p) {
 ; CHECK-LABEL: loadnxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i32, ptr %p
   %v = insertelement <vscale x 4 x i32> poison, i32 %l, i32 0
@@ -853,8 +838,7 @@ define <vscale x 4 x i32> @loadnxv4i32(ptr %p) {
 define <vscale x 2 x i64> @loadnxv2i64(ptr %p) {
 ; CHECK-LABEL: loadnxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ret
   %l = load i64, ptr %p
   %v = insertelement <vscale x 2 x i64> poison, i64 %l, i32 0
@@ -950,8 +934,7 @@ define <vscale x 8 x i8> @loadnxv8i8_offset(ptr %p) {
 define <vscale x 16 x i8> @loadnxv16i8_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv16i8_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i8, ptr %g
@@ -974,8 +957,7 @@ define <vscale x 4 x i16> @loadnxv4i16_offset(ptr %p) {
 define <vscale x 8 x i16> @loadnxv8i16_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv8i16_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur h0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i16, ptr %g
@@ -998,8 +980,7 @@ define <vscale x 2 x i32> @loadnxv2i32_offset(ptr %p) {
 define <vscale x 4 x i32> @loadnxv4i32_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv4i32_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldur s0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i32, ptr %g
@@ -1010,8 +991,7 @@ define <vscale x 4 x i32> @loadnxv4i32_offset(ptr %p) {
 define <vscale x 2 x i64> @loadnxv2i64_offset(ptr %p) {
 ; CHECK-LABEL: loadnxv2i64_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldur x8, [x0, #1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
   %l = load i64, ptr %g

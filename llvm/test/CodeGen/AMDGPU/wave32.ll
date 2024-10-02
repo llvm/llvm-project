@@ -372,8 +372,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:  .LBB10_2: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
-; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
 ; GFX1032-NEXT:    s_mov_b32 s3, 0
+; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX1032-NEXT:  ; %bb.3: ; %bb5
@@ -515,8 +515,8 @@ bb13:
 define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #0 {
 ; GFX1032-LABEL: test_loop_with_if_else_break:
 ; GFX1032:       ; %bb.0: ; %bb
-; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_mov_b32 s4, 0
+; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
 ; GFX1032-NEXT:  ; %bb.1: ; %.preheader

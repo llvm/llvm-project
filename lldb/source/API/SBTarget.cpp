@@ -662,15 +662,14 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, buf, size, error);
 
-  SBError sb_error;
   size_t bytes_read = 0;
   TargetSP target_sp(GetSP());
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     bytes_read =
-        target_sp->ReadMemory(addr.ref(), buf, size, sb_error.ref(), true);
+        target_sp->ReadMemory(addr.ref(), buf, size, error.ref(), true);
   } else {
-    sb_error.SetErrorString("invalid target");
+    error.SetErrorString("invalid target");
   }
 
   return bytes_read;

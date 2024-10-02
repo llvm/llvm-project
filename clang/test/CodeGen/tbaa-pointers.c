@@ -116,15 +116,41 @@ void p2struct(struct S1 **ptr) {
   // COMMON-LABEL: define void @p2struct(
   // COMMON-SAME:    ptr noundef [[PTR:%.+]])
   // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
-  // ENABLED-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2S1_0:!.+]]
-  // ENABLED-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[P2S1_0]]
-  // ENABLED-NEXT:   store ptr null, ptr [[BASE]], align 8, !tbaa [[P1S1_:!.+]]
-  // DEFAULT-NEXT:   store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
-  // DEFAULT-NEXT:   [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
-  // DEFAULT-NEXT:   store ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
+  // ENABLED-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR:!.+]]
+  // DEFAULT-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    store ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
   // COMMON-NEXT:    ret void
   //
   *ptr = 0;
+}
+
+void p2struct_const(struct S1 const **ptr) {
+  // COMMON-LABEL: define void @p2struct_const(
+  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    store ptr null, ptr [[BASE]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    ret void
+  //
+  *ptr = 0;
+}
+
+struct S2 {
+  struct S1 *s;
+};
+
+void p2struct2(struct S2 *ptr) {
+  // COMMON-LABEL: define void @p2struct2(
+  // COMMON-SAME:    ptr noundef [[PTR:%.+]])
+  // COMMON:         [[PTR_ADDR:%.+]] = alloca ptr, align 8
+  // COMMON-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    [[BASE:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+  // COMMON-NEXT:    [[S:%.+]] = getelementptr inbounds nuw %struct.S2, ptr [[BASE]], i32 0, i32 0
+  // COMMON-NEXT:    store ptr null, ptr [[S]], align 8, !tbaa [[S2_S_TAG:!.+]]
+  // COMMON-NEXT:    ret void
+    ptr->s = 0;
 }
 
 // ENABLED: [[P2INT_0]] = !{[[P2INT:!.+]], [[P2INT]], i64 0}
@@ -145,3 +171,5 @@ void p2struct(struct S1 **ptr) {
 // ENABLED: [[P2CHAR]] = !{!"p2 omnipotent char", [[ANY_POINTER]], i64 0}
 // ENABLED: [[P1CHAR_0]] = !{[[P1CHAR:!.+]], [[P1CHAR]], i64 0}
 // ENABLED: [[P1CHAR]] = !{!"p1 omnipotent char", [[ANY_POINTER]], i64 0}
+// COMMON: [[S2_S_TAG]]  = !{[[S2_TY:!.+]], [[ANY_POINTER]], i64 0}
+// COMMON: [[S2_TY]]  = !{!"S2", [[ANY_POINTER]], i64 0}

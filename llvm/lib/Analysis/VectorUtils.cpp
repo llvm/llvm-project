@@ -1454,7 +1454,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // that all the pointers in the group don't wrap.
     // So we check only group member 0 (which is always guaranteed to exist),
     // and group member Factor - 1; If the latter doesn't exist we rely on
-    // peeling (if it is a non-reversed accsess -- see Case 3).
+    // peeling (if it is a non-reversed access -- see Case 3).
     if (InvalidateGroupIfMemberMayWrap(Group, 0, std::string("first")))
       continue;
     if (Group->getMember(Group->getFactor() - 1))

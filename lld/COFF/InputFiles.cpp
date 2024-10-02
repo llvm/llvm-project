@@ -1091,6 +1091,12 @@ void ImportFile::parse() {
     }
     if (!impECSym)
       return;
+
+    StringRef auxImpCopyName = saver().save("__auximpcopy_" + name);
+    auxImpCopySym =
+        ctx.symtab.addImportData(auxImpCopyName, this, auxCopyLocation);
+    if (!auxImpCopySym)
+      return;
   }
   // If this was a duplicate, we logged an error but may continue;
   // in this case, impSym is nullptr.
@@ -1120,7 +1126,8 @@ void ImportFile::parse() {
 
       StringRef impChkName = saver().save("__impchk_" + name);
       impchkThunk = make<ImportThunkChunkARM64EC>(this);
-      ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
+      impchkThunk->sym =
+          ctx.symtab.addImportThunk(impChkName, impSym, impchkThunk);
       ctx.driver.pullArm64ECIcallHelper();
     }
   }
