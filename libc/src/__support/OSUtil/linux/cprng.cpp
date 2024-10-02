@@ -51,6 +51,8 @@ using namespace vdso;
 // │           ├────────────┤    ├──────────────────┤
 // │           │   ......   │    │  ..............  │
 // └───────────┴────────────┘    └──────────────────┘
+// State blocks are doubly linked so that we can iterate bidrectionally as a
+// freelist. We'will use a sentinel to simplify the implementation.
 struct StateBlock {
   StateBlock *prev;
   StateBlock *next;
@@ -59,6 +61,8 @@ struct StateBlock {
   void *&freelist(size_t index) { return appendix[index + 1]; }
 };
 
+// Parameters from Linux UAPI. Available only for 6.11+. We manually provide it
+// to support a mean of compiling libc on old kernels.
 struct vgetrandom_opaque_params {
   unsigned size_of_opaque_state = 0;
   unsigned mmap_prot = 0;
@@ -66,6 +70,14 @@ struct vgetrandom_opaque_params {
   unsigned reserved[13];
 };
 
+// Global configuration for state allocation.
+// - System Page Size
+// - Number of pages per block (allocation)
+// - Number of states per page
+// - Parameters for state allocation
+// An opaque state cannot go across page boundaries.
+// We use the number of processors available to the current process to estimate
+// the anticipated number of states.
 class GlobalConfig {
 public:
   const size_t page_size = 0;
