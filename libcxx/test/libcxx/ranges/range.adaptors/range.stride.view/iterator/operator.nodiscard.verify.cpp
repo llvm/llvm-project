@@ -47,14 +47,16 @@ constexpr bool test_forward_operator_minus() {
 
   sv_zero_offset_begin + // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
       1;
-  1 + sv_zero_offset_begin; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  1 + sv_zero_offset_begin; // expected-warning {{ignoring return value of function declared with 'nodiscard'
+                            // attribute}}
 
   sv_one_offset_begin - 1; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   sv_one_offset_begin - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
       sv_zero_offset_begin;
 
-  std::default_sentinel_t() - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::default_sentinel_t() - // expected-warning {{ignoring return value of function declared with 'nodiscard'
+                              // attribute}}
       sv_zero_offset_begin;
 
   sv_zero_offset_begin - // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
