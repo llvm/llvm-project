@@ -386,8 +386,6 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   // Ensure that tentative code layout always runs for cold blocks.
   if (!ColdLayoutDone)
     runColdLayout();
-  assert(ColdLayoutDone &&
-         "Did not perform tentative code layout for cold blocks.");
 
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
