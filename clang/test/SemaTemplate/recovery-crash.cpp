@@ -47,7 +47,7 @@ namespace PR16225 {
 namespace test1 {
   template <typename> class ArraySlice {};
   class Foo;
-  class NonTemplateClass {
+  class NonTemplateClass { // #defined-here
     void MemberFunction(ArraySlice<Foo>, int);
     template <class T> void MemberFuncTemplate(ArraySlice<T>, int);
   };
@@ -63,6 +63,6 @@ namespace test1 {
   }
   // expected-error@+3 {{out-of-line definition of 'UndeclaredMethod' does not match any declaration}}
   // expected-note@+2 {{member is declared here}}
-  // expected-note@-16 {{defined here}}
+  // expected-note@#defined-here {{defined here}}
   void NonTemplateClass::UndeclaredMethod() {}
 }

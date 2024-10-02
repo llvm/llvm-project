@@ -597,10 +597,10 @@ namespace cwg336 { // cwg336: yes
         void mf2();
       };
     };
-    template<> template<class X> class A<int>::B {};
+    template<> template<class X> class A<int>::B {}; // #defined-here-cwg336
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
-    // expected-note@-3 {{defined here}}
+    // expected-note@#defined-here-cwg336 {{defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
     // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
   }
@@ -759,7 +759,7 @@ namespace cwg347 { // cwg347: yes
     void g();
   };
 
-  struct derived : base {};
+  struct derived : base {}; // #defined-here-derived
 
   struct derived::nested {};
   // expected-error@-1 {{no struct named 'nested' in 'cwg347::derived'}}
@@ -767,10 +767,10 @@ namespace cwg347 { // cwg347: yes
   // expected-error@-1 {{no member named 'n' in 'cwg347::derived'}}
   void derived::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg347::derived'}}
-  // expected-note@-8 {{defined here}}
+  // expected-note@#defined-here-derived {{defined here}}
   void derived::g() {}
   // expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in 'cwg347::derived'}}
-  // expected-note@-11 {{defined here}}
+  // expected-note@#defined-here-derived {{defined here}}
 }
 
 // cwg348: na
@@ -1012,20 +1012,20 @@ namespace cwg355 { struct ::cwg355_S s; }
 // cwg356: na
 
 namespace cwg357 { // cwg357: yes
-  template<typename T> struct A {
+  template<typename T> struct A { // #defined-here-cwg357-A
     void f() const; // #cwg357-f
   };
   template<typename T> void A<T>::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
-  // expected-note@-5 {{defined here}}
+  // expected-note@#defined-here-cwg357 {{defined here}}
   // expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
-  struct B {
+  struct B { // #defined-here-cwg357-B
     template<typename T> void f();
   };
   template<typename T> void B::f() const {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::B'}}
-  // expected-note@-5 {{defined here}}
+  // expected-note@#defined-here-cwg357-B {{defined here}}
 }
 
 namespace cwg358 { // cwg358: yes
