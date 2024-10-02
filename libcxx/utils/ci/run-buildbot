@@ -371,13 +371,7 @@ bootstrapping-build)
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the LLDB libc++ data formatter tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx \
-                                check-lldb-api-functionalities-data-formatter-data-formatter-stl-generic \
-                                check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx-simulators \
-                                check-lldb-api-commands-expression-import-std-module \
-                                check-lldb-api-lang-cpp-std-function-step-into-callable \
-                                check-lldb-api-lang-cpp-std-function-recognizer \
-                                check-lldb-api-lang-cpp-std-invoke-recognizer
+    ${NINJA} -vC "${BUILD_DIR}" check-lldb-libcxx-integration
 
 
     echo "--- Running the libc++ and libc++abi tests"
