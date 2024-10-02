@@ -1557,7 +1557,7 @@ bool AAPointerInfoFloating::collectConstantsForGEP(Attributor &A,
                                                    const OffsetInfo &PtrOI,
                                                    const GEPOperator *GEP) {
   unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
 
   assert(!UsrOI.isUnknown() && !PtrOI.isUnknown() &&

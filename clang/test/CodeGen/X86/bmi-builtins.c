@@ -249,6 +249,26 @@ char bextr32_6[_bextr_u32(0x00000000, 0x00000000, 0x00000000) == 0x00000000 ? 1 
 char bextr32_7[_bextr_u32(0x000003F0, 0xFFFFFF04, 0xFFFFFF10) == 0x0000003F ? 1 : -1];
 char bextr32_8[_bextr_u32(0x000003F0, 0xFFFFFF08, 0xFFFFFF30) == 0x00000003 ? 1 : -1];
 
+char tzcntu16_0[__tzcnt_u16(0x0000) == 16 ? 1 : -1];
+char tzcntu16_1[__tzcnt_u16(0x0001) ==  0 ? 1 : -1];
+char tzcntu16_2[__tzcnt_u16(0x0010) ==  4 ? 1 : -1];
+
+char tzcnt2u16_0[_tzcnt_u16(0x0000) == 16 ? 1 : -1];
+char tzcnt2u16_1[_tzcnt_u16(0x0001) ==  0 ? 1 : -1];
+char tzcnt2u16_2[_tzcnt_u16(0x0010) ==  4 ? 1 : -1];
+
+char tzcntu32_0[__tzcnt_u32(0x00000000) == 32 ? 1 : -1];
+char tzcntu32_1[__tzcnt_u32(0x00000001) ==  0 ? 1 : -1];
+char tzcntu32_2[__tzcnt_u32(0x00000080) ==  7 ? 1 : -1];
+
+char tzcnt2u32_0[_tzcnt_u32(0x00000000) == 32 ? 1 : -1];
+char tzcnt2u32_1[_tzcnt_u32(0x00000001) ==  0 ? 1 : -1];
+char tzcnt2u32_2[_tzcnt_u32(0x00000080) ==  7 ? 1 : -1];
+
+char tzcnt3u32_0[_mm_tzcnt_32(0x00000000) == 32 ? 1 : -1];
+char tzcnt3u32_1[_mm_tzcnt_32(0x00000001) ==  0 ? 1 : -1];
+char tzcnt3u32_2[_mm_tzcnt_32(0x00000080) ==  7 ? 1 : -1];
+
 #ifdef __x86_64__
 char bextr64_0[__bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
 char bextr64_1[__bextr_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
@@ -261,5 +281,17 @@ char bextr64_5[_bextr2_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x00
 char bextr64_6[_bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
 char bextr64_7[_bextr_u64(0xF000000000000001ULL, 0x0000000000000001ULL, 0x0000000000000040ULL) == 0x7800000000000000ULL ? 1 : -1];
 char bextr64_8[_bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFFFF01ULL, 0xFFFFFFFFFFFFFF10ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char tzcntu64_0[__tzcnt_u64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcntu64_1[__tzcnt_u64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcntu64_2[__tzcnt_u64(0x0000000800000000ULL) == 35 ? 1 : -1];
+
+char tzcnt2u64_0[_tzcnt_u64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcnt2u64_1[_tzcnt_u64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcnt2u64_2[_tzcnt_u64(0x0000000800000000ULL) == 35 ? 1 : -1];
+
+char tzcnt3u64_0[_mm_tzcnt_64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcnt3u64_1[_mm_tzcnt_64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcnt3u64_2[_mm_tzcnt_64(0x0000000800000000ULL) == 35 ? 1 : -1];
 #endif
 #endif

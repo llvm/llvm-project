@@ -952,12 +952,12 @@ static constexpr const char *const IntrinsicNameTable[] = {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_TARGET_DATA
 
-bool Function::isTargetIntrinsic(Intrinsic::ID IID) {
+bool Intrinsic::isTargetIntrinsic(Intrinsic::ID IID) {
   return IID > TargetInfos[0].Count;
 }
 
 bool Function::isTargetIntrinsic() const {
-  return isTargetIntrinsic(IntID);
+  return Intrinsic::isTargetIntrinsic(IntID);
 }
 
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
@@ -982,7 +982,7 @@ findTargetSubtable(StringRef Name) {
 
 /// This does the actual lookup of an intrinsic ID which matches the given
 /// function name.
-Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
+Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
   auto [NameTable, Target] = findTargetSubtable(Name);
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, Target);
   if (Idx == -1)
@@ -1011,7 +1011,7 @@ void Function::updateAfterNameChange() {
     return;
   }
   HasLLVMReservedName = true;
-  IntID = lookupIntrinsicID(Name);
+  IntID = Intrinsic::lookupIntrinsicID(Name);
 }
 
 /// Returns a stable mangling for the type specified for use in the name

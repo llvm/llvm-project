@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
-; CHECK: ; TotalNumSgprs: 4
+; CHECK: ; NumSgprs: 4
 ; CHECK: ; NumVgprs: 2
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---

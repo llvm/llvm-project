@@ -333,26 +333,22 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   bool Changed = false;
   for (AllocaInst *AI : Allocas) {
     const unsigned AllocaCost = DL->getTypeSizeInBits(AI->getAllocatedType());
-    // First, check if we have enough budget to vectorize this alloca.
-    if (AllocaCost <= VectorizationBudget) {
-      // If we do, attempt vectorization, otherwise, fall through and try
-      // promoting to LDS instead.
-      if (tryPromoteAllocaToVector(*AI)) {
-        Changed = true;
-        assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
-               "Underflow!");
-        VectorizationBudget -= AllocaCost;
-        LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
-                          << VectorizationBudget << "\n");
-        continue;
-      }
-    } else {
-      LLVM_DEBUG(dbgs() << "Alloca too big for vectorization (size:"
-                        << AllocaCost << ", budget:" << VectorizationBudget
-                        << "): " << *AI << "\n");
+    if (AllocaCost > VectorizationBudget) {
+      LLVM_DEBUG(dbgs() << "  Alloca too big for vectorization: " << *AI
+                        << "\n");
+      return Changed;
     }
 
-    if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
+    if (tryPromoteAllocaToVector(*AI)) {
+      Changed = true;
+      assert((VectorizationBudget - AllocaCost) < VectorizationBudget &&
+             "Underflow!");
+      VectorizationBudget -= AllocaCost;
+      LLVM_DEBUG(dbgs() << "  Remaining vectorization budget:"
+                        << VectorizationBudget << "\n");
+      if (VectorizationBudget == 0)
+        break;
+    } else if (PromoteToLDS && tryPromoteAllocaToLDS(*AI, SufficientLDS))
       Changed = true;
   }
 
@@ -402,7 +398,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  MapVector<Value *, APInt> VarOffsets;
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
   if (GEP->getPointerOperand()->stripPointerCasts() != Alloca ||
       !GEP->collectOffset(DL, BW, VarOffsets, ConstOffset))

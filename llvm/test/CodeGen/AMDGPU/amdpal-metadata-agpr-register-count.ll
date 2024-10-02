@@ -60,9 +60,7 @@ bb:
 declare void @undef_func()
 
 ; CHECK:      .type          kernel_call_undef_func
-; CHECK:      .set kernel_call_undef_func.num_agpr, max(0, amdgpu.max_num_agpr)
-; CHECK:      NumAgprs: kernel_call_undef_func.num_agpr
-; CHECK:      .set amdgpu.max_num_agpr, 32
+; CHECK:      NumAgprs:       32
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:
   call void @undef_func()

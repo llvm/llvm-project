@@ -124,6 +124,8 @@
 ; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
+; GCN-O0-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Fix VGPR copies
 ; GCN-O0-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O0-NEXT:        Fixup Statepoint Caller Saved
@@ -150,7 +152,13 @@
 ; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
-; GCN-O0-NEXT:        Function register usage analysis
+; GCN-O0-NEXT:    Function register usage analysis
+; GCN-O0-NEXT:    CallGraph Construction
+; GCN-O0-NEXT:    Call Graph SCC Pass Manager
+; GCN-O0-NEXT:      DummyCGSCCPass
+; GCN-O0-NEXT:      FunctionPass Manager
+; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
+; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        AMDGPU Assembly Printer
 ; GCN-O0-NEXT:        Free MachineFunction
 
@@ -371,6 +379,11 @@
 ; GCN-O1-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        SI Lower WWM Copies
+; GCN-O1-NEXT:        Virtual Register Rewriter
+; GCN-O1-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O1-NEXT:        Virtual Register Map
+; GCN-O1-NEXT:        Live Register Matrix
+; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        GCN NSA Reassign
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
@@ -425,7 +438,13 @@
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
-; GCN-O1-NEXT:        Function register usage analysis
+; GCN-O1-NEXT:    Function register usage analysis
+; GCN-O1-NEXT:    CallGraph Construction
+; GCN-O1-NEXT:    Call Graph SCC Pass Manager
+; GCN-O1-NEXT:      DummyCGSCCPass
+; GCN-O1-NEXT:      FunctionPass Manager
+; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
+; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-NEXT:        Free MachineFunction
 
@@ -674,6 +693,11 @@
 ; GCN-O1-OPTS-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        SI Lower WWM Copies
+; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
+; GCN-O1-OPTS-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O1-OPTS-NEXT:        Virtual Register Map
+; GCN-O1-OPTS-NEXT:        Live Register Matrix
+; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
@@ -728,7 +752,13 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
-; GCN-O1-OPTS-NEXT:        Function register usage analysis
+; GCN-O1-OPTS-NEXT:    Function register usage analysis
+; GCN-O1-OPTS-NEXT:    CallGraph Construction
+; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
+; GCN-O1-OPTS-NEXT:      DummyCGSCCPass
+; GCN-O1-OPTS-NEXT:      FunctionPass Manager
+; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:        Free MachineFunction
 
@@ -983,6 +1013,11 @@
 ; GCN-O2-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        SI Lower WWM Copies
+; GCN-O2-NEXT:        Virtual Register Rewriter
+; GCN-O2-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O2-NEXT:        Virtual Register Map
+; GCN-O2-NEXT:        Live Register Matrix
+; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        GCN NSA Reassign
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
@@ -1037,7 +1072,13 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
-; GCN-O2-NEXT:        Function register usage analysis
+; GCN-O2-NEXT:    Function register usage analysis
+; GCN-O2-NEXT:    CallGraph Construction
+; GCN-O2-NEXT:    Call Graph SCC Pass Manager
+; GCN-O2-NEXT:      DummyCGSCCPass
+; GCN-O2-NEXT:      FunctionPass Manager
+; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
+; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        AMDGPU Assembly Printer
 ; GCN-O2-NEXT:        Free MachineFunction
 
@@ -1304,6 +1345,11 @@
 ; GCN-O3-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        SI Lower WWM Copies
+; GCN-O3-NEXT:        Virtual Register Rewriter
+; GCN-O3-NEXT:        AMDGPU Reserve WWM Registers
+; GCN-O3-NEXT:        Virtual Register Map
+; GCN-O3-NEXT:        Live Register Matrix
+; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
@@ -1358,7 +1404,13 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
-; GCN-O3-NEXT:        Function register usage analysis
+; GCN-O3-NEXT:    Function register usage analysis
+; GCN-O3-NEXT:    CallGraph Construction
+; GCN-O3-NEXT:    Call Graph SCC Pass Manager
+; GCN-O3-NEXT:      DummyCGSCCPass
+; GCN-O3-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
+; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        AMDGPU Assembly Printer
 ; GCN-O3-NEXT:        Free MachineFunction
 
