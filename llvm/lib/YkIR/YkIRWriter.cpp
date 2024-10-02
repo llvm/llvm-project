@@ -1247,18 +1247,19 @@ private:
   void serialiseCastInst(CastInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // We don't support:
-    // - truncating ptrtoint
+    // - truncating ptrtoint/inttoptr
     // - any cast we've not thought about
     // - vector casts
     std::optional<CastKind> CK = getCastKind(I->getOpcode());
-    if (isa<PtrToIntInst>(I)) {
+    if (isa<PtrToIntInst>(I) || isa<IntToPtrInst>(I)) {
       TypeSize SrcSize = DL.getTypeSizeInBits(I->getSrcTy());
       TypeSize DstSize = DL.getTypeSizeInBits(I->getDestTy());
       if (DstSize < SrcSize) {
         serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
         return;
       }
-      // After excluding truncation from ptrtoint, it's just a zext in disguise.
+      // After excluding truncation from ptrtoint/inttoptr, it's just a zext in
+      // disguise.
       CK = CastKindZeroExt;
     }
     if (!CK.has_value() || (I->getOperand(0)->getType()->isVectorTy())) {
