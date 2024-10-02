@@ -328,12 +328,11 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  ArrayRef<std::pair<Record *, SMRange>> SCs = SC->getSuperClasses();
-  for (const auto &SCPair : SCs) {
-    if (CurRec->isSubClassOf(SCPair.first))
+  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
+    if (CurRec->isSubClassOf(SC))
       return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SCPair.first->getName() + "'!\n");
-    CurRec->addSuperClass(SCPair.first, SCPair.second);
+                   "Already subclass of '" + SC->getName() + "'!\n");
+    CurRec->addSuperClass(SC, Loc);
   }
 
   if (CurRec->isSubClassOf(SC))
