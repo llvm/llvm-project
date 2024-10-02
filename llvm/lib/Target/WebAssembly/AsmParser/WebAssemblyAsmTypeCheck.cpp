@@ -140,7 +140,7 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
   bool Error = false;
   bool PolymorphicStack = false;
   // Compare elements one by one from the stack top
-  for (;StackI > BlockStackStartPos && TypeI > 0; StackI--, TypeI--) {
+  for (; StackI > BlockStackStartPos && TypeI > 0; StackI--, TypeI--) {
     // If the stack is polymorphic, we assume all types in 'Types' have been
     // compared and matched
     if (std::get_if<Polymorphic>(&Stack[StackI - 1])) {
@@ -316,8 +316,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc,
-                                            bool ExactMatch) {
+bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc, bool ExactMatch) {
   assert(!BlockInfoStack.empty());
   const auto &FuncInfo = BlockInfoStack[0];
   return checkTypes(ErrorLoc, FuncInfo.Sig.Returns, ExactMatch);
