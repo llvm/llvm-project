@@ -31,6 +31,7 @@
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -70,6 +71,9 @@ class ObjCARCContract {
   ProvenanceAnalysis PA;
   ARCRuntimeEntryPoints EP;
   BundledRetainClaimRVs *BundledInsts = nullptr;
+
+  /// A flag indicating whether this optimization pass should run.
+  bool Run;
 
   /// The inline asm string to insert between calls and RetainRV calls to make
   /// the optimization work on targets which need it.
@@ -472,8 +476,8 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, std::nullopt, "",
-                                        Inst->getIterator(), BlockColors);
+      objcarc::createCallInstWithColors(IA, {}, "", Inst->getIterator(),
+                                        BlockColors);
     }
   decline_rv_optimization:
     return false;
@@ -527,6 +531,10 @@ bool ObjCARCContract::tryToPeepholeInstruction(
 //===----------------------------------------------------------------------===//
 
 bool ObjCARCContract::init(Module &M) {
+  Run = ModuleHasARC(M);
+  if (!Run)
+    return false;
+
   EP.init(&M);
 
   // Initialize RVInstMarker.
@@ -536,6 +544,9 @@ bool ObjCARCContract::init(Module &M) {
 }
 
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
+  if (!Run)
+    return false;
+
   if (!EnableARCOpts)
     return false;
 
@@ -730,6 +741,9 @@ INITIALIZE_PASS_END(ObjCARCContractLegacyPass, "objc-arc-contract",
 void ObjCARCContractLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
 Pass *llvm::createObjCARCContractPass() {

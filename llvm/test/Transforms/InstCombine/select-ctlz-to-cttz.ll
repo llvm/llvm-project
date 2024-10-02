@@ -154,10 +154,10 @@ define i32 @select_clz_to_ctz_wrong_sub(i32 %a) {
 define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64_wrong_xor(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SUB]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A]], [[SUB]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[AND]], i1 true)
-; CHECK-NEXT:    [[SUB11:%.*]] = or disjoint i64 [[LZ]], 64
-; CHECK-NEXT:    ret i64 [[SUB11]]
+; CHECK-NEXT:    [[SUB1:%.*]] = or disjoint i64 [[LZ]], 64
+; CHECK-NEXT:    ret i64 [[SUB1]]
 ;
   %sub = sub i64 0, %a
   %and = and i64 %sub, %a
@@ -187,7 +187,7 @@ define i64 @select_clz_to_ctz_i64_wrong_icmp_cst(i64 %a) {
 define i64 @select_clz_to_ctz_i64_wrong_icmp_pred(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64_wrong_icmp_pred(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SUB]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A]], [[SUB]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[AND]], i1 true)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i64 [[A]], 0
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor i64 [[LZ]], 63
@@ -206,7 +206,7 @@ define i64 @select_clz_to_ctz_i64_wrong_icmp_pred(i64 %a) {
 define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec_with_undef(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SUB]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], [[SUB]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[AND]], i1 true)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq <2 x i32> [[A]], zeroinitializer
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor <2 x i32> [[LZ]], <i32 31, i32 undef>
@@ -225,7 +225,7 @@ define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
 define i32 @select_clz_to_ctz_wrong_constant_for_zero(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_wrong_constant_for_zero(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[SUB]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 false)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31

@@ -13,6 +13,7 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/lldb-enumerations.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -231,6 +232,37 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
 }
 
+TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
+  // Test that we can access type-info of builtin Clang AST
+  // types without crashing even when the target triple is
+  // empty.
+
+  TypeSystemClang ast("empty triple AST", llvm::Triple{});
+
+  // This test only makes sense if the builtin ASTContext types were
+  // not initialized.
+  ASSERT_TRUE(ast.getASTContext().VoidPtrTy.isNull());
+
+  EXPECT_FALSE(ast.GetBuiltinTypeByName(ConstString("int")).IsValid());
+  EXPECT_FALSE(ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+                      "char", dwarf::DW_ATE_signed_char, 8)
+                   .IsValid());
+  EXPECT_FALSE(ast.GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 8)
+                   .IsValid());
+  EXPECT_FALSE(ast.GetPointerSizedIntType(/*is_signed=*/false));
+  EXPECT_FALSE(ast.GetIntTypeFromBitSize(8, /*is_signed=*/false));
+
+  CompilerType record_type = ast.CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "Record",
+      llvm::to_underlying(clang::TagTypeKind::Struct),
+      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  TypeSystemClang::StartTagDeclarationDefinition(record_type);
+  EXPECT_EQ(ast.AddFieldToRecordType(record_type, "field", record_type,
+                                     eAccessPublic, /*bitfield_bit_size=*/8),
+            nullptr);
+  TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
+}
+
 TEST_F(TestTypeSystemClang, TestDisplayName) {
   TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
@@ -303,7 +335,7 @@ TEST_F(TestTypeSystemClang, TestOwningModule) {
 
   CompilerType class_type =
       ast.CreateObjCClass("objc_class", ast.GetTranslationUnitDecl(),
-                          OptionalClangModuleID(300), false, false);
+                          OptionalClangModuleID(300), false);
   auto *cd = TypeSystemClang::GetAsObjCInterfaceDecl(class_type);
   EXPECT_FALSE(!cd);
   EXPECT_EQ(cd->getOwningModuleID(), 300u);
@@ -925,7 +957,6 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   // Create an interface decl and mark it as having external storage.
   CompilerType c = m_ast->CreateObjCClass("A", m_ast->GetTranslationUnitDecl(),
                                           OptionalClangModuleID(),
-                                          /*IsForwardDecl*/ false,
                                           /*IsInternal*/ false);
   ObjCInterfaceDecl *interface = m_ast->GetAsObjCInterfaceDecl(c);
   m_ast->SetHasExternalStorage(c.GetOpaqueQualType(), true);

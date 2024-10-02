@@ -432,10 +432,10 @@ exit:
 ; In the function below, the condition %c.1 results in a range [7, 6), which
 ; can be used as a widening bound. It does not fully contain the range we get
 ; from combining it with the information from %tmp12.
-define void @foo(ptr %arg) {
+define void @foo(ptr %arg, i8 %x) {
 ; SCCP-LABEL: @foo(
 ; SCCP-NEXT:  bb:
-; SCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; SCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; SCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; SCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; SCCP-NEXT:      i32 1, label [[BB3:%.*]]
@@ -472,7 +472,7 @@ define void @foo(ptr %arg) {
 ;
 ; IPSCCP-LABEL: @foo(
 ; IPSCCP-NEXT:  bb:
-; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 undef to i32
+; IPSCCP-NEXT:    [[TMP:%.*]] = zext i8 [[X:%.*]] to i32
 ; IPSCCP-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 8
 ; IPSCCP-NEXT:    switch i32 [[TMP]], label [[BB20:%.*]] [
 ; IPSCCP-NEXT:      i32 1, label [[BB3:%.*]]
@@ -508,7 +508,7 @@ define void @foo(ptr %arg) {
 ; IPSCCP-NEXT:    ret void
 ;
 bb:
-  %tmp = zext i8 undef to i32
+  %tmp = zext i8 %x to i32
   %tmp2 = load i64, ptr %arg, align 8
   switch i32 %tmp, label %bb20 [
   i32 1, label %bb3

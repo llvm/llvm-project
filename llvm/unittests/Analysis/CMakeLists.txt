@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   CodeGen
   Core
+  Instrumentation
   Passes
   Support
   TargetParser
@@ -22,9 +23,11 @@ set(ANALYSIS_TEST_SOURCES
   CFGTest.cpp
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
+  CtxProfAnalysisTest.cpp
   DDGTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp
+  GraphWriterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
@@ -62,14 +65,10 @@ else()
   LIST(APPEND LLVM_OPTIONAL_SOURCES ${MLGO_TESTS})
 endif()
 
-# Export symbols from the plugins shared objects.
-if(NOT WIN32)
-  set(export_symbols EXPORT_SYMBOLS_FOR_PLUGINS)
-endif()
-
 add_llvm_unittest_with_input_files(AnalysisTests
   ${ANALYSIS_TEST_SOURCES}
-  ${export_symbols}
+
+  EXPORT_SYMBOLS
   )
 
 add_dependencies(AnalysisTests intrinsics_gen)

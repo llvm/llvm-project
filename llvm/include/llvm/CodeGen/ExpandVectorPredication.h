@@ -16,10 +16,21 @@ namespace llvm {
 class TargetTransformInfo;
 class VPIntrinsic;
 
-/// Expand a vector predication intrinsic. Returns true if the intrinsic was
-/// removed/replaced.
-bool expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
-                                      const TargetTransformInfo &TTI);
+/// Represents the details the expansion of a VP intrinsic.
+enum class VPExpansionDetails {
+  /// No change happened during expansion.
+  IntrinsicUnchanged,
+  /// At least one operand was updated.
+  IntrinsicUpdated,
+  /// The whole intrinsic was replaced.
+  IntrinsicReplaced,
+};
+
+/// Expand a vector predication intrinsic. Returns the kind of expansion
+/// that was applied to the intrinsic.
+VPExpansionDetails
+expandVectorPredicationIntrinsic(VPIntrinsic &VPI,
+                                 const TargetTransformInfo &TTI);
 
 } // end namespace llvm
 

@@ -7,7 +7,7 @@ if (NOT WIN32 AND NOT CYGWIN)
   add_llvm_unittest(PluginsTests
     PluginsTest.cpp
 
-    EXPORT_SYMBOLS_FOR_PLUGINS
+    EXPORT_SYMBOLS
     )
   target_link_libraries(PluginsTests PRIVATE LLVMTestingSupport)
 

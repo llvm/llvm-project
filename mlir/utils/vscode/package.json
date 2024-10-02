@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -47,7 +47,7 @@
     "@types/vscode": "~1.67.0",
     "@vscode/vsce": "^2.19.0",
     "clang-format": "^1.8.0",
-    "typescript": "^4.6.4",
+    "typescript": "^4.9.5",
     "vscode-test": "^1.3.0"
   },
   "repository": {
@@ -155,6 +155,11 @@
           "type": "string",
           "description": "The file path of the mlir-lsp-server executable."
         },
+        "mlir.mlir_additional_server_args": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of additional arguments for mlir-lsp-server executable. E.g. --log=verbose."
+        },
         "mlir.pdll_server_path": {
           "scope": "resource",
           "type": "string",
@@ -165,6 +170,11 @@
           "type": "array",
           "description": "A list of `pdll_compile_commands.yml` database files containing information about .pdll files processed by the server."
         },
+        "mlir.pdll_additional_server_args": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of additional arguments for pdll-lsp-server executable. E.g. --log=verbose."
+        },
         "mlir.tablegen_server_path": {
           "scope": "resource",
           "type": "string",
@@ -174,6 +184,11 @@
           "scope": "resource",
           "type": "array",
           "description": "A list of `tablegen_compile_commands.yml` database files containing information about .td files processed by the server."
+        },
+        "mlir.tablegen_additional_server_args": {
+          "scope": "resource",
+          "type": "array",
+          "description": "A list of additional arguments for tblgen-lsp-server executable. E.g. --log=verbose."
         },
         "mlir.onSettingsChanged": {
           "type": "string",

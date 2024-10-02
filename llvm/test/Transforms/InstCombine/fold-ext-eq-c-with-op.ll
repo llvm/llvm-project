@@ -31,7 +31,7 @@ define i8 @fold_add_zext_eq_0_fail_multiuse_exp(i8 %x) {
 ; CHECK-LABEL: @fold_add_zext_eq_0_fail_multiuse_exp(
 ; CHECK-NEXT:    [[X_EQ:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[X_EQ_EXT:%.*]] = zext i1 [[X_EQ]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X_EQ_EXT]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], [[X_EQ_EXT]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X_EQ_EXT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -46,7 +46,7 @@ define i8 @fold_add_sext_eq_4_fail_wrong_cond(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_add_sext_eq_4_fail_wrong_cond(
 ; CHECK-NEXT:    [[X_EQ:%.*]] = icmp eq i8 [[Y:%.*]], 4
 ; CHECK-NEXT:    [[X_EQ_EXT:%.*]] = sext i1 [[X_EQ]] to i8
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X_EQ_EXT]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], [[X_EQ_EXT]]
 ; CHECK-NEXT:    call void @use.i8(i8 [[X_EQ_EXT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

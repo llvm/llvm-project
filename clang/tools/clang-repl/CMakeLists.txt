@@ -10,7 +10,7 @@ set( LLVM_LINK_COMPONENTS
 add_clang_tool(clang-repl
   ClangRepl.cpp
 
-  EXPORT_SYMBOLS_FOR_PLUGINS
+  EXPORT_SYMBOLS
   )
 
 if(MSVC)

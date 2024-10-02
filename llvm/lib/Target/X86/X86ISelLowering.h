@@ -87,6 +87,10 @@ namespace llvm {
     COMI,
     UCOMI,
 
+    // X86 compare with Intrinsics similar to COMI.
+    COMX,
+    UCOMX,
+
     /// X86 bit-test instructions.
     BT,
 
@@ -340,6 +344,9 @@ namespace llvm {
 
     // Vector FP round.
     VFPROUND,
+    // Convert TWO packed single data to one packed data
+    VFPROUND2,
+    VFPROUND2_RND,
     VFPROUND_RND,
     VFPROUNDS,
     VFPROUNDS_RND,
@@ -618,6 +625,28 @@ namespace llvm {
 
     MPSADBW,
 
+    VCVTNE2PH2BF8,
+    VCVTNE2PH2BF8S,
+    VCVTNE2PH2HF8,
+    VCVTNE2PH2HF8S,
+    VCVTBIASPH2BF8,
+    VCVTBIASPH2BF8S,
+    VCVTBIASPH2HF8,
+    VCVTBIASPH2HF8S,
+    VCVTNEPH2BF8,
+    VCVTNEPH2BF8S,
+    VCVTNEPH2HF8,
+    VCVTNEPH2HF8S,
+    VMCVTBIASPH2BF8,
+    VMCVTBIASPH2BF8S,
+    VMCVTBIASPH2HF8,
+    VMCVTBIASPH2HF8S,
+    VMCVTNEPH2BF8,
+    VMCVTNEPH2BF8S,
+    VMCVTNEPH2HF8,
+    VMCVTNEPH2HF8S,
+    VCVTHF82PH,
+
     // Compress and expand.
     COMPRESS,
     EXPAND,
@@ -649,6 +678,18 @@ namespace llvm {
     CVTTP2UI,
     CVTTP2SI_SAE,
     CVTTP2UI_SAE,
+
+    // Saturation enabled Vector float/double to signed/unsigned
+    // integer with truncation.
+    CVTTP2SIS,
+    CVTTP2UIS,
+    CVTTP2SIS_SAE,
+    CVTTP2UIS_SAE,
+    // Masked versions of above. Used for v2f64 to v4i32.
+    // SRC, PASSTHRU, MASK
+    MCVTTP2SIS,
+    MCVTTP2UIS,
+
     // Scalar float/double to signed/unsigned integer with truncation.
     CVTTS2SI,
     CVTTS2UI,
@@ -658,6 +699,12 @@ namespace llvm {
     // Vector signed/unsigned integer to float/double.
     CVTSI2P,
     CVTUI2P,
+
+    // Scalar float/double to signed/unsigned integer with saturation.
+    CVTTS2SIS,
+    CVTTS2UIS,
+    CVTTS2SIS_SAE,
+    CVTTS2UIS_SAE,
 
     // Masked versions of above. Used for v2f64->v4f32.
     // SRC, PASSTHRU, MASK
@@ -669,8 +716,6 @@ namespace llvm {
     MCVTUI2P,
 
     // Vector float to bfloat16.
-    // Convert TWO packed single data to one packed BF16 data
-    CVTNE2PS2BF16,
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
     // Masked version of above.
@@ -1406,7 +1451,7 @@ namespace llvm {
     /// Return true if it's profitable to narrow operations of type SrcVT to
     /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not
     /// from i32 to i16.
-    bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+    bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                               EVT VT) const override;

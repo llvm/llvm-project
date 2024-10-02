@@ -21,7 +21,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "TargetInfo/SPIRVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -427,7 +426,23 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
-        if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
+        if (OpCode == SPIRV::OpString) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
+        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+                   MI.getOperand(2).getImm() ==
+                       SPIRV::InstructionSet::
+                           NonSemantic_Shader_DebugInfo_100) {
+          MachineOperand Ins = MI.getOperand(3);
+          namespace NS = SPIRV::NonSemanticExtInst;
+          static constexpr int64_t GlobalNonSemanticDITy[] = {
+              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
+              NS::DebugTypeBasic};
+          bool IsGlobalDI = false;
+          for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
+            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
+          if (IsGlobalDI)
+            collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
+        } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
@@ -899,6 +914,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
+  case SPIRV::OpExtInst: {
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+    }
+    break;
+  }
   case SPIRV::OpBitReverse:
   case SPIRV::OpBitFieldInsert:
   case SPIRV::OpBitFieldSExtract:
@@ -1176,6 +1199,14 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
+    break;
+  case SPIRV::OpArithmeticFenceEXT:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
+      report_fatal_error("OpArithmeticFenceEXT requires the "
+                         "following SPIR-V extension: SPV_EXT_arithmetic_fence",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence);
+    Reqs.addCapability(SPIRV::Capability::ArithmeticFenceEXT);
     break;
   default:
     break;

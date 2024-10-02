@@ -260,6 +260,8 @@ public:
   bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
                               Align &PrefAlign) const override;
 
+  bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
@@ -335,6 +337,8 @@ private:
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
+
+  bool softPromoteHalfType() const override { return true; }
 };
 
 } // end namespace llvm

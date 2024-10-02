@@ -7,13 +7,6 @@ types:
 enums: []
 objects: []
 functions:
-  - name: statvfs
-    standards:
-      - POSIX
-    return_type: int
-    arguments:
-      - type: const char *__restrict
-      - type: struct statvfs *__restrict
   - name: fstatvfs
     standards:
       - POSIX
@@ -21,3 +14,10 @@ functions:
     arguments:
       - type: int
       - type: struct statvfs *
+  - name: statvfs
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const char *__restrict
+      - type: struct statvfs *__restrict

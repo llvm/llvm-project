@@ -44,6 +44,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -1684,6 +1685,7 @@ class ExtQualsTypeCommonBase {
   friend class ExtQuals;
   friend class QualType;
   friend class Type;
+  friend class ASTReader;
 
   /// The "base" type of an extended qualifiers type (\c ExtQuals) or
   /// a self-referential pointer (for \c Type).
@@ -1929,6 +1931,11 @@ protected:
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
+public:
+  static constexpr int FunctionTypeNumParamsWidth = 16;
+  static constexpr int FunctionTypeNumParamsLimit = (1 << 16) - 1;
+
+protected:
   /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
   /// Only common bits are stored here. Additional uncommon bits are stored
   /// in a trailing object after FunctionProtoType.
@@ -1966,7 +1973,7 @@ protected:
     /// According to [implimits] 8 bits should be enough here but this is
     /// somewhat easy to exceed with metaprogramming and so we would like to
     /// keep NumParams as wide as reasonably possible.
-    unsigned NumParams : 16;
+    unsigned NumParams : FunctionTypeNumParamsWidth;
 
     /// The type of exception specification this function has.
     LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
@@ -2134,6 +2141,23 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  class TemplateTypeParmTypeBitfields {
+    friend class TemplateTypeParmType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    /// The depth of the template parameter.
+    unsigned Depth : 15;
+
+    /// Whether this is a template parameter pack.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ParameterPack : 1;
+
+    /// The index of the template parameter.
+    unsigned Index : 16;
+  };
+
   class SubstTemplateTypeParmTypeBitfields {
     friend class SubstTemplateTypeParmType;
 
@@ -2257,6 +2281,7 @@ protected:
     TypeWithKeywordBitfields TypeWithKeywordBits;
     ElaboratedTypeBitfields ElaboratedTypeBits;
     VectorTypeBitfields VectorTypeBits;
+    TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
@@ -2633,6 +2658,7 @@ public:
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
+  bool isHLSLIntangibleType() const; // Any HLSL intangible type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -3024,7 +3050,7 @@ public:
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // AMDGPU types
-#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) Id,
 #include "clang/Basic/AMDGPUTypes.def"
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
@@ -3989,6 +4015,10 @@ enum class VectorKind {
 
   /// is RISC-V RVV fixed-length mask vector
   RVVFixedLengthMask,
+
+  RVVFixedLengthMask_1,
+  RVVFixedLengthMask_2,
+  RVVFixedLengthMask_4
 };
 
 /// Represents a GCC generic vector type. This type is created using
@@ -5799,12 +5829,15 @@ class PackIndexingType final
   QualType Pattern;
   Expr *IndexExpr;
 
-  unsigned Size;
+  unsigned Size : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandsToEmptyPack : 1;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
   PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr,
+                   QualType Pattern, Expr *IndexExpr, bool ExpandsToEmptyPack,
                    ArrayRef<QualType> Expansions = {});
 
 public:
@@ -5828,6 +5861,8 @@ public:
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
+  bool expandsToEmptyPack() const { return ExpandsToEmptyPack; }
+
   ArrayRef<QualType> getExpansions() const {
     return {getExpansionsPtr(), Size};
   }
@@ -5840,10 +5875,10 @@ public:
     if (hasSelectedType())
       getSelectedType().Profile(ID);
     else
-      Profile(ID, Context, getPattern(), getIndexExpr());
+      Profile(ID, Context, getPattern(), getIndexExpr(), expandsToEmptyPack());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E);
+                      QualType Pattern, Expr *E, bool ExpandsToEmptyPack);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -6128,54 +6163,91 @@ public:
   }
 };
 
+class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
+public:
+  struct Attributes {
+    // Data gathered from HLSL resource attributes
+    llvm::dxil::ResourceClass ResourceClass;
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsROV : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t RawBuffer : 1;
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
+               bool RawBuffer)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+
+    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
+  };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  QualType ContainedType;
+  const Attributes Attrs;
+
+  HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
+                             QualType Contained, const Attributes &Attrs)
+      : Type(HLSLAttributedResource, Canon,
+             Contained.isNull() ? TypeDependence::None
+                                : Contained->getDependence()),
+        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  QualType getContainedType() const { return ContainedType; }
+  const Attributes &getAttrs() const { return Attrs; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, ContainedType, Attrs);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      QualType Contained, const Attributes &Attrs) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(Contained.getAsOpaquePtr());
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddBoolean(Attrs.IsROV);
+    ID.AddBoolean(Attrs.RawBuffer);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLAttributedResource;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  // Helper data collector for canonical types.
-  struct CanonicalTTPTInfo {
-    unsigned Depth : 15;
-    unsigned ParameterPack : 1;
-    unsigned Index : 16;
-  };
+  // The associated TemplateTypeParmDecl for the non-canonical type.
+  TemplateTypeParmDecl *TTPDecl;
 
-  union {
-    // Info for the canonical type.
-    CanonicalTTPTInfo CanTTPTInfo;
-
-    // Info for the non-canonical type.
-    TemplateTypeParmDecl *TTPDecl;
-  };
-
-  /// Build a non-canonical type.
-  TemplateTypeParmType(TemplateTypeParmDecl *TTPDecl, QualType Canon)
+  TemplateTypeParmType(unsigned D, unsigned I, bool PP,
+                       TemplateTypeParmDecl *TTPDecl, QualType Canon)
       : Type(TemplateTypeParm, Canon,
              TypeDependence::DependentInstantiation |
-                 (Canon->getDependence() & TypeDependence::UnexpandedPack)),
-        TTPDecl(TTPDecl) {}
-
-  /// Build the canonical type.
-  TemplateTypeParmType(unsigned D, unsigned I, bool PP)
-      : Type(TemplateTypeParm, QualType(this, 0),
-             TypeDependence::DependentInstantiation |
-                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)) {
-    CanTTPTInfo.Depth = D;
-    CanTTPTInfo.Index = I;
-    CanTTPTInfo.ParameterPack = PP;
-  }
-
-  const CanonicalTTPTInfo& getCanTTPTInfo() const {
-    QualType Can = getCanonicalTypeInternal();
-    return Can->castAs<TemplateTypeParmType>()->CanTTPTInfo;
+                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
+        TTPDecl(TTPDecl) {
+    assert(!TTPDecl == Canon.isNull());
+    TemplateTypeParmTypeBits.Depth = D;
+    TemplateTypeParmTypeBits.Index = I;
+    TemplateTypeParmTypeBits.ParameterPack = PP;
   }
 
 public:
-  unsigned getDepth() const { return getCanTTPTInfo().Depth; }
-  unsigned getIndex() const { return getCanTTPTInfo().Index; }
-  bool isParameterPack() const { return getCanTTPTInfo().ParameterPack; }
-
-  TemplateTypeParmDecl *getDecl() const {
-    return isCanonicalUnqualified() ? nullptr : TTPDecl;
+  unsigned getDepth() const { return TemplateTypeParmTypeBits.Depth; }
+  unsigned getIndex() const { return TemplateTypeParmTypeBits.Index; }
+  bool isParameterPack() const {
+    return TemplateTypeParmTypeBits.ParameterPack;
   }
+
+  TemplateTypeParmDecl *getDecl() const { return TTPDecl; }
 
   IdentifierInfo *getIdentifier() const;
 
@@ -8281,6 +8353,12 @@ inline bool Type::isHLSLSpecificType() const {
       false; // end boolean or operation
 }
 
+inline bool Type::isHLSLIntangibleType() const {
+  // All HLSL specific types are currently intangible type as well, but that
+  // might change in the future.
+  return isHLSLSpecificType();
+}
+
 inline bool Type::isTemplateTypeParmType() const {
   return isa<TemplateTypeParmType>(CanonicalType);
 }
@@ -8572,6 +8650,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();

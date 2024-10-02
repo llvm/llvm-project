@@ -1055,28 +1055,18 @@ void BinaryContext::adjustCodePadding() {
 MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
                                                uint64_t Size,
                                                uint16_t Alignment,
-                                               unsigned Flags,
-                                               BinarySection *Section) {
+                                               unsigned Flags) {
   // Register the name with MCContext.
   MCSymbol *Symbol = Ctx->getOrCreateSymbol(Name);
-  BinaryData *BD;
-
-  // Register out of section symbols only in GlobalSymbols map
-  if (Section && Section->getEndAddress() == Address) {
-    BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
-                        *Section, Flags);
-    GlobalSymbols[Name] = BD;
-    return Symbol;
-  }
 
   auto GAI = BinaryDataMap.find(Address);
+  BinaryData *BD;
   if (GAI == BinaryDataMap.end()) {
     ErrorOr<BinarySection &> SectionOrErr = getSectionForAddress(Address);
-    BinarySection &SectionRef = Section        ? *Section
-                                : SectionOrErr ? SectionOrErr.get()
-                                               : absoluteSection();
+    BinarySection &Section =
+        SectionOrErr ? SectionOrErr.get() : absoluteSection();
     BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
-                        SectionRef, Flags);
+                        Section, Flags);
     GAI = BinaryDataMap.emplace(Address, BD).first;
     GlobalSymbols[Name] = BD;
     updateObjectNesting(GAI);
@@ -1411,7 +1401,7 @@ void BinaryContext::postProcessSymbolTable() {
     if ((BD->getName().starts_with("SYMBOLat") ||
          BD->getName().starts_with("DATAat")) &&
         !BD->getParent() && !BD->getSize() && !BD->isAbsolute() &&
-        BD->getSection().getSize()) {
+        BD->getSection()) {
       this->errs() << "BOLT-WARNING: zero-sized top level symbol: " << *BD
                    << "\n";
       Valid = false;
@@ -2031,6 +2021,9 @@ BinaryContext::getBaseAddressForMapping(uint64_t MMapAddress,
   // Find a segment with a matching file offset.
   for (auto &KV : SegmentMapInfo) {
     const SegmentInfo &SegInfo = KV.second;
+    // Only consider executable segments.
+    if (!SegInfo.IsExecutable)
+      continue;
     // FileOffset is got from perf event,
     // and it is equal to alignDown(SegInfo.FileOffset, pagesize).
     // If the pagesize is not equal to SegInfo.Alignment.

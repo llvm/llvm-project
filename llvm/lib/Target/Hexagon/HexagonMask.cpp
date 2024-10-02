@@ -90,6 +90,9 @@ bool HexagonMask::runOnMachineFunction(MachineFunction &MF) {
 
   if (!F.hasFnAttribute(Attribute::OptimizeForSize))
     return false;
+  // Mask instruction is available only from v66
+  if (!HST.hasV66Ops())
+    return false;
   // The mask instruction available in v66 can be used to generate values in
   // registers using 2 immediates Eg. to form 0x07fffffc in R0, you would write
   // "R0 = mask(#25,#2)" Since it is a single-word instruction, it takes less

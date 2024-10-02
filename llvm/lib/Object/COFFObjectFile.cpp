@@ -763,7 +763,7 @@ Error COFFObjectFile::initLoadConfigPtr() {
       if (Error E =
               getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
         return E;
-      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+      if (Error E = checkOffset(Data, IntPtr, sizeof(*CHPEMetadata)))
         return E;
 
       CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
@@ -1487,6 +1487,54 @@ StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
   return StringSwitch<StringRef>(Name)
       .Case("eh_fram", "eh_frame")
       .Default(Name);
+}
+
+std::unique_ptr<MemoryBuffer> COFFObjectFile::getHybridObjectView() const {
+  if (getMachine() != COFF::IMAGE_FILE_MACHINE_ARM64X)
+    return nullptr;
+
+  std::unique_ptr<WritableMemoryBuffer> HybridView;
+
+  for (auto DynReloc : dynamic_relocs()) {
+    if (DynReloc.getType() != COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X)
+      continue;
+
+    for (auto reloc : DynReloc.arm64x_relocs()) {
+      if (!HybridView) {
+        HybridView =
+            WritableMemoryBuffer::getNewUninitMemBuffer(Data.getBufferSize());
+        memcpy(HybridView->getBufferStart(), Data.getBufferStart(),
+               Data.getBufferSize());
+      }
+
+      uint32_t RVA = reloc.getRVA();
+      void *Ptr;
+      uintptr_t IntPtr;
+      if (RVA & ~0xfff) {
+        cantFail(getRvaPtr(RVA, IntPtr));
+        Ptr = HybridView->getBufferStart() + IntPtr -
+              reinterpret_cast<uintptr_t>(base());
+      } else {
+        // PE header relocation.
+        Ptr = HybridView->getBufferStart() + RVA;
+      }
+
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+        memset(Ptr, 0, reloc.getSize());
+        break;
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE: {
+        auto Value = static_cast<ulittle64_t>(reloc.getValue());
+        memcpy(Ptr, &Value, reloc.getSize());
+        break;
+      }
+      case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+        *reinterpret_cast<ulittle32_t *>(Ptr) += reloc.getValue();
+        break;
+      }
+    }
+  }
+  return HybridView;
 }
 
 bool ImportDirectoryEntryRef::
@@ -2321,7 +2369,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
         Expected<StringRef> Contents = S.getContents();
         if (!Contents)
           return Contents.takeError();
-        return Contents->slice(Offset, Offset + Entry.DataSize);
+        return Contents->substr(Offset, Entry.DataSize);
       }
     }
     return createStringError(object_error::parse_failed,

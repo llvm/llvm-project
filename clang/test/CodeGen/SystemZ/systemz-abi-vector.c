@@ -146,17 +146,17 @@ v1f128 pass_v1f128(v1f128 arg) { return arg; }
 
 struct agg_v1i8 { v1i8 a; };
 struct agg_v1i8 pass_agg_v1i8(struct agg_v1i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, i8 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, i8 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, <1 x i8> %{{.*}})
 
 struct agg_v2i8 { v2i8 a; };
 struct agg_v2i8 pass_agg_v2i8(struct agg_v2i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, i16 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, i16 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, <2 x i8> %{{.*}})
 
 struct agg_v4i8 { v4i8 a; };
 struct agg_v4i8 pass_agg_v4i8(struct agg_v4i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, i32 noext %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, <4 x i8> %{{.*}})
 
 struct agg_v8i8 { v8i8 a; };
@@ -189,8 +189,8 @@ struct agg_novector2 pass_agg_novector2(struct agg_novector2 arg) { return arg; 
 
 struct agg_novector3 { v4i8 a; int : 0; };
 struct agg_novector3 pass_agg_novector3(struct agg_novector3 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 %{{.*}})
-// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 noext %{{.*}})
+// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_novector3(ptr dead_on_unwind noalias writable sret(%struct.agg_novector3) align 4 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_novector4 { v4i8 a __attribute__((aligned (8))); };
 struct agg_novector4 pass_agg_novector4(struct agg_novector4 arg) { return arg; }
@@ -202,18 +202,18 @@ struct agg_novector4 pass_agg_novector4(struct agg_novector4 arg) { return arg; 
 
 v1i8 va_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, v1i8); }
 // CHECK-LABEL: define{{.*}} void @va_v1i8(ptr dead_on_unwind noalias writable sret(<1 x i8>) align 1 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -222,7 +222,7 @@ v1i8 va_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, v1i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i8> @va_v1i8(ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -231,18 +231,18 @@ v1i8 va_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, v1i8); }
 
 v2i8 va_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, v2i8); }
 // CHECK-LABEL: define{{.*}} void @va_v2i8(ptr dead_on_unwind noalias writable sret(<2 x i8>) align 2 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -251,7 +251,7 @@ v2i8 va_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, v2i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x i8> @va_v2i8(ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -260,18 +260,18 @@ v2i8 va_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, v2i8); }
 
 v4i8 va_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, v4i8); }
 // CHECK-LABEL: define{{.*}} void @va_v4i8(ptr dead_on_unwind noalias writable sret(<4 x i8>) align 4 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -280,7 +280,7 @@ v4i8 va_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, v4i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} <4 x i8> @va_v4i8(ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -289,18 +289,18 @@ v4i8 va_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, v4i8); }
 
 v8i8 va_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, v8i8); }
 // CHECK-LABEL: define{{.*}} void @va_v8i8(ptr dead_on_unwind noalias writable sret(<8 x i8>) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -309,7 +309,7 @@ v8i8 va_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, v8i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} <8 x i8> @va_v8i8(ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -318,18 +318,18 @@ v8i8 va_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, v8i8); }
 
 v16i8 va_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, v16i8); }
 // CHECK-LABEL: define{{.*}} void @va_v16i8(ptr dead_on_unwind noalias writable sret(<16 x i8>) align 16 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -338,7 +338,7 @@ v16i8 va_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, v16i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} <16 x i8> @va_v16i8(ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 16
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -347,18 +347,18 @@ v16i8 va_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, v16i8); }
 
 v32i8 va_v32i8(__builtin_va_list l) { return __builtin_va_arg(l, v32i8); }
 // CHECK-LABEL: define{{.*}} void @va_v32i8(ptr dead_on_unwind noalias writable sret(<32 x i8>) align 32 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -367,18 +367,18 @@ v32i8 va_v32i8(__builtin_va_list l) { return __builtin_va_arg(l, v32i8); }
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_v32i8(ptr dead_on_unwind noalias writable sret(<32 x i8>) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK-VECTOR: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK-VECTOR: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK-VECTOR: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK-VECTOR: br i1 [[FITS_IN_REGS]],
 // CHECK-VECTOR: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK-VECTOR: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK-VECTOR: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK-VECTOR: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK-VECTOR: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK-VECTOR: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK-VECTOR: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK-VECTOR: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -389,18 +389,18 @@ v32i8 va_v32i8(__builtin_va_list l) { return __builtin_va_arg(l, v32i8); }
 
 struct agg_v1i8 va_agg_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v1i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 23
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 7
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -408,7 +408,7 @@ struct agg_v1i8 va_agg_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 // CHECK: [[VA_ARG_ADDR:%[^ ]+]] = phi ptr [ [[RAW_REG_ADDR]], %{{.*}} ], [ [[RAW_MEM_ADDR]], %{{.*}} ]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v1i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v1i8) align 1 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -416,18 +416,18 @@ struct agg_v1i8 va_agg_v1i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 
 struct agg_v2i8 va_agg_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v2i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 22
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 6
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -435,7 +435,7 @@ struct agg_v2i8 va_agg_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 // CHECK: [[VA_ARG_ADDR:%[^ ]+]] = phi ptr [ [[RAW_REG_ADDR]], %{{.*}} ], [ [[RAW_MEM_ADDR]], %{{.*}} ]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v2i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v2i8) align 2 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -443,18 +443,18 @@ struct agg_v2i8 va_agg_v2i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 
 struct agg_v4i8 va_agg_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v4i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 20
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 4
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -462,7 +462,7 @@ struct agg_v4i8 va_agg_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 // CHECK: [[VA_ARG_ADDR:%[^ ]+]] = phi ptr [ [[RAW_REG_ADDR]], %{{.*}} ], [ [[RAW_MEM_ADDR]], %{{.*}} ]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v4i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v4i8) align 4 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -470,18 +470,18 @@ struct agg_v4i8 va_agg_v4i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 
 struct agg_v8i8 va_agg_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v8i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v8i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v8i8) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -489,7 +489,7 @@ struct agg_v8i8 va_agg_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 // CHECK: [[VA_ARG_ADDR:%[^ ]+]] = phi ptr [ [[RAW_REG_ADDR]], %{{.*}} ], [ [[RAW_MEM_ADDR]], %{{.*}} ]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v8i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v8i8) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -497,18 +497,18 @@ struct agg_v8i8 va_agg_v8i8(__builtin_va_list l) { return __builtin_va_arg(l, st
 
 struct agg_v16i8 va_agg_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v16i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v16i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v16i8) align 16 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -517,7 +517,7 @@ struct agg_v16i8 va_agg_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, 
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v16i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v16i8) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA1:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 16
 // CHECK-VECTOR: store ptr [[OVERFLOW_ARG_AREA1]], ptr [[OVERFLOW_ARG_AREA_PTR]]
@@ -525,18 +525,18 @@ struct agg_v16i8 va_agg_v16i8(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_v32i8 va_agg_v32i8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_v32i8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_v32i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v32i8) align 32 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -545,18 +545,18 @@ struct agg_v32i8 va_agg_v32i8(__builtin_va_list l) { return __builtin_va_arg(l, 
 // CHECK: [[INDIRECT_ARG:%[^ ]+]] = load ptr, ptr [[VA_ARG_ADDR]]
 // CHECK: ret void
 // CHECK-VECTOR-LABEL: define{{.*}} void @va_agg_v32i8(ptr dead_on_unwind noalias writable sret(%struct.agg_v32i8) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK-VECTOR: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK-VECTOR: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK-VECTOR: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK-VECTOR: br i1 [[FITS_IN_REGS]],
 // CHECK-VECTOR: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK-VECTOR: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK-VECTOR: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK-VECTOR: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK-VECTOR: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK-VECTOR: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK-VECTOR: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK-VECTOR: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK-VECTOR: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK-VECTOR: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK-VECTOR: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8

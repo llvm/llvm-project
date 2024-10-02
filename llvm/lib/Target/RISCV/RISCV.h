@@ -34,6 +34,9 @@ void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
 FunctionPass *createRISCVIndirectBranchTrackingPass();
 void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
 
+FunctionPass *createRISCVLandingPadSetupPass();
+void initializeRISCVLandingPadSetupPass(PassRegistry &);
+
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 
@@ -81,6 +84,9 @@ void initializeRISCVMoveMergePass(PassRegistry &);
 
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
+
+FunctionPass *createRISCVZacasABIFixPass();
+void initializeRISCVZacasABIFixPass(PassRegistry &);
 
 InstructionSelector *
 createRISCVInstructionSelector(const RISCVTargetMachine &,

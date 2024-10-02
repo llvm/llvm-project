@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_GLOBALISEL_PATTERNS_H
-#define LLVM_UTILS_GLOBALISEL_PATTERNS_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
@@ -731,4 +731,4 @@ private:
 } // namespace gi
 } // end namespace llvm
 
-#endif // ifndef LLVM_UTILS_GLOBALISEL_PATTERNS_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_PATTERNS_H

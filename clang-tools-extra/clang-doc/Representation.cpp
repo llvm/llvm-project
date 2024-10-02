@@ -221,7 +221,7 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
-      : Info(InfoType::IT_namespace, USR, Name, Path) {}
+    : Info(InfoType::IT_namespace, USR, Name, Path) {}
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
@@ -384,5 +384,12 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
   }
 }
 
+void ScopeChildren::sort() {
+  llvm::sort(Namespaces.begin(), Namespaces.end());
+  llvm::sort(Records.begin(), Records.end());
+  llvm::sort(Functions.begin(), Functions.end());
+  llvm::sort(Enums.begin(), Enums.end());
+  llvm::sort(Typedefs.begin(), Typedefs.end());
+}
 } // namespace doc
 } // namespace clang

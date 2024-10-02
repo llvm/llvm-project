@@ -35,7 +35,7 @@ struct __allocation_result {
 };
 
 template <class _Alloc>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR __allocation_result<typename allocator_traits<_Alloc>::pointer>
 __allocate_at_least(_Alloc& __alloc, size_t __n) {
   return {__alloc.allocate(__n), __n};

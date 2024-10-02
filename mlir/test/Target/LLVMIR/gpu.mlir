@@ -9,11 +9,11 @@ module attributes {gpu.container_module} {
   llvm.func @foo() {
     // CHECK: [[ARGS:%.*]] = alloca %{{.*}}, align 8
     // CHECK: [[ARGS_ARRAY:%.*]] = alloca ptr, i64 2, align 8
-    // CHECK: [[ARG0:%.*]] = getelementptr inbounds [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 0
+    // CHECK: [[ARG0:%.*]] = getelementptr inbounds nuw [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 0
     // CHECK: store i32 32, ptr [[ARG0]], align 4
     // CHECK: %{{.*}} = getelementptr ptr, ptr [[ARGS_ARRAY]], i32 0
     // CHECK: store ptr [[ARG0]], ptr %{{.*}}, align 8
-    // CHECK: [[ARG1:%.*]] = getelementptr inbounds [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 1
+    // CHECK: [[ARG1:%.*]] = getelementptr inbounds nuw [[ARGS_TY]], ptr [[ARGS]], i32 0, i32 1
     // CHECK: store i32 32, ptr [[ARG1]], align 4
     // CHECK: %{{.*}} = getelementptr ptr, ptr [[ARGS_ARRAY]], i32 1
     // CHECK: store ptr [[ARG1]], ptr %{{.*}}, align 8

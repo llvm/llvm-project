@@ -29,6 +29,7 @@ class Symbol;
 
 class TargetInfo {
 public:
+  TargetInfo(Ctx &ctx) : ctx(ctx) {}
   virtual uint32_t calcEFlags() const { return 0; }
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
@@ -113,6 +114,7 @@ public:
     return false;
   }
 
+  Ctx &ctx;
   unsigned defaultCommonPageSize = 4096;
   unsigned defaultMaxPageSize = 4096;
 
@@ -132,7 +134,7 @@ public:
   RelType tlsGotRel;
   RelType tlsModuleIndexRel;
   RelType tlsOffsetRel;
-  unsigned gotEntrySize = config->wordsize;
+  unsigned gotEntrySize = ctx.arg.wordsize;
   unsigned pltEntrySize;
   unsigned pltHeaderSize;
   unsigned ipltEntrySize;
@@ -177,21 +179,21 @@ protected:
   uint64_t defaultImageBase = 0x10000;
 };
 
-TargetInfo *getAArch64TargetInfo();
-TargetInfo *getAMDGPUTargetInfo();
-TargetInfo *getARMTargetInfo();
-TargetInfo *getAVRTargetInfo();
-TargetInfo *getHexagonTargetInfo();
-TargetInfo *getLoongArchTargetInfo();
-TargetInfo *getMSP430TargetInfo();
-TargetInfo *getPPC64TargetInfo();
-TargetInfo *getPPCTargetInfo();
-TargetInfo *getRISCVTargetInfo();
-TargetInfo *getSPARCV9TargetInfo();
-TargetInfo *getSystemZTargetInfo();
-TargetInfo *getX86TargetInfo();
-TargetInfo *getX86_64TargetInfo();
-template <class ELFT> TargetInfo *getMipsTargetInfo();
+TargetInfo *getAArch64TargetInfo(Ctx &);
+TargetInfo *getAMDGPUTargetInfo(Ctx &);
+TargetInfo *getARMTargetInfo(Ctx &);
+TargetInfo *getAVRTargetInfo(Ctx &);
+TargetInfo *getHexagonTargetInfo(Ctx &);
+TargetInfo *getLoongArchTargetInfo(Ctx &);
+TargetInfo *getMSP430TargetInfo(Ctx &);
+TargetInfo *getMipsTargetInfo(Ctx &);
+TargetInfo *getPPC64TargetInfo(Ctx &);
+TargetInfo *getPPCTargetInfo(Ctx &);
+TargetInfo *getRISCVTargetInfo(Ctx &);
+TargetInfo *getSPARCV9TargetInfo(Ctx &);
+TargetInfo *getSystemZTargetInfo(Ctx &);
+TargetInfo *getX86TargetInfo(Ctx &);
+TargetInfo *getX86_64TargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -200,13 +202,13 @@ struct ErrorPlace {
 };
 
 // Returns input section and corresponding source string for the given location.
-ErrorPlace getErrorPlace(const uint8_t *loc);
+ErrorPlace getErrorPlace(Ctx &ctx, const uint8_t *loc);
 
 static inline std::string getErrorLocation(const uint8_t *loc) {
-  return getErrorPlace(loc).loc;
+  return getErrorPlace(ctx, loc).loc;
 }
 
-void processArmCmseSymbols();
+void processArmCmseSymbols(Ctx &);
 
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
@@ -230,10 +232,11 @@ void writePrefixedInstruction(uint8_t *loc, uint64_t insn);
 void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
+bool isAArch64BTILandingPad(Symbol &s, int64_t a);
 template <typename ELFT> void writeARMCmseImportLib();
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
-void mergeRISCVAttributesSections();
+void mergeRISCVAttributesSections(Ctx &);
 void addArmInputSectionMappingSymbols();
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
@@ -241,26 +244,26 @@ void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
 void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
 void initSymbolAnchors();
 
-LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
-TargetInfo *getTarget();
+TargetInfo *getTarget(Ctx &);
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
-void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
-                      int64_t min, uint64_t max);
-void reportRangeError(uint8_t *loc, int64_t v, int n, const Symbol &sym,
-                      const Twine &msg);
+void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
+                      const Twine &v, int64_t min, uint64_t max);
+void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
+                      const Symbol &sym, const Twine &msg);
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
   if (v != llvm::SignExtend64(v, n))
-    reportRangeError(loc, rel, Twine(v), llvm::minIntN(n), llvm::maxIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), llvm::minIntN(n),
+                     llvm::maxIntN(n));
 }
 
 // Make sure that V can be represented as an N bit unsigned integer.
 inline void checkUInt(uint8_t *loc, uint64_t v, int n, const Relocation &rel) {
   if ((v >> n) != 0)
-    reportRangeError(loc, rel, Twine(v), 0, llvm::maxUIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.
@@ -269,7 +272,7 @@ inline void checkIntUInt(uint8_t *loc, uint64_t v, int n,
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
   if (v != (uint64_t)llvm::SignExtend64(v, n) && (v >> n) != 0)
-    reportRangeError(loc, rel, Twine((int64_t)v), llvm::minIntN(n),
+    reportRangeError(ctx, loc, rel, Twine((int64_t)v), llvm::minIntN(n),
                      llvm::maxUIntN(n));
 }
 
@@ -283,27 +286,27 @@ inline void checkAlignment(uint8_t *loc, uint64_t v, int n,
 
 // Endianness-aware read/write.
 inline uint16_t read16(const void *p) {
-  return llvm::support::endian::read16(p, config->endianness);
+  return llvm::support::endian::read16(p, ctx.arg.endianness);
 }
 
 inline uint32_t read32(const void *p) {
-  return llvm::support::endian::read32(p, config->endianness);
+  return llvm::support::endian::read32(p, ctx.arg.endianness);
 }
 
 inline uint64_t read64(const void *p) {
-  return llvm::support::endian::read64(p, config->endianness);
+  return llvm::support::endian::read64(p, ctx.arg.endianness);
 }
 
 inline void write16(void *p, uint16_t v) {
-  llvm::support::endian::write16(p, v, config->endianness);
+  llvm::support::endian::write16(p, v, ctx.arg.endianness);
 }
 
 inline void write32(void *p, uint32_t v) {
-  llvm::support::endian::write32(p, v, config->endianness);
+  llvm::support::endian::write32(p, v, ctx.arg.endianness);
 }
 
 inline void write64(void *p, uint64_t v) {
-  llvm::support::endian::write64(p, v, config->endianness);
+  llvm::support::endian::write64(p, v, ctx.arg.endianness);
 }
 
 // Overwrite a ULEB128 value and keep the original length.
@@ -322,7 +325,7 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 #endif
 #define invokeELFT(f, ...)                                                     \
-  switch (config->ekind) {                                                     \
+  switch (ctx.arg.ekind) {                                                     \
   case lld::elf::ELF32LEKind:                                                  \
     f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
     break;                                                                     \
@@ -336,7 +339,7 @@ inline uint64_t overwriteULEB128(uint8_t *bufLoc, uint64_t val) {
     f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
     break;                                                                     \
   default:                                                                     \
-    llvm_unreachable("unknown config->ekind");                                 \
+    llvm_unreachable("unknown ctx.arg.ekind");                                 \
   }
 
 #endif

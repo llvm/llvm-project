@@ -36,6 +36,7 @@ public:
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void DeclRead(GlobalDeclID ID, const Decl *D) override;
+  void PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) override;
   void SelectorRead(serialization::SelectorID iD, Selector Sel) override;
   void MacroDefinitionRead(serialization::PreprocessedEntityID,
                            MacroDefinitionRecord *MD) override;
@@ -52,6 +53,7 @@ class MultiplexConsumer : public SemaConsumer {
 public:
   // Takes ownership of the pointers in C.
   MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>> C);
+  MultiplexConsumer(std::unique_ptr<ASTConsumer> C);
   ~MultiplexConsumer() override;
 
   // ASTConsumer
@@ -79,7 +81,7 @@ public:
   void InitializeSema(Sema &S) override;
   void ForgetSema() override;
 
-private:
+protected:
   std::vector<std::unique_ptr<ASTConsumer>> Consumers; // Owns these.
   std::unique_ptr<MultiplexASTMutationListener> MutationListener;
   std::unique_ptr<MultiplexASTDeserializationListener> DeserializationListener;

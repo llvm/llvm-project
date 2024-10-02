@@ -1,12 +1,20 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown %s | FileCheck %s
 
-.irpc foo,123
+.irpc foo,"123"
         .long \foo
+.endr
+.irpc foo,ab
+        .long 0x\foo
+.endr
+.irpc foo,""
 .endr
 
 // CHECK: long 1
 // CHECK: long 2
 // CHECK: long 3
+// CHECK: long 10
+// CHECK: long 11
+// CHECK-NOT: long
 
 .irpc foo,123
 .irpc bar,45

@@ -132,6 +132,7 @@ private:
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif
 
+public:
   basic_format_context(const basic_format_context&)            = delete;
   basic_format_context& operator=(const basic_format_context&) = delete;
 };
@@ -211,7 +212,7 @@ private:
 };
 
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_context);
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

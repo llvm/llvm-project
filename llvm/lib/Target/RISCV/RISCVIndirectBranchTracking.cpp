@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-static cl::opt<uint32_t> PreferredLandingPadLabel(
+cl::opt<uint32_t> PreferredLandingPadLabel(
     "riscv-landing-pad-label", cl::ReallyHidden,
     cl::desc("Use preferred fixed label for all labels"));
 

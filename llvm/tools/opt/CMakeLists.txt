@@ -45,7 +45,9 @@ add_llvm_tool(opt
   DEPENDS
   intrinsics_gen
   SUPPORT_PLUGINS
-  EXPORT_SYMBOLS_FOR_PLUGINS
 
+  EXPORT_SYMBOLS
   )
 target_link_libraries(opt PRIVATE LLVMOptDriver)
+
+setup_host_tool(opt OPT opt_exe opt_target)

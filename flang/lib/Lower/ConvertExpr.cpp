@@ -5590,7 +5590,8 @@ private:
     ty = unwrapBoxEleTy(ty);
     mlir::Location loc = getLoc();
     mlir::IndexType idxTy = builder.getIndexType();
-    for (auto extent : mlir::cast<fir::SequenceType>(ty).getShape()) {
+    auto seqType = mlir::cast<fir::SequenceType>(ty);
+    for (auto extent : seqType.getShape()) {
       auto v = extent == fir::SequenceType::getUnknownExtent()
                    ? builder.create<fir::UndefOp>(loc, idxTy).getResult()
                    : builder.createIntegerConstant(loc, idxTy, extent);
@@ -6120,7 +6121,7 @@ private:
     mlir::SymbolRefAttr funcSymAttr =
         builder.getSymbolRefAttr(memcpyFunc.getName());
     mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
-    builder.create<fir::CallOp>(loc, funcTy.getResults(), funcSymAttr, args);
+    builder.create<fir::CallOp>(loc, funcSymAttr, funcTy.getResults(), args);
   }
 
   // Construct code to check for a buffer overrun and realloc the buffer when
@@ -6146,7 +6147,7 @@ private:
         builder.getSymbolRefAttr(reallocFunc.getName());
     mlir::FunctionType funcTy = reallocFunc.getFunctionType();
     auto newMem = builder.create<fir::CallOp>(
-        loc, funcTy.getResults(), funcSymAttr,
+        loc, funcSymAttr, funcTy.getResults(),
         llvm::ArrayRef<mlir::Value>{
             builder.createConvert(loc, funcTy.getInputs()[0], mem),
             builder.createConvert(loc, funcTy.getInputs()[1], byteSz)});

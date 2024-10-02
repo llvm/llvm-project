@@ -21,6 +21,8 @@
 
 #include "hdr/math_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
@@ -233,5 +235,37 @@ template <typename T> struct FPTest : public Test {
 
 #define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                             \
+    expected, actual, expected_except, rounding_mode)                          \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
+      EXPECT_FP_EQ((expected), (actual));                                      \
+      EXPECT_FP_EXCEPTION(expected_except);                                    \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(expected, actual,         \
+                                                     expected_except)          \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Nearest)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(expected, actual,          \
+                                                    expected_except)           \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Upward)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(expected, actual,        \
+                                                      expected_except)         \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::Downward)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(expected, actual,     \
+                                                         expected_except)      \
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_MODE(                                   \
+      (expected), (actual), (expected_except), RoundingMode::TowardZero)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

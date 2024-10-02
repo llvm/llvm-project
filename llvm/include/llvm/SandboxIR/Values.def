@@ -1,0 +1,150 @@
+//===- Values.def -----------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+//    ClassID, Class
+#ifndef DEF_VALUE
+#define DEF_VALUE(ID, CLASS)
+#endif
+
+#ifndef DEF_USER
+#define DEF_USER(ID, CLASS)
+#endif
+
+#ifndef DEF_CONST
+#define DEF_CONST(ID, CLASS)
+#endif
+
+DEF_CONST(Function, Function)
+DEF_VALUE(Argument, Argument)
+
+DEF_USER(User, User)
+DEF_VALUE(Block, BasicBlock)
+DEF_CONST(Constant, Constant)
+DEF_CONST(ConstantInt, ConstantInt)
+DEF_CONST(ConstantFP, ConstantFP)
+DEF_CONST(ConstantArray, ConstantArray)
+DEF_CONST(ConstantStruct, ConstantStruct)
+DEF_CONST(ConstantVector, ConstantVector)
+DEF_CONST(ConstantAggregateZero, ConstantAggregateZero)
+DEF_CONST(ConstantPointerNull, ConstantPointerNull)
+DEF_CONST(UndefValue, UndefValue)
+DEF_CONST(PoisonValue, PoisonValue)
+DEF_CONST(GlobalVariable, GlobalVariable)
+DEF_CONST(GlobalIFunc, GlobalIFunc)
+DEF_CONST(GlobalAlias, GlobalAlias)
+DEF_CONST(BlockAddress, BlockAddress)
+DEF_CONST(NoCFIValue, NoCFIValue)
+DEF_CONST(ConstantPtrAuth, ConstantPtrAuth)
+DEF_CONST(ConstantExpr, ConstantExpr)
+DEF_CONST(DSOLocalEquivalent, DSOLocalEquivalent)
+DEF_CONST(ConstantTokenNone, ConstantTokenNone)
+
+#ifndef DEF_INSTR
+#define DEF_INSTR(ID, OPCODE, CLASS)
+#endif
+
+#ifndef OP
+#define OP(OPCODE)
+#endif
+
+#ifndef OPCODES
+#define OPCODES(...)
+#endif
+// clang-format off
+//        ClassID,        Opcode(s),          Class
+DEF_INSTR(Opaque,         OP(Opaque),         OpaqueInst)
+DEF_INSTR(ExtractElement, OP(ExtractElement), ExtractElementInst)
+DEF_INSTR(InsertElement,  OP(InsertElement),  InsertElementInst)
+DEF_INSTR(VAArg,          OP(VAArg),          VAArgInst)
+DEF_INSTR(Freeze,         OP(Freeze),         FreezeInst)
+DEF_INSTR(Fence,          OP(Fence),          FenceInst)
+DEF_INSTR(ShuffleVector,  OP(ShuffleVector),  ShuffleVectorInst)
+DEF_INSTR(ExtractValue,   OP(ExtractValue),   ExtractValueInst)
+DEF_INSTR(InsertValue,    OP(InsertValue),    InsertValueInst)
+DEF_INSTR(Select,         OP(Select),         SelectInst)
+DEF_INSTR(Br,             OP(Br),             BranchInst)
+DEF_INSTR(Load,           OP(Load),           LoadInst)
+DEF_INSTR(Store,          OP(Store),          StoreInst)
+DEF_INSTR(Ret,            OP(Ret),            ReturnInst)
+DEF_INSTR(Call,           OP(Call),           CallInst)
+DEF_INSTR(Invoke,         OP(Invoke),         InvokeInst)
+DEF_INSTR(CallBr,         OP(CallBr),         CallBrInst)
+DEF_INSTR(LandingPad,     OP(LandingPad),     LandingPadInst)
+DEF_INSTR(CatchPad,       OP(CatchPad),       CatchPadInst)
+DEF_INSTR(CleanupPad,     OP(CleanupPad),     CleanupPadInst)
+DEF_INSTR(CatchRet,       OP(CatchRet),       CatchReturnInst)
+DEF_INSTR(CleanupRet,     OP(CleanupRet),     CleanupReturnInst)
+DEF_INSTR(GetElementPtr,  OP(GetElementPtr),  GetElementPtrInst)
+DEF_INSTR(Resume,         OP(Resume),         ResumeInst)
+DEF_INSTR(CatchSwitch,    OP(CatchSwitch),    CatchSwitchInst)
+DEF_INSTR(Switch,         OP(Switch),         SwitchInst)
+DEF_INSTR(UnOp,           OPCODES( \
+                          OP(FNeg) \
+                          ),                  UnaryOperator)
+DEF_INSTR(BinaryOperator, OPCODES(\
+                          OP(Add)  \
+                          OP(FAdd) \
+                          OP(Sub)  \
+                          OP(FSub) \
+                          OP(Mul)  \
+                          OP(FMul) \
+                          OP(UDiv) \
+                          OP(SDiv) \
+                          OP(FDiv) \
+                          OP(URem) \
+                          OP(SRem) \
+                          OP(FRem) \
+                          OP(Shl)  \
+                          OP(LShr) \
+                          OP(AShr) \
+                          OP(And)  \
+                          OP(Or)   \
+                          OP(Xor)  \
+                          ),                  BinaryOperator)
+DEF_INSTR(AtomicRMW,      OP(AtomicRMW),      AtomicRMWInst)
+DEF_INSTR(AtomicCmpXchg,  OP(AtomicCmpXchg),  AtomicCmpXchgInst)
+DEF_INSTR(Alloca,         OP(Alloca),         AllocaInst)
+DEF_INSTR(Cast,   OPCODES(\
+                          OP(ZExt)          \
+                          OP(SExt)          \
+                          OP(FPToUI)        \
+                          OP(FPToSI)        \
+                          OP(FPExt)         \
+                          OP(PtrToInt)      \
+                          OP(IntToPtr)      \
+                          OP(SIToFP)        \
+                          OP(UIToFP)        \
+                          OP(Trunc)         \
+                          OP(FPTrunc)       \
+                          OP(BitCast)       \
+                          OP(AddrSpaceCast) \
+                          ),                  CastInst)
+DEF_INSTR(PHI,            OP(PHI),            PHINode)
+DEF_INSTR(Unreachable,    OP(Unreachable),    UnreachableInst)
+DEF_INSTR(ICmp,           OP(ICmp),          FCmpInst)
+DEF_INSTR(FCmp,           OP(FCmp),          ICmpInst)
+
+// clang-format on
+#ifdef DEF_VALUE
+#undef DEF_VALUE
+#endif
+#ifdef DEF_USER
+#undef DEF_USER
+#endif
+#ifdef DEF_CONST
+#undef DEF_CONST
+#endif
+#ifdef DEF_INSTR
+#undef DEF_INSTR
+#endif
+#ifdef OP
+#undef OP
+#endif
+#ifdef OPCODES
+#undef OPCODES
+#endif

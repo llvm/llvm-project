@@ -398,17 +398,33 @@ void GsymReader::dump(raw_ostream &OS) {
   }
 }
 
-void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI) {
+void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
+                      uint32_t Indent) {
+  OS.indent(Indent);
   OS << FI.Range << " \"" << getString(FI.Name) << "\"\n";
   if (FI.OptLineTable)
-    dump(OS, *FI.OptLineTable);
+    dump(OS, *FI.OptLineTable, Indent);
   if (FI.Inline)
-    dump(OS, *FI.Inline);
+    dump(OS, *FI.Inline, Indent);
+
+  if (FI.MergedFunctions) {
+    assert(Indent == 0 && "MergedFunctionsInfo should only exist at top level");
+    dump(OS, *FI.MergedFunctions);
+  }
 }
 
-void GsymReader::dump(raw_ostream &OS, const LineTable &LT) {
+void GsymReader::dump(raw_ostream &OS, const MergedFunctionsInfo &MFI) {
+  for (uint32_t inx = 0; inx < MFI.MergedFunctions.size(); inx++) {
+    OS << "++ Merged FunctionInfos[" << inx << "]:\n";
+    dump(OS, MFI.MergedFunctions[inx], 4);
+  }
+}
+
+void GsymReader::dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent) {
+  OS.indent(Indent);
   OS << "LineTable:\n";
   for (auto &LE: LT) {
+    OS.indent(Indent);
     OS << "  " << HEX64(LE.Addr) << ' ';
     if (LE.File)
       dump(OS, getFile(LE.File));

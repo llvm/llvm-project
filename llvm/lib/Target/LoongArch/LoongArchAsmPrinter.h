@@ -15,6 +15,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Compiler.h"
 
@@ -41,6 +42,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  void LowerSTATEPOINT(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);

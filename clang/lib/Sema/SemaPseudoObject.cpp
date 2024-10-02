@@ -787,7 +787,7 @@ ExprResult ObjCPropertyOpBuilder::buildSet(Expr *op, SourceLocation opcLoc,
       if (opResult.isInvalid() ||
           S.DiagnoseAssignmentResult(assignResult, opcLoc, paramType,
                                      op->getType(), opResult.get(),
-                                     Sema::AA_Assigning))
+                                     AssignmentAction::Assigning))
         return ExprError();
 
       op = opResult.get();

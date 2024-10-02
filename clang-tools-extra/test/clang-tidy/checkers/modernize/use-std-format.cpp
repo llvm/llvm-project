@@ -11,9 +11,8 @@
 
 namespace absl
 {
-// Use const char * for the format since the real type is hard to mock up.
-template <typename... Args>
-std::string StrFormat(const char *format, const Args&... args);
+template <typename S, typename... Args>
+std::string StrFormat(const S &format, const Args&... args);
 } // namespace absl
 
 template <typename T>

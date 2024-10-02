@@ -85,4 +85,26 @@ TEST(ASTOpsTest, ReferencedDeclsOnUnionInitList) {
               UnorderedElementsAre(IDecl));
 }
 
+TEST(ASTOpsTest, ReferencedDeclsLocalsNotParamsOrStatics) {
+  std::string Code = R"cc(
+    void func(int Param) {
+      static int Static = 0;
+      int Local = Param;
+      Local = Static;
+    }
+  )cc";
+  std::unique_ptr<ASTUnit> Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &ASTCtx = Unit->getASTContext();
+
+  ASSERT_EQ(ASTCtx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Func = cast<FunctionDecl>(findValueDecl(ASTCtx, "func"));
+  ASSERT_NE(Func, nullptr);
+  auto *LocalDecl = cast<VarDecl>(findValueDecl(ASTCtx, "Local"));
+
+  EXPECT_THAT(getReferencedDecls(*Func).Locals,
+              UnorderedElementsAre(LocalDecl));
+}
+
 } // namespace

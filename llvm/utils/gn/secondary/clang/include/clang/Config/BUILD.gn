@@ -68,7 +68,7 @@ write_cmake_config("Config") {
     # FIXME: Hardcoding this isn't great, but assuming that the host ld version
     # has anything to do with the ld version where the built clang will run
     # isn't either. Probably want to make this a declare_args.
-    values += [ "HOST_LINK_VERSION=305" ]
+    values += [ "HOST_LINK_VERSION=520" ]
   } else {
     values += [ "HOST_LINK_VERSION=" ]
   }

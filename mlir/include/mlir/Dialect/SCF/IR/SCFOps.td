@@ -80,8 +80,8 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
     DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
-    The `execute_region` operation is used to allow multiple blocks within SCF
-    and other operations which can hold only one block.  The `execute_region`
+    The `scf.execute_region` operation is used to allow multiple blocks within SCF
+    and other operations which can hold only one block.  The `scf.execute_region`
     operation executes the region held exactly once and cannot have any operands.
     As such, its region has no arguments. All SSA values that dominate the op can
     be accessed inside the op. The op's region can have multiple blocks and the
@@ -344,7 +344,7 @@ def ForallOp : SCF_Op<"forall", [
 
     The only allowed terminator is `scf.forall.in_parallel`.
     `scf.forall` returns one value per `shared_out` operand. The
-    actions of the `in_parallel` terminators specify how to combine the
+    actions of the `scf.forall.in_parallel` terminators specify how to combine the
     partial results of all parallel invocations into a full value, in some
     unspecified order. The "destination" of each such op must be a `shared_out`
     block argument of the `scf.forall` op.
@@ -633,7 +633,7 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";
   let description = [{
-    `scf.forall.in_parallel` is a designated terminator for
+    The `scf.forall.in_parallel` is a designated terminator for
     the `scf.forall` operation.
 
     It has a single region with a single block that contains a flat list of ops.
@@ -778,7 +778,7 @@ def ParallelOp : SCF_Op<"parallel",
      HasParallelRegion]> {
   let summary = "parallel for operation";
   let description = [{
-    The "scf.parallel" operation represents a loop nest taking 4 groups of SSA
+    The `scf.parallel` operation represents a loop nest taking 4 groups of SSA
     values as operands that represent the lower bounds, upper bounds, steps and
     initial values, respectively. The operation defines a variadic number of
     SSA values for its induction variables. It has one region capturing the
@@ -787,7 +787,7 @@ def ParallelOp : SCF_Op<"parallel",
     machine word. The steps are values of type index, required to be positive.
     The lower and upper bounds specify a half-open range: the range includes
     the lower bound but does not include the upper bound. The initial values
-    have the same types as results of "scf.parallel". If there are no results,
+    have the same types as results of `scf.parallel`. If there are no results,
     the keyword `init` can be omitted.
 
     Semantically we require that the iteration space can be iterated in any
@@ -796,17 +796,17 @@ def ParallelOp : SCF_Op<"parallel",
 
     The parallel loop operation supports reduction of values produced by
     individual iterations into a single result. This is modeled using the
-    "scf.reduce" terminator operation (see "scf.reduce" for details). The i-th
-    result of an "scf.parallel" operation is associated with the i-th initial
-    value operand, the i-th operand of the "scf.reduce" operation (the value to
-    be reduced) and the i-th region of the "scf.reduce" operation (the reduction
+    `scf.reduce` terminator operation (see `scf.reduce` for details). The i-th
+    result of an `scf.parallel` operation is associated with the i-th initial
+    value operand, the i-th operand of the `scf.reduce` operation (the value to
+    be reduced) and the i-th region of the `scf.reduce` operation (the reduction
     function). Consequently, we require that the number of results of an
-    "scf.parallel" op matches the number of initial values and the the number of
-    reductions in the "scf.reduce" terminator.
+    `scf.parallel` op matches the number of initial values and the the number of
+    reductions in the `scf.reduce` terminator.
 
     The body region must contain exactly one block that terminates with a
-    "scf.reduce" operation. If an "scf.parallel" op has no reductions, the
-    terminator has no operands and no regions. The "scf.parallel" parser will
+    `scf.reduce` operation. If an `scf.parallel` op has no reductions, the
+    terminator has no operands and no regions. The `scf.parallel` parser will
     automatically insert the terminator for ops that have no reductions if it is
     absent.
 
@@ -875,25 +875,25 @@ def ReduceOp : SCF_Op<"reduce", [
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
   let summary = "reduce operation for scf.parallel";
   let description = [{
-    "scf.reduce" is the terminator for "scf.parallel" operations. It can model
+    The `scf.reduce` operation is the terminator for `scf.parallel` operations. It can model
     an arbitrary number of reductions. It has one region per reduction. Each
     region has one block with two arguments which have the same type as the
-    corresponding operand of "scf.reduce". The operands of the op are the values
+    corresponding operand of `scf.reduce`. The operands of the op are the values
     that should be reduce; one value per reduction.
 
     The i-th reduction (i.e., the i-th region and the i-th operand) corresponds
-    the i-th initial value and the i-th result of the enclosing "scf.parallel"
+    the i-th initial value and the i-th result of the enclosing `scf.parallel`
     op.
 
-    The "scf.reduce" operation contains regions whose entry blocks expect two
+    The `scf.reduce` operation contains regions whose entry blocks expect two
     arguments of the same type as the corresponding operand. As the iteration
     order of the enclosing parallel loop and hence reduction order is
     unspecified, the results of the reductions may be non-deterministic unless
     the reductions are associative and commutative.
 
-    The result of a reduction region ("scf.reduce.return" operand) must have the
-    same type as the corresponding "scf.reduce" operand and the corresponding
-    "scf.parallel" initial value.
+    The result of a reduction region (`scf.reduce.return` operand) must have the
+    same type as the corresponding `scf.reduce` operand and the corresponding
+    `scf.parallel` initial value.
 
     Example:
 
@@ -929,9 +929,9 @@ def ReduceReturnOp :
     SCF_Op<"reduce.return", [HasParent<"ReduceOp">, Pure, Terminator]> {
   let summary = "terminator for reduce operation";
   let description = [{
-    "scf.reduce.return" is a special terminator operation for the block inside
-    "scf.reduce" regions. It terminates the region. It should have the same
-    operand type as the corresponding operand of the enclosing "scf.reduce" op.
+    The `scf.reduce.return` operation is a special terminator operation for the block inside
+    `scf.reduce` regions. It terminates the region. It should have the same
+    operand type as the corresponding operand of the enclosing `scf.reduce` op.
 
     Example:
 
@@ -1172,12 +1172,12 @@ def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
                  "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
-    "scf.yield" yields an SSA value from the SCF dialect op region and
+    The `scf.yield` operation yields an SSA value from the SCF dialect op region and
     terminates the regions. The semantics of how the values are yielded is
     defined by the parent operation.
-    If "scf.yield" has any operands, the operands must match the parent
+    If `scf.yield` has any operands, the operands must match the parent
     operation's results.
-    If the parent operation defines no values, then the "scf.yield" may be
+    If the parent operation defines no values, then the `scf.yield` may be
     left out in the custom syntax and the builders will insert one implicitly.
     Otherwise, it has to be present in the syntax to indicate which values are
     yielded.

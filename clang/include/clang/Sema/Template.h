@@ -234,8 +234,7 @@ enum class TemplateSubstitutionKind : char {
     /// Replaces the current 'innermost' level with the provided argument list.
     /// This is useful for type deduction cases where we need to get the entire
     /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args,
-                                           bool Final = false) {
+    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
       assert((!TemplateArgumentLists.empty() || NumRetainedOuterLevels) &&
              "Replacing in an empty list?");
 
@@ -247,7 +246,8 @@ enum class TemplateSubstitutionKind : char {
         TemplateArgumentLists[0].Args = Args;
       } else {
         --NumRetainedOuterLevels;
-        TemplateArgumentLists.push_back({{AssociatedDecl, Final}, Args});
+        TemplateArgumentLists.push_back(
+            {{AssociatedDecl, /*Final=*/false}, Args});
       }
     }
 
@@ -411,6 +411,11 @@ enum class TemplateSubstitutionKind : char {
     /// lookup will search our outer scope.
     bool CombineWithOuterScope;
 
+    /// Whether this scope is being used to instantiate a lambda expression,
+    /// in which case it should be reused for instantiating the lambda's
+    /// FunctionProtoType.
+    bool InstantiatingLambda = false;
+
     /// If non-NULL, the template parameter pack that has been
     /// partially substituted per C++0x [temp.arg.explicit]p9.
     NamedDecl *PartiallySubstitutedPack = nullptr;
@@ -425,9 +430,11 @@ enum class TemplateSubstitutionKind : char {
     unsigned NumArgsInPartiallySubstitutedPack;
 
   public:
-    LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false)
+    LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false,
+                            bool InstantiatingLambda = false)
         : SemaRef(SemaRef), Outer(SemaRef.CurrentInstantiationScope),
-          CombineWithOuterScope(CombineWithOuterScope) {
+          CombineWithOuterScope(CombineWithOuterScope),
+          InstantiatingLambda(InstantiatingLambda) {
       SemaRef.CurrentInstantiationScope = this;
     }
 
@@ -553,6 +560,9 @@ enum class TemplateSubstitutionKind : char {
 
     /// Determine whether D is a pack expansion created in this scope.
     bool isLocalPackExpansion(const Decl *D);
+
+    /// Determine whether this scope is for instantiating a lambda.
+    bool isLambda() const { return InstantiatingLambda; }
   };
 
   class TemplateDeclInstantiator

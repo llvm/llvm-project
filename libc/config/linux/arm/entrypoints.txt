@@ -243,6 +243,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabsf
     libc.src.math.fabsl
     libc.src.math.fadd 
+    libc.src.math.faddl
+    libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
     libc.src.math.fdiml
@@ -297,8 +299,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fromfpx
     libc.src.math.fromfpxf
     libc.src.math.fromfpxl
-    libc.src.math.fsub 
-    libc.src.math.fsubl 
+    libc.src.math.fsub
+    libc.src.math.fsubl
     libc.src.math.getpayload
     libc.src.math.getpayloadf
     libc.src.math.getpayloadl
@@ -371,11 +373,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbln
+    libc.src.math.scalblnf
+    libc.src.math.scalblnl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
     libc.src.math.setpayload
     libc.src.math.setpayloadf
+    libc.src.math.setpayloadl
+    libc.src.math.setpayloadsig
+    libc.src.math.setpayloadsigf
+    libc.src.math.setpayloadsigl
     libc.src.math.sin
     libc.src.math.sincos
     libc.src.math.sincosf
@@ -389,6 +398,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tanhf
     libc.src.math.totalorder
     libc.src.math.totalorderf
+    libc.src.math.totalorderl
     libc.src.math.totalordermag
     libc.src.math.totalordermagf
     libc.src.math.totalordermagl

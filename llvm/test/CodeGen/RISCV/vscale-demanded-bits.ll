@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple riscv64 -mattr +v -filetype asm -o - %s | FileCheck %s
 
 declare i8 @llvm.vscale.i8()
-declare <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+declare <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
 
 define <vscale x 8 x i8> @f() #0 {
 ; CHECK-LABEL: f:
@@ -17,7 +17,7 @@ entry:
   %1 = shl i8 %0, 3
   %.splat.insert = insertelement <vscale x 8 x i8> poison, i8 %1, i64 0
   %.splat = shufflevector <vscale x 8 x i8> %.splat.insert, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
-  %2 = tail call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
+  %2 = tail call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
   %3 = add <vscale x 8 x i8> %2, %.splat
   ret <vscale x 8 x i8> %3
 }

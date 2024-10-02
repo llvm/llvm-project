@@ -1227,6 +1227,14 @@ StorageSpecifierType::get(MLIRContext *ctx, SparseTensorEncodingAttr encoding) {
   return Base::get(ctx, getNormalizedEncodingForSpecifier(encoding));
 }
 
+StorageSpecifierType
+StorageSpecifierType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                 MLIRContext *ctx,
+                                 SparseTensorEncodingAttr encoding) {
+  return Base::getChecked(emitError, ctx,
+                          getNormalizedEncodingForSpecifier(encoding));
+}
+
 //===----------------------------------------------------------------------===//
 // SparseTensorDialect Operations.
 //===----------------------------------------------------------------------===//
@@ -2220,15 +2228,18 @@ parseSparseIterateLoop(OpAsmParser &parser, OperationState &state,
         parser.getNameLoc(),
         "mismatch in number of sparse iterators and sparse spaces");
 
-  if (failed(parseUsedCoordList(parser, state, blockArgs)))
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
     return failure();
-  size_t numCrds = blockArgs.size();
+  size_t numCrds = coords.size();
 
   // Parse "iter_args(%arg = %init, ...)"
   bool hasIterArgs = succeeded(parser.parseOptionalKeyword("iter_args"));
   if (hasIterArgs)
     if (parser.parseAssignmentList(blockArgs, initArgs))
       return failure();
+
+  blockArgs.append(coords);
 
   SmallVector<Type> iterSpaceTps;
   // parse ": sparse_tensor.iter_space -> ret"
@@ -2259,7 +2270,7 @@ parseSparseIterateLoop(OpAsmParser &parser, OperationState &state,
 
   if (hasIterArgs) {
     // Strip off leading args that used for coordinates.
-    MutableArrayRef args = MutableArrayRef(blockArgs).drop_front(numCrds);
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
     if (args.size() != initArgs.size() || args.size() != state.types.size()) {
       return parser.emitError(
           parser.getNameLoc(),
@@ -2285,9 +2296,10 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   if (parser.parseOperandList(spaces, OpAsmParser::Delimiter::Paren))
     return failure();
 
-  if (failed(parseUsedCoordList(parser, state, blockArgs)))
+  SmallVector<OpAsmParser::Argument> coords;
+  if (failed(parseUsedCoordList(parser, state, coords)))
     return failure();
-  size_t numCrds = blockArgs.size();
+  size_t numCrds = coords.size();
 
   // Parse "iter_args(%arg = %init, ...)"
   SmallVector<OpAsmParser::UnresolvedOperand> initArgs;
@@ -2295,6 +2307,7 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   if (hasIterArgs)
     if (parser.parseAssignmentList(blockArgs, initArgs))
       return failure();
+  blockArgs.append(coords);
 
   SmallVector<Type> iterSpaceTps;
   // parse ": (sparse_tensor.iter_space, ...) -> ret"
@@ -2318,8 +2331,8 @@ parseSparseCoIterateLoop(OpAsmParser &parser, OperationState &state,
   state.operands.append(spacesVals);
 
   if (hasIterArgs) {
-    // Strip off leading args that used for coordinates.
-    MutableArrayRef args = MutableArrayRef(blockArgs).drop_front(numCrds);
+    // Strip off trailing args that used for coordinates.
+    MutableArrayRef args = MutableArrayRef(blockArgs).drop_back(numCrds);
     if (args.size() != initArgs.size() || args.size() != state.types.size()) {
       return parser.emitError(
           parser.getNameLoc(),
@@ -2438,18 +2451,18 @@ void IterateOp::build(OpBuilder &builder, OperationState &odsState,
   odsState.addTypes(initArgs.getTypes());
   Block *bodyBlock = builder.createBlock(bodyRegion);
 
-  // First argument, sparse iterator
-  bodyBlock->addArgument(
-      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
-      odsState.location);
+  // Starts with a list of user-provided loop arguments.
+  for (Value v : initArgs)
+    bodyBlock->addArgument(v.getType(), v.getLoc());
 
-  // Followed by a list of used coordinates.
+  // Follows by a list of used coordinates.
   for (unsigned i = 0, e = crdUsedLvls.count(); i < e; i++)
     bodyBlock->addArgument(builder.getIndexType(), odsState.location);
 
-  // Followed by a list of user-provided loop arguments.
-  for (Value v : initArgs)
-    bodyBlock->addArgument(v.getType(), v.getLoc());
+  // Ends with sparse iterator
+  bodyBlock->addArgument(
+      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
+      odsState.location);
 }
 
 ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2463,9 +2476,9 @@ ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
     return parser.emitError(parser.getNameLoc(),
                             "expected only one iterator/iteration space");
 
-  iters.append(iterArgs);
+  iterArgs.append(iters);
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, iters))
+  if (parser.parseRegion(*body, iterArgs))
     return failure();
 
   IterateOp::ensureTerminator(*body, parser.getBuilder(), result.location);
@@ -2570,7 +2583,7 @@ MutableArrayRef<OpOperand> IterateOp::getInitsMutable() {
 }
 
 Block::BlockArgListType IterateOp::getRegionIterArgs() {
-  return getRegion().getArguments().take_back(getNumRegionIterArgs());
+  return getRegion().getArguments().take_front(getNumRegionIterArgs());
 }
 
 std::optional<MutableArrayRef<OpOperand>> IterateOp::getYieldedValuesMutable() {
@@ -2592,6 +2605,24 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   // It is possible for loop not to enter the body.
   regions.push_back(RegionSuccessor(getResults()));
+}
+
+void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,
+                        ValueRange iterSpaces, ValueRange initArgs,
+                        unsigned numCases) {
+  unsigned rank =
+      cast<IterSpaceType>(iterSpaces.front().getType()).getSpaceDim();
+  // All ones.
+  I64BitSet set((1 << rank) - 1);
+  // Generates all-zero case bits (they only serve as placeholders), which are
+  // supposed to be overriden later. We need to preallocate all the regions as
+  // mlir::Region cannot be dynamically added later after the operation is
+  // created.
+  SmallVector<int64_t> caseBits(numCases, 0);
+  ArrayAttr cases = builder.getI64ArrayAttr(caseBits);
+  return CoIterateOp::build(builder, odsState, initArgs.getTypes(), iterSpaces,
+                            initArgs, set, cases,
+                            /*caseRegionsCount=*/numCases);
 }
 
 ParseResult CoIterateOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2677,7 +2708,7 @@ ValueRange CoIterateOp::getYieldedValues(unsigned regionIdx) {
 
 LogicalResult CoIterateOp::verifyRegions() {
   for (unsigned r = 0, e = getNumRegions(); r < e; r++) {
-    if (getNumRegionIterArgs(r) != getNumResults())
+    if (getNumRegionIterArgs() != getNumResults())
       return emitOpError(
           "mismatch in number of basic block args and defined values");
 
@@ -2715,6 +2746,16 @@ LogicalResult CoIterateOp::verifyRegions() {
     return emitOpError("contains duplicated cases.");
 
   return success();
+}
+
+SmallVector<Region *> CoIterateOp::getSubCasesOf(unsigned regionIdx) {
+  SmallVector<Region *> ret;
+  I64BitSet caseBit = getRegionDefinedSpace(regionIdx);
+  for (Region &r : getCaseRegions())
+    if (getRegionDefinedSpace(r.getRegionNumber()).isSubSetOf(caseBit))
+      ret.push_back(&r);
+
+  return ret;
 }
 
 //===----------------------------------------------------------------------===//

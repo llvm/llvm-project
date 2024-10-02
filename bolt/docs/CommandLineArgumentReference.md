@@ -113,6 +113,10 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
+- `--debug-thread-count=<uint>`
+
+  Specifies the number of threads to be used when processing DWO debug information.
+
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes

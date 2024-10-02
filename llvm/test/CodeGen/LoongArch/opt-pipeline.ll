@@ -70,6 +70,9 @@
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       ObjC ARC contraction
 ; LAXX-NEXT:       Prepare callbr
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
@@ -105,6 +108,7 @@
 ; LAXX-NEXT:       Remove dead machine instructions
 ; LA64-NEXT:       LoongArch Optimize W Instructions
 ; LAXX-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
+; LAXX-NEXT:       LoongArch Merge Base Offset
 ; LAXX-NEXT:       Detect Dead Lanes
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions
@@ -162,6 +166,7 @@
 ; LAXX-NEXT:       Implement the 'patchable-function' attribute
 ; LAXX-NEXT:       Branch relaxation pass
 ; LAXX-NEXT:       Contiguously Lay Out Funclets
+; LAXX-NEXT:       Remove Loads Into Fake Uses
 ; LAXX-NEXT:       StackMap Liveness Analysis
 ; LAXX-NEXT:       Live DEBUG_VALUE analysis
 ; LAXX-NEXT:       Machine Sanitizer Binary Metadata

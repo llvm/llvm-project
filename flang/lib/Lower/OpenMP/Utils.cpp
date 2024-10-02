@@ -17,6 +17,7 @@
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/PFTBuilder.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
+#include <flang/Optimizer/Builder/Todo.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
@@ -131,6 +132,13 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::TypeAttr varType = mlir::TypeAttr::get(
       llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
+
+  // For types with unknown extents such as <2x?xi32> we discard the incomplete
+  // type info and only retain the base type. The correct dimensions are later
+  // recovered through the bounds info.
+  if (auto seqType = llvm::dyn_cast<fir::SequenceType>(varType.getValue()))
+    if (seqType.hasDynamicExtents())
+      varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
       loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
@@ -347,6 +355,18 @@ semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
           [&](const parser::Name &name) { sym = name.symbol; }},
       ompObject.u);
   return sym;
+}
+
+void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
+                                     mlir::Location loc) {
+  using Lastprivate = omp::clause::Lastprivate;
+  auto &maybeMod =
+      std::get<std::optional<Lastprivate::LastprivateModifier>>(lastp.t);
+  if (maybeMod) {
+    assert(*maybeMod == Lastprivate::LastprivateModifier::Conditional &&
+           "Unexpected lastprivate modifier");
+    TODO(loc, "lastprivate clause with CONDITIONAL modifier");
+  }
 }
 
 } // namespace omp

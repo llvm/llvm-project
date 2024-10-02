@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class SetPayloadTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -65,7 +67,7 @@ public:
     // The following code is creating a NaN payload manually to prevent a
     // conversion from BigInt to float128.
     FPBits nan_payload_bits = FPBits::one();
-    nan_payload_bits.set_biased_exponent(FPBits::SIG_LEN - 2 +
+    nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +
                                          FPBits::EXP_BIAS);
     nan_payload_bits.set_mantissa(FPBits::SIG_MASK - 3);
     T nan_payload = nan_payload_bits.get_val();

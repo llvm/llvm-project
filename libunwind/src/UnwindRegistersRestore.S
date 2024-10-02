@@ -629,6 +629,10 @@ Lnovec:
 
 #elif defined(__aarch64__)
 
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+.arch_extension gcs
+#endif
+
 //
 // extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 //
@@ -680,7 +684,17 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldr    x16,     [x0, #0x0F8]
   ldp    x0, x1,  [x0, #0x000]  // restore x0,x1
   mov    sp,x16                 // restore sp
-  br     x30                    // jump to pc
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+  // If GCS is enabled we need to push the address we're returning to onto the
+  // GCS stack. We can't just return using br, as there won't be a BTI landing
+  // pad instruction at the destination.
+  mov      x16, #1
+  chkfeat  x16
+  cbnz     x16, Lnogcs
+  gcspushm x30
+Lnogcs:
+#endif
+  ret    x30                    // jump to pc
 
 #elif defined(__arm__) && !defined(__APPLE__)
 

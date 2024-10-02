@@ -67,6 +67,7 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
   auto ControlFlag = MinidumpContext_x86_64_Flags::Control;
   auto IntegerFlag = MinidumpContext_x86_64_Flags::Integer;
   auto SegmentsFlag = MinidumpContext_x86_64_Flags::Segments;
+  auto LLDBSpecificFlag = MinidumpContext_x86_64_Flags::LLDBSpecific;
 
   if ((context_flags & x86_64_Flag) != x86_64_Flag)
     return nullptr;
@@ -102,6 +103,13 @@ lldb::DataBufferSP lldb_private::minidump::ConvertMinidumpContext_x86_64(
     writeRegister(&context->r13, result_base, reg_info[lldb_r13_x86_64]);
     writeRegister(&context->r14, result_base, reg_info[lldb_r14_x86_64]);
     writeRegister(&context->r15, result_base, reg_info[lldb_r15_x86_64]);
+  }
+
+  if ((context_flags & LLDBSpecificFlag) == LLDBSpecificFlag) {
+    writeRegister(&context->fs_base, result_base,
+                  reg_info[x86_64_with_base::lldb_fs_base]);
+    writeRegister(&context->gs_base, result_base,
+                  reg_info[x86_64_with_base::lldb_gs_base]);
   }
 
   // TODO parse the floating point registers

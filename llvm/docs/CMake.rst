@@ -218,6 +218,11 @@ used variables that control features of LLVM and enabled subprojects.
   If you are using an IDE such as Visual Studio or Xcode, you should use
   the IDE settings to set the build type.
 
+  Note: on Windows (building with MSVC or clang-cl), CMake's **RelWithDebInfo**
+  setting does not enable the same optimizations as **Release**. Using the
+  **Release** build type with :ref:`LLVM_ENABLE_PDB <llvm_enable_pdb>` set
+  may be a better option.
+
 **CMAKE_INSTALL_PREFIX**:PATH
   Path where LLVM will be installed when the "install" target is built.
 
@@ -548,6 +553,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   Compile with `Clang Header Modules
   <https://clang.llvm.org/docs/Modules.html>`_.
 
+.. _llvm_enable_pdb:
+
+**LLVM_ENABLE_PDB**:BOOL
+  For Windows builds using MSVC or clang-cl, generate PDB files when
+  :ref:`CMAKE_BUILD_TYPE <cmake_build_type>` is set to Release.
+
 **LLVM_ENABLE_PEDANTIC**:BOOL
   Enable pedantic mode. This disables compiler-specific extensions, if
   possible. Defaults to ON.
@@ -560,11 +571,18 @@ enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of projects to build, or *all* for building all
   (clang, lldb, lld, polly, etc) projects. This flag assumes that projects
   are checked out side-by-side and not nested, i.e. clang needs to be in
-  parallel of llvm instead of nested in `llvm/tools`. This feature allows
+  parallel of llvm instead of nested in ``llvm/tools``. This feature allows
   to have one build for only LLVM and another for clang+llvm using the same
   source checkout.
+
   The full list is:
-  ``clang;clang-tools-extra;cross-project-tests;libc;libclc;lld;lldb;openmp;polly;pstl``
+
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl``
+
+  .. note::
+    Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
+    should only appear in one of the two lists. If a project is a valid possiblity
+    for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
 
 **LLVM_ENABLE_RTTI**:BOOL
   Build LLVM with run-time type information. Defaults to OFF.
@@ -575,10 +593,16 @@ enabled sub-projects. Nearly all of these variable names begin with
   It will build the builtins separately from the other runtimes to preserve
   correct dependency ordering. If you want to build the runtimes using a system
   compiler, see the `libc++ documentation <https://libcxx.llvm.org/BuildingLibcxx.html>`_.
-  Note: the list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
+
+  .. note::
+    The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
+
   The full list is:
-  ``compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp``
+
+  ``libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+
   To enable all of them, use:
+
   ``LLVM_ENABLE_RUNTIMES=all``
 
 **LLVM_ENABLE_SPHINX**:BOOL

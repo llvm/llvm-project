@@ -1,6 +1,3 @@
-# `-no_objc_relative_method_lists` needs to be explicitly added to this test to avoid crashing after `-objc_relative_method_lists` was made default.
-# TODO: Make this test compatible with default `-objc_relative_method_lists` and remove the `-no_objc_relative_method_lists` flag. Issue #101419
-
 ; REQUIRES: aarch64
 
 ; Here we test that if we defined a protocol MyTestProtocol and also a category MyTestProtocol

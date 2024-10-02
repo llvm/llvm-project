@@ -16,13 +16,20 @@
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/StmtOpenACC.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
+#include <cassert>
+#include <optional>
+#include <utility>
 #include <variant>
 
 namespace clang {
+class IdentifierInfo;
 class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
@@ -34,6 +41,43 @@ private:
   /// Whether we are inside of a compute construct, and should add loops to the
   /// above collection.
   bool InsideComputeConstruct = false;
+
+  /// The 'collapse' clause requires quite a bit of checking while
+  /// parsing/instantiating its body, so this structure/object keeps all of the
+  /// necessary information as we do checking.  This should rarely be directly
+  /// modified, and typically should be controlled by the RAII objects.
+  ///
+  /// Collapse has an 'N' count that makes it apply to a number of loops 'below'
+  /// it.
+  struct CollapseCheckingInfo {
+    OpenACCCollapseClause *ActiveCollapse = nullptr;
+
+    /// This is a value that maintains the current value of the 'N' on the
+    /// current collapse, minus the depth that has already been traversed. When
+    /// there is not an active collapse, or a collapse whose depth we don't know
+    /// (for example, if it is a dependent value), this should be `nullopt`,
+    /// else it should be 'N' minus the current depth traversed.
+    std::optional<llvm::APSInt> CurCollapseCount;
+
+    /// Records whether we've seen the top level 'for'. We already diagnose
+    /// later that the 'top level' is a for loop, so we use this to suppress the
+    /// 'collapse inner loop not a 'for' loop' diagnostic.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned TopLevelLoopSeen : 1;
+
+    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
+    /// used to diagnose if there are multiple 'for' loops at any one level.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CurLevelHasLoopAlready : 1;
+
+    /// Records whether we've hit a CurCollapseCount of '0' on the way down,
+    /// which allows us to diagnose if the value of 'N' is too large for the
+    /// current number of 'for' loops.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CollapseDepthSatisfied : 1;
+  } CollapseInfo{nullptr, std::nullopt, /*TopLevelLoopSeen=*/false,
+                 /*CurLevelHasLoopAlready=*/false,
+                 /*CollapseDepthSatisfied=*/true};
 
 public:
   // Redeclaration of the version in OpenACCClause.h.
@@ -81,9 +125,14 @@ public:
       SmallVector<Expr *> VarList;
     };
 
+    struct CollapseDetails {
+      bool IsForce;
+      Expr *LoopCount;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
                  IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
-                 ReductionDetails>
+                 ReductionDetails, CollapseDetails>
         Details = std::monostate{};
 
   public:
@@ -240,6 +289,18 @@ public:
       return std::get<VarListDetails>(Details).IsZero;
     }
 
+    bool isForce() const {
+      assert(ClauseKind == OpenACCClauseKind::Collapse &&
+             "Only 'collapse' has a force tag");
+      return std::get<CollapseDetails>(Details).IsForce;
+    }
+
+    Expr *getLoopCount() const {
+      assert(ClauseKind == OpenACCClauseKind::Collapse &&
+             "Only 'collapse' has a loop count");
+      return std::get<CollapseDetails>(Details).LoopCount;
+    }
+
     ArrayRef<DeviceTypeArgument> getDeviceTypeArchitectures() const {
       assert((ClauseKind == OpenACCClauseKind::DeviceType ||
               ClauseKind == OpenACCClauseKind::DType) &&
@@ -378,9 +439,26 @@ public:
              "Only 'device_type'/'dtype' has a device-type-arg list");
       Details = DeviceTypeDetails{std::move(Archs)};
     }
+
+    void setCollapseDetails(bool IsForce, Expr *LoopCount) {
+      assert(ClauseKind == OpenACCClauseKind::Collapse &&
+             "Only 'collapse' has collapse details");
+      Details = CollapseDetails{IsForce, LoopCount};
+    }
   };
 
   SemaOpenACC(Sema &S);
+
+  // Called when we encounter a 'while' statement, before looking at its 'body'.
+  void ActOnWhileStmt(SourceLocation WhileLoc);
+  // Called when we encounter a 'do' statement, before looking at its 'body'.
+  void ActOnDoStmt(SourceLocation DoLoc);
+  // Called when we encounter a 'for' statement, before looking at its 'body'.
+  void ActOnForStmtBegin(SourceLocation ForLoc);
+  // Called when we encounter a 'for' statement, after we've consumed/checked
+  // the body. This is necessary for a number of checks on the contents of the
+  // 'for' statement.
+  void ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body);
 
   /// Called after parsing an OpenACC Clause so that it can be checked.
   OpenACCClause *ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -442,6 +520,35 @@ public:
                                    Expr *LowerBound,
                                    SourceLocation ColonLocFirst, Expr *Length,
                                    SourceLocation RBLoc);
+  /// Checks the loop depth value for a collapse clause.
+  ExprResult CheckCollapseLoopCount(Expr *LoopCount);
+
+  /// Helper type to restore the state of various 'loop' constructs when we run
+  /// into a loop (for, etc) inside the construct.
+  class LoopInConstructRAII {
+    SemaOpenACC &SemaRef;
+    CollapseCheckingInfo OldCollapseInfo;
+    bool PreserveDepth;
+
+  public:
+    LoopInConstructRAII(SemaOpenACC &SemaRef, bool PreserveDepth = true)
+        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo),
+          PreserveDepth(PreserveDepth) {}
+    ~LoopInConstructRAII() {
+      // The associated-statement level of this should NOT preserve this, as it
+      // is a new construct, but other loop uses need to preserve the depth so
+      // it makes it to the 'top level' for diagnostics.
+      bool CollapseDepthSatisified =
+          PreserveDepth ? SemaRef.CollapseInfo.CollapseDepthSatisfied
+                        : OldCollapseInfo.CollapseDepthSatisfied;
+      bool CurLevelHasLoopAlready =
+          PreserveDepth ? SemaRef.CollapseInfo.CurLevelHasLoopAlready
+                        : OldCollapseInfo.CurLevelHasLoopAlready;
+      SemaRef.CollapseInfo = OldCollapseInfo;
+      SemaRef.CollapseInfo.CollapseDepthSatisfied = CollapseDepthSatisified;
+      SemaRef.CollapseInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
+    }
+  };
 
   /// Helper type for the registration/assignment of constructs that need to
   /// 'know' about their parent constructs and hold a reference to them, such as
@@ -451,9 +558,15 @@ public:
     bool WasInsideComputeConstruct;
     OpenACCDirectiveKind DirKind;
     llvm::SmallVector<OpenACCLoopConstruct *> ParentlessLoopConstructs;
+    LoopInConstructRAII LoopRAII;
 
   public:
-    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind);
+    AssociatedStmtRAII(SemaOpenACC &, OpenACCDirectiveKind,
+                       ArrayRef<const OpenACCClause *>,
+                       ArrayRef<OpenACCClause *>);
+    void SetCollapseInfoBeforeAssociatedStmt(
+        ArrayRef<const OpenACCClause *> UnInstClauses,
+        ArrayRef<OpenACCClause *> Clauses);
     ~AssociatedStmtRAII();
   };
 };

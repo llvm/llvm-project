@@ -1521,6 +1521,12 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
+    // For lambdas inside canonical FunctionDecl remember the mapping.
+    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && FD->isCanonicalDecl()) {
+      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+          Writer.GetDeclRef(D));
+    }
   } else {
     Record.push_back(CXXRecNotTemplate);
   }
@@ -1529,8 +1535,14 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (D->isThisDeclarationADefinition())
     Record.AddCXXDefinitionData(D);
 
+  if (D->isCompleteDefinition() && D->isInNamedModule())
+    Writer.AddDeclRef(D, Writer.ModularCodegenDecls);
+
   // Store (what we currently believe to be) the key function to avoid
   // deserializing every method so we can compute it.
+  //
+  // FIXME: Avoid adding the key function if the class is defined in
+  // module purview since in that case the key function is meaningless.
   if (D->isCompleteDefinition())
     Record.AddDeclRef(Context.getCurrentKeyFunction(D));
 
@@ -1654,6 +1666,7 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
   Record.AddDeclRef(D->getNextFriend());
   Record.push_back(D->UnsupportedFriend);
   Record.AddSourceLocation(D->FriendLoc);
+  Record.AddSourceLocation(D->EllipsisLoc);
   Code = serialization::DECL_FRIEND;
 }
 
@@ -1771,6 +1784,18 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.push_back(!!ArgsWritten);
   if (ArgsWritten)
     Record.AddASTTemplateArgumentListInfo(ArgsWritten);
+
+  // Mention the implicitly generated C++ deduction guide to make sure the
+  // deduction guide will be rewritten as expected.
+  //
+  // FIXME: Would it be more efficient to add a callback register function
+  // in sema to register the deduction guide?
+  if (Writer.isWritingStdCXXNamedModules()) {
+    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(
+        D->getSpecializedTemplate());
+    for (auto *DG : D->getDeclContext()->noload_lookup(Name))
+      Writer.GetDeclRef(DG->getCanonicalDecl());
+  }
 
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }

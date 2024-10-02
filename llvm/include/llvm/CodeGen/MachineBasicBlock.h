@@ -478,11 +478,11 @@ public:
   Register addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC);
 
   /// Remove the specified register from the live in set.
-  void removeLiveIn(MCPhysReg Reg,
+  void removeLiveIn(MCRegister Reg,
                     LaneBitmask LaneMask = LaneBitmask::getAll());
 
   /// Return true if the specified register is in the live in set.
-  bool isLiveIn(MCPhysReg Reg,
+  bool isLiveIn(MCRegister Reg,
                 LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
   // Iteration support for live in sets.  These sets are kept in sorted
@@ -983,6 +983,12 @@ public:
     return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
   }
 
+  // Helper method for new pass manager migration.
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets);
+
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
@@ -1256,12 +1262,6 @@ private:
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->removeSuccessor instead.
   void removePredecessor(MachineBasicBlock *Pred);
-
-  // Helper method for new pass manager migration.
-  MachineBasicBlock *
-  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
-                    MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
@@ -1304,6 +1304,9 @@ template <> struct GraphTraits<MachineBasicBlock *> {
   }
 };
 
+static_assert(GraphHasNodeNumbers<MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
+
 template <> struct GraphTraits<const MachineBasicBlock *> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_succ_iterator;
@@ -1317,6 +1320,9 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
     return BB->getNumber();
   }
 };
+
+static_assert(GraphHasNodeNumbers<const MachineBasicBlock *>,
+              "GraphTraits getNumber() not detected");
 
 // Provide specializations of GraphTraits to be able to treat a
 // MachineFunction as a graph of MachineBasicBlocks and to walk it
@@ -1341,6 +1347,9 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*>> {
   }
 };
 
+static_assert(GraphHasNodeNumbers<Inverse<MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
+
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
   using NodeRef = const MachineBasicBlock *;
   using ChildIteratorType = MachineBasicBlock::const_pred_iterator;
@@ -1357,6 +1366,9 @@ template <> struct GraphTraits<Inverse<const MachineBasicBlock*>> {
     return BB->getNumber();
   }
 };
+
+static_assert(GraphHasNodeNumbers<Inverse<const MachineBasicBlock *>>,
+              "GraphTraits getNumber() not detected");
 
 // These accessors are handy for sharing templated code between IR and MIR.
 inline auto successors(const MachineBasicBlock *BB) { return BB->successors(); }

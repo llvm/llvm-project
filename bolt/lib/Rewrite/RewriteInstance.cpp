@@ -526,11 +526,9 @@ Error RewriteInstance::discoverStorage() {
       NextAvailableOffset = std::max(NextAvailableOffset,
                                      Phdr.p_offset + Phdr.p_filesz);
 
-      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{Phdr.p_vaddr,
-                                                     Phdr.p_memsz,
-                                                     Phdr.p_offset,
-                                                     Phdr.p_filesz,
-                                                     Phdr.p_align};
+      BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
+          Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
+          Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
       if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
           Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
         BC->IsLinuxKernel = true;
@@ -956,13 +954,13 @@ void RewriteInstance::discoverFileObjects() {
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
     uint64_t SymbolAlignment = Symbol.getAlignment();
 
-    auto registerName = [&](uint64_t FinalSize, BinarySection *Section = NULL) {
+    auto registerName = [&](uint64_t FinalSize) {
       // Register names even if it's not a function, e.g. for an entry point.
       BC->registerNameAtAddress(UniqueName, SymbolAddress, FinalSize,
-                                SymbolAlignment, SymbolFlags, Section);
+                                SymbolAlignment, SymbolFlags);
       if (!AlternativeName.empty())
         BC->registerNameAtAddress(AlternativeName, SymbolAddress, FinalSize,
-                                  SymbolAlignment, SymbolFlags, Section);
+                                  SymbolAlignment, SymbolFlags);
     };
 
     section_iterator Section =
@@ -987,25 +985,12 @@ void RewriteInstance::discoverFileObjects() {
                       << " for function\n");
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
-      ErrorOr<BinarySection &> SectionOrError =
-          BC->getSectionForAddress(Section->getAddress());
-
-      // Skip symbols from invalid sections
-      if (!SectionOrError) {
-        BC->errs() << "BOLT-WARNING: " << UniqueName << " (0x"
-                   << Twine::utohexstr(SymbolAddress)
-                   << ") does not have any section\n";
-        continue;
-      }
-
       assert(SymbolSize == 0 &&
              "unexpect non-zero sized symbol at end of section");
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: rejecting as symbol " << UniqueName
-               << " points to end of " << SectionOrError->getName()
-               << " section\n";
-      });
-      registerName(SymbolSize, &SectionOrError.get());
+      LLVM_DEBUG(
+          dbgs()
+          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
+      registerName(SymbolSize);
       continue;
     }
 
@@ -1546,7 +1531,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!BC->isAArch64() || !Rel->Addend || !Rel->isIRelative())
+    if (BC->isRISCV() || !Rel->Addend || !Rel->isIRelative())
       return;
 
     // IFUNC trampoline without symbol
@@ -2634,30 +2619,6 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                   Rel.getType(), 0,
                                   cantFail(Symbol.getValue()));
       return;
-    }
-  }
-
-  if (Relocation::isGOT(RType) && !Relocation::isTLS(RType)) {
-    auto exitOnGotEndSymol = [&](StringRef Name) {
-      BC->errs() << "BOLT-ERROR: GOT table contains currently unsupported "
-                    "section end symbol "
-                 << Name << "\n";
-      exit(1);
-    };
-
-    if (SymbolIter != InputFile->symbol_end() && ReferencedSection) {
-      if (cantFail(SymbolIter->getAddress()) ==
-          ReferencedSection->getEndAddress())
-        exitOnGotEndSymol(cantFail(SymbolIter->getName()));
-    } else {
-      // If no section and symbol are provided by relocation, try to find the
-      // symbol by its name, including the possibility that the symbol is local.
-      BinaryData *BD = BC->getBinaryDataByName(SymbolName);
-      if (!BD && NR.getUniquifiedNameCount(SymbolName) == 1)
-        BD = BC->getBinaryDataByName(NR.getUniqueName(SymbolName, 1));
-
-      if ((BD && BD->getAddress() == BD->getSection().getEndAddress()))
-        exitOnGotEndSymol(BD->getName());
     }
   }
 
@@ -4284,7 +4245,6 @@ void RewriteInstance::addBoltInfoSection() {
          << "command line:";
   for (int I = 0; I < Argc; ++I)
     DescOS << " " << Argv[I];
-  DescOS.flush();
 
   // Encode as GNU GOLD VERSION so it is easily printable by 'readelf -n'
   const std::string BoltInfo =
@@ -4307,7 +4267,6 @@ void RewriteInstance::encodeBATSection() {
   raw_string_ostream DescOS(DescStr);
 
   BAT->write(*BC, DescOS);
-  DescOS.flush();
 
   const std::string BoltInfo =
       BinarySection::encodeELFNote("BOLT", DescStr, BinarySection::NT_BOLT_BAT);

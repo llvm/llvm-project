@@ -170,7 +170,7 @@ public:
   /// both cases correctly and avoids crashes.
   DWARFCompileUnit *GetSkeletonUnit();
 
-  void SetSkeletonUnit(DWARFUnit *skeleton_unit);
+  bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
 
   bool Supports_DW_AT_APPLE_objc_complete_type();
 
@@ -268,7 +268,7 @@ public:
   /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
   /// .dwo errors can be stored in each compile unit so the issues can be
   /// communicated to the user.
-  void SetDwoError(const Status &error) { m_dwo_error = error; }
+  void SetDwoError(Status &&error) { m_dwo_error = std::move(error); }
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
@@ -308,7 +308,7 @@ protected:
   const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   lldb_private::CompileUnit *m_lldb_cu = nullptr;
   // If this is a DWO file, we have a backlink to our skeleton compile unit.
-  DWARFUnit *m_skeleton_unit = nullptr;
+  std::atomic<DWARFUnit *> m_skeleton_unit = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;

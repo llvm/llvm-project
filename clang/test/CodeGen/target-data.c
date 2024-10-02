@@ -28,11 +28,11 @@
 
 // RUN: %clang_cc1 -triple sparc-sun-solaris -emit-llvm -o - %s | \
 // RUN:     FileCheck %s --check-prefix=SPARC-V8
-// SPARC-V8: target datalayout = "E-m:e-p:32:32-i64:64-f128:64-n32-S64"
+// SPARC-V8: target datalayout = "E-m:e-p:32:32-i64:64-i128:128-f128:64-n32-S64"
 
 // RUN: %clang_cc1 -triple sparcv9-sun-solaris -emit-llvm -o - %s | \
 // RUN: FileCheck %s --check-prefix=SPARC-V9
-// SPARC-V9: target datalayout = "E-m:e-i64:64-n32:64-S128"
+// SPARC-V9: target datalayout = "E-m:e-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple mipsel-linux-gnu -o - -emit-llvm %s |     \
 // RUN: FileCheck %s -check-prefix=MIPS-32EL
@@ -235,7 +235,7 @@
 // RUN: FileCheck %s -check-prefix=ZOS
 // RUN: %clang_cc1 -triple s390x-none-zos -target-cpu z13 -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=ZOS
-// ZOS: target datalayout = "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+// ZOS: target datalayout = "E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 // RUN: %clang_cc1 -triple msp430-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=MSP430

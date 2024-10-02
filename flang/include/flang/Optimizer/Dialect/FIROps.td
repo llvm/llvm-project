@@ -2432,9 +2432,9 @@ def fir_CallOp : fir_Op<"call",
   let arguments = (ins
     OptionalAttr<SymbolRefAttr>:$callee,
     Variadic<AnyType>:$args,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
     DefaultValuedAttr<Arith_FastMathAttr,
-                      "::mlir::arith::FastMathFlags::none">:$fastmath,
-    UnitAttr:$is_bind_c
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
   );
   let results = (outs Variadic<AnyType>);
 
@@ -2609,29 +2609,6 @@ class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
-  let summary = "create a complex constant";
-
-  let description = [{
-    A complex constant. Similar to the standard dialect complex type, but this
-    extension allows constants with APFloat values that are not supported in
-    the standard dialect.
-  }];
-
-  let results = (outs fir_ComplexType);
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
-    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
-
-    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
-  }];
-}
-
 class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
       Arguments<(ins fir_ComplexType:$operand)>;
@@ -2713,7 +2690,7 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2721,6 +2698,9 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
     Not all pairs of types have conversions. When types T and U are the same
     type, this instruction is a NOP and may be folded away. This also supports
     integer to pointer conversion and pointer to integer conversion.
+
+    This operation also allows limited interaction between FIR and LLVM
+    dialects by allowing conversion between FIR pointer types and llvm.ptr type.
 
     ```
       %v = ... : i64
@@ -2731,6 +2711,7 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   }];
 
   let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
 
   let assemblyFormat = [{
     $value attr-dict `:` functional-type($value, results)
