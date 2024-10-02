@@ -145,3 +145,12 @@ entry:
   %0 = tail call double @llvm.sin.f64(double %a)
   ret double %0
 }
+
+define <2 x double> @tan_v2f64_nofast(<2 x double> %a) {
+; CHECK-LABEL: tan_v2f64_nofast
+; CHECK-NOT: bl __xl_tan
+; CHECK: blr
+entry:
+  %0 = tail call <2 x double> @llvm.tan.v2f64(<2 x double> %a)
+  ret <2 x double> %0
+}

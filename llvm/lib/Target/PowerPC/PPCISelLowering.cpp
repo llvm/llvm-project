@@ -865,6 +865,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FEXP2, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FTAN, VT, Expand);
       setOperationAction(ISD::FABS, VT, Expand);
       setOperationAction(ISD::FFLOOR, VT, Expand);
       setOperationAction(ISD::FCEIL,  VT, Expand);
