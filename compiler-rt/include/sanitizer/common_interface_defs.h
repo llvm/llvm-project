@@ -220,11 +220,15 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
 /// Argument requirements: The destination container must have the same size as
 /// the source container, which is inferred from the beginning and end of the
 /// source region. Addresses may be granule-unaligned, but this may affect
-/// performance. \param src_begin Beginning of the source container region.
-/// \param src_end End of the source container region. \param dst_begin
-/// Beginning of the destination container region.
+/// performance.
+///
+/// \param src_begin Begin of the source container region.
+/// \param src_end End of the source container region.
+/// \param dst_begin Begin of the destination container region.
+/// \param dst_end End of the destination container region.
 void SANITIZER_CDECL __sanitizer_copy_contiguous_container_annotations(
-    const void *src_begin, const void *src_end, const void *dst_begin);
+    const void *src_begin, const void *src_end, const void *dst_begin,
+    const void *dst_end);
 
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
 /// poisoned.
