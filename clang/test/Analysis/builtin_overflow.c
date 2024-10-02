@@ -79,7 +79,7 @@ void test_sub_nooverflow(void)
    clang_analyzer_dump_int(res); //expected-warning{{2147483646 S32b}}
 }
 
-void test_mul_overrflow(void)
+void test_mul_overflow(void)
 {
    int res;
 
@@ -90,7 +90,7 @@ void test_mul_overrflow(void)
    clang_analyzer_warnIfReached();
 }
 
-void test_mul_underrflow(void)
+void test_mul_underflow(void)
 {
    int res;
 

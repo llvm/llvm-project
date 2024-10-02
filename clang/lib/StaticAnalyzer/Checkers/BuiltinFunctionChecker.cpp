@@ -98,7 +98,7 @@ public:
                              BinaryOperator::Opcode Op,
                              QualType ResultType) const;
   const NoteTag *createBuiltinNoOverflowNoteTag(CheckerContext &C,
-                                                bool bothFeasible, SVal Arg1,
+                                                bool BothFeasible, SVal Arg1,
                                                 SVal Arg2, SVal Result) const;
   const NoteTag *createBuiltinOverflowNoteTag(CheckerContext &C) const;
   std::pair<bool, bool> checkOverflow(CheckerContext &C, SVal RetVal,
@@ -123,9 +123,9 @@ private:
 } // namespace
 
 const NoteTag *BuiltinFunctionChecker::createBuiltinNoOverflowNoteTag(
-    CheckerContext &C, bool bothFeasible, SVal Arg1, SVal Arg2,
+    CheckerContext &C, bool BothFeasible, SVal Arg1, SVal Arg2,
     SVal Result) const {
-  return C.getNoteTag([Result, Arg1, Arg2, bothFeasible](
+  return C.getNoteTag([Result, Arg1, Arg2, BothFeasible](
                           PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
     if (!BR.isInteresting(Result))
       return;
@@ -134,40 +134,34 @@ const NoteTag *BuiltinFunctionChecker::createBuiltinNoOverflowNoteTag(
     BR.markInteresting(Arg1);
     BR.markInteresting(Arg2);
 
-    if (bothFeasible)
-      OS << "Assuming overflow does not happen";
+    if (BothFeasible)
+      OS << "Assuming no overflow";
   });
 }
 
 const NoteTag *
 BuiltinFunctionChecker::createBuiltinOverflowNoteTag(CheckerContext &C) const {
-  return C.getNoteTag(
-      [](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-        OS << "Assuming overflow does happen";
-      },
-      /*isPrunable=*/true);
+  return C.getNoteTag([](PathSensitiveBugReport &BR,
+                         llvm::raw_ostream &OS) { OS << "Assuming overflow"; },
+                      /*isPrunable=*/true);
 }
 
 std::pair<bool, bool>
 BuiltinFunctionChecker::checkOverflow(CheckerContext &C, SVal RetVal,
                                       QualType Res) const {
-  ProgramStateRef State = C.getState();
-  SValBuilder &SVB = C.getSValBuilder();
-  ASTContext &ACtx = C.getASTContext();
-
   // Calling a builtin with a non-integer type result produces compiler error.
   assert(Res->isIntegerType());
 
-  unsigned BitWidth = ACtx.getIntWidth(Res);
-  auto MinVal =
-      llvm::APSInt::getMinValue(BitWidth, Res->isUnsignedIntegerType());
-  auto MaxVal =
-      llvm::APSInt::getMaxValue(BitWidth, Res->isUnsignedIntegerType());
+  unsigned BitWidth = C.getASTContext().getIntWidth(Res);
+  bool IsUnsigned = Res->isUnsignedIntegerType();
 
-  SVal IsLeMax =
-      SVB.evalBinOp(State, BO_LE, RetVal, nonloc::ConcreteInt(MaxVal), Res);
-  SVal IsGeMin =
-      SVB.evalBinOp(State, BO_GE, RetVal, nonloc::ConcreteInt(MinVal), Res);
+  nonloc::ConcreteInt MinVal{llvm::APSInt::getMinValue(BitWidth, IsUnsigned)};
+  nonloc::ConcreteInt MaxVal{llvm::APSInt::getMaxValue(BitWidth, IsUnsigned)};
+
+  SValBuilder &SVB = C.getSValBuilder();
+  ProgramStateRef State = C.getState();
+  SVal IsLeMax = SVB.evalBinOp(State, BO_LE, RetVal, MaxVal, Res);
+  SVal IsGeMin = SVB.evalBinOp(State, BO_GE, RetVal, MinVal, Res);
 
   auto [MayNotOverflow, MayOverflow] =
       State->assume(IsLeMax.castAs<DefinedOrUnknownSVal>());
@@ -209,17 +203,16 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
         StateNoOverflow = addTaint(StateNoOverflow, *L);
     }
 
-    const NoteTag *tag = createBuiltinNoOverflowNoteTag(
-        C, NotOverflow && Overflow, Arg1, Arg2, RetVal);
-
-    C.addTransition(StateNoOverflow, tag);
+    C.addTransition(
+        StateNoOverflow,
+        createBuiltinNoOverflowNoteTag(
+            C, /*BothFeasible=*/NotOverflow && Overflow, Arg1, Arg2, RetVal));
   }
 
   if (Overflow) {
-    const NoteTag *tag = createBuiltinOverflowNoteTag(C);
     C.addTransition(
         State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)),
-        tag);
+        createBuiltinOverflowNoteTag(C));
   }
 }
 

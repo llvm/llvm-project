@@ -327,7 +327,7 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-- Now CSA models `__builtin_*_overflow` functions.
+- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
 
 - MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
   attributes with class names different from "malloc". Clang static analyzer now reports an error

@@ -5,7 +5,7 @@ void test_no_overflow_note(int a, int b)
 {
    int res;
 
-   if (__builtin_add_overflow(a, b, &res)) // expected-note {{Assuming overflow does not happen}}
+   if (__builtin_add_overflow(a, b, &res)) // expected-note {{Assuming no overflow}}
                                            // expected-note@-1 {{Taking false branch}}
      return;
 
@@ -21,7 +21,7 @@ void test_overflow_note(int a, int b)
 {
    int res; // expected-note{{'res' declared without an initial value}}
 
-   if (__builtin_add_overflow(a, b, &res)) { // expected-note {{Assuming overflow does happen}}
+   if (__builtin_add_overflow(a, b, &res)) { // expected-note {{Assuming overflow}}
                                              // expected-note@-1 {{Taking true branch}}
      int var = res; // expected-warning{{Assigned value is garbage or undefined}}
                     // expected-note@-1 {{Assigned value is garbage or undefined}}
