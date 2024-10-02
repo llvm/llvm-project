@@ -810,6 +810,42 @@ void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
   WorkScheduler->runWithAST("Definitions", File, std::move(Action));
 }
 
+void ClangdServer::findAST(SearchASTArgs const &Args,
+                           Callback<std::vector<std::vector<ASTNode>>> CB) {
+  auto Action =
+      [Args, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        auto BoundNodes = clangd::locateASTQuery(InpAST->AST, Args);
+        if (BoundNodes.empty())
+          return CB(error("No matching AST nodes found"));
+
+        auto &&AST = InpAST->AST;
+        // Convert BoundNodes to a vector of vectors to ASTNode's.
+        std::vector<std::vector<ASTNode>> Result;
+        Result.reserve(BoundNodes.size());
+        for (auto &&BN : BoundNodes) {
+          auto &&Map = BN.getMap();
+          std::vector<ASTNode> Nodes;
+          Nodes.reserve(Map.size());
+          for (const auto &[Key, Value] : Map) {
+            auto Node = dumpAST(Value, AST.getTokens(), AST.getASTContext());
+            Nodes.push_back(std::move(Node));
+          }
+          if (Nodes.empty())
+            continue;
+          Result.push_back(std::move(Nodes));
+        }
+        if (Result.empty()) {
+          return CB(error("No AST nodes found for the query"));
+        }
+        CB(std::move(Result));
+      };
+
+  WorkScheduler->runWithAST("Definitions", Args.textDocument.uri.file(),
+                            std::move(Action));
+}
+
 void ClangdServer::switchSourceHeader(
     PathRef Path, Callback<std::optional<clangd::Path>> CB) {
   // We want to return the result as fast as possible, strategy is:

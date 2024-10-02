@@ -30,6 +30,8 @@
 #include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -259,6 +261,9 @@ public:
   /// Find declaration/definition locations of symbol at a specified position.
   void locateSymbolAt(PathRef File, Position Pos,
                       Callback<std::vector<LocatedSymbol>> CB);
+
+  void findAST(const SearchASTArgs &Args,
+               Callback<std::vector<std::vector<ASTNode>>> CB);
 
   /// Switch to a corresponding source file when given a header file, and vice
   /// versa.
