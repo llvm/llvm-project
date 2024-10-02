@@ -410,8 +410,8 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   Value *X = Orig->getOperand(0);
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
-  Value *OneEightyOverPi = ConstantFP::get(Ty, llvm::numbers::pi / 180.0);
-  return Builder.CreateFMul(X, OneEightyOverPi);
+  Value *PiOver180 = ConstantFP::get(Ty, llvm::numbers::pi / 180.0);
+  return Builder.CreateFMul(X, PiOver180);
 }
 
 
