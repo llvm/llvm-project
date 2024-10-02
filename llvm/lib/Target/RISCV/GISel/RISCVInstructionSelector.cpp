@@ -385,17 +385,21 @@ RISCVInstructionSelector::selectVLOp(MachineOperand &Root) const {
   assert(Root.isReg() && "Expected operand to be a Register");
   MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
 
-  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT &&
-      RootDef->getOperand(1).getCImm()->getSExtValue() == RISCV::VLMaxSentinel)
-    // If the operand is a G_CONSTANT with value VLMaxSentinel, convert it
-    // to an immediate with value VLMaxSentinel. This is recognized specially by
-    // the vsetvli insertion pass.
-    return {
-        {[=](MachineInstrBuilder &MIB) { MIB.addImm(RISCV::VLMaxSentinel); }}};
+  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    auto C = RootDef->getOperand(1).getCImm();
+    if (C->getSExtValue() == RISCV::VLMaxSentinel || C->getValue().isAllOnes())
+      // If the operand is a G_CONSTANT with value VLMaxSentinel or all ones,
+      // convert it to an immediate with value VLMaxSentinel. This is recognized
+      // specially by the vsetvli insertion pass.
+      return {{[=](MachineInstrBuilder &MIB) {
+        MIB.addImm(RISCV::VLMaxSentinel);
+      }}};
 
-  // FIXME: Implement non-VLMAX case. ISEL will fail gracefully by returning
-  // like this for now.
-  return std::nullopt;
+    if (isUInt<5>(C->getZExtValue()))
+      return {
+          {[=](MachineInstrBuilder &MIB) { MIB.addImm(C->getZExtValue()); }}};
+  }
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); }}};
 }
 
 InstructionSelector::ComplexRendererFns
