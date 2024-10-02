@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify=expected,eagerlyassume %s
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -analyzer-config eagerly-assume=false -verify %s
 
 // Note that eagerly-assume=false is tested separately because the
@@ -268,15 +268,6 @@ void no_suppression_when_no_assumption_third_iteration(int len) {
   }
 }
 
-void loop_suppress_in_third_iteration_cast(int len) {
-  int buf[2] = {0};
-  for (int i = 0; (unsigned)(i < len); i++) {
-    // Check that a (somewhat arbitrary) cast does not hinder the recognition
-    // of the condition expression.
-    buf[i] = 1; // no-warning
-  }
-}
-
 void loop_suppress_in_third_iteration_logical_and(int len, int flag) {
   int buf[2] = {0};
   for (int i = 0; i < len && flag; i++) {
@@ -300,6 +291,27 @@ void loop_suppress_in_third_iteration_logical_and_2(int len, int flag) {
     // determines whether the short-circuiting happens or not) and 'i < len' is
     // the terminator statement of the loop itself.
     buf[i] = 1; // no-warning
+  }
+}
+
+void loop_suppress_in_third_iteration_cast(int len) {
+  int buf[2] = {0};
+  for (int i = 0; (unsigned)(i < len); i++) {
+    // The behavior of this suppression is slightly different under
+    // eagerly-assume=true (the default) and eagerly-assume=false:
+    // * When eager assumptions are disabled, it's enough to look for cases
+    //   where we get two non-null states from splitting the state over the
+    //   'SVal' that represents the full loop condition. 
+    // * When eager assumptions are enabled, we also accept situations when the
+    //   loop condition expression triggers an eager state split and therefore
+    //   we won't see a state split at the "normal" point because it's executed
+    //   on two already separated execution paths.
+    // However, for the sake of simplicity we don't activate the suppression in
+    // cases when _a subexpression_ of the loop condition triggers an eager
+    // assumption. There are already many differences between analysis with and
+    // without eager assumptions, so it would be pointless to write more
+    // complicated code to eliminate these rare differences.
+    buf[i] = 1; // eagerlyassume-warning{{Out of bound access to memory}}
   }
 }
 

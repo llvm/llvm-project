@@ -2839,14 +2839,7 @@ void ExprEngine::processBranch(
 
     const Expr *EagerlyAssumeExpr =
         PrevState->get<LastEagerlyAssumeAssumptionAt>();
-    const Expr *ConditionExpr = dyn_cast<Expr>(Condition);
-    if (ConditionExpr) {
-      // Ignore casts to ensure equivalent behavior with and without
-      // eagerly-assume. This is a mostly theoretical question an I don't see a
-      // good reason for putting casts around a conditional expression.
-      ConditionExpr = ConditionExpr->IgnoreParenCasts();
-    }
-    bool DidEagerlyAssume = EagerlyAssumeExpr == ConditionExpr;
+    bool DidEagerlyAssume = EagerlyAssumeExpr == dyn_cast<Expr>(Condition);
 
     // Process the true branch.
     if (builder.isFeasible(true)) {
