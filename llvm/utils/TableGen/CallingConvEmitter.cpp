@@ -110,7 +110,7 @@ void CallingConvEmitter::EmitCallingConv(const Record *CC, raw_ostream &O) {
     const Record *Action = CCActions->getElementAsRecord(i);
     SwiftAction =
         llvm::any_of(Action->getSuperClasses(),
-                     [](const std::pair<Record *, SMRange> &Class) {
+                     [](const std::pair<const Record *, SMRange> &Class) {
                        std::string Name = Class.first->getNameInitAsString();
                        return StringRef(Name).starts_with("CCIfSwift");
                      });
