@@ -460,7 +460,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     return popType(ErrorLoc, Any{});
   }
 
-  if (Name == "try" || Name == "block" || Name == "loop" || Name == "if") {
+  if (Name == "block" || Name == "loop" || Name == "if" || Name == "try") {
     bool Error = Name == "if" && popType(ErrorLoc, wasm::ValType::I32);
     // Pop block input parameters and check their types are correct
     Error |= popTypes(ErrorLoc, LastSig.Params);
@@ -472,8 +472,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
-      Name == "else" || Name == "end_try" || Name == "catch" ||
-      Name == "catch_all" || Name == "delegate") {
+      Name == "end_try" || Name == "delegate" || Name == "else" ||
+      Name == "catch" || Name == "catch_all") {
     assert(!BlockInfoStack.empty());
     // Check if the types on the stack match with the block return type
     const auto &LastBlockInfo = BlockInfoStack.back();
