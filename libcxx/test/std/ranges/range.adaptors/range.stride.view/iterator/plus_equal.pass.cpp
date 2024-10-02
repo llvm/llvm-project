@@ -75,9 +75,9 @@ constexpr bool test_random_access_operator_plus_equal(Iter begin, Iter end, Diff
   assert(*sv_bv_begin == *sv_bv_offset_begin);
   assert(*sv_bv_begin_after_distance == *sv_bv_offset_begin);
 
-  auto big_step              = (end - 1) - begin;
+  auto big_step                            = (end - 1) - begin;
   auto stride_view_over_base_view_big_step = std::ranges::stride_view(base_view, big_step);
-  sv_bv_begin                = stride_view_over_base_view_big_step.begin();
+  sv_bv_begin                              = stride_view_over_base_view_big_step.begin();
 
   // This += should move us into a position where the __missing_ will come into play.
   // Do a -= 1 here to confirm that the __missing_ is taken into account.

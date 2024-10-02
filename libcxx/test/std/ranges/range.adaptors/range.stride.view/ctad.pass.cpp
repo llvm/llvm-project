@@ -31,14 +31,17 @@ constexpr bool testCTAD() {
   using BaseRange = BasicTestRange<cpp17_input_iterator<int*>>;
   using BaseView  = BasicTestView<int*>;
 
-  auto base_view  = BaseView(a, a + 5);
-  auto base_range = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
+  auto base_view          = BaseView(a, a + 5);
+  auto base_view_for_move = BaseView(a, a + 5);
+
+  auto base_range          = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
+  auto base_range_for_move = BaseRange(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 5));
 
   auto copied_stride_base_view = std::ranges::stride_view(base_view, 2);
-  auto moved_stride_base_view  = std::ranges::stride_view(std::move(base_view), 2);
+  auto moved_stride_base_view  = std::ranges::stride_view(std::move(base_view_for_move), 2);
 
   auto copied_stride_base_range = std::ranges::stride_view(base_range, 2);
-  auto moved_stride_base_range  = std::ranges::stride_view(std::move(base_range), 2);
+  auto moved_stride_base_range  = std::ranges::stride_view(std::move(base_range_for_move), 2);
 
   static_assert(std::same_as< decltype(copied_stride_base_view), std::ranges::stride_view<BaseView>>);
   static_assert(std::same_as< decltype(moved_stride_base_view), std::ranges::stride_view<BaseView>>);
