@@ -92,7 +92,8 @@ exit:
   ret <8 x i64> %res
 }
 
-; Test that exposed a bug in the PHI handling after D60846. No folding should happen here!
+; Test that exposed a bug in the PHI handling after D60846.
+; Check that folding happens correctly.
 define void @D60846_miscompile(ptr %p) {
 ; CHECK-LABEL: @D60846_miscompile(
 ; CHECK-NEXT:  entry:
