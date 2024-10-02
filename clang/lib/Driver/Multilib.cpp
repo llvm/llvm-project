@@ -123,10 +123,9 @@ bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
         continue;
     }
 
-    // If this multilib is actually a placeholder containing a fatal
-    // error message written by the multilib.yaml author, then set a
-    // flag that will cause a failure return. Our caller will display
-    // the error message.
+    // If this multilib is actually a placeholder containing an error message
+    // written by the multilib.yaml author, then set a flag that will cause a
+    // failure return. Our caller will display the error message.
     if (M.isError())
       AnyErrors = true;
 
