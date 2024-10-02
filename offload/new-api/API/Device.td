@@ -46,13 +46,13 @@ def : Function {
   let params = [
     Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
     Param<"offload_device_type_t", "DeviceType", "the type of the devices.", PARAM_IN>,
-    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices."
-        "If phDevices is not NULL, then NumEntries should be greater than zero. Otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE"
+    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices. "
+        "If phDevices is not NULL, then NumEntries should be greater than zero. Otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE "
         "will be returned.", PARAM_IN>,
-    RangedParam<"offload_device_handle_t*", "phDevices", "array of handle of devices."
+    RangedParam<"offload_device_handle_t*", "phDevices", "Array of device handles. "
         "If NumEntries is less than the number of devices available, then platform shall only retrieve that number of devices.", PARAM_OUT_OPTIONAL,
         Range<"0", "NumEntries">>,
-    Param<"uint32_t*", "pNumDevices", "pointer to the number of devices."
+    Param<"uint32_t*", "pNumDevices", "pointer to the number of devices. "
         "pNumDevices will be updated with the total number of devices available.", PARAM_OUT_OPTIONAL>
   ];
   let returns = [

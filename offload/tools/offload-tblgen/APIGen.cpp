@@ -32,7 +32,7 @@ static std::string MakeComment(StringRef in) {
     if (LineBreak - LineStart <= 1) {
       break;
     }
-    out += std::string("\t///< ") +
+    out += std::string("/// ") +
            in.substr(LineStart, LineBreak - LineStart).str() + "\n";
     LineStart = LineBreak + 1;
   }
@@ -107,13 +107,13 @@ static void ProcessFunction(const FunctionRec &F, raw_ostream &OS) {
   OS << "(\n";
   auto Params = F.getParams();
   for (auto &Param : Params) {
+    OS << MakeParamComment(Param) << "\n";
     OS << "  " << Param.getType() << " " << Param.getName();
     if (Param != Params.back()) {
-      OS << ", ";
+      OS << ",\n";
     } else {
-      OS << " ";
+      OS << "\n";
     }
-    OS << MakeParamComment(Param) << "\n";
   }
   OS << ");\n\n";
 }
@@ -125,9 +125,9 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
 
   uint32_t EtorVal = 0;
   for (const auto &EnumVal : Enum.getValues()) {
-    auto Desc = MakeComment(EnumVal.getDesc());
-    OS << formatv(TAB_1 "{0}_{1} = {2}, {3}", Enum.getEnumValNamePrefix(),
-                  EnumVal.getName(), EtorVal++, Desc);
+    OS << TAB_1 << MakeComment(EnumVal.getDesc());
+    OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
+                  EnumVal.getName(), EtorVal++);
   }
 
   // Add force uint32 val
