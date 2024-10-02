@@ -2873,7 +2873,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
   )");
 }
 
-// A case that we should handle but currently don't.
+// FIXME: A case that we should handle but currently don't.
 // When there is a field of type reference to non-optional, we may
 // stop recursively creating storage locations.
 // E.g., the field `second` below in `pair` should eventually lead to
