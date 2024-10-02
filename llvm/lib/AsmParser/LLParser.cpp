@@ -3202,8 +3202,15 @@ bool LLParser::parseOptionalOperandBundles(
 
       Type *Ty = nullptr;
       Value *Input = nullptr;
-      if (parseType(Ty) || parseValue(Ty, Input, PFS))
+      if (parseType(Ty))
         return true;
+      if (Ty->isMetadataTy()) {
+        if (parseMetadataAsValue(Input, PFS))
+          return true;
+      } else {
+        if (parseValue(Ty, Input, PFS))
+          return true;
+      }
       Inputs.push_back(Input);
     }
 
@@ -3940,15 +3947,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       return true;
     ID.Kind = ValID::t_Constant;
     return false;
-
-  case lltok::exclaim: {
-    Lex.Lex();
-    ID.StrVal = Lex.getStrVal();
-    if (parseToken(lltok::StringConstant, "expected string"))
-      return true;
-    ID.Kind = ValID::t_MDString;
-    return false;
-  }
 
   case lltok::kw_asm: {
     // ValID ::= 'asm' SideEffect? AlignStack? IntelDialect? STRINGCONSTANT ','
@@ -6220,11 +6218,6 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
                                getTypeString(Ty->getScalarType()) + "'");
     V = ConstantVector::getSplat(cast<VectorType>(Ty)->getElementCount(),
                                  ID.ConstantVal);
-    return false;
-  case ValID::t_MDString:
-    if (!Ty->isMetadataTy())
-      return error(ID.Loc, "invalid type for metadata string");
-    V = MetadataAsValue::get(Context, MDString::get(Context, ID.StrVal));
     return false;
   case ValID::t_ConstantStruct:
   case ValID::t_PackedConstantStruct:
