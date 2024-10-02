@@ -459,7 +459,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V);
+  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which
