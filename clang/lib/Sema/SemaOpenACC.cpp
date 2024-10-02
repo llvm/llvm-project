@@ -1078,7 +1078,7 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses)
     : SemaRef(S), WasInsideComputeConstruct(S.InsideComputeConstruct),
-      DirKind(DK), LoopRAII(SemaRef) {
+      DirKind(DK), LoopRAII(SemaRef, /*PreserveDepth=*/false) {
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
@@ -1093,6 +1093,11 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
 void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses) {
+
+  // Reset this checking for loops that aren't covered in a RAII object.
+  SemaRef.CollapseInfo.CurLevelHasLoopAlready = false;
+  SemaRef.CollapseInfo.CollapseDepthSatisfied = true;
+
   // We make sure to take an optional list of uninstantiated clauses, so that
   // we can check to make sure we don't 'double diagnose' in the event that
   // the value of 'N' was not dependent in a template. We also ensure during
@@ -1125,6 +1130,7 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
            ->isInstantiationDependent())
     return;
 
+  SemaRef.CollapseInfo.CollapseDepthSatisfied = false;
   SemaRef.CollapseInfo.CurCollapseCount =
       cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
 }
@@ -1737,13 +1743,38 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
   // Enable the while/do-while checking.
   CollapseInfo.TopLevelLoopSeen = true;
 
-  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0)
-    --(*CollapseInfo.CurCollapseCount);
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+
+    // OpenACC 3.3 2.9.1:
+    // Each associated loop, except the innermost, must contain exactly one loop
+    // or loop nest.
+    // This checks for more than 1 loop at the current level, the
+    // 'depth'-satisifed checking manages the 'not zero' case.
+    if (CollapseInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_collapse_multiple_loops);
+      assert(CollapseInfo.ActiveCollapse && "No collapse object?");
+      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+           diag::note_acc_collapse_clause_here);
+    } else {
+      --(*CollapseInfo.CurCollapseCount);
+
+      // Once we've hit zero here, we know we have deep enough 'for' loops to
+      // get to the bottom.
+      if (*CollapseInfo.CurCollapseCount == 0)
+        CollapseInfo.CollapseDepthSatisfied = true;
+    }
+  }
+
+  // Set this to 'false' for the body of this loop, so that the next level
+  // checks independently.
+  CollapseInfo.CurLevelHasLoopAlready = false;
 }
 
 void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
   if (!getLangOpts().OpenACC)
     return;
+  // Set this to 'true' so if we find another one at this level we can diagnose.
+  CollapseInfo.CurLevelHasLoopAlready = true;
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
@@ -1827,12 +1858,23 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
     // the 'structured block'.
     return AssocStmt;
   case OpenACCDirectiveKind::Loop:
-    if (AssocStmt.isUsable() &&
-        !isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
+    if (!AssocStmt.isUsable())
+      return StmtError();
+
+    if (!isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
       Diag(AssocStmt.get()->getBeginLoc(), diag::err_acc_loop_not_for_loop);
       Diag(DirectiveLoc, diag::note_acc_construct_here) << K;
       return StmtError();
     }
+
+    if (!CollapseInfo.CollapseDepthSatisfied) {
+      Diag(DirectiveLoc, diag::err_acc_collapse_insufficient_loops);
+      assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+           diag::note_acc_collapse_clause_here);
+      return StmtError();
+    }
+
     // TODO OpenACC: 2.9 ~ line 2010 specifies that the associated loop has some
     // restrictions when there is a 'seq' clause in place. We probably need to
     // implement that, including piping in the clauses here.
