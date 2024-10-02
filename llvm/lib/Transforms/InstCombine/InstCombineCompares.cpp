@@ -5935,9 +5935,9 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
   // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
   // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
   if (auto Res = decomposeBitTestICmp(Op0, Op1, Pred, /*WithTrunc=*/true,
-                                      /*AllowNonZeroCmp=*/true)) {
+                                      /*AllowNonZeroC=*/true)) {
     Value *And = Builder.CreateAnd(Res->X, Res->Mask);
-    Constant *Zero = ConstantInt::get(Res->X->getType(), Res->Cmp);
+    Constant *Zero = ConstantInt::get(Res->X->getType(), Res->C);
     return new ICmpInst(Res->Pred, And, Zero);
   }
 
