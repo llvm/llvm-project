@@ -1064,16 +1064,8 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
     // This poses a problem when we wish to insert a scalable vector which
     // can't be re-expressed as a larger type. Just choose the slow path and
     // extend to a larger type, then truncate back down.
-    BigTy = BigTy.changeElementType(LLT::scalar(8));
-    LitTy = LitTy.changeElementType(LLT::scalar(8));
-    auto BigZExt = MIB.buildZExt(BigTy, BigVec);
-    auto LitZExt = MIB.buildZExt(LitTy, LitVec);
-    auto Insert = MIB.buildInsertSubvector(BigTy, BigZExt, LitZExt, Idx);
-    auto SplatZero = MIB.buildSplatVector(
-        BigTy, MIB.buildConstant(BigTy.getElementType(), 0));
-    MIB.buildICmp(CmpInst::Predicate::ICMP_NE, Dst, Insert, SplatZero);
-    MI.eraseFromParent();
-    return true;
+    LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
+    return Helper.widenScalar(IS, 0, ExtBigTy);
   }
 
   const RISCVRegisterInfo *TRI = STI.getRegisterInfo();

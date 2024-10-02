@@ -3276,6 +3276,33 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+
+    GInsertSubvector &IS = cast<GInsertSubvector>(MI);
+    Register BigVec = IS.getBigVec();
+    Register SubVec = IS.getSubVec();
+
+    LLT SubVecTy = MRI.getType(SubVec);
+    LLT SubVecWideTy = SubVecTy.changeElementType(WideTy.getElementType());
+
+    // Widen the G_INSERT_SUBVECTOR
+    auto BigZExt = MIRBuilder.buildZExt(WideTy, BigVec);
+    auto SubZExt = MIRBuilder.buildZExt(SubVecWideTy, SubVec);
+    auto WideInsert = MIRBuilder.buildInsertSubvector(WideTy, BigZExt, SubZExt,
+                                                      IS.getIndexImm());
+
+    // Truncate back down
+    auto SplatZero = MIRBuilder.buildSplatVector(
+        WideTy, MIRBuilder.buildConstant(WideTy.getElementType(), 0));
+    MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_NE, IS.getReg(0), WideInsert,
+                         SplatZero);
+
+    MI.eraseFromParent();
+
+    return Legalized;
+  }
   }
 }
 
