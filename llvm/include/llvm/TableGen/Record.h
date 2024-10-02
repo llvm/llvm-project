@@ -783,7 +783,7 @@ public:
     return cast<ListRecTy>(getType())->getElementType();
   }
 
-  Record *getElementAsRecord(unsigned i) const;
+  const Record *getElementAsRecord(unsigned i) const;
 
   Init *convertInitializerTo(const RecTy *Ty) const override;
 
@@ -1316,9 +1316,9 @@ public:
 class DefInit : public TypedInit {
   friend class Record;
 
-  Record *Def;
+  const Record *Def;
 
-  explicit DefInit(Record *D);
+  explicit DefInit(const Record *D);
 
 public:
   DefInit(const DefInit &) = delete;
@@ -1330,7 +1330,7 @@ public:
 
   Init *convertInitializerTo(const RecTy *Ty) const override;
 
-  Record *getDef() const { return Def; }
+  const Record *getDef() const { return Def; }
 
   const RecTy *getFieldType(StringInit *FieldName) const override;
 
@@ -1473,7 +1473,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   Init *getOperator() const { return Val; }
-  Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
+  const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
 
   StringInit *getName() const { return ValName; }
 
@@ -1660,7 +1660,7 @@ private:
   // this record.
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
-  SmallVector<SMRange, 0> ReferenceLocs;
+  mutable SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1668,7 +1668,7 @@ private:
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
-  SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
+  SmallVector<std::pair<const Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
@@ -1729,7 +1729,7 @@ public:
   }
 
   /// Add a reference to this record value.
-  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+  void appendReferenceLoc(SMRange Loc) const { ReferenceLocs.push_back(Loc); }
 
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
@@ -1758,7 +1758,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>> getSuperClasses() const {
+  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -1832,25 +1832,25 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const auto &SCPair : SuperClasses)
-      if (SCPair.first == R)
+    for (const auto &[SC, _] : SuperClasses)
+      if (SC == R)
         return true;
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &SCPair : SuperClasses) {
-      if (const auto *SI = dyn_cast<StringInit>(SCPair.first->getNameInit())) {
+    for (const auto &[SC, _] : SuperClasses) {
+      if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
-      } else if (SCPair.first->getNameInitAsString() == Name) {
+      } else if (SC->getNameInitAsString() == Name) {
         return true;
       }
     }
     return false;
   }
 
-  void addSuperClass(Record *R, SMRange Range) {
+  void addSuperClass(const Record *R, SMRange Range) {
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
@@ -1931,13 +1931,13 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// Record, throwing an exception if the field does not exist or if the value
   /// is not the right type.
-  Record *getValueAsDef(StringRef FieldName) const;
+  const Record *getValueAsDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// Record, returning null if the field exists but is "uninitialized" (i.e.
   /// set to `?`), and throwing an exception if the field does not exist or if
   /// its value is not the right type.
-  Record *getValueAsOptionalDef(StringRef FieldName) const;
+  const Record *getValueAsOptionalDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a bit,
   /// throwing an exception if the field does not exist or if the value is not

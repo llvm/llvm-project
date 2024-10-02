@@ -79,6 +79,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InstructionCost.h"
@@ -108,6 +109,9 @@ using namespace slpvectorizer;
 #define DEBUG_TYPE "SLP"
 
 STATISTIC(NumVectorInstructions, "Number of vector instructions generated");
+
+DEBUG_COUNTER(VectorizedGraphs, "slp-vectorized",
+              "Controls which SLP graphs should be vectorized.");
 
 static cl::opt<bool>
     RunSLPVectorization("vectorize-slp", cl::init(true), cl::Hidden,
@@ -5509,27 +5513,30 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       if (!EE1 && EE2)
         return false;
       if (EE1 && EE2) {
+        auto *Inst1 = dyn_cast<Instruction>(EE1->getOperand(0));
+        auto *Inst2 = dyn_cast<Instruction>(EE2->getOperand(0));
+        auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
+        auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
+        if ((!Inst1 && !Inst2) || (!P1 && !P2))
+          return false;
         if (EE1->getOperand(0) == EE2->getOperand(0))
           return getElementIndex(EE1) < getElementIndex(EE2);
-        auto *Inst1 = dyn_cast<Instruction>(EE1->getOperand(0));
-        if (Inst1 && !I2)
+        if (Inst1 && !Inst2)
           return true;
-        if (!Inst1 && I2)
+        if (!Inst1 && Inst2)
           return false;
-        auto *Inst2 = dyn_cast<Instruction>(EE2->getOperand(0));
         if (Inst1 && Inst2) {
           if (Inst1->getParent() != Inst2->getParent())
             return CompareByBasicBlocks(Inst1->getParent(), Inst2->getParent());
           return Inst1->comesBefore(Inst2);
         }
-        auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
-        auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
         if (P1 && !P2)
           return true;
         if (!P1 && P2)
           return false;
-        if (P1 && P2)
-          return P1->getArgNo() < P2->getArgNo();
+        assert(P1 && P2 &&
+               "Expected either instructions or arguments vector operands.");
+        return P1->getArgNo() < P2->getArgNo();
       }
       return false;
     };
@@ -9244,12 +9251,13 @@ void BoUpSLP::transformNodes() {
         for (unsigned Cnt : Slices) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
           // If any instruction is vectorized already - do not try again.
-          if (const TreeEntry *SE = getTreeEntry(Slice.front());
+          if (TreeEntry *SE = getTreeEntry(Slice.front());
               SE || getTreeEntry(Slice.back())) {
             if (!SE)
               continue;
             if (VF != SE->getVectorFactor() || !SE->isSame(Slice))
               continue;
+            SE->UserTreeIndices.emplace_back(&E, UINT_MAX);
             AddCombinedNode(SE->Idx, Cnt);
             continue;
           }
@@ -11238,6 +11246,9 @@ bool BoUpSLP::isLoadCombineCandidate(ArrayRef<Value *> Stores) const {
 }
 
 bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
+  if (!DebugCounter::shouldExecute(VectorizedGraphs))
+    return true;
+
   // No need to vectorize inserts of gathered values.
   if (VectorizableTree.size() == 2 &&
       isa<InsertElementInst>(VectorizableTree[0]->Scalars[0]) &&
@@ -13502,7 +13513,12 @@ public:
         if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
       for (auto [E, Idx] : SubVectors) {
-        Value *V = castToScalarTyElem(E->VectorizedValue);
+        Value *V = E->VectorizedValue;
+        if (V->getType()->isIntOrIntVectorTy())
+          V = castToScalarTyElem(V, any_of(E->Scalars, [&](Value *V) {
+                                   return !isKnownNonNegative(
+                                       V, SimplifyQuery(*R.DL));
+                                 }));
         Vec = Builder.CreateInsertVector(Vec->getType(), Vec, V,
                                          Builder.getInt64(Idx));
         if (!CommonMask.empty()) {
@@ -18911,6 +18927,7 @@ public:
             ++SameValuesCounter.try_emplace(OrigV).first->second;
           }
         }
+        V.transformNodes();
         SmallPtrSet<Value *, 4> VLScalars(VL.begin(), VL.end());
         // Gather externally used values.
         SmallPtrSet<Value *, 4> Visited;
@@ -18940,7 +18957,6 @@ public:
         for (Value *RdxVal : VL)
           if (RequiredExtract.contains(RdxVal))
             LocalExternallyUsedValues[RdxVal];
-        V.transformNodes();
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();

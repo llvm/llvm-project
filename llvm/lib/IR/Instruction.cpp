@@ -875,7 +875,8 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
 
   // If both instructions have no operands, they are identical.
   if (getNumOperands() == 0 && I->getNumOperands() == 0)
-    return this->hasSameSpecialState(I);
+    return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,
+                                     IntersectAttrs);
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.

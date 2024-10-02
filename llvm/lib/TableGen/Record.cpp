@@ -746,7 +746,7 @@ Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-Record *ListInit::getElementAsRecord(unsigned i) const {
+const Record *ListInit::getElementAsRecord(unsigned i) const {
   assert(i < NumValues && "List element index out of range!");
   DefInit *DI = dyn_cast<DefInit>(getElement(i));
   if (!DI)
@@ -1713,7 +1713,7 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
     if (LHSd && MHSd && RHSd) {
-      Record *Val = RHSd->getDef();
+      const Record *Val = RHSd->getDef();
       if (LHSd->getAsString() == RHSd->getAsString())
         Val = MHSd->getDef();
       return Val->getDefInit();
@@ -2265,7 +2265,7 @@ Init *VarBitInit::resolveReferences(Resolver &R) const {
   return const_cast<VarBitInit*>(this);
 }
 
-DefInit::DefInit(Record *D)
+DefInit::DefInit(const Record *D)
     : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
 Init *DefInit::convertInitializerTo(const RecTy *Ty) const {
@@ -2357,9 +2357,8 @@ DefInit *VarDefInit::instantiate() {
   NewRec->resolveReferences(R);
 
   // Add superclasses.
-  ArrayRef<std::pair<Record *, SMRange>> SCs = Class->getSuperClasses();
-  for (const auto &SCPair : SCs)
-    NewRec->addSuperClass(SCPair.first, SCPair.second);
+  for (const auto &[SC, Loc] : Class->getSuperClasses())
+    NewRec->addSuperClass(SC, Loc);
 
   NewRec->addSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
@@ -2445,7 +2444,7 @@ Init *FieldInit::resolveReferences(Resolver &R) const {
 
 Init *FieldInit::Fold(Record *CurRec) const {
   if (DefInit *DI = dyn_cast<DefInit>(Rec)) {
-    Record *Def = DI->getDef();
+    const Record *Def = DI->getDef();
     if (Def == CurRec)
       PrintFatalError(CurRec->getLoc(),
                       Twine("Attempting to access field '") +
@@ -2656,7 +2655,7 @@ void DagInit::Profile(FoldingSetNodeID &ID) const {
                  ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
-Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
+const Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
   if (DefInit *DefI = dyn_cast<DefInit>(Val))
     return DefI->getDef();
   PrintFatalError(Loc, "Expected record as operator");
@@ -2837,8 +2836,8 @@ const RecordRecTy *Record::getType() const {
 
 DefInit *Record::getDefInit() const {
   if (!CorrespondingDefInit) {
-    CorrespondingDefInit = new (TrackedRecords.getImpl().Allocator)
-        DefInit(const_cast<Record *>(this));
+    CorrespondingDefInit =
+        new (TrackedRecords.getImpl().Allocator) DefInit(this);
   }
   return CorrespondingDefInit;
 }
@@ -2869,7 +2868,7 @@ void Record::setName(Init *NewName) {
 // so we can step through the direct superclasses in reverse order.
 
 bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
@@ -2883,10 +2882,10 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
 
 void Record::getDirectSuperClasses(
     SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   while (!SCs.empty()) {
-    Record *SC = SCs.back().first;
+    const Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
     Classes.push_back(SC);
   }
@@ -2965,11 +2964,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<Record *, SMRange>> SC = R.getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
   if (!SC.empty()) {
     OS << "\t//";
-    for (const auto &SuperPair : SC)
-      OS << " " << SuperPair.first->getNameInitAsString();
+    for (const auto &[SC, _] : SC)
+      OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";
 
@@ -3108,7 +3107,7 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
   return Strings;
 }
 
-Record *Record::getValueAsDef(StringRef FieldName) const {
+const Record *Record::getValueAsDef(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -3120,7 +3119,7 @@ Record *Record::getValueAsDef(StringRef FieldName) const {
     FieldName + "' does not have a def initializer!");
 }
 
-Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
+const Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -3133,7 +3132,6 @@ Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have either a def initializer or '?'!");
 }
-
 
 bool Record::getValueAsBit(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
