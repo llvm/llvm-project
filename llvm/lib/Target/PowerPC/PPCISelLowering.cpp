@@ -198,8 +198,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     }
   }
 
-  if (!Subtarget.hasP10Vector())
-    setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
+  setOperationAction(ISD::UADDO, isPPC64 ? MVT::i64 : MVT::i32, Custom);
 
   // Match BITREVERSE to customized fast code sequence in the td file.
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
