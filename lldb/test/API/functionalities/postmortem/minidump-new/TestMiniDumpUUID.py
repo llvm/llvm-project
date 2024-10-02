@@ -327,6 +327,7 @@ class MiniDumpUUIDTestCase(TestBase):
         old_cwd = os.getcwd()
         self.addTearDownHook(lambda: os.chdir(old_cwd))
         os.chdir(self.getBuildDir())
+        name = "file-with-a-name-unlikely-to-exist-in-the-current-directory.so"
         modules = self.get_minidump_modules(
             self.getSourcePath("relative_module_name.yaml")
         )
