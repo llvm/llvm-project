@@ -739,8 +739,8 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_begin_p,
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
   if (src_storage_begin > src_storage_end ||
-      dst_storage_end !=
-          (dst_storage_begin + (src_storage_end - src_storage_begin))) {
+      (dst_storage_end - dst_storage_begin) !=
+          (src_storage_end - src_storage_begin)) {
     GET_STACK_TRACE_FATAL_HERE;
     ReportBadParamsToCopyContiguousContainerAnnotations(
         src_storage_begin, src_storage_end, dst_storage_begin, dst_storage_end,
