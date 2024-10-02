@@ -60,6 +60,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -1416,6 +1417,11 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
         // to the argument (readonly), the call to NewInnerCB may write to its
         // by-value copy.
         if (AL.hasParamAttr(I, Attribute::ByVal))
+          continue;
+
+        // Don't both propagating attrs to constants.
+        if (match(NewInnerCB->getArgOperand(I),
+                  llvm::PatternMatch::m_ImmConstant()))
           continue;
 
         // Check if the underlying value for the parameter is an argument.
