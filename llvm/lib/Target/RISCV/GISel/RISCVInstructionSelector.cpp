@@ -100,7 +100,7 @@ private:
     return selectSHXADD_UWOp(Root, ShAmt);
   }
 
-  ComplexRendererFns selectVLOp(MachineOperand &Root) const;
+  ComplexRendererFns renderVLOp(MachineOperand &Root) const;
 
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -379,7 +379,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
 }
 
 InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::selectVLOp(MachineOperand &Root) const {
+RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
   MachineRegisterInfo &MRI =
       Root.getParent()->getParent()->getParent()->getRegInfo();
   assert(Root.isReg() && "Expected operand to be a Register");

@@ -50,9 +50,9 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
-def GIVLOpS32 : GIComplexOperandMatcher<s32, "selectVLOp">,
+def GIVLOpS32 : GIComplexOperandMatcher<s32, "renderVLOp">,
                 GIComplexPatternEquiv<VLOp>;
-def GIVLOpS64 : GIComplexOperandMatcher<s64, "selectVLOp">,
+def GIVLOpS64 : GIComplexOperandMatcher<s64, "renderVLOp">,
                 GIComplexPatternEquiv<VLOp>;
 
 // Convert from i32 immediate to i64 target immediate to make SelectionDAG type
