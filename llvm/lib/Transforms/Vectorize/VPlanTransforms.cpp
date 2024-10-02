@@ -1467,6 +1467,44 @@ void VPlanTransforms::truncateToMinimalBitwidths(
          "some entries in MinBWs haven't been processed");
 }
 
+/// Remove BranchOnCond recipes with constant conditions together with removing
+/// dead edges to their successors. Remove blocks that become dead (no remaining
+/// predecessors())
+static void simplifyCFG(VPlan &Plan) {
+  using namespace llvm::VPlanPatternMatch;
+  // Start by collecting successor blocks known to not be taken from
+  // branch-on-cond terminator in their predecessor.
+  SmallVector<VPBlockBase *> WorkList;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    VPRecipeBase *Term = VPBB->getTerminator();
+    if (!Term || !match(Term, m_BranchOnCond(m_True())))
+      continue;
+    VPBasicBlock *DeadSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
+    VPBlockUtils::disconnectBlocks(VPBB, DeadSucc);
+    Term->eraseFromParent();
+    WorkList.push_back(DeadSucc);
+  }
+
+  VPValue Tmp;
+  // Remove any block in the worklist if it doesn't have any predecessors left.
+  // Disconnect the block from all successors and queue them for removal.
+  while (!WorkList.empty()) {
+    VPBlockBase *VPBB = WorkList.pop_back_val();
+    if (VPBB->getNumPredecessors() != 0)
+      continue;
+    for (VPBlockBase *Succ : to_vector(VPBB->getSuccessors())) {
+      VPBlockUtils::disconnectBlocks(VPBB, Succ);
+      WorkList.push_back(Succ);
+    }
+    // Replace all uses of values defined in VPB with a dummy VPValue to
+    // facilitate removal. All blocks with remaining uses of the dummy value
+    // must be removed by subsequent operation.
+    VPBB->dropAllReferences(&Tmp);
+    delete VPBB;
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
@@ -1480,6 +1518,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   runPass(createAndOptimizeReplicateRegions, Plan);
   runPass(mergeBlocksIntoPredecessors, Plan);
+  runPass(simplifyCFG,Plan);
   runPass(licm, Plan);
 }
 
