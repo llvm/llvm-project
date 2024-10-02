@@ -153,21 +153,4 @@ else()
       FortranRuntime.dynamic
       FortranRuntime.dynamic_dbg
     )
-
-  if (MSVC)
-    # The Fortran files compiled with flang-new generate libcall functions such as `__udivti3`
-    # Add LLVM_ENABLE_RUNTIMES=compiler-rt for it to be available during the runtimes build
-    # FIXME: Can embed linker command --dependent-lib into object files as already done with FortranRuntime.<mode>.lib
-    #if (NOT TARGET clang_rt.builtins-x86_64)
-    #  message(WARNING
-    #    "compiler-rt needed when compiling with msvc\n"
-    #    "Flang/LLVM will emit code that calls into libgcc/compiler-rt, but using the MSVC linker will only link Microsoft's CRT automatically\n"
-    #    "Add compiler-rt to LLVM_ENABLE_RUNTIMES to fix"
-    #  )
-    #endif ()
-    #target_link_libraries(FortranRuntime.static PUBLIC clang_rt.builtins-x86_64)
-    #target_link_libraries(FortranRuntime.static_dbg PUBLIC clang_rt.builtins-x86_64)
-    #target_link_libraries(FortranRuntime.dynamic PUBLIC clang_rt.builtins-x86_64)
-    #target_link_libraries(FortranRuntime.dynamic_dbg PUBLIC clang_rt.builtins-x86_64)
-  endif ()
 endif()

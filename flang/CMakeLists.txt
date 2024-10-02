@@ -253,6 +253,7 @@ include_directories(BEFORE
 # Add Flang-centric modules to cmake path.
 list(INSERT CMAKE_MODULE_PATH 0
   "${FLANG_SOURCE_DIR}/cmake/modules"
+  "${FORTRANRUNTIME_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 include(AddFlang)
@@ -325,14 +326,6 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()
 
 # Configure Flang's Version.inc file.
 configure_file(
@@ -432,6 +425,7 @@ endif()
 
 include(CMakeParseArguments)
 include(AddFlang)
+include(FlangCommon)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)

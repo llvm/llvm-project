@@ -23,6 +23,7 @@ list(APPEND CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 include(AddFortranRuntime)
+include(FlangCommon)
 
 
 ############################
@@ -65,41 +66,15 @@ option(FORTRANRUNTIME_INCLUDE_TESTS
          "Generate build targets for the FortranRuntime unit tests."
          ${LLVM_INCLUDE_TESTS})
 
-# The out of tree builds of the compiler and the Fortran runtime
-# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
-# to be composable. Failure to synchronize this setting may result
-# in linking errors or fatal failures in F128 runtime functions.
-set(FORTRARUNTIME_F128_MATH_LIB "" CACHE STRING
-  "Specifies the target library used for implementing IEEE-754 128-bit float \
-  math in F18 runtime, e.g. it might be libquadmath for targets where \
-  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
-  is mapped to long double, etc."
-  )
-if (FLANG_RUNTIME_F128_MATH_LIB)
-  add_compile_definitions(
-    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
-    )
-endif()
-
 option(FLANG_EXPERIMENTAL_CUDA_RUNTIME "Compile Fortran runtime as CUDA sources (experimental)" OFF)
 if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
   message(FATAL_ERROOR "FLANG_EXPERIMENTAL_CUDA_RUNTIME currently not supported")
 endif()
 
 
-
-
 ########################
 # System Introspection #
 ########################
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
@@ -113,26 +88,6 @@ check_cxx_source_compiles(
    }
   "
   HAVE_DECL_STRERROR_S)
-
-# Check if 128-bit float computations can be done via long double
-check_cxx_source_compiles(
-  "#include <cfloat>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
-
-# Check if 128-bit float computations can be done via long double
-check_cxx_source_compiles(
-  "#include <cfloat>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
 
 # Search for clang_rt.builtins
 execute_process(
@@ -155,11 +110,6 @@ endif ()
 # GTest included later also requires C++17.
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-
-# Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
-# to avoid an unwanted dependency on libstdc++/libc++.so.
-add_definitions(-U_GLIBCXX_ASSERTIONS)
-add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 configure_file(cmake/config.h.cmake.in config.h)
 
