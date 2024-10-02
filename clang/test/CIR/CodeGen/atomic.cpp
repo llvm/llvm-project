@@ -351,6 +351,19 @@ void inc_int(int* a, int b) {
 // LLVM-LABEL: @_Z7inc_int
 // LLVM: atomicrmw add ptr {{.*}}, i32 {{.*}} seq_cst, align 4
 
+void sub_int(int* a, int b) {
+  int c = __sync_fetch_and_sub(a, b);
+}
+
+// CHECK-LABEL: _Z7sub_int
+// CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK: %[[VAL:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
+// CHECK: %[[RES:.*]] = cir.atomic.fetch(sub, %[[PTR]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) fetch_first : !s32i
+// CHECK: cir.store %[[RES]], {{.*}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: _Z7sub_int
+// LLVM: atomicrmw sub ptr {{.*}}, i32 {{.*}} seq_cst, align 4
+
 
 // CHECK-LABEL: @_Z8inc_long
 // CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!s64i>, {{.*}} : !s64i, seq_cst) fetch_first : !s64i
@@ -362,6 +375,17 @@ void inc_long(long* a, long b) {
   long c = __sync_fetch_and_add(a, 2);
 }
 
+// CHECK-LABEL: @_Z8sub_long
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!s64i>, {{.*}} : !s64i, seq_cst) fetch_first : !s64i
+
+// LLVM-LABEL: @_Z8sub_long
+// LLVM: atomicrmw sub ptr {{.*}}, i64 {{.*}} seq_cst, align 8
+
+void sub_long(long* a, long b) {
+  long c = __sync_fetch_and_sub(a, 2);
+}
+
+
 // CHECK-LABEL: @_Z9inc_short
 // CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!s16i>, {{.*}} : !s16i, seq_cst) fetch_first : !s16i
 
@@ -370,6 +394,16 @@ void inc_long(long* a, long b) {
 void inc_short(short* a, short b) {
   short c = __sync_fetch_and_add(a, 2);
 }
+
+// CHECK-LABEL: @_Z9sub_short
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!s16i>, {{.*}} : !s16i, seq_cst) fetch_first : !s16i
+
+// LLVM-LABEL: @_Z9sub_short
+// LLVM: atomicrmw sub ptr {{.*}}, i16 {{.*}} seq_cst, align 2
+void sub_short(short* a, short b) {
+  short c = __sync_fetch_and_sub(a, 2);
+}
+
 
 // CHECK-LABEL: @_Z8inc_byte
 // CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!s8i>, {{.*}} : !s8i, seq_cst) fetch_first : !s8i
@@ -380,6 +414,14 @@ void inc_byte(char* a, char b) {
   char c = __sync_fetch_and_add(a, b);
 }
 
+// CHECK-LABEL: @_Z8sub_byte
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!s8i>, {{.*}} : !s8i, seq_cst) fetch_first : !s8i
+
+// LLVM-LABEL: @_Z8sub_byte
+// LLVM: atomicrmw sub ptr {{.*}}, i8 {{.*}} seq_cst, align 1
+void sub_byte(char* a, char b) {
+  char c = __sync_fetch_and_sub(a, b);
+}
 
 // CHECK-LABEL: @_Z12cmp_bool_int
 // CHECK: %[[PTR:.*]] = cir.load {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -481,6 +523,15 @@ void inc_uint(unsigned int* a, int b) {
   unsigned int c = __sync_fetch_and_add(a, b);
 }
 
+// CHECK-LABEL: @_Z8sub_uint
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!u32i>, {{.*}} : !u32i, seq_cst) fetch_first : !u32i
+
+// LLVM-LABEL: @_Z8sub_uint
+// LLVM: atomicrmw sub ptr {{.*}}, i32 {{.*}} seq_cst, align 4
+void sub_uint(unsigned int* a, int b) {
+  unsigned int c = __sync_fetch_and_sub(a, b);
+}
+
 // CHECK-LABEL: @_Z9inc_ulong
 // CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!u64i>, {{.*}} : !u64i, seq_cst) fetch_first : !u64i
 
@@ -490,6 +541,16 @@ void inc_ulong(unsigned long* a, long b) {
   unsigned long c = __sync_fetch_and_add(a, b);
 }
 
+// CHECK-LABEL: @_Z9sub_ulong
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!u64i>, {{.*}} : !u64i, seq_cst) fetch_first : !u64i
+
+// LLVM-LABEL: @_Z9sub_ulong
+// LLVM: atomicrmw sub ptr {{.*}}, i64 {{.*}} seq_cst, align 8
+void sub_ulong(unsigned long* a, long b) {
+  unsigned long c = __sync_fetch_and_sub(a, b);
+}
+
+
 // CHECK-LABEL: @_Z9inc_uchar
 // CHECK: cir.atomic.fetch(add, {{.*}} : !cir.ptr<!u8i>, {{.*}} : !u8i, seq_cst) fetch_first : !u8i
 
@@ -497,4 +558,13 @@ void inc_ulong(unsigned long* a, long b) {
 // LLVM: atomicrmw add ptr {{.*}}, i8 {{.*}} seq_cst, align 1
 void inc_uchar(unsigned char* a, char b) {
   unsigned char c = __sync_fetch_and_add(a, b);
+}
+
+// CHECK-LABEL: @_Z9sub_uchar
+// CHECK: cir.atomic.fetch(sub, {{.*}} : !cir.ptr<!u8i>, {{.*}} : !u8i, seq_cst) fetch_first : !u8i
+
+// LLVM-LABEL: @_Z9sub_uchar
+// LLVM: atomicrmw sub ptr {{.*}}, i8 {{.*}} seq_cst, align 1
+void sub_uchar(unsigned char* a, char b) {
+  unsigned char c = __sync_fetch_and_sub(a, b);
 }

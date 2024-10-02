@@ -1164,6 +1164,16 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Add, E);
   }
 
+  case Builtin::BI__sync_fetch_and_sub:
+    llvm_unreachable("Shouldn't make it through sema");
+  case Builtin::BI__sync_fetch_and_sub_1:
+  case Builtin::BI__sync_fetch_and_sub_2:
+  case Builtin::BI__sync_fetch_and_sub_4:
+  case Builtin::BI__sync_fetch_and_sub_8:
+  case Builtin::BI__sync_fetch_and_sub_16: {
+    return buildBinaryAtomic(*this, mlir::cir::AtomicFetchKind::Sub, E);
+  }
+
   case Builtin::BI__sync_val_compare_and_swap_1:
   case Builtin::BI__sync_val_compare_and_swap_2:
   case Builtin::BI__sync_val_compare_and_swap_4:
