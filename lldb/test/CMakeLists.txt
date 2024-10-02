@@ -267,6 +267,21 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
     lldb-shell-test-deps
     lldb-unit-test-deps)
 
+# This target covers all targets that are tied to implementation details
+# of libc++, intended to be run by the libc++ pre-merge CI.
+add_lit_testsuite(check-lldb-libcxx-integration "Running lldb libc++ support test suite"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS
+    check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
+    check-lldb-api-functionalities-data-formatter-data-formatter-stl-generic
+    check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx-simulators
+    check-lldb-api-commands-expression-import-std-module
+    check-lldb-api-lang-cpp-std-function-step-into-callable
+    check-lldb-api-lang-cpp-std-function-recognizer
+    check-lldb-api-lang-cpp-std-invoke-recognizer
+)
+
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
