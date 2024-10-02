@@ -1288,6 +1288,34 @@ by explicitly marking the ``size`` parameter as sanitized. See the
     delete[] ptr;
   }
 
+.. _optin-taint-TaintedDiv:
+
+optin.taint.TaintedDiv (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""
+This checker warns when the denominator in a division
+operation is a tainted (potentially attacker controlled) value.
+If the attacker can set the denominator to 0, a runtime error can
+be triggered. The checker warns when the denominator is a tainted
+value and the analyzer cannot prove that it is not 0. This warning
+is more pessimistic than the :ref:`core-DivideZero` checker
+which warns only when it can prove that the denominator is 0.
+
+.. code-block:: c
+
+  int vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    return n / size; // warn: Division by a tainted value, possibly zero
+  }
+
+  int not_vulnerable(int n) {
+    size_t size = 0;
+    scanf("%zu", &size);
+    if (!size)
+      return 0;
+    return n / size; // no warning
+  }
+
 .. _security-checkers:
 
 security

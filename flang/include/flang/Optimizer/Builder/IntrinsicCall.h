@@ -274,6 +274,7 @@ struct IntrinsicLibrary {
   template <bool isGet>
   void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNegative(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -284,6 +285,7 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpFPredicate pred>
   mlir::Value genIeeeQuietCompare(mlir::Type resultType,
                                   llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeRint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <bool isFlag>
   void genIeeeSetFlagOrHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);

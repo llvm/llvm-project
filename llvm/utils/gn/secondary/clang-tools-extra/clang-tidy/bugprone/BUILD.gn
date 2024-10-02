@@ -86,6 +86,7 @@ static_library("bugprone") {
     "SuspiciousStringviewDataUsageCheck.cpp",
     "SwappedArgumentsCheck.cpp",
     "SwitchMissingDefaultCaseCheck.cpp",
+    "TaggedUnionMemberCountCheck.cpp",
     "TerminatingContinueCheck.cpp",
     "ThrowKeywordMissingCheck.cpp",
     "TooSmallLoopVariableCheck.cpp",

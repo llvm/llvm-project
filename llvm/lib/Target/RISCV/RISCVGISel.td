@@ -95,6 +95,10 @@ def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
 let Predicates = [IsRV64] in {
 def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
+
+def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
 }
 
 // Ptr type used in patterns with GlobalISelEmitter
@@ -165,6 +169,7 @@ def : StPat<store, SD, GPR, PtrVT>;
 //===----------------------------------------------------------------------===//
 
 def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
+def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
   KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
@@ -191,9 +196,9 @@ def : PatGprGpr<sub, SUBW, i32, i32>;
 def : PatGprGpr<and, AND, i32, i32>;
 def : PatGprGpr<or, OR, i32, i32>;
 def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shl, SLLW, i32, i32>;
-def : PatGprGpr<srl, SRLW, i32, i32>;
-def : PatGprGpr<sra, SRAW, i32, i32>;
+def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
+def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
+def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
 
 def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
@@ -333,12 +338,13 @@ def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
-def : PatGprGpr<shiftopw<rotl>, ROLW, i32, i64>;
-def : PatGprGpr<shiftopw<rotr>, RORW, i32, i64>;
-def : PatGprImm<rotr, RORIW, uimm5, i32>;
+def : PatGprGpr<rotl, ROLW, i32, i32>;
+def : PatGprGpr<rotr, RORW, i32, i32>;
+def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$imm)),
+          (RORIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
-def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
-          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
+def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$rs2)),
+          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5i32:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {

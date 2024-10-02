@@ -204,13 +204,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
   auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
-  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb()) {
-    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
-    // Widen s32 rotate amount to s64 so SDAG patterns will match.
-    if (ST.is64Bit())
-      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
-                                  changeTo(1, sXLen));
-  }
+  if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
+    RotateActions.legalFor({{s32, s32}, {sXLen, sXLen}});
   RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
@@ -597,6 +592,31 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   SplatActions.clampScalar(1, sXLen, sXLen);
 
+  LegalityPredicate ExtractSubvecBitcastPred = [=](const LegalityQuery &Query) {
+    LLT DstTy = Query.Types[0];
+    LLT SrcTy = Query.Types[1];
+    return DstTy.getElementType() == LLT::scalar(1) &&
+           DstTy.getElementCount().getKnownMinValue() >= 8 &&
+           SrcTy.getElementCount().getKnownMinValue() >= 8;
+  };
+  getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
+      // We don't have the ability to slide mask vectors down indexed by their
+      // i1 elements; the smallest we can do is i8. Often we are able to bitcast
+      // to equivalent i8 vectors.
+      .bitcastIf(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
+          [=](const LegalityQuery &Query) {
+            LLT CastTy = LLT::vector(
+                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
+            return std::pair(0, CastTy);
+          })
+      .customIf(LegalityPredicates::any(
+          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+              typeIsLegalBoolVec(1, BoolVecTys, ST)),
+          all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+              typeIsLegalIntOrFPVec(1, IntOrFPVecTys, ST))));
+
   getLegacyLegalizerInfo().computeTables();
 }
 
@@ -931,6 +951,104 @@ bool RISCVLegalizerInfo::legalizeSplatVector(MachineInstr &MI,
   return true;
 }
 
+static LLT getLMUL1Ty(LLT VecTy) {
+  assert(VecTy.getElementType().getSizeInBits() <= 64 &&
+         "Unexpected vector LLT");
+  return LLT::scalable_vector(RISCV::RVVBitsPerBlock /
+                                  VecTy.getElementType().getSizeInBits(),
+                              VecTy.getElementType());
+}
+
+bool RISCVLegalizerInfo::legalizeExtractSubvector(MachineInstr &MI,
+                                                  MachineIRBuilder &MIB) const {
+  GExtractSubvector &ES = cast<GExtractSubvector>(MI);
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = ES.getReg(0);
+  Register Src = ES.getSrcVec();
+  uint64_t Idx = ES.getIndexImm();
+
+  // With an index of 0 this is a cast-like subvector, which can be performed
+  // with subregister operations.
+  if (Idx == 0)
+    return true;
+
+  LLT LitTy = MRI.getType(Dst);
+  LLT BigTy = MRI.getType(Src);
+
+  if (LitTy.getElementType() == LLT::scalar(1)) {
+    // We can't slide this mask vector up indexed by its i1 elements.
+    // This poses a problem when we wish to insert a scalable vector which
+    // can't be re-expressed as a larger type. Just choose the slow path and
+    // extend to a larger type, then truncate back down.
+    LLT ExtBigTy = BigTy.changeElementType(LLT::scalar(8));
+    LLT ExtLitTy = LitTy.changeElementType(LLT::scalar(8));
+    auto BigZExt = MIB.buildZExt(ExtBigTy, Src);
+    auto ExtractZExt = MIB.buildExtractSubvector(ExtLitTy, BigZExt, Idx);
+    auto SplatZero = MIB.buildSplatVector(
+        ExtLitTy, MIB.buildConstant(ExtLitTy.getElementType(), 0));
+    MIB.buildICmp(CmpInst::Predicate::ICMP_NE, Dst, ExtractZExt, SplatZero);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // extract_subvector scales the index by vscale if the subvector is scalable,
+  // and decomposeSubvectorInsertExtractToSubRegs takes this into account.
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+  MVT LitTyMVT = getMVTForLLT(LitTy);
+  auto Decompose =
+      RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
+          getMVTForLLT(BigTy), LitTyMVT, Idx, TRI);
+  unsigned RemIdx = Decompose.second;
+
+  // If the Idx has been completely eliminated then this is a subvector extract
+  // which naturally aligns to a vector register. These can easily be handled
+  // using subregister manipulation.
+  if (RemIdx == 0)
+    return true;
+
+  // Else LitTy is M1 or smaller and may need to be slid down: if LitTy
+  // was > M1 then the index would need to be a multiple of VLMAX, and so would
+  // divide exactly.
+  assert(
+      RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(LitTyMVT)).second ||
+      RISCVTargetLowering::getLMUL(LitTyMVT) == RISCVII::VLMUL::LMUL_1);
+
+  // If the vector type is an LMUL-group type, extract a subvector equal to the
+  // nearest full vector register type.
+  LLT InterLitTy = BigTy;
+  Register Vec = Src;
+  if (TypeSize::isKnownGT(BigTy.getSizeInBits(),
+                          getLMUL1Ty(BigTy).getSizeInBits())) {
+    // If BigTy has an LMUL > 1, then LitTy should have a smaller LMUL, and
+    // we should have successfully decomposed the extract into a subregister.
+    assert(Decompose.first != RISCV::NoSubRegister);
+    InterLitTy = getLMUL1Ty(BigTy);
+    // SDAG builds a TargetExtractSubreg. We cannot create a a Copy with SubReg
+    // specified on the source Register (the equivalent) since generic virtual
+    // register does not allow subregister index.
+    Vec = MIB.buildExtractSubvector(InterLitTy, Src, Idx - RemIdx).getReg(0);
+  }
+
+  // Slide this vector register down by the desired number of elements in order
+  // to place the desired subvector starting at element 0.
+  const LLT XLenTy(STI.getXLenVT());
+  auto SlidedownAmt = MIB.buildVScale(XLenTy, RemIdx);
+  auto [Mask, VL] = buildDefaultVLOps(LitTy, MIB, MRI);
+  uint64_t Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  auto Slidedown = MIB.buildInstr(
+      RISCV::G_VSLIDEDOWN_VL, {InterLitTy},
+      {MIB.buildUndef(InterLitTy), Vec, SlidedownAmt, Mask, VL, Policy});
+
+  // Now the vector is in the right position, extract our final subvector. This
+  // should resolve to a COPY.
+  MIB.buildExtractSubvector(Dst, Slidedown, 0);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -1001,6 +1119,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExt(MI, MIRBuilder);
   case TargetOpcode::G_SPLAT_VECTOR:
     return legalizeSplatVector(MI, MIRBuilder);
+  case TargetOpcode::G_EXTRACT_SUBVECTOR:
+    return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
