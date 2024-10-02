@@ -55,7 +55,7 @@ enum {
   GISF_IgnoreCopies = 0x1,
 };
 
-using GISelFlags = std::uint16_t;
+using GISelFlags = std::uint32_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
