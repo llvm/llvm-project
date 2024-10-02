@@ -952,7 +952,7 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
       Value = getInstrMaxCountValue();
       Overflowed = true;
     }
-    Counts[I] = Value;
+    Counts[I] = (SingleByteCoverage && Value != 0 ? 1 : Value);
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }

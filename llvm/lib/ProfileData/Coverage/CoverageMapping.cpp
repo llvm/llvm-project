@@ -874,6 +874,9 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
+    assert(!SingleByteCoverage ||
+           (0 <= *ExecutionCount && *ExecutionCount <= 1 &&
+            0 <= *AltExecutionCount && *AltExecutionCount <= 1));
     Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
 
     // Record ExpansionRegion.

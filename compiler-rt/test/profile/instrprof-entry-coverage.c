@@ -36,4 +36,4 @@ int main(int argc, char *argv[]) {
 // CHECK-DAG: foo
 // CHECK-DAG: bar
 
-// COUNTS: Maximum function count: 2
+// COUNTS: Maximum function count: 1

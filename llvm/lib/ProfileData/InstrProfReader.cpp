@@ -743,6 +743,7 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
 
   Record.Counts.clear();
   Record.Counts.reserve(NumCounters);
+  Record.SingleByteCoverage = hasSingleByteCoverage();
   for (uint32_t I = 0; I < NumCounters; I++) {
     const char *Ptr =
         CountersStart + CounterBaseOffset + I * getCounterTypeSize();
