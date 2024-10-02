@@ -729,7 +729,7 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_begin_p,
     return;
 
   VPrintf(3, "contiguous_container_src: %p %p\n", src_begin_p, src_end_p);
-  VPrintf(3, "contiguous_container_dst: %p\n", dst_begin_p);
+  VPrintf(3, "contiguous_container_dst: %p %p\n", dst_begin_p, dst_end_p);
 
   uptr src_storage_begin = reinterpret_cast<uptr>(src_begin_p);
   uptr src_storage_end = reinterpret_cast<uptr>(src_end_p);
