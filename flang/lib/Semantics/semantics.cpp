@@ -181,7 +181,7 @@ static void WarnUndefinedFunctionResult(
             }
           }
           if (!wasDefined) {
-            context.Say(
+            context.Warn(common::UsageWarning::UndefinedFunctionResult,
                 symbol->name(), "Function result is never defined"_warn_en_US);
           }
         }
@@ -222,10 +222,7 @@ static bool PerformStatementSemantics(
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
   if (!context.messages().AnyFatalError()) {
-    // Do this if all messages are only warnings
-    if (context.ShouldWarn(common::UsageWarning::UndefinedFunctionResult)) {
-      WarnUndefinedFunctionResult(context, context.globalScope());
-    }
+    WarnUndefinedFunctionResult(context, context.globalScope());
   }
   if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
@@ -285,15 +282,15 @@ public:
           info.initialization = common;
         }
       }
-      if (common.size() != info.biggestSize->size() && !common.name().empty() &&
-          context.ShouldWarn(common::LanguageFeature::DistinctCommonSizes)) {
-        context
-            .Say(common.name(),
+      if (common.size() != info.biggestSize->size() && !common.name().empty()) {
+        if (auto *msg{context.Warn(common::LanguageFeature::DistinctCommonSizes,
+                common.name(),
                 "A named COMMON block should have the same size everywhere it appears (%zd bytes here)"_port_en_US,
-                common.size())
-            .Attach(info.biggestSize->name(),
-                "Previously defined with a size of %zd bytes"_en_US,
-                info.biggestSize->size());
+                common.size())}) {
+          msg->Attach(info.biggestSize->name(),
+              "Previously defined with a size of %zd bytes"_en_US,
+              info.biggestSize->size());
+        }
       }
       if (common.size() > info.biggestSize->size()) {
         info.biggestSize = common;
@@ -473,22 +470,28 @@ void SemanticsContext::PopConstruct() {
   constructStack_.pop_back();
 }
 
-void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
-    const Symbol &variable, parser::MessageFixedText &&message) {
+parser::Message *SemanticsContext::CheckIndexVarRedefine(
+    const parser::CharBlock &location, const Symbol &variable,
+    parser::MessageFixedText &&message) {
   const Symbol &symbol{ResolveAssociations(variable)};
   auto it{activeIndexVars_.find(symbol)};
   if (it != activeIndexVars_.end()) {
     std::string kind{EnumToString(it->second.kind)};
-    Say(location, std::move(message), kind, symbol.name())
-        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
+    return &Say(location, std::move(message), kind, symbol.name())
+                .Attach(
+                    it->second.location, "Enclosing %s construct"_en_US, kind);
+  } else {
+    return nullptr;
   }
 }
 
 void SemanticsContext::WarnIndexVarRedefine(
     const parser::CharBlock &location, const Symbol &variable) {
   if (ShouldWarn(common::UsageWarning::IndexVarRedefinition)) {
-    CheckIndexVarRedefine(location, variable,
-        "Possible redefinition of %s variable '%s'"_warn_en_US);
+    if (auto *msg{CheckIndexVarRedefine(location, variable,
+            "Possible redefinition of %s variable '%s'"_warn_en_US)}) {
+      msg->set_usageWarning(common::UsageWarning::IndexVarRedefinition);
+    }
   }
 }
 

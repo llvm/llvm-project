@@ -3745,11 +3745,13 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":VectorOpsIncGen",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
@@ -7694,6 +7696,7 @@ cc_library(
         ":DialectUtils",
         ":TensorDialect",
         ":ValueBoundsOpInterface",
+        ":VectorDialect",
     ],
 )
 
@@ -13320,6 +13323,7 @@ cc_library(
         ":ArithUtils",
         ":MemRefDialect",
         ":VectorDialect",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )

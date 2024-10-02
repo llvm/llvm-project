@@ -88,21 +88,21 @@ bool WebAssemblyAsmTypeCheck::match(StackType TypeA, StackType TypeB) {
 
 std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
                                                     size_t StartPos) {
-  SmallVector<std::string, 4> Reverse;
+  SmallVector<std::string, 4> TypeStrs;
   for (auto I = Types.size(); I > StartPos; I--) {
     if (std::get_if<Any>(&Types[I - 1]))
-      Reverse.push_back("any");
+      TypeStrs.push_back("any");
     else if (std::get_if<Ref>(&Types[I - 1]))
-      Reverse.push_back("ref");
+      TypeStrs.push_back("ref");
     else
-      Reverse.push_back(
+      TypeStrs.push_back(
           WebAssembly::typeToString(std::get<wasm::ValType>(Types[I - 1])));
   }
 
   std::stringstream SS;
   SS << "[";
   bool First = true;
-  for (auto It = Reverse.rbegin(); It != Reverse.rend(); ++It) {
+  for (auto It = TypeStrs.rbegin(); It != TypeStrs.rend(); ++It) {
     if (!First)
       SS << ", ";
     SS << *It;
@@ -159,15 +159,15 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
                                  getTypesString(Stack, StackStartPos));
 }
 
-bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
-                                               ArrayRef<wasm::ValType> ValTypes,
-                                               bool ExactMatch) {
-  return checkAndPopTypes(ErrorLoc, valTypeToStackType(ValTypes), ExactMatch);
+bool WebAssemblyAsmTypeCheck::popTypes(SMLoc ErrorLoc,
+                                       ArrayRef<wasm::ValType> ValTypes,
+                                       bool ExactMatch) {
+  return popTypes(ErrorLoc, valTypeToStackType(ValTypes), ExactMatch);
 }
 
-bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
-                                               ArrayRef<StackType> Types,
-                                               bool ExactMatch) {
+bool WebAssemblyAsmTypeCheck::popTypes(SMLoc ErrorLoc,
+                                       ArrayRef<StackType> Types,
+                                       bool ExactMatch) {
   bool Error = checkTypes(ErrorLoc, Types, ExactMatch);
   auto NumPops = std::min(Stack.size(), Types.size());
   for (size_t I = 0, E = NumPops; I != E; I++)
@@ -176,7 +176,7 @@ bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
 }
 
 bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc, StackType Type) {
-  return checkAndPopTypes(ErrorLoc, {Type}, false);
+  return popTypes(ErrorLoc, {Type});
 }
 
 bool WebAssemblyAsmTypeCheck::popRefType(SMLoc ErrorLoc) {
@@ -207,7 +207,7 @@ bool WebAssemblyAsmTypeCheck::checkBr(SMLoc ErrorLoc, size_t Level) {
                      StringRef("br: invalid depth ") + std::to_string(Level));
   const SmallVector<wasm::ValType, 4> &Expected =
       BrStack[BrStack.size() - Level - 1];
-  return checkTypes(ErrorLoc, Expected, false);
+  return checkTypes(ErrorLoc, Expected);
   return false;
 }
 
@@ -216,13 +216,13 @@ bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
     BrStack.pop_back();
 
   if (PopVals)
-    return checkAndPopTypes(ErrorLoc, LastSig.Returns, false);
-  return checkTypes(ErrorLoc, LastSig.Returns, false);
+    return popTypes(ErrorLoc, LastSig.Returns);
+  return checkTypes(ErrorLoc, LastSig.Returns);
 }
 
 bool WebAssemblyAsmTypeCheck::checkSig(SMLoc ErrorLoc,
                                        const wasm::WasmSignature &Sig) {
-  bool Error = checkAndPopTypes(ErrorLoc, Sig.Params, false);
+  bool Error = popTypes(ErrorLoc, Sig.Params);
   pushTypes(Sig.Returns);
   return Error;
 }
@@ -309,7 +309,7 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
 }
 
 bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc, bool ExactMatch) {
-  bool Error = checkAndPopTypes(ErrorLoc, ReturnTypes, ExactMatch);
+  bool Error = popTypes(ErrorLoc, ReturnTypes, ExactMatch);
   Unreachable = true;
   return Error;
 }
@@ -326,12 +326,14 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return false;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "local.set") {
     if (!getLocal(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
       return popType(ErrorLoc, Type);
+    popType(ErrorLoc, Any{});
     return true;
   }
 
@@ -341,6 +343,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return Error;
     }
+    popType(ErrorLoc, Any{});
+    pushType(Any{});
     return true;
   }
 
@@ -349,12 +353,14 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return false;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "global.set") {
     if (!getGlobal(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
       return popType(ErrorLoc, Type);
+    popType(ErrorLoc, Any{});
     return true;
   }
 
@@ -364,16 +370,21 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return Error;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "table.set") {
     bool Error = false;
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    SmallVector<StackType, 2> PopTypes;
+    PopTypes.push_back(wasm::ValType::I32);
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
-    Error |= popType(ErrorLoc, wasm::ValType::I32);
+      PopTypes.push_back(Any{});
+    }
+    Error |= popTypes(ErrorLoc, PopTypes);
     return Error;
   }
 
@@ -384,22 +395,32 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "table.grow") {
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    bool Error = false;
+    SmallVector<StackType, 2> PopTypes;
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
+      PopTypes.push_back(Any{});
+    }
+    PopTypes.push_back(wasm::ValType::I32);
+    Error |= popTypes(ErrorLoc, PopTypes);
     pushType(wasm::ValType::I32);
     return Error;
   }
 
   if (Name == "table.fill") {
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    bool Error = false;
+    SmallVector<StackType, 2> PopTypes;
+    PopTypes.push_back(wasm::ValType::I32);
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
-    Error |= popType(ErrorLoc, wasm::ValType::I32);
+      PopTypes.push_back(Any{});
+    }
+    PopTypes.push_back(wasm::ValType::I32);
+    Error |= popTypes(ErrorLoc, PopTypes);
     return Error;
   }
 
@@ -525,7 +546,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     if (Op.OperandType == MCOI::OPERAND_REGISTER)
       PopTypes.push_back(WebAssembly::regClassToValType(Op.RegClass));
   }
-  bool Error = checkAndPopTypes(ErrorLoc, PopTypes, false);
+  bool Error = popTypes(ErrorLoc, PopTypes);
   SmallVector<wasm::ValType, 4> PushTypes;
   // Now push all the defs onto the stack.
   for (unsigned I = 0; I < II.getNumDefs(); I++) {

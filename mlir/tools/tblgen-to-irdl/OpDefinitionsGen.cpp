@@ -249,7 +249,7 @@ Value createTypeConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
     std::vector<Value> constraints;
     constraints.push_back(createTypeConstraint(
         builder, tblgen::Constraint(predRec.getValueAsDef("baseType"))));
-    for (Record *child : predRec.getValueAsListOfDefs("predicateList")) {
+    for (const Record *child : predRec.getValueAsListOfDefs("predicateList")) {
       constraints.push_back(createPredicate(builder, tblgen::Pred(child)));
     }
     auto op = builder.create<irdl::AllOfOp>(UnknownLoc::get(ctx), constraints);
@@ -273,7 +273,8 @@ Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
     std::vector<Value> constraints;
     constraints.push_back(createAttrConstraint(
         builder, tblgen::Constraint(predRec.getValueAsDef("baseAttr"))));
-    for (Record *child : predRec.getValueAsListOfDefs("attrConstraints")) {
+    for (const Record *child :
+         predRec.getValueAsListOfDefs("attrConstraints")) {
       constraints.push_back(createPredicate(
           builder, tblgen::Pred(child->getValueAsDef("predicate"))));
     }
@@ -283,7 +284,8 @@ Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
 
   if (predRec.isSubClassOf("AnyAttrOf")) {
     std::vector<Value> constraints;
-    for (Record *child : predRec.getValueAsListOfDefs("allowedAttributes")) {
+    for (const Record *child :
+         predRec.getValueAsListOfDefs("allowedAttributes")) {
       constraints.push_back(
           createAttrConstraint(builder, tblgen::Constraint(child)));
     }

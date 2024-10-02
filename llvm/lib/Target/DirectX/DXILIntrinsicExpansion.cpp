@@ -33,6 +33,16 @@
 
 using namespace llvm;
 
+class DXILIntrinsicExpansionLegacy : public ModulePass {
+
+public:
+  bool runOnModule(Module &M) override;
+  DXILIntrinsicExpansionLegacy() : ModulePass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  static char ID; // Pass identification.
+};
+
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:

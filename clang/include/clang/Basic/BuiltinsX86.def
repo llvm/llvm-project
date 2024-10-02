@@ -543,8 +543,8 @@ TARGET_BUILTIN(__builtin_ia32_wbinvd, "v", "n", "")
 TARGET_BUILTIN(__builtin_ia32_wbnoinvd, "v", "n", "wbnoinvd")
 
 // ADX
-TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "n", "")
-TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "n", "")
+TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "nE", "")
+TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "nE", "")
 
 // RDSEED
 TARGET_BUILTIN(__builtin_ia32_rdseed16_step, "UiUs*", "n", "rdseed")
@@ -561,8 +561,8 @@ TARGET_BUILTIN(__builtin_ia32_tzcnt_u32, "UiUi", "ncE", "")
 
 // BMI2
 TARGET_BUILTIN(__builtin_ia32_bzhi_si, "UiUiUi", "ncE", "bmi2")
-TARGET_BUILTIN(__builtin_ia32_pdep_si, "UiUiUi", "nc", "bmi2")
-TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "nc", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pdep_si, "UiUiUi", "ncE", "bmi2")
+TARGET_BUILTIN(__builtin_ia32_pext_si, "UiUiUi", "ncE", "bmi2")
 
 // TBM
 TARGET_BUILTIN(__builtin_ia32_bextri_u32, "UiUiIUi", "ncE", "tbm")
