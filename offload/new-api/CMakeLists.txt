@@ -27,4 +27,4 @@ set_target_properties(offload_new PROPERTIES
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS offload_new LIBRARY COMPONENT offload_new DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/offload_api.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/offload_api.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
