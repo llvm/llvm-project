@@ -75,6 +75,8 @@ public:
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
                               MCContext &Ctx);
 
+  void reset();
+  
   // Resolves the final symbols that requires the inter-function resource info
   // to be resolved.
   void finalize(MCContext &OutContext);
