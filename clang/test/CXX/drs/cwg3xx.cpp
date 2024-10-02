@@ -1025,7 +1025,7 @@ namespace cwg357 { // cwg357: yes
   };
   template<typename T> void B::f() const {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg357::B'}}
-  // expected-note@#cwg357-B {{defined here}}
+  //   expected-note@#cwg357-B {{defined here}}
 }
 
 namespace cwg358 { // cwg358: yes
