@@ -1055,6 +1055,7 @@ def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
     Syntax:
     ```
     `<` `i`(width($lower)) $lower `,` $upper `>`
+    ```
   }];
 
   let builders = [
