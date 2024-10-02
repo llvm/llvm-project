@@ -21,13 +21,11 @@
 
 // Unit and hermetic tests should:
 // - #include "src/errno/libc_errno.h"
-// - NOT #include <errno.h>
 // - Only use `libc_errno` in the code
 // - Depend on libc.src.errno.errno
 
 // Integration tests should:
 // - NOT #include "src/errno/libc_errno.h"
-// - #include <errno.h>
 // - Use regular `errno` in the code
 // - Still depend on libc.src.errno.errno
 

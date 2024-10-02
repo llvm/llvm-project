@@ -19,7 +19,6 @@
 
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 

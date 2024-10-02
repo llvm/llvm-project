@@ -11,7 +11,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 

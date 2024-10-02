@@ -20,7 +20,6 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/threads/thread.h"
 
-#include <errno.h>
 #include <pthread.h> // For pthread_* type definitions.
 
 namespace LIBC_NAMESPACE_DECL {

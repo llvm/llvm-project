@@ -23,6 +23,7 @@ add_header_library(
   DEPENDS
     libc.include.errno
     libc.src.__support.StringUtil.message_mapper
+    libc.src.errno.libc_errno
 )
 
 add_header_library(

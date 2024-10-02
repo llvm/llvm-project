@@ -19,7 +19,6 @@
 
 #include "test/IntegrationTest/test.h"
 
-#include <errno.h>
 #include <pthread.h>
 #include <stdint.h> // uintptr_t
 

@@ -16,7 +16,6 @@
 #include "src/pthread/pthread_mutexattr_settype.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <pthread.h>
 
 TEST(LlvmLibcPThreadMutexAttrTest, InitAndDestroy) {

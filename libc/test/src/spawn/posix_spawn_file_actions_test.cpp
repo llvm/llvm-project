@@ -14,7 +14,6 @@
 #include "src/spawn/posix_spawn_file_actions_init.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <spawn.h>
 #include <stdint.h>
 

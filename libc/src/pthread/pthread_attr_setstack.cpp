@@ -13,7 +13,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
 
-#include <errno.h>
 #include <pthread.h>
 #include <stdint.h>
 

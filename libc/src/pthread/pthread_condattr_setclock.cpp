@@ -11,7 +11,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include <errno.h>     // EINVAL
 #include <pthread.h>   // pthread_condattr_t
 #include <sys/types.h> // clockid_t
 #include <time.h>      // CLOCK_MONOTONIC, CLOCK_REALTIME
