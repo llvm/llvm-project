@@ -24,6 +24,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    addi s0, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    li a0, 0
@@ -60,6 +61,7 @@ define signext i32 @foo() #1 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4: # %ehcleanup
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    call _Unwind_Resume
 entry:
   invoke void @_Z3fooiiiiiiiiiiPi(i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 signext poison, i32 poison, i32 poison, i32 poison)

@@ -2789,6 +2789,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    .cfi_offset s9, -44
 ; CHECK-RV32-NEXT:    .cfi_offset s10, -48
 ; CHECK-RV32-NEXT:    .cfi_offset s11, -52
+; CHECK-RV32-NEXT:    .cfi_remember_state
 ; CHECK-RV32-NEXT:    #APP
 ; CHECK-RV32-NEXT:    li ra, 1
 ; CHECK-RV32-NEXT:    #NO_APP
@@ -3006,6 +3007,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV32-NEXT:    ret
 ; CHECK-RV32-NEXT:  .LBB6_5: # %cond_3
+; CHECK-RV32-NEXT:    .cfi_restore_state
 ; CHECK-RV32-NEXT:    beq t1, t2, .LBB6_4
 ; CHECK-RV32-NEXT:  # %bb.6: # %space
 ; CHECK-RV32-NEXT:    #APP
@@ -3045,6 +3047,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    .cfi_offset s9, -88
 ; CHECK-RV64-NEXT:    .cfi_offset s10, -96
 ; CHECK-RV64-NEXT:    .cfi_offset s11, -104
+; CHECK-RV64-NEXT:    .cfi_remember_state
 ; CHECK-RV64-NEXT:    #APP
 ; CHECK-RV64-NEXT:    li ra, 1
 ; CHECK-RV64-NEXT:    #NO_APP
@@ -3267,6 +3270,7 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-RV64-NEXT:    ret
 ; CHECK-RV64-NEXT:  .LBB6_5: # %cond_3
+; CHECK-RV64-NEXT:    .cfi_restore_state
 ; CHECK-RV64-NEXT:    sext.w t5, t2
 ; CHECK-RV64-NEXT:    sext.w t6, t1
 ; CHECK-RV64-NEXT:    beq t6, t5, .LBB6_4
