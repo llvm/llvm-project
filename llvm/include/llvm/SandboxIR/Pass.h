@@ -15,6 +15,7 @@
 namespace llvm::sandboxir {
 
 class Function;
+class Region;
 
 /// The base class of a Sandbox IR Pass.
 class Pass {
@@ -50,6 +51,14 @@ public:
   FunctionPass(StringRef Name) : Pass(Name) {}
   /// \Returns true if it modifies \p F.
   virtual bool runOnFunction(Function &F) = 0;
+};
+
+/// A pass that runs on a sandbox::Region.
+class RegionPass : public Pass {
+public:
+  RegionPass(StringRef Name) : Pass(Name) {}
+  /// \Returns true if it modifies \p R.
+  virtual bool runOnRegion(Region &R) = 0;
 };
 
 } // namespace llvm::sandboxir
