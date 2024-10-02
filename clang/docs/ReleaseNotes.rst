@@ -376,6 +376,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
 
+- Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
