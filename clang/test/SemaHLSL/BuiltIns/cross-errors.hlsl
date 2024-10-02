@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -disable-llvm-passes -verify -verify-ignore-unexpected
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -disable-llvm-passes -verify
 
 void test_too_few_arg()
 {
@@ -15,7 +15,7 @@ void test_too_many_arg(float3 p0)
 bool builtin_bool_to_float_type_promotion(bool p1)
 {
   return __builtin_hlsl_cross(p1, p1);
-  // expected-error@-1 {passing 'bool' to parameter of incompatible type 'float'}}
+  // expected-error@-1 {{passing 'bool' to parameter of incompatible type 'float'}}
 }
 
 bool builtin_cross_int_to_float_promotion(int p1)
