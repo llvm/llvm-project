@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int iscanonicall (long double x) {
+int iscanonicall(long double x) {
   long double temp;
   return fputil::canonicalize(temp, x) == 0;
 }

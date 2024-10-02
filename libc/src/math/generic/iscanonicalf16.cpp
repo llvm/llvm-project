@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int iscanonicalf16 (float16 x) {
+int iscanonicalf16(float16 x) {
   float16 temp;
   return fputil::canonicalize(temp, x) == 0;
 }
