@@ -81,13 +81,12 @@ static void canonicalizeRange(APFloat &Lower, APFloat &Upper) {
 }
 
 ConstantFPRange::ConstantFPRange(APFloat LowerVal, APFloat UpperVal,
-                                 bool MayBeQNaN, bool MayBeSNaN)
-    : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)) {
+                                 bool MayBeQNaNVal, bool MayBeSNaNVal)
+    : Lower(std::move(LowerVal)), Upper(std::move(UpperVal)),
+      MayBeQNaN(MayBeQNaNVal), MayBeSNaN(MayBeSNaNVal) {
   assert(&Lower.getSemantics() == &Upper.getSemantics() &&
          "Should only use the same semantics");
   assert(!isNonCanonicalEmptySet(Lower, Upper) && "Non-canonical form");
-  this->MayBeQNaN = MayBeQNaN;
-  this->MayBeSNaN = MayBeSNaN;
 }
 
 ConstantFPRange ConstantFPRange::getFinite(const fltSemantics &Sem) {
@@ -101,6 +100,12 @@ ConstantFPRange ConstantFPRange::getNaNOnly(const fltSemantics &Sem,
   return ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/false),
                          APFloat::getInf(Sem, /*Negative=*/true), MayBeQNaN,
                          MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::getNonNaN(const fltSemantics &Sem) {
+  return ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/true),
+                         APFloat::getInf(Sem, /*Negative=*/false),
+                         /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
 }
 
 ConstantFPRange
@@ -117,9 +122,10 @@ ConstantFPRange::makeSatisfyingFCmpRegion(FCmpInst::Predicate Pred,
   return getEmpty(Other.getSemantics());
 }
 
-ConstantFPRange ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
-                                                     const APFloat &Other) {
-  return makeAllowedFCmpRegion(Pred, ConstantFPRange(Other));
+std::optional<ConstantFPRange>
+ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
+                                     const APFloat &Other) {
+  return std::nullopt;
 }
 
 bool ConstantFPRange::fcmp(FCmpInst::Predicate Pred,
@@ -161,8 +167,8 @@ bool ConstantFPRange::contains(const ConstantFPRange &CR) const {
          strictCompare(CR.Upper, Upper) != APFloat::cmpGreaterThan;
 }
 
-const APFloat *ConstantFPRange::getSingleElement() const {
-  if (MayBeSNaN || MayBeQNaN)
+const APFloat *ConstantFPRange::getSingleElement(bool ExcludesNaN) const {
+  if (!ExcludesNaN && (MayBeSNaN || MayBeQNaN))
     return nullptr;
   return Lower.bitwiseIsEqual(Upper) ? &Lower : nullptr;
 }
@@ -189,8 +195,8 @@ FPClassTest ConstantFPRange::classify() const {
     FPClassTest LowerMask = Lower.classify();
     FPClassTest UpperMask = Upper.classify();
     assert(LowerMask <= UpperMask && "Range is nan-only.");
-    for (uint32_t I = LowerMask; I <= UpperMask; I <<= 1)
-      Mask |= I;
+    // Set all bits from log2(LowerMask) to log2(UpperMask).
+    Mask |= (UpperMask << 1) - LowerMask;
   }
   return static_cast<FPClassTest>(Mask);
 }
