@@ -16,6 +16,20 @@
 #define __need_size_t
 #include <stddef.h>
 
+// CPRNG provides LLVM-libc with a cryptographically secure random number.
+// arc4random is available in BSD systems and later introduced in glibc.
+// However, arc4random family faces performance issues on pre 6.11 Linux
+// as each entropy generation would demand a round trip to and from the kernel.
+// We still use getrandom syscall as fallback for older kernels. For modern
+// kernels, we use the vDSO interface to get random bytes.
+// Such vDSO interface differs from the getrandom syscall in that it demands
+// the userspace to maintain an opaque state. System library (e.g. libc) is in
+// charge of allocating a large bunch of such states and lend them to each
+// thread demanding random bytes.
+// Our approach should be providing similar guarantees as arc4random family on
+// BSD and bionic. It is not async-signal-safe, but we have means to prevent
+// information leakage due to reentrancy in signal frames. The vDSO getrandom
+// implementation itself provides security across forks (by wiping pages).
 namespace LIBC_NAMESPACE_DECL {
 namespace cprng {
 size_t fill_buffer(char *buffer, size_t length);
