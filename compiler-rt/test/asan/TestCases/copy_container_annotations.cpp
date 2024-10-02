@@ -20,10 +20,8 @@ template <class T> static constexpr T RoundDown(T x) {
                              ~(kGranularity - 1));
 }
 template <class T> static constexpr T RoundUp(T x) {
-  return (x == RoundDown(x))
-             ? x
-             : reinterpret_cast<T>(reinterpret_cast<uintptr_t>(RoundDown(x)) +
-                                   kGranularity);
+  return reinterpret_cast<T>(
+      RoundDown(reinterpret_cast<uintptr_t>(x) + kGranularity - 1));
 }
 
 static std::deque<int> GetPoisonedState(char *begin, char *end) {
@@ -67,7 +65,6 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
   size_t old_buffer_size = capacity + off_old + kGranularity * 2;
   size_t new_buffer_size = capacity + off_new + kGranularity * 2;
 
-  // Use unique_ptr with a custom deleter to manage the buffers
   std::unique_ptr<char[]> old_buffer =
       std::make_unique<char[]>(old_buffer_size);
   std::unique_ptr<char[]> new_buffer =
