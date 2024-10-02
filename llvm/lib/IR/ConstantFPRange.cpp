@@ -108,10 +108,15 @@ ConstantFPRange ConstantFPRange::getNonNaN(const fltSemantics &Sem) {
                          /*MayBeQNaN=*/false, /*MayBeSNaN=*/false);
 }
 
+/// Return true for ULT/UGT/OLT/OGT
+static bool fcmpPredExcludesEqual(FCmpInst::Predicate Pred) {
+  return !(Pred & FCmpInst::FCMP_OEQ);
+}
+
 /// Return [-inf, V) or [-inf, V]
 static ConstantFPRange makeLessThan(APFloat V, FCmpInst::Predicate Pred) {
   const fltSemantics &Sem = V.getSemantics();
-  if (FCmpInst::isFalseWhenEqual(FCmpInst::getOrderedPredicate(Pred))) {
+  if (fcmpPredExcludesEqual(Pred)) {
     if (V.isNegInfinity())
       return ConstantFPRange::getEmpty(Sem);
     V.next(/*nextDown=*/true);
@@ -123,7 +128,7 @@ static ConstantFPRange makeLessThan(APFloat V, FCmpInst::Predicate Pred) {
 /// Return (V, +inf] or [V, +inf]
 static ConstantFPRange makeGreaterThan(APFloat V, FCmpInst::Predicate Pred) {
   const fltSemantics &Sem = V.getSemantics();
-  if (FCmpInst::isFalseWhenEqual(FCmpInst::getOrderedPredicate(Pred))) {
+  if (fcmpPredExcludesEqual(Pred)) {
     if (V.isPosInfinity())
       return ConstantFPRange::getEmpty(Sem);
     V.next(/*nextDown=*/false);
@@ -135,7 +140,7 @@ static ConstantFPRange makeGreaterThan(APFloat V, FCmpInst::Predicate Pred) {
 /// Make sure that +0/-0 are both included in the range.
 static ConstantFPRange extendZeroIfEqual(const ConstantFPRange &CR,
                                          FCmpInst::Predicate Pred) {
-  if (FCmpInst::isFalseWhenEqual(FCmpInst::getOrderedPredicate(Pred)))
+  if (fcmpPredExcludesEqual(Pred))
     return CR;
 
   APFloat Lower = CR.getLower();
