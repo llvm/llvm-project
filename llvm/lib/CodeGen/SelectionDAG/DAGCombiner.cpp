@@ -191,6 +191,11 @@ namespace {
     // AA - Used for DAG load/store alias analysis.
     AliasAnalysis *AA;
 
+    /// This caches all chains that have already been processed in
+    /// DAGCombiner::getStoreMergeCandidates() and found to have no mergeable
+    /// stores candidates.
+    SmallPtrSet<SDNode *, 4> ChainsWithoutMergeableStores;
+
     /// When an instruction is simplified, add all users of the instruction to
     /// the work lists because they might get more simplified now.
     void AddUsersToWorklist(SDNode *N) {
@@ -776,11 +781,10 @@ namespace {
                                          bool UseTrunc);
 
     /// This is a helper function for mergeConsecutiveStores. Stores that
-    /// potentially may be merged with St are placed in StoreNodes. RootNode is
-    /// a chain predecessor to all store candidates.
-    void getStoreMergeCandidates(StoreSDNode *St,
-                                 SmallVectorImpl<MemOpLink> &StoreNodes,
-                                 SDNode *&Root);
+    /// potentially may be merged with St are placed in StoreNodes. On success,
+    /// returns a chain predecessor to all store candidates.
+    SDNode *getStoreMergeCandidates(StoreSDNode *St,
+                                    SmallVectorImpl<MemOpLink> &StoreNodes);
 
     /// Helper function for mergeConsecutiveStores. Checks if candidate stores
     /// have indirect dependency through their operands. RootNode is the
@@ -1781,6 +1785,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       continue;
 
     ++NodesCombined;
+
+    // Invalidate cached info.
+    ChainsWithoutMergeableStores.clear();
 
     // If we get back the same node we passed in, rather than a new node or
     // zero, we know that the node must have defined multiple values and
@@ -20372,15 +20379,15 @@ bool DAGCombiner::mergeStoresOfConstantsOrVecElts(
   return true;
 }
 
-void DAGCombiner::getStoreMergeCandidates(
-    StoreSDNode *St, SmallVectorImpl<MemOpLink> &StoreNodes,
-    SDNode *&RootNode) {
+SDNode *
+DAGCombiner::getStoreMergeCandidates(StoreSDNode *St,
+                                     SmallVectorImpl<MemOpLink> &StoreNodes) {
   // This holds the base pointer, index, and the offset in bytes from the base
   // pointer. We must have a base and an offset. Do not handle stores to undef
   // base pointers.
   BaseIndexOffset BasePtr = BaseIndexOffset::match(St, DAG);
   if (!BasePtr.getBase().getNode() || BasePtr.getBase().isUndef())
-    return;
+    return nullptr;
 
   SDValue Val = peekThroughBitcasts(St->getValue());
   StoreSource StoreSrc = getStoreSource(Val);
@@ -20396,14 +20403,14 @@ void DAGCombiner::getStoreMergeCandidates(
     LoadVT = Ld->getMemoryVT();
     // Load and store should be the same type.
     if (MemVT != LoadVT)
-      return;
+      return nullptr;
     // Loads must only have one use.
     if (!Ld->hasNUsesOfValue(1, 0))
-      return;
+      return nullptr;
     // The memory operands must not be volatile/indexed/atomic.
     // TODO: May be able to relax for unordered atomics (see D66309)
     if (!Ld->isSimple() || Ld->isIndexed())
-      return;
+      return nullptr;
   }
   auto CandidateMatch = [&](StoreSDNode *Other, BaseIndexOffset &Ptr,
                             int64_t &Offset) -> bool {
@@ -20471,6 +20478,27 @@ void DAGCombiner::getStoreMergeCandidates(
     return (BasePtr.equalBaseIndex(Ptr, DAG, Offset));
   };
 
+  // We are looking for a root node which is an ancestor to all mergable
+  // stores. We search up through a load, to our root and then down
+  // through all children. For instance we will find Store{1,2,3} if
+  // St is Store1, Store2. or Store3 where the root is not a load
+  // which always true for nonvolatile ops. TODO: Expand
+  // the search to find all valid candidates through multiple layers of loads.
+  //
+  // Root
+  // |-------|-------|
+  // Load    Load    Store3
+  // |       |
+  // Store1   Store2
+  //
+  // FIXME: We should be able to climb and
+  // descend TokenFactors to find candidates as well.
+
+  SDNode *RootNode = St->getChain().getNode();
+  // Bail out if we already analyzed this root node and found nothing.
+  if (ChainsWithoutMergeableStores.contains(RootNode))
+    return nullptr;
+
   // Check if the pair of StoreNode and the RootNode already bail out many
   // times which is over the limit in dependence check.
   auto OverLimitInDependenceCheck = [&](SDNode *StoreNode,
@@ -20494,28 +20522,13 @@ void DAGCombiner::getStoreMergeCandidates(
     }
   };
 
-  // We looking for a root node which is an ancestor to all mergable
-  // stores. We search up through a load, to our root and then down
-  // through all children. For instance we will find Store{1,2,3} if
-  // St is Store1, Store2. or Store3 where the root is not a load
-  // which always true for nonvolatile ops. TODO: Expand
-  // the search to find all valid candidates through multiple layers of loads.
-  //
-  // Root
-  // |-------|-------|
-  // Load    Load    Store3
-  // |       |
-  // Store1   Store2
-  //
-  // FIXME: We should be able to climb and
-  // descend TokenFactors to find candidates as well.
-
-  RootNode = St->getChain().getNode();
-
   unsigned NumNodesExplored = 0;
   const unsigned MaxSearchNodes = 1024;
   if (auto *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
     RootNode = Ldn->getChain().getNode();
+    // Bail out if we already analyzed this root node and found nothing.
+    if (ChainsWithoutMergeableStores.contains(RootNode))
+      return nullptr;
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
       if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) { // walk down chain
@@ -20532,6 +20545,8 @@ void DAGCombiner::getStoreMergeCandidates(
          I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored)
       TryToAddCandidate(I);
   }
+
+  return RootNode;
 }
 
 // We need to check that merging these stores does not cause a loop in the
@@ -21162,9 +21177,8 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
     return false;
 
   SmallVector<MemOpLink, 8> StoreNodes;
-  SDNode *RootNode;
   // Find potential store merge candidates by searching through chain sub-DAG
-  getStoreMergeCandidates(St, StoreNodes, RootNode);
+  SDNode *RootNode = getStoreMergeCandidates(St, StoreNodes);
 
   // Check if there is anything to merge.
   if (StoreNodes.size() < 2)
@@ -21220,6 +21234,11 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
       llvm_unreachable("Unhandled store source type");
     }
   }
+
+  // Remember if we failed to optimize, to save compile time.
+  if (!MadeChange)
+    ChainsWithoutMergeableStores.insert(RootNode);
+
   return MadeChange;
 }
 
