@@ -375,6 +375,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
 
+- Clang now omits warnings for extra parentheses in fold expressions with single expansion. (#GH101863)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -471,7 +473,6 @@ Bug Fixes to C++ Support
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
   in certain friend declarations. (#GH93099)
-- Fixed warnings for extra parentheses in fold expressions by eliminating them in single expansion cases. (#GH101863)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
