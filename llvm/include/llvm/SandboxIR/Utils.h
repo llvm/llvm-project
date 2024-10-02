@@ -56,6 +56,12 @@ public:
     return DL.getTypeSizeInBits(Ty->LLVMTy);
   }
 
+  /// \Returns the number of bits required to represent the operands or
+  /// return value of \p I.
+  static unsigned getNumBits(Instruction *I) {
+    return I->getDataLayout().getTypeSizeInBits(getExpectedType(I)->LLVMTy);
+  }
+
   /// Equivalent to MemoryLocation::getOrNone(I).
   static std::optional<llvm::MemoryLocation>
   memoryLocationGetOrNone(const Instruction *I) {

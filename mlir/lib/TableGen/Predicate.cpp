@@ -82,7 +82,7 @@ const llvm::Record *CombinedPred::getCombinerDef() const {
 std::vector<const llvm::Record *> CombinedPred::getChildren() const {
   assert(def->getValue("children") &&
          "CombinedPred must have a value 'children'");
-  return def->getValueAsListOfConstDefs("children");
+  return def->getValueAsListOfDefs("children");
 }
 
 namespace {

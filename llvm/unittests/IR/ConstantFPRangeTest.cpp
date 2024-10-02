@@ -263,12 +263,16 @@ TEST_F(ConstantFPRangeTest, SingleElement) {
   EXPECT_EQ(*One.getSingleElement(), APFloat(1.0));
   EXPECT_EQ(*PosZero.getSingleElement(), APFloat::getZero(Sem));
   EXPECT_EQ(*PosInf.getSingleElement(), APFloat::getInf(Sem));
+  ConstantFPRange PosZeroOrNaN = PosZero.unionWith(NaN);
+  EXPECT_EQ(*PosZeroOrNaN.getSingleElement(/*ExcludesNaN=*/true),
+            APFloat::getZero(Sem));
 
   EXPECT_FALSE(Full.isSingleElement());
   EXPECT_FALSE(Empty.isSingleElement());
   EXPECT_TRUE(One.isSingleElement());
   EXPECT_FALSE(Some.isSingleElement());
   EXPECT_FALSE(Zero.isSingleElement());
+  EXPECT_TRUE(PosZeroOrNaN.isSingleElement(/*ExcludesNaN=*/true));
 }
 
 TEST_F(ConstantFPRangeTest, ExhaustivelyEnumerate) {

@@ -48,7 +48,7 @@ public:
         Records.getAllDerivedDefinitions("DiagGroup");
     for (unsigned i = 0, e = DiagGroups.size(); i != e; ++i) {
       std::vector<const Record *> SubGroups =
-          DiagGroups[i]->getValueAsListOfConstDefs("SubGroups");
+          DiagGroups[i]->getValueAsListOfDefs("SubGroups");
       for (unsigned j = 0, e = SubGroups.size(); j != e; ++j)
         Mapping[SubGroups[j]].push_back(DiagGroups[i]);
     }

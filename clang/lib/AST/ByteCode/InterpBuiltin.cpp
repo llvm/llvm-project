@@ -1205,6 +1205,10 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
   pushInteger(S, Val.countLeadingZeros(), Call->getType());
   return true;
@@ -1214,6 +1218,10 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
   pushInteger(S, Val.countTrailingZeros(), Call->getType());
   return true;

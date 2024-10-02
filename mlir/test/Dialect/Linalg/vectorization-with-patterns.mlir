@@ -1091,9 +1091,15 @@ module attributes {transform.with_named_sequence} {
 func.func private @make_vector() -> tensor<12x13xf32>
 
 // CHECK-LABEL: func @pad_and_insert_slice_dest
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<1x5x6xf32>
 // Check the insert slice is not rewritten if the padded result is used by the destination operand.
+//   CHECK-NOT:   tensor.pad
+//       CHECK:   %[[EMPTY:.*]] = tensor.empty() : tensor<1x12x13xf32>
+//       CHECK:   %[[WRITE_1:.*]] = vector.transfer_write %{{.*}}, %[[EMPTY]]{{.*}} : vector<1x12x13xf32>, tensor<1x12x13xf32>
+//       CHECK:   %[[READ:.*]]  = vector.transfer_read %[[ARG0:.*]]{{.*}} : tensor<1x5x6xf32>, vector<1x5x6xf32>
+//       CHECK:   %[[WRITE_2:.*]] = vector.transfer_write %[[READ]], %[[WRITE_1]]{{.*}} : vector<1x5x6xf32>, tensor<1x12x13xf32>
 //       CHECK:   %[[T1:.*]] = call @make_vector() : () -> tensor<12x13xf32>
-//       CHECK:   = tensor.insert_slice %[[T1]] into
+//       CHECK:   tensor.insert_slice %[[T1]] into %[[WRITE_2]]
 func.func @pad_and_insert_slice_dest(
     %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
   %c5 = arith.constant 5.0 : f32
@@ -1110,7 +1116,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %3 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %4 = transform.get_parent_op %3 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %5 = transform.structured.vectorize_children_and_apply_patterns %4 : (!transform.any_op) -> !transform.any_op
+    %5 = transform.structured.vectorize_children_and_apply_patterns %4  { vectorize_padding } : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

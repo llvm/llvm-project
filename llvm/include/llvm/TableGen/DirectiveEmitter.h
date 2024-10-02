@@ -136,23 +136,23 @@ public:
   Directive(const Record *Def) : BaseRecord(Def) {}
 
   std::vector<const Record *> getAllowedClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedClauses");
+    return Def->getValueAsListOfDefs("allowedClauses");
   }
 
   std::vector<const Record *> getAllowedOnceClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedOnceClauses");
+    return Def->getValueAsListOfDefs("allowedOnceClauses");
   }
 
   std::vector<const Record *> getAllowedExclusiveClauses() const {
-    return Def->getValueAsListOfConstDefs("allowedExclusiveClauses");
+    return Def->getValueAsListOfDefs("allowedExclusiveClauses");
   }
 
   std::vector<const Record *> getRequiredClauses() const {
-    return Def->getValueAsListOfConstDefs("requiredClauses");
+    return Def->getValueAsListOfDefs("requiredClauses");
   }
 
   std::vector<const Record *> getLeafConstructs() const {
-    return Def->getValueAsListOfConstDefs("leafConstructs");
+    return Def->getValueAsListOfDefs("leafConstructs");
   }
 
   Record *getAssociation() const { return Def->getValueAsDef("association"); }
@@ -204,7 +204,7 @@ public:
   }
 
   std::vector<const Record *> getClauseVals() const {
-    return Def->getValueAsListOfConstDefs("allowedClauseValues");
+    return Def->getValueAsListOfDefs("allowedClauseValues");
   }
 
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }

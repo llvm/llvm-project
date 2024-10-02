@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-data-scalarization -scalarizer -scalarize-load-store -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
+; RUN: opt -S -passes='dxil-data-scalarization,scalarizer<load-store>,dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 ; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
 
 ; Make sure we can store groupshared, static vectors and arrays of vectors

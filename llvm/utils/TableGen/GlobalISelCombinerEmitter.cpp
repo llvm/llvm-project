@@ -2681,7 +2681,7 @@ void GICombinerEmitter::gatherRules(std::vector<RuleMatcher> &ActiveRules,
                                     ArrayRef<const Record *> RulesAndGroups) {
   for (const Record *Rec : RulesAndGroups) {
     if (!Rec->isValueUnset("Rules")) {
-      gatherRules(ActiveRules, Rec->getValueAsListOfConstDefs("Rules"));
+      gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
       continue;
     }
 
@@ -2720,7 +2720,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   Records.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
-  gatherRules(Rules, Combiner->getValueAsListOfConstDefs("Rules"));
+  gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (ErrorsPrinted)
     PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
 

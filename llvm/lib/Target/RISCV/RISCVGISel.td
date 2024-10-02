@@ -165,6 +165,7 @@ def : StPat<store, SD, GPR, PtrVT>;
 //===----------------------------------------------------------------------===//
 
 def simm12i32 : ImmLeaf<i32, [{return isInt<12>(Imm);}]>;
+def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
 
 def zext_is_sext : PatFrag<(ops node:$src), (zext node:$src), [{
   KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0), 0);
@@ -204,9 +205,12 @@ def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
 def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
           (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
-def : PatGprImm<shl, SLLIW, uimm5, i32>;
-def : PatGprImm<srl, SRLIW, uimm5, i32>;
-def : PatGprImm<sra, SRAIW, uimm5, i32>;
+def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
+          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
+          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
+          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
@@ -333,12 +337,13 @@ def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
 
-def : PatGprGpr<shiftopw<rotl>, ROLW, i32, i64>;
-def : PatGprGpr<shiftopw<rotr>, RORW, i32, i64>;
-def : PatGprImm<rotr, RORIW, uimm5, i32>;
+def : PatGprGpr<rotl, ROLW, i32, i32>;
+def : PatGprGpr<rotr, RORW, i32, i32>;
+def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$imm)),
+          (RORIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
-def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
-          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
+def : Pat<(i32 (rotl GPR:$rs1, uimm5i32:$rs2)),
+          (RORIW GPR:$rs1, (ImmSubFrom32 uimm5i32:$rs2))>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {
@@ -366,7 +371,7 @@ def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
+  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i32 (riscv_shl_add GPR:$rs1, (i32 i), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;

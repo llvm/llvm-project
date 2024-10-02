@@ -9,6 +9,7 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include <complex>
 
 // Check that it is possible to make a difference between complex runtime
 // function using C99 complex and C++ std::complex. This is important since

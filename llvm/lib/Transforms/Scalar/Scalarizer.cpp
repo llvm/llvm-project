@@ -39,7 +39,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
@@ -50,28 +49,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "scalarizer"
-
-static cl::opt<bool> ClScalarizeVariableInsertExtract(
-    "scalarize-variable-insert-extract", cl::init(true), cl::Hidden,
-    cl::desc("Allow the scalarizer pass to scalarize "
-             "insertelement/extractelement with variable index"));
-
-// This is disabled by default because having separate loads and stores
-// makes it more likely that the -combiner-alias-analysis limits will be
-// reached.
-static cl::opt<bool> ClScalarizeLoadStore(
-    "scalarize-load-store", cl::init(false), cl::Hidden,
-    cl::desc("Allow the scalarizer pass to scalarize loads and store"));
-
-// Split vectors larger than this size into fragments, where each fragment is
-// either a vector no larger than this size or a scalar.
-//
-// Instructions with operands or results of different sizes that would be split
-// into a different number of fragments are currently left as-is.
-static cl::opt<unsigned> ClScalarizeMinBits(
-    "scalarize-min-bits", cl::init(0), cl::Hidden,
-    cl::desc("Instruct the scalarizer pass to attempt to keep values of a "
-             "minimum number of bits"));
 
 namespace {
 
@@ -273,24 +250,14 @@ static Value *concatenate(IRBuilder<> &Builder, ArrayRef<Value *> Fragments,
   return Res;
 }
 
-template <typename T>
-T getWithDefaultOverride(const cl::opt<T> &ClOption,
-                         const std::optional<T> &DefaultOverride) {
-  return ClOption.getNumOccurrences() ? ClOption
-                                      : DefaultOverride.value_or(ClOption);
-}
-
 class ScalarizerVisitor : public InstVisitor<ScalarizerVisitor, bool> {
 public:
   ScalarizerVisitor(DominatorTree *DT, const TargetTransformInfo *TTI,
                     ScalarizerPassOptions Options)
-      : DT(DT), TTI(TTI), ScalarizeVariableInsertExtract(getWithDefaultOverride(
-                              ClScalarizeVariableInsertExtract,
-                              Options.ScalarizeVariableInsertExtract)),
-        ScalarizeLoadStore(getWithDefaultOverride(ClScalarizeLoadStore,
-                                                  Options.ScalarizeLoadStore)),
-        ScalarizeMinBits(getWithDefaultOverride(ClScalarizeMinBits,
-                                                Options.ScalarizeMinBits)) {}
+      : DT(DT), TTI(TTI),
+        ScalarizeVariableInsertExtract(Options.ScalarizeVariableInsertExtract),
+        ScalarizeLoadStore(Options.ScalarizeLoadStore),
+        ScalarizeMinBits(Options.ScalarizeMinBits) {}
 
   bool visit(Function &F);
 

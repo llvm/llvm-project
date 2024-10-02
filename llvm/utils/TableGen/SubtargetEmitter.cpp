@@ -284,7 +284,7 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS,
        << "\"" << CommandLineName << "\", "
        << "\"" << Desc << "\", " << Target << "::" << Name << ", ";
 
-    ConstRecVec ImpliesList = Feature->getValueAsListOfConstDefs("Implies");
+    ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
     printFeatureMask(OS, ImpliesList, FeatureMap);
 
@@ -320,9 +320,9 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
 
   for (const Record *Processor : ProcessorList) {
     StringRef Name = Processor->getValueAsString("Name");
-    ConstRecVec FeatureList = Processor->getValueAsListOfConstDefs("Features");
+    ConstRecVec FeatureList = Processor->getValueAsListOfDefs("Features");
     ConstRecVec TuneFeatureList =
-        Processor->getValueAsListOfConstDefs("TuneFeatures");
+        Processor->getValueAsListOfDefs("TuneFeatures");
 
     // Emit as "{ "cpu", "description", 0, { f1 , f2 , ... fn } },".
     OS << " { "
@@ -354,7 +354,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
                                                 std::string &ItinString,
                                                 unsigned &NStages) {
   // Get states list
-  ConstRecVec StageList = ItinData->getValueAsListOfConstDefs("Stages");
+  ConstRecVec StageList = ItinData->getValueAsListOfDefs("Stages");
 
   // For each stage
   unsigned N = NStages = StageList.size();
@@ -367,7 +367,7 @@ void SubtargetEmitter::FormItineraryStageString(const std::string &Name,
     ItinString += "  { " + itostr(Cycles) + ", ";
 
     // Get unit list
-    ConstRecVec UnitList = Stage->getValueAsListOfConstDefs("Units");
+    ConstRecVec UnitList = Stage->getValueAsListOfDefs("Units");
 
     // For each unit
     for (unsigned j = 0, M = UnitList.size(); j < M;) {
@@ -415,7 +415,7 @@ void SubtargetEmitter::FormItineraryBypassString(const std::string &Name,
                                                  const Record *ItinData,
                                                  std::string &ItinString,
                                                  unsigned NOperandCycles) {
-  ConstRecVec BypassList = ItinData->getValueAsListOfConstDefs("Bypasses");
+  ConstRecVec BypassList = ItinData->getValueAsListOfDefs("Bypasses");
   unsigned N = BypassList.size();
   unsigned i = 0;
   ListSeparator LS;
@@ -445,7 +445,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
     if (!ItinsDefSet.insert(ProcModel.ItinsDef).second)
       continue;
 
-    ConstRecVec FUs = ProcModel.ItinsDef->getValueAsListOfConstDefs("FU");
+    ConstRecVec FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
     if (FUs.empty())
       continue;
 
@@ -459,7 +459,7 @@ void SubtargetEmitter::EmitStageAndOperandCycleData(
 
     OS << "} // end namespace " << Name << "FU\n";
 
-    ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfConstDefs("BP");
+    ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (!BPs.empty()) {
       OS << "\n// Pipeline forwarding paths for itineraries \"" << Name
          << "\"\n"
@@ -1005,7 +1005,7 @@ void SubtargetEmitter::ExpandProcResources(
     const Record *PRDef = PRVec[i];
     ConstRecVec SubResources;
     if (PRDef->isSubClassOf("ProcResGroup"))
-      SubResources = PRDef->getValueAsListOfConstDefs("Resources");
+      SubResources = PRDef->getValueAsListOfDefs("Resources");
     else {
       SubResources.push_back(PRDef);
       PRDef = SchedModels.findProcResUnits(PRDef, PM, PRDef->getLoc());
@@ -1027,7 +1027,7 @@ void SubtargetEmitter::ExpandProcResources(
     for (const Record *PR : PM.ProcResourceDefs) {
       if (PR == PRDef || !PR->isSubClassOf("ProcResGroup"))
         continue;
-      ConstRecVec SuperResources = PR->getValueAsListOfConstDefs("Resources");
+      ConstRecVec SuperResources = PR->getValueAsListOfDefs("Resources");
       ConstRecIter SubI = SubResources.begin(), SubE = SubResources.end();
       for (; SubI != SubE; ++SubI) {
         if (!is_contained(SuperResources, *SubI)) {
@@ -1104,18 +1104,16 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       if (RWDef) {
         Writes.clear();
         Reads.clear();
-        SchedModels.findRWs(
-            RWDef->getValueAsListOfConstDefs("OperandReadWrites"), Writes,
-            Reads);
+        SchedModels.findRWs(RWDef->getValueAsListOfDefs("OperandReadWrites"),
+                            Writes, Reads);
       }
     }
     if (Writes.empty()) {
       // Check this processor's itinerary class resources.
       for (const Record *I : ProcModel.ItinRWDefs) {
-        ConstRecVec Matched =
-            I->getValueAsListOfConstDefs("MatchedItinClasses");
+        ConstRecVec Matched = I->getValueAsListOfDefs("MatchedItinClasses");
         if (is_contained(Matched, SC.ItinClassDef)) {
-          SchedModels.findRWs(I->getValueAsListOfConstDefs("OperandReadWrites"),
+          SchedModels.findRWs(I->getValueAsListOfDefs("OperandReadWrites"),
                               Writes, Reads);
           break;
         }
@@ -1165,8 +1163,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
 
         // Create an entry for each ProcResource listed in WriteRes.
-        ConstRecVec PRVec =
-            WriteRes->getValueAsListOfConstDefs("ProcResources");
+        ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
         std::vector<int64_t> ReleaseAtCycles =
             WriteRes->getValueAsListOfInts("ReleaseAtCycles");
 
@@ -1276,7 +1273,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         break;
       }
       ConstRecVec ValidWrites =
-          ReadAdvance->getValueAsListOfConstDefs("ValidWrites");
+          ReadAdvance->getValueAsListOfDefs("ValidWrites");
       IdxVec WriteIDs;
       if (ValidWrites.empty())
         WriteIDs.push_back(0);

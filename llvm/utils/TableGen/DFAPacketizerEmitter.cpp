@@ -108,7 +108,7 @@ int DFAPacketizerEmitter::collectAllFuncUnits(
   int totalFUs = 0;
   // Parse functional units for all the itineraries.
   for (const Record *Proc : ProcItinList) {
-    std::vector<const Record *> FUs = Proc->getValueAsListOfConstDefs("FU");
+    std::vector<const Record *> FUs = Proc->getValueAsListOfDefs("FU");
 
     LLVM_DEBUG(dbgs() << "    FU:"
                       << " (" << FUs.size() << " FUs) " << Proc->getName());
@@ -139,7 +139,7 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
   int numCombos = 0;
   for (unsigned i = 0, N = ComboFuncList.size(); i < N; ++i) {
     const Record *Func = ComboFuncList[i];
-    std::vector<const Record *> FUs = Func->getValueAsListOfConstDefs("CFD");
+    std::vector<const Record *> FUs = Func->getValueAsListOfDefs("CFD");
 
     LLVM_DEBUG(dbgs() << "    CFD:" << i << " (" << FUs.size() << " combo FUs) "
                       << Func->getName() << "\n");
@@ -151,7 +151,7 @@ int DFAPacketizerEmitter::collectAllComboFuncs(
       const Record *FuncData = FUs[j];
       const Record *ComboFunc = FuncData->getValueAsDef("TheComboFunc");
       const std::vector<const Record *> FuncList =
-          FuncData->getValueAsListOfConstDefs("FuncList");
+          FuncData->getValueAsListOfDefs("FuncList");
       const std::string &ComboFuncName = std::string(ComboFunc->getName());
       uint64_t ComboBit = FUNameToBitsMap[ComboFuncName];
       uint64_t ComboResources = ComboBit;

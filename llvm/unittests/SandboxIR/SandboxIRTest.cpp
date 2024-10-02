@@ -1512,26 +1512,6 @@ define void @bar(float %v, ptr %ptr) {
   EXPECT_EQ(sandboxir::Utils::getExpectedValue(RetV), nullptr);
 }
 
-TEST_F(SandboxIRTest, GetNumBits) {
-  parseIR(C, R"IR(
-define void @foo(float %arg0, double %arg1, i8 %arg2, i64 %arg3) {
-bb0:
-  ret void
-}
-)IR");
-  llvm::Function &Foo = *M->getFunction("foo");
-  sandboxir::Context Ctx(C);
-  sandboxir::Function *F = Ctx.createFunction(&Foo);
-  const DataLayout &DL = M->getDataLayout();
-  // getNumBits for scalars
-  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(0), DL),
-            DL.getTypeSizeInBits(Type::getFloatTy(C)));
-  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(1), DL),
-            DL.getTypeSizeInBits(Type::getDoubleTy(C)));
-  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(2), DL), 8u);
-  EXPECT_EQ(sandboxir::Utils::getNumBits(F->getArg(3), DL), 64u);
-}
-
 TEST_F(SandboxIRTest, RAUW_RUWIf) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
