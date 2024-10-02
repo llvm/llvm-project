@@ -55,7 +55,7 @@ enum {
   GISF_IgnoreCopies = 0x1,
 };
 
-using GISelFlags = std::uint16_t;
+using GISelFlags = std::uint32_t;
 
 //===- Helper functions ---------------------------------------------------===//
 
@@ -1998,7 +1998,7 @@ protected:
 
 public:
   CopyOrAddZeroRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
-                           Record *ZeroRegisterDef)
+                           const Record *ZeroRegisterDef)
       : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");

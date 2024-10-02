@@ -1073,17 +1073,66 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
 
-SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(SemaOpenACC &S,
-                                                    OpenACCDirectiveKind DK)
+SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
+    SemaOpenACC &S, OpenACCDirectiveKind DK,
+    ArrayRef<const OpenACCClause *> UnInstClauses,
+    ArrayRef<OpenACCClause *> Clauses)
     : SemaRef(S), WasInsideComputeConstruct(S.InsideComputeConstruct),
-      DirKind(DK) {
+      DirKind(DK), LoopRAII(SemaRef, /*PreserveDepth=*/false) {
   // Compute constructs end up taking their 'loop'.
   if (DirKind == OpenACCDirectiveKind::Parallel ||
       DirKind == OpenACCDirectiveKind::Serial ||
       DirKind == OpenACCDirectiveKind::Kernels) {
     SemaRef.InsideComputeConstruct = true;
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+  } else if (DirKind == OpenACCDirectiveKind::Loop) {
+    SetCollapseInfoBeforeAssociatedStmt(UnInstClauses, Clauses);
   }
+}
+
+void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
+    ArrayRef<const OpenACCClause *> UnInstClauses,
+    ArrayRef<OpenACCClause *> Clauses) {
+
+  // Reset this checking for loops that aren't covered in a RAII object.
+  SemaRef.CollapseInfo.CurLevelHasLoopAlready = false;
+  SemaRef.CollapseInfo.CollapseDepthSatisfied = true;
+
+  // We make sure to take an optional list of uninstantiated clauses, so that
+  // we can check to make sure we don't 'double diagnose' in the event that
+  // the value of 'N' was not dependent in a template. We also ensure during
+  // Sema that there is only 1 collapse on each construct, so we can count on
+  // the fact that if both find a 'collapse', that they are the same one.
+  auto *CollapseClauseItr =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCCollapseClause>);
+  auto *UnInstCollapseClauseItr =
+      llvm::find_if(UnInstClauses, llvm::IsaPred<OpenACCCollapseClause>);
+
+  if (Clauses.end() == CollapseClauseItr)
+    return;
+
+  OpenACCCollapseClause *CollapseClause =
+      cast<OpenACCCollapseClause>(*CollapseClauseItr);
+
+  SemaRef.CollapseInfo.ActiveCollapse = CollapseClause;
+  Expr *LoopCount = CollapseClause->getLoopCount();
+
+  // If the loop count is still instantiation dependent, setting the depth
+  // counter isn't necessary, so return here.
+  if (!LoopCount || LoopCount->isInstantiationDependent())
+    return;
+
+  // Suppress diagnostics if we've done a 'transform' where the previous version
+  // wasn't dependent, meaning we already diagnosed it.
+  if (UnInstCollapseClauseItr != UnInstClauses.end() &&
+      !cast<OpenACCCollapseClause>(*UnInstCollapseClauseItr)
+           ->getLoopCount()
+           ->isInstantiationDependent())
+    return;
+
+  SemaRef.CollapseInfo.CollapseDepthSatisfied = false;
+  SemaRef.CollapseInfo.CurCollapseCount =
+      cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
 }
 
 SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
@@ -1094,6 +1143,9 @@ SemaOpenACC::AssociatedStmtRAII::~AssociatedStmtRAII() {
     assert(SemaRef.ParentlessLoopConstructs.empty() &&
            "Didn't consume loop construct list?");
     SemaRef.ParentlessLoopConstructs.swap(ParentlessLoopConstructs);
+  } else if (DirKind == OpenACCDirectiveKind::Loop) {
+    // Nothing really to do here, the LoopInConstruct should handle restorations
+    // correctly.
   }
 }
 
@@ -1646,10 +1698,103 @@ ExprResult SemaOpenACC::CheckCollapseLoopCount(Expr *LoopCount) {
       ConstantExpr::Create(getASTContext(), LoopCount, APValue{*ICE})};
 }
 
+void SemaOpenACC::ActOnWhileStmt(SourceLocation WhileLoc) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  if (!CollapseInfo.TopLevelLoopSeen)
+    return;
+
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+    Diag(WhileLoc, diag::err_acc_invalid_in_collapse_loop) << /*while loop*/ 1;
+    assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+    Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+         diag::note_acc_collapse_clause_here);
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+}
+
+void SemaOpenACC::ActOnDoStmt(SourceLocation DoLoc) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  if (!CollapseInfo.TopLevelLoopSeen)
+    return;
+
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+    Diag(DoLoc, diag::err_acc_invalid_in_collapse_loop) << /*do loop*/ 2;
+    assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+    Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+         diag::note_acc_collapse_clause_here);
+
+    // Remove the value so that we don't get cascading errors in the body. The
+    // caller RAII object will restore this.
+    CollapseInfo.CurCollapseCount = std::nullopt;
+  }
+}
+
+void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc) {
+  if (!getLangOpts().OpenACC)
+    return;
+
+  // Enable the while/do-while checking.
+  CollapseInfo.TopLevelLoopSeen = true;
+
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+
+    // OpenACC 3.3 2.9.1:
+    // Each associated loop, except the innermost, must contain exactly one loop
+    // or loop nest.
+    // This checks for more than 1 loop at the current level, the
+    // 'depth'-satisifed checking manages the 'not zero' case.
+    if (CollapseInfo.CurLevelHasLoopAlready) {
+      Diag(ForLoc, diag::err_acc_collapse_multiple_loops);
+      assert(CollapseInfo.ActiveCollapse && "No collapse object?");
+      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+           diag::note_acc_collapse_clause_here);
+    } else {
+      --(*CollapseInfo.CurCollapseCount);
+
+      // Once we've hit zero here, we know we have deep enough 'for' loops to
+      // get to the bottom.
+      if (*CollapseInfo.CurCollapseCount == 0)
+        CollapseInfo.CollapseDepthSatisfied = true;
+    }
+  }
+
+  // Set this to 'false' for the body of this loop, so that the next level
+  // checks independently.
+  CollapseInfo.CurLevelHasLoopAlready = false;
+}
+
+void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
+  if (!getLangOpts().OpenACC)
+    return;
+  // Set this to 'true' so if we find another one at this level we can diagnose.
+  CollapseInfo.CurLevelHasLoopAlready = true;
+}
+
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
+
+  // OpenACC 3.3 2.9.1:
+  // Intervening code must not contain other OpenACC directives or calls to API
+  // routines.
+  //
+  // ALL constructs are ill-formed if there is an active 'collapse'
+  if (CollapseInfo.CurCollapseCount && *CollapseInfo.CurCollapseCount > 0) {
+    Diag(StartLoc, diag::err_acc_invalid_in_collapse_loop)
+        << /*OpenACC Construct*/ 0 << K;
+    assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+    Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+         diag::note_acc_collapse_clause_here);
+  }
+
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -1713,12 +1858,23 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(SourceLocation DirectiveLoc,
     // the 'structured block'.
     return AssocStmt;
   case OpenACCDirectiveKind::Loop:
-    if (AssocStmt.isUsable() &&
-        !isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
+    if (!AssocStmt.isUsable())
+      return StmtError();
+
+    if (!isa<CXXForRangeStmt, ForStmt>(AssocStmt.get())) {
       Diag(AssocStmt.get()->getBeginLoc(), diag::err_acc_loop_not_for_loop);
       Diag(DirectiveLoc, diag::note_acc_construct_here) << K;
       return StmtError();
     }
+
+    if (!CollapseInfo.CollapseDepthSatisfied) {
+      Diag(DirectiveLoc, diag::err_acc_collapse_insufficient_loops);
+      assert(CollapseInfo.ActiveCollapse && "Collapse count without object?");
+      Diag(CollapseInfo.ActiveCollapse->getBeginLoc(),
+           diag::note_acc_collapse_clause_here);
+      return StmtError();
+    }
+
     // TODO OpenACC: 2.9 ~ line 2010 specifies that the associated loop has some
     // restrictions when there is a 'seq' clause in place. We probably need to
     // implement that, including piping in the clauses here.

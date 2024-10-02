@@ -4054,7 +4054,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     unsigned MaxVFtimesIC =
         UserIC ? *MaxPowerOf2RuntimeVF * UserIC : *MaxPowerOf2RuntimeVF;
     ScalarEvolution *SE = PSE.getSE();
-    const SCEV *BackedgeTakenCount = PSE.getBackedgeTakenCount();
+    // Currently only loops with countable exits are vectorized, but calling
+    // getSymbolicMaxBackedgeTakenCount allows enablement work for loops with
+    // uncountable exits whilst also ensuring the symbolic maximum and known
+    // back-edge taken count remain identical for loops with countable exits.
+    const SCEV *BackedgeTakenCount = PSE.getSymbolicMaxBackedgeTakenCount();
+    assert(BackedgeTakenCount == PSE.getBackedgeTakenCount() &&
+           "Invalid loop count");
     const SCEV *ExitCount = SE->getAddExpr(
         BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
     const SCEV *Rem = SE->getURemExpr(
@@ -8414,21 +8420,28 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
-    if (I->getOpcode() == Instruction::Mul) {
-      // Simplify operands of multiplications using SCEV. This is needed at the
-      // moment to match the behavior of the legacy cost-model.
-      // TODO: Generalize to any opcode and move to VPlan transformation.
-      SmallVector<VPValue *> NewOps(Operands);
+    SmallVector<VPValue *> NewOps(Operands);
+    if (Instruction::isBinaryOp(I->getOpcode())) {
+      // The legacy cost model uses SCEV to check if some of the operands are
+      // constants. To match the legacy cost model's behavior, use SCEV to try
+      // to replace operands with constants.
       ScalarEvolution &SE = *PSE.getSE();
-      for (unsigned I = 0; I < Operands.size(); ++I) {
-        Value *V = NewOps[I]->getUnderlyingValue();
-        if (!isa<Constant>(V) && SE.isSCEVable(V->getType()))
-          if (auto *C = dyn_cast<SCEVConstant>(PSE.getSE()->getSCEV(V)))
-            NewOps[I] = Plan.getOrAddLiveIn(C->getValue());
-      }
-      return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+      auto GetConstantViaSCEV = [this, &SE](VPValue *Op) {
+        Value *V = Op->getUnderlyingValue();
+        if (isa<Constant>(V) || !SE.isSCEVable(V->getType()))
+          return Op;
+        auto *C = dyn_cast<SCEVConstant>(SE.getSCEV(V));
+        if (!C)
+          return Op;
+        return Plan.getOrAddLiveIn(C->getValue());
+      };
+      // For Mul, the legacy cost model checks both operands.
+      if (I->getOpcode() == Instruction::Mul)
+        NewOps[0] = GetConstantViaSCEV(NewOps[0]);
+      // For other binops, the legacy cost model only checks the second operand.
+      NewOps[1] = GetConstantViaSCEV(NewOps[1]);
     }
-    return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
+    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
   };
 }
 

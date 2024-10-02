@@ -29,7 +29,7 @@ struct DependencyGraphTest : public testing::Test {
   }
 };
 
-TEST_F(DependencyGraphTest, DGNode_IsMem) {
+TEST_F(DependencyGraphTest, MemDGNode) {
   parseIR(C, R"IR(
 declare void @llvm.sideeffect()
 declare void @llvm.pseudoprobe(i64, i64, i32, i64)
@@ -66,16 +66,16 @@ define void @foo(i8 %v1, ptr %ptr) {
 
   sandboxir::DependencyGraph DAG;
   DAG.extend({&*BB->begin(), BB->getTerminator()});
-  EXPECT_TRUE(DAG.getNode(Store)->isMem());
-  EXPECT_TRUE(DAG.getNode(Load)->isMem());
-  EXPECT_FALSE(DAG.getNode(Add)->isMem());
-  EXPECT_TRUE(DAG.getNode(StackSave)->isMem());
-  EXPECT_TRUE(DAG.getNode(StackRestore)->isMem());
-  EXPECT_FALSE(DAG.getNode(SideEffect)->isMem());
-  EXPECT_FALSE(DAG.getNode(PseudoProbe)->isMem());
-  EXPECT_TRUE(DAG.getNode(FakeUse)->isMem());
-  EXPECT_TRUE(DAG.getNode(Call)->isMem());
-  EXPECT_FALSE(DAG.getNode(Ret)->isMem());
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Store)));
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Load)));
+  EXPECT_FALSE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Add)));
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(StackSave)));
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(StackRestore)));
+  EXPECT_FALSE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(SideEffect)));
+  EXPECT_FALSE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(PseudoProbe)));
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(FakeUse)));
+  EXPECT_TRUE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Call)));
+  EXPECT_FALSE(isa<llvm::sandboxir::MemDGNode>(DAG.getNode(Ret)));
 }
 
 TEST_F(DependencyGraphTest, Basic) {
@@ -114,4 +114,101 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
   EXPECT_TRUE(N0->memPreds().empty());
   EXPECT_THAT(N1->memPreds(), testing::ElementsAre(N0));
   EXPECT_THAT(N2->memPreds(), testing::ElementsAre(N1));
+}
+
+TEST_F(DependencyGraphTest, MemDGNode_getPrevNode_getNextNode) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr
+  add i8 %v0, %v0
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG;
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+
+  auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
+  auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+
+  EXPECT_EQ(S0N->getPrevNode(), nullptr);
+  EXPECT_EQ(S0N->getNextNode(), S1N);
+
+  EXPECT_EQ(S1N->getPrevNode(), S0N);
+  EXPECT_EQ(S1N->getNextNode(), nullptr);
+}
+
+TEST_F(DependencyGraphTest, DGNodeRange) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
+  add i8 %v0, %v0
+  store i8 %v0, ptr %ptr
+  add i8 %v0, %v0
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG;
+  DAG.extend({&*BB->begin(), BB->getTerminator()});
+
+  auto *S0N = cast<sandboxir::MemDGNode>(DAG.getNode(S0));
+  auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+
+  // Check empty range.
+  EXPECT_THAT(sandboxir::MemDGNodeIntervalBuilder::makeEmpty(),
+              testing::ElementsAre());
+
+  // Returns the pointers in Range.
+  auto getPtrVec = [](const auto &Range) {
+    SmallVector<const sandboxir::DGNode *> Vec;
+    for (const sandboxir::DGNode &N : Range)
+      Vec.push_back(&N);
+    return Vec;
+  };
+  // Both TopN and BotN are memory.
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({S0, S1}, DAG)),
+      testing::ElementsAre(S0N, S1N));
+  // Only TopN is memory.
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({S0, Ret}, DAG)),
+      testing::ElementsAre(S0N, S1N));
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({S0, Add1}, DAG)),
+      testing::ElementsAre(S0N));
+  // Only BotN is memory.
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({Add0, S1}, DAG)),
+      testing::ElementsAre(S0N, S1N));
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({Add0, S0}, DAG)),
+      testing::ElementsAre(S0N));
+  // Neither TopN or BotN is memory.
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({Add0, Ret}, DAG)),
+      testing::ElementsAre(S0N, S1N));
+  EXPECT_THAT(
+      getPtrVec(sandboxir::MemDGNodeIntervalBuilder::make({Add0, Add0}, DAG)),
+      testing::ElementsAre());
 }
