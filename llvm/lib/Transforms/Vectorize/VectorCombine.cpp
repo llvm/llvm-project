@@ -1038,23 +1038,20 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 
   // The compare predicates should match, and each compare should have a
   // constant operand.
-  // TODO: Relax the one-use constraints.
   Value *B0 = I.getOperand(0), *B1 = I.getOperand(1);
   Instruction *I0, *I1;
   Constant *C0, *C1;
   CmpInst::Predicate P0, P1;
-  if (!match(B0, m_OneUse(m_Cmp(P0, m_Instruction(I0), m_Constant(C0)))) ||
-      !match(B1, m_OneUse(m_Cmp(P1, m_Instruction(I1), m_Constant(C1)))) ||
-      P0 != P1)
+  if (!match(B0, m_Cmp(P0, m_Instruction(I0), m_Constant(C0))) ||
+      !match(B1, m_Cmp(P1, m_Instruction(I1), m_Constant(C1))) || P0 != P1)
     return false;
 
   // The compare operands must be extracts of the same vector with constant
   // extract indexes.
-  // TODO: Relax the one-use constraints.
   Value *X;
   uint64_t Index0, Index1;
-  if (!match(I0, m_OneUse(m_ExtractElt(m_Value(X), m_ConstantInt(Index0)))) ||
-      !match(I1, m_OneUse(m_ExtractElt(m_Specific(X), m_ConstantInt(Index1)))))
+  if (!match(I0, m_ExtractElt(m_Value(X), m_ConstantInt(Index0))) ||
+      !match(I1, m_ExtractElt(m_Specific(X), m_ConstantInt(Index1))))
     return false;
 
   auto *Ext0 = cast<ExtractElementInst>(I0);
@@ -1073,14 +1070,16 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
     return false;
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost Ext0Cost =
+                      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0),
+                  Ext1Cost =
+                      TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
   InstructionCost OldCost =
-      TTI.getVectorInstrCost(*Ext0, VecTy, CostKind, Index0);
-  OldCost += TTI.getVectorInstrCost(*Ext1, VecTy, CostKind, Index1);
-  OldCost +=
+      Ext0Cost + Ext1Cost +
       TTI.getCmpSelInstrCost(CmpOpcode, I0->getType(),
                              CmpInst::makeCmpResultType(I0->getType()), Pred) *
-      2;
-  OldCost += TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
+          2 +
+      TTI.getArithmeticInstrCost(I.getOpcode(), I.getType());
 
   // The proposed vector pattern is:
   // vcmp = cmp Pred X, VecC
@@ -1096,6 +1095,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
                                 ShufMask);
   NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
   NewCost += TTI.getVectorInstrCost(*Ext0, CmpTy, CostKind, CheapIndex);
+  NewCost += !Ext0->hasOneUse() * Ext0Cost + !Ext1->hasOneUse() * Ext1Cost;
 
   // Aggressively form vector ops if the cost is equal because the transform
   // may enable further optimization.
