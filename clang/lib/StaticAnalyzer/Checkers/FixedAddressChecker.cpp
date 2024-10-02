@@ -43,9 +43,9 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
   if (!T->isPointerType())
     return;
 
-  // Omit warning if the RHS has already pointer type.
-  // The value may come from a variable and is candidate for a previous warning
-  // from the checker.
+  // Omit warning if the RHS has already pointer type. Without this passing
+  // around one fixed value in several pointer variables would produce several
+  // redundant warnings.
   if (B->getRHS()->IgnoreParenCasts()->getType()->isPointerType())
     return;
 
