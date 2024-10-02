@@ -12617,6 +12617,17 @@ def err_acc_loop_spec_conflict
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
+def err_acc_invalid_in_collapse_loop
+    : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a 'loop' with a 'collapse' clause">;
+def note_acc_collapse_clause_here
+    : Note<"active 'collapse' clause defined here">;
+def err_acc_collapse_multiple_loops
+    : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
+            "construct with a 'collapse' clause">;
+def err_acc_collapse_insufficient_loops
+    : Error<"'collapse' clause specifies a loop count greater than the number "
+            "of available loops">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

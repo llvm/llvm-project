@@ -1998,7 +1998,7 @@ protected:
 
 public:
   CopyOrAddZeroRegRenderer(unsigned NewInsnID, StringRef SymbolicName,
-                           Record *ZeroRegisterDef)
+                           const Record *ZeroRegisterDef)
       : OperandRenderer(OR_CopyOrAddZeroReg), NewInsnID(NewInsnID),
         SymbolicName(SymbolicName), ZeroRegisterDef(ZeroRegisterDef) {
     assert(!SymbolicName.empty() && "Cannot copy from an unspecified source");

@@ -1145,12 +1145,6 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult GeneralizeOuterUnitDimsPackOpPattern::matchAndRewrite(
     tensor::PackOp packOp, PatternRewriter &rewriter) const {
-  if (llvm::count_if(packOp.getMixedTiles(),
-                     [](OpFoldResult tile) { return tile.is<Value>(); }) > 1) {
-    return rewriter.notifyMatchFailure(
-        packOp, "at most one dynamic tile size is supported");
-  }
-
   // TODO: support the case that outer dimensions are not all 1s. A
   // tensor.expand_shape will be generated in this case.
   if (llvm::any_of(packOp.getTiledOuterDims(),

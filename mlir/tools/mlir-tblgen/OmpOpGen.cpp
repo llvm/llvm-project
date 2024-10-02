@@ -210,7 +210,7 @@ static void verifyClause(const Record *op, const Record *clause) {
 ///         type.
 static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
                                        Init *init, int &nest, int &rank) {
-  Record *def = cast<DefInit>(init)->getDef();
+  const Record *def = cast<DefInit>(init)->getDef();
 
   llvm::StringSet<> superClasses;
   for (auto [sc, _] : def->getSuperClasses())

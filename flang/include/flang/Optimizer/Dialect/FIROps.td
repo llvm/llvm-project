@@ -2609,29 +2609,6 @@ class fir_UnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def fir_ConstcOp : fir_Op<"constc", [NoMemoryEffect]> {
-  let summary = "create a complex constant";
-
-  let description = [{
-    A complex constant. Similar to the standard dialect complex type, but this
-    extension allows constants with APFloat values that are not supported in
-    the standard dialect.
-  }];
-
-  let results = (outs fir_ComplexType);
-
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getRealAttrName() { return "real"; }
-    static constexpr llvm::StringRef getImagAttrName() { return "imaginary"; }
-
-    mlir::Attribute getReal() { return (*this)->getAttr(getRealAttrName()); }
-    mlir::Attribute getImaginary() { return (*this)->getAttr(getImagAttrName()); }
-  }];
-}
-
 class ComplexUnaryArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_UnaryArithmeticOp<mnemonic, traits>,
       Arguments<(ins fir_ComplexType:$operand)>;
