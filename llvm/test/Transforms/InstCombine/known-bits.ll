@@ -2060,6 +2060,27 @@ define i1 @mul_nuw_nsw_nonneg_const(i8 %x) {
   ret i1 %cmp
 }
 
+define i1 @mul_nuw_nsw_nonneg_const_missing_nuw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nsw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_nsw_nonneg_const_missing_nsw(i8 %x) {
+; CHECK-LABEL: @mul_nuw_nsw_nonneg_const_missing_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[MUL]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i8 %x, 3
+  %cmp = icmp sgt i8 %mul, -1
+  ret i1 %cmp
+}
+
 define i1 @mul_nuw_nsw_nonneg_can_be_one(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_nuw_nsw_nonneg_can_be_one(
 ; CHECK-NEXT:    [[Y_NNEG:%.*]] = and i8 [[Y:%.*]], 127
