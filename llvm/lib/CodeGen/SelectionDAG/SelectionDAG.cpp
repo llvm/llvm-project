@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -11726,7 +11727,10 @@ void SelectionDAG::CreateTopologicalOrder(std::vector<SDNode *> &Order) {
 }
 
 #ifndef NDEBUG
-void SelectionDAG::VerifyDAGDivergence() {
+void SelectionDAG::VerifyDAGDivergence(TargetTransformInfo *TTI) {
+  if (TTI && !TTI->hasBranchDivergence())
+    return;
+
   std::vector<SDNode *> TopoOrder;
   CreateTopologicalOrder(TopoOrder);
   for (auto *N : TopoOrder) {
