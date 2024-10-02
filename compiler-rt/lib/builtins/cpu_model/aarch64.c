@@ -57,14 +57,13 @@ _Bool __aarch64_have_lse_atomics = false;
 #if !defined(DISABLE_AARCH64_FMV)
 
 // Architecture features used in function multi-versioning
-#if defined(_MSC_VER)
-__declspec(allocate(".data"))
-#endif
 struct {
   unsigned long long features;
   // As features grows new fields could be added
 } __aarch64_cpu_features
-#if !defined(_MSC_VER)
+#if defined(_MSC_VER)
+= { 0 }
+#else
 __attribute__((__visibility__("hidden"), __nocommon__))
 #endif
 ;
