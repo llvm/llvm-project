@@ -1125,18 +1125,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // removed.
       MPM.addPass(
           PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
-
-    if (InstrumentSampleColdFuncPath.getNumOccurrences() &&
-        Phase != ThinOrFullLTOPhase::ThinLTOPostLink) {
-      assert(!InstrumentSampleColdFuncPath.empty() &&
-             "File path is requeired for instrumentation generation");
-      InstrumentColdFunctionCoverage = true;
-      addPreInlinerPasses(MPM, Level, Phase);
-      addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true,
-                        /* IsCS */ false, /* AtomicCounterUpdate */ false,
-                        InstrumentSampleColdFuncPath, "",
-                        IntrusiveRefCntPtr<vfs::FileSystem>());
-    }
   }
 
   // Try to perform OpenMP specific optimizations on the module. This is a
@@ -1202,8 +1190,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
+  // Enable sampling-based cold function coverage instrumentation if
+  // InstrumentSampleColdFuncPath is provided.
+  const bool IsSampleColdFuncCovGen = InstrumentColdFunctionCoverage =
+      IsPGOPreLink && LoadSampleProfile &&
+      !InstrumentSampleColdFuncPath.empty();
+  assert((InstrumentSampleColdFuncPath.empty() || LoadSampleProfile) &&
+         "Sampling-based cold functon coverage is not supported without "
+         "providing sampling PGO profile");
+
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
-      IsCtxProfUse)
+      IsCtxProfUse || IsSampleColdFuncCovGen)
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
@@ -1225,6 +1222,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       return MPM;
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
+  } else if (IsSampleColdFuncCovGen) {
+    addPGOInstrPasses(
+        MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
+        /* AtomicCounterUpdate */ false, InstrumentSampleColdFuncPath,
+        /* ProfileRemappingFile */ "", IntrusiveRefCntPtr<vfs::FileSystem>());
   }
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsCtxProfGen)
