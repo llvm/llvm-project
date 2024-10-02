@@ -188,7 +188,7 @@ struct BasicTestViewOrRange : MaybeView<IsView> {
   Iter begin_{};
   Iter end_{};
 
-  constexpr BasicTestViewOrRange(Iter b, Iter e) : begin_(b), end_(e) {}
+  constexpr BasicTestViewOrRange(const Iter& b, const Iter& e) : begin_(b), end_(e) {}
 
   constexpr Iter begin() { return begin_; }
   constexpr Iter begin() const { return begin_; }
