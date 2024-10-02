@@ -404,7 +404,7 @@ constexpr TypeBuilderFunc getModel<bool &>() {
 // getModel<std::complex<T>> are not implemented on purpose.
 // Prefer passing/returning the complex by reference in the runtime to
 // avoid ABI issues.
-// C++ std::complex is not an intrinsic type, and it while it is storage
+// C++ std::complex is not an intrinsic type, and while it is storage
 // compatible with C/Fortran complex type, it follows the struct value passing
 // ABI rule, which may differ from how C complex are passed on some platforms.
 
