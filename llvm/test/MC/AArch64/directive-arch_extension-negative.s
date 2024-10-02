@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+sve2-pmull128,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
 // RUN: -mattr=+rcpc3,+lse128,+d128,+the,+rasv2,+ite,+cssc,+specres2,+gcs \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
@@ -35,12 +35,29 @@ sha1h s0, s1
 // CHECK: [[@LINE-1]]:1: error: instruction requires: sha2
 // CHECK-NEXT: sha1h s0, s1
 
+aese z0.b, z0.b, z31.b
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: sve2-aes
+pmullt z29.q, z30.d, z31.d
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: sve2-pmull128
+.arch_extension nosve2-aes
+aese z0.b, z0.b, z31.b
+// CHECK: [[@LINE-1]]:1: error: instruction requires: sve2-aes
+// CHECK-NEXT: aese z0.b, z0.b, z31.b
+pmullt z29.q, z30.d, z31.d
+// CHECK: [[@LINE-1]]:1: error: instruction requires: sve2-pmull128
+// CHECK-NEXT: pmullt z29.q, z30.d, z31.d
+
 aese v0.16b, v1.16b
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: aes
+pmull v0.1q, v1.1d, v2.1d
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: pmull
 .arch_extension noaes
 aese v0.16b, v1.16b
 // CHECK: [[@LINE-1]]:1: error: instruction requires: aes
 // CHECK-NEXT: aese v0.16b, v1.16b
+pmull v0.1q, v1.1d, v2.1d
+// CHECK: [[@LINE-1]]:1: error: instruction requires: pmull
+// CHECK-NEXT: pmull v0.1q, v1.1d, v2.1d
 
 fminnm d0, d0, d1
 // CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: fp

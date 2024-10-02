@@ -4,7 +4,7 @@
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:
 // CHECK-NEXT:     Architecture Feature(s)                                Description
-// CHECK-NEXT:     FEAT_AES, FEAT_PMULL                                   Enable AES support
+// CHECK-NEXT:     FEAT_AES                                               Enable AES support
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_DPB                                               Enable Armv8.2-A data Cache Clean to Point of Persistence
@@ -20,6 +20,7 @@
 // CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
 // CHECK-NEXT:     FEAT_PAN2                                              Enable Armv8.2-A PAN s1e1R and s1e1W Variants
 // CHECK-NEXT:     FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
+// CHECK-NEXT:     FEAT_PMULL                                             Enable PMULL support
 // CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions

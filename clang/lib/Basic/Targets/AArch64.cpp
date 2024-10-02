@@ -853,7 +853,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2-aes") {
+    if (Feature == "+sve2-aes" || Feature == "+sve2-pmull128") {
       FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
@@ -963,7 +963,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCRC = true;
     if (Feature == "+rcpc")
       HasRCPC = true;
-    if (Feature == "+aes") {
+    if (Feature == "+aes" || Feature == "+pmull") {
       FPU |= NeonMode;
       HasAES = true;
     }

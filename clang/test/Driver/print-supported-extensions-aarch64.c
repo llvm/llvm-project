@@ -4,7 +4,6 @@
 // CHECK: All available -march extensions for AArch64
 // CHECK-EMPTY:
 // CHECK-NEXT:     Name                Architecture Feature(s)                                Description
-// CHECK-NEXT:     aes                 FEAT_AES, FEAT_PMULL                                   Enable AES support
 // CHECK-NEXT:     bf16                FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     brbe                FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     bti                 FEAT_BTI                                               Enable Branch Target Identification
@@ -42,6 +41,7 @@
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
+// CHECK-NEXT:     aes                 FEAT_PMULL                                             Enable PMULL support
 // CHECK-NEXT:     predres             FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     rng                 FEAT_RNG                                               Enable Random Number generation instructions
 // CHECK-NEXT:     ras                 FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
@@ -73,8 +73,8 @@
 // CHECK-NEXT:     sve                 FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     sve-b16b16          FEAT_SVE_B16B16                                        Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions
 // CHECK-NEXT:     sve2                FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
-// CHECK-NEXT:     sve2-aes            FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable AES SVE2 instructions
 // CHECK-NEXT:     sve2-bitperm        FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
+// CHECK-NEXT:     sve2-aes            FEAT_SVE_PMULL128                                      Enable PMULL128 SVE2 instructions
 // CHECK-NEXT:     sve2-sha3           FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
 // CHECK-NEXT:     sve2-sm4            FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions
 // CHECK-NEXT:     sve2p1              FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions

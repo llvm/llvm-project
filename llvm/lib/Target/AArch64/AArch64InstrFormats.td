@@ -6992,7 +6992,7 @@ multiclass SIMDDifferentThreeVectorBD<bit U, bits<4> opc, string asm,
   def v16i8  : BaseSIMDDifferentThreeVector<U, 0b001, opc,
                                             V128, V128, V128,
                                             asm#"2", ".8h", ".16b", ".16b", []>;
-  let Predicates = [HasAES] in {
+  let Predicates = [HasPMULL] in {
     def v1i64  : BaseSIMDDifferentThreeVector<U, 0b110, opc,
                                               V128, V64, V64,
                                               asm, ".1q", ".1d", ".1d",

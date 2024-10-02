@@ -117,6 +117,8 @@ def HasSHA2          : Predicate<"Subtarget->hasSHA2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSHA2), "sha2">;
 def HasAES           : Predicate<"Subtarget->hasAES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureAES), "aes">;
+def HasPMULL         : Predicate<"Subtarget->hasPMULL()">,
+                                 AssemblerPredicateWithAll<(all_of FeaturePMULL), "pmull">;
 def HasDotProd       : Predicate<"Subtarget->hasDotProd()">,
                                  AssemblerPredicateWithAll<(all_of FeatureDotProd), "dotprod">;
 def HasCRC           : Predicate<"Subtarget->hasCRC()">,
@@ -151,6 +153,8 @@ def HasSVE2p1        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
 def HasSVE2AES       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2AES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
+def HasSVE2PMULL128  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2PMULL128()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2PMULL128), "sve2-pmull128">;
 def HasSVE2SM4       : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SM4), "sve2-sm4">;
 def HasSVE2SHA3      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2SHA3()">,

@@ -1319,7 +1319,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,
       AArch64::AEK_FCMA,         AArch64::AEK_FP8,
-      AArch64::AEK_SVEB16B16,
+      AArch64::AEK_SVEB16B16,    AArch64::AEK_PMULL,
+      AArch64::AEK_SVE2PMULL128,
   };
 
   std::vector<StringRef> Features;
@@ -1343,6 +1344,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sha2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+pmull"));
   EXPECT_TRUE(llvm::is_contained(Features, "+dotprod"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fp-armv8"));
   EXPECT_TRUE(llvm::is_contained(Features, "+neon"));
@@ -1354,6 +1356,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-b16b16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2-pmull128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
@@ -1491,6 +1494,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
 
 TEST(TargetParserTest, AArch64ArchExtFeature) {
   const char *ArchExt[][4] = {
+      {"aes", "noaes", "+pmull", "-pmull"},
       {"crc", "nocrc", "+crc", "-crc"},
       {"crypto", "nocrypto", "+crypto", "-crypto"},
       {"flagm", "noflagm", "+flagm", "-flagm"},
@@ -1505,7 +1509,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve", "nosve", "+sve", "-sve"},
       {"sve-b16b16", "nosve-b16b16", "+sve-b16b16", "-sve-b16b16"},
       {"sve2", "nosve2", "+sve2", "-sve2"},
-      {"sve2-aes", "nosve2-aes", "+sve2-aes", "-sve2-aes"},
+      {"sve2-aes", "nosve2-aes", "+sve2-pmull128", "-sve2-pmull128"},
       {"sve2-sm4", "nosve2-sm4", "+sve2-sm4", "-sve2-sm4"},
       {"sve2-sha3", "nosve2-sha3", "+sve2-sha3", "-sve2-sha3"},
       {"sve2p1", "nosve2p1", "+sve2p1", "-sve2p1"},

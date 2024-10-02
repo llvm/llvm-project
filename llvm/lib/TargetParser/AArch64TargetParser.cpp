@@ -244,14 +244,23 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
 }
 
 void AArch64::ExtensionSet::disable(ArchExtKind E) {
-  // -crypto always disables aes, sha2, sha3 and sm4, even for architectures
+  // -crypto always disables pmull, sha2, sha3 and sm4, even for architectures
   // where the latter two would not be enabled by +crypto.
   if (E == AEK_CRYPTO) {
-    disable(AEK_AES);
+    disable(AEK_PMULL);
     disable(AEK_SHA2);
     disable(AEK_SHA3);
     disable(AEK_SM4);
   }
+
+  // FEAT_AES and FEAT_PMULL were historically lumped under the name 'aes'.
+  // Therefore 'noaes' should disable FEAT_AES too even though it does not
+  // depend on FEAT_PMULL after they got split.
+  if (E == AEK_PMULL)
+    disable(AEK_AES);
+  // The same goes for FEAT_SVE2_AES and FEAT_SVE2_PMULL128.
+  if (E == AEK_SVE2PMULL128)
+    disable(AEK_SVE2AES);
 
   if (!Enabled.test(E))
     return;

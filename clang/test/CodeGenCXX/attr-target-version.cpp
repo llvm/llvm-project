@@ -329,7 +329,7 @@ int bar() {
 // CHECK: attributes #[[ATTR3]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+crc" }
 // CHECK: attributes #[[ATTR4]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR5]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+mops" }
-// CHECK: attributes #[[ATTR6]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+neon" }
+// CHECK: attributes #[[ATTR6]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+fp-armv8,+neon" }
 // CHECK: attributes #[[ATTR7]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
 // CHECK: attributes #[[ATTR8]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
 // CHECK: attributes #[[ATTR9]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse" }

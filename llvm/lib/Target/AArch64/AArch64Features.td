@@ -74,8 +74,14 @@ def FeatureNEON : ExtensionWithMArch<"neon", "NEON", "FEAT_AdvSIMD",
 def FeatureSHA2 : ExtensionWithMArch<"sha2", "SHA2", "FEAT_SHA1, FEAT_SHA256",
   "Enable SHA1 and SHA256 support", [FeatureNEON]>;
 
-def FeatureAES : ExtensionWithMArch<"aes", "AES", "FEAT_AES, FEAT_PMULL",
+def FeatureAES : Extension<"aes", "AES", "FEAT_AES",
   "Enable AES support", [FeatureNEON]>;
+
+// NOTE: "aes" means FEAT_AES + FEAT_PMULL for -march or
+// __attribute((target(...))), but only FEAT_AES for FMV.
+let UserVisibleName = "aes" in
+def FeaturePMULL : ExtensionWithMArch<"pmull", "PMULL", "FEAT_PMULL",
+  "Enable PMULL support", [FeatureAES]>;
 
 // Crypto has been split up and any combination is now valid (see the
 // crypto definitions above). Also, crypto is now context sensitive:
@@ -86,7 +92,7 @@ def FeatureAES : ExtensionWithMArch<"aes", "AES", "FEAT_AES, FEAT_PMULL",
 // compatibility, and now imply features SHA2 and AES, which was the
 // "traditional" meaning of Crypto.
 def FeatureCrypto : ExtensionWithMArch<"crypto", "Crypto", "FEAT_Crypto",
-  "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeatureAES]>;
+  "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeaturePMULL]>;
 
 def FeatureCRC : ExtensionWithMArch<"crc", "CRC", "FEAT_CRC32",
   "Enable Armv8.0-A CRC-32 checksum instructions">;
@@ -369,9 +375,14 @@ def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
   "Enable Scalable Vector Extension 2 (SVE2) instructions",
   [FeatureSVE, FeatureUseScalarIncVL]>;
 
-def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
-  "FEAT_SVE_AES, FEAT_SVE_PMULL128",
+def FeatureSVE2AES : Extension<"sve2-aes", "SVE2AES", "FEAT_SVE_AES",
   "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+
+// NOTE: "sve2-aes" means FEAT_SVE_AES + FEAT_SVE_PMULL128 for -march or
+// __attribute((target(...))), but only FEAT_SVE_AES for FMV.
+let UserVisibleName = "sve2-aes" in
+def FeatureSVE2PMULL128 : ExtensionWithMArch<"sve2-pmull128", "SVE2PMULL128", "FEAT_SVE_PMULL128",
+  "Enable PMULL128 SVE2 instructions", [FeatureSVE2AES, FeaturePMULL]>;
 
 def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
   "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;

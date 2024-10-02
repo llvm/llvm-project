@@ -3880,13 +3880,15 @@ let Predicates = [HasSVE2AES] in {
   // SVE2 crypto unary operations
   defm AESMC_ZZ_B  : sve2_crypto_unary_op<0b0, "aesmc",  int_aarch64_sve_aesmc>;
   defm AESIMC_ZZ_B : sve2_crypto_unary_op<0b1, "aesimc", int_aarch64_sve_aesimc>;
+} // End HasSVE2AES
 
+let Predicates = [HasSVE2PMULL128] in {
   // PMULLB and PMULLT instructions which operate with 64-bit source and
   // 128-bit destination elements are enabled with crypto extensions, similar
   // to NEON PMULL2 instruction.
   defm PMULLB_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11010, "pmullb", int_aarch64_sve_pmullb_pair>;
   defm PMULLT_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11011, "pmullt", int_aarch64_sve_pmullt_pair>;
-} // End HasSVE2AES
+} // End HasSVE2PMULL128
 
 let Predicates = [HasSVE2SM4] in {
   // SVE2 crypto constructive binary operations
