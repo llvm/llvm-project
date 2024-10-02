@@ -564,4 +564,73 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
 #endif
 }
 
+TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateConstantFPRanges(
+        [Pred](const ConstantFPRange &CR) {
+          ConstantFPRange Res =
+              ConstantFPRange::makeSatisfyingFCmpRegion(Pred, CR);
+          // Super set of the optimal set excluding NaNs
+          ConstantFPRange SuperSet(CR.getSemantics());
+          bool ContainsSNaN = false;
+          bool ContainsQNaN = false;
+          unsigned NonNaNValsInOptimalSet = 0;
+          EnumerateValuesInConstantFPRange(
+              ConstantFPRange::getFull(CR.getSemantics()),
+              [&](const APFloat &V) {
+                if (AnyOfValueInConstantFPRange(CR, [&](const APFloat &U) {
+                      return !FCmpInst::compare(V, U, Pred);
+                    })) {
+                  EXPECT_FALSE(Res.contains(V))
+                      << "Wrong result for makeSatisfyingFCmpRegion(" << Pred
+                      << ", " << CR << "). The result " << Res
+                      << " should not contain " << V;
+                } else {
+                  if (V.isNaN()) {
+                    if (V.isSignaling())
+                      ContainsSNaN = true;
+                    else
+                      ContainsQNaN = true;
+                  } else {
+                    SuperSet = SuperSet.unionWith(ConstantFPRange(V));
+                    ++NonNaNValsInOptimalSet;
+                  }
+                }
+              });
+
+          // Check optimality
+
+          // The usefullness of making the result optimal for one/une is
+          // questionable.
+          if (Pred == FCmpInst::FCMP_ONE || Pred == FCmpInst::FCMP_UNE)
+            return;
+
+          EXPECT_FALSE(ContainsSNaN && !Res.containsSNaN())
+              << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+              << ", " << CR << "), should contain SNaN, but got " << Res;
+          EXPECT_FALSE(ContainsQNaN && !Res.containsQNaN())
+              << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+              << ", " << CR << "), should contain QNaN, but got " << Res;
+
+          // We only care about the cases where the result is representable by
+          // ConstantFPRange.
+          unsigned NonNaNValsInSuperSet = 0;
+          EnumerateValuesInConstantFPRange(SuperSet, [&](const APFloat &V) {
+            if (!V.isNaN())
+              ++NonNaNValsInSuperSet;
+          });
+
+          if (NonNaNValsInSuperSet == NonNaNValsInOptimalSet) {
+            ConstantFPRange Optimal =
+                ConstantFPRange(SuperSet.getLower(), SuperSet.getUpper(),
+                                ContainsQNaN, ContainsSNaN);
+            EXPECT_EQ(Res, Optimal)
+                << "Suboptimal result for makeSatisfyingFCmpRegion(" << Pred
+                << ", " << CR << ")";
+          }
+        },
+        /*Exhaustive=*/false);
+  }
+}
+
 } // anonymous namespace
