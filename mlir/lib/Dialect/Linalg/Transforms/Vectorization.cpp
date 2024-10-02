@@ -2129,7 +2129,7 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
   }
 }
 
-bool mlir::linalg::isVectorizable(Operation *op) {
+bool mlir::linalg::hasVectorizationImpl(Operation *op) {
   return isa<linalg::LinalgOp, tensor::PadOp, tensor::PackOp, tensor::UnPackOp>(
       op);
 }
