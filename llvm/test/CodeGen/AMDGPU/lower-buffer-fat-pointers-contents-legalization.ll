@@ -1724,8 +1724,8 @@ define void @store_i256(i256 %data, ptr addrspace(8) %buf) {
 
 ;;; Non-byte-sized scalars. Require zero-extension.
 
-define i7 @load_i4(ptr addrspace(8) %buf) {
-; CHECK-LABEL: define i7 @load_i4(
+define i7 @load_i7(ptr addrspace(8) %buf) {
+; CHECK-LABEL: define i7 @load_i7(
 ; CHECK-SAME: ptr addrspace(8) [[BUF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RET_LOADABLE:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[RET_LOADABLE]] to i7
@@ -1736,8 +1736,8 @@ define i7 @load_i4(ptr addrspace(8) %buf) {
   ret i7 %ret
 }
 
-define void @store_i4(i7 %data, ptr addrspace(8) %buf) {
-; CHECK-LABEL: define void @store_i4(
+define void @store_i7(i7 %data, ptr addrspace(8) %buf) {
+; CHECK-LABEL: define void @store_i7(
 ; CHECK-SAME: i7 [[DATA:%.*]], ptr addrspace(8) [[BUF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[DATA_ZEXT:%.*]] = zext i7 [[DATA]] to i8
 ; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_ZEXT]], ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
@@ -1745,6 +1745,30 @@ define void @store_i4(i7 %data, ptr addrspace(8) %buf) {
 ;
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   store i7 %data, ptr addrspace(7) %p
+  ret void
+}
+
+define i4 @load_i4(ptr addrspace(8) %buf) {
+; CHECK-LABEL: define i4 @load_i4(
+; CHECK-SAME: ptr addrspace(8) [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET_LOADABLE:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    [[RET:%.*]] = trunc i8 [[RET_LOADABLE]] to i4
+; CHECK-NEXT:    ret i4 [[RET]]
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  %ret = load i4, ptr addrspace(7) %p
+  ret i4 %ret
+}
+
+define void @store_i4(i4 %data, ptr addrspace(8) %buf) {
+; CHECK-LABEL: define void @store_i4(
+; CHECK-SAME: i4 [[DATA:%.*]], ptr addrspace(8) [[BUF:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[DATA_ZEXT:%.*]] = zext i4 [[DATA]] to i8
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i8(i8 [[DATA_ZEXT]], ptr addrspace(8) align 1 [[BUF]], i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  store i4 %data, ptr addrspace(7) %p
   ret void
 }
 
