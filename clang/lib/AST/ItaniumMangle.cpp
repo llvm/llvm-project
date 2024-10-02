@@ -4497,10 +4497,10 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
   // map resource class to HLSL virtual register letter
   switch (Attrs.ResourceClass) {
-  case llvm::dxil::ResourceClass::UAV: 
+  case llvm::dxil::ResourceClass::UAV:
     Str += "_u";
     break;
-  case llvm::dxil::ResourceClass::SRV: 
+  case llvm::dxil::ResourceClass::SRV:
     Str += "_t";
     break;
   case llvm::dxil::ResourceClass::CBuffer:

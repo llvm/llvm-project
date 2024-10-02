@@ -3756,7 +3756,8 @@ void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
                                          Qualifiers, SourceRange Range) {
-  mangleArtificialTagType(TagTypeKind::Struct, "HLSLAttributedResourceType", {"__hlsl"});
+  mangleArtificialTagType(TagTypeKind::Struct, "HLSLAttributedResourceType",
+                          {"__hlsl"});
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
