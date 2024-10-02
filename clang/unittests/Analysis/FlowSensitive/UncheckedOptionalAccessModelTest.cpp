@@ -2893,7 +2893,7 @@ TEST_P(UncheckedOptionalAccessTest, NestedOptionalThroughNonOptionalRefField) {
 
     struct B {
       $ns::$optional<pair>& nonConstGetRef();
-   };
+    };
 
     void target(B b) {
       const auto& maybe_pair = b.nonConstGetRef();
@@ -2902,7 +2902,7 @@ TEST_P(UncheckedOptionalAccessTest, NestedOptionalThroughNonOptionalRefField) {
 
       if(!maybe_pair->second.x.has_value())
         return;
-     maybe_pair->second.x.value();  // [[unsafe]]
+      maybe_pair->second.x.value();  // [[unsafe]]
     }
   )");
 }
