@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple i386 %s -stop-after=livedebugvalues -o - | FileCheck %s
+; RUN: llc -mtriple i386 %s -stop-after=livedebugvalues -o - | FileCheck %s
 
 ; There should be multiple debug values for this variable after regalloc. The
 ; value has been spilled, but we shouldn't lose track of the location because
