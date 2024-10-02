@@ -40,17 +40,17 @@ tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
 fixedStack:
-  - { id: 0, type: default, offset: 12, size: 4, alignment: 4, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 0, type: default, offset: 0, size: 4, alignment: 4, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, type: default, offset: 8, size: 1, alignment: 4, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, type: default, offset: 4, size: 4, alignment: 4, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 2, type: default, offset: 8, size: 1, alignment: 4, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 3, type: default, offset: 0, size: 4, alignment: 4, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 3, type: default, offset: 12, size: 4, alignment: 4, stack-id: default, 
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
