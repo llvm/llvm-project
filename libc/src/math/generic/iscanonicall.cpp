@@ -15,7 +15,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, iscanonicall, (long double x)) {
   long double temp;
-  return static_cast<int>(fputil::canonicalize(temp, x) == 0);
+  return fputil::canonicalize(temp, x) == 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
