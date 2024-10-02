@@ -4440,7 +4440,7 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
 
             CloneCallsite(StackNode, CB, CalledFunction);
           }
-        } else if (CB->isTailCall()) {
+        } else if (CB->isTailCall() && CalledFunction) {
           // Locate the synthesized callsite info for the callee VI, if any was
           // created, and use that for cloning.
           ValueInfo CalleeVI =
