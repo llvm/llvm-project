@@ -369,9 +369,9 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
-                                const APInt &DemandedElts, KnownBits &Known,
-                                KnownBits &Known2, unsigned Depth,
-                                const SimplifyQuery &Q) {
+                                bool NUW, const APInt &DemandedElts,
+                                KnownBits &Known, KnownBits &Known2,
+                                unsigned Depth, const SimplifyQuery &Q) {
   computeKnownBits(Op1, DemandedElts, Known, Depth + 1, Q);
   computeKnownBits(Op0, DemandedElts, Known2, Depth + 1, Q);
 
@@ -390,6 +390,13 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
       // The product of two numbers with the same sign is non-negative.
       isKnownNonNegative = (isKnownNegativeOp1 && isKnownNegativeOp0) ||
                            (isKnownNonNegativeOp1 && isKnownNonNegativeOp0);
+      if (!isKnownNonNegative && NUW) {
+        // mul nuw nsw with a factor > 1 is non-negative.
+        KnownBits One = KnownBits::makeConstant(APInt(Known.getBitWidth(), 1));
+        isKnownNonNegative = KnownBits::sgt(Known, One).value_or(false) ||
+                             KnownBits::sgt(Known2, One).value_or(false);
+      }
+
       // The product of a negative number and a non-negative number is either
       // negative or zero.
       if (!isKnownNonNegative)
@@ -1090,8 +1097,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   case Instruction::Mul: {
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, DemandedElts,
-                        Known, Known2, Depth, Q);
+    bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
+    computeKnownBitsMul(I->getOperand(0), I->getOperand(1), NSW, NUW,
+                        DemandedElts, Known, Known2, Depth, Q);
     break;
   }
   case Instruction::UDiv: {
@@ -1961,7 +1969,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         case Intrinsic::umul_with_overflow:
         case Intrinsic::smul_with_overflow:
           computeKnownBitsMul(II->getArgOperand(0), II->getArgOperand(1), false,
-                              DemandedElts, Known, Known2, Depth, Q);
+                              false, DemandedElts, Known, Known2, Depth, Q);
           break;
         }
       }
