@@ -52,7 +52,7 @@ namespace llvm {
     using size_type = size_t;
     using difference_type = ptrdiff_t;
 
-  private:
+  protected:
     /// The start of the array, in an external buffer.
     const T *Data = nullptr;
 
