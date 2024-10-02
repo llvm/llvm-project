@@ -99,6 +99,7 @@ bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
                          llvm::SmallVectorImpl<Multilib> &Selected) const {
   llvm::StringSet<> FlagSet(expandFlags(Flags));
   Selected.clear();
+  bool AnyErrors = false;
 
   // Decide which multilibs we're going to select at all.
   llvm::DenseSet<StringRef> ExclusiveGroupsSelected;
@@ -123,12 +124,11 @@ bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
     }
 
     // If this multilib is actually a placeholder containing a fatal
-    // error message written by the multilib.yaml author, display that
-    // error message, and return failure.
-    if (M.isError()) {
-      D.Diag(clang::diag::err_drv_multilib_custom_error) << M.getErrorMessage();
-      return false;
-    }
+    // error message written by the multilib.yaml author, then set a
+    // flag that will cause a failure return. Our caller will display
+    // the error message.
+    if (M.isError())
+      AnyErrors = true;
 
     // Select this multilib.
     Selected.push_back(M);
@@ -138,7 +138,7 @@ bool MultilibSet::select(const Driver &D, const Multilib::flags_list &Flags,
   // round.
   std::reverse(Selected.begin(), Selected.end());
 
-  return !Selected.empty();
+  return !AnyErrors && !Selected.empty();
 }
 
 llvm::StringSet<>
