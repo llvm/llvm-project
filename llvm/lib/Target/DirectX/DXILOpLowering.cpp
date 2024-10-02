@@ -493,6 +493,12 @@ public:
 
       Value *Arg0 = CI->getArgOperand(0);
 
+      if (Arg0->getType()->isVectorTy()) {
+        return make_error<StringError>(
+            "splitdouble doesn't support lowering vector types.",
+            inconvertibleErrorCode());
+      }
+
       Type *NewRetTy = OpBuilder.getResSplitDoubleType(M.getContext());
 
       std::array<Value *, 1> Args{Arg0};
