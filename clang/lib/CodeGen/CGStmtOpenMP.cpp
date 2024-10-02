@@ -1937,7 +1937,12 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
       return;
     }
   }
-  CGF.EmitStmt(S);
+  if (SimplifiedS != NextLoop) {
+    CodeGenFunction::OMPLoopImperfectionRAII OLI(CGF);
+    CGF.EmitStmt(S);
+  } else {
+    CGF.EmitStmt(S);
+  }
 }
 
 void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,

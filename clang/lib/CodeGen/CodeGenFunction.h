@@ -3647,6 +3647,22 @@ public:
     ~OMPCancelStackRAII() { CGF.OMPCancelStack.exit(CGF); }
   };
 
+  /// Controls emission of "llvm.omp.loop.imperfection" metadata on
+  /// load/store instructions.
+  class OMPLoopImperfectionRAII {
+    CodeGenFunction &CGF;
+    bool OldValue;
+
+  public:
+    OMPLoopImperfectionRAII(CodeGenFunction &CGF) : CGF(CGF) {
+      OldValue = CGF.GetOMPLoopImperfection();
+      CGF.SetOMPLoopImperfection (true);
+    }
+    ~OMPLoopImperfectionRAII() {
+      CGF.SetOMPLoopImperfection (OldValue);
+    }
+  };
+
   /// Returns calculated size of the specified type.
   llvm::Value *getTypeSize(QualType Ty);
   LValue InitCapturedStruct(const CapturedStmt &S);
@@ -4009,6 +4025,9 @@ public:
   /// Emits the lvalue for the expression with possibly captured variable.
   LValue EmitOMPSharedLValue(const Expr *E);
 
+  bool GetOMPLoopImperfection() { return OMPLoopImperfection; }
+  void SetOMPLoopImperfection(bool I) { OMPLoopImperfection = I; }
+
 private:
   /// Helpers for blocks.
   llvm::Value *EmitBlockLiteral(const CGBlockInfo &Info);
@@ -4049,6 +4068,9 @@ private:
           IncExpr(IncExpr), Init(Init), Cond(Cond), NextLB(NextLB),
           NextUB(NextUB) {}
   };
+
+  bool OMPLoopImperfection = false;
+
   void EmitOMPOuterLoop(bool DynamicOrOrdered, bool IsMonotonic,
                         const OMPLoopDirective &S, OMPPrivateScope &LoopScope,
                         const OMPLoopArguments &LoopArgs,
