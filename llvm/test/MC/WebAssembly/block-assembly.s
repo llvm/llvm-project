@@ -87,7 +87,7 @@ block_branch_test:
   drop
   drop
 
-  # Withina loop, branches target the start of the loop
+  # Within a loop, branches target the start of the loop
   i32.const 0
   loop (i32) -> ()
     i32.const 1
