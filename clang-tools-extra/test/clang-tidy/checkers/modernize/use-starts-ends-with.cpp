@@ -208,6 +208,62 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use starts_with
   // CHECK-FIXES: !s.starts_with(sv);
 
+  s.compare(s.size() - 6, 6, "suffix") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.compare(s.size() - 6, strlen("abcdef"), "suffix") == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  std::string suffix = "suffix";
+  s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind("suffix") == s.size() - 6;
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.rfind("suffix") == s.size() - strlen("suffix");
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with("suffix");
+
+  s.rfind(suffix) == s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, std::string::npos) == s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix) == (s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, s.npos) == (s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix, s.npos) == (((s.size()) - (suffix.size())));
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  s.rfind(suffix) != s.size() - suffix.size();
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: !s.ends_with(suffix);
+
+  (s.size() - suffix.size()) == s.rfind(suffix);
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: s.ends_with(suffix);
+
+  struct S {
+    std::string s;
+  } t;
+  t.s.rfind(suffix) == (t.s.size() - suffix.size());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use ends_with
+  // CHECK-FIXES: t.s.ends_with(suffix);
+
   // Expressions that don't trigger the check are here.
   #define EQ(x, y) ((x) == (y))
   EQ(s.find("a"), 0);
@@ -219,4 +275,5 @@ void test(std::string s, std::string_view sv, sub_string ss, sub_sub_string sss,
   STARTS_WITH_COMPARE(s, s) == 0;
 
   s.compare(0, 1, "ab") == 0;
+  s.rfind(suffix, 1) == s.size() - suffix.size();
 }
