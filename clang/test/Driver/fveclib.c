@@ -36,16 +36,23 @@
 /* Verify that the correct vector library is passed to LTO flags. */
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=LIBMVEC -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC %s
+// CHECK-LTO-LIBMVEC: "-fmath-errno"
 // CHECK-LTO-LIBMVEC: "-plugin-opt=-vector-library=LIBMVEC-X86"
 
 // RUN: %clang -### --target=powerpc64-unknown-linux-gnu -fveclib=MASSV -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-MASSV %s
+// CHECK-LTO-MASSV: "-fmath-errno"
 // CHECK-LTO-MASSV: "-plugin-opt=-vector-library=MASSV"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=SVML -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-SVML %s
+// CHECK-LTO-SVML: "-fmath-errno"
 // CHECK-LTO-SVML: "-plugin-opt=-vector-library=SVML"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-SLEEF %s
+// CHECK-LTO-SLEEF-NOT: "-fmath-errno"
 // CHECK-LTO-SLEEF: "-plugin-opt=-vector-library=sleefgnuabi"
+// CHECK-LTO-SLEEF-NOT: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
+// CHECK-LTO-ARMPL-NOT: "-fmath-errno"
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"
+// CHECK-LTO-ARMPL-NOT: "-fmath-errno"
