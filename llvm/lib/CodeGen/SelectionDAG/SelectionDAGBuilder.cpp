@@ -4386,6 +4386,17 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       // it.
       IdxN = DAG.getSExtOrTrunc(IdxN, dl, N.getValueType());
 
+      SDNodeFlags ScaleFlags;
+      // The multiplication of an index by the type size does not wrap the
+      // pointer index type in a signed sense (mul nsw).
+      if (NW.hasNoUnsignedSignedWrap())
+        ScaleFlags.setNoSignedWrap(true);
+
+      // The multiplication of an index by the type size does not wrap the
+      // pointer index type in an unsigned sense (mul nuw).
+      if (NW.hasNoUnsignedWrap())
+        ScaleFlags.setNoUnsignedWrap(true);
+
       if (ElementScalable) {
         EVT VScaleTy = N.getValueType().getScalarType();
         SDValue VScale = DAG.getNode(
@@ -4393,27 +4404,41 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             DAG.getConstant(ElementMul.getZExtValue(), dl, VScaleTy));
         if (IsVectorGEP)
           VScale = DAG.getSplatVector(N.getValueType(), dl, VScale);
-        IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale);
+        IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale,
+                           ScaleFlags);
       } else {
         // If this is a multiply by a power of two, turn it into a shl
         // immediately.  This is a very common case.
         if (ElementMul != 1) {
           if (ElementMul.isPowerOf2()) {
             unsigned Amt = ElementMul.logBase2();
-            IdxN = DAG.getNode(ISD::SHL, dl,
-                               N.getValueType(), IdxN,
-                               DAG.getConstant(Amt, dl, IdxN.getValueType()));
+            IdxN = DAG.getNode(ISD::SHL, dl, N.getValueType(), IdxN,
+                               DAG.getConstant(Amt, dl, IdxN.getValueType()),
+                               ScaleFlags);
           } else {
             SDValue Scale = DAG.getConstant(ElementMul.getZExtValue(), dl,
                                             IdxN.getValueType());
-            IdxN = DAG.getNode(ISD::MUL, dl,
-                               N.getValueType(), IdxN, Scale);
+            IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, Scale,
+                               ScaleFlags);
           }
         }
       }
 
-      N = DAG.getNode(ISD::ADD, dl,
-                      N.getValueType(), N, IdxN);
+      SDNodeFlags AddFlags;
+
+      // The successive addition of each offset (without adding the base
+      // address) does not wrap the pointer index type in a signed sense (add
+      // nsw).
+      if (NW.hasNoUnsignedSignedWrap())
+        AddFlags.setNoSignedWrap(true);
+
+      // The successive addition of each offset (without adding the base
+      // address) does not wrap the pointer index type in an unsigned sense (add
+      // nuw).
+      if (NW.hasNoUnsignedWrap())
+        AddFlags.setNoUnsignedWrap(true);
+
+      N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
     }
   }
 
