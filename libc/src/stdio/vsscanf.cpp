@@ -8,13 +8,13 @@
 
 #include "src/stdio/vsscanf.h"
 
+#include "hdr/stdio_macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
 #include <stdarg.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

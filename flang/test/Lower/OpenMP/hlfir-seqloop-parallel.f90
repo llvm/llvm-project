@@ -52,7 +52,7 @@ end subroutine
 !CHECK:    %[[J_DECL:.*]]:2 = hlfir.declare %[[J_ADDR]] {uniq_name = "_QFsb2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:    %[[K_ADDR:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFsb2Ek"}
 !CHECK:    %[[K_DECL:.*]]:2 = hlfir.declare %[[K_ADDR]] {uniq_name = "_QFsb2Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:    omp.parallel private({{.*}} %[[J_DECL]]#0 -> %[[J_PVT_ADDR:.*]] : {{.*}}, {{.*}} %[[I_DECL]]#0 -> %[[I_PVT_ADDR:.*]] : {{.*}}) {
+!CHECK:    omp.parallel private({{.*}} %[[J_DECL]]#0 -> %[[J_PVT_ADDR:.*]], {{.*}} %[[I_DECL]]#0 -> %[[I_PVT_ADDR:.*]] : {{.*}}) {
 
 !CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_ADDR]] {uniq_name = "_QFsb2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 

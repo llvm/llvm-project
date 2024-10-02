@@ -16,6 +16,36 @@ New entries should be added directly below the "Version" header.
 Version 19.0
 ------------
 
+* [libc++] Avoid re-exporting a few specific symbols from libc++abi
+
+  In 6a884a9aef39, I synchronized the export list of libc++abi to the
+  export list of libc++. From the linker's perspective, this caused
+  these symbols to be taken from libc++.dylib instead of libc++abi.dylib.
+
+  However, that can be problematic when back-deploying. Indeed, this means
+  that the linker will encode an undefined reference to be fullfilled by
+  libc++.dylib, but when backdeploying against an older system, that symbol
+  might only be available in libc++abi.dylib.
+
+  Most of the symbols that started being re-exported after 6a884a9aef39
+  turn out to be implementation details of libc++abi, so nobody really
+  depends on them and this back-deployment issue is inconsequential.
+
+  However, we ran into issues with a few of these symbols while testing
+  LLVM 19, which led to this patch.
+
+  In the future, a follow-up cleanup would be to stop exporting most of
+  the _cxxabiv1_foo_type_infoE symbols from both libc++abi and libc++
+  since they are implementation details that nobody should be relying
+  on.
+
+  <arch>-apple-darwin
+  -------------------
+  Symbol not reexported anymore: ___cxa_rethrow_primary_exception
+  Symbol not reexported anymore: __ZTIN10__cxxabiv117__class_type_infoE
+  Symbol not reexported anymore: __ZTIN10__cxxabiv120__si_class_type_infoE
+  Symbol not reexported anymore: __ZTIN10__cxxabiv121__vmi_class_type_infoE
+
 * [libc++] Always keep libc++abi re-exports up-to-date
 
   This patch makes sure that the set of libc++abi symbols re-exported from libc++
