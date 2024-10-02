@@ -43,6 +43,14 @@ public:
                            const RISCVRegisterBankInfo &RBI);
 
   bool select(MachineInstr &MI) override;
+
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI) override {
+    InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+    MRI = &MF.getRegInfo();
+  }
+
   static const char *getName() { return DEBUG_TYPE; }
 
 private:
@@ -495,7 +503,6 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
-  MRI = &MF.getRegInfo();
   MachineIRBuilder MIB(MI);
 
   preISelLower(MI, MIB);
@@ -959,8 +966,7 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
 }
 
 bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
-                                          MachineIRBuilder &MIB,
-                                          bool IsLocal,
+                                          MachineIRBuilder &MIB, bool IsLocal,
                                           bool IsExternWeak) const {
   assert((MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
           MI.getOpcode() == TargetOpcode::G_JUMP_TABLE ||
