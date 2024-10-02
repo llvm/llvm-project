@@ -2569,8 +2569,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_wave_readlane:
     return selectWaveReadLaneAt(ResVReg, ResType, I);
-  case Intrinsic::spv_splitdouble:
-    return selectSplitdouble(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
