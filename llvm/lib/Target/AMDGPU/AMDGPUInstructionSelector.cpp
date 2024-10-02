@@ -1475,7 +1475,7 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
   const MDNode *Metadata = I.getOperand(2).getMetadata();
   auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
   auto *RelocSymbol = cast<GlobalVariable>(
-    M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
+      M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
 
   MachineBasicBlock *BB = I.getParent();
   BuildMI(*BB, &I, I.getDebugLoc(),

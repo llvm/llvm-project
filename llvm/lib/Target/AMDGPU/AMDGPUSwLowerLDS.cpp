@@ -1070,7 +1070,8 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
       IRB.CreateLoad(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), BaseLoad);
 
   for (GlobalVariable *GV : LDSGlobals) {
-    const auto *GVIt = std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
+    const auto *GVIt =
+        std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
     assert(GVIt != OrdereLDSGlobals.end());
     uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
 

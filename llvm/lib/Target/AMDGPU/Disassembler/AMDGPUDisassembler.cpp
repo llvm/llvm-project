@@ -104,7 +104,7 @@ static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
 static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
 
   // Our branches take a simm16.
   int64_t Offset = SignExtend64<16>(Imm) * 4 + 4 + Addr;
@@ -116,7 +116,7 @@ static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
 
 static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                      const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   int64_t Offset;
   if (DAsm->isGFX12Plus()) { // GFX12 supports 24-bit signed offsets.
     Offset = SignExtend64<24>(Imm);
@@ -130,7 +130,7 @@ static DecodeStatus decodeSMEMOffset(MCInst &Inst, unsigned Imm, uint64_t Addr,
 
 static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
                                   const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeBoolReg(Val));
 }
 
@@ -393,7 +393,7 @@ static bool IsAGPROperand(const MCInst &Inst, int OpIdx,
 static DecodeStatus decodeAVLdSt(MCInst &Inst, unsigned Imm,
                                  AMDGPUDisassembler::OpWidthTy Opw,
                                  const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
+  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   if (!DAsm->isGFX90A()) {
     Imm &= 511;
   } else {
@@ -1774,10 +1774,10 @@ MCOperand AMDGPUDisassembler::decodeVersionImm(unsigned Imm) const {
     return MCOperand::createImm(Imm);
 
   const auto &Versions = AMDGPU::UCVersion::getGFXVersions();
-  const auto *I = find_if(Versions,
-                   [Version = Version](const AMDGPU::UCVersion::GFXVersion &V) {
-                     return V.Code == Version;
-                   });
+  const auto *I = find_if(
+      Versions, [Version = Version](const AMDGPU::UCVersion::GFXVersion &V) {
+        return V.Code == Version;
+      });
   MCContext &Ctx = getContext();
   const MCExpr *E;
   if (I == Versions.end())

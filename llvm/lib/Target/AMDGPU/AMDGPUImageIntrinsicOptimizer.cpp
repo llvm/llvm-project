@@ -219,7 +219,8 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       continue;
 
     const uint8_t FragIdIndex = ImageDimIntr->VAddrEnd - 1;
-    auto *FragId = cast<ConstantInt>(IIList.front()->getArgOperand(FragIdIndex));
+    auto *FragId =
+        cast<ConstantInt>(IIList.front()->getArgOperand(FragIdIndex));
     const APInt &NewFragIdVal = FragId->getValue().udiv(4) * 4;
 
     // Create the new instructions.
