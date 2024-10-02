@@ -87,6 +87,14 @@ public:
                    SmallVectorImpl<MCFixup> &Fixups,
                    const MCSubtargetInfo &STI) const;
 
+  void encodeGSrcVGPR(const MCInst &MI, unsigned OpNo, APInt &Op,
+                      SmallVectorImpl<MCFixup> &Fixups,
+                      const MCSubtargetInfo &STI) const;
+
+  void encodeGSrcVGPROrZero(const MCInst &MI, unsigned OpNo, APInt &Op,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+
   void encodeGSrcSimple(const MCInst &MI, unsigned OpNo, APInt &Op,
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
@@ -757,7 +765,43 @@ void AMDGPUMCCodeEmitter::encodeGVGPR(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  Op = MRI.getEncodingValue(MO.getReg()) & AMDGPU::HWEncoding::REG_IDX_MASK;
+  if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
+    Op = AMDGPU::getHWRegIndex(MO.getReg(), MRI);
+    return;
+  }
+
+  // TODO-GFX13: This should not be needed, but 1x1 convolve instructions with
+  // iteration count < 4 need to handle placeholder operands for unused
+  // iterations.
+  getMachineOpValue(MI, MO, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::encodeGSrcVGPR(const MCInst &MI, unsigned OpNo,
+                                         APInt &Op,
+                                         SmallVectorImpl<MCFixup> &Fixups,
+                                         const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
+    Op = 0x400 | AMDGPU::getHWRegIndex(MO.getReg(), MRI);
+    return;
+  }
+
+  // TODO-GFX13: This should not be needed, but 1x1 convolve instructions with
+  // iteration count < 4 need to handle placeholder operands for unused
+  // iterations.
+  getMachineOpValue(MI, MO, Op, Fixups, STI);
+}
+
+void AMDGPUMCCodeEmitter::encodeGSrcVGPROrZero(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
+    Op = 0x400 | AMDGPU::getHWRegIndex(MO.getReg(), MRI);
+    return;
+  }
+
+  getMachineOpValue(MI, MO, Op, Fixups, STI);
 }
 
 void AMDGPUMCCodeEmitter::encodeGSrcSimple(const MCInst &MI, unsigned OpNo,

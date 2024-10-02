@@ -367,6 +367,10 @@ struct VOP3CDPPAsmOnlyInfo {
   uint16_t Opcode;
 };
 
+struct VOPMInfo {
+  uint16_t Opcode;
+};
+
 struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
@@ -424,6 +428,8 @@ struct FP8DstByteSelInfo {
 #define GET_VOPCAsmOnlyInfoTable_IMPL
 #define GET_VOP3CAsmOnlyInfoTable_DECL
 #define GET_VOP3CAsmOnlyInfoTable_IMPL
+#define GET_VOPMInfoTable_DECL
+#define GET_VOPMInfoTable_IMPL
 #define GET_VOPDComponentTable_DECL
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
@@ -536,6 +542,8 @@ bool isVOPC64DPP(unsigned Opc) {
 }
 
 bool isVOPCAsmOnly(unsigned Opc) { return isVOPCAsmOnlyOpcodeHelper(Opc); }
+
+bool isVOPM(unsigned Opc) { return isVOPMOpcodeHelper(Opc); }
 
 bool getMAIIsDGEMM(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
