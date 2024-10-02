@@ -48,7 +48,7 @@ static void RandomPoison(char *beg, char *end) {
   }
 }
 
-static size_t count_unpoisoned(std::deque<int> &poison_states, size_t n) {
+static size_t CountUnpoisoned(std::deque<int> &poison_states, size_t n) {
   size_t result = 0;
   for (size_t i = 0; i < n && !poison_states.empty(); ++i) {
     if (!poison_states.front()) {
@@ -61,7 +61,8 @@ static size_t count_unpoisoned(std::deque<int> &poison_states, size_t n) {
 }
 
 void TestNonOverlappingContainers(size_t capacity, size_t off_old,
-                                  size_t off_new, int poison_buffers) {
+                                  size_t off_new, bool poison_old,
+                                  bool poison_new) {
   size_t old_buffer_size = capacity + off_old + kGranularity * 2;
   size_t new_buffer_size = capacity + off_new + kGranularity * 2;
 
@@ -72,8 +73,6 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
 
   char *old_buffer_end = old_buffer.get() + old_buffer_size;
   char *new_buffer_end = new_buffer.get() + new_buffer_size;
-  bool poison_old = poison_buffers % 2 == 1;
-  bool poison_new = poison_buffers / 2 == 1;
   char *old_beg = old_buffer.get() + off_old;
   char *new_beg = new_buffer.get() + off_new;
   char *old_end = old_beg + capacity;
@@ -118,7 +117,7 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
     char *next;
     for (cur = new_beg; cur + kGranularity <= new_end; cur = next) {
       next = RoundUp(cur + 1);
-      size_t unpoisoned = count_unpoisoned(poison_states, next - cur);
+      size_t unpoisoned = CountUnpoisoned(poison_states, next - cur);
       if (unpoisoned > 0) {
         assert(!__asan_address_is_poisoned(cur + unpoisoned - 1));
       }
@@ -130,7 +129,7 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
     // If new_buffer were not poisoned, it cannot be poisoned.
     // If new_buffer were poisoned, it should be same as earlier.
     if (cur < new_end) {
-      size_t unpoisoned = count_unpoisoned(poison_states, new_end - cur);
+      size_t unpoisoned = CountUnpoisoned(poison_states, new_end - cur);
       if (unpoisoned > 0) {
         assert(!__asan_address_is_poisoned(cur + unpoisoned - 1));
       }
@@ -149,15 +148,13 @@ void TestNonOverlappingContainers(size_t capacity, size_t off_old,
 }
 
 void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
-                               int poison_buffers) {
+                               bool poison_whole, bool poison_new) {
   size_t buffer_size = capacity + off_old + off_new + kGranularity * 3;
 
   // Use unique_ptr with a custom deleter to manage the buffer
   std::unique_ptr<char[]> buffer = std::make_unique<char[]>(buffer_size);
 
   char *buffer_end = buffer.get() + buffer_size;
-  bool poison_whole = poison_buffers % 2 == 1;
-  bool poison_new = poison_buffers / 2 == 1;
   char *old_beg = buffer.get() + kGranularity + off_old;
   char *new_beg = buffer.get() + kGranularity + off_new;
   char *old_end = old_beg + capacity;
@@ -170,7 +167,7 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
       __asan_poison_memory_region(new_beg, new_end - new_beg);
 
     RandomPoison(old_beg, old_end);
-    std::deque<int> poison_states = GetPoisonedState(old_beg, old_end);
+    auto poison_states = GetPoisonedState(old_beg, old_end);
     __sanitizer_copy_contiguous_container_annotations(old_beg, old_end, new_beg,
                                                       new_end);
     // This variable is used only when buffer ends in the middle of a granule.
@@ -195,7 +192,7 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
     char *next;
     for (cur = new_beg; cur + kGranularity <= new_end; cur = next) {
       next = RoundUp(cur + 1);
-      size_t unpoisoned = count_unpoisoned(poison_states, next - cur);
+      size_t unpoisoned = CountUnpoisoned(poison_states, next - cur);
       if (unpoisoned > 0) {
         assert(!__asan_address_is_poisoned(cur + unpoisoned - 1));
       }
@@ -207,7 +204,7 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
     // It can be poisoned, only if non-container bytes in that granule were poisoned.
     // Otherwise, it should be unpoisoned.
     if (cur < new_end) {
-      size_t unpoisoned = count_unpoisoned(poison_states, new_end - cur);
+      size_t unpoisoned = CountUnpoisoned(poison_states, new_end - cur);
       if (unpoisoned > 0) {
         assert(!__asan_address_is_poisoned(cur + unpoisoned - 1));
       }
@@ -222,12 +219,16 @@ void TestOverlappingContainers(size_t capacity, size_t off_old, size_t off_new,
 
 int main(int argc, char **argv) {
   int n = argc == 1 ? 64 : atoi(argv[1]);
-  for (size_t j = 0; j < kGranularity + 2; j++) {
-    for (size_t k = 0; k < kGranularity + 2; k++) {
-      for (int i = 0; i <= n; i++) {
-        for (int poison = 0; poison < 4; ++poison) {
-          TestNonOverlappingContainers(i, j, k, poison);
-          TestOverlappingContainers(i, j, k, poison);
+  for (size_t off_old = 0; off_old < kGranularity + 2; off_old++) {
+    for (size_t off_new = 0; off_new < kGranularity + 2; off_new++) {
+      for (int capacity = 0; capacity <= n; capacity++) {
+        for (int poison_old = 0; poison_old < 2; ++poison_old) {
+          for (int poison_new = 0; poison_new < 2; ++poison_new) {
+            TestNonOverlappingContainers(capacity, off_old, off_new, poison_old,
+                                         poison_new);
+            TestOverlappingContainers(capacity, off_old, off_new, poison_old,
+                                      poison_new);
+          }
         }
       }
     }
