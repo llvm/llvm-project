@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -300,7 +301,7 @@ public:
   }
 };
 
-class StoredDeclsMap
+class CLANG_ABI StoredDeclsMap
     : public llvm::SmallDenseMap<DeclarationName, StoredDeclsList, 4> {
   friend class ASTContext; // walks the chain deleting these
   friend class DeclContext;

@@ -10,8 +10,9 @@
 #define LLVM_CLANG_FRONTEND_SERIALIZEDDIAGNOSTICREADER_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/Bitstream/BitstreamReader.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/ErrorOr.h"
 #include <system_error>
 
@@ -36,7 +37,7 @@ enum class SDError {
   HandlerFailed
 };
 
-const std::error_category &SDErrorCategory();
+CLANG_ABI const std::error_category &SDErrorCategory();
 
 inline std::error_code make_error_code(SDError E) {
   return std::error_code(static_cast<int>(E), SDErrorCategory());
@@ -57,7 +58,7 @@ struct Location {
 ///
 /// Subclasses should override the visit* methods with their logic for handling
 /// the various constructs that are found in serialized diagnostics.
-class SerializedDiagnosticReader {
+class CLANG_ABI SerializedDiagnosticReader {
 public:
   SerializedDiagnosticReader() = default;
   virtual ~SerializedDiagnosticReader() = default;

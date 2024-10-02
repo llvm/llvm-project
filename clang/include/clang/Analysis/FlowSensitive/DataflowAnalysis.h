@@ -28,6 +28,7 @@
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -392,7 +393,7 @@ diagnoseFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
 /// Abstract base class for dataflow "models": reusable analysis components that
 /// model a particular aspect of program semantics in the `Environment`. For
 /// example, a model may capture a type and its related functions.
-class DataflowModel : public Environment::ValueModel {
+class CLANG_ABI DataflowModel : public Environment::ValueModel {
 public:
   /// Return value indicates whether the model processed the `Element`.
   virtual bool transfer(const CFGElement &Element, Environment &Env) = 0;

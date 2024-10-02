@@ -12,6 +12,7 @@
 
 #ifndef LLVM_CLANG_INTERPRETER_CODE_COMPLETION_H
 #define LLVM_CLANG_INTERPRETER_CODE_COMPLETION_H
+#include "clang/Support/Compiler.h"
 #include <string>
 #include <vector>
 
@@ -23,7 +24,7 @@ namespace clang {
 class CodeCompletionResult;
 class CompilerInstance;
 
-struct ReplCodeCompleter {
+struct CLANG_ABI ReplCodeCompleter {
   ReplCodeCompleter() = default;
   std::string Prefix;
 

@@ -13,6 +13,7 @@
 #define LLVM_CLANG_AST_STMTOBJC_H
 
 #include "clang/AST/Stmt.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -20,7 +21,7 @@ namespace clang {
 /// Represents Objective-C's collection statement.
 ///
 /// This is represented as 'for (element 'in' collection-expression)' stmt.
-class ObjCForCollectionStmt : public Stmt {
+class CLANG_ABI ObjCForCollectionStmt : public Stmt {
   enum { ELEM, COLLECTION, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // SubExprs[ELEM] is an expression or declstmt.
   SourceLocation ForLoc;
@@ -162,7 +163,7 @@ public:
 };
 
 /// Represents Objective-C's \@try ... \@catch ... \@finally statement.
-class ObjCAtTryStmt final
+class CLANG_ABI ObjCAtTryStmt final
     : public Stmt,
       private llvm::TrailingObjects<ObjCAtTryStmt, Stmt *> {
   friend TrailingObjects;

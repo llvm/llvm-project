@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -35,7 +36,7 @@ class LocationContext;
 /// ProgramPoints can be "tagged" as representing points specific to a given
 /// analysis entity.  Tags are abstract annotations, with an associated
 /// description and potentially other information.
-class ProgramPointTag {
+class CLANG_ABI ProgramPointTag {
 public:
   ProgramPointTag(void *tagKind = nullptr) : TagKind(tagKind) {}
   virtual ~ProgramPointTag();
@@ -48,14 +49,14 @@ private:
   const void *const TagKind;
 };
 
-class SimpleProgramPointTag : public ProgramPointTag {
+class CLANG_ABI SimpleProgramPointTag : public ProgramPointTag {
   std::string Desc;
 public:
   SimpleProgramPointTag(StringRef MsgProvider, StringRef Msg);
   StringRef getTagDescription() const override;
 };
 
-class ProgramPoint {
+class CLANG_ABI ProgramPoint {
 public:
   enum Kind { BlockEdgeKind,
               BlockEntranceKind,

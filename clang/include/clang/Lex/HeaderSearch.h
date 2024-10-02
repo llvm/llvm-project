@@ -19,6 +19,7 @@
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/ModuleMap.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -56,7 +57,7 @@ class TargetInfo;
 
 /// The preprocessor keeps track of this information for each
 /// file that is \#included.
-struct HeaderFileInfo {
+struct CLANG_ABI HeaderFileInfo {
   // TODO: Whether the file was included is not a property of the file itself.
   // It's a preprocessor state, move it there.
   /// True if this file has been included (or imported) **locally**.
@@ -156,7 +157,7 @@ struct HeaderFileInfo {
 
 /// An external source of header file information, which may supply
 /// information about header files already included.
-class ExternalHeaderFileInfoSource {
+class CLANG_ABI ExternalHeaderFileInfoSource {
 public:
   virtual ~ExternalHeaderFileInfoSource();
 
@@ -246,7 +247,7 @@ using SearchDirRange = llvm::iterator_range<SearchDirIterator>;
 
 /// Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
-class HeaderSearch {
+class CLANG_ABI HeaderSearch {
   friend class DirectoryLookup;
 
   friend ConstSearchDirIterator;
@@ -973,7 +974,7 @@ private:
 };
 
 /// Apply the header search options to get given HeaderSearch object.
-void ApplyHeaderSearchOptions(HeaderSearch &HS,
+CLANG_ABI void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const HeaderSearchOptions &HSOpts,
                               const LangOptions &Lang,
                               const llvm::Triple &triple);

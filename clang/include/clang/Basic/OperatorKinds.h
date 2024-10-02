@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_OPERATORKINDS_H
 #define LLVM_CLANG_BASIC_OPERATORKINDS_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
 
 /// Enumeration specifying the different kinds of C++ overloaded
@@ -28,7 +29,7 @@ enum OverloadedOperatorKind : int {
 
 /// Retrieve the spelling of the given overloaded operator, without
 /// the preceding "operator" keyword.
-const char *getOperatorSpelling(OverloadedOperatorKind Operator);
+CLANG_ABI const char *getOperatorSpelling(OverloadedOperatorKind Operator);
 
 /// Get the other overloaded operator that the given operator can be rewritten
 /// into, if any such operator exists.

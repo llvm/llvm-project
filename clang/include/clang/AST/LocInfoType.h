@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_LOCINFOTYPE_H
 
 #include "clang/AST/Type.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -25,7 +26,7 @@ class TypeSourceInfo;
 /// LocInfoType is a "transient" type, only needed for passing to/from Parser
 /// and Sema, when we want to preserve type source info for a parsed type.
 /// It will not participate in the type system semantics in any way.
-class LocInfoType : public Type {
+class CLANG_ABI LocInfoType : public Type {
   enum {
     // The last number that can fit in Type's TC.
     // Avoids conflict with an existing Type class.

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_FRONTEND_TEXTDIAGNOSTIC_H
 
 #include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -32,7 +33,7 @@ namespace clang {
 /// beautiful text diagnostics from any particular interfaces. The Clang
 /// DiagnosticClient is implemented through this class as is diagnostic
 /// printing coming out of libclang.
-class TextDiagnostic : public DiagnosticRenderer {
+class CLANG_ABI TextDiagnostic : public DiagnosticRenderer {
   raw_ostream &OS;
   const Preprocessor *PP;
 

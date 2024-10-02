@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -28,7 +29,7 @@ class CodeInjector;
 namespace ento {
   class CheckerManager;
 
-class AnalysisManager : public BugReporterData {
+class CLANG_ABI AnalysisManager : public BugReporterData {
   virtual void anchor();
   AnalysisDeclContextManager AnaCtxMgr;
 

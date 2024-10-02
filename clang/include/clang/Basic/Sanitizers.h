@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_SANITIZERS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/HashBuilder.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -31,7 +32,7 @@ class ArgList;
 
 namespace clang {
 
-class SanitizerMask {
+class CLANG_ABI SanitizerMask {
   // NOTE: this class assumes kNumElem == 2 in most of the constexpr functions,
   // in order to work within the C++11 constexpr function constraints. If you
   // change kNumElem, you'll need to update those member functions as well.
@@ -128,7 +129,7 @@ public:
 };
 
 // Declaring in clang namespace so that it can be found by ADL.
-llvm::hash_code hash_value(const clang::SanitizerMask &Arg);
+CLANG_ABI llvm::hash_code hash_value(const clang::SanitizerMask &Arg);
 
 // Define the set of sanitizer kinds, as well as the set of sanitizers each
 // sanitizer group expands into.
@@ -184,15 +185,15 @@ struct SanitizerSet {
 
 /// Parse a single value from a -fsanitize= or -fno-sanitize= value list.
 /// Returns a non-zero SanitizerMask, or \c 0 if \p Value is not known.
-SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
+CLANG_ABI SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 
 /// Serialize a SanitizerSet into values for -fsanitize= or -fno-sanitize=.
-void serializeSanitizerSet(SanitizerSet Set,
+CLANG_ABI void serializeSanitizerSet(SanitizerSet Set,
                            SmallVectorImpl<StringRef> &Values);
 
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
 /// this group enables.
-SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
+CLANG_ABI SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
 
 /// Return the sanitizers which do not affect preprocessing.
 inline SanitizerMask getPPTransparentSanitizers() {
@@ -201,14 +202,14 @@ inline SanitizerMask getPPTransparentSanitizers() {
          SanitizerKind::Undefined | SanitizerKind::FloatDivideByZero;
 }
 
-StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
+CLANG_ABI StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
 
-llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
+CLANG_ABI llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
 
-StringRef AsanDetectStackUseAfterReturnModeToString(
+CLANG_ABI StringRef AsanDetectStackUseAfterReturnModeToString(
     llvm::AsanDetectStackUseAfterReturnMode mode);
 
-llvm::AsanDetectStackUseAfterReturnMode
+CLANG_ABI llvm::AsanDetectStackUseAfterReturnMode
 AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr);
 
 } // namespace clang

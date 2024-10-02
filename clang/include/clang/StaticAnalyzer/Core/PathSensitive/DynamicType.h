@@ -22,64 +22,65 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace ento {
 
 /// Get dynamic type information for the region \p MR.
-DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR);
+CLANG_ABI DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR);
 
 /// Get raw dynamic type information for the region \p MR.
 /// It might return null.
-const DynamicTypeInfo *getRawDynamicTypeInfo(ProgramStateRef State,
+CLANG_ABI const DynamicTypeInfo *getRawDynamicTypeInfo(ProgramStateRef State,
                                              const MemRegion *MR);
 
 /// Get dynamic type information stored in a class object represented by \p Sym.
-DynamicTypeInfo getClassObjectDynamicTypeInfo(ProgramStateRef State,
+CLANG_ABI DynamicTypeInfo getClassObjectDynamicTypeInfo(ProgramStateRef State,
                                               SymbolRef Sym);
 
 /// Get dynamic cast information from \p CastFromTy to \p CastToTy of \p MR.
-const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
+CLANG_ABI const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
                                           const MemRegion *MR,
                                           QualType CastFromTy,
                                           QualType CastToTy);
 
 /// Set dynamic type information of the region; return the new state.
-ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
+CLANG_ABI ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
                                    DynamicTypeInfo NewTy);
 
 /// Set dynamic type information of the region; return the new state.
-ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
+CLANG_ABI ProgramStateRef setDynamicTypeInfo(ProgramStateRef State, const MemRegion *MR,
                                    QualType NewTy, bool CanBeSubClassed = true);
 
 /// Set constraint on a type contained in a class object; return the new state.
-ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
+CLANG_ABI ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
                                               SymbolRef Sym,
                                               DynamicTypeInfo NewTy);
 
 /// Set constraint on a type contained in a class object; return the new state.
-ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
+CLANG_ABI ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
                                               SymbolRef Sym, QualType NewTy,
                                               bool CanBeSubClassed = true);
 
 /// Set dynamic type and cast information of the region; return the new state.
-ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
+CLANG_ABI ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
                                           const MemRegion *MR,
                                           QualType CastFromTy,
                                           QualType CastToTy,
                                           bool IsCastSucceeds);
 
 /// Removes the dead type informations from \p State.
-ProgramStateRef removeDeadTypes(ProgramStateRef State, SymbolReaper &SR);
+CLANG_ABI ProgramStateRef removeDeadTypes(ProgramStateRef State, SymbolReaper &SR);
 
 /// Removes the dead cast informations from \p State.
-ProgramStateRef removeDeadCasts(ProgramStateRef State, SymbolReaper &SR);
+CLANG_ABI ProgramStateRef removeDeadCasts(ProgramStateRef State, SymbolReaper &SR);
 
 /// Removes the dead Class object type informations from \p State.
-ProgramStateRef removeDeadClassObjectTypes(ProgramStateRef State,
+CLANG_ABI ProgramStateRef removeDeadClassObjectTypes(ProgramStateRef State,
                                            SymbolReaper &SR);
 
-void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
+CLANG_ABI void printDynamicTypeInfoJson(raw_ostream &Out, ProgramStateRef State,
                               const char *NL = "\n", unsigned int Space = 0,
                               bool IsDot = false);
 

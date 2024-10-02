@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_STMTITERATOR_H
 #define LLVM_CLANG_AST_STMTITERATOR_H
 
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -24,7 +25,7 @@ class Decl;
 class Stmt;
 class VariableArrayType;
 
-class StmtIteratorBase {
+class CLANG_ABI StmtIteratorBase {
 protected:
   enum {
     StmtMode = 0x0,

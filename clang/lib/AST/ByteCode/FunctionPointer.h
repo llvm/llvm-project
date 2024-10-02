@@ -11,13 +11,14 @@
 
 #include "Function.h"
 #include "Primitives.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class ASTContext;
 class APValue;
 namespace interp {
 
-class FunctionPointer final {
+class CLANG_ABI FunctionPointer final {
 private:
   const Function *Func;
   uint64_t Offset;

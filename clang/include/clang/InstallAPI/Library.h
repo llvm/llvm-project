@@ -15,10 +15,11 @@
 
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang::installapi {
 
-class Library {
+class CLANG_ABI Library {
 public:
   Library(StringRef Directory) : BaseDirectory(Directory) {}
 

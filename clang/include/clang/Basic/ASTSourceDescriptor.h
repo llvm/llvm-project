@@ -16,6 +16,7 @@
 #define LLVM_CLANG_BASIC_ASTSOURCEDESCRIPTOR_H
 
 #include "clang/Basic/Module.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 #include <utility>
@@ -25,7 +26,7 @@ namespace clang {
 /// Abstracts clang modules and precompiled header files and holds
 /// everything needed to generate debug info for an imported module
 /// or PCH.
-class ASTSourceDescriptor {
+class CLANG_ABI ASTSourceDescriptor {
   StringRef PCHModuleName;
   StringRef Path;
   StringRef ASTFile;

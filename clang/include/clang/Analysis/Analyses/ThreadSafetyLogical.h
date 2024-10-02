@@ -13,6 +13,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYLOGICAL_H
 
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace threadSafety {
@@ -93,7 +94,7 @@ public:
 
 /// Logical implication. Returns true if LHS implies RHS, i.e. if LHS
 /// holds, then RHS must hold. For example, (A & B) implies A.
-bool implies(const LExpr *LHS, const LExpr *RHS);
+CLANG_ABI bool implies(const LExpr *LHS, const LExpr *RHS);
 
 bool LExpr::implies(const LExpr *RHS) const {
   return lexpr::implies(this, RHS);

@@ -12,6 +12,7 @@
 #include "clang/ARCMigrate/FileRemapper.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   class ASTContext;
@@ -37,7 +38,7 @@ namespace arcmt {
 /// the pre-migration ARC diagnostics.
 ///
 /// \returns false if no error is produced, true otherwise.
-bool
+CLANG_ABI bool
 checkForManualIssues(CompilerInvocation &CI, const FrontendInputFile &Input,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagClient,
@@ -48,7 +49,7 @@ checkForManualIssues(CompilerInvocation &CI, const FrontendInputFile &Input,
 /// applies automatic modifications to source files to conform to ARC.
 ///
 /// \returns false if no error is produced, true otherwise.
-bool
+CLANG_ABI bool
 applyTransformations(CompilerInvocation &origCI,
                      const FrontendInputFile &Input,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -65,7 +66,7 @@ applyTransformations(CompilerInvocation &origCI,
 /// the pre-migration ARC diagnostics.
 ///
 /// \returns false if no error is produced, true otherwise.
-bool migrateWithTemporaryFiles(
+CLANG_ABI bool migrateWithTemporaryFiles(
     CompilerInvocation &origCI, const FrontendInputFile &Input,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagClient, StringRef outputDir,
@@ -75,7 +76,7 @@ bool migrateWithTemporaryFiles(
 /// migrateWithTemporaryFiles produced.
 ///
 /// \returns false if no error is produced, true otherwise.
-bool getFileRemappings(std::vector<std::pair<std::string,std::string> > &remap,
+CLANG_ABI bool getFileRemappings(std::vector<std::pair<std::string,std::string> > &remap,
                        StringRef outputDir,
                        DiagnosticConsumer *DiagClient);
 
@@ -83,17 +84,17 @@ bool getFileRemappings(std::vector<std::pair<std::string,std::string> > &remap,
 /// info.
 ///
 /// \returns false if no error is produced, true otherwise.
-bool getFileRemappingsFromFileList(
+CLANG_ABI bool getFileRemappingsFromFileList(
                         std::vector<std::pair<std::string,std::string> > &remap,
                         ArrayRef<StringRef> remapFiles,
                         DiagnosticConsumer *DiagClient);
 
 typedef void (*TransformFn)(MigrationPass &pass);
 
-std::vector<TransformFn> getAllTransformations(LangOptions::GCMode OrigGCMode,
+CLANG_ABI std::vector<TransformFn> getAllTransformations(LangOptions::GCMode OrigGCMode,
                                                bool NoFinalizeRemoval);
 
-class MigrationProcess {
+class CLANG_ABI MigrationProcess {
   CompilerInvocation OrigCI;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   DiagnosticConsumer *DiagClient;
@@ -107,7 +108,7 @@ public:
                    DiagnosticConsumer *diagClient,
                    StringRef outputDir = StringRef());
 
-  class RewriteListener {
+  class CLANG_ABI RewriteListener {
   public:
     virtual ~RewriteListener();
 

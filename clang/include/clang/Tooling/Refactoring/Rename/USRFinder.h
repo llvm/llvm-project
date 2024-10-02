@@ -17,6 +17,7 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Support/Compiler.h"
 #include <string>
 #include <vector>
 
@@ -31,17 +32,17 @@ namespace tooling {
 
 // Given an AST context and a point, returns a NamedDecl identifying the symbol
 // at the point. Returns null if nothing is found at the point.
-const NamedDecl *getNamedDeclAt(const ASTContext &Context,
+CLANG_ABI const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point);
 
 // Given an AST context and a fully qualified name, returns a NamedDecl
 // identifying the symbol with a matching name. Returns null if nothing is
 // found for the name.
-const NamedDecl *getNamedDeclFor(const ASTContext &Context,
+CLANG_ABI const NamedDecl *getNamedDeclFor(const ASTContext &Context,
                                  const std::string &Name);
 
 // Converts a Decl into a USR.
-std::string getUSRForDecl(const Decl *Decl);
+CLANG_ABI std::string getUSRForDecl(const Decl *Decl);
 
 } // end namespace tooling
 } // end namespace clang

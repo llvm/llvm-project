@@ -15,6 +15,7 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Types.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -89,7 +90,7 @@ struct ParsedClangName {
 };
 
 /// ToolChain - Access to tools for a single platform.
-class ToolChain {
+class CLANG_ABI ToolChain {
 public:
   using path_list = SmallVector<std::string, 16>;
 

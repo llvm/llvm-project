@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_CLONEDETECTION_H
 
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include <vector>
 
@@ -30,7 +31,7 @@ class CompoundStmt;
 ///
 /// Can either identify a single arbitrary Stmt object, a continuous sequence of
 /// child statements inside a CompoundStmt or no statements at all.
-class StmtSequence {
+class CLANG_ABI StmtSequence {
   /// If this object identifies a sequence of statements inside a CompoundStmt,
   /// S points to this CompoundStmt. If this object only identifies a single
   /// Stmt, then S is a pointer to this Stmt.
@@ -163,7 +164,7 @@ public:
 /// This class only searches for clones in executable source code
 /// (e.g. function bodies). Other clones (e.g. cloned comments or declarations)
 /// are not supported.
-class CloneDetector {
+class CLANG_ABI CloneDetector {
 
 public:
   /// A collection of StmtSequences that share an arbitrary property.
@@ -219,7 +220,7 @@ private:
 
 /// This class is a utility class that contains utility functions for building
 /// custom constraints.
-class CloneConstraint {
+class CLANG_ABI CloneConstraint {
 public:
   /// Removes all groups by using a filter function.
   /// \param CloneGroups The list of CloneGroups that is supposed to be
@@ -251,7 +252,7 @@ public:
 /// them. Add the slower RecursiveCloneTypeIIVerifyConstraint later in the
 /// constraint chain, not necessarily immediately, to eliminate hash collisions
 /// through a more detailed analysis.
-class RecursiveCloneTypeIIHashConstraint {
+class CLANG_ABI RecursiveCloneTypeIIHashConstraint {
 public:
   void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
 };
@@ -262,7 +263,7 @@ public:
 /// In contrast to the RecursiveCloneTypeIIHashConstraint, all clones in a clone
 /// group are guaranteed to be type II clones of each other, but it is too
 /// slow to efficiently handle large amounts of clones.
-class RecursiveCloneTypeIIVerifyConstraint {
+class CLANG_ABI RecursiveCloneTypeIIVerifyConstraint {
 public:
   void constrain(std::vector<CloneDetector::CloneGroup> &Sequences);
 };
@@ -272,7 +273,7 @@ public:
 /// Complexity is here defined as the total amount of children of a statement.
 /// This constraint assumes the first statement in the group is representative
 /// for all other statements in the group in terms of complexity.
-class MinComplexityConstraint {
+class CLANG_ABI MinComplexityConstraint {
   unsigned MinComplexity;
 
 public:
@@ -315,11 +316,11 @@ public:
 };
 
 /// Ensures that no clone group fully contains another clone group.
-struct OnlyLargestCloneConstraint {
+struct CLANG_ABI OnlyLargestCloneConstraint {
   void constrain(std::vector<CloneDetector::CloneGroup> &Result);
 };
 
-struct FilenamePatternConstraint {
+struct CLANG_ABI FilenamePatternConstraint {
   StringRef IgnoredFilesPattern;
   std::shared_ptr<llvm::Regex> IgnoredFilesRegex;
 
@@ -340,7 +341,7 @@ struct FilenamePatternConstraint {
 };
 
 /// Analyzes the pattern of the referenced variables in a statement.
-class VariablePattern {
+class CLANG_ABI VariablePattern {
 
   /// Describes an occurrence of a variable reference in a statement.
   struct VariableOccurence {
@@ -429,7 +430,7 @@ public:
 };
 
 /// Ensures that all clones reference variables in the same pattern.
-struct MatchingVariablePatternConstraint {
+struct CLANG_ABI MatchingVariablePatternConstraint {
   void constrain(std::vector<CloneDetector::CloneGroup> &CloneGroups);
 };
 

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICIDS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -178,7 +179,7 @@ public:
 /// Used for handling and querying diagnostic IDs.
 ///
 /// Can be used and shared by multiple Diagnostics for multiple translation units.
-class DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
+class CLANG_ABI DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
   enum Level {

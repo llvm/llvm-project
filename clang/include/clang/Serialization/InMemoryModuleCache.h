@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_INMEMORYMODULECACHE_H
 #define LLVM_CLANG_SERIALIZATION_INMEMORYMODULECACHE_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -26,7 +27,7 @@ namespace clang {
 /// Critically, it ensures that a single process has a consistent view of each
 /// PCM.  This is used by \a CompilerInstance when building PCMs to ensure that
 /// each \a ModuleManager sees the same files.
-class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
+class CLANG_ABI InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   struct PCM {
     std::unique_ptr<llvm::MemoryBuffer> Buffer;
 

@@ -16,6 +16,7 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/BlockCounter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
+#include "clang/Support/Compiler.h"
 #include <cassert>
 
 namespace clang {
@@ -57,7 +58,7 @@ public:
   unsigned getIndex() const { return blockIdx; }
 };
 
-class WorkList {
+class CLANG_ABI WorkList {
   BlockCounter CurrentCounter;
 public:
   virtual ~WorkList();

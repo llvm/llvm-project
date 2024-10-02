@@ -9,6 +9,7 @@
 #ifndef CLANG_SUPPORT_RISCVVINTRINSICUTILS_H
 #define CLANG_SUPPORT_RISCVVINTRINSICUTILS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
@@ -167,7 +168,7 @@ public:
 
 // PrototypeDescriptor is used to compute type info of arguments or return
 // value.
-struct PrototypeDescriptor {
+struct CLANG_ABI PrototypeDescriptor {
   constexpr PrototypeDescriptor() = default;
   constexpr PrototypeDescriptor(
       BaseTypeModifier PT,
@@ -198,7 +199,7 @@ struct PrototypeDescriptor {
   parsePrototypeDescriptor(llvm::StringRef PrototypeStr);
 };
 
-llvm::SmallVector<PrototypeDescriptor>
+CLANG_ABI llvm::SmallVector<PrototypeDescriptor>
 parsePrototypes(llvm::StringRef Prototypes);
 
 // Basic type of vector type.
@@ -233,7 +234,7 @@ enum ScalarTypeKind : uint8_t {
 };
 
 // Exponential LMUL
-struct LMULType {
+struct CLANG_ABI LMULType {
   int Log2LMUL;
   LMULType(int Log2LMUL);
   // Return the C/C++ string representation of LMUL
@@ -248,7 +249,7 @@ using RVVTypes = std::vector<RVVTypePtr>;
 class RVVTypeCache;
 
 // This class is compact representation of a valid and invalid RVVType.
-class RVVType {
+class CLANG_ABI RVVType {
   friend class RVVTypeCache;
 
   BasicType BT;
@@ -352,7 +353,7 @@ private:
 
 // This class is used to manage RVVType, RVVType should only created by this
 // class, also provided thread-safe cache capability.
-class RVVTypeCache {
+class CLANG_ABI RVVTypeCache {
 private:
   std::unordered_map<uint64_t, RVVType> LegalTypes;
   std::set<uint64_t> IllegalTypes;
@@ -379,7 +380,7 @@ enum PolicyScheme : uint8_t {
 // TODO refactor RVVIntrinsic class design after support all intrinsic
 // combination. This represents an instantiation of an intrinsic with a
 // particular type and prototype
-class RVVIntrinsic {
+class CLANG_ABI RVVIntrinsic {
 
 private:
   std::string BuiltinName; // Builtin name
@@ -562,7 +563,7 @@ struct RVVIntrinsicRecord {
   uint8_t MaskedPolicyScheme : 2;
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const RVVIntrinsicRecord &RVVInstrRecord);
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();

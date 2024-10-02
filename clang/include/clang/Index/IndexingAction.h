@@ -14,6 +14,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <memory>
 
@@ -33,12 +34,12 @@ namespace index {
 class IndexDataConsumer;
 
 /// Creates an ASTConsumer that indexes all symbols (macros and AST decls).
-std::unique_ptr<ASTConsumer>
+CLANG_ABI std::unique_ptr<ASTConsumer>
 createIndexingASTConsumer(std::shared_ptr<IndexDataConsumer> DataConsumer,
                           const IndexingOptions &Opts,
                           std::shared_ptr<Preprocessor> PP);
 
-std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
+CLANG_ABI std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
     std::shared_ptr<IndexDataConsumer> DataConsumer,
     const IndexingOptions &Opts, std::shared_ptr<Preprocessor> PP,
     // Prefer to set Opts.ShouldTraverseDecl and use the above overload.
@@ -46,26 +47,26 @@ std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
     std::function<bool(const Decl *)> ShouldSkipFunctionBody);
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).
-std::unique_ptr<FrontendAction>
+CLANG_ABI std::unique_ptr<FrontendAction>
 createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      const IndexingOptions &Opts);
 
 /// Recursively indexes all decls in the AST.
-void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
+CLANG_ABI void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
                   IndexingOptions Opts);
 
 /// Recursively indexes \p Decls.
-void indexTopLevelDecls(ASTContext &Ctx, Preprocessor &PP,
+CLANG_ABI void indexTopLevelDecls(ASTContext &Ctx, Preprocessor &PP,
                         ArrayRef<const Decl *> Decls,
                         IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 /// Creates a PPCallbacks that indexes macros and feeds macros to \p Consumer.
 /// The caller is responsible for calling `Consumer.setPreprocessor()`.
-std::unique_ptr<PPCallbacks> indexMacrosCallback(IndexDataConsumer &Consumer,
+CLANG_ABI std::unique_ptr<PPCallbacks> indexMacrosCallback(IndexDataConsumer &Consumer,
                                                  IndexingOptions Opts);
 
 /// Recursively indexes all top-level decls in the module.
-void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
+CLANG_ABI void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
                      IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 } // namespace index

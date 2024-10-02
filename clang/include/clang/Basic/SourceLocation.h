@@ -16,6 +16,7 @@
 
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstdint>
@@ -85,7 +86,7 @@ private:
 /// information whether the location is in a file or a macro expansion.
 ///
 /// It is important that this type remains small. It is currently 32 bits wide.
-class SourceLocation {
+class CLANG_ABI SourceLocation {
   friend class ASTReader;
   friend class ASTWriter;
   friend class SourceManager;
@@ -210,7 +211,7 @@ inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
 }
 
 /// A trivial tuple used to represent a source range.
-class SourceRange {
+class CLANG_ABI SourceRange {
   SourceLocation B;
   SourceLocation E;
 
@@ -366,7 +367,7 @@ public:
 /// This class does not guarantee the presence of either the SourceManager or
 /// a valid SourceLocation. Clients should use `isValid()` and `hasManager()`
 /// before calling the member functions.
-class FullSourceLoc : public SourceLocation {
+class CLANG_ABI FullSourceLoc : public SourceLocation {
   const SourceManager *SrcMgr = nullptr;
 
 public:
@@ -515,7 +516,7 @@ namespace llvm {
   };
 
   // Allow calling FoldingSetNodeID::Add with SourceLocation object as parameter
-  template <> struct FoldingSetTrait<clang::SourceLocation, void> {
+  template <> struct CLANG_ABI FoldingSetTrait<clang::SourceLocation, void> {
     static void Profile(const clang::SourceLocation &X, FoldingSetNodeID &ID);
   };
 

@@ -49,6 +49,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/ThreadSafetyUtil.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -138,10 +139,10 @@ const TIL_CastOpcode   CAST_Min = CAST_none;
 const TIL_CastOpcode   CAST_Max = CAST_toInt;
 
 /// Return the name of a unary opcode.
-StringRef getUnaryOpcodeString(TIL_UnaryOpcode Op);
+CLANG_ABI StringRef getUnaryOpcodeString(TIL_UnaryOpcode Op);
 
 /// Return the name of a binary opcode.
-StringRef getBinaryOpcodeString(TIL_BinaryOpcode Op);
+CLANG_ABI StringRef getBinaryOpcodeString(TIL_BinaryOpcode Op);
 
 /// ValueTypes are data types that can actually be held in registers.
 /// All variables and expressions must have a value type.
@@ -432,7 +433,7 @@ private:
 
 /// Placeholder for an expression that has not yet been created.
 /// Used to implement lazy copy and rewriting strategies.
-class Future : public SExpr {
+class CLANG_ABI Future : public SExpr {
 public:
   enum FutureStatus {
     FS_pending,
@@ -1505,7 +1506,7 @@ inline ArrayRef<BasicBlock*> Terminator::successors() {
 /// which are "arguments" to the function, followed by a sequence of
 /// instructions.  It ends with a Terminator, which is a Branch or Goto to
 /// another basic block in the same SCFG.
-class BasicBlock : public SExpr {
+class CLANG_ABI BasicBlock : public SExpr {
 public:
   using InstrArray = SimpleArray<SExpr *>;
   using BlockArray = SimpleArray<BasicBlock *>;
@@ -1692,7 +1693,7 @@ private:
 /// An SCFG is a control-flow graph.  It consists of a set of basic blocks,
 /// each of which terminates in a branch to another basic block.  There is one
 /// entry point, and one exit point.
-class SCFG : public SExpr {
+class CLANG_ABI SCFG : public SExpr {
 public:
   using BlockArray = SimpleArray<BasicBlock *>;
   using iterator = BlockArray::iterator;
@@ -1907,9 +1908,9 @@ private:
   SExpr* Body;
 };
 
-const SExpr *getCanonicalVal(const SExpr *E);
-SExpr* simplifyToCanonicalVal(SExpr *E);
-void simplifyIncompleteArg(til::Phi *Ph);
+CLANG_ABI const SExpr *getCanonicalVal(const SExpr *E);
+CLANG_ABI SExpr* simplifyToCanonicalVal(SExpr *E);
+CLANG_ABI void simplifyIncompleteArg(til::Phi *Ph);
 
 } // namespace til
 } // namespace threadSafety

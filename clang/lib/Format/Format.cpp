@@ -21,6 +21,7 @@
 #include "SortJavaScriptImports.h"
 #include "UnwrappedLineFormatter.h"
 #include "UsingDeclarationsSorter.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/Sequence.h"
 
@@ -3912,7 +3913,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   return LangOpts;
 }
 
-const char *StyleOptionHelpDescription =
+CLANG_ABI const char *StyleOptionHelpDescription =
     "Set coding style. <string> can be:\n"
     "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
     "   Mozilla, WebKit.\n"
@@ -3985,9 +3986,9 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
 }
 
 // Update StyleOptionHelpDescription above when changing this.
-const char *DefaultFormatStyle = "file";
+CLANG_ABI const char *DefaultFormatStyle = "file";
 
-const char *DefaultFallbackStyle = "LLVM";
+CLANG_ABI const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,

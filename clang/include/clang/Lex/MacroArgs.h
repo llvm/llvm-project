@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <vector>
@@ -26,7 +27,7 @@ namespace clang {
 
 /// MacroArgs - An instance of this class captures information about
 /// the formal arguments specified to a function-like macro invocation.
-class MacroArgs final
+class CLANG_ABI MacroArgs final
     : private llvm::TrailingObjects<MacroArgs, Token> {
 
   friend TrailingObjects;

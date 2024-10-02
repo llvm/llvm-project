@@ -15,12 +15,13 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class AttributeCommonInfo;
 class ParsedAttr;
 
-class SemaAMDGPU : public SemaBase {
+class CLANG_ABI SemaAMDGPU : public SemaBase {
 public:
   SemaAMDGPU(Sema &S);
 

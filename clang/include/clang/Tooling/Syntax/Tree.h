@@ -22,6 +22,7 @@
 #define LLVM_CLANG_TOOLING_SYNTAX_TREE_H
 
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Syntax/TokenManager.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
@@ -51,7 +52,7 @@ enum class NodeRole : uint8_t;
 
 /// A node in a syntax tree. Each node is either a Leaf (representing tokens) or
 /// a Tree (representing language constructrs).
-class Node {
+class CLANG_ABI Node {
 protected:
   /// Newly created nodes are detached from a tree, parent and sibling links are
   /// set when the node is added as a child to another one.
@@ -129,7 +130,7 @@ private:
 
 /// A leaf node points to a single token.
 // FIXME: add TokenKind field (borrow some bits from the Node::kind).
-class Leaf final : public Node {
+class CLANG_ABI Leaf final : public Node {
 public:
   Leaf(TokenManager::Key K);
   static bool classof(const Node *N);
@@ -141,7 +142,7 @@ private:
 };
 
 /// A node that has children and represents a syntactic language construct.
-class Tree : public Node {
+class CLANG_ABI Tree : public Node {
   /// Iterator over children (common base for const/non-const).
   /// Not invalidated by tree mutations (holds a stable node pointer).
   template <typename DerivedT, typename NodeT>
@@ -251,7 +252,7 @@ private:
 ///
 /// This type models the following grammar construct:
 /// delimited-list(element, delimiter, termination, canBeEmpty)
-class List : public Tree {
+class CLANG_ABI List : public Tree {
 public:
   template <typename Element> struct ElementAndDelimiter {
     Element *element;

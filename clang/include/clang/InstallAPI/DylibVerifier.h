@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/InstallAPI/MachO.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace installapi {
@@ -42,14 +43,14 @@ using ZipperedDeclSources = std::vector<ZipperedDeclSource>;
 /// lifetime of InstallAPI.
 /// As declarations are collected during AST traversal, they are
 /// compared as symbols against what is available in the binary dylib.
-class DylibVerifier : llvm::MachO::RecordVisitor {
+class CLANG_ABI DylibVerifier : llvm::MachO::RecordVisitor {
 private:
   struct SymbolContext;
   struct DWARFContext;
 
 public:
   enum class Result { NoVerify, Ignore, Valid, Invalid };
-  struct VerifierContext {
+  struct CLANG_ABI VerifierContext {
     // Current target being verified against the AST.
     llvm::MachO::Target Target;
 

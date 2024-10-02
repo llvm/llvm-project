@@ -15,13 +15,14 @@
 #define LLVM_CLANG_ANALYSIS_CFGSTMTMAP_H
 
 #include "clang/Analysis/CFG.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 class ParentMap;
 class Stmt;
 
-class CFGStmtMap {
+class CLANG_ABI CFGStmtMap {
   ParentMap *PM;
   void *M;
 

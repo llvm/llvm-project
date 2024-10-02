@@ -35,6 +35,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
@@ -54,7 +55,7 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
+CLANG_ABI extern cl::opt<bool> EnableSingleByteCoverage;
 } // namespace llvm
 
 /// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time

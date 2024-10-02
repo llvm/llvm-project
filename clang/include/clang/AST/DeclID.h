@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_DECLID_H
 #define LLVM_CLANG_AST_DECLID_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
@@ -97,7 +98,7 @@ enum PredefinedDeclIDs {
 /// We can translate a LocalDeclID to the GlobalDeclID by
 /// `ASTReader::getGlobalDeclID()`.
 
-class DeclIDBase {
+class CLANG_ABI DeclIDBase {
 public:
   /// An ID number that refers to a declaration in an AST file.
   ///
@@ -180,7 +181,7 @@ namespace serialization {
 class ModuleFile;
 } // namespace serialization
 
-class LocalDeclID : public DeclIDBase {
+class CLANG_ABI LocalDeclID : public DeclIDBase {
   using Base = DeclIDBase;
 
   LocalDeclID(PredefinedDeclIDs ID) : Base(ID) {}

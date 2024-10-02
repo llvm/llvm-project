@@ -15,13 +15,14 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_Z3CROSSCHECKVISITOR_H
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang::ento {
 
 /// The bug visitor will walk all the nodes in a path and collect all the
 /// constraints. When it reaches the root node, will create a refutation
 /// manager and check if the constraints are satisfiable.
-class Z3CrosscheckVisitor final : public BugReporterVisitor {
+class CLANG_ABI Z3CrosscheckVisitor final : public BugReporterVisitor {
 public:
   struct Z3Result {
     std::optional<bool> IsSAT = std::nullopt;
@@ -53,7 +54,7 @@ private:
 /// The oracle will decide if a report should be accepted or rejected based on
 /// the results of the Z3 solver and the statistics of the queries of a report
 /// equivalenece class.
-class Z3CrosscheckOracle {
+class CLANG_ABI Z3CrosscheckOracle {
 public:
   explicit Z3CrosscheckOracle(const AnalyzerOptions &Opts) : Opts(Opts) {}
 

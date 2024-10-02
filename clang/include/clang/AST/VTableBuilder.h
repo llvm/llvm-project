@@ -19,6 +19,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/Thunk.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 #include <utility>
@@ -230,7 +231,7 @@ private:
   int64_t Value;
 };
 
-class VTableLayout {
+class CLANG_ABI VTableLayout {
 public:
   typedef std::pair<uint64_t, ThunkInfo> VTableThunkTy;
   struct AddressPointLocation {
@@ -318,7 +319,7 @@ public:
   }
 };
 
-class VTableContextBase {
+class CLANG_ABI VTableContextBase {
 public:
   typedef SmallVector<ThunkInfo, 1> ThunkInfoVectorTy;
 
@@ -360,7 +361,7 @@ public:
   static bool hasVtableSlot(const CXXMethodDecl *MD);
 };
 
-class ItaniumVTableContext : public VTableContextBase {
+class CLANG_ABI ItaniumVTableContext : public VTableContextBase {
 public:
   typedef llvm::DenseMap<const CXXMethodDecl *, const CXXMethodDecl *>
       OriginalMethodMapTy;
@@ -570,7 +571,7 @@ struct MethodVFTableLocation {
   }
 };
 
-class MicrosoftVTableContext : public VTableContextBase {
+class CLANG_ABI MicrosoftVTableContext : public VTableContextBase {
 public:
 
 private:

@@ -32,6 +32,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -71,7 +72,7 @@ namespace clang {
 /// If CXXScopeSpec refers to SomeType<T> then TemplateParamLists will contain
 /// a single element referring to template <class T>.
 
-class CXXScopeSpec {
+class CLANG_ABI CXXScopeSpec {
   SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
   ArrayRef<TemplateParameterList *> TemplateParamLists;
@@ -244,7 +245,7 @@ public:
 ///
 /// "Declaration specifiers" encompasses storage-class-specifiers,
 /// type-specifiers, type-qualifiers, and function-specifiers.
-class DeclSpec {
+class CLANG_ABI DeclSpec {
 public:
   /// storage-class-specifier
   /// \note The order of these enumerators is important for diagnostics.
@@ -1025,7 +1026,7 @@ enum class UnqualifiedIdKind {
 };
 
 /// Represents a C++ unqualified-id that has been parsed.
-class UnqualifiedId {
+class CLANG_ABI UnqualifiedId {
 private:
   UnqualifiedId(const UnqualifiedId &Other) = delete;
   const UnqualifiedId &operator=(const UnqualifiedId &) = delete;
@@ -1248,7 +1249,7 @@ typedef SmallVector<Token, 4> CachedTokens;
 /// declarator that is parsed.
 ///
 /// This is intended to be a small value object.
-struct DeclaratorChunk {
+struct CLANG_ABI DeclaratorChunk {
   DeclaratorChunk() {};
 
   enum {
@@ -1900,7 +1901,7 @@ enum class ImplicitTypenameContext {
 ///
 /// Instances of this class should be a transient object that lives on the
 /// stack, not objects that are allocated in large quantities on the heap.
-class Declarator {
+class CLANG_ABI Declarator {
 
 private:
   const DeclSpec &DS;
@@ -2780,7 +2781,7 @@ struct FieldDeclarator {
 };
 
 /// Represents a C++11 virt-specifier-seq.
-class VirtSpecifiers {
+class CLANG_ABI VirtSpecifiers {
 public:
   enum Specifier {
     VS_None = 0,

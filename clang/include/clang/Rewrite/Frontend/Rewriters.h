@@ -14,19 +14,20 @@
 #define LLVM_CLANG_REWRITE_FRONTEND_REWRITERS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class Preprocessor;
 class PreprocessorOutputOptions;
 
 /// RewriteMacrosInInput - Implement -rewrite-macros mode.
-void RewriteMacrosInInput(Preprocessor &PP, raw_ostream *OS);
+CLANG_ABI void RewriteMacrosInInput(Preprocessor &PP, raw_ostream *OS);
 
 /// DoRewriteTest - A simple test for the TokenRewriter class.
-void DoRewriteTest(Preprocessor &PP, raw_ostream *OS);
+CLANG_ABI void DoRewriteTest(Preprocessor &PP, raw_ostream *OS);
 
 /// RewriteIncludesInInput - Implement -frewrite-includes mode.
-void RewriteIncludesInInput(Preprocessor &PP, raw_ostream *OS,
+CLANG_ABI void RewriteIncludesInInput(Preprocessor &PP, raw_ostream *OS,
                             const PreprocessorOutputOptions &Opts);
 
 }  // end namespace clang

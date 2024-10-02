@@ -15,6 +15,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
@@ -33,7 +34,7 @@ class LangOptions;
 /// tokens that were parsed and semantically resolved, e.g.: "foo::MyClass<int>"
 /// can be represented by a single typename annotation token that carries
 /// information about the SourceRange of the tokens and the type object.
-class Token {
+class CLANG_ABI Token {
   /// The location of the token. This is actually a SourceLocation.
   SourceLocation::UIntTy Loc;
 

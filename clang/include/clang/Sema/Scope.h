@@ -15,6 +15,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,7 +39,7 @@ class VarDecl;
 /// Scope - A scope is a transient data structure that is used while parsing the
 /// program.  It assists with resolving identifiers to the appropriate
 /// declaration.
-class Scope {
+class CLANG_ABI Scope {
 public:
   /// ScopeFlags - These are bitfields that are or'd together when creating a
   /// scope, which defines the sorts of things the scope contains.

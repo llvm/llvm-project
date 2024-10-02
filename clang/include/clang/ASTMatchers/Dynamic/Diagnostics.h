@@ -16,6 +16,7 @@
 
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -47,7 +48,7 @@ struct ParserValue {
 };
 
 /// Helper class to manage error messages.
-class Diagnostics {
+class CLANG_ABI Diagnostics {
 public:
   /// Parser context types.
   enum ContextType {
@@ -85,7 +86,7 @@ public:
   };
 
   /// Helper stream class.
-  class ArgStream {
+  class CLANG_ABI ArgStream {
   public:
     ArgStream(std::vector<std::string> *Out) : Out(Out) {}
     template <class T> ArgStream &operator<<(const T &Arg) {
@@ -103,7 +104,7 @@ public:
   /// parsing/construction can fail. Any error triggered within a context will
   /// keep information about the context chain.
   /// This class should be used as a RAII instance in the stack.
-  struct Context {
+  struct CLANG_ABI Context {
   public:
     /// About to call the constructor for a matcher.
     enum ConstructMatcherEnum { ConstructMatcher };
@@ -123,7 +124,7 @@ public:
   ///
   /// This context will take care of merging all errors that happen within it
   /// as "candidate" overloads for the same matcher.
-  struct OverloadContext {
+  struct CLANG_ABI OverloadContext {
   public:
    OverloadContext(Diagnostics* Error);
    ~OverloadContext();

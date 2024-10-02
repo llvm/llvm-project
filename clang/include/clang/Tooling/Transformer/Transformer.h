@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_TRANSFORMER_TRANSFORMER_H_
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "llvm/Support/Error.h"
@@ -22,7 +23,7 @@ namespace tooling {
 namespace detail {
 /// Implementation details of \c Transformer with type erasure around
 /// \c RewriteRule<T> as well as the corresponding consumers.
-class TransformerImpl {
+class CLANG_ABI TransformerImpl {
 public:
   virtual ~TransformerImpl() = default;
 
@@ -60,7 +61,7 @@ template <> struct TransformerResult<void> {
 
 /// Handles the matcher and callback registration for a single `RewriteRule`, as
 /// defined by the arguments of the constructor.
-class Transformer : public ast_matchers::MatchFinder::MatchCallback {
+class CLANG_ABI Transformer : public ast_matchers::MatchFinder::MatchCallback {
 public:
   /// Provides the set of changes to the consumer.  The callback is free to move
   /// or destructively consume the changes as needed.

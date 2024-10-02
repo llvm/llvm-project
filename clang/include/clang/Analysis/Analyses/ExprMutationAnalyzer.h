@@ -9,6 +9,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_EXPRMUTATIONANALYZER_H
 
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 
@@ -38,7 +39,7 @@ public:
       FuncParmAnalyzer.clear();
     }
   };
-  struct Analyzer {
+  struct CLANG_ABI Analyzer {
     Analyzer(const Stmt &Stm, ASTContext &Context, Memoized &Memorized)
         : Stm(Stm), Context(Context), Memorized(Memorized) {}
 
@@ -113,7 +114,7 @@ private:
 
 // A convenient wrapper around ExprMutationAnalyzer for analyzing function
 // params.
-class FunctionParmMutationAnalyzer {
+class CLANG_ABI FunctionParmMutationAnalyzer {
 public:
   static FunctionParmMutationAnalyzer *
   getFunctionParmMutationAnalyzer(const FunctionDecl &Func, ASTContext &Context,

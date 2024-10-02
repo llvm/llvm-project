@@ -20,13 +20,14 @@
 #define LLVM_CLANG_TOOLING_FIXIT_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace tooling {
 namespace fixit {
 
 namespace internal {
-StringRef getText(CharSourceRange Range, const ASTContext &Context);
+CLANG_ABI StringRef getText(CharSourceRange Range, const ASTContext &Context);
 
 /// Returns the token CharSourceRange corresponding to \p Range.
 inline CharSourceRange getSourceRange(const SourceRange &Range) {

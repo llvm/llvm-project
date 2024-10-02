@@ -10,6 +10,7 @@
 #define LLVM_CLANG_AST_INTERP_MEMBER_POINTER_H
 
 #include "Pointer.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 
 namespace clang {
@@ -19,7 +20,7 @@ namespace interp {
 class Context;
 class FunctionPointer;
 
-class MemberPointer final {
+class CLANG_ABI MemberPointer final {
 private:
   Pointer Base;
   const ValueDecl *Dcl = nullptr;

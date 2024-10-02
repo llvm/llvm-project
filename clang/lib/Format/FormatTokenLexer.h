@@ -17,6 +17,7 @@
 
 #include "Encoding.h"
 #include "FormatToken.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
@@ -32,7 +33,7 @@ enum LexerState {
   TOKEN_STASHED,
 };
 
-class FormatTokenLexer {
+class CLANG_ABI FormatTokenLexer {
 public:
   FormatTokenLexer(const SourceManager &SourceMgr, FileID ID, unsigned Column,
                    const FormatStyle &Style, encoding::Encoding Encoding,

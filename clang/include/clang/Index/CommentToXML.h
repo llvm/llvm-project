@@ -10,6 +10,7 @@
 #define LLVM_CLANG_INDEX_COMMENTTOXML_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class ASTContext;
@@ -20,7 +21,7 @@ class HTMLTagComment;
 }
 
 namespace index {
-class CommentToXMLConverter {
+class CLANG_ABI CommentToXMLConverter {
 public:
   CommentToXMLConverter();
   ~CommentToXMLConverter();

@@ -19,11 +19,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class Scope;
 
-class SemaPseudoObject : public SemaBase {
+class CLANG_ABI SemaPseudoObject : public SemaBase {
 public:
   SemaPseudoObject(Sema &S);
 

@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_GLOBALMODULEINDEX_H
 #define LLVM_CLANG_SERIALIZATION_GLOBALMODULEINDEX_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,7 +52,7 @@ namespace serialization {
 /// the global module index may know about module files that have not been
 /// imported, and can be queried to determine which modules the current
 /// translation could or should load to fix a problem.
-class GlobalModuleIndex {
+class CLANG_ABI GlobalModuleIndex {
   using ModuleFile = serialization::ModuleFile;
 
   /// Buffer containing the index file, which is lazily accessed so long

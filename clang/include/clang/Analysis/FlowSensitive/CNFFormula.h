@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "clang/Analysis/FlowSensitive/Formula.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace dataflow {
@@ -65,7 +66,7 @@ inline constexpr Variable var(Literal L) { return L >> 1; }
 
 /// A boolean formula in 3-CNF (conjunctive normal form with at most 3 literals
 /// per clause).
-class CNFFormula {
+class CLANG_ABI CNFFormula {
   /// `LargestVar` is equal to the largest positive integer that represents a
   /// variable in the formula.
   const Variable LargestVar;
@@ -170,7 +171,7 @@ public:
 /// form where each clause has at least one and at most three literals.
 /// `Atomics` is populated with a mapping from `Variables` to the corresponding
 /// `Atom`s for atomic booleans in the input formulas.
-CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Formulas,
+CLANG_ABI CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Formulas,
                     llvm::DenseMap<Variable, Atom> &Atomics);
 
 } // namespace dataflow

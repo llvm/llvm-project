@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SimpleConstraintManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Allocator.h"
 
@@ -26,7 +27,7 @@ namespace ento {
 /// A Range represents the closed range [from, to].  The caller must
 /// guarantee that from <= to.  Note that Range is immutable, so as not
 /// to subvert RangeSet's immutability.
-class Range {
+class CLANG_ABI Range {
 public:
   Range(const llvm::APSInt &From, const llvm::APSInt &To) : Impl(&From, &To) {
     assert(From <= To);
@@ -68,7 +69,7 @@ private:
 ///
 /// Empty set corresponds to an overly constrained symbol meaning that there
 /// are no possible values for that symbol.
-class RangeSet {
+class CLANG_ABI RangeSet {
 public:
   class Factory;
 
@@ -118,7 +119,7 @@ public:
 
   bool isEmpty() const { return Impl->empty(); }
 
-  class Factory {
+  class CLANG_ABI Factory {
   public:
     Factory(BasicValueFactory &BV) : ValueFactory(BV) {}
 
@@ -402,9 +403,9 @@ private:
 };
 
 using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet>;
-ConstraintMap getConstraintMap(ProgramStateRef State);
+CLANG_ABI ConstraintMap getConstraintMap(ProgramStateRef State);
 
-class RangedConstraintManager : public SimpleConstraintManager {
+class CLANG_ABI RangedConstraintManager : public SimpleConstraintManager {
 public:
   RangedConstraintManager(ExprEngine *EE, SValBuilder &SB)
       : SimpleConstraintManager(EE, SB) {}
@@ -486,13 +487,13 @@ private:
 /// functions where we can work only with symbols. Use the other function
 /// (simplifyToSVal) if you are interested in a simplification that may yield
 /// a concrete constant value.
-SymbolRef simplify(ProgramStateRef State, SymbolRef Sym);
+CLANG_ABI SymbolRef simplify(ProgramStateRef State, SymbolRef Sym);
 
 /// Try to simplify a given symbolic expression's associated `SVal` based on the
 /// constraints in State. This is very similar to `simplify`, but this function
 /// always returns the simplified SVal. The simplified SVal might be a single
 /// constant (i.e. `ConcreteInt`).
-SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym);
+CLANG_ABI SVal simplifyToSVal(ProgramStateRef State, SymbolRef Sym);
 
 } // namespace ento
 } // namespace clang

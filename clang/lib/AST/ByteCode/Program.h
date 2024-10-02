@@ -18,6 +18,7 @@
 #include "PrimType.h"
 #include "Record.h"
 #include "Source.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,7 +37,7 @@ namespace interp {
 class Context;
 
 /// The program contains and links the bytecode for all functions.
-class Program final {
+class CLANG_ABI Program final {
 public:
   Program(Context &Ctx) : Ctx(Ctx) {}
 

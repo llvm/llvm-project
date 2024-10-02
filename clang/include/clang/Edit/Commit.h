@@ -12,6 +12,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/FileOffset.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -26,7 +27,7 @@ namespace edit {
 
 class EditedSource;
 
-class Commit {
+class CLANG_ABI Commit {
 public:
   enum EditKind {
     Act_Insert,
@@ -34,7 +35,7 @@ public:
     Act_Remove
   };
 
-  struct Edit {
+  struct CLANG_ABI Edit {
     EditKind Kind;
     StringRef Text;
     SourceLocation OrigLoc;

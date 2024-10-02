@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LEX_TOKENLEXER_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
@@ -27,7 +28,7 @@ class VAOptExpansionContext;
 /// TokenLexer - This implements a lexer that returns tokens from a macro body
 /// or token stream instead of lexing from a character buffer.  This is used for
 /// macro expansion and _Pragma handling, for example.
-class TokenLexer {
+class CLANG_ABI TokenLexer {
   friend class Preprocessor;
 
   /// The macro we are expanding from. This is null if expanding a token stream.

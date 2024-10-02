@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMACONSUMER_H
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
   class Sema;
@@ -22,7 +23,7 @@ namespace clang {
   /// An abstract interface that should be implemented by
   /// clients that read ASTs and then require further semantic
   /// analysis of the entities in those ASTs.
-  class SemaConsumer : public ASTConsumer {
+  class CLANG_ABI SemaConsumer : public ASTConsumer {
     virtual void anchor();
   public:
     SemaConsumer() {

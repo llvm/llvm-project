@@ -17,6 +17,7 @@
 
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
@@ -146,7 +147,7 @@ struct CommandInfo {
 
 /// This class provides information about commands that can be used
 /// in comments.
-class CommandTraits {
+class CLANG_ABI CommandTraits {
 public:
   enum KnownCommandIDs {
 #define COMMENT_COMMAND(NAME) KCI_##NAME,

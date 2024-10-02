@@ -15,6 +15,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_UNINITIALIZEDVALUES_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -101,7 +102,7 @@ public:
   bool branch_empty() const { return UninitBranches.empty(); }
 };
 
-class UninitVariablesHandler {
+class CLANG_ABI UninitVariablesHandler {
 public:
   UninitVariablesHandler() = default;
   virtual ~UninitVariablesHandler();
@@ -125,7 +126,7 @@ struct UninitVariablesAnalysisStats {
   unsigned NumBlockVisits;
 };
 
-void runUninitializedVariablesAnalysis(const DeclContext &dc, const CFG &cfg,
+CLANG_ABI void runUninitializedVariablesAnalysis(const DeclContext &dc, const CFG &cfg,
                                        AnalysisDeclContext &ac,
                                        UninitVariablesHandler &handler,
                                        UninitVariablesAnalysisStats &stats);

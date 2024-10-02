@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULES_H
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULES_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRule.h"
 #include "clang/Tooling/Refactoring/RefactoringActionRulesInternal.h"
 
@@ -49,7 +50,7 @@ using RefactoringActionRules =
 ///
 /// This action rule is typically used for local refactorings that replace
 /// source in a single AST unit.
-class SourceChangeRefactoringRule : public RefactoringActionRuleBase {
+class CLANG_ABI SourceChangeRefactoringRule : public RefactoringActionRuleBase {
 public:
   void invoke(RefactoringResultConsumer &Consumer,
               RefactoringRuleContext &Context) final {
@@ -71,7 +72,7 @@ private:
 /// This action rule is typically used for an interactive rename that allows
 /// users to specify the new name and the set of selected occurrences during
 /// the refactoring.
-class FindSymbolOccurrencesRefactoringRule : public RefactoringActionRuleBase {
+class CLANG_ABI FindSymbolOccurrencesRefactoringRule : public RefactoringActionRuleBase {
 public:
   void invoke(RefactoringResultConsumer &Consumer,
               RefactoringRuleContext &Context) final {

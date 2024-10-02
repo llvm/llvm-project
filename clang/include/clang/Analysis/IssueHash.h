@@ -8,6 +8,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ISSUEHASH_H
 #define LLVM_CLANG_ANALYSIS_ISSUEHASH_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallString.h"
 
 namespace clang {
@@ -31,7 +32,7 @@ class LangOptions;
 ///   - Name of the enclosing declaration.
 ///   - Contents of the line of code with the issue, excluding whitespace.
 ///   - Column number (but not the line number! - which makes it stable).
-llvm::SmallString<32> getIssueHash(const FullSourceLoc &IssueLoc,
+CLANG_ABI llvm::SmallString<32> getIssueHash(const FullSourceLoc &IssueLoc,
                                    llvm::StringRef CheckerName,
                                    llvm::StringRef WarningMessage,
                                    const Decl *IssueDecl,
@@ -40,7 +41,7 @@ llvm::SmallString<32> getIssueHash(const FullSourceLoc &IssueLoc,
 /// Get the unhashed string representation of the V1 issue hash.
 /// When hashed, it becomes the actual issue hash. Useful for testing.
 /// See GetIssueHashV1() for more information.
-std::string getIssueString(const FullSourceLoc &IssueLoc,
+CLANG_ABI std::string getIssueString(const FullSourceLoc &IssueLoc,
                            llvm::StringRef CheckerName,
                            llvm::StringRef WarningMessage,
                            const Decl *IssueDecl, const LangOptions &LangOpts);

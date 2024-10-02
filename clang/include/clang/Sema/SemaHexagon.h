@@ -15,9 +15,10 @@
 
 #include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
-class SemaHexagon : public SemaBase {
+class CLANG_ABI SemaHexagon : public SemaBase {
 public:
   SemaHexagon(Sema &S);
 

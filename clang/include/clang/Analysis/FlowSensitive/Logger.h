@@ -10,6 +10,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_LOGGER_H
 
 #include "clang/Analysis/CFG.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -24,7 +25,7 @@ struct TypeErasedDataflowAnalysisState;
 ///
 /// The framework reports key structural events (e.g. traversal of blocks).
 /// The specific analysis can add extra details to be presented in context.
-class Logger {
+class CLANG_ABI Logger {
 public:
   /// Returns a dummy logger that does nothing.
   static Logger &null();

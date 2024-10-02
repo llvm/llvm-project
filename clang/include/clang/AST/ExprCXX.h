@@ -39,6 +39,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
@@ -78,7 +79,7 @@ class TemplateParameterList;
 /// function itself will be a (possibly empty) set of functions and
 /// function templates that were found by name lookup at template
 /// definition time.
-class CXXOperatorCallExpr final : public CallExpr {
+class CLANG_ABI CXXOperatorCallExpr final : public CallExpr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
@@ -173,7 +174,7 @@ public:
 /// both the object argument and the member function, while the
 /// arguments are the arguments within the parentheses (not including
 /// the object argument).
-class CXXMemberCallExpr final : public CallExpr {
+class CLANG_ABI CXXMemberCallExpr final : public CallExpr {
   // CXXMemberCallExpr has some trailing objects belonging
   // to CallExpr. See CallExpr for the details.
 
@@ -228,7 +229,7 @@ public:
 };
 
 /// Represents a call to a CUDA kernel function.
-class CUDAKernelCallExpr final : public CallExpr {
+class CLANG_ABI CUDAKernelCallExpr final : public CallExpr {
   friend class ASTStmtReader;
 
   enum { CONFIG, END_PREARG };
@@ -280,7 +281,7 @@ public:
 ///
 /// Note that the rewritten calls to \c ==, \c <=>, and \c \@ are typically
 /// \c CXXOperatorCallExprs, but could theoretically be \c BinaryOperators.
-class CXXRewrittenBinaryOperator : public Expr {
+class CLANG_ABI CXXRewrittenBinaryOperator : public Expr {
   friend class ASTStmtReader;
 
   /// The rewritten semantic form.
@@ -369,7 +370,7 @@ public:
 /// CXXDynamicCastExpr for \c dynamic_cast, CXXReinterpretCastExpr for
 /// reinterpret_cast, CXXConstCastExpr for \c const_cast and
 /// CXXAddrspaceCastExpr for addrspace_cast (in OpenCL).
-class CXXNamedCastExpr : public ExplicitCastExpr {
+class CLANG_ABI CXXNamedCastExpr : public ExplicitCastExpr {
 private:
   // the location of the casting op
   SourceLocation Loc;
@@ -427,7 +428,7 @@ public:
 ///
 /// This expression node represents a C++ static cast, e.g.,
 /// \c static_cast<int>(1.0).
-class CXXStaticCastExpr final
+class CLANG_ABI CXXStaticCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXStaticCastExpr, CXXBaseSpecifier *,
                                     FPOptionsOverride> {
@@ -473,7 +474,7 @@ public:
 /// This expression node represents a dynamic cast, e.g.,
 /// \c dynamic_cast<Derived*>(BasePtr). Such a cast may perform a run-time
 /// check to determine how to perform the type conversion.
-class CXXDynamicCastExpr final
+class CLANG_ABI CXXDynamicCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXDynamicCastExpr, CXXBaseSpecifier *> {
   CXXDynamicCastExpr(QualType ty, ExprValueKind VK, CastKind kind, Expr *op,
@@ -517,7 +518,7 @@ public:
 /// A reinterpret_cast provides a differently-typed view of a value but
 /// (in Clang, as in most C++ implementations) performs no actual work at
 /// run time.
-class CXXReinterpretCastExpr final
+class CLANG_ABI CXXReinterpretCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXReinterpretCastExpr,
                                     CXXBaseSpecifier *> {
@@ -558,7 +559,7 @@ public:
 ///
 /// A const_cast can remove type qualifiers but does not change the underlying
 /// value.
-class CXXConstCastExpr final
+class CLANG_ABI CXXConstCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXConstCastExpr, CXXBaseSpecifier *> {
   CXXConstCastExpr(QualType ty, ExprValueKind VK, Expr *op,
@@ -596,7 +597,7 @@ public:
 ///
 /// A addrspace_cast can cast address space type qualifiers but does not change
 /// the underlying value.
-class CXXAddrspaceCastExpr final
+class CLANG_ABI CXXAddrspaceCastExpr final
     : public CXXNamedCastExpr,
       private llvm::TrailingObjects<CXXAddrspaceCastExpr, CXXBaseSpecifier *> {
   CXXAddrspaceCastExpr(QualType ty, ExprValueKind VK, CastKind Kind, Expr *op,
@@ -634,7 +635,7 @@ public:
 ///
 /// Since literal operators are never found by ADL and can only be declared at
 /// namespace scope, a user-defined literal is never dependent.
-class UserDefinedLiteral final : public CallExpr {
+class CLANG_ABI UserDefinedLiteral final : public CallExpr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
@@ -842,7 +843,7 @@ public:
 /// dynamic) type of the supplied expression.
 ///
 /// This represents code like \c typeid(int) or \c typeid(*objPtr)
-class CXXTypeidExpr : public Expr {
+class CLANG_ABI CXXTypeidExpr : public Expr {
   friend class ASTStmtReader;
 
 private:
@@ -1063,7 +1064,7 @@ public:
 /// the _GUID that corresponds to the supplied type or expression.
 ///
 /// This represents code like @c __uuidof(COMTYPE) or @c __uuidof(*comPtr)
-class CXXUuidofExpr : public Expr {
+class CLANG_ABI CXXUuidofExpr : public Expr {
   friend class ASTStmtReader;
 
 private:
@@ -1149,7 +1150,7 @@ public:
 ///   void test() { this->bar(); }
 /// };
 /// \endcode
-class CXXThisExpr : public Expr {
+class CLANG_ABI CXXThisExpr : public Expr {
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
@@ -1263,7 +1264,7 @@ public:
 /// This wraps up a function call argument that was created from the
 /// corresponding parameter's default argument, when the call did not
 /// explicitly supply arguments for all of the parameters.
-class CXXDefaultArgExpr final
+class CLANG_ABI CXXDefaultArgExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXDefaultArgExpr, Expr *> {
   friend class ASTStmtReader;
@@ -1370,7 +1371,7 @@ public:
 /// is implicitly used in a mem-initializer-list in a constructor
 /// (C++11 [class.base.init]p8) or in aggregate initialization
 /// (C++1y [dcl.init.aggr]p7).
-class CXXDefaultInitExpr final
+class CLANG_ABI CXXDefaultInitExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXDefaultInitExpr, Expr *> {
 
@@ -1454,7 +1455,7 @@ public:
 };
 
 /// Represents a C++ temporary.
-class CXXTemporary {
+class CLANG_ABI CXXTemporary {
   /// The destructor that needs to be called.
   const CXXDestructorDecl *Destructor;
 
@@ -1488,7 +1489,7 @@ public:
 /// \endcode
 ///
 /// Destructor might be null if destructor declaration is not valid.
-class CXXBindTemporaryExpr : public Expr {
+class CLANG_ABI CXXBindTemporaryExpr : public Expr {
   CXXTemporary *Temp = nullptr;
   Stmt *SubExpr = nullptr;
 
@@ -1543,7 +1544,7 @@ enum class CXXConstructionKind {
 };
 
 /// Represents a call to a C++ constructor.
-class CXXConstructExpr : public Expr {
+class CLANG_ABI CXXConstructExpr : public Expr {
   friend class ASTStmtReader;
 
   /// A pointer to the constructor which will be ultimately called.
@@ -1811,7 +1812,7 @@ public:
 /// \code
 ///   x = int(0.5);
 /// \endcode
-class CXXFunctionalCastExpr final
+class CLANG_ABI CXXFunctionalCastExpr final
     : public ExplicitCastExpr,
       private llvm::TrailingObjects<CXXFunctionalCastExpr, CXXBaseSpecifier *,
                                     FPOptionsOverride> {
@@ -1882,7 +1883,7 @@ public:
 ///   return X(1, 3.14f); // creates a CXXTemporaryObjectExpr
 /// };
 /// \endcode
-class CXXTemporaryObjectExpr final : public CXXConstructExpr {
+class CLANG_ABI CXXTemporaryObjectExpr final : public CXXConstructExpr {
   friend class ASTStmtReader;
 
   // CXXTemporaryObjectExpr has some trailing objects belonging
@@ -1950,7 +1951,7 @@ Stmt **CXXConstructExpr::getTrailingArgs() {
 /// C++1y introduces a new form of "capture" called an init-capture that
 /// includes an initializing expression (rather than capturing a variable),
 /// and which can never occur implicitly.
-class LambdaExpr final : public Expr,
+class CLANG_ABI LambdaExpr final : public Expr,
                          private llvm::TrailingObjects<LambdaExpr, Stmt *> {
   // LambdaExpr has some data stored in LambdaExprBits.
 
@@ -2179,7 +2180,7 @@ public:
 /// An expression "T()" which creates an rvalue of a non-class type T.
 /// For non-void T, the rvalue is value-initialized.
 /// See (C++98 [5.2.3p2]).
-class CXXScalarValueInitExpr : public Expr {
+class CLANG_ABI CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
   TypeSourceInfo *TypeInfo;
@@ -2236,7 +2237,7 @@ enum class CXXNewInitializationStyle {
 
 /// Represents a new-expression for memory allocation and constructor
 /// calls, e.g: "new CXXNewExpr(foo)".
-class CXXNewExpr final
+class CLANG_ABI CXXNewExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXNewExpr, Stmt *, SourceRange> {
   friend class ASTStmtReader;
@@ -2495,7 +2496,7 @@ public:
 
 /// Represents a \c delete expression for memory deallocation and
 /// destructor calls, e.g. "delete[] pArray".
-class CXXDeleteExpr : public Expr {
+class CLANG_ABI CXXDeleteExpr : public Expr {
   friend class ASTStmtReader;
 
   /// Points to the operator delete overload that is used. Could be a member.
@@ -2563,7 +2564,7 @@ public:
 };
 
 /// Stores the type being destroyed by a pseudo-destructor expression.
-class PseudoDestructorTypeStorage {
+class CLANG_ABI PseudoDestructorTypeStorage {
   /// Either the type source information or the name of the type, if
   /// it couldn't be resolved due to type-dependence.
   llvm::PointerUnion<TypeSourceInfo *, const IdentifierInfo *> Type;
@@ -2614,7 +2615,7 @@ public:
 ///
 /// for scalar types. A pseudo-destructor expression has no run-time semantics
 /// beyond evaluating the base expression.
-class CXXPseudoDestructorExpr : public Expr {
+class CLANG_ABI CXXPseudoDestructorExpr : public Expr {
   friend class ASTStmtReader;
 
   /// The base expression (that is being destroyed).
@@ -2763,7 +2764,7 @@ public:
 ///   __is_enum(std::string) == false
 ///   __is_trivially_constructible(vector<int>, int*, int*)
 /// \endcode
-class TypeTraitExpr final
+class CLANG_ABI TypeTraitExpr final
     : public Expr,
       private llvm::TrailingObjects<TypeTraitExpr, TypeSourceInfo *> {
   /// The location of the type trait keyword.
@@ -2980,7 +2981,7 @@ public:
 
 /// A reference to an overloaded function set, either an
 /// \c UnresolvedLookupExpr or an \c UnresolvedMemberExpr.
-class OverloadExpr : public Expr {
+class CLANG_ABI OverloadExpr : public Expr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
@@ -3196,7 +3197,7 @@ public:
 ///
 /// These never include UnresolvedUsingValueDecls, which are always class
 /// members and therefore appear only in UnresolvedMemberLookupExprs.
-class UnresolvedLookupExpr final
+class CLANG_ABI UnresolvedLookupExpr final
     : public OverloadExpr,
       private llvm::TrailingObjects<UnresolvedLookupExpr, DeclAccessPair,
                                     ASTTemplateKWAndArgsInfo,
@@ -3316,7 +3317,7 @@ public:
 /// qualifier (X<T>::) and the name of the entity being referenced
 /// ("value"). Such expressions will instantiate to a DeclRefExpr once the
 /// declaration can be found.
-class DependentScopeDeclRefExpr final
+class CLANG_ABI DependentScopeDeclRefExpr final
     : public Expr,
       private llvm::TrailingObjects<DependentScopeDeclRefExpr,
                                     ASTTemplateKWAndArgsInfo,
@@ -3467,7 +3468,7 @@ public:
 /// This expression also tracks whether the sub-expression contains a
 /// potentially-evaluated block literal.  The lifetime of a block
 /// literal is the extent of the enclosing scope.
-class ExprWithCleanups final
+class CLANG_ABI ExprWithCleanups final
     : public FullExpr,
       private llvm::TrailingObjects<
           ExprWithCleanups,
@@ -3552,7 +3553,7 @@ public:
 /// When the returned expression is instantiated, it may resolve to a
 /// constructor call, conversion function call, or some kind of type
 /// conversion.
-class CXXUnresolvedConstructExpr final
+class CLANG_ABI CXXUnresolvedConstructExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXUnresolvedConstructExpr, Expr *> {
   friend class ASTStmtReader;
@@ -3676,7 +3677,7 @@ public:
 /// Like UnresolvedMemberExprs, these can be either implicit or
 /// explicit accesses.  It is only possible to get one of these with
 /// an implicit access if a qualifier is provided.
-class CXXDependentScopeMemberExpr final
+class CLANG_ABI CXXDependentScopeMemberExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXDependentScopeMemberExpr,
                                     ASTTemplateKWAndArgsInfo,
@@ -3936,7 +3937,7 @@ public:
 /// In the final AST, an explicit access always becomes a MemberExpr.
 /// An implicit access may become either a MemberExpr or a
 /// DeclRefExpr, depending on whether the member is static.
-class UnresolvedMemberExpr final
+class CLANG_ABI UnresolvedMemberExpr final
     : public OverloadExpr,
       private llvm::TrailingObjects<UnresolvedMemberExpr, DeclAccessPair,
                                     ASTTemplateKWAndArgsInfo,
@@ -4253,7 +4254,7 @@ public:
 ///   static const unsigned value = sizeof...(Types);
 /// };
 /// \endcode
-class SizeOfPackExpr final
+class CLANG_ABI SizeOfPackExpr final
     : public Expr,
       private llvm::TrailingObjects<SizeOfPackExpr, TemplateArgument> {
   friend class ASTStmtReader;
@@ -4369,7 +4370,7 @@ public:
   }
 };
 
-class PackIndexingExpr final
+class CLANG_ABI PackIndexingExpr final
     : public Expr,
       private llvm::TrailingObjects<PackIndexingExpr, Expr *> {
   friend class ASTStmtReader;
@@ -4481,7 +4482,7 @@ public:
 
 /// Represents a reference to a non-type template parameter
 /// that has been substituted with a template argument.
-class SubstNonTypeTemplateParmExpr : public Expr {
+class CLANG_ABI SubstNonTypeTemplateParmExpr : public Expr {
   friend class ASTReader;
   friend class ASTStmtReader;
 
@@ -4566,7 +4567,7 @@ public:
 /// that pack expansion (e.g., when all template parameters have corresponding
 /// arguments), this type will be replaced with the appropriate underlying
 /// expression at the current pack substitution index.
-class SubstNonTypeTemplateParmPackExpr : public Expr {
+class CLANG_ABI SubstNonTypeTemplateParmPackExpr : public Expr {
   friend class ASTReader;
   friend class ASTStmtReader;
 
@@ -4643,7 +4644,7 @@ public:
 /// };
 /// template struct S<int, int>;
 /// \endcode
-class FunctionParmPackExpr final
+class CLANG_ABI FunctionParmPackExpr final
     : public Expr,
       private llvm::TrailingObjects<FunctionParmPackExpr, VarDecl *> {
   friend class ASTReader;
@@ -4725,7 +4726,7 @@ public:
 /// Reference binding and copy-elision can both extend the lifetime of a
 /// temporary. When either happens, the expression will also track the
 /// declaration which is responsible for the lifetime extension.
-class MaterializeTemporaryExpr : public Expr {
+class CLANG_ABI MaterializeTemporaryExpr : public Expr {
 private:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
@@ -4837,7 +4838,7 @@ public:
 ///    ( expr op ... )
 ///    ( ... op expr )
 ///    ( expr op ... op expr )
-class CXXFoldExpr : public Expr {
+class CLANG_ABI CXXFoldExpr : public Expr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
@@ -4949,7 +4950,7 @@ public:
 ///   A b{1.5}; // Ill-formed !
 /// }
 /// ```
-class CXXParenListInitExpr final
+class CLANG_ABI CXXParenListInitExpr final
     : public Expr,
       private llvm::TrailingObjects<CXXParenListInitExpr, Expr *> {
   friend class TrailingObjects;

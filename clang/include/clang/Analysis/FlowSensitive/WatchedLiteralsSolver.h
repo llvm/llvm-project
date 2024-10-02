@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
@@ -28,7 +29,7 @@ namespace dataflow {
 /// for unit propagation.
 //
 // [1] https://en.wikipedia.org/wiki/DPLL_algorithm
-class WatchedLiteralsSolver : public Solver {
+class CLANG_ABI WatchedLiteralsSolver : public Solver {
   // Count of the iterations of the main loop of the solver. This spans *all*
   // calls to the underlying solver across the life of this object. It is
   // reduced with every (non-trivial) call to the solver.

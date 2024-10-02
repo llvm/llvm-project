@@ -10,6 +10,7 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICOPTIONS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include <string>
 #include <type_traits>
@@ -64,11 +65,11 @@ inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
     static_cast<UT>(LHS) & static_cast<UT>(RHS));
 }
 
-raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
+CLANG_ABI raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
 
 /// Options for controlling the compiler diagnostics engine.
 class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
-  friend bool ParseDiagnosticArgs(DiagnosticOptions &, llvm::opt::ArgList &,
+  friend CLANG_ABI bool ParseDiagnosticArgs(DiagnosticOptions &, llvm::opt::ArgList &,
                                   clang::DiagnosticsEngine *, bool);
 
   friend class CompilerInvocation;

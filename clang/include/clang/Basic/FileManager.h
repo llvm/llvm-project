@@ -18,6 +18,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -50,7 +51,7 @@ class FileSystemStatCache;
 /// on "inode", so that a file with two names (e.g. symlinked) will be treated
 /// as a single file.
 ///
-class FileManager : public RefCountedBase<FileManager> {
+class CLANG_ABI FileManager : public RefCountedBase<FileManager> {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   FileSystemOptions FileSystemOpts;
   llvm::SpecificBumpPtrAllocator<FileEntry> FilesAlloc;

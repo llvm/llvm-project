@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_SPECIFIERS_H
 #define LLVM_CLANG_BASIC_SPECIFIERS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -350,7 +351,7 @@ namespace clang {
     NullableResult,
   };
   /// Prints human-readable debug representation.
-  llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
+  CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 
   /// Return true if \p L has a weaker nullability annotation than \p R. The
   /// ordering is: Unspecified < Nullable < NonNull.
@@ -359,7 +360,7 @@ namespace clang {
   }
 
   /// Retrieve the spelling of the given nullability kind.
-  llvm::StringRef getNullabilitySpelling(NullabilityKind kind,
+  CLANG_ABI llvm::StringRef getNullabilitySpelling(NullabilityKind kind,
                                          bool isContextSensitive = false);
 
   /// Kinds of parameter ABI.
@@ -402,7 +403,7 @@ namespace clang {
     Unspecified = 3,
   };
 
-  llvm::StringRef getParameterABISpelling(ParameterABI kind);
+  CLANG_ABI llvm::StringRef getParameterABISpelling(ParameterABI kind);
 
   inline llvm::StringRef getAccessSpelling(AccessSpecifier AS) {
     switch (AS) {

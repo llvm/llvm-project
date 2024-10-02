@@ -19,6 +19,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
@@ -31,11 +32,11 @@ class Scope;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
-bool CreateHLSLAttributedResourceType(
+CLANG_ABI bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
     QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
 
-class SemaHLSL : public SemaBase {
+class CLANG_ABI SemaHLSL : public SemaBase {
 public:
   SemaHLSL(Sema &S);
 

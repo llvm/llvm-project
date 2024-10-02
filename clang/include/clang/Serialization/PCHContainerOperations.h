@@ -10,6 +10,7 @@
 #define LLVM_CLANG_SERIALIZATION_PCHCONTAINEROPERATIONS_H
 
 #include "clang/Basic/Module.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -33,7 +34,7 @@ struct PCHBuffer {
 /// This abstract interface provides operations for creating
 /// containers for serialized ASTs (precompiled headers and clang
 /// modules).
-class PCHContainerWriter {
+class CLANG_ABI PCHContainerWriter {
 public:
   virtual ~PCHContainerWriter() = 0;
   virtual llvm::StringRef getFormat() const = 0;
@@ -52,7 +53,7 @@ public:
 /// This abstract interface provides operations for unwrapping
 /// containers for serialized ASTs (precompiled headers and clang
 /// modules).
-class PCHContainerReader {
+class CLANG_ABI PCHContainerReader {
 public:
   virtual ~PCHContainerReader() = 0;
   /// Equivalent to the format passed to -fmodule-format=
@@ -63,7 +64,7 @@ public:
 };
 
 /// Implements write operations for a raw pass-through PCH container.
-class RawPCHContainerWriter : public PCHContainerWriter {
+class CLANG_ABI RawPCHContainerWriter : public PCHContainerWriter {
   llvm::StringRef getFormat() const override { return "raw"; }
 
   /// Return an ASTConsumer that can be chained with a
@@ -77,14 +78,14 @@ class RawPCHContainerWriter : public PCHContainerWriter {
 };
 
 /// Implements read operations for a raw pass-through PCH container.
-class RawPCHContainerReader : public PCHContainerReader {
+class CLANG_ABI RawPCHContainerReader : public PCHContainerReader {
   llvm::ArrayRef<llvm::StringRef> getFormats() const override;
   /// Simply returns the buffer contained in Buffer.
   llvm::StringRef ExtractPCH(llvm::MemoryBufferRef Buffer) const override;
 };
 
 /// A registry of PCHContainerWriter and -Reader objects for different formats.
-class PCHContainerOperations {
+class CLANG_ABI PCHContainerOperations {
   llvm::StringMap<std::unique_ptr<PCHContainerWriter>> Writers;
   llvm::StringMap<PCHContainerReader *> Readers;
   llvm::SmallVector<std::unique_ptr<PCHContainerReader>> OwnedReaders;

@@ -15,15 +15,16 @@
 #ifndef LLVM_CLANG_ANALYSIS_RETAINSUMMARYMANAGER_H
 #define LLVM_CLANG_ANALYSIS_RETAINSUMMARYMANAGER_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/Analysis/AnyCall.h"
 #include "clang/Analysis/SelectorExtras.h"
+#include "clang/Support/Compiler.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 
@@ -447,7 +448,7 @@ public:
 
 class RetainSummaryTemplate;
 
-class RetainSummaryManager {
+class CLANG_ABI RetainSummaryManager {
   typedef llvm::DenseMap<const FunctionDecl*, const RetainSummary *>
           FuncSummariesTy;
 

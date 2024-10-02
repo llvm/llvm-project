@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <tuple>
 
@@ -28,7 +29,7 @@ namespace clang {
 class ParsedAttr;
 class TargetInfo;
 
-class SemaARM : public SemaBase {
+class CLANG_ABI SemaARM : public SemaBase {
 public:
   SemaARM(Sema &S);
 
@@ -81,7 +82,7 @@ public:
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
 };
 
-SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);
+CLANG_ABI SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);
 
 } // namespace clang
 

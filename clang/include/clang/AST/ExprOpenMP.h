@@ -15,11 +15,12 @@
 
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Expr.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 /// An explicit cast in C or a C-style cast in C++, which uses the syntax
 /// ([s1][s2]...[sn])expr. For example: @c ([3][3])f.
-class OMPArrayShapingExpr final
+class CLANG_ABI OMPArrayShapingExpr final
     : public Expr,
       private llvm::TrailingObjects<OMPArrayShapingExpr, Expr *, SourceRange> {
   friend TrailingObjects;
@@ -145,7 +146,7 @@ struct OMPIteratorHelperData {
 /// type of that iterator is of int type.
 /// The iterator-type must be an integral or pointer type.
 /// The iterator-type must not be const qualified.
-class OMPIteratorExpr final
+class CLANG_ABI OMPIteratorExpr final
     : public Expr,
       private llvm::TrailingObjects<OMPIteratorExpr, Decl *, Expr *,
                                     SourceLocation, OMPIteratorHelperData> {

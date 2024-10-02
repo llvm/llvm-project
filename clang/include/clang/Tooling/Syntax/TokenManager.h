@@ -19,6 +19,7 @@
 #ifndef LLVM_CLANG_TOOLING_SYNTAX_TOKEN_MANAGER_H
 #define LLVM_CLANG_TOOLING_SYNTAX_TOKEN_MANAGER_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
@@ -26,7 +27,7 @@ namespace clang {
 namespace syntax {
 
 /// Defines interfaces for operating "Token" in the clang syntax-tree.
-class TokenManager {
+class CLANG_ABI TokenManager {
 public:
   virtual ~TokenManager() = default;
 

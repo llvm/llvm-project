@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -123,7 +124,7 @@ enum class ObjCMessageVisitKind {
   MessageNil
 };
 
-class CheckerManager {
+class CLANG_ABI CheckerManager {
   ASTContext *Context = nullptr;
   const LangOptions LangOpts;
   const AnalyzerOptions &AOptions;

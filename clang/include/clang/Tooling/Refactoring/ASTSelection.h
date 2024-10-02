@@ -13,6 +13,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <vector>
@@ -49,7 +50,7 @@ enum class SourceSelectionKind {
 /// a selection kind. The kind might be none as the node itself might not
 /// actually be selected, e.g. a statement in macro whose child is in a macro
 /// argument.
-struct SelectedASTNode {
+struct CLANG_ABI SelectedASTNode {
   DynTypedNode Node;
   SourceSelectionKind SelectionKind;
   std::vector<SelectedASTNode> Children;
@@ -68,7 +69,7 @@ struct SelectedASTNode {
 ///
 /// \returns std::nullopt if no nodes are selected in the AST, or a selected AST
 /// node that corresponds to the TranslationUnitDecl otherwise.
-std::optional<SelectedASTNode> findSelectedASTNodes(const ASTContext &Context,
+CLANG_ABI std::optional<SelectedASTNode> findSelectedASTNodes(const ASTContext &Context,
                                                     SourceRange SelectionRange);
 
 /// An AST selection value that corresponds to a selection of a set of
@@ -93,7 +94,7 @@ std::optional<SelectedASTNode> findSelectedASTNodes(const ASTContext &Context,
 ///
 /// A \c CodeRangeASTSelection value stores references to the full
 /// \c SelectedASTNode tree and should not outlive it.
-class CodeRangeASTSelection {
+class CLANG_ABI CodeRangeASTSelection {
 public:
   CodeRangeASTSelection(CodeRangeASTSelection &&) = default;
   CodeRangeASTSelection &operator=(CodeRangeASTSelection &&) = default;

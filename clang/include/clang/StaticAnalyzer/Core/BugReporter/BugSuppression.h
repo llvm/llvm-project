@@ -15,6 +15,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_SUPPRESSION_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -26,7 +27,7 @@ namespace ento {
 class BugReport;
 class PathDiagnosticLocation;
 
-class BugSuppression {
+class CLANG_ABI BugSuppression {
 public:
   explicit BugSuppression(const ASTContext &ACtx) : ACtx(ACtx) {}
 

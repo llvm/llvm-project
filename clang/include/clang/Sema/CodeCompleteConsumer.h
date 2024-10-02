@@ -19,6 +19,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -158,11 +159,11 @@ enum SimplifiedTypeClass {
 };
 
 /// Determine the simplified type class of the given canonical type.
-SimplifiedTypeClass getSimplifiedTypeClass(CanQualType T);
+CLANG_ABI SimplifiedTypeClass getSimplifiedTypeClass(CanQualType T);
 
 /// Determine the type that this declaration will have if it is used
 /// as a type or in an expression.
-QualType getDeclUsageType(ASTContext &C, const NamedDecl *ND);
+CLANG_ABI QualType getDeclUsageType(ASTContext &C, const NamedDecl *ND);
 
 /// Determine the priority to be given to a macro code completion result
 /// with the given name.
@@ -173,17 +174,17 @@ QualType getDeclUsageType(ASTContext &C, const NamedDecl *ND);
 ///
 /// \param PreferredTypeIsPointer Whether the preferred type for the context
 /// of this macro is a pointer type.
-unsigned getMacroUsagePriority(StringRef MacroName,
+CLANG_ABI unsigned getMacroUsagePriority(StringRef MacroName,
                                const LangOptions &LangOpts,
                                bool PreferredTypeIsPointer = false);
 
 /// Determine the libclang cursor kind associated with the given
 /// declaration.
-CXCursorKind getCursorKindForDecl(const Decl *D);
+CLANG_ABI CXCursorKind getCursorKindForDecl(const Decl *D);
 
 /// The context in which code completion occurred, so that the
 /// code-completion consumer can process the results accordingly.
-class CodeCompletionContext {
+class CLANG_ABI CodeCompletionContext {
 public:
   enum Kind {
     /// An unspecified code-completion context.
@@ -438,7 +439,7 @@ public:
 };
 
 /// Get string representation of \p Kind, useful for debugging.
-llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
+CLANG_ABI llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
 
 /// A "string" used to describe how code completion can
 /// be performed for an entity.
@@ -447,7 +448,7 @@ llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
 /// used. For example, the code completion string for a function would show
 /// the syntax to call it, including the parentheses, placeholders for the
 /// arguments, etc.
-class CodeCompletionString {
+class CLANG_ABI CodeCompletionString {
 public:
   /// The different kinds of "chunks" that can occur within a code
   /// completion string.
@@ -527,7 +528,7 @@ public:
   };
 
   /// One piece of the code completion string.
-  struct Chunk {
+  struct CLANG_ABI Chunk {
     /// The kind of data stored in this piece of the code completion
     /// string.
     ChunkKind Kind = CK_Text;
@@ -648,7 +649,7 @@ public:
 };
 
 /// An allocator used specifically for the purpose of code completion.
-class CodeCompletionAllocator : public llvm::BumpPtrAllocator {
+class CLANG_ABI CodeCompletionAllocator : public llvm::BumpPtrAllocator {
 public:
   /// Copy the given string into this allocator.
   const char *CopyString(const Twine &String);
@@ -657,7 +658,7 @@ public:
 /// Allocator for a cached set of global code completions.
 class GlobalCodeCompletionAllocator : public CodeCompletionAllocator {};
 
-class CodeCompletionTUInfo {
+class CLANG_ABI CodeCompletionTUInfo {
   llvm::DenseMap<const DeclContext *, StringRef> ParentNames;
   std::shared_ptr<GlobalCodeCompletionAllocator> AllocatorRef;
 
@@ -683,7 +684,7 @@ public:
 namespace clang {
 
 /// A builder class used to construct new code-completion strings.
-class CodeCompletionBuilder {
+class CLANG_ABI CodeCompletionBuilder {
 public:
   using Chunk = CodeCompletionString::Chunk;
 
@@ -758,7 +759,7 @@ public:
 };
 
 /// Captures a result of code completion.
-class CodeCompletionResult {
+class CLANG_ABI CodeCompletionResult {
 public:
   /// Describes the kind of result generated.
   enum ResultKind {
@@ -997,7 +998,7 @@ private:
   void computeCursorKindAndAvailability(bool Accessible = true);
 };
 
-bool operator<(const CodeCompletionResult &X, const CodeCompletionResult &Y);
+CLANG_ABI bool operator<(const CodeCompletionResult &X, const CodeCompletionResult &Y);
 
 inline bool operator>(const CodeCompletionResult &X,
                       const CodeCompletionResult &Y) {
@@ -1016,12 +1017,12 @@ inline bool operator>=(const CodeCompletionResult &X,
 
 /// Abstract interface for a consumer of code-completion
 /// information.
-class CodeCompleteConsumer {
+class CLANG_ABI CodeCompleteConsumer {
 protected:
   const CodeCompleteOptions CodeCompleteOpts;
 
 public:
-  class OverloadCandidate {
+  class CLANG_ABI OverloadCandidate {
   public:
     /// Describes the type of overload candidate.
     enum CandidateKind {
@@ -1242,24 +1243,24 @@ public:
 
 /// Get the documentation comment used to produce
 /// CodeCompletionString::BriefComment for RK_Declaration.
-const RawComment *getCompletionComment(const ASTContext &Ctx,
+CLANG_ABI const RawComment *getCompletionComment(const ASTContext &Ctx,
                                        const NamedDecl *Decl);
 
 /// Get the documentation comment used to produce
 /// CodeCompletionString::BriefComment for RK_Pattern.
-const RawComment *getPatternCompletionComment(const ASTContext &Ctx,
+CLANG_ABI const RawComment *getPatternCompletionComment(const ASTContext &Ctx,
                                               const NamedDecl *Decl);
 
 /// Get the documentation comment used to produce
 /// CodeCompletionString::BriefComment for OverloadCandidate.
-const RawComment *
+CLANG_ABI const RawComment *
 getParameterComment(const ASTContext &Ctx,
                     const CodeCompleteConsumer::OverloadCandidate &Result,
                     unsigned ArgIndex);
 
 /// A simple code-completion consumer that prints the results it
 /// receives in a simple format.
-class PrintingCodeCompleteConsumer : public CodeCompleteConsumer {
+class CLANG_ABI PrintingCodeCompleteConsumer : public CodeCompleteConsumer {
   /// The raw output stream.
   raw_ostream &OS;
 

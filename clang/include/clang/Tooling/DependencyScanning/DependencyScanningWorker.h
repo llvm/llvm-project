@@ -13,6 +13,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -37,7 +38,7 @@ struct Command {
   std::vector<std::string> Arguments;
 };
 
-class DependencyConsumer {
+class CLANG_ABI DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
@@ -63,7 +64,7 @@ public:
 
 /// Dependency scanner callbacks that are used during scanning to influence the
 /// behaviour of the scan - for example, to customize the scanned invocations.
-class DependencyActionController {
+class CLANG_ABI DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
@@ -77,7 +78,7 @@ public:
 /// The worker computes the dependencies for the input files by preprocessing
 /// sources either using a fast mode where the source files are minimized, or
 /// using the regular processing run.
-class DependencyScanningWorker {
+class CLANG_ABI DependencyScanningWorker {
 public:
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);

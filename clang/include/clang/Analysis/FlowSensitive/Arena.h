@@ -11,6 +11,7 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
@@ -18,7 +19,7 @@ namespace clang::dataflow {
 
 /// The Arena owns the objects that model data within an analysis.
 /// For example, `Value`, `StorageLocation`, `Atom`, and `Formula`.
-class Arena {
+class CLANG_ABI Arena {
 public:
   Arena()
       : True(Formula::create(Alloc, Formula::Literal, {}, 1)),

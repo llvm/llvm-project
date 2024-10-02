@@ -16,6 +16,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 
@@ -27,7 +28,7 @@ class ObjCMethodDecl;
 class Stmt;
 class CodeInjector;
 
-class BodyFarm {
+class CLANG_ABI BodyFarm {
 public:
   BodyFarm(ASTContext &C, CodeInjector *injector) : C(C), Injector(injector) {}
 

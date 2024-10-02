@@ -17,6 +17,7 @@
 #include "clang/Basic/CustomizableOptional.h"
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -297,7 +298,7 @@ inline bool operator!=(const OptionalFileEntryRef &LHS, const FileEntry *RHS) {
 ///
 /// If the 'File' member is valid, then this FileEntry has an open file
 /// descriptor for the file.
-class FileEntry {
+class CLANG_ABI FileEntry {
   friend class FileManager;
   friend class FileEntryTestHelper;
   FileEntry();

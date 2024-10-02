@@ -19,6 +19,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -26,7 +27,7 @@ class OpenACCClause;
 class TypeLoc;
 
 /// An object for streaming information to a record.
-class ASTRecordWriter
+class CLANG_ABI ASTRecordWriter
     : public serialization::DataStreamBasicWriter<ASTRecordWriter> {
   using LocSeq = SourceLocationSequence;
 

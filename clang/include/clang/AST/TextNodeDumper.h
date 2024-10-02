@@ -19,13 +19,14 @@
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclVisitor.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateArgumentVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/TypeVisitor.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -125,7 +126,7 @@ public:
       : OS(OS), ShowColors(ShowColors) {}
 };
 
-class TextNodeDumper
+class CLANG_ABI TextNodeDumper
     : public TextTreeStructure,
       public comments::ConstCommentVisitor<TextNodeDumper, void,
                                            const comments::FullComment *>,

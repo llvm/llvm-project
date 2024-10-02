@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_RANDSTRUCT_H
 #define LLVM_CLANG_AST_RANDSTRUCT_H
 
+#include "clang/Support/Compiler.h"
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 } // end namespace llvm
@@ -26,7 +27,7 @@ class RecordDecl;
 
 namespace randstruct {
 
-bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
+CLANG_ABI bool randomizeStructureLayout(const ASTContext &Context, RecordDecl *RD,
                               llvm::SmallVectorImpl<Decl *> &FinalOrdering);
 
 } // namespace randstruct

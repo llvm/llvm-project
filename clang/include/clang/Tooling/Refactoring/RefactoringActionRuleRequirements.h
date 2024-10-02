@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
@@ -57,7 +58,7 @@ public:
 ///
 /// The requirement will be evaluated only once during the initiation and
 /// search of matching refactoring action rules.
-class ASTSelectionRequirement : public SourceRangeSelectionRequirement {
+class CLANG_ABI ASTSelectionRequirement : public SourceRangeSelectionRequirement {
 public:
   Expected<SelectedASTNode> evaluate(RefactoringRuleContext &Context) const;
 };
@@ -71,14 +72,14 @@ public:
 /// of matching refactoring action rules.
 ///
 /// \see CodeRangeASTSelection
-class CodeRangeASTSelectionRequirement : public ASTSelectionRequirement {
+class CLANG_ABI CodeRangeASTSelectionRequirement : public ASTSelectionRequirement {
 public:
   Expected<CodeRangeASTSelection>
   evaluate(RefactoringRuleContext &Context) const;
 };
 
 /// A base class for any requirement that requires some refactoring options.
-class RefactoringOptionsRequirement : public RefactoringActionRuleRequirement {
+class CLANG_ABI RefactoringOptionsRequirement : public RefactoringActionRuleRequirement {
 public:
   virtual ~RefactoringOptionsRequirement() {}
 

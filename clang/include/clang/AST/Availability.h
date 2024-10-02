@@ -14,6 +14,7 @@
 #define LLVM_CLANG_AST_AVAILABILITY_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
@@ -61,7 +62,7 @@ public:
 class Decl;
 
 /// Storage of availability attributes for a declaration.
-struct AvailabilityInfo {
+struct CLANG_ABI AvailabilityInfo {
   /// The domain is the platform for which this availability info applies to.
   llvm::SmallString<32> Domain;
   VersionTuple Introduced;

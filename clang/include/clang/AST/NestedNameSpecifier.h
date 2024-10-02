@@ -17,6 +17,7 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -47,7 +48,7 @@ class TypeLoc;
 /// (for dependent names), decltype specifier, or the global specifier ('::').
 /// The last two specifiers can only appear at the start of a
 /// nested-namespace-specifier.
-class NestedNameSpecifier : public llvm::FoldingSetNode {
+class CLANG_ABI NestedNameSpecifier : public llvm::FoldingSetNode {
   /// Enumeration describing
   enum StoredSpecifierKind {
     StoredIdentifier = 0,
@@ -240,7 +241,7 @@ public:
 
 /// A C++ nested-name-specifier augmented with source location
 /// information.
-class NestedNameSpecifierLoc {
+class CLANG_ABI NestedNameSpecifierLoc {
   NestedNameSpecifier *Qualifier = nullptr;
   void *Data = nullptr;
 
@@ -353,7 +354,7 @@ public:
 /// Class that aids in the construction of nested-name-specifiers along
 /// with source-location information for all of the components of the
 /// nested-name-specifier.
-class NestedNameSpecifierLocBuilder {
+class CLANG_ABI NestedNameSpecifierLocBuilder {
   /// The current representation of the nested-name-specifier we're
   /// building.
   NestedNameSpecifier *Representation = nullptr;

@@ -20,6 +20,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -41,7 +42,7 @@ struct BlockPointer {
   unsigned Base;
 };
 
-struct IntPointer {
+struct CLANG_ABI IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
 
@@ -80,7 +81,7 @@ enum class Storage { Block, Int, Fn };
 ///                      │
 ///                      │
 ///                     Base
-class Pointer {
+class CLANG_ABI Pointer {
 private:
   static constexpr unsigned PastEndMark = ~0u;
   static constexpr unsigned RootPtrMark = ~0u;

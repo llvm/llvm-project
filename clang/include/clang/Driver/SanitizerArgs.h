@@ -10,6 +10,7 @@
 
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Types.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -21,7 +22,7 @@ namespace driver {
 
 class ToolChain;
 
-class SanitizerArgs {
+class CLANG_ABI SanitizerArgs {
   SanitizerSet Sanitizers;
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;

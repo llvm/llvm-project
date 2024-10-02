@@ -49,6 +49,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -272,11 +273,11 @@ private:
 ///
 /// The tree builder is used during the matching process to insert the bound
 /// nodes from the Id matcher.
-class BoundNodesTreeBuilder {
+class CLANG_ABI BoundNodesTreeBuilder {
 public:
   /// A visitor interface to visit all BoundNodes results for a
   /// BoundNodesTree.
-  class Visitor {
+  class CLANG_ABI Visitor {
   public:
     virtual ~Visitor() = default;
 
@@ -334,7 +335,7 @@ class ASTMatchFinder;
 /// Used by the implementation of Matcher<T> and DynTypedMatcher.
 /// In general, implement MatcherInterface<T> or SingleNodeMatcherInterface<T>
 /// instead.
-class DynMatcherInterface
+class CLANG_ABI DynMatcherInterface
     : public llvm::ThreadSafeRefCountedBase<DynMatcherInterface> {
 public:
   virtual ~DynMatcherInterface() = default;
@@ -403,7 +404,7 @@ template <typename> class Matcher;
 /// It checks whether the \c DynTypedNode is convertible into the type of the
 /// underlying matcher and then do the actual match on the actual node, or
 /// return false if it is not convertible.
-class DynTypedMatcher {
+class CLANG_ABI DynTypedMatcher {
 public:
   /// Takes ownership of the provided implementation pointer.
   template <typename T>
@@ -694,7 +695,7 @@ inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
 /// In the future, we want to implement this for all nodes for which it makes
 /// sense. In the case of matchesAncestorOf, we'll want to implement it for
 /// all nodes, as all nodes have ancestors.
-class ASTMatchFinder {
+class CLANG_ABI ASTMatchFinder {
 public:
   /// Defines how bindings are processed on recursive matches.
   enum BindKind {
@@ -936,7 +937,7 @@ private:
 /// Matches named declarations with a specific name.
 ///
 /// See \c hasName() and \c hasAnyName() in ASTMatchers.h for details.
-class HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
+class CLANG_ABI HasNameMatcher : public SingleNodeMatcherInterface<NamedDecl> {
  public:
   explicit HasNameMatcher(std::vector<std::string> Names);
 
@@ -970,11 +971,11 @@ private:
 
 /// Trampoline function to use VariadicFunction<> to construct a
 ///        HasNameMatcher.
-Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs);
+CLANG_ABI Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs);
 
 /// Trampoline function to use VariadicFunction<> to construct a
 ///        hasAnySelector matcher.
-Matcher<ObjCMessageExpr> hasAnySelectorFunc(
+CLANG_ABI Matcher<ObjCMessageExpr> hasAnySelectorFunc(
     ArrayRef<const StringRef *> NameRefs);
 
 /// Matches declarations for QualType and CallExpr.
@@ -2212,7 +2213,7 @@ CompoundStmtMatcher<StmtExpr>::get(const StmtExpr &Node) {
 /// location (in the chain of expansions) at which \p MacroName was
 /// expanded. Since the macro may have been expanded inside a series of
 /// expansions, that location may itself be a MacroID.
-std::optional<SourceLocation> getExpansionLocOfMacro(StringRef MacroName,
+CLANG_ABI std::optional<SourceLocation> getExpansionLocOfMacro(StringRef MacroName,
                                                      SourceLocation Loc,
                                                      const ASTContext &Context);
 
@@ -2294,24 +2295,24 @@ using HasOpNameMatcher =
                                     CXXRewrittenBinaryOperator, UnaryOperator>),
                        std::vector<std::string>>;
 
-HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
+CLANG_ABI HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
 using HasOverloadOpNameMatcher =
     PolymorphicMatcher<HasOverloadedOperatorNameMatcher,
                        void(TypeList<CXXOperatorCallExpr, FunctionDecl>),
                        std::vector<std::string>>;
 
-HasOverloadOpNameMatcher
+CLANG_ABI HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
 /// Returns true if \p Node has a base specifier matching \p BaseSpec.
 ///
 /// A class is not considered to be derived from itself.
-bool matchesAnyBase(const CXXRecordDecl &Node,
+CLANG_ABI bool matchesAnyBase(const CXXRecordDecl &Node,
                     const Matcher<CXXBaseSpecifier> &BaseSpecMatcher,
                     ASTMatchFinder *Finder, BoundNodesTreeBuilder *Builder);
 
-std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
+CLANG_ABI std::shared_ptr<llvm::Regex> createAndVerifyRegex(StringRef Regex,
                                                   llvm::Regex::RegexFlags Flags,
                                                   StringRef MatcherID);
 

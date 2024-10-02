@@ -18,12 +18,13 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace dataflow {
 
 /// Maps statements to the environments of basic blocks that contain them.
-class StmtToEnvMap {
+class CLANG_ABI StmtToEnvMap {
 public:
   // `CurBlockID` is the ID of the block currently being processed, and
   // `CurState` is the pending state currently associated with this block. These
@@ -53,7 +54,7 @@ private:
 /// Requirements:
 ///
 ///  `S` must not be `ParenExpr` or `ExprWithCleanups`.
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
+CLANG_ABI void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
               Environment::ValueModel &Model);
 
 } // namespace dataflow

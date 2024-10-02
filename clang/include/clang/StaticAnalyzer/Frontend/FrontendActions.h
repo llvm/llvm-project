@@ -10,6 +10,7 @@
 #define LLVM_CLANG_STATICANALYZER_FRONTEND_FRONTENDACTIONS_H
 
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -23,7 +24,7 @@ namespace ento {
 // AST Consumer Actions
 //===----------------------------------------------------------------------===//
 
-class AnalysisAction : public ASTFrontendAction {
+class CLANG_ABI AnalysisAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
@@ -37,7 +38,7 @@ protected:
 /// separate compiler instance that reuses the ASTContext and othen information
 /// from the main translation unit that is being compiled. After a model file is
 /// parsed, the function definitions will be collected into a StringMap.
-class ParseModelFileAction : public ASTFrontendAction {
+class CLANG_ABI ParseModelFileAction : public ASTFrontendAction {
 public:
   ParseModelFileAction(llvm::StringMap<Stmt *> &Bodies);
   bool isModelParsingAction() const override { return true; }

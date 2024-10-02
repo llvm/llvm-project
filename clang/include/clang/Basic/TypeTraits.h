@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_TYPETRAITS_H
 #define LLVM_CLANG_BASIC_TYPETRAITS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -59,17 +60,17 @@ enum UnaryExprOrTypeTrait {
 };
 
 /// Return the internal name of type trait \p T. Never null.
-const char *getTraitName(TypeTrait T) LLVM_READONLY;
-const char *getTraitName(ArrayTypeTrait T) LLVM_READONLY;
-const char *getTraitName(UnaryExprOrTypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitName(TypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitName(ArrayTypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitName(UnaryExprOrTypeTrait T) LLVM_READONLY;
 
 /// Return the spelling of the type trait \p TT. Never null.
-const char *getTraitSpelling(TypeTrait T) LLVM_READONLY;
-const char *getTraitSpelling(ArrayTypeTrait T) LLVM_READONLY;
-const char *getTraitSpelling(UnaryExprOrTypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitSpelling(TypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitSpelling(ArrayTypeTrait T) LLVM_READONLY;
+CLANG_ABI const char *getTraitSpelling(UnaryExprOrTypeTrait T) LLVM_READONLY;
 
 /// Return the arity of the type trait \p T.
-unsigned getTypeTraitArity(TypeTrait T) LLVM_READONLY;
+CLANG_ABI unsigned getTypeTraitArity(TypeTrait T) LLVM_READONLY;
 
 } // namespace clang
 

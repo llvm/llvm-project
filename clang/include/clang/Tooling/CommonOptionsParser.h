@@ -26,6 +26,7 @@
 #ifndef LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H
 #define LLVM_CLANG_TOOLING_COMMONOPTIONSPARSER_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
@@ -67,7 +68,7 @@ namespace tooling {
 ///       newFrontendActionFactory<clang::SyntaxOnlyAction>().get());
 /// }
 /// \endcode
-class CommonOptionsParser {
+class CLANG_ABI CommonOptionsParser {
 
 protected:
   /// Parses command-line, initializes a compilation database.
@@ -120,7 +121,7 @@ private:
   ArgumentsAdjuster Adjuster;
 };
 
-class ArgumentsAdjustingCompilations : public CompilationDatabase {
+class CLANG_ABI ArgumentsAdjustingCompilations : public CompilationDatabase {
 public:
   ArgumentsAdjustingCompilations(
       std::unique_ptr<CompilationDatabase> Compilations)

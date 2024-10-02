@@ -20,6 +20,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 // FIXME: move this information to an HTML file in docs/.
@@ -86,7 +87,7 @@ class CheckerManager;
 /// For example, the checker "core.builtin.NoReturnFunctionChecker" will be
 /// included if initializeManager() is called with an option of "core",
 /// "core.builtin", or the full name "core.builtin.NoReturnFunctionChecker".
-class CheckerRegistry {
+class CLANG_ABI CheckerRegistry {
 public:
   CheckerRegistry(CheckerRegistryData &Data, ArrayRef<std::string> Plugins,
                   DiagnosticsEngine &Diags, AnalyzerOptions &AnOpts,

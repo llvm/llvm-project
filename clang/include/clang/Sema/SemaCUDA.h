@@ -22,6 +22,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -42,7 +43,7 @@ enum class CXXSpecialMemberKind;
 class ParsedAttributesView;
 class Scope;
 
-class SemaCUDA : public SemaBase {
+class CLANG_ABI SemaCUDA : public SemaBase {
 public:
   SemaCUDA(Sema &S);
 
@@ -140,7 +141,7 @@ public:
     Decl *D = nullptr;
   } CurCUDATargetCtx;
 
-  struct CUDATargetContextRAII {
+  struct CLANG_ABI CUDATargetContextRAII {
     SemaCUDA &S;
     SemaCUDA::CUDATargetContext SavedCtx;
     CUDATargetContextRAII(SemaCUDA &S_, SemaCUDA::CUDATargetContextKind K,

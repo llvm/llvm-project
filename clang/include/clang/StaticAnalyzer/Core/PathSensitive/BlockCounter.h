@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BLOCKCOUNTER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BLOCKCOUNTER_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Allocator.h"
 
 namespace clang {
@@ -26,7 +27,7 @@ namespace ento {
 /// \class BlockCounter
 /// An abstract data type used to count the number of times a given
 /// block has been visited along a path analyzed by CoreEngine.
-class BlockCounter {
+class CLANG_ABI BlockCounter {
   void *Data;
 
   BlockCounter(void *D) : Data(D) {}
@@ -37,7 +38,7 @@ public:
   unsigned getNumVisited(const StackFrameContext *CallSite,
                          unsigned BlockID) const;
 
-  class Factory {
+  class CLANG_ABI Factory {
     void *F;
   public:
     Factory(llvm::BumpPtrAllocator& Alloc);

@@ -21,6 +21,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_CHECKERREGISTRYDATA_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,7 +42,7 @@ using ShouldRegisterFunction = bool (*)(const CheckerManager &);
 
 /// Specifies a command line option. It may either belong to a checker or a
 /// package.
-struct CmdLineOption {
+struct CLANG_ABI CmdLineOption {
   StringRef OptionType;
   StringRef OptionName;
   StringRef DefaultValStr;
@@ -91,7 +92,7 @@ using CheckerInfoSet = llvm::SetVector<const CheckerInfo *>;
 
 /// Specifies a checker. Note that this isn't what we call a checker object,
 /// it merely contains everything required to create one.
-struct CheckerInfo {
+struct CLANG_ABI CheckerInfo {
   enum class StateFromCmdLine {
     // This checker wasn't explicitly enabled or disabled.
     State_Unspecified,
@@ -143,7 +144,7 @@ using StateFromCmdLine = CheckerInfo::StateFromCmdLine;
 
 /// Specifies a package. Each package option is implicitly an option for all
 /// checkers within the package.
-struct PackageInfo {
+struct CLANG_ABI PackageInfo {
   StringRef FullName;
   CmdLineOptionList CmdLineOptions;
 
@@ -190,7 +191,7 @@ binaryFind(CheckerOrPackageInfoList &Collection, StringRef FullName) {
 }
 } // namespace checker_registry
 
-struct CheckerRegistryData {
+struct CLANG_ABI CheckerRegistryData {
 public:
   CheckerInfoSet EnabledCheckers;
 

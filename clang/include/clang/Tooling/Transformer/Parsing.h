@@ -18,6 +18,7 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "llvm/Support/Error.h"
 #include <functional>
@@ -32,7 +33,7 @@ namespace transformer {
 /// string. Additionally, the \c charRange combinator is not supported, because
 /// there is no representation of values of type \c CharSourceRange in this
 /// (little) language.
-llvm::Expected<RangeSelector> parseRangeSelector(llvm::StringRef Input);
+CLANG_ABI llvm::Expected<RangeSelector> parseRangeSelector(llvm::StringRef Input);
 
 } // namespace transformer
 } // namespace clang

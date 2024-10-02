@@ -18,6 +18,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang {
@@ -25,7 +26,7 @@ namespace clang {
 using VarGrpTy = std::vector<const VarDecl *>;
 using VarGrpRef = ArrayRef<const VarDecl *>;
 
-class VariableGroupsManager {
+class CLANG_ABI VariableGroupsManager {
 public:
   VariableGroupsManager() = default;
   virtual ~VariableGroupsManager() = default;
@@ -82,7 +83,7 @@ public:
 
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
-class UnsafeBufferUsageHandler {
+class CLANG_ABI UnsafeBufferUsageHandler {
 #ifndef NDEBUG
 public:
   // A self-debugging facility that you can use to notify the user when
@@ -177,13 +178,13 @@ public:
 
 // This function invokes the analysis and allows the caller to react to it
 // through the handler class.
-void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler,
+CLANG_ABI void checkUnsafeBufferUsage(const Decl *D, UnsafeBufferUsageHandler &Handler,
                             bool EmitSuggestions);
 
 namespace internal {
 // Tests if any two `FixItHint`s in `FixIts` conflict.  Two `FixItHint`s
 // conflict if they have overlapping source ranges.
-bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
+CLANG_ABI bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
 } // end namespace clang

@@ -19,6 +19,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -29,7 +30,7 @@ class OMPTraitInfo;
 class OMPChildren;
 
 /// An object for streaming information from a record.
-class ASTRecordReader
+class CLANG_ABI ASTRecordReader
     : public serialization::DataStreamBasicReader<ASTRecordReader> {
   using ModuleFile = serialization::ModuleFile;
   using LocSeq = SourceLocationSequence;

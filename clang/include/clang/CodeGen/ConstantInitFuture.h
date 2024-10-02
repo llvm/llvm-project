@@ -17,6 +17,7 @@
 #ifndef LLVM_CLANG_CODEGEN_CONSTANTINITFUTURE_H
 #define LLVM_CLANG_CODEGEN_CONSTANTINITFUTURE_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/IR/Constant.h"
 
@@ -44,7 +45,7 @@ namespace CodeGen {
 
 /// A "future" for a completed constant initializer, which can be passed
 /// around independently of any sub-builders (but not the original parent).
-class ConstantInitFuture {
+class CLANG_ABI ConstantInitFuture {
   using PairTy = llvm::PointerUnion<ConstantInitBuilderBase*, llvm::Constant*>;
 
   PairTy Data;

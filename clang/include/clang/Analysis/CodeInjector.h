@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_CODEINJECTOR_H
 #define LLVM_CLANG_ANALYSIS_CODEINJECTOR_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
 
 class Stmt;
@@ -32,7 +33,7 @@ class ObjCMethodDecl;
 /// the body can be arbitrary, but it is advised to use memoization to avoid
 /// unnecessary reparsing of the external source that provides the body of the
 /// functions.
-class CodeInjector {
+class CLANG_ABI CodeInjector {
 public:
   CodeInjector();
   virtual ~CodeInjector();

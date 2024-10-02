@@ -38,6 +38,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -98,7 +99,7 @@ inline bool isModuleMap(CharacteristicKind CK) {
 
 /// Mapping of line offsets into a source file. This does not own the storage
 /// for the line numbers.
-class LineOffsetMapping {
+class CLANG_ABI LineOffsetMapping {
 public:
   explicit operator bool() const { return Storage; }
   unsigned size() const {
@@ -128,7 +129,7 @@ private:
 /// One instance of this struct is kept for every file loaded or used.
 ///
 /// This object owns the MemoryBuffer object.
-class alignas(8) ContentCache {
+class CLANG_ABI alignas(8) ContentCache {
   /// The actual buffer containing the characters from the input
   /// file.
   mutable std::unique_ptr<llvm::MemoryBuffer> Buffer;
@@ -541,7 +542,7 @@ public:
 } // namespace SrcMgr
 
 /// External source of source location entries.
-class ExternalSLocEntrySource {
+class CLANG_ABI ExternalSLocEntrySource {
 public:
   virtual ~ExternalSLocEntrySource();
 
@@ -660,7 +661,7 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// the case of a macro expansion, for example, the spelling location indicates
 /// where the expanded token came from and the expansion location specifies
 /// where it was expanded.
-class SourceManager : public RefCountedBase<SourceManager> {
+class CLANG_ABI SourceManager : public RefCountedBase<SourceManager> {
   /// DiagnosticsEngine object.
   DiagnosticsEngine &Diag;
 
@@ -2016,7 +2017,7 @@ public:
 
 /// SourceManager and necessary dependencies (e.g. VFS, FileManager) for a
 /// single in-memorty file.
-class SourceManagerForFile {
+class CLANG_ABI SourceManagerForFile {
 public:
   /// Creates SourceManager and necessary dependencies (e.g. VFS, FileManager).
   /// The main file in the SourceManager will be \p FileName with \p Content.

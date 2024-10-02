@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Sarif.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
@@ -27,7 +28,7 @@ class LangOptions;
 class SARIFDiagnostic;
 class SarifDocumentWriter;
 
-class SARIFDiagnosticPrinter : public DiagnosticConsumer {
+class CLANG_ABI SARIFDiagnosticPrinter : public DiagnosticConsumer {
 public:
   SARIFDiagnosticPrinter(raw_ostream &OS, DiagnosticOptions *Diags);
   ~SARIFDiagnosticPrinter() = default;

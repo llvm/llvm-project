@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SEMA_RISCVINTRINSICMANAGER_H
 #define LLVM_CLANG_SEMA_RISCVINTRINSICMANAGER_H
 
+#include "clang/Support/Compiler.h"
 #include <cstdint>
 
 namespace clang {
@@ -22,7 +23,7 @@ class IdentifierInfo;
 class Preprocessor;
 
 namespace sema {
-class RISCVIntrinsicManager {
+class CLANG_ABI RISCVIntrinsicManager {
 public:
   enum class IntrinsicKind : uint8_t { RVV, SIFIVE_VECTOR };
 

@@ -15,12 +15,13 @@
 
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/raw_ostream.h"
 
 // FIXME: There is no good reason for the domtree to require a print method
@@ -182,8 +183,8 @@ private:
 using CFGDomTree = CFGDominatorTreeImpl</*IsPostDom*/ false>;
 using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
 
-template<> void CFGDominatorTreeImpl<true>::anchor();
-template<> void CFGDominatorTreeImpl<false>::anchor();
+template<> CLANG_ABI CLANG_ABI void CFGDominatorTreeImpl<true>::anchor();
+template<> CLANG_ABI CLANG_ABI void CFGDominatorTreeImpl<false>::anchor();
 
 } // end of namespace clang
 

@@ -13,6 +13,7 @@
 #define LLVM_CLANG_SEMA_SEMAFIXITUTILS_H
 
 #include "clang/AST/Expr.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -29,7 +30,7 @@ class Sema;
 /// The class facilities generation and storage of conversion FixIts. Hints for
 /// new conversions are added using TryToFixConversion method. The default type
 /// conversion checker can be reset.
-struct ConversionFixItGenerator {
+struct CLANG_ABI ConversionFixItGenerator {
   /// Performs a simple check to see if From type can be converted to To type.
   static bool compareTypesSimple(CanQualType From,
                                  CanQualType To,

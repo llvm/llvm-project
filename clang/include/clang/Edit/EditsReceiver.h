@@ -11,12 +11,13 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace edit {
 
-class EditsReceiver {
+class CLANG_ABI EditsReceiver {
 public:
   virtual ~EditsReceiver() = default;
 

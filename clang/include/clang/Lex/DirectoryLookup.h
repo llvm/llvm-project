@@ -13,10 +13,11 @@
 #ifndef LLVM_CLANG_LEX_DIRECTORYLOOKUP_H
 #define LLVM_CLANG_LEX_DIRECTORYLOOKUP_H
 
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/ModuleMap.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class HeaderMap;
@@ -27,7 +28,7 @@ class Module;
 /// specifies the search order for directories in \#include directives.  It
 /// represents either a directory, a framework, or a headermap.
 ///
-class DirectoryLookup {
+class CLANG_ABI DirectoryLookup {
 public:
   enum LookupType_t {
     LT_NormalDir,

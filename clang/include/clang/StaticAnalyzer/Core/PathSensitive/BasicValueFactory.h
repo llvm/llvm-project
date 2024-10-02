@@ -19,9 +19,10 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
@@ -37,7 +38,7 @@ class CXXBaseSpecifier;
 
 namespace ento {
 
-class CompoundValData : public llvm::FoldingSetNode {
+class CLANG_ABI CompoundValData : public llvm::FoldingSetNode {
   QualType T;
   llvm::ImmutableList<SVal> L;
 
@@ -59,7 +60,7 @@ public:
   void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, T, L); }
 };
 
-class LazyCompoundValData : public llvm::FoldingSetNode {
+class CLANG_ABI LazyCompoundValData : public llvm::FoldingSetNode {
   StoreRef store;
   const TypedValueRegion *region;
 
@@ -83,7 +84,7 @@ public:
   void Profile(llvm::FoldingSetNodeID& ID) { Profile(ID, store, region); }
 };
 
-class PointerToMemberData : public llvm::FoldingSetNode {
+class CLANG_ABI PointerToMemberData : public llvm::FoldingSetNode {
   const NamedDecl *D;
   llvm::ImmutableList<const CXXBaseSpecifier *> L;
 
@@ -110,7 +111,7 @@ public:
   }
 };
 
-class BasicValueFactory {
+class CLANG_ABI BasicValueFactory {
   using APSIntSetTy =
       llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APSInt>>;
 

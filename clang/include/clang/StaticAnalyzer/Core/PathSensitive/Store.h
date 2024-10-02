@@ -14,13 +14,14 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STORE_H
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -50,7 +51,7 @@ class SymbolReaper;
 
 using InvalidatedSymbols = llvm::DenseSet<SymbolRef>;
 
-class StoreManager {
+class CLANG_ABI StoreManager {
 protected:
   SValBuilder &svalBuilder;
   ProgramStateManager &StateMgr;
@@ -253,7 +254,7 @@ public:
   virtual void printJson(raw_ostream &Out, Store S, const char *NL,
                          unsigned int Space, bool IsDot) const = 0;
 
-  class BindingsHandler {
+  class CLANG_ABI BindingsHandler {
   public:
     virtual ~BindingsHandler();
 
@@ -262,7 +263,7 @@ public:
                                const MemRegion *region, SVal val) = 0;
   };
 
-  class FindUniqueBinding : public BindingsHandler {
+  class CLANG_ABI FindUniqueBinding : public BindingsHandler {
     SymbolRef Sym;
     const MemRegion* Binding = nullptr;
     bool First = true;
@@ -318,7 +319,7 @@ inline StoreRef &StoreRef::operator=(StoreRef const &newStore) {
 }
 
 // FIXME: Do we need to pass ProgramStateManager anymore?
-std::unique_ptr<StoreManager>
+CLANG_ABI std::unique_ptr<StoreManager>
 CreateRegionStoreManager(ProgramStateManager &StMgr);
 
 } // namespace ento

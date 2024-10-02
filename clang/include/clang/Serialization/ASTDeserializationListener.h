@@ -16,6 +16,7 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Serialization/ASTBitCodes.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -27,7 +28,7 @@ class MacroInfo;
 class Module;
 class SourceLocation;
 
-class ASTDeserializationListener {
+class CLANG_ABI ASTDeserializationListener {
 public:
   virtual ~ASTDeserializationListener();
 

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICERROR_H
 
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
@@ -18,7 +19,7 @@ namespace clang {
 /// Carries a Clang diagnostic in an llvm::Error.
 ///
 /// Users should emit the stored diagnostic using the DiagnosticsEngine.
-class DiagnosticError : public llvm::ErrorInfo<DiagnosticError> {
+class CLANG_ABI DiagnosticError : public llvm::ErrorInfo<DiagnosticError> {
 public:
   DiagnosticError(PartialDiagnosticAt Diag) : Diag(std::move(Diag)) {}
 

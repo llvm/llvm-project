@@ -16,9 +16,10 @@
 #ifndef LLVM_CLANG_ANALYSIS_CONSTRUCTIONCONTEXT_H
 #define LLVM_CLANG_ANALYSIS_CONSTRUCTIONCONTEXT_H
 
-#include "clang/Analysis/Support/BumpVector.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Analysis/Support/BumpVector.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -210,7 +211,7 @@ public:
 /// (which has links to the previous layers) and classifies the seemingly
 /// arbitrary chain of layers into one of the possible ways of constructing
 /// an object in C++ for user-friendly experience.
-class ConstructionContextLayer {
+class CLANG_ABI ConstructionContextLayer {
   const ConstructionContextLayer *Parent = nullptr;
   ConstructionContextItem Item;
 
@@ -240,7 +241,7 @@ public:
 /// an object in C++. The context re-captures the essential parent AST nodes
 /// of the CXXConstructExpr it is assigned to and presents these nodes
 /// through easy-to-understand accessor methods.
-class ConstructionContext {
+class CLANG_ABI ConstructionContext {
 public:
   enum Kind {
     SimpleVariableKind,

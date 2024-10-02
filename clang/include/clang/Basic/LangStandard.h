@@ -10,6 +10,7 @@
 #define LLVM_CLANG_BASIC_LANGSTANDARD_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
@@ -44,7 +45,7 @@ enum class Language : uint8_t {
   HLSL,
   ///@}
 };
-StringRef languageToString(Language L);
+CLANG_ABI StringRef languageToString(Language L);
 
 enum LangFeatures {
   LineComment = (1 << 0),
@@ -69,7 +70,7 @@ enum LangFeatures {
 
 /// LangStandard - Information about the properties of a particular language
 /// standard.
-struct LangStandard {
+struct CLANG_ABI LangStandard {
   enum Kind {
 #define LANGSTANDARD(id, name, lang, desc, features) \
     lang_##id,
@@ -156,7 +157,7 @@ public:
   static const LangStandard *getLangStandardForName(StringRef Name);
 };
 
-LangStandard::Kind getDefaultLanguageStandard(clang::Language Lang,
+CLANG_ABI LangStandard::Kind getDefaultLanguageStandard(clang::Language Lang,
                                               const llvm::Triple &T);
 
 }  // end namespace clang

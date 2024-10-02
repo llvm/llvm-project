@@ -16,11 +16,12 @@
 
 #include "clang/Basic/Sarif.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 
-class SARIFDiagnostic : public DiagnosticRenderer {
+class CLANG_ABI SARIFDiagnostic : public DiagnosticRenderer {
 public:
   SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                   DiagnosticOptions *DiagOpts, SarifDocumentWriter *Writer);

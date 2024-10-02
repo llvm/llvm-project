@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Transformer/MatchConsumer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "llvm/ADT/StringRef.h"
@@ -50,14 +51,14 @@ namespace detail {
 /// so that user doesn't need to specify which factory function to use. This
 /// pattern gives benefits similar to implicit constructors, while maintaing a
 /// higher degree of explicitness.
-Stencil makeStencil(llvm::StringRef Text);
-Stencil makeStencil(RangeSelector Selector);
+CLANG_ABI Stencil makeStencil(llvm::StringRef Text);
+CLANG_ABI Stencil makeStencil(RangeSelector Selector);
 inline Stencil makeStencil(Stencil S) { return S; }
 } // namespace detail
 
 /// Constructs the string representing the concatenation of the given \p
 /// Parts. If only one element is passed in \p Parts, returns that element.
-Stencil catVector(std::vector<Stencil> Parts);
+CLANG_ABI Stencil catVector(std::vector<Stencil> Parts);
 
 /// Concatenates 0+ stencil pieces into a single stencil. Arguments can be raw
 /// text, ranges in the matched code (\p RangeSelector) or other `Stencil`s.
@@ -73,41 +74,41 @@ template <typename... Ts> Stencil cat(Ts &&... Parts) {
 /// parentheses if it may parse differently depending on context. For example, a
 /// binary operation is always wrapped, while a variable reference is never
 /// wrapped.
-Stencil expression(llvm::StringRef Id);
+CLANG_ABI Stencil expression(llvm::StringRef Id);
 
 /// Constructs an idiomatic dereferencing of the expression bound to \p ExprId.
 /// \p ExprId is wrapped in parentheses, if needed.
-Stencil deref(llvm::StringRef ExprId);
+CLANG_ABI Stencil deref(llvm::StringRef ExprId);
 
 /// If \p ExprId is of pointer type, constructs an idiomatic dereferencing of
 /// the expression bound to \p ExprId, including wrapping it in parentheses, if
 /// needed. Otherwise, generates the original expression source.
-Stencil maybeDeref(llvm::StringRef ExprId);
+CLANG_ABI Stencil maybeDeref(llvm::StringRef ExprId);
 
 /// Constructs an expression that idiomatically takes the address of the
 /// expression bound to \p ExprId. \p ExprId is wrapped in parentheses, if
 /// needed.
-Stencil addressOf(llvm::StringRef ExprId);
+CLANG_ABI Stencil addressOf(llvm::StringRef ExprId);
 
 /// If \p ExprId is not a pointer type, constructs an expression that
 /// idiomatically takes the address of the expression bound to \p ExprId,
 /// including wrapping \p ExprId in parentheses, if needed. Otherwise, generates
 /// the original expression source.
-Stencil maybeAddressOf(llvm::StringRef ExprId);
+CLANG_ABI Stencil maybeAddressOf(llvm::StringRef ExprId);
 
 /// Constructs a `MemberExpr` that accesses the named member (\p Member) of the
 /// object bound to \p BaseId. The access is constructed idiomatically: if \p
 /// BaseId is bound to `e` and \p Member identifies member `m`, then returns
 /// `e->m`, when e is a pointer, `e2->m` when e = `*e2` and `e.m` otherwise.
 /// Additionally, `e` is wrapped in parentheses, if needed.
-Stencil access(llvm::StringRef BaseId, Stencil Member);
+CLANG_ABI Stencil access(llvm::StringRef BaseId, Stencil Member);
 inline Stencil access(llvm::StringRef BaseId, llvm::StringRef Member) {
   return access(BaseId, detail::makeStencil(Member));
 }
 
 /// Chooses between the two stencil parts, based on whether \p ID is bound in
 /// the match.
-Stencil ifBound(llvm::StringRef Id, Stencil TrueStencil, Stencil FalseStencil);
+CLANG_ABI Stencil ifBound(llvm::StringRef Id, Stencil TrueStencil, Stencil FalseStencil);
 
 /// Chooses between the two strings, based on whether \p ID is bound in the
 /// match.
@@ -146,12 +147,12 @@ inline Stencil ifBound(llvm::StringRef Id, llvm::StringRef TrueText,
 ///          ...
 ///          {"bool", cat("false")}},
 ///         cat("{}"))
-Stencil selectBound(std::vector<std::pair<std::string, Stencil>> CaseStencils,
+CLANG_ABI Stencil selectBound(std::vector<std::pair<std::string, Stencil>> CaseStencils,
                     Stencil DefaultStencil = nullptr);
 
 /// Wraps a \c MatchConsumer in a \c Stencil, so that it can be used in a \c
 /// Stencil.  This supports user-defined extensions to the \c Stencil language.
-Stencil run(MatchConsumer<std::string> C);
+CLANG_ABI Stencil run(MatchConsumer<std::string> C);
 
 /// Produces a human-readable rendering of the node bound to `Id`, suitable for
 /// diagnostics and debugging. This operator can be applied to any node, but is
@@ -160,12 +161,12 @@ Stencil run(MatchConsumer<std::string> C);
 /// * Types. represented based on their structure. Note that namespace
 ///   qualifiers are always printed, with the anonymous namespace represented
 ///   explicitly. No desugaring or canonicalization is applied.
-Stencil describe(llvm::StringRef Id);
+CLANG_ABI Stencil describe(llvm::StringRef Id);
 
 /// For debug use only; semantics are not guaranteed.
 ///
 /// \returns the string resulting from calling the node's print() method.
-Stencil dPrint(llvm::StringRef Id);
+CLANG_ABI Stencil dPrint(llvm::StringRef Id);
 } // namespace transformer
 } // namespace clang
 #endif // LLVM_CLANG_TOOLING_TRANSFORMER_STENCIL_H_

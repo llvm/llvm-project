@@ -16,12 +16,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/OpenACCKinds.h"
+#include "clang/Support/Compiler.h"
 
 #include <utility>
 
 namespace clang {
 /// This is the base type for all OpenACC Clauses.
-class OpenACCClause {
+class CLANG_ABI OpenACCClause {
   OpenACCClauseKind Kind;
   SourceRange Location;
 
@@ -55,7 +56,7 @@ public:
 };
 
 // Represents the 'auto' clause.
-class OpenACCAutoClause : public OpenACCClause {
+class CLANG_ABI OpenACCAutoClause : public OpenACCClause {
 protected:
   OpenACCAutoClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Auto, BeginLoc, EndLoc) {}
@@ -77,7 +78,7 @@ public:
 };
 
 // Represents the 'independent' clause.
-class OpenACCIndependentClause : public OpenACCClause {
+class CLANG_ABI OpenACCIndependentClause : public OpenACCClause {
 protected:
   OpenACCIndependentClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Independent, BeginLoc, EndLoc) {}
@@ -98,7 +99,7 @@ public:
   }
 };
 // Represents the 'seq' clause.
-class OpenACCSeqClause : public OpenACCClause {
+class CLANG_ABI OpenACCSeqClause : public OpenACCClause {
 protected:
   OpenACCSeqClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Seq, BeginLoc, EndLoc) {}
@@ -122,7 +123,7 @@ public:
 // Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
 // this provides a basic, do-nothing implementation. We still need to add this
 // type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCGangClause : public OpenACCClause {
+class CLANG_ABI OpenACCGangClause : public OpenACCClause {
 protected:
   OpenACCGangClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
@@ -148,7 +149,7 @@ public:
 // Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
 // this provides a basic, do-nothing implementation. We still need to add this
 // type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCVectorClause : public OpenACCClause {
+class CLANG_ABI OpenACCVectorClause : public OpenACCClause {
 protected:
   OpenACCVectorClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Vector, BeginLoc, EndLoc) {
@@ -174,7 +175,7 @@ public:
 // Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
 // this provides a basic, do-nothing implementation. We still need to add this
 // type to the visitors/etc, as well as get it to take its proper arguments.
-class OpenACCWorkerClause : public OpenACCClause {
+class CLANG_ABI OpenACCWorkerClause : public OpenACCClause {
 protected:
   OpenACCWorkerClause(SourceLocation BeginLoc, SourceLocation EndLoc)
       : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
@@ -198,7 +199,7 @@ public:
 };
 
 /// Represents a clause that has a list of parameters.
-class OpenACCClauseWithParams : public OpenACCClause {
+class CLANG_ABI OpenACCClauseWithParams : public OpenACCClause {
   /// Location of the '('.
   SourceLocation LParenLoc;
 
@@ -223,7 +224,7 @@ public:
 using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
 /// an identifier. The 'asterisk' means 'the rest'.
-class OpenACCDeviceTypeClause final
+class CLANG_ABI OpenACCDeviceTypeClause final
     : public OpenACCClauseWithParams,
       public llvm::TrailingObjects<OpenACCDeviceTypeClause,
                                    DeviceTypeArgument> {
@@ -278,7 +279,7 @@ public:
 };
 
 /// A 'default' clause, has the optional 'none' or 'present' argument.
-class OpenACCDefaultClause : public OpenACCClauseWithParams {
+class CLANG_ABI OpenACCDefaultClause : public OpenACCClauseWithParams {
   friend class ASTReaderStmt;
   friend class ASTWriterStmt;
 
@@ -312,7 +313,7 @@ public:
 
 /// Represents one of the handful of classes that has an optional/required
 /// 'condition' expression as an argument.
-class OpenACCClauseWithCondition : public OpenACCClauseWithParams {
+class CLANG_ABI OpenACCClauseWithCondition : public OpenACCClauseWithParams {
   Expr *ConditionExpr = nullptr;
 
 protected:
@@ -346,7 +347,7 @@ public:
 };
 
 /// An 'if' clause, which has a required condition expression.
-class OpenACCIfClause : public OpenACCClauseWithCondition {
+class CLANG_ABI OpenACCIfClause : public OpenACCClauseWithCondition {
 protected:
   OpenACCIfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                   Expr *ConditionExpr, SourceLocation EndLoc);
@@ -361,7 +362,7 @@ public:
 };
 
 /// A 'self' clause, which has an optional condition expression.
-class OpenACCSelfClause : public OpenACCClauseWithCondition {
+class CLANG_ABI OpenACCSelfClause : public OpenACCClauseWithCondition {
   OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     Expr *ConditionExpr, SourceLocation EndLoc);
 
@@ -375,7 +376,7 @@ public:
 };
 
 /// Represents a clause that has one or more expressions associated with it.
-class OpenACCClauseWithExprs : public OpenACCClauseWithParams {
+class CLANG_ABI OpenACCClauseWithExprs : public OpenACCClauseWithParams {
   MutableArrayRef<Expr *> Exprs;
 
 protected:
@@ -409,7 +410,7 @@ public:
 };
 
 // Represents the 'devnum' and expressions lists for the 'wait' clause.
-class OpenACCWaitClause final
+class CLANG_ABI OpenACCWaitClause final
     : public OpenACCClauseWithExprs,
       public llvm::TrailingObjects<OpenACCWaitClause, Expr *> {
   SourceLocation QueuesLoc;
@@ -451,7 +452,7 @@ public:
   }
 };
 
-class OpenACCNumGangsClause final
+class CLANG_ABI OpenACCNumGangsClause final
     : public OpenACCClauseWithExprs,
       public llvm::TrailingObjects<OpenACCNumGangsClause, Expr *> {
 
@@ -483,7 +484,7 @@ public:
 
 /// Represents one of a handful of clauses that have a single integer
 /// expression.
-class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithExprs {
+class CLANG_ABI OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithExprs {
   Expr *IntExpr;
 
 protected:
@@ -506,7 +507,7 @@ public:
   Expr *getIntExpr() { return hasIntExpr() ? getExprs()[0] : nullptr; };
 };
 
-class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
+class CLANG_ABI OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
   OpenACCNumWorkersClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                           Expr *IntExpr, SourceLocation EndLoc);
 
@@ -520,7 +521,7 @@ public:
                                          Expr *IntExpr, SourceLocation EndLoc);
 };
 
-class OpenACCVectorLengthClause : public OpenACCClauseWithSingleIntExpr {
+class CLANG_ABI OpenACCVectorLengthClause : public OpenACCClauseWithSingleIntExpr {
   OpenACCVectorLengthClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                             Expr *IntExpr, SourceLocation EndLoc);
 
@@ -533,7 +534,7 @@ public:
          Expr *IntExpr, SourceLocation EndLoc);
 };
 
-class OpenACCAsyncClause : public OpenACCClauseWithSingleIntExpr {
+class CLANG_ABI OpenACCAsyncClause : public OpenACCClauseWithSingleIntExpr {
   OpenACCAsyncClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                      Expr *IntExpr, SourceLocation EndLoc);
 
@@ -577,7 +578,7 @@ public:
 /// as its arguments. Var-list is expected to be stored in trailing storage.
 /// For now, we're just storing the original expression in its entirety, unlike
 /// OMP which has to do a bunch of work to create a private.
-class OpenACCClauseWithVarList : public OpenACCClauseWithExprs {
+class CLANG_ABI OpenACCClauseWithVarList : public OpenACCClauseWithExprs {
 protected:
   OpenACCClauseWithVarList(OpenACCClauseKind K, SourceLocation BeginLoc,
                            SourceLocation LParenLoc, SourceLocation EndLoc)
@@ -589,7 +590,7 @@ public:
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
 
-class OpenACCPrivateClause final
+class CLANG_ABI OpenACCPrivateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
 
@@ -611,7 +612,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCFirstPrivateClause final
+class CLANG_ABI OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
 
@@ -633,7 +634,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCDevicePtrClause final
+class CLANG_ABI OpenACCDevicePtrClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCDevicePtrClause, Expr *> {
 
@@ -655,7 +656,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCAttachClause final
+class CLANG_ABI OpenACCAttachClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCAttachClause, Expr *> {
 
@@ -677,7 +678,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCNoCreateClause final
+class CLANG_ABI OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {
 
@@ -699,7 +700,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCPresentClause final
+class CLANG_ABI OpenACCPresentClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCPresentClause, Expr *> {
 
@@ -721,7 +722,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCCopyClause final
+class CLANG_ABI OpenACCCopyClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
 
@@ -750,7 +751,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCCopyInClause final
+class CLANG_ABI OpenACCCopyInClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
   bool IsReadOnly;
@@ -782,7 +783,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCCopyOutClause final
+class CLANG_ABI OpenACCCopyOutClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
   bool IsZero;
@@ -814,7 +815,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCCreateClause final
+class CLANG_ABI OpenACCCreateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
   bool IsZero;
@@ -846,7 +847,7 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
-class OpenACCReductionClause final
+class CLANG_ABI OpenACCReductionClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCReductionClause, Expr *> {
   OpenACCReductionOperator Op;
@@ -914,7 +915,7 @@ public:
 #include "clang/Basic/OpenACCClauses.def"
 };
 
-class OpenACCClausePrinter final
+class CLANG_ABI OpenACCClausePrinter final
     : public OpenACCClauseVisitor<OpenACCClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;

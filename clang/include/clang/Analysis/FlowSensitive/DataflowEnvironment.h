@@ -26,6 +26,7 @@
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -62,7 +63,7 @@ struct WidenResult {
 /// local and global variables are not currently invalidated on function calls.
 /// This is unsound and should be taken into account when designing dataflow
 /// analyses.
-class Environment {
+class CLANG_ABI Environment {
 public:
   /// Supplements `Environment` with non-standard comparison and join
   /// operations.
@@ -813,13 +814,13 @@ private:
 /// `CXXMemberCallExpr`, or null if none is defined in the environment.
 /// Dereferences the pointer if the member call expression was written using
 /// `->`.
-RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
+CLANG_ABI RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
                                                  const Environment &Env);
 
 /// Returns the storage location for the base object of a `MemberExpr`, or null
 /// if none is defined in the environment. Dereferences the pointer if the
 /// member expression was written using `->`.
-RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+CLANG_ABI RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
 
 } // namespace dataflow

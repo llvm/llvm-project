@@ -19,6 +19,7 @@
 #include "clang/InstallAPI/Context.h"
 #include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/Visitor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -27,7 +28,7 @@ namespace installapi {
 
 /// Create a buffer that contains all headers to scan
 /// for global symbols with.
-std::unique_ptr<llvm::MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx);
+CLANG_ABI std::unique_ptr<llvm::MemoryBuffer> createInputBuffer(InstallAPIContext &Ctx);
 
 class InstallAPIAction : public ASTFrontendAction {
 public:

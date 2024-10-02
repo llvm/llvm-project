@@ -22,12 +22,13 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
-#include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -86,7 +87,7 @@ enum class SkipFunctionBodiesScope { None, Preamble, PreambleAndMainFile };
 enum class CaptureDiagsKind { None, All, AllWithoutNonErrorsFromIncludes };
 
 /// Utility class for loading a ASTContext from an AST file.
-class ASTUnit {
+class CLANG_ABI ASTUnit {
 public:
   struct StandaloneFixIt {
     std::pair<unsigned, unsigned> RemoveRange;
@@ -392,7 +393,7 @@ private:
   /// using the ASTUnit in a way that isn't intended to be concurrent, which is
   /// just about any usage.
   /// Becomes a noop in release mode; only useful for debug mode checking.
-  class ConcurrencyState {
+  class CLANG_ABI ConcurrencyState {
     void *Mutex; // a std::recursive_mutex in debug;
 
   public:

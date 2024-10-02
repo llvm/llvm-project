@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Execution.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ToolExecutorPluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
 
@@ -15,7 +16,7 @@ LLVM_INSTANTIATE_REGISTRY(clang::tooling::ToolExecutorPluginRegistry)
 namespace clang {
 namespace tooling {
 
-llvm::cl::opt<std::string>
+CLANG_ABI llvm::cl::opt<std::string>
     ExecutorName("executor", llvm::cl::desc("The name of the executor to use."),
                  llvm::cl::init("standalone"));
 

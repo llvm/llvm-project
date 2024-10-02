@@ -10,6 +10,7 @@
 #define LLVM_CLANG_AST_NSAPI_H
 
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <optional>
 
@@ -20,7 +21,7 @@ namespace clang {
   class Expr;
 
 // Provides info and caches identifiers/selectors for NSFoundation API.
-class NSAPI {
+class CLANG_ABI NSAPI {
 public:
   explicit NSAPI(ASTContext &Ctx);
 

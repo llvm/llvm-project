@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LEX_EXTERNALPREPROCESSORSOURCE_H
 #define LLVM_CLANG_LEX_EXTERNALPREPROCESSORSOURCE_H
 
+#include "clang/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
   
@@ -26,7 +27,7 @@ class Module;
 ///
 /// This abstract class allows an external sources (such as the \c ASTReader)
 /// to provide additional preprocessing information.
-class ExternalPreprocessorSource {
+class CLANG_ABI ExternalPreprocessorSource {
 public:
   virtual ~ExternalPreprocessorSource();
 

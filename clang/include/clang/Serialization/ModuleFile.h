@@ -20,6 +20,7 @@
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -121,7 +122,7 @@ public:
 /// of some sort loaded as the main file, all of which are specific formulations
 /// of the general notion of a "module". A module may depend on any number of
 /// other modules.
-class ModuleFile {
+class CLANG_ABI ModuleFile {
 public:
   ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
       : Kind(Kind), File(File), Generation(Generation) {}

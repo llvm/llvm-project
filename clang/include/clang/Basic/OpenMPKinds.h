@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OPENMPKINDS_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -233,41 +234,41 @@ struct OMPInteropInfo final {
   llvm::SmallVector<Expr *, 4> PreferTypes;
 };
 
-unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
+CLANG_ABI unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
-const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
+CLANG_ABI const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
 
 /// Checks if the specified directive is a directive with an associated
 /// loop construct.
 /// \param DKind Specified directive.
 /// \return true - the directive is a loop-associated directive like 'omp simd'
 /// or 'omp for' directive, otherwise - false.
-bool isOpenMPLoopDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPLoopDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a worksharing directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a worksharing directive like 'omp for',
 /// otherwise - false.
-bool isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a taskloop directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a worksharing directive like 'omp taskloop',
 /// otherwise - false.
-bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a parallel-kind directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a parallel-like directive like 'omp
 /// parallel', otherwise - false.
-bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPParallelDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a target code offload directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a target code offload directive like
 /// 'omp target', 'omp target parallel', 'omp target xxx'
 /// otherwise - false.
-bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a target data offload directive.
 /// \param DKind Specified directive.
@@ -275,7 +276,7 @@ bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 /// 'omp target data', 'omp target update', 'omp target enter data',
 /// 'omp target exit data'
 /// otherwise - false.
-bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified composite/combined directive constitutes a teams
 /// directive in the outermost nest.  For example
@@ -283,26 +284,26 @@ bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
 /// \param DKind Specified directive.
 /// \return true - the directive has teams on the outermost nest, otherwise -
 /// false.
-bool isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a teams-kind directive.  For example,
 /// 'omp teams distribute' or 'omp target teams'.
 /// \param DKind Specified directive.
 /// \return true - the directive is a teams-like directive, otherwise - false.
-bool isOpenMPTeamsDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPTeamsDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a simd directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a simd directive like 'omp simd',
 /// otherwise - false.
-bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPSimdDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a distribute directive.
 /// \param DKind Specified directive.
 /// \return true - the directive is a distribute-directive like 'omp
 /// distribute',
 /// otherwise - false.
-bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified composite/combined directive constitutes a
 /// distribute directive in the outermost nest.  For example,
@@ -310,44 +311,44 @@ bool isOpenMPDistributeDirective(OpenMPDirectiveKind DKind);
 /// \param DKind Specified directive.
 /// \return true - the directive has distribute on the outermost nest.
 /// otherwise - false.
-bool isOpenMPNestingDistributeDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPNestingDistributeDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive constitutes a 'loop' directive in the
 /// outermost nest.  For example, 'omp teams loop' or 'omp loop'.
 /// \param DKind Specified directive.
 /// \return true - the directive has loop on the outermost nest.
 /// otherwise - false.
-bool isOpenMPGenericLoopDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPGenericLoopDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified clause is one of private clauses like
 /// 'private', 'firstprivate', 'reduction' etc..
 /// \param Kind Clause kind.
 /// \return true - the clause is a private clause, otherwise - false.
-bool isOpenMPPrivate(OpenMPClauseKind Kind);
+CLANG_ABI bool isOpenMPPrivate(OpenMPClauseKind Kind);
 
 /// Checks if the specified clause is one of threadprivate clauses like
 /// 'threadprivate', 'copyin' or 'copyprivate'.
 /// \param Kind Clause kind.
 /// \return true - the clause is a threadprivate clause, otherwise - false.
-bool isOpenMPThreadPrivate(OpenMPClauseKind Kind);
+CLANG_ABI bool isOpenMPThreadPrivate(OpenMPClauseKind Kind);
 
 /// Checks if the specified directive kind is one of tasking directives - task,
 /// taskloop, taksloop simd, master taskloop, parallel master taskloop, master
 /// taskloop simd, or parallel master taskloop simd.
-bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
+CLANG_ABI bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 
 /// Checks if the specified directive kind is one of the composite or combined
 /// directives that need loop bound sharing across loops outlined in nested
 /// functions
-bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
+CLANG_ABI bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.
-bool isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind);
 
 /// Return the captured regions of an OpenMP directive.
-void getOpenMPCaptureRegions(
+CLANG_ABI void getOpenMPCaptureRegions(
     llvm::SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind);
 
@@ -356,19 +357,19 @@ void getOpenMPCaptureRegions(
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified target directive, combined or not, needs task based
 /// thread_limit
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
+CLANG_ABI bool needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind);
 
 /// Checks if the parameter to the fail clause in "#pragma atomic compare fail"
 /// is restricted only to memory order clauses of "OMPC_acquire",
 /// "OMPC_relaxed" and "OMPC_seq_cst".
-bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
+CLANG_ABI bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
 
 /// Checks if the specified directive is considered as "executable". This
 /// combines the OpenMP categories of "executable" and "subsidiary", plus
@@ -376,18 +377,18 @@ bool checkFailClauseParameter(OpenMPClauseKind FailClauseParameter);
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPExecutableDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is considered as "informational".
 /// \param DKind Specified directive.
 /// \return true if it is an informational directive, false otherwise.
-bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPInformationalDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive can capture variables.
 /// \param DKind Specified directive.
 /// \return true - if the above condition is met for this directive
 /// otherwise - false.
-bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
+CLANG_ABI bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 }
 
 template <>

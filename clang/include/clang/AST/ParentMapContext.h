@@ -16,11 +16,12 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 class DynTypedNodeList;
 
-class ParentMapContext {
+class CLANG_ABI ParentMapContext {
 public:
   ParentMapContext(ASTContext &Ctx);
 

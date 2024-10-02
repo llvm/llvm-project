@@ -14,10 +14,11 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
-class ODRDiagsEmitter {
+class CLANG_ABI ODRDiagsEmitter {
 public:
   ODRDiagsEmitter(DiagnosticsEngine &Diags, const ASTContext &Context,
                   const LangOptions &LangOpts)

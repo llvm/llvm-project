@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/InstallAPI/Context.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/Twine.h"
 
 namespace clang {
@@ -25,7 +26,7 @@ struct AvailabilityInfo;
 namespace installapi {
 
 /// ASTVisitor for collecting declarations that represent global symbols.
-class InstallAPIVisitor final : public ASTConsumer,
+class CLANG_ABI InstallAPIVisitor final : public ASTConsumer,
                                 public RecursiveASTVisitor<InstallAPIVisitor> {
 public:
   InstallAPIVisitor(ASTContext &ASTCtx, InstallAPIContext &Ctx,

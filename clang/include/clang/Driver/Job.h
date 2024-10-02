@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/InputInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -103,7 +104,7 @@ struct ResponseFileSupport {
 
 /// Command - An executable path/name and argument vector to
 /// execute.
-class Command {
+class CLANG_ABI Command {
   /// Source - The action which caused the creation of this job.
   const Action &Source;
 
@@ -240,7 +241,7 @@ protected:
 };
 
 /// Use the CC1 tool callback when available, to avoid creating a new process
-class CC1Command : public Command {
+class CLANG_ABI CC1Command : public Command {
 public:
   CC1Command(const Action &Source, const Tool &Creator,
              ResponseFileSupport ResponseSupport, const char *Executable,
@@ -259,7 +260,7 @@ public:
 };
 
 /// JobList - A sequence of jobs to perform.
-class JobList {
+class CLANG_ABI JobList {
 public:
   using list_type = SmallVector<std::unique_ptr<Command>, 4>;
   using size_type = list_type::size_type;

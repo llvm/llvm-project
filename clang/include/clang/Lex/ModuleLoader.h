@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
@@ -79,7 +80,7 @@ public:
 /// This abstract interface describes a module loader, which is responsible
 /// for resolving a module name (e.g., "std") to an actual module file, and
 /// then loading that module.
-class ModuleLoader {
+class CLANG_ABI ModuleLoader {
   // Building a module if true.
   bool BuildingModule;
 

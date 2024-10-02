@@ -14,6 +14,7 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/InstallAPI/Library.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang::installapi {
 
@@ -24,7 +25,7 @@ enum ScanMode {
   ScanDylibs,
 };
 
-class DirectoryScanner {
+class CLANG_ABI DirectoryScanner {
 public:
   DirectoryScanner(FileManager &FM, ScanMode Mode = ScanMode::ScanFrameworks)
       : FM(FM), Mode(Mode) {}

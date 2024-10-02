@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -52,7 +53,7 @@ class ASTContext;
 //===----------------------------------------------------------------------===//
 
 /// This is a basic class for representing single OpenMP clause.
-class OMPClause {
+class CLANG_ABI OMPClause {
   /// Starting location of the clause (the clause keyword).
   SourceLocation StartLoc;
 
@@ -192,7 +193,7 @@ public:
 
 /// Class that handles pre-initialization statement for some clauses, like
 /// 'schedule', 'firstprivate' etc.
-class OMPClauseWithPreInit {
+class CLANG_ABI OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Pre-initialization statement for the clause.
@@ -230,7 +231,7 @@ public:
 
 /// Class that handles post-update expression for some clauses, like
 /// 'lastprivate', 'reduction' etc.
-class OMPClauseWithPostUpdate : public OMPClauseWithPreInit {
+class CLANG_ABI OMPClauseWithPostUpdate : public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Post-update expression for the clause.
@@ -444,7 +445,7 @@ public:
 /// In this example directive '#pragma omp allocate' has simple 'allocator'
 /// clause with the allocator 'omp_default_mem_alloc' and align clause with
 /// value of 8.
-class OMPAlignClause final
+class CLANG_ABI OMPAlignClause final
     : public OMPOneStmtClause<llvm::omp::OMPC_align, OMPClause> {
   friend class OMPClauseReader;
 
@@ -487,7 +488,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'private'
 /// and clause 'allocate' for the variable 'a'.
-class OMPAllocateClause final
+class CLANG_ABI OMPAllocateClause final
     : public OMPVarListClause<OMPAllocateClause>,
       private llvm::TrailingObjects<OMPAllocateClause, Expr *> {
   friend class OMPClauseReader;
@@ -584,7 +585,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has simple 'if' clause with
 /// condition 'a > 5' and directive name modifier 'parallel'.
-class OMPIfClause : public OMPClause, public OMPClauseWithPreInit {
+class CLANG_ABI OMPIfClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -685,7 +686,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp task' has simple 'final'
 /// clause with condition 'a > 5'.
-class OMPFinalClause final
+class CLANG_ABI OMPFinalClause final
     : public OMPOneStmtClause<llvm::omp::OMPC_final, OMPClause>,
       public OMPClauseWithPreInit {
   friend class OMPClauseReader;
@@ -843,7 +844,7 @@ public:
 /// for (int i = 0; i < 64; ++i)
 ///   for (int j = 0; j < 64; ++j)
 /// \endcode
-class OMPSizesClause final
+class CLANG_ABI OMPSizesClause final
     : public OMPClause,
       private llvm::TrailingObjects<OMPSizesClause, Expr *> {
   friend class OMPClauseReader;
@@ -936,7 +937,7 @@ public:
 /// #pragma omp unroll full
 /// for (int i = 0; i < 64; ++i)
 /// \endcode
-class OMPFullClause final : public OMPNoChildClause<llvm::omp::OMPC_full> {
+class CLANG_ABI OMPFullClause final : public OMPNoChildClause<llvm::omp::OMPC_full> {
   friend class OMPClauseReader;
 
   /// Build an empty clause.
@@ -964,7 +965,7 @@ public:
 /// #pragma omp unroll partial(4)
 /// for (int i = start; i < end; ++i)
 /// \endcode
-class OMPPartialClause final : public OMPClause {
+class CLANG_ABI OMPPartialClause final : public OMPClause {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -1887,7 +1888,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp for' has 'ordered' clause with
 /// parameter 2.
-class OMPOrderedClause final
+class CLANG_ABI OMPOrderedClause final
     : public OMPClause,
       private llvm::TrailingObjects<OMPOrderedClause, Expr *> {
   friend class OMPClauseReader;
@@ -2080,7 +2081,7 @@ public:
 /// #pragma omp assume absent(<directive-name list>)
 /// \endcode
 /// In this example directive '#pragma omp assume' has an 'absent' clause.
-class OMPAbsentClause final
+class CLANG_ABI OMPAbsentClause final
     : public OMPDirectiveListClause<OMPAbsentClause>,
       private llvm::TrailingObjects<OMPAbsentClause, OpenMPDirectiveKind> {
   friend OMPDirectiveListClause;
@@ -2123,7 +2124,7 @@ public:
 /// #pragma omp assume contains(<directive-name list>)
 /// \endcode
 /// In this example directive '#pragma omp assume' has a 'contains' clause.
-class OMPContainsClause final
+class CLANG_ABI OMPContainsClause final
     : public OMPDirectiveListClause<OMPContainsClause>,
       private llvm::TrailingObjects<OMPContainsClause, OpenMPDirectiveKind> {
   friend OMPDirectiveListClause;
@@ -2344,7 +2345,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp depobj' has 'update' clause with 'in'
 /// dependence kind.
-class OMPUpdateClause final
+class CLANG_ABI OMPUpdateClause final
     : public OMPClause,
       private llvm::TrailingObjects<OMPUpdateClause, SourceLocation,
                                     OpenMPDependClauseKind> {
@@ -2881,7 +2882,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'private'
 /// with the variables 'a' and 'b'.
-class OMPPrivateClause final
+class CLANG_ABI OMPPrivateClause final
     : public OMPVarListClause<OMPPrivateClause>,
       private llvm::TrailingObjects<OMPPrivateClause, Expr *> {
   friend class OMPClauseReader;
@@ -2987,7 +2988,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'firstprivate'
 /// with the variables 'a' and 'b'.
-class OMPFirstprivateClause final
+class CLANG_ABI OMPFirstprivateClause final
     : public OMPVarListClause<OMPFirstprivateClause>,
       public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPFirstprivateClause, Expr *> {
@@ -3128,7 +3129,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp simd' has clause 'lastprivate'
 /// with the variables 'a' and 'b'.
-class OMPLastprivateClause final
+class CLANG_ABI OMPLastprivateClause final
     : public OMPVarListClause<OMPLastprivateClause>,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPLastprivateClause, Expr *> {
@@ -3366,7 +3367,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'shared'
 /// with the variables 'a' and 'b'.
-class OMPSharedClause final
+class CLANG_ABI OMPSharedClause final
     : public OMPVarListClause<OMPSharedClause>,
       private llvm::TrailingObjects<OMPSharedClause, Expr *> {
   friend OMPVarListClause;
@@ -3439,7 +3440,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'reduction'
 /// with operator '+' and the variables 'a' and 'b'.
-class OMPReductionClause final
+class CLANG_ABI OMPReductionClause final
     : public OMPVarListClause<OMPReductionClause>,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPReductionClause, Expr *> {
@@ -3775,7 +3776,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp taskgroup' has clause
 /// 'task_reduction' with operator '+' and the variables 'a' and 'b'.
-class OMPTaskReductionClause final
+class CLANG_ABI OMPTaskReductionClause final
     : public OMPVarListClause<OMPTaskReductionClause>,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPTaskReductionClause, Expr *> {
@@ -4006,7 +4007,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp task' has clause 'in_reduction' with
 /// operator '+' and the variables 'a' and 'b'.
-class OMPInReductionClause final
+class CLANG_ABI OMPInReductionClause final
     : public OMPVarListClause<OMPInReductionClause>,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPInReductionClause, Expr *> {
@@ -4262,7 +4263,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp simd' has clause 'linear'
 /// with variables 'a', 'b' and linear step '2'.
-class OMPLinearClause final
+class CLANG_ABI OMPLinearClause final
     : public OMPVarListClause<OMPLinearClause>,
       public OMPClauseWithPostUpdate,
       private llvm::TrailingObjects<OMPLinearClause, Expr *> {
@@ -4552,7 +4553,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp simd' has clause 'aligned'
 /// with variables 'a', 'b' and alignment '8'.
-class OMPAlignedClause final
+class CLANG_ABI OMPAlignedClause final
     : public OMPVarListClause<OMPAlignedClause>,
       private llvm::TrailingObjects<OMPAlignedClause, Expr *> {
   friend class OMPClauseReader;
@@ -4650,7 +4651,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp parallel' has clause 'copyin'
 /// with the variables 'a' and 'b'.
-class OMPCopyinClause final
+class CLANG_ABI OMPCopyinClause final
     : public OMPVarListClause<OMPCopyinClause>,
       private llvm::TrailingObjects<OMPCopyinClause, Expr *> {
   // Class has 3 additional tail allocated arrays:
@@ -4827,7 +4828,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp single' has clause 'copyprivate'
 /// with the variables 'a' and 'b'.
-class OMPCopyprivateClause final
+class CLANG_ABI OMPCopyprivateClause final
     : public OMPVarListClause<OMPCopyprivateClause>,
       private llvm::TrailingObjects<OMPCopyprivateClause, Expr *> {
   friend class OMPClauseReader;
@@ -4995,7 +4996,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp flush' has implicit clause 'flush'
 /// with the variables 'a' and 'b'.
-class OMPFlushClause final
+class CLANG_ABI OMPFlushClause final
     : public OMPVarListClause<OMPFlushClause>,
       private llvm::TrailingObjects<OMPFlushClause, Expr *> {
   friend OMPVarListClause;
@@ -5072,7 +5073,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp depobj' has implicit clause 'depobj'
 /// with the depobj 'a'.
-class OMPDepobjClause final : public OMPClause {
+class CLANG_ABI OMPDepobjClause final : public OMPClause {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -5155,7 +5156,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp task' with clause 'depend' with the
 /// variables 'a' and 'b' with dependency 'in'.
-class OMPDependClause final
+class CLANG_ABI OMPDependClause final
     : public OMPVarListClause<OMPDependClause>,
       private llvm::TrailingObjects<OMPDependClause, Expr *> {
   friend class OMPClauseReader;
@@ -5458,7 +5459,7 @@ public:
 
 /// Struct that defines common infrastructure to handle mappable
 /// expressions used in OpenMP clauses.
-class OMPClauseMappableExprCommon {
+class CLANG_ABI OMPClauseMappableExprCommon {
 public:
   /// Class that represents a component of a mappable expression. E.g.
   /// for an expression S.a, the first component is a declaration reference
@@ -6105,7 +6106,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target' has clause 'map'
 /// with the variables 'a' and 'b'.
-class OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
+class CLANG_ABI OMPMapClause final : public OMPMappableExprListClause<OMPMapClause>,
                            private llvm::TrailingObjects<
                                OMPMapClause, Expr *, ValueDecl *, unsigned,
                                OMPClauseMappableExprCommon::MappableComponent> {
@@ -6376,7 +6377,7 @@ public:
 /// \code
 /// #pragma omp target teams ompx_bare num_teams(x, y, z)
 /// \endcode
-class OMPNumTeamsClause final
+class CLANG_ABI OMPNumTeamsClause final
     : public OMPVarListClause<OMPNumTeamsClause>,
       public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPNumTeamsClause, Expr *> {
@@ -6469,7 +6470,7 @@ public:
 /// \code
 /// #pragma omp target teams ompx_bare thread_limit(x, y, z)
 /// \endcode
-class OMPThreadLimitClause final
+class CLANG_ABI OMPThreadLimitClause final
     : public OMPVarListClause<OMPThreadLimitClause>,
       public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPThreadLimitClause, Expr *> {
@@ -6556,7 +6557,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'priority' with
 /// single expression 'n'.
-class OMPPriorityClause : public OMPClause, public OMPClauseWithPreInit {
+class CLANG_ABI OMPPriorityClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -6630,7 +6631,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp taskloop' has clause 'grainsize'
 /// with single expression '4'.
-class OMPGrainsizeClause : public OMPClause, public OMPClauseWithPreInit {
+class CLANG_ABI OMPGrainsizeClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -6762,7 +6763,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp taskloop' has clause 'num_tasks'
 /// with single expression '4'.
-class OMPNumTasksClause : public OMPClause, public OMPClauseWithPreInit {
+class CLANG_ABI OMPNumTasksClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -7150,7 +7151,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target update' has clause 'to'
 /// with the variables 'a' and 'b'.
-class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
+class CLANG_ABI OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
                           private llvm::TrailingObjects<
                               OMPToClause, Expr *, ValueDecl *, unsigned,
                               OMPClauseMappableExprCommon::MappableComponent> {
@@ -7350,7 +7351,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target update' has clause 'from'
 /// with the variables 'a' and 'b'.
-class OMPFromClause final
+class CLANG_ABI OMPFromClause final
     : public OMPMappableExprListClause<OMPFromClause>,
       private llvm::TrailingObjects<
           OMPFromClause, Expr *, ValueDecl *, unsigned,
@@ -7550,7 +7551,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target data' has clause
 /// 'use_device_ptr' with the variables 'a' and 'b'.
-class OMPUseDevicePtrClause final
+class CLANG_ABI OMPUseDevicePtrClause final
     : public OMPMappableExprListClause<OMPUseDevicePtrClause>,
       private llvm::TrailingObjects<
           OMPUseDevicePtrClause, Expr *, ValueDecl *, unsigned,
@@ -7714,7 +7715,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target data' has clause
 /// 'use_device_addr' with the variables 'a' and 'b'.
-class OMPUseDeviceAddrClause final
+class CLANG_ABI OMPUseDeviceAddrClause final
     : public OMPMappableExprListClause<OMPUseDeviceAddrClause>,
       private llvm::TrailingObjects<
           OMPUseDeviceAddrClause, Expr *, ValueDecl *, unsigned,
@@ -7818,7 +7819,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target' has clause
 /// 'is_device_ptr' with the variables 'a' and 'b'.
-class OMPIsDevicePtrClause final
+class CLANG_ABI OMPIsDevicePtrClause final
     : public OMPMappableExprListClause<OMPIsDevicePtrClause>,
       private llvm::TrailingObjects<
           OMPIsDevicePtrClause, Expr *, ValueDecl *, unsigned,
@@ -7921,7 +7922,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target' has clause
 /// 'has_device_ptr' with the variables 'a' and 'b'.
-class OMPHasDeviceAddrClause final
+class CLANG_ABI OMPHasDeviceAddrClause final
     : public OMPMappableExprListClause<OMPHasDeviceAddrClause>,
       private llvm::TrailingObjects<
           OMPHasDeviceAddrClause, Expr *, ValueDecl *, unsigned,
@@ -8024,7 +8025,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp simd' has clause 'nontemporal' for
 /// the variable 'a'.
-class OMPNontemporalClause final
+class CLANG_ABI OMPNontemporalClause final
     : public OMPVarListClause<OMPNontemporalClause>,
       private llvm::TrailingObjects<OMPNontemporalClause, Expr *> {
   friend class OMPClauseReader;
@@ -8224,7 +8225,7 @@ public:
 /// \code
 /// #pragma omp interop init(target:obj)
 /// \endcode
-class OMPInitClause final
+class CLANG_ABI OMPInitClause final
     : public OMPVarListClause<OMPInitClause>,
       private llvm::TrailingObjects<OMPInitClause, Expr *> {
   friend class OMPClauseReader;
@@ -8507,7 +8508,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp dispatch' has simple 'novariants'
 /// clause with condition 'a > 5'.
-class OMPNovariantsClause final
+class CLANG_ABI OMPNovariantsClause final
     : public OMPOneStmtClause<llvm::omp::OMPC_novariants, OMPClause>,
       public OMPClauseWithPreInit {
   friend class OMPClauseReader;
@@ -8554,7 +8555,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp dispatch' has simple 'nocontext'
 /// clause with condition 'a > 5'.
-class OMPNocontextClause final
+class CLANG_ABI OMPNocontextClause final
     : public OMPOneStmtClause<llvm::omp::OMPC_nocontext, OMPClause>,
       public OMPClauseWithPreInit {
   friend class OMPClauseReader;
@@ -8632,7 +8633,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp scan' has clause 'inclusive'
 /// with the variables 'a' and 'b'.
-class OMPInclusiveClause final
+class CLANG_ABI OMPInclusiveClause final
     : public OMPVarListClause<OMPInclusiveClause>,
       private llvm::TrailingObjects<OMPInclusiveClause, Expr *> {
   friend class OMPClauseReader;
@@ -8706,7 +8707,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp scan' has clause 'exclusive'
 /// with the variables 'a' and 'b'.
-class OMPExclusiveClause final
+class CLANG_ABI OMPExclusiveClause final
     : public OMPVarListClause<OMPExclusiveClause>,
       private llvm::TrailingObjects<OMPExclusiveClause, Expr *> {
   friend class OMPClauseReader;
@@ -8781,7 +8782,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp target' has clause 'uses_allocators'
 /// with the allocators 'default_allocator' and user-defined 'my_allocator'.
-class OMPUsesAllocatorsClause final
+class CLANG_ABI OMPUsesAllocatorsClause final
     : public OMPClause,
       private llvm::TrailingObjects<OMPUsesAllocatorsClause, Expr *,
                                     SourceLocation> {
@@ -8907,7 +8908,7 @@ public:
 /// In this example directive '#pragma omp task' has clause 'affinity' with the
 /// affinity modifer 'iterator(i = 0:n)' and locator items '([3][n])a', 'b[:n]'
 /// and 'c[i]'.
-class OMPAffinityClause final
+class CLANG_ABI OMPAffinityClause final
     : public OMPVarListClause<OMPAffinityClause>,
       private llvm::TrailingObjects<OMPAffinityClause, Expr *> {
   friend class OMPClauseReader;
@@ -9047,7 +9048,7 @@ public:
 /// \code
 /// #pragma omp loop bind(parallel)
 /// \endcode
-class OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
+class CLANG_ABI OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -9154,7 +9155,7 @@ template<class ImplClass, typename RetTy = void>
 class ConstOMPClauseVisitor :
       public OMPClauseVisitorBase <ImplClass, const_ptr, RetTy> {};
 
-class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
+class CLANG_ABI OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
 
@@ -9194,7 +9195,7 @@ struct OMPTraitSet {
 /// collection of selector sets, each with an associated kind and an ordered
 /// collection of selectors. A selector has a kind, an optional score/condition,
 /// and an ordered collection of properties.
-class OMPTraitInfo {
+class CLANG_ABI OMPTraitInfo {
   /// Private constructor accesible only by ASTContext.
   OMPTraitInfo() {}
   friend class ASTContext;
@@ -9249,11 +9250,11 @@ public:
   /// Print a human readable representation into \p OS.
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 };
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo &TI);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const OMPTraitInfo *TI);
 
 /// Clang specific specialization of the OMPContext to lookup target features.
-struct TargetOMPContext final : public llvm::omp::OMPContext {
+struct CLANG_ABI TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
                    const FunctionDecl *CurrentFunctionDecl,
@@ -9273,7 +9274,7 @@ private:
 /// Contains data for OpenMP directives: clauses, children
 /// expressions/statements (helpers for codegen) and associated statement, if
 /// any.
-class OMPChildren final
+class CLANG_ABI OMPChildren final
     : private llvm::TrailingObjects<OMPChildren, OMPClause *, Stmt *> {
   friend TrailingObjects;
   friend class OMPClauseReader;
@@ -9462,7 +9463,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp ordered' with clause 'doacross' with
 /// a dependence-type 'sink' and loop-iteration vector expressions i-1 and j-1.
-class OMPDoacrossClause final
+class CLANG_ABI OMPDoacrossClause final
     : public OMPVarListClause<OMPDoacrossClause>,
       private llvm::TrailingObjects<OMPDoacrossClause, Expr *> {
   friend class OMPClauseReader;

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_BASIC_TOKENKINDS_H
 #define LLVM_CLANG_BASIC_TOKENKINDS_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 
@@ -61,7 +62,7 @@ enum OnOffSwitch {
 ///
 /// The name of a token will be an internal name (such as "l_square")
 /// and should not be used as part of diagnostic messages.
-const char *getTokenName(TokenKind Kind) LLVM_READNONE;
+CLANG_ABI const char *getTokenName(TokenKind Kind) LLVM_READNONE;
 
 /// Determines the spelling of simple punctuation tokens like
 /// '!' or '%', and returns NULL for literal and annotation tokens.
@@ -70,14 +71,14 @@ const char *getTokenName(TokenKind Kind) LLVM_READNONE;
 /// and will not produce any alternative spellings (e.g., a
 /// digraph). For the actual spelling of a given Token, use
 /// Preprocessor::getSpelling().
-const char *getPunctuatorSpelling(TokenKind Kind) LLVM_READNONE;
+CLANG_ABI const char *getPunctuatorSpelling(TokenKind Kind) LLVM_READNONE;
 
 /// Determines the spelling of simple keyword and contextual keyword
 /// tokens like 'int' and 'dynamic_cast'. Returns NULL for other token kinds.
-const char *getKeywordSpelling(TokenKind Kind) LLVM_READNONE;
+CLANG_ABI const char *getKeywordSpelling(TokenKind Kind) LLVM_READNONE;
 
 /// Returns the spelling of preprocessor keywords, such as "else".
-const char *getPPKeywordSpelling(PPKeywordKind Kind) LLVM_READNONE;
+CLANG_ABI const char *getPPKeywordSpelling(PPKeywordKind Kind) LLVM_READNONE;
 
 /// Return true if this is a raw identifier or an identifier kind.
 inline bool isAnyIdentifier(TokenKind K) {
@@ -102,10 +103,10 @@ inline bool isLiteral(TokenKind K) {
 }
 
 /// Return true if this is any of tok::annot_* kinds.
-bool isAnnotation(TokenKind K);
+CLANG_ABI bool isAnnotation(TokenKind K);
 
 /// Return true if this is an annotation token representing a pragma.
-bool isPragmaAnnotation(TokenKind K);
+CLANG_ABI bool isPragmaAnnotation(TokenKind K);
 
 inline constexpr bool isRegularKeywordAttribute(TokenKind K) {
   return (false

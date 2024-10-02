@@ -25,6 +25,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/Support/Error.h"
 
@@ -51,7 +52,7 @@ struct TypeErasedLattice {
 };
 
 /// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis : public Environment::ValueModel {
+class CLANG_ABI TypeErasedDataflowAnalysis : public Environment::ValueModel {
   DataflowAnalysisOptions Options;
 
 public:
@@ -157,7 +158,7 @@ struct CFGEltCallbacksTypeErased {
 /// blocks. This parameter is a backstop to prevent infinite loops, in the case
 /// of bugs in the lattice and/or transfer functions that prevent the analysis
 /// from converging.
-llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
+CLANG_ABI llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,

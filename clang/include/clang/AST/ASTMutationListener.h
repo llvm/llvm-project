@@ -12,6 +12,7 @@
 #ifndef LLVM_CLANG_AST_ASTMUTATIONLISTENER_H
 #define LLVM_CLANG_AST_ASTMUTATIONLISTENER_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
   class Attr;
   class ClassTemplateDecl;
@@ -45,7 +46,7 @@ namespace clang {
 /// An abstract interface that should be implemented by listeners
 /// that want to be notified when an AST entity gets modified after its
 /// initial creation.
-class ASTMutationListener {
+class CLANG_ABI ASTMutationListener {
 public:
   virtual ~ASTMutationListener();
 

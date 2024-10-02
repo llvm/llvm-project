@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -45,7 +46,7 @@ class SourceManager;
 
 /// A mechanism to observe the actions of the module map parser as it
 /// reads module map files.
-class ModuleMapCallbacks {
+class CLANG_ABI ModuleMapCallbacks {
   virtual void anchor();
 
 public:
@@ -71,7 +72,7 @@ public:
   virtual void moduleMapAddUmbrellaHeader(FileEntryRef Header) {}
 };
 
-class ModuleMap {
+class CLANG_ABI ModuleMap {
   SourceManager &SourceMgr;
   DiagnosticsEngine &Diags;
   const LangOptions &LangOpts;

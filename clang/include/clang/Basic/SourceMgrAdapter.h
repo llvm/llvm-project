@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SOURCEMGRADAPTER_H
 
 #include "clang/Basic/SourceManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/SourceMgr.h"
 #include <string>
@@ -27,7 +28,7 @@ class FileEntry;
 
 /// An adapter that can be used to translate diagnostics from one or more
 /// llvm::SourceMgr instances to a ,
-class SourceMgrAdapter {
+class CLANG_ABI SourceMgrAdapter {
   /// Clang source manager.
   SourceManager &SrcMgr;
 

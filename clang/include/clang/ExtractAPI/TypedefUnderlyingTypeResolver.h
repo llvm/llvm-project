@@ -19,13 +19,14 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ExtractAPI/API.h"
+#include "clang/Support/Compiler.h"
 
 #include <string>
 
 namespace clang {
 namespace extractapi {
 
-struct TypedefUnderlyingTypeResolver {
+struct CLANG_ABI TypedefUnderlyingTypeResolver {
   /// Gets the underlying type declaration.
   const NamedDecl *getUnderlyingTypeDecl(QualType Type) const;
 

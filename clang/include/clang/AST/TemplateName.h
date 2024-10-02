@@ -16,6 +16,7 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -145,7 +146,7 @@ public:
 /// This kind of template names occurs when the parameter pack has been
 /// provided with a template template argument pack in a context where its
 /// enclosing pack expansion could not be fully expanded.
-class SubstTemplateTemplateParmPackStorage : public UncommonTemplateNameStorage,
+class CLANG_ABI SubstTemplateTemplateParmPackStorage : public UncommonTemplateNameStorage,
                                              public llvm::FoldingSetNode {
   const TemplateArgument *Arguments;
   llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
@@ -217,7 +218,7 @@ struct DefaultArguments {
 /// specifier in the typedef. "apply" is a nested template, and can
 /// only be understood in the context of a template instantiation,
 /// hence is represented as a dependent template name.
-class TemplateName {
+class CLANG_ABI TemplateName {
   // NameDecl is either a TemplateDecl or a UsingShadowDecl depending on the
   // NameKind.
   // !! There is no free low bits in 32-bit builds to discriminate more than 4
@@ -399,12 +400,12 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending TemplateName's
 /// into a diagnostic with <<.
-const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+CLANG_ABI const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       TemplateName N);
 
 /// A structure for storing the information associated with a
 /// substituted template template parameter.
-class SubstTemplateTemplateParmStorage
+class CLANG_ABI SubstTemplateTemplateParmStorage
   : public UncommonTemplateNameStorage, public llvm::FoldingSetNode {
   friend class ASTContext;
 
@@ -445,7 +446,7 @@ public:
                       std::optional<unsigned> PackIndex);
 };
 
-class DeducedTemplateStorage : public UncommonTemplateNameStorage,
+class CLANG_ABI DeducedTemplateStorage : public UncommonTemplateNameStorage,
                                public llvm::FoldingSetNode {
   friend class ASTContext;
 

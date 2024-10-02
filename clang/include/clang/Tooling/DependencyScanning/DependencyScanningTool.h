@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGTOOL_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
@@ -75,7 +76,7 @@ struct P1689Rule {
 
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
-class DependencyScanningTool {
+class CLANG_ABI DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
   DependencyScanningTool(DependencyScanningService &Service,
@@ -150,7 +151,7 @@ private:
   DependencyScanningWorker Worker;
 };
 
-class FullDependencyConsumer : public DependencyConsumer {
+class CLANG_ABI FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::DenseSet<ModuleID> &AlreadySeen)
       : AlreadySeen(AlreadySeen) {}
@@ -197,7 +198,7 @@ private:
 
 /// A simple dependency action controller that uses a callback. If no callback
 /// is provided, it is assumed that looking up module outputs is unreachable.
-class CallbackActionController : public DependencyActionController {
+class CLANG_ABI CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 

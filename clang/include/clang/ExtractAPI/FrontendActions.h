@@ -17,11 +17,12 @@
 
 #include "clang/ExtractAPI/ExtractAPIActionBase.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 /// ExtractAPIAction sets up the output file and creates the ExtractAPIVisitor.
-class ExtractAPIAction : public ASTFrontendAction,
+class CLANG_ABI ExtractAPIAction : public ASTFrontendAction,
                          private ExtractAPIActionBase {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -56,7 +57,7 @@ private:
 /// Used when the ExtractAPI action needs to be executed as a side effect of a
 /// regular compilation job. Unlike ExtarctAPIAction, this is meant to be used
 /// on regular source files ( .m , .c files) instead of header files
-class WrappingExtractAPIAction : public WrapperFrontendAction,
+class CLANG_ABI WrappingExtractAPIAction : public WrapperFrontendAction,
                                  private ExtractAPIActionBase {
 public:
   WrappingExtractAPIAction(std::unique_ptr<FrontendAction> WrappedAction)

@@ -24,6 +24,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -39,7 +40,7 @@ class FunctionDecl;
 class OMPTraitInfo;
 
 /// Attr - This represents one attribute.
-class Attr : public AttributeCommonInfo {
+class CLANG_ABI Attr : public AttributeCommonInfo {
 private:
   LLVM_PREFERRED_TYPE(attr::Kind)
   unsigned AttrKind : 16;

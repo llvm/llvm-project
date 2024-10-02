@@ -17,6 +17,7 @@
 
 #include "clang/Analysis/CFG.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace ento {
@@ -25,7 +26,7 @@ namespace ento {
 ///
 /// Widen the loop by invalidating anything that might be modified
 /// by the loop body in any iteration.
-ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
+CLANG_ABI ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount, const Stmt *LoopStmt);
 

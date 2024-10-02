@@ -20,6 +20,7 @@
 #include "clang/ExtractAPI/API.h"
 #include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/Serialization/APISetVisitor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -45,7 +46,7 @@ struct SymbolGraphSerializerOption {
 };
 
 /// A representation of the contents of a given module symbol graph
-struct ExtendedModule {
+struct CLANG_ABI ExtendedModule {
   ExtendedModule() = default;
   ExtendedModule(ExtendedModule &&EM) = default;
   ExtendedModule &operator=(ExtendedModule &&EM) = default;
@@ -71,7 +72,7 @@ struct ExtendedModule {
 /// The Symbol Graph format (https://github.com/apple/swift-docc-symbolkit)
 /// models an API set as a directed graph, where nodes are symbol declarations,
 /// and edges are relationships between the connected symbols.
-class SymbolGraphSerializer : public APISetVisitor<SymbolGraphSerializer> {
+class CLANG_ABI SymbolGraphSerializer : public APISetVisitor<SymbolGraphSerializer> {
 private:
   using Base = APISetVisitor<SymbolGraphSerializer>;
   /// The main symbol graph that contains symbols that are either top-level or a

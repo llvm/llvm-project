@@ -16,6 +16,7 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_CALLDESCRIPTION_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -29,7 +30,7 @@ namespace clang {
 namespace ento {
 /// A `CallDescription` is a pattern that can be used to _match_ calls
 /// based on the qualified name and the argument/parameter counts.
-class CallDescription {
+class CLANG_ABI CallDescription {
 public:
   enum class Mode {
     /// Match calls to functions from the C standard library. This also
@@ -259,7 +260,7 @@ using CDM = CallDescription::Mode;
 /// An immutable set of CallDescriptions.
 /// Checkers can efficiently decide if a given CallEvent matches any
 /// CallDescription in the set.
-class CallDescriptionSet {
+class CLANG_ABI CallDescriptionSet {
   CallDescriptionMap<bool /*unused*/> Impl = {};
 
 public:

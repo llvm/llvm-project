@@ -16,6 +16,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include <utility>
 
@@ -32,7 +33,7 @@ class SymbolReaper;
 /// This allows the environment to manage context-sensitive bindings,
 /// which is essentially for modeling recursive function analysis, among
 /// other things.
-class EnvironmentEntry : public std::pair<const Stmt *,
+class CLANG_ABI EnvironmentEntry : public std::pair<const Stmt *,
                                           const StackFrameContext *> {
 public:
   EnvironmentEntry(const Stmt *s, const LocationContext *L);
@@ -53,7 +54,7 @@ public:
 };
 
 /// An immutable map from EnvironemntEntries to SVals.
-class Environment {
+class CLANG_ABI Environment {
 private:
   friend class EnvironmentManager;
 
@@ -96,7 +97,7 @@ public:
                  unsigned int Space = 0, bool IsDot = false) const;
 };
 
-class EnvironmentManager {
+class CLANG_ABI EnvironmentManager {
 private:
   using FactoryTy = Environment::BindingsTy::Factory;
 

@@ -16,6 +16,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -24,7 +25,7 @@
 
 namespace clang {
 
-class PostOrderCFGView : public ManagedAnalysis {
+class CLANG_ABI PostOrderCFGView : public ManagedAnalysis {
   virtual void anchor();
 
 public:
@@ -126,7 +127,7 @@ public:
 
   bool empty() const { return begin() == end(); }
 
-  struct BlockOrderCompare {
+  struct CLANG_ABI BlockOrderCompare {
     const PostOrderCFGView &POV;
 
   public:

@@ -22,6 +22,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,7 +49,7 @@ class VarDecl;
 
 /// The base class of a hierarchy of objects representing analyses tied
 /// to AnalysisDeclContext.
-class ManagedAnalysis {
+class CLANG_ABI ManagedAnalysis {
 protected:
   ManagedAnalysis() = default;
 
@@ -69,7 +70,7 @@ public:
 
 /// AnalysisDeclContext contains the context data for the function, method
 /// or block under analysis.
-class AnalysisDeclContext {
+class CLANG_ABI AnalysisDeclContext {
   // Backpoint to the AnalysisManager object that created this
   // AnalysisDeclContext. This may be null.
   AnalysisDeclContextManager *ADCMgr;
@@ -212,7 +213,7 @@ private:
 /// the help of StackFrameContext and inside the function calls the
 /// BlockInvocationContext. It is needed for context sensitive analysis to
 /// model entering, leaving or inlining function calls.
-class LocationContext : public llvm::FoldingSetNode {
+class CLANG_ABI LocationContext : public llvm::FoldingSetNode {
 public:
   enum ContextKind { StackFrame, Block };
 
@@ -296,7 +297,7 @@ public:
 };
 
 /// It represents a stack frame of the call stack (based on CallEvent).
-class StackFrameContext : public LocationContext {
+class CLANG_ABI StackFrameContext : public LocationContext {
   friend class LocationContextManager;
 
   // The call site where this stack frame is established.
@@ -350,7 +351,7 @@ public:
 };
 
 /// It represents a block invocation (based on BlockCall).
-class BlockInvocationContext : public LocationContext {
+class CLANG_ABI BlockInvocationContext : public LocationContext {
   friend class LocationContextManager;
 
   const BlockDecl *BD;
@@ -384,7 +385,7 @@ public:
   }
 };
 
-class LocationContextManager {
+class CLANG_ABI LocationContextManager {
   llvm::FoldingSet<LocationContext> Contexts;
 
   // ID used for generating a new location context.
@@ -422,7 +423,7 @@ public:
   void clear();
 };
 
-class AnalysisDeclContextManager {
+class CLANG_ABI AnalysisDeclContextManager {
   using ContextMap =
       llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>;
 

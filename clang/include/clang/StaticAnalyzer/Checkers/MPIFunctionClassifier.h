@@ -15,12 +15,13 @@
 #define LLVM_CLANG_STATICANALYZER_CHECKERS_MPIFUNCTIONCLASSIFIER_H
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace ento {
 namespace mpi {
 
-class MPIFunctionClassifier {
+class CLANG_ABI MPIFunctionClassifier {
 public:
   MPIFunctionClassifier(ASTContext &ASTCtx) { identifierInit(ASTCtx); }
 

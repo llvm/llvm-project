@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_CALLEDONCECHECK_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_CALLEDONCECHECK_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
 
 class AnalysisDeclContext;
@@ -117,7 +118,7 @@ public:
 /// \param CheckConventionalParameters -- true, if we want to check parameters
 /// not explicitly marked as 'called once', but having the same requirements
 /// according to conventions.
-void checkCalledOnceParameters(AnalysisDeclContext &AC,
+CLANG_ABI void checkCalledOnceParameters(AnalysisDeclContext &AC,
                                CalledOnceCheckHandler &Handler,
                                bool CheckConventionalParameters);
 

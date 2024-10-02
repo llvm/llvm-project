@@ -11,12 +11,13 @@
 
 #include "clang/ARCMigrate/FileRemapper.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 
 namespace clang {
 namespace arcmt {
 
-class CheckAction : public WrapperFrontendAction {
+class CLANG_ABI CheckAction : public WrapperFrontendAction {
 protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 
@@ -24,7 +25,7 @@ public:
   CheckAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
-class ModifyAction : public WrapperFrontendAction {
+class CLANG_ABI ModifyAction : public WrapperFrontendAction {
 protected:
   bool BeginInvocation(CompilerInstance &CI) override;
 
@@ -32,7 +33,7 @@ public:
   ModifyAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
-class MigrateSourceAction : public ASTFrontendAction {
+class CLANG_ABI MigrateSourceAction : public ASTFrontendAction {
   FileRemapper Remapper;
 protected:
   bool BeginInvocation(CompilerInstance &CI) override;
@@ -40,7 +41,7 @@ protected:
                                                  StringRef InFile) override;
 };
 
-class MigrateAction : public WrapperFrontendAction {
+class CLANG_ABI MigrateAction : public WrapperFrontendAction {
   std::string MigrateDir;
   std::string PlistOut;
   bool EmitPremigrationARCErrors;
@@ -55,7 +56,7 @@ public:
 };
 
 /// Migrates to modern ObjC syntax.
-class ObjCMigrateAction : public WrapperFrontendAction {
+class CLANG_ABI ObjCMigrateAction : public WrapperFrontendAction {
   std::string MigrateDir;
   unsigned    ObjCMigAction;
   FileRemapper Remapper;

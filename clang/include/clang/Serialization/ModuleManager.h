@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -43,7 +44,7 @@ class PCHContainerReader;
 namespace serialization {
 
 /// Manages the set of modules loaded by an AST reader.
-class ModuleManager {
+class CLANG_ABI ModuleManager {
   /// The chain of AST files, in the order in which we started to load
   /// them.
   SmallVector<std::unique_ptr<ModuleFile>, 2> Chain;

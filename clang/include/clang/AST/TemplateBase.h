@@ -20,6 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -58,7 +59,7 @@ class TypeSourceInfo;
 class ValueDecl;
 
 /// Represents a template argument.
-class TemplateArgument {
+class CLANG_ABI TemplateArgument {
 public:
   /// The kind of template argument we're storing.
   enum ArgKind {
@@ -469,7 +470,7 @@ public:
 };
 
 /// Location information for a TemplateArgument.
-struct TemplateArgumentLocInfo {
+struct CLANG_ABI TemplateArgumentLocInfo {
 private:
   struct TemplateTemplateArgLocInfo {
     // FIXME: We'd like to just use the qualifier in the TemplateName,
@@ -521,7 +522,7 @@ public:
 
 /// Location wrapper for a TemplateArgument.  TemplateArgument is to
 /// TemplateArgumentLoc as Type is to TypeLoc.
-class TemplateArgumentLoc {
+class CLANG_ABI TemplateArgumentLoc {
   TemplateArgument Argument;
   TemplateArgumentLocInfo LocInfo;
 
@@ -671,7 +672,7 @@ public:
 /// the "<int>" in "sort<int>".
 /// This is safe to be used inside an AST node, in contrast with
 /// TemplateArgumentListInfo.
-struct ASTTemplateArgumentListInfo final
+struct CLANG_ABI ASTTemplateArgumentListInfo final
     : private llvm::TrailingObjects<ASTTemplateArgumentListInfo,
                                     TemplateArgumentLoc> {
 private:
@@ -725,7 +726,7 @@ public:
 /// as such, doesn't contain the array of TemplateArgumentLoc itself,
 /// but expects the containing object to also provide storage for
 /// that.
-struct alignas(void *) ASTTemplateKWAndArgsInfo {
+struct CLANG_ABI alignas(void *) ASTTemplateKWAndArgsInfo {
   /// The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
 
@@ -757,7 +758,7 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
                 TemplateArgumentListInfo &List) const;
 };
 
-const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+CLANG_ABI const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       const TemplateArgument &Arg);
 
 } // namespace clang

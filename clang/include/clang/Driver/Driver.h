@@ -20,6 +20,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -74,7 +75,7 @@ enum ModuleHeaderMode {
 
 /// Driver - Encapsulate logic for constructing compilation processes
 /// from a set of gcc-driver-like command line arguments.
-class Driver {
+class CLANG_ABI Driver {
   DiagnosticsEngine &Diags;
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
@@ -821,20 +822,20 @@ public:
 
 /// \return True if the last defined optimization level is -Ofast.
 /// And False otherwise.
-bool isOptimizationLevelFast(const llvm::opt::ArgList &Args);
+CLANG_ABI bool isOptimizationLevelFast(const llvm::opt::ArgList &Args);
 
 /// \return True if the argument combination will end up generating remarks.
-bool willEmitRemarks(const llvm::opt::ArgList &Args);
+CLANG_ABI bool willEmitRemarks(const llvm::opt::ArgList &Args);
 
 /// Returns the driver mode option's value, i.e. `X` in `--driver-mode=X`. If \p
 /// Args doesn't mention one explicitly, tries to deduce from `ProgName`.
 /// Returns empty on failure.
 /// Common values are "gcc", "g++", "cpp", "cl" and "flang". Returned value need
 /// not be one of these.
-llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
+CLANG_ABI llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
 
 /// Checks whether the value produced by getDriverMode is for CL mode.
-bool IsClangCL(StringRef DriverMode);
+CLANG_ABI bool IsClangCL(StringRef DriverMode);
 
 /// Expand response files from a clang driver or cc1 invocation.
 ///
@@ -842,13 +843,13 @@ bool IsClangCL(StringRef DriverMode);
 /// \param ClangCLMode Whether clang is in CL mode.
 /// \param Alloc Allocator for new arguments.
 /// \param FS Filesystem to use when expanding files.
-llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
+CLANG_ABI llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
 
 /// Apply a space separated list of edits to the input argument lists.
 /// See applyOneOverrideOption.
-void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+CLANG_ABI void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
                           llvm::StringSet<> &SavedStrings,
                           raw_ostream *OS = nullptr);

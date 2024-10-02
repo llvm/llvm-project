@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -186,7 +187,7 @@ public:
 
 /// ObjCArrayLiteral - used for objective-c array containers; as in:
 /// @[@"Hello", NSApp, [NSNumber numberWithInt:42]];
-class ObjCArrayLiteral final
+class CLANG_ABI ObjCArrayLiteral final
     : public Expr,
       private llvm::TrailingObjects<ObjCArrayLiteral, Expr *> {
   unsigned NumElements;
@@ -302,7 +303,7 @@ struct ObjCDictionaryLiteral_ExpansionData {
 
 /// ObjCDictionaryLiteral - AST node to represent objective-c dictionary
 /// literals; as in:  @{@"name" : NSUserName(), @"date" : [NSDate date] };
-class ObjCDictionaryLiteral final
+class CLANG_ABI ObjCDictionaryLiteral final
     : public Expr,
       private llvm::TrailingObjects<ObjCDictionaryLiteral,
                                     ObjCDictionaryLiteral_KeyValuePair,
@@ -614,7 +615,7 @@ public:
 
 /// ObjCPropertyRefExpr - A dot-syntax expression to access an ObjC
 /// property.
-class ObjCPropertyRefExpr : public Expr {
+class CLANG_ABI ObjCPropertyRefExpr : public Expr {
 private:
   /// If the bool is true, this is an implicit property reference; the
   /// pointer is an (optional) ObjCMethodDecl and Setter may be set.
@@ -940,7 +941,7 @@ private:
 /// The "void *" trailing objects are actually ONE void * (the
 /// receiver pointer), and NumArgs Expr *. But due to the
 /// implementation of children(), these must be together contiguously.
-class ObjCMessageExpr final
+class CLANG_ABI ObjCMessageExpr final
     : public Expr,
       private llvm::TrailingObjects<ObjCMessageExpr, void *, SourceLocation> {
 public:
@@ -1631,7 +1632,7 @@ public:
 /// \code
 /// NSString *str = (__bridge_transfer NSString *)CFCreateString();
 /// \endcode
-class ObjCBridgedCastExpr final
+class CLANG_ABI ObjCBridgedCastExpr final
     : public ExplicitCastExpr,
       private llvm::TrailingObjects<ObjCBridgedCastExpr, CXXBaseSpecifier *> {
   friend class ASTStmtReader;

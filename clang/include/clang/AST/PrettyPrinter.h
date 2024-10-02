@@ -15,6 +15,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -22,7 +23,7 @@ class DeclContext;
 class LangOptions;
 class Stmt;
 
-class PrinterHelper {
+class CLANG_ABI PrinterHelper {
 public:
   virtual ~PrinterHelper();
   virtual bool handledStmt(Stmt* E, raw_ostream& OS) = 0;

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_TYPES_H
 
 #include "clang/Driver/Phases.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
 
@@ -29,45 +30,45 @@ namespace types {
   };
 
   /// getTypeName - Return the name of the type for \p Id.
-  const char *getTypeName(ID Id);
+  CLANG_ABI const char *getTypeName(ID Id);
 
   /// getPreprocessedType - Get the ID of the type for this input when
   /// it has been preprocessed, or INVALID if this input is not
   /// preprocessed.
-  ID getPreprocessedType(ID Id);
+  CLANG_ABI ID getPreprocessedType(ID Id);
 
   /// getPrecompiledType - Get the ID of the type for this input when
   /// it has been precompiled, or INVALID if this input is not
   /// precompiled.
-  ID getPrecompiledType(ID Id);
+  CLANG_ABI ID getPrecompiledType(ID Id);
 
   /// getTypeTempSuffix - Return the suffix to use when creating a
   /// temp file of this type, or null if unspecified.
-  const char *getTypeTempSuffix(ID Id, bool CLStyle = false);
+  CLANG_ABI const char *getTypeTempSuffix(ID Id, bool CLStyle = false);
 
   /// onlyPrecompileType - Should this type only be precompiled.
-  bool onlyPrecompileType(ID Id);
+  CLANG_ABI bool onlyPrecompileType(ID Id);
 
   /// canTypeBeUserSpecified - Can this type be specified on the
   /// command line (by the type name); this is used when forwarding
   /// commands to gcc.
-  bool canTypeBeUserSpecified(ID Id);
+  CLANG_ABI bool canTypeBeUserSpecified(ID Id);
 
   /// appendSuffixForType - When generating outputs of this type,
   /// should the suffix be appended (instead of replacing the existing
   /// suffix).
-  bool appendSuffixForType(ID Id);
+  CLANG_ABI bool appendSuffixForType(ID Id);
 
   /// canLipoType - Is this type acceptable as the output of a
   /// universal build (currently, just the Nothing, Image, and Object
   /// types).
-  bool canLipoType(ID Id);
+  CLANG_ABI bool canLipoType(ID Id);
 
   /// isAcceptedByClang - Can clang handle this input type.
-  bool isAcceptedByClang(ID Id);
+  CLANG_ABI bool isAcceptedByClang(ID Id);
 
   /// isAcceptedByFlang - Can flang handle this input type.
-  bool isAcceptedByFlang(ID Id);
+  CLANG_ABI bool isAcceptedByFlang(ID Id);
 
   /// isDerivedFromC - Is the input derived from C.
   ///
@@ -75,57 +76,57 @@ namespace types {
   /// TokenConcatenation::AvoidConcat. If this is the case, the preprocessor may
   /// add and remove whitespace between tokens. Used to determine whether the
   /// input can be processed by -fminimize-whitespace.
-  bool isDerivedFromC(ID Id);
+  CLANG_ABI bool isDerivedFromC(ID Id);
 
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
-  bool isCXX(ID Id);
+  CLANG_ABI bool isCXX(ID Id);
 
   /// Is this LLVM IR.
-  bool isLLVMIR(ID Id);
+  CLANG_ABI bool isLLVMIR(ID Id);
 
   /// isCuda - Is this a CUDA input.
-  bool isCuda(ID Id);
+  CLANG_ABI bool isCuda(ID Id);
 
   /// isHIP - Is this a HIP input.
-  bool isHIP(ID Id);
+  CLANG_ABI bool isHIP(ID Id);
 
   /// isObjC - Is this an "ObjC" input (Obj-C and Obj-C++ sources and headers).
-  bool isObjC(ID Id);
+  CLANG_ABI bool isObjC(ID Id);
 
   /// isOpenCL - Is this an "OpenCL" input.
-  bool isOpenCL(ID Id);
+  CLANG_ABI bool isOpenCL(ID Id);
 
   /// isHLSL - Is this an HLSL input.
-  bool isHLSL(ID Id);
+  CLANG_ABI bool isHLSL(ID Id);
 
   /// isSrcFile - Is this a source file, i.e. something that still has to be
   /// preprocessed. The logic behind this is the same that decides if the first
   /// compilation phase is a preprocessing one.
-  bool isSrcFile(ID Id);
+  CLANG_ABI bool isSrcFile(ID Id);
 
   /// lookupTypeForExtension - Lookup the type to use for the file
   /// extension \p Ext.
-  ID lookupTypeForExtension(llvm::StringRef Ext);
+  CLANG_ABI ID lookupTypeForExtension(llvm::StringRef Ext);
 
   /// lookupTypeForTypSpecifier - Lookup the type to use for a user
   /// specified type name.
-  ID lookupTypeForTypeSpecifier(const char *Name);
+  CLANG_ABI ID lookupTypeForTypeSpecifier(const char *Name);
 
   /// getCompilationPhases - Get the list of compilation phases ('Phases') to be
   /// done for type 'Id' up until including LastPhase.
-  llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
+  CLANG_ABI llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
-  llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
+  CLANG_ABI llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(const clang::driver::Driver &Driver,
                        llvm::opt::DerivedArgList &DAL, ID Id);
 
   /// lookupCXXTypeForCType - Lookup CXX input type that corresponds to given
   /// C type (used for clang++ emulation of g++ behaviour)
-  ID lookupCXXTypeForCType(ID Id);
+  CLANG_ABI ID lookupCXXTypeForCType(ID Id);
 
   /// Lookup header file input type that corresponds to given
   /// source file type (used for clang-cl emulation of \Yc).
-  ID lookupHeaderTypeForSourceType(ID Id);
+  CLANG_ABI ID lookupHeaderTypeForSourceType(ID Id);
 
 } // end namespace types
 } // end namespace driver

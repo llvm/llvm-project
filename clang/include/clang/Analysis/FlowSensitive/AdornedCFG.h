@@ -19,6 +19,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
@@ -29,7 +30,7 @@ namespace clang {
 namespace dataflow {
 
 namespace internal {
-class StmtToBlockMap {
+class CLANG_ABI StmtToBlockMap {
 public:
   StmtToBlockMap(const CFG &Cfg);
 
@@ -44,7 +45,7 @@ private:
 
 /// Holds CFG with additional information derived from it that is needed to
 /// perform dataflow analysis.
-class AdornedCFG {
+class CLANG_ABI AdornedCFG {
 public:
   /// Builds an `AdornedCFG` from a `FunctionDecl`.
   /// `Func.doesThisDeclarationHaveABody()` must be true, and

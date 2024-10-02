@@ -19,6 +19,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -53,7 +54,7 @@ namespace consumed {
   using DelayedDiag = std::pair<PartialDiagnosticAt, OptionalNotes>;
   using DiagList = std::list<DelayedDiag>;
 
-  class ConsumedWarningsHandlerBase {
+  class CLANG_ABI ConsumedWarningsHandlerBase {
   public:
     virtual ~ConsumedWarningsHandlerBase();
 
@@ -139,7 +140,7 @@ namespace consumed {
                                        SourceLocation Loc) {}
   };
 
-  class ConsumedStateMap {
+  class CLANG_ABI ConsumedStateMap {
     using VarMapType = llvm::DenseMap<const VarDecl *, ConsumedState>;
     using TmpMapType =
         llvm::DenseMap<const CXXBindTemporaryExpr *, ConsumedState>;
@@ -207,7 +208,7 @@ namespace consumed {
     bool operator!=(const ConsumedStateMap *Other) const;
   };
 
-  class ConsumedBlockInfo {
+  class CLANG_ABI ConsumedBlockInfo {
     std::vector<std::unique_ptr<ConsumedStateMap>> StateMapsArray;
     std::vector<unsigned int> VisitOrder;
 
@@ -240,7 +241,7 @@ namespace consumed {
   };
 
   /// A class that handles the analysis of uniqueness violations.
-  class ConsumedAnalyzer {
+  class CLANG_ABI ConsumedAnalyzer {
     ConsumedBlockInfo BlockInfo;
     std::unique_ptr<ConsumedStateMap> CurrStates;
 

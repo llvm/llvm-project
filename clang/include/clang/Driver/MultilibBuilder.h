@@ -11,6 +11,7 @@
 #define LLVM_CLANG_DRIVER_MULTILIBBUILDER_H
 
 #include "clang/Driver/Multilib.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 namespace driver {
@@ -19,7 +20,7 @@ namespace driver {
 /// by a command line flag. This class can be used to create a Multilib, and
 /// contains helper functions to mutate it before creating a Multilib instance
 /// with makeMultilib().
-class MultilibBuilder {
+class CLANG_ABI MultilibBuilder {
 public:
   using flags_list = std::vector<std::string>;
 
@@ -93,7 +94,7 @@ public:
 /// This class can be used to create a MultilibSet, and contains helper
 /// functions to add combinations of multilibs before creating a MultilibSet
 /// instance with makeMultilibSet().
-class MultilibSetBuilder {
+class CLANG_ABI MultilibSetBuilder {
 public:
   using multilib_list = std::vector<MultilibBuilder>;
 

@@ -29,6 +29,7 @@
 #include "clang/Sema/Redeclaration.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -49,7 +50,7 @@ class ParsedAttributesView;
 class Scope;
 struct SkipBodyInfo;
 
-class SemaObjC : public SemaBase {
+class CLANG_ABI SemaObjC : public SemaBase {
 public:
   SemaObjC(Sema &S);
 

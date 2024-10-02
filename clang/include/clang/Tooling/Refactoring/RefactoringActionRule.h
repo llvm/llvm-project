@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -31,7 +32,7 @@ struct RefactoringDescriptor {
 /// A common refactoring action rule interface that defines the 'invoke'
 /// function that performs the refactoring operation (either fully or
 /// partially).
-class RefactoringActionRuleBase {
+class CLANG_ABI RefactoringActionRuleBase {
 public:
   virtual ~RefactoringActionRuleBase() {}
 
@@ -50,7 +51,7 @@ public:
 /// action rule (SourceChangeRefactoringRule, etc) that, in addition to invoking
 /// the action, describes the requirements that determine when the action can be
 /// initiated.
-class RefactoringActionRule : public RefactoringActionRuleBase {
+class CLANG_ABI RefactoringActionRule : public RefactoringActionRuleBase {
 public:
   /// Returns true when the rule has a source selection requirement that has
   /// to be fulfilled before refactoring can be performed.

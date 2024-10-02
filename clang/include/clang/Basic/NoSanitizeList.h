@@ -16,6 +16,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <vector>
@@ -26,7 +27,7 @@ class SanitizerMask;
 class SourceManager;
 class SanitizerSpecialCaseList;
 
-class NoSanitizeList {
+class CLANG_ABI NoSanitizeList {
   std::unique_ptr<SanitizerSpecialCaseList> SSCL;
   SourceManager &SM;
 

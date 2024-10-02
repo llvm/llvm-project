@@ -15,6 +15,7 @@
 #define LLVM_CLANG_API_IGNORES_LIST_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -30,7 +31,7 @@ class MemoryBuffer;
 namespace clang {
 namespace extractapi {
 
-struct IgnoresFileNotFound : public llvm::ErrorInfo<IgnoresFileNotFound> {
+struct CLANG_ABI IgnoresFileNotFound : public llvm::ErrorInfo<IgnoresFileNotFound> {
   std::string Path;
   static char ID;
 
@@ -43,7 +44,7 @@ struct IgnoresFileNotFound : public llvm::ErrorInfo<IgnoresFileNotFound> {
 
 /// A type that provides access to a new line separated list of symbol names to
 /// ignore when extracting API information.
-struct APIIgnoresList {
+struct CLANG_ABI APIIgnoresList {
   using FilePathList = std::vector<std::string>;
 
   /// The API to use for generating from the files at \p IgnoresFilePathList.

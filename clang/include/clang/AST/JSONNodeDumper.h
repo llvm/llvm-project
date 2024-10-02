@@ -20,10 +20,11 @@
 #include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 
 namespace clang {
@@ -113,7 +114,7 @@ public:
 // being valid JSON output. Further, there is no requirement that the
 // information dumped is a complete representation of the AST, only that the
 // information presented is correct.
-class JSONNodeDumper
+class CLANG_ABI JSONNodeDumper
     : public ConstAttrVisitor<JSONNodeDumper>,
       public comments::ConstCommentVisitor<JSONNodeDumper, void,
                                            const comments::FullComment *>,

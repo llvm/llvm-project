@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_OBJCRUNTIME_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HashBuilder.h"
@@ -25,7 +26,7 @@
 namespace clang {
 
 /// The basic abstraction for the target Objective-C runtime.
-class ObjCRuntime {
+class CLANG_ABI ObjCRuntime {
 public:
   /// The basic Objective-C runtimes that we know about.
   enum Kind {
@@ -506,7 +507,7 @@ public:
   }
 };
 
-raw_ostream &operator<<(raw_ostream &out, const ObjCRuntime &value);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &out, const ObjCRuntime &value);
 
 } // namespace clang
 

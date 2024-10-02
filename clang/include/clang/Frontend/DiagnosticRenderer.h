@@ -19,6 +19,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -44,7 +45,7 @@ using DiagOrStoredDiag =
 /// A brief worklist:
 /// FIXME: Sink the recursive printing of template instantiations into this
 /// class.
-class DiagnosticRenderer {
+class CLANG_ABI DiagnosticRenderer {
 protected:
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
@@ -139,7 +140,7 @@ public:
 
 /// Subclass of DiagnosticRender that turns all subdiagostics into explicit
 /// notes.  It is up to subclasses to further define the behavior.
-class DiagnosticNoteRenderer : public DiagnosticRenderer {
+class CLANG_ABI DiagnosticNoteRenderer : public DiagnosticRenderer {
 public:
   DiagnosticNoteRenderer(const LangOptions &LangOpts,
                          DiagnosticOptions *DiagOpts)

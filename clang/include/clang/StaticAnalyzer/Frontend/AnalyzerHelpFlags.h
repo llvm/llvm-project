@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_FRONTEND_ANALYZERHELPFLAGS_H
 #define LLVM_CLANG_STATICANALYZER_FRONTEND_ANALYZERHELPFLAGS_H
 
+#include "clang/Support/Compiler.h"
 namespace llvm {
 class raw_ostream;
 } // namespace llvm
@@ -19,10 +20,10 @@ class CompilerInstance;
 
 namespace ento {
 
-void printCheckerHelp(llvm::raw_ostream &OS, CompilerInstance &CI);
-void printEnabledCheckerList(llvm::raw_ostream &OS, CompilerInstance &CI);
-void printAnalyzerConfigList(llvm::raw_ostream &OS);
-void printCheckerConfigList(llvm::raw_ostream &OS, CompilerInstance &CI);
+CLANG_ABI void printCheckerHelp(llvm::raw_ostream &OS, CompilerInstance &CI);
+CLANG_ABI void printEnabledCheckerList(llvm::raw_ostream &OS, CompilerInstance &CI);
+CLANG_ABI void printAnalyzerConfigList(llvm::raw_ostream &OS);
+CLANG_ABI void printCheckerConfigList(llvm::raw_ostream &OS, CompilerInstance &CI);
 
 } // namespace ento
 } // namespace clang

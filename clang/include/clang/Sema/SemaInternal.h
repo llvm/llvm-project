@@ -18,6 +18,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
@@ -78,7 +79,7 @@ getDepthAndIndex(UnexpandedParameterPack UPP) {
   return getDepthAndIndex(UPP.first.get<NamedDecl *>());
 }
 
-class TypoCorrectionConsumer : public VisibleDeclConsumer {
+class CLANG_ABI TypoCorrectionConsumer : public VisibleDeclConsumer {
   typedef SmallVector<TypoCorrection, 1> TypoResultList;
   typedef llvm::StringMap<TypoResultList> TypoResultsMap;
   typedef std::map<unsigned, TypoResultsMap> TypoEditDistanceMap;
@@ -205,7 +206,7 @@ public:
   }
 
 private:
-  class NamespaceSpecifierSet {
+  class CLANG_ABI NamespaceSpecifierSet {
     struct SpecifierInfo {
       DeclContext* DeclCtx;
       NestedNameSpecifier* NameSpecifier;

@@ -20,6 +20,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/EditedSource.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Support/Compiler.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -30,7 +31,7 @@ namespace clang {
 class LangOptions;
 class SourceManager;
 
-class FixItOptions {
+class CLANG_ABI FixItOptions {
 public:
   FixItOptions() = default;
   virtual ~FixItOptions();
@@ -59,7 +60,7 @@ public:
   bool Silent = false;
 };
 
-class FixItRewriter : public DiagnosticConsumer {
+class CLANG_ABI FixItRewriter : public DiagnosticConsumer {
   /// The diagnostics machinery.
   DiagnosticsEngine &Diags;
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_DECLGROUP_H
 #define LLVM_CLANG_AST_DECLGROUP_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstdint>
@@ -22,7 +23,7 @@ namespace clang {
 class ASTContext;
 class Decl;
 
-class DeclGroup final : private llvm::TrailingObjects<DeclGroup, Decl *> {
+class CLANG_ABI DeclGroup final : private llvm::TrailingObjects<DeclGroup, Decl *> {
   // FIXME: Include a TypeSpecifier object.
   unsigned NumDecls = 0;
 

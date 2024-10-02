@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 #define LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -26,7 +27,7 @@ enum SubjectMatchRule {
 #include "clang/Basic/AttrSubMatchRulesList.inc"
 };
 
-const char *getSubjectMatchRuleSpelling(SubjectMatchRule Rule);
+CLANG_ABI const char *getSubjectMatchRuleSpelling(SubjectMatchRule Rule);
 
 using ParsedSubjectMatchRuleSet = llvm::DenseMap<int, SourceRange>;
 

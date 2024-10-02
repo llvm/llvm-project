@@ -14,6 +14,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_REACHABLECODE_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 
 //===----------------------------------------------------------------------===//
 // Forward declarations.
@@ -44,7 +45,7 @@ enum UnreachableKind {
   UK_Other
 };
 
-class Callback {
+class CLANG_ABI Callback {
   virtual void anchor();
 public:
   virtual ~Callback() {}
@@ -55,10 +56,10 @@ public:
 
 /// ScanReachableFromBlock - Mark all blocks reachable from Start.
 /// Returns the total number of blocks that were marked reachable.
-unsigned ScanReachableFromBlock(const CFGBlock *Start,
+CLANG_ABI unsigned ScanReachableFromBlock(const CFGBlock *Start,
                                 llvm::BitVector &Reachable);
 
-void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
+CLANG_ABI void FindUnreachableCode(AnalysisDeclContext &AC, Preprocessor &PP,
                          Callback &CB);
 
 }} // end namespace clang::reachable_code

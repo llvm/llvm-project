@@ -16,13 +16,14 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 
 namespace clang {
 
 class ASTRecordWriter;
 class IdentifierInfo;
 
-class AttributeCommonInfo {
+class CLANG_ABI AttributeCommonInfo {
 public:
   /// The style used to specify an attribute.
   enum Syntax {

@@ -24,6 +24,7 @@
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -44,7 +45,7 @@ struct ContextSensitiveOptions {
 
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
-class DataflowAnalysisContext {
+class CLANG_ABI DataflowAnalysisContext {
 public:
   struct Options {
     /// Options for analyzing function bodies when present in the translation

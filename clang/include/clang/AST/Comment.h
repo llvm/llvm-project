@@ -17,6 +17,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -62,7 +63,7 @@ enum class CommentKind {
 
 /// Any part of the comment.
 /// Abstract class.
-class Comment {
+class CLANG_ABI Comment {
 protected:
   /// Preferred location to show caret.
   SourceLocation Loc;
@@ -288,7 +289,7 @@ public:
 };
 
 /// Plain text.
-class TextComment : public InlineContentComment {
+class CLANG_ABI TextComment : public InlineContentComment {
   StringRef Text;
 
 public:
@@ -552,7 +553,7 @@ public:
 };
 
 /// A single paragraph that contains inline content.
-class ParagraphComment : public BlockContentComment {
+class CLANG_ABI ParagraphComment : public BlockContentComment {
   ArrayRef<InlineContentComment *> Content;
 
 public:
@@ -708,7 +709,7 @@ public:
 enum class ParamCommandPassDirection { In, Out, InOut };
 
 /// Doxygen \\param command.
-class ParamCommandComment : public BlockCommandComment {
+class CLANG_ABI ParamCommandComment : public BlockCommandComment {
 private:
   /// Parameter index in the function declaration.
   unsigned ParamIndex;
@@ -790,7 +791,7 @@ public:
 };
 
 /// Doxygen \\tparam command, describes a template parameter.
-class TParamCommandComment : public BlockCommandComment {
+class CLANG_ABI TParamCommandComment : public BlockCommandComment {
 private:
   /// If this template parameter name was resolved (found in template parameter
   /// list), then this stores a list of position indexes in all template
@@ -959,7 +960,7 @@ public:
 };
 
 /// Information about the declaration, useful to clients of FullComment.
-struct DeclInfo {
+struct CLANG_ABI DeclInfo {
   /// Declaration the comment is actually attached to (in the source).
   /// Should not be NULL.
   const Decl *CommentDecl;

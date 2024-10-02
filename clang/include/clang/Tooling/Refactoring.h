@@ -18,6 +18,7 @@
 #ifndef LLVM_CLANG_TOOLING_REFACTORING_H
 #define LLVM_CLANG_TOOLING_REFACTORING_H
 
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include <map>
@@ -34,7 +35,7 @@ namespace tooling {
 /// This is a refactoring specific version of \see ClangTool. FrontendActions
 /// passed to run() and runAndSave() should add replacements to
 /// getReplacements().
-class RefactoringTool : public ClangTool {
+class CLANG_ABI RefactoringTool : public ClangTool {
 public:
   /// \see ClangTool::ClangTool.
   RefactoringTool(const CompilationDatabase &Compilations,
@@ -89,7 +90,7 @@ private:
 /// "include/clang/Format/Format.h" for all possible style forms.
 ///
 /// \returns true if all replacements applied and formatted. false otherwise.
-bool formatAndApplyAllReplacements(
+CLANG_ABI bool formatAndApplyAllReplacements(
     const std::map<std::string, Replacements> &FileToReplaces,
     Rewriter &Rewrite, StringRef Style = "file");
 

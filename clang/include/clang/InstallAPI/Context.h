@@ -14,6 +14,7 @@
 #include "clang/InstallAPI/DylibVerifier.h"
 #include "clang/InstallAPI/HeaderFile.h"
 #include "clang/InstallAPI/MachO.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
@@ -23,7 +24,7 @@ class FrontendRecordsSlice;
 /// Struct used for generating validating InstallAPI.
 /// The attributes captured represent all necessary information
 /// to generate TextAPI output.
-struct InstallAPIContext {
+struct CLANG_ABI InstallAPIContext {
 
   /// Library attributes that are typically passed as linker inputs.
   BinaryAttrs BA;
@@ -93,7 +94,7 @@ private:
 /// \param SearchPaths Fallback search paths if library was not found in earlier
 /// paths.
 /// \return The full path of the library.
-std::string findLibrary(StringRef InstallName, FileManager &FM,
+CLANG_ABI std::string findLibrary(StringRef InstallName, FileManager &FM,
                         ArrayRef<std::string> FrameworkSearchPaths,
                         ArrayRef<std::string> LibrarySearchPaths,
                         ArrayRef<std::string> SearchPaths);

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_TOOL_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 
 namespace llvm {
 namespace opt {
@@ -29,7 +30,7 @@ namespace driver {
   typedef SmallVector<InputInfo, 4> InputInfoList;
 
 /// Tool - Information on a specific compilation tool.
-class Tool {
+class CLANG_ABI Tool {
   /// The tool name (for debugging).
   const char *Name;
 

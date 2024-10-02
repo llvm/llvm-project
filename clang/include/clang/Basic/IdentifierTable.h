@@ -19,6 +19,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -114,7 +115,7 @@ enum class InterestingIdentifier {
 /// variable or function name).  The preprocessor keeps this information in a
 /// set, and all tok::identifier tokens have a pointer to one of these.
 /// It is aligned to 8 bytes because DeclarationName needs the lower 3 bits.
-class alignas(IdentifierInfoAlignment) IdentifierInfo {
+class CLANG_ABI alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.
@@ -604,7 +605,7 @@ public:
 /// advance, and end-of-sequence checking in a single
 /// operation. Subclasses of this iterator type will provide the
 /// actual functionality.
-class IdentifierIterator {
+class CLANG_ABI IdentifierIterator {
 protected:
   IdentifierIterator() = default;
 
@@ -623,7 +624,7 @@ public:
 };
 
 /// Provides lookups to, and iteration over, IdentiferInfo objects.
-class IdentifierInfoLookup {
+class CLANG_ABI IdentifierInfoLookup {
 public:
   virtual ~IdentifierInfoLookup();
 
@@ -652,7 +653,7 @@ public:
 /// This has no other purpose, but this is an extremely performance-critical
 /// piece of the code, as each occurrence of every identifier goes through
 /// here when lexed.
-class IdentifierTable {
+class CLANG_ABI IdentifierTable {
   // Shark shows that using MallocAllocator is *much* slower than using this
   // BumpPtrAllocator!
   using HashTableTy = llvm::StringMap<IdentifierInfo *, llvm::BumpPtrAllocator>;
@@ -906,7 +907,7 @@ protected:
 /// selector containing more than one keyword. We use a folding set
 /// to unique aggregate names (keyword selectors in ObjC parlance). Access to
 /// this class is provided strictly through Selector.
-class alignas(IdentifierInfoAlignment) MultiKeywordSelector
+class CLANG_ABI alignas(IdentifierInfoAlignment) MultiKeywordSelector
     : public detail::DeclarationNameExtra,
       public llvm::FoldingSetNode {
   MultiKeywordSelector(unsigned nKeys) : DeclarationNameExtra(nKeys) {}
@@ -963,7 +964,7 @@ public:
 /// MultiKeywordSelector (which is private). This enables us to optimize
 /// selectors that take no arguments and selectors that take 1 argument, which
 /// accounts for 78% of all selectors in Cocoa.h.
-class Selector {
+class CLANG_ABI Selector {
   friend class Diagnostic;
   friend class SelectorTable; // only the SelectorTable can create these
   friend class DeclarationName; // and the AST's DeclarationName.
@@ -1119,7 +1120,7 @@ public:
 
 /// This table allows us to fully hide how we implement
 /// multi-keyword caching.
-class SelectorTable {
+class CLANG_ABI SelectorTable {
   // Actually a SelectorTableImpl
   void *Impl;
 
@@ -1171,7 +1172,7 @@ namespace llvm {
 /// Define DenseMapInfo so that Selectors can be used as keys in DenseMap and
 /// DenseSets.
 template <>
-struct DenseMapInfo<clang::Selector> {
+struct CLANG_ABI DenseMapInfo<clang::Selector> {
   static clang::Selector getEmptyKey() {
     return clang::Selector::getEmptyMarker();
   }

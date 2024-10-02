@@ -11,6 +11,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -18,7 +19,7 @@ namespace clang {
 class DiagnosticOptions;
 class LangOptions;
 
-class LogDiagnosticPrinter : public DiagnosticConsumer {
+class CLANG_ABI LogDiagnosticPrinter : public DiagnosticConsumer {
   struct DiagEntry {
     /// The primary message line of the diagnostic.
     std::string Message;

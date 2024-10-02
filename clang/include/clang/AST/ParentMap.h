@@ -13,11 +13,12 @@
 #ifndef LLVM_CLANG_AST_PARENTMAP_H
 #define LLVM_CLANG_AST_PARENTMAP_H
 
+#include "clang/Support/Compiler.h"
 namespace clang {
 class Stmt;
 class Expr;
 
-class ParentMap {
+class CLANG_ABI ParentMap {
   void* Impl;
 public:
   ParentMap(Stmt* ASTRoot);

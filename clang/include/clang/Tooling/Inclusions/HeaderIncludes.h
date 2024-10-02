@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_INCLUSIONS_HEADERINCLUDES_H
 
 #include "clang/Basic/SourceManager.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/Support/Path.h"
@@ -25,7 +26,7 @@ namespace tooling {
 /// priorities for headers.
 /// FIXME(ioeric): move this class into implementation file when clang-format's
 /// include sorting functions are also moved here.
-class IncludeCategoryManager {
+class CLANG_ABI IncludeCategoryManager {
 public:
   IncludeCategoryManager(const IncludeStyle &Style, StringRef FileName);
 
@@ -49,7 +50,7 @@ enum class IncludeDirective { Include, Import };
 
 /// Generates replacements for inserting or deleting #include directives in a
 /// file.
-class HeaderIncludes {
+class CLANG_ABI HeaderIncludes {
 public:
   HeaderIncludes(llvm::StringRef FileName, llvm::StringRef Code,
                  const IncludeStyle &Style);

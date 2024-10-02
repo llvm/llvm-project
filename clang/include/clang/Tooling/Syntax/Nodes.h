@@ -22,6 +22,7 @@
 #define LLVM_CLANG_TOOLING_SYNTAX_NODES_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Syntax/Tree.h"
 namespace clang {
 namespace syntax {
@@ -34,7 +35,7 @@ enum class NodeKind : uint16_t {
 #include "clang/Tooling/Syntax/Nodes.inc"
 };
 /// For debugging purposes.
-raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
 
 /// A relation between a parent and child node, e.g. 'left-hand-side of
 /// a binary expression'. Used for implementing accessors.
@@ -107,13 +108,13 @@ enum class NodeRole : uint8_t {
   Declarators
 };
 /// For debugging purposes.
-raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
+CLANG_ABI raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
 
 #include "clang/Tooling/Syntax/NodeClasses.inc"
 
 /// Models a `nested-name-specifier`. C++ [expr.prim.id.qual]
 /// e.g. the `std::vector<int>::` in `std::vector<int>::size`.
-class NestedNameSpecifier final : public List {
+class CLANG_ABI NestedNameSpecifier final : public List {
 public:
   NestedNameSpecifier() : List(NodeKind::NestedNameSpecifier) {}
   static bool classof(const Node *N);
@@ -143,7 +144,7 @@ public:
 ///     delimited_list(expression, ',')
 /// Note: This construct is a simplification of the grammar rule for
 /// `expression-list`, that is used in the definition of `call-expression`
-class CallArguments final : public List {
+class CLANG_ABI CallArguments final : public List {
 public:
   CallArguments() : List(NodeKind::CallArguments) {}
   static bool classof(const Node *N);
@@ -152,7 +153,7 @@ public:
 };
 
 /// An abstract class for prefix and postfix unary operators.
-class UnaryOperatorExpression : public Expression {
+class CLANG_ABI UnaryOperatorExpression : public Expression {
 public:
   UnaryOperatorExpression(NodeKind K) : Expression(K) {}
   static bool classof(const Node *N);
@@ -195,7 +196,7 @@ public:
 ///   a bitor 1
 ///   a |= b
 ///   a and_eq b
-class BinaryOperatorExpression final : public Expression {
+class CLANG_ABI BinaryOperatorExpression final : public Expression {
 public:
   BinaryOperatorExpression() : Expression(NodeKind::BinaryOperatorExpression) {}
   static bool classof(const Node *N);
@@ -235,7 +236,7 @@ public:
 };
 
 /// switch (<cond>) <body>
-class SwitchStatement final : public Statement {
+class CLANG_ABI SwitchStatement final : public Statement {
 public:
   SwitchStatement() : Statement(NodeKind::SwitchStatement) {}
   static bool classof(const Node *N);
@@ -244,7 +245,7 @@ public:
 };
 
 /// case <value>: <body>
-class CaseStatement final : public Statement {
+class CLANG_ABI CaseStatement final : public Statement {
 public:
   CaseStatement() : Statement(NodeKind::CaseStatement) {}
   static bool classof(const Node *N);
@@ -254,7 +255,7 @@ public:
 };
 
 /// default: <body>
-class DefaultStatement final : public Statement {
+class CLANG_ABI DefaultStatement final : public Statement {
 public:
   DefaultStatement() : Statement(NodeKind::DefaultStatement) {}
   static bool classof(const Node *N);
@@ -264,7 +265,7 @@ public:
 
 /// if (cond) <then-statement> else <else-statement>
 /// FIXME: add condition that models 'expression  or variable declaration'
-class IfStatement final : public Statement {
+class CLANG_ABI IfStatement final : public Statement {
 public:
   IfStatement() : Statement(NodeKind::IfStatement) {}
   static bool classof(const Node *N);
@@ -275,7 +276,7 @@ public:
 };
 
 /// for (<init>; <cond>; <increment>) <body>
-class ForStatement final : public Statement {
+class CLANG_ABI ForStatement final : public Statement {
 public:
   ForStatement() : Statement(NodeKind::ForStatement) {}
   static bool classof(const Node *N);
@@ -284,7 +285,7 @@ public:
 };
 
 /// while (<cond>) <body>
-class WhileStatement final : public Statement {
+class CLANG_ABI WhileStatement final : public Statement {
 public:
   WhileStatement() : Statement(NodeKind::WhileStatement) {}
   static bool classof(const Node *N);
@@ -293,7 +294,7 @@ public:
 };
 
 /// continue;
-class ContinueStatement final : public Statement {
+class CLANG_ABI ContinueStatement final : public Statement {
 public:
   ContinueStatement() : Statement(NodeKind::ContinueStatement) {}
   static bool classof(const Node *N);
@@ -301,7 +302,7 @@ public:
 };
 
 /// break;
-class BreakStatement final : public Statement {
+class CLANG_ABI BreakStatement final : public Statement {
 public:
   BreakStatement() : Statement(NodeKind::BreakStatement) {}
   static bool classof(const Node *N);
@@ -310,7 +311,7 @@ public:
 
 /// return <expr>;
 /// return;
-class ReturnStatement final : public Statement {
+class CLANG_ABI ReturnStatement final : public Statement {
 public:
   ReturnStatement() : Statement(NodeKind::ReturnStatement) {}
   static bool classof(const Node *N);
@@ -319,7 +320,7 @@ public:
 };
 
 /// for (<decl> : <init>) <body>
-class RangeBasedForStatement final : public Statement {
+class CLANG_ABI RangeBasedForStatement final : public Statement {
 public:
   RangeBasedForStatement() : Statement(NodeKind::RangeBasedForStatement) {}
   static bool classof(const Node *N);
@@ -329,7 +330,7 @@ public:
 
 /// Expression in a statement position, e.g. functions calls inside compound
 /// statements or inside a loop body.
-class ExpressionStatement final : public Statement {
+class CLANG_ABI ExpressionStatement final : public Statement {
 public:
   ExpressionStatement() : Statement(NodeKind::ExpressionStatement) {}
   static bool classof(const Node *N);
@@ -337,7 +338,7 @@ public:
 };
 
 /// { statement1; statement2; … }
-class CompoundStatement final : public Statement {
+class CLANG_ABI CompoundStatement final : public Statement {
 public:
   CompoundStatement() : Statement(NodeKind::CompoundStatement) {}
   static bool classof(const Node *N);
@@ -373,7 +374,7 @@ public:
 
 /// static_assert(<condition>, <message>)
 /// static_assert(<condition>)
-class StaticAssertDeclaration final : public Declaration {
+class CLANG_ABI StaticAssertDeclaration final : public Declaration {
 public:
   StaticAssertDeclaration() : Declaration(NodeKind::StaticAssertDeclaration) {}
   static bool classof(const Node *N);
@@ -390,7 +391,7 @@ public:
   static bool classof(const Node *N);
 };
 
-class DeclaratorList final : public List {
+class CLANG_ABI DeclaratorList final : public List {
 public:
   DeclaratorList() : List(NodeKind::DeclaratorList) {}
   static bool classof(const Node *N);
@@ -402,7 +403,7 @@ public:
 /// Groups multiple declarators (e.g. variables, typedefs, etc.) together. All
 /// grouped declarators share the same declaration specifiers (e.g. 'int' or
 /// 'typedef').
-class SimpleDeclaration final : public Declaration {
+class CLANG_ABI SimpleDeclaration final : public Declaration {
 public:
   SimpleDeclaration() : Declaration(NodeKind::SimpleDeclaration) {}
   static bool classof(const Node *N);
@@ -411,7 +412,7 @@ public:
 };
 
 /// template <template-parameters> <declaration>
-class TemplateDeclaration final : public Declaration {
+class CLANG_ABI TemplateDeclaration final : public Declaration {
 public:
   TemplateDeclaration() : Declaration(NodeKind::TemplateDeclaration) {}
   static bool classof(const Node *N);
@@ -424,7 +425,7 @@ public:
 ///     template struct X<int>
 ///     template void foo<int>()
 ///     template int var<double>
-class ExplicitTemplateInstantiation final : public Declaration {
+class CLANG_ABI ExplicitTemplateInstantiation final : public Declaration {
 public:
   ExplicitTemplateInstantiation()
       : Declaration(NodeKind::ExplicitTemplateInstantiation) {}
@@ -500,7 +501,7 @@ public:
 /// Declarator inside parentheses.
 /// E.g. `(***a)` from `int (***a) = nullptr;`
 /// See comment of Declarator for more details.
-class ParenDeclarator final : public Declarator {
+class CLANG_ABI ParenDeclarator final : public Declarator {
 public:
   ParenDeclarator() : Declarator(NodeKind::ParenDeclarator) {}
   static bool classof(const Node *N);
@@ -512,7 +513,7 @@ public:
 /// E.g:
 ///   `[10]` in `int a[10];`
 ///   `[static 10]` in `void f(int xs[static 10]);`
-class ArraySubscript final : public Tree {
+class CLANG_ABI ArraySubscript final : public Tree {
 public:
   ArraySubscript() : Tree(NodeKind::ArraySubscript) {}
   static bool classof(const Node *N);
@@ -524,7 +525,7 @@ public:
 
 /// Trailing return type after the parameter list, including the arrow token.
 /// E.g. `-> int***`.
-class TrailingReturnType final : public Tree {
+class CLANG_ABI TrailingReturnType final : public Tree {
 public:
   TrailingReturnType() : Tree(NodeKind::TrailingReturnType) {}
   static bool classof(const Node *N);
@@ -537,7 +538,7 @@ public:
 
 /// Models a `parameter-declaration-list` which appears within
 /// `parameters-and-qualifiers`. See C++ [dcl.fct]
-class ParameterDeclarationList final : public List {
+class CLANG_ABI ParameterDeclarationList final : public List {
 public:
   ParameterDeclarationList() : List(NodeKind::ParameterDeclarationList) {}
   static bool classof(const Node *N);
@@ -557,7 +558,7 @@ public:
 ///  `() throw()` in `int foo() throw();`
 ///
 /// (!) override doesn't belong here.
-class ParametersAndQualifiers final : public Tree {
+class CLANG_ABI ParametersAndQualifiers final : public Tree {
 public:
   ParametersAndQualifiers() : Tree(NodeKind::ParametersAndQualifiers) {}
   static bool classof(const Node *N);

@@ -17,6 +17,7 @@
 #include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -68,7 +69,7 @@ struct VTTComponent {
 };
 
 /// Class for building VTT layout information.
-class VTTBuilder {
+class CLANG_ABI VTTBuilder {
   ASTContext &Ctx;
 
   /// The most derived class for which we're building this vtable.

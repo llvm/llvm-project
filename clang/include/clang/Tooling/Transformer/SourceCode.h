@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include <optional>
 
 namespace clang {
@@ -23,7 +24,7 @@ namespace tooling {
 
 /// Extends \p Range to include the token \p Terminator, if it immediately
 /// follows the end of the range. Otherwise, returns \p Range unchanged.
-CharSourceRange maybeExtendRange(CharSourceRange Range,
+CLANG_ABI CharSourceRange maybeExtendRange(CharSourceRange Range,
                                  tok::TokenKind Terminator,
                                  ASTContext &Context);
 
@@ -46,10 +47,10 @@ CharSourceRange getExtendedRange(const T &Node, tok::TokenKind Next,
 /// Note that parsing comments is disabled by default. In order to select a
 /// range containing associated comments, you may need to invoke the tool with
 /// `-fparse-all-comments`.
-CharSourceRange getAssociatedRange(const Decl &D, ASTContext &Context);
+CLANG_ABI CharSourceRange getAssociatedRange(const Decl &D, ASTContext &Context);
 
 /// Returns the source-code text in the specified range.
-StringRef getText(CharSourceRange Range, const ASTContext &Context);
+CLANG_ABI StringRef getText(CharSourceRange Range, const ASTContext &Context);
 
 /// Returns the source-code text corresponding to \p Node.
 template <typename T>
@@ -88,13 +89,13 @@ StringRef getExtendedText(const T &Node, tok::TokenKind Next,
 
 /// Determines whether \p Range is one that can be edited by a rewrite;
 /// generally, one that starts and ends within a particular file.
-llvm::Error validateEditRange(const CharSourceRange &Range,
+CLANG_ABI llvm::Error validateEditRange(const CharSourceRange &Range,
                               const SourceManager &SM);
 
 /// Determines whether \p Range is one that can be read from. If
 /// `AllowSystemHeaders` is false, a range that falls within a system header
 /// fails validation.
-llvm::Error validateRange(const CharSourceRange &Range, const SourceManager &SM,
+CLANG_ABI llvm::Error validateRange(const CharSourceRange &Range, const SourceManager &SM,
                           bool AllowSystemHeaders);
 
 /// Attempts to resolve the given range to one that can be edited by a rewrite;
@@ -109,7 +110,7 @@ llvm::Error validateRange(const CharSourceRange &Range, const SourceManager &SM,
 ///    foo(DO_NOTHING(3))
 /// will be rewritten to
 ///    foo(6)
-std::optional<CharSourceRange>
+CLANG_ABI std::optional<CharSourceRange>
 getFileRangeForEdit(const CharSourceRange &EditRange, const SourceManager &SM,
                     const LangOptions &LangOpts,
                     bool IncludeMacroExpansion = true);
@@ -129,7 +130,7 @@ getFileRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context,
 ///    #define DO_NOTHING(x) x
 ///    foo(DO_NOTHING(3))
 /// the returned range will hold the source text `DO_NOTHING(3)`.
-std::optional<CharSourceRange> getFileRange(const CharSourceRange &EditRange,
+CLANG_ABI std::optional<CharSourceRange> getFileRange(const CharSourceRange &EditRange,
                                             const SourceManager &SM,
                                             const LangOptions &LangOpts,
                                             bool IncludeMacroExpansion);

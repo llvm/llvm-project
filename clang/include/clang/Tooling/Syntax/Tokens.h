@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Token.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,7 +48,7 @@ namespace syntax {
 
 /// A half-open character range inside a particular file, the start offset is
 /// included and the end offset is excluded from the range.
-struct FileRange {
+struct CLANG_ABI FileRange {
   /// EXPECTS: File.isValid() && Begin <= End.
   FileRange(FileID File, unsigned BeginOffset, unsigned EndOffset);
   /// EXPECTS: BeginLoc.isValid() && BeginLoc.isFileID().
@@ -95,12 +96,12 @@ private:
 };
 
 /// For debugging purposes.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FileRange &R);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FileRange &R);
 
 /// A token coming directly from a file or from a macro invocation. Has just
 /// enough information to locate the token in the source code.
 /// Can represent both expanded and spelled tokens.
-class Token {
+class CLANG_ABI Token {
 public:
   Token(SourceLocation Location, unsigned Length, tok::TokenKind Kind);
   /// EXPECTS: clang::Token is not an annotation token.
@@ -143,7 +144,7 @@ private:
   tok::TokenKind Kind;
 };
 /// For debugging purposes. Equivalent to a call to Token::str().
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
+CLANG_ABI llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 
 /// A list of tokens obtained by preprocessing a text buffer and operations to
 /// map between the expanded and spelled tokens, i.e. TokenBuffer has
@@ -171,7 +172,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T);
 /// the spelled tokens of a file using the tokenize() helper.
 ///
 /// FIXME: allow mappings into macro arguments.
-class TokenBuffer {
+class CLANG_ABI TokenBuffer {
 public:
   TokenBuffer(const SourceManager &SourceMgr) : SourceMgr(&SourceMgr) {}
 
@@ -319,7 +320,7 @@ private:
   ///   FOO    // invocation #1, tokens = {'1','+','2'}, macroTokens = {'FOO'}.
   ///   BAR(1) // invocation #2, tokens = {'a', '+', '1'},
   ///                            macroTokens = {'BAR', '(', '1', ')'}.
-  struct Mapping {
+  struct CLANG_ABI Mapping {
     // Positions in the corresponding spelled token stream. The corresponding
     // range is never empty.
     unsigned BeginSpelled = 0;
@@ -380,17 +381,17 @@ private:
 
 /// The spelled tokens that overlap or touch a spelling location Loc.
 /// This always returns 0-2 tokens.
-llvm::ArrayRef<syntax::Token>
+CLANG_ABI llvm::ArrayRef<syntax::Token>
 spelledTokensTouching(SourceLocation Loc, const syntax::TokenBuffer &Tokens);
-llvm::ArrayRef<syntax::Token>
+CLANG_ABI llvm::ArrayRef<syntax::Token>
 spelledTokensTouching(SourceLocation Loc, llvm::ArrayRef<syntax::Token> Tokens);
 
 /// The identifier token that overlaps or touches a spelling location Loc.
 /// If there is none, returns nullptr.
-const syntax::Token *
+CLANG_ABI const syntax::Token *
 spelledIdentifierTouching(SourceLocation Loc,
                           llvm::ArrayRef<syntax::Token> Tokens);
-const syntax::Token *
+CLANG_ABI const syntax::Token *
 spelledIdentifierTouching(SourceLocation Loc,
                           const syntax::TokenBuffer &Tokens);
 
@@ -402,20 +403,20 @@ spelledIdentifierTouching(SourceLocation Loc,
 /// results from what one might expect when running a C++ frontend, e.g.
 /// preprocessor does not run at all.
 /// The result will *not* have a 'eof' token at the end.
-std::vector<syntax::Token> tokenize(FileID FID, const SourceManager &SM,
+CLANG_ABI std::vector<syntax::Token> tokenize(FileID FID, const SourceManager &SM,
                                     const LangOptions &LO);
 /// Similar to one above, instead of whole file tokenizes a part of it. Note
 /// that, the first token might be incomplete if FR.startOffset is not at the
 /// beginning of a token, and the last token returned will start before the
 /// FR.endOffset but might end after it.
-std::vector<syntax::Token>
+CLANG_ABI std::vector<syntax::Token>
 tokenize(const FileRange &FR, const SourceManager &SM, const LangOptions &LO);
 
 /// Collects tokens for the main file while running the frontend action. An
 /// instance of this object should be created on
 /// FrontendAction::BeginSourceFile() and the results should be consumed after
 /// FrontendAction::Execute() finishes.
-class TokenCollector {
+class CLANG_ABI TokenCollector {
 public:
   /// Adds the hooks to collect the tokens. Should be called before the
   /// preprocessing starts, i.e. as a part of BeginSourceFile() or

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_INDEXSERIALIZATION_SERIALIZABLEPATHCOLLECTION_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -24,7 +25,7 @@ namespace clang {
 namespace index {
 
 /// Pool of strings
-class StringPool {
+class CLANG_ABI StringPool {
   llvm::SmallString<512> Buffer;
 
 public:
@@ -40,7 +41,7 @@ public:
 };
 
 /// Pool of filesystem paths backed by a StringPool
-class PathPool {
+class CLANG_ABI PathPool {
 public:
   /// Special root directory of a filesystem path.
   enum class RootDirKind {
@@ -82,7 +83,7 @@ private:
 };
 
 /// Stores file paths and produces serialization-friendly representation.
-class SerializablePathCollection {
+class CLANG_ABI SerializablePathCollection {
   std::string WorkDir;
   std::string SysRoot;
 

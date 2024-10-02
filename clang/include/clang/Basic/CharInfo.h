@@ -10,13 +10,14 @@
 #define LLVM_CLANG_BASIC_CHARINFO_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace clang {
 namespace charinfo {
-  extern const uint16_t InfoTable[256];
+  CLANG_ABI extern const uint16_t InfoTable[256];
 
   enum {
     CHAR_HORZ_WS  = 0x0001,  // '\t', '\f', '\v'.  Note, no '\0'
