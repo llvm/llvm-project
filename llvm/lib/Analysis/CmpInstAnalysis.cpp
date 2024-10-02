@@ -79,13 +79,19 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   using namespace PatternMatch;
 
   const APInt *C;
-  if (!match(RHS, m_APIntAllowPoison(C)))
+  if (!ICmpInst::isRelational(Pred) || !match(RHS, m_APIntAllowPoison(C)))
     return std::nullopt;
+
+  bool Inverted = false;
+  if (ICmpInst::isGT(Pred) || ICmpInst::isGE(Pred)) {
+    Inverted = true;
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
 
   DecomposedBitTest Result;
   switch (Pred) {
   default:
-    return std::nullopt;
+    llvm_unreachable("Unexpected predicate");
   case ICmpInst::ICMP_SLT:
     // X < 0 is equivalent to (X & SignMask) != 0.
     if (!C->isZero())
@@ -99,20 +105,6 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
       return std::nullopt;
     Result.Mask = APInt::getSignMask(C->getBitWidth());
     Result.Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_SGT:
-    // X > -1 is equivalent to (X & SignMask) == 0.
-    if (!C->isAllOnes())
-      return std::nullopt;
-    Result.Mask = APInt::getSignMask(C->getBitWidth());
-    Result.Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_SGE:
-    // X >= 0 is equivalent to (X & SignMask) == 0.
-    if (!C->isZero())
-      return std::nullopt;
-    Result.Mask = APInt::getSignMask(C->getBitWidth());
-    Result.Pred = ICmpInst::ICMP_EQ;
     break;
   case ICmpInst::ICMP_ULT:
     // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
@@ -128,21 +120,10 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     Result.Mask = ~*C;
     Result.Pred = ICmpInst::ICMP_EQ;
     break;
-  case ICmpInst::ICMP_UGT:
-    // X >u 2^n-1 is equivalent to (X & ~(2^n-1)) != 0.
-    if (!(*C + 1).isPowerOf2())
-      return std::nullopt;
-    Result.Mask = ~*C;
-    Result.Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_UGE:
-    // X >=u 2^n is equivalent to (X & ~(2^n-1)) != 0.
-    if (!C->isPowerOf2())
-      return std::nullopt;
-    Result.Mask = -*C;
-    Result.Pred = ICmpInst::ICMP_NE;
-    break;
   }
+
+  if (Inverted)
+    Result.Pred = ICmpInst::getInversePredicate(Result.Pred);
 
   Value *X;
   if (LookThruTrunc && match(LHS, m_Trunc(m_Value(X)))) {
