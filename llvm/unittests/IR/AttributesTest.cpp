@@ -596,6 +596,32 @@ TEST(Attributes, SetIntersectByValAlign) {
   }
 }
 
+TEST(Attributes, ListIntersectDifferingMustPreserve) {
+  LLVMContext C;
+  fprintf(stderr, "Starting Test!\n");
+  std::optional<AttributeList> Res;
+  {
+    AttributeList AL0;
+    AttributeList AL1;
+    AL1 = AL1.addFnAttribute(C, Attribute::ReadOnly);
+    AL0 = AL0.addParamAttribute(C, 0, Attribute::SExt);
+    Res = AL0.intersectWith(C, AL1);
+    ASSERT_FALSE(Res.has_value());
+    Res = AL1.intersectWith(C, AL0);
+    ASSERT_FALSE(Res.has_value());
+  }
+  {
+    AttributeList AL0;
+    AttributeList AL1;
+    AL1 = AL1.addFnAttribute(C, Attribute::AlwaysInline);
+    AL0 = AL0.addParamAttribute(C, 0, Attribute::ReadOnly);
+    Res = AL0.intersectWith(C, AL1);
+    ASSERT_FALSE(Res.has_value());
+    Res = AL1.intersectWith(C, AL0);
+    ASSERT_FALSE(Res.has_value());
+  }
+}
+
 TEST(Attributes, ListIntersect) {
   LLVMContext C;
   AttributeList AL0;

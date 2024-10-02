@@ -1802,19 +1802,11 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
     return *this;
 
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  SmallSet<unsigned, 8> AllIndexes{};
-  AllIndexes.insert(indexes().begin(), indexes().end());
-  AllIndexes.insert(Other.indexes().begin(), Other.indexes().end());
-
-  for (unsigned Idx : AllIndexes) {
-    AttributeSet ThisSet = {};
-    AttributeSet OtherSet = {};
-    if (hasAttributesAtIndex(Idx))
-      ThisSet = getAttributes(Idx);
-    if (Other.hasAttributesAtIndex(Idx))
-      OtherSet = Other.getAttributes(Idx);
-
-    auto IntersectedAS = ThisSet.intersectWith(C, OtherSet);
+  auto IndexIt = index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
+    fprintf(stderr, "Checking Idx: %u\n", Idx);
+    auto IntersectedAS =
+        getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.
     if (!IntersectedAS)
       return std::nullopt;
