@@ -287,3 +287,31 @@ define void @foo(i8 %v1, ptr %ptr) {
   EXPECT_TRUE(Utils::isMemDepCandidate(CallBar));
   EXPECT_FALSE(Utils::isMemDepCandidate(Ret));
 }
+
+TEST_F(UtilsTest, Instruction_isMemIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64)
+declare void @llvm.assume(i1)
+
+define void @foo(ptr %ptr, i1 %cond) {
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42)
+  call void @llvm.assume(i1 %cond)
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *SideEffect = cast<sandboxir::IntrinsicInst>(&*It++);
+  auto *PseudoProbe = cast<sandboxir::IntrinsicInst>(&*It++);
+  auto *OtherIntrinsic = cast<sandboxir::IntrinsicInst>(&*It++);
+  using Utils = sandboxir::Utils;
+
+  EXPECT_FALSE(Utils::isMemIntrinsic(SideEffect));
+  EXPECT_FALSE(Utils::isMemIntrinsic(PseudoProbe));
+  EXPECT_TRUE(Utils::isMemIntrinsic(OtherIntrinsic));
+}
