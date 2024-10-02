@@ -26,9 +26,15 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 
@@ -89,6 +95,89 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setFastISel(false);
   setO0WantsFastISel(false);
   setRequiresStructuredCFG(false);
+}
+
+namespace {
+  enum AddressSpace {
+    Function = storageClassToAddressSpace(SPIRV::StorageClass::Function),
+    CrossWorkgroup =
+        storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup),
+    UniformConstant =
+        storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant),
+    Workgroup = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup),
+    Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic)
+  };
+}
+
+unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
+  const auto *LD = dyn_cast<LoadInst>(V);
+  if (!LD)
+    return UINT32_MAX;
+
+  // It must be a load from a pointer to Generic.
+  assert(V->getType()->isPointerTy() &&
+         V->getType()->getPointerAddressSpace() == AddressSpace::Generic);
+
+  const auto *Ptr = LD->getPointerOperand();
+  if (Ptr->getType()->getPointerAddressSpace() != AddressSpace::UniformConstant)
+    return UINT32_MAX;
+  // For a loaded from a pointer to UniformConstant, we can infer CrossWorkgroup
+  // storage, as this could only have been legally initialised with a
+  // CrossWorkgroup (aka device) constant pointer.
+  return AddressSpace::CrossWorkgroup;
+}
+
+std::pair<const Value *, unsigned>
+SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
+  using namespace PatternMatch;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_is_shared:
+      return std::pair(II->getArgOperand(0), AddressSpace::Workgroup);
+    case Intrinsic::amdgcn_is_private:
+      return std::pair(II->getArgOperand(0), AddressSpace::Function);
+    default:
+      break;
+    }
+    return std::pair(nullptr, UINT32_MAX);
+  }
+  // Check the global pointer predication based on
+  // (!is_share(p) && !is_private(p)). Note that logic 'and' is commutative and
+  // the order of 'is_shared' and 'is_private' is not significant.
+  Value *Ptr;
+  if (getTargetTriple().getVendor() == Triple::VendorType::AMD &&
+      match(
+        const_cast<Value *>(V),
+        m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
+                m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(m_Deferred(Ptr))))))
+    return std::pair(Ptr, AddressSpace::CrossWorkgroup);
+
+  return std::pair(nullptr, UINT32_MAX);
+}
+
+bool SPIRVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+                                             unsigned DestAS) const {
+  if (SrcAS != AddressSpace::Generic && SrcAS != AddressSpace::CrossWorkgroup)
+    return false;
+  return DestAS == AddressSpace::Generic ||
+         DestAS == AddressSpace::CrossWorkgroup;
+}
+
+void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerCGSCCOptimizerLateEPCallback([](CGSCCPassManager &PM,
+                                             OptimizationLevel Level) {
+    if (Level == OptimizationLevel::O0)
+      return;
+
+    FunctionPassManager FPM;
+
+    // Add infer address spaces pass to the opt pipeline after inlining
+    // but before SROA to increase SROA opportunities.
+    FPM.addPass(InferAddressSpacesPass(AddressSpace::Generic));
+
+    PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+  });
 }
 
 namespace {
@@ -177,6 +266,9 @@ void SPIRVPassConfig::addIRPasses() {
     // 3. Structurize.
     addPass(createSPIRVStructurizerPass());
   }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(createInferAddressSpacesPass(AddressSpace::Generic));
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));

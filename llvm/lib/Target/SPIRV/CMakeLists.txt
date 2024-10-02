@@ -52,6 +52,8 @@ add_llvm_target(SPIRVCodeGen
   Core
   Demangle
   GlobalISel
+  Passes
+  Scalar
   SPIRVAnalysis
   MC
   SPIRVDesc

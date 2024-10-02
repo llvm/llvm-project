@@ -39,6 +39,10 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  unsigned getFlatAddressSpace() const {
+    return storageClassToAddressSpace(SPIRV::StorageClass::Generic);
+  }
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
     // SPIR-V natively supports OpBitcount, per 3.53.14 in the spec, as such it
     // is reasonable to assume the Op is fast / preferable to the expanded loop.
