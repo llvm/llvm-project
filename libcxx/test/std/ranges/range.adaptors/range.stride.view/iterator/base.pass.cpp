@@ -47,7 +47,7 @@ constexpr bool base_const() {
   return true;
 }
 
-bool base_move() {
+constexpr bool base_move() {
   // Keep track of how many times the original iterator is moved
   // and/or copied during the test.
   int move_counter = 0;
@@ -59,23 +59,35 @@ bool base_move() {
   auto stop          = SizedInputIter();
 
   auto view = BasicTestView<SizedInputIter>{start, stop};
-  auto sv   = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
-  auto svi  = sv.begin();
+  assert(move_counter == 0);
+  // One copies of _start_ occurs when it is copied to the basic test view's member variable.
+  assert(copy_counter == 1);
 
-  // Reset the move/copy counters so that they reflect *only* whether the
-  // base() member function moved or copied the iterator.
-  move_counter                 = 0;
-  copy_counter                 = 0;
+  auto sv = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
+  // There is a copy of _view_ made when it is passed by value.
+  // There is a move done of _view_ when it is used as the initial value of __base.
+  assert(move_counter == 1);
+  assert(copy_counter == 2);
+
+  auto svi = sv.begin();
+  // Another copy of _start_ when begin uses the iterator to the first element
+  // of the view underlying sv as the by-value parameter to the stride view iterator's
+  // constructor.
+  assert(copy_counter == 3);
+  // Another move of __start_ happens right after that when it is std::move'd to
+  // become the first __current of the iterator.
+  assert(move_counter == 2);
+
   [[maybe_unused]] auto result = std::move(svi).base();
-
-  // Ensure that base std::move'd the iterator.
-  assert(*result.move_counter == 1);
-  assert(*result.copy_counter == 0);
+  // Ensure that base std::move'd the iterator and did not copy it.
+  assert(move_counter == 3);
+  assert(copy_counter == 3);
   return true;
 }
 
-bool base_copy() {
-  // See above.
+constexpr bool base_copy() {
+  // See base_move() for complete description of when/why
+  // moves/copies take place..
   int move_counter = 0;
   int copy_counter = 0;
   auto start       = SizedInputIter();
@@ -84,27 +96,37 @@ bool base_copy() {
   start.copy_counter = &copy_counter;
   auto stop          = SizedInputIter();
 
-  auto view                 = BasicTestView<SizedInputIter>{start, stop};
-  auto sv                   = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
+  auto view = BasicTestView<SizedInputIter>{start, stop};
+  assert(move_counter == 0);
+  assert(copy_counter == 1);
+
+  auto sv = std::ranges::stride_view<BasicTestView<SizedInputIter>>(view, 1);
+  assert(move_counter == 1);
+  assert(copy_counter == 2);
+
   [[maybe_unused]] auto svi = sv.begin();
+  assert(copy_counter == 3);
+  assert(move_counter == 2);
 
-  // See above.
-  move_counter                                      = 0;
-  copy_counter                                      = 0;
-  [[maybe_unused]] const SizedInputIter& result = svi.base();
-
+  [[maybe_unused]] const SizedInputIter result = svi.base();
   // Ensure that base did _not_ std::move'd the iterator.
-  assert(*result.move_counter == 0);
-  assert(*result.copy_counter == 0);
+  assert(move_counter == 2);
+  assert(copy_counter == 4);
+
   return true;
 }
 
 int main(int, char**) {
   base_noexcept();
   static_assert(base_noexcept());
+
   base_const();
   static_assert(base_const());
+
   base_move();
+  static_assert(base_move());
+
   base_copy();
+  static_assert(base_copy());
   return 0;
 }
