@@ -1047,19 +1047,19 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
 
   // Enable kernarg preloading by default on GFX940+.
   size_t PreloadCount;
-  if (KernargPreloadCount.getNumOccurrences() > 0) {
+  if (KernargPreloadCount.getNumOccurrences()) {
     // Override default behavior if CL option is present.
     PreloadCount = std::min<size_t>(KernargPreloadCount, F.arg_size());
   } else {
     // Defaults with no CL option.
-    if (ST.hasGFX940Insts())
+    if (ST.defaultEnabledKernargPreload())
       PreloadCount =
           getMaxNumPreloadArgs(F, F.getParent()->getDataLayout(), TM);
     else
       PreloadCount = 0;
   }
 
-  for (unsigned I = 0; I < PreloadCount; ++I) {
+  for (size_t I = 0; I < PreloadCount; ++I) {
     Argument &Arg = *F.getArg(I);
     // Check for incompatible attributes.
     if (Arg.hasByRefAttr() || Arg.hasNestAttr())
