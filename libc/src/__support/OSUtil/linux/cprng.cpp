@@ -32,6 +32,25 @@ namespace {
 
 using namespace vdso;
 // A block of random state together with enough space to hold all its freelist.
+// ┌───────────┬────────────┐
+// │           │            │
+// │           │   Pages    ├──────────────┐
+// │           │            │              ▼
+// │ Prev      ├────────────┤    ┌──────────────────┐
+// │           │            │    │                  │
+// │           │   State0   ├───►│   Opaque Area    │
+// │           │            │    │                  │
+// │           ├────────────┤    ├──────────────────┤
+// ├───────────┤            │    │                  │
+// │           │   State1   ├───►│   Opaque Area    │
+// │           │            │    │                  │
+// │           ├────────────┤    ├──────────────────┤
+// │ Next      │            │    │                  │
+// │           │   State2   ├───►│   Opaque Area    │
+// │           │            │    │                  │
+// │           ├────────────┤    ├──────────────────┤
+// │           │   ......   │    │  ..............  │
+// └───────────┴────────────┘    └──────────────────┘
 struct StateBlock {
   StateBlock *prev;
   StateBlock *next;
