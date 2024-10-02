@@ -376,6 +376,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
 
+- Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -533,6 +535,10 @@ X86 Support
 - Support ISA of ``AVX10.2``.
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
+
+- All intrinsics in adcintrin.h can now be used in constant expressions.
+
+- All intrinsics in adxintrin.h can now be used in constant expressions.
 
 - All intrinsics in lzcntintrin.h can now be used in constant expressions.
 
