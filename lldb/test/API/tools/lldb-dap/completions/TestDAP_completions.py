@@ -19,13 +19,16 @@ settings_completion = {
 }
 memory_completion = {
     "text": "memory",
-    "label": "memory -- Commands for operating on memory in the current target process."
+    "label": "memory -- Commands for operating on memory in the current target process.",
 }
 command_var_completion = {
     "text": "var",
     "label": "var -- Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
 }
-variable_var_completion = { "text": "var", "label": "var -- vector<baz> &", }
+variable_var_completion = {
+    "text": "var",
+    "label": "var -- vector<baz> &",
+}
 variable_var1_completion = {"text": "var1", "label": "var1 -- int &"}
 variable_var2_completion = {"text": "var2", "label": "var2 -- int &"}
 
@@ -48,7 +51,6 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         self.set_source_breakpoints(source, [breakpoint1_line, breakpoint2_line])
 
-
     def test_command_completions(self):
         """
         Tests completion requests for lldb commands, within "repl-mode=command"
@@ -56,13 +58,15 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.setup_debugee()
         self.continue_to_next_stop()
 
-        res = self.dap_server.request_evaluate("`lldb-dap repl-mode command", context="repl")
+        res = self.dap_server.request_evaluate(
+            "`lldb-dap repl-mode command", context="repl"
+        )
         self.assertTrue(res["success"])
 
         # Provides completion for top-level commands
         self.verify_completions(
             self.dap_server.get_completions("se"),
-            [session_completion, settings_completion]
+            [session_completion, settings_completion],
         )
 
         # Provides completions for sub-commands
@@ -71,13 +75,13 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             [
                 {
                     "text": "read",
-                    "label": "read -- Read from the memory of the current target process."
+                    "label": "read -- Read from the memory of the current target process.",
                 },
                 {
                     "text": "region",
                     "label": "region -- Get information on the memory region containing an address in the current target process.",
                 },
-            ]
+            ],
         )
 
         # Provides completions for parameter values of commands
@@ -88,15 +92,13 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Also works if the escape prefix is used
         self.verify_completions(
-            self.dap_server.get_completions("`mem"),
-            [memory_completion]
+            self.dap_server.get_completions("`mem"), [memory_completion]
         )
 
         self.verify_completions(
             self.dap_server.get_completions("`"),
-            [session_completion, settings_completion, memory_completion]
+            [session_completion, settings_completion, memory_completion],
         )
-
 
         # Completes an incomplete quoted token
         self.verify_completions(
@@ -128,7 +130,6 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
             [variable_var_completion],
         )
 
-
     def test_variable_completions(self):
         """
         Tests completion requests in "repl-mode=command"
@@ -136,7 +137,9 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         self.setup_debugee()
         self.continue_to_next_stop()
 
-        res = self.dap_server.request_evaluate("`lldb-dap repl-mode variable", context="repl")
+        res = self.dap_server.request_evaluate(
+            "`lldb-dap repl-mode variable", context="repl"
+        )
         self.assertTrue(res["success"])
 
         # Provides completions for varibles, but not command
@@ -222,8 +225,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
 
         # Even in variable mode, we can still use the escape prefix
         self.verify_completions(
-            self.dap_server.get_completions("`mem"),
-            [memory_completion]
+            self.dap_server.get_completions("`mem"), [memory_completion]
         )
 
     def test_auto_completions(self):
@@ -232,7 +234,9 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         """
         self.setup_debugee()
 
-        res = self.dap_server.request_evaluate("`lldb-dap repl-mode auto", context="repl")
+        res = self.dap_server.request_evaluate(
+            "`lldb-dap repl-mode auto", context="repl"
+        )
         self.assertTrue(res["success"])
 
         self.continue_to_next_stop()
@@ -242,19 +246,21 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         # Make sure, we offer all completions
         self.verify_completions(
             self.dap_server.get_completions("va"),
-            [ 
-              command_var_completion,
-              variable_var1_completion,
-              variable_var2_completion,
+            [
+                command_var_completion,
+                variable_var1_completion,
+                variable_var2_completion,
             ],
         )
 
         # If we are using the escape prefix, only commands are suggested, but no variables
         self.verify_completions(
             self.dap_server.get_completions("`va"),
-            [ command_var_completion, ],
             [
-              variable_var1_completion,
-              variable_var2_completion,
+                command_var_completion,
+            ],
+            [
+                variable_var1_completion,
+                variable_var2_completion,
             ],
         )

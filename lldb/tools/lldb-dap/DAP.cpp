@@ -483,7 +483,8 @@ llvm::json::Value DAP::CreateTopLevelScopes() {
   return llvm::json::Value(std::move(scopes));
 }
 
-ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression, bool partial_expression) {
+ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
+                             bool partial_expression) {
   // Check for the escape hatch prefix.
   if (!expression.empty() &&
       llvm::StringRef(expression).starts_with(g_dap.command_escape_prefix)) {
@@ -512,7 +513,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression, bool 
     // If the first token is not fully finished yet, we can't
     // determine whether this will be a variable or a lldb command.
     if (partial_expression && token.second.empty()) {
-       return ReplMode::Auto;
+      return ReplMode::Auto;
     }
 
     std::string term = token.first.str();

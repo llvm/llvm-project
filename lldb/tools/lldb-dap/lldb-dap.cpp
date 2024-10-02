@@ -1395,10 +1395,12 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  bool had_escape_prefix = llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
+  bool had_escape_prefix =
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
   ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
 
-  // Handle the offset change introduced by stripping out the `command_escape_prefix`.
+  // Handle the offset change introduced by stripping out the
+  // `command_escape_prefix`.
   if (had_escape_prefix) {
     if (offset < g_dap.command_escape_prefix.size()) {
       body.try_emplace("targets", std::move(targets));
@@ -1580,10 +1582,10 @@ void request_evaluate(const llvm::json::Object &request) {
   bool repeat_last_command =
       expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && (repeat_last_command ||
-                            (!expression.empty() &&
-                             g_dap.DetectReplMode(frame, expression, false) ==
-                                 ReplMode::Command))) {
+  if (context == "repl" &&
+      (repeat_last_command ||
+       (!expression.empty() &&
+        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
