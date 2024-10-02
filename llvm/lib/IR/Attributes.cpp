@@ -28,6 +28,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2296,12 +2297,8 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
 bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
+  return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
 
 /// Which attributes cannot be applied to a type.
