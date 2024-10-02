@@ -290,7 +290,7 @@ func.func @expand_shape_and_read_from_source(%in_0: memref<20xi32>, %vec: vector
 // The same regression test, but the initial write is to the collapsed memref,
 // and the subsequent unforwardable read is from the collapse shape.
 
-// CHECK-LABEL:  func.func @collapse_shape_of_source
+// CHECK-LABEL:  func.func @collapse_shape_and_read_from_collapse
 //       CHECK:    scf.for {{.*}} {
 //       CHECK:      vector.transfer_read
 //       CHECK:      vector.transfer_write
@@ -321,7 +321,7 @@ func.func @collapse_shape_and_read_from_collapse(%in_0: memref<20xi32>, %vec: ve
 // The same test except writing to the expanded source first (same as the
 // previous collapse test but for expand).
 
-// CHECK-LABEL:  func.func @expand_shape_of_source
+// CHECK-LABEL:  func.func @expand_shape_and_read_from_expand
 //       CHECK:    scf.for {{.*}} {
 //       CHECK:      vector.transfer_read
 //       CHECK:      vector.transfer_write
