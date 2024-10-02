@@ -763,13 +763,12 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
 }
 
 /// Estimates the number of cycles elapsed between DefMI and UseMI, DefMI
-/// inclusive and UseMI exclusive, if they're non-null and in the same
-/// BasicBlock. Returns std::nullopt when UseMI is in a different MBB than
-/// DefMI.
+/// inclusive and UseMI exclusive, if they're in the same MBB. Returns
+/// std::nullopt if they're in different MBBs, and 0 if UseMI is null.
 static std::optional<unsigned>
 estimateDefUseCycles(const TargetSchedModel &Sched, const MachineInstr *DefMI,
                      const MachineInstr *UseMI) {
-  if (!DefMI || !UseMI || DefMI == UseMI)
+  if (!UseMI)
     return 0;
   if (DefMI->getParent() != UseMI->getParent())
     return std::nullopt;
