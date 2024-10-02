@@ -395,15 +395,14 @@ body:             |
 ...
 
 ---
-name:            splat_zero_nxv1float
+name:            splat_zero_nxv1f32
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv1float
+    ; CHECK-LABEL: name: splat_zero_nxv1f32
     ; CHECK: [[C:%[0-9]+]]:fprb(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[COPY]](s32)
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[C]](s32)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %1:_(s32) = G_FCONSTANT float 0.000000e+00
@@ -413,15 +412,14 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv2float
+name:            splat_zero_nxv2f32
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv2float
+    ; CHECK-LABEL: name: splat_zero_nxv2f32
     ; CHECK: [[C:%[0-9]+]]:fprb(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[COPY]](s32)
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[C]](s32)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
     %1:_(s32) = G_FCONSTANT float 0.000000e+00
@@ -431,15 +429,14 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv4float
+name:            splat_zero_nxv4f32
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv4float
+    ; CHECK-LABEL: name: splat_zero_nxv4f32
     ; CHECK: [[C:%[0-9]+]]:fprb(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[COPY]](s32)
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[C]](s32)
     ; CHECK-NEXT: $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
     %1:_(s32) = G_FCONSTANT float 0.000000e+00
@@ -449,15 +446,14 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv8float
+name:            splat_zero_nxv8f32
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv8float
+    ; CHECK-LABEL: name: splat_zero_nxv8f32
     ; CHECK: [[C:%[0-9]+]]:fprb(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[COPY]](s32)
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[C]](s32)
     ; CHECK-NEXT: $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
     %1:_(s32) = G_FCONSTANT float 0.000000e+00
@@ -467,15 +463,14 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv16float
+name:            splat_zero_nxv16f32
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv16float
+    ; CHECK-LABEL: name: splat_zero_nxv16f32
     ; CHECK: [[C:%[0-9]+]]:fprb(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[COPY]](s32)
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[C]](s32)
     ; CHECK-NEXT: $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
     %1:_(s32) = G_FCONSTANT float 0.000000e+00
@@ -485,12 +480,12 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv1double
+name:            splat_zero_nxv1f64
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv1double
+    ; CHECK-LABEL: name: splat_zero_nxv1f64
     ; CHECK: [[C:%[0-9]+]]:fprb(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s64>)
@@ -502,12 +497,12 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv2double
+name:            splat_zero_nxv2f64
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv2double
+    ; CHECK-LABEL: name: splat_zero_nxv2f64
     ; CHECK: [[C:%[0-9]+]]:fprb(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s64>)
@@ -519,12 +514,12 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv4double
+name:            splat_zero_nxv4f64
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv4double
+    ; CHECK-LABEL: name: splat_zero_nxv4f64
     ; CHECK: [[C:%[0-9]+]]:fprb(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s64>)
@@ -536,12 +531,12 @@ body:             |
 
 ...
 ---
-name:            splat_zero_nxv8double
+name:            splat_zero_nxv8f64
 legalized:       true
 regBankSelected: false
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: splat_zero_nxv8double
+    ; CHECK-LABEL: name: splat_zero_nxv8f64
     ; CHECK: [[C:%[0-9]+]]:fprb(s64) = G_FCONSTANT double 0.000000e+00
     ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:vrb(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s64>)

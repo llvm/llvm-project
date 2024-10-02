@@ -484,7 +484,9 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                             .getKnownMinValue());
 
     LLT ScalarTy = MRI.getType(MI.getOperand(1).getReg());
-    if (GPRSize == 32 && ScalarTy.getSizeInBits() == 64) {
+    MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if ((GPRSize == 32 && ScalarTy.getSizeInBits() == 64) ||
+        onlyDefinesFP(*DefMI, MRI, TRI)) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
       OpdsMapping[1] = getFPValueMapping(ScalarTy.getSizeInBits());
     } else
