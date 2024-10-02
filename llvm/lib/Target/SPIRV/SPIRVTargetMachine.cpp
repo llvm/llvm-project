@@ -97,17 +97,15 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
-namespace {
-  enum AddressSpace {
-    Function = storageClassToAddressSpace(SPIRV::StorageClass::Function),
-    CrossWorkgroup =
-        storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup),
-    UniformConstant =
-        storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant),
-    Workgroup = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup),
-    Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic)
-  };
-}
+enum AddressSpace {
+  Function = storageClassToAddressSpace(SPIRV::StorageClass::Function),
+  CrossWorkgroup =
+      storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup),
+  UniformConstant =
+      storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant),
+  Workgroup = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup),
+  Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic)
+};
 
 unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
   const auto *LD = dyn_cast<LoadInst>(V);
@@ -148,9 +146,10 @@ SPIRVTargetMachine::getPredicatedAddrSpace(const Value *V) const {
   Value *Ptr;
   if (getTargetTriple().getVendor() == Triple::VendorType::AMD &&
       match(
-        const_cast<Value *>(V),
-        m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
-                m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(m_Deferred(Ptr))))))
+          const_cast<Value *>(V),
+          m_c_And(m_Not(m_Intrinsic<Intrinsic::amdgcn_is_shared>(m_Value(Ptr))),
+                m_Not(m_Intrinsic<Intrinsic::amdgcn_is_private>(
+                    m_Deferred(Ptr))))))
     return std::pair(Ptr, AddressSpace::CrossWorkgroup);
 
   return std::pair(nullptr, UINT32_MAX);
@@ -165,19 +164,19 @@ bool SPIRVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 }
 
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-  PB.registerCGSCCOptimizerLateEPCallback([](CGSCCPassManager &PM,
-                                             OptimizationLevel Level) {
-    if (Level == OptimizationLevel::O0)
-      return;
+  PB.registerCGSCCOptimizerLateEPCallback(
+      [](CGSCCPassManager &PM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
 
-    FunctionPassManager FPM;
+        FunctionPassManager FPM;
 
-    // Add infer address spaces pass to the opt pipeline after inlining
-    // but before SROA to increase SROA opportunities.
-    FPM.addPass(InferAddressSpacesPass(AddressSpace::Generic));
+        // Add infer address spaces pass to the opt pipeline after inlining
+        // but before SROA to increase SROA opportunities.
+        FPM.addPass(InferAddressSpacesPass(AddressSpace::Generic));
 
-    PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
-  });
+        PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
 }
 
 namespace {
