@@ -246,7 +246,7 @@ struct DAP {
   /// \param[in] frame
   ///     The frame, used as context to detect local variable names
   /// \param[inout] expression
-  ///     The expression string. Might be modifuied by this function to
+  ///     The expression string. Might be modified by this function to
   ///     remove the leading escape character.
   /// \param[in] partial_expression
   ///     Whether the provided `expression` is only a prefix of the
