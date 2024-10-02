@@ -67,7 +67,6 @@ static std::vector<std::string> DebugFileDirectory;
 
 static void parseArgs(int argc, char **argv) {
   DebuginfodFindOptTable Tbl;
-  llvm::StringRef ToolName = argv[0];
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   opt::InputArgList Args =
