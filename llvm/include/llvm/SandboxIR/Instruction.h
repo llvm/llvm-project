@@ -97,6 +97,9 @@ public:
 
   const char *getOpcodeName() const { return getOpcodeName(Opc); }
 
+  const DataLayout &getDataLayout() const {
+    return cast<llvm::Instruction>(Val)->getModule()->getDataLayout();
+  }
   // Note that these functions below are calling into llvm::Instruction.
   // A sandbox IR instruction could introduce a new opcode that could change the
   // behavior of one of these functions. It is better that these functions are

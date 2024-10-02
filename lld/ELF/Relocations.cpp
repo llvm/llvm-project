@@ -2265,6 +2265,15 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
   return std::make_pair(t, true);
 }
 
+std::pair<Thunk *, bool> ThunkCreator::getSyntheticLandingPad(Defined &d,
+                                                              int64_t a) {
+  auto [it, isNew] = landingPadsBySectionAndAddend.try_emplace(
+      {{d.section, d.value}, a}, nullptr);
+  if (isNew)
+    it->second = addLandingPadThunk(ctx, d, a);
+  return {it->second, isNew};
+}
+
 // Return true if the relocation target is an in range Thunk.
 // Return false if the relocation is not to a Thunk. If the relocation target
 // was originally to a Thunk, but is no longer in range we revert the
@@ -2348,6 +2357,20 @@ bool ThunkCreator::createThunks(uint32_t pass,
                 ts = getISDThunkSec(os, isec, isd, rel, src);
               ts->addThunk(t);
               thunks[t->getThunkTargetSym()] = t;
+
+              // When indirect branches are restricted, such as AArch64 BTI
+              // Thunks may need to target a linker generated landing pad
+              // instead of the target.
+              if (t->needsSyntheticLandingPad()) {
+                Thunk *lpt;
+                auto &dr = cast<Defined>(t->destination);
+                std::tie(lpt, isNew) = getSyntheticLandingPad(dr, t->addend);
+                if (isNew) {
+                  ts = getISThunkSec(cast<InputSection>(dr.section));
+                  ts->addThunk(lpt);
+                }
+                t->landingPad = lpt->getThunkTargetSym();
+              }
             }
 
             // Redirect relocation to Thunk, we never go via the PLT to a Thunk

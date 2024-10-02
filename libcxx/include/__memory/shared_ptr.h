@@ -248,35 +248,33 @@ struct __for_overwrite_tag {};
 
 template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace : __shared_weak_count {
-  using __value_type = __remove_cv_t<_Tp>;
-
   template <class... _Args,
             class _Allocator                                                                         = _Alloc,
             __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&...) : __storage_(std::move(__a)) {
     static_assert(
         sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
-    ::new (static_cast<void*>(__get_elem())) __value_type;
+    ::new ((void*)__get_elem()) _Tp;
   }
 
   template <class... _Args,
             class _Allocator                                                                          = _Alloc,
             __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __storage_(std::move(__a)) {
-    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __value_type>::type;
+    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __remove_cv_t<_Tp> >::type;
     _TpAlloc __tmp(*__get_alloc());
     allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI _Alloc* __get_alloc() _NOEXCEPT { return __storage_.__get_alloc(); }
 
-  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
+  _LIBCPP_HIDE_FROM_ABI _Tp* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
 
 private:
   template <class _Allocator                                                                         = _Alloc,
             __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    __get_elem()->~__value_type();
+    __get_elem()->~_Tp();
   }
 
   template <class _Allocator                                                                          = _Alloc,
@@ -302,7 +300,7 @@ private:
   // through `std::allocate_shared` and `std::make_shared`.
   struct _Storage {
     struct _Data {
-      _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, __value_type, __elem_);
+      _LIBCPP_COMPRESSED_PAIR(_Alloc, __alloc_, _Tp, __elem_);
     };
 
     _ALIGNAS_TYPE(_Data) char __buffer_[sizeof(_Data)];
@@ -314,7 +312,7 @@ private:
       return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__alloc_);
     }
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI __value_type* __get_elem() _NOEXCEPT {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Tp* __get_elem() _NOEXCEPT {
       return std::addressof(reinterpret_cast<_Data*>(__buffer_)->__elem_);
     }
   };
