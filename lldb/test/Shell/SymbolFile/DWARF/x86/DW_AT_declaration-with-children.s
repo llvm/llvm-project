@@ -105,6 +105,8 @@ c1:
         .byte   1                               # DW_CHILDREN_yes
         .byte   3                               # DW_AT_name
         .byte   8                               # DW_FORM_string
+        .byte   11                              # DW_AT_byte_size
+        .byte   11                              # DW_FORM_data1
         .byte   0                               # EOM(1)
         .byte   0                               # EOM(2)
         .byte   7                               # Abbreviation Code
@@ -251,6 +253,7 @@ c1:
 .LB1:
         .byte   6                               # Abbrev [6] DW_TAG_class_type
         .asciz  "B1"                            # DW_AT_name
+        .byte   8                               # DW_AT_byte_size
         .byte   7                               # Abbrev [5] 0x58:0xc DW_TAG_member
         .asciz  "ptr"                           # DW_AT_name
         .long   .LAptr                          # DW_AT_type
