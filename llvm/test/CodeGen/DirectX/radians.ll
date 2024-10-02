@@ -3,11 +3,9 @@
 
 declare half @llvm.dx.radians.f16(half)
 declare float @llvm.dx.radians.f32(float)
-declare double @llvm.dx.radians.f64(double)
 
 declare <4 x half> @llvm.dx.radians.v4f16(<4 x half>)
 declare <4 x float> @llvm.dx.radians.v4f32(<4 x float>)
-declare <4 x double> @llvm.dx.radians.v4f64(<4 x double>)
 
 define noundef half @radians_half(half noundef %a) {
 ; CHECK-LABEL: define noundef half @radians_half(
@@ -33,18 +31,6 @@ entry:
   ret float %elt.radians
 }
 
-define noundef double @radians_double(double noundef %a) {
-; CHECK-LABEL: define noundef double @radians_double(
-; CHECK-SAME: double noundef [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul double [[A]], 0x3F91DF46A2529D39
-; CHECK-NEXT:    ret double [[TMP0]]
-;
-entry:
-  %elt.radians = call double @llvm.dx.radians.f64(double %a)
-  ret double %elt.radians
-}
-
 define noundef <4 x half> @radians_half_vector(<4 x half> noundef %a) {
 ; CHECK-LABEL: define noundef <4 x half> @radians_half_vector(
 ; CHECK-SAME: <4 x half> noundef [[A:%.*]]) {
@@ -67,16 +53,4 @@ define noundef <4 x float> @radians_float_vector(<4 x float> noundef %a) {
 entry:
   %elt.radians = call <4 x float> @llvm.dx.radians.v4f32(<4 x float> %a)
   ret <4 x float> %elt.radians
-}
-
-define noundef <4 x double> @radians_double_vector(<4 x double> noundef %a) {
-; CHECK-LABEL: define noundef <4 x double> @radians_double_vector(
-; CHECK-SAME: <4 x double> noundef [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul <4 x double> [[A]], <double 0x3F91DF46A2529D39, double 0x3F91DF46A2529D39, double 0x3F91DF46A2529D39, double 0x3F91DF46A2529D39>
-; CHECK-NEXT:    ret <4 x double> [[TMP0]]
-;
-entry:
-  %elt.radians = call <4 x double> @llvm.dx.radians.v4f64(<4 x double> %a)
-  ret <4 x double> %elt.radians
 }
