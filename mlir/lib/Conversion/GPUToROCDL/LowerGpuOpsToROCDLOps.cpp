@@ -222,13 +222,12 @@ struct LowerGpuOpsToROCDLOpsPass
     ArrayAttr targets = m.getTargetsAttr();
     if (chipset == "infer") {
       if (!targets) {
-        emitError(UnknownLoc::get(ctx),
-                  "ROCDLTargetAttr is empty on GPU module");
+        m->emitError("ROCDLTargetAttr is empty on GPU module");
         return signalPassFailure();
       }
       if (targets.size() != 1) {
-        emitError(UnknownLoc::get(ctx), "ROCDLTargetAttrs has more specified "
-                                        "more than one gpu-arch on GPU module");
+        m->emitError("ROCDLTargetAttrs has more specified more than one "
+                     "gpu-arch on GPU module");
         return signalPassFailure();
       }
       const ROCDL::ROCDLTargetAttr targetAttr =
@@ -238,7 +237,7 @@ struct LowerGpuOpsToROCDLOpsPass
 
     FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
     if (failed(maybeChipset)) {
-      emitError(UnknownLoc::get(ctx), "Invalid chipset name: " + chipset);
+      m->emitError("Invalid chipset name: " + chipset);
       return signalPassFailure();
     }
 
