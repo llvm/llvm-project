@@ -1026,10 +1026,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 /// the source directly.
 ///
 /// This method assumes that all outer dims for this pack Op are 1.
-///
-/// At most _one_ inner tile size can be _dynamic_, all other inner tiles are
-/// required to have static sizes. This restriction can be relaxed in the
-/// future.
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            tensor::PackOp packOp) {
   Value input = packOp.getSource();
