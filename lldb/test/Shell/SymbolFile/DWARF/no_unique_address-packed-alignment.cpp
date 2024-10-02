@@ -6,7 +6,7 @@
 
 struct Empty {};
 struct __attribute((packed)) PackedNUA {
-  [[no_unique_address]] Empty a,b,c,d;
+  [[no_unique_address]] Empty a, b, c, d;
   char x;
   int y;
 };
