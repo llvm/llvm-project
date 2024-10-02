@@ -2558,6 +2558,12 @@ void OpenACCClauseProfiler::VisitNumWorkersClause(
   Profiler.VisitStmt(Clause.getIntExpr());
 }
 
+void OpenACCClauseProfiler::VisitCollapseClause(
+    const OpenACCCollapseClause &Clause) {
+  assert(Clause.getLoopCount() && "collapse clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getLoopCount());
+}
+
 void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
   for (auto *E : Clause.getVarList())
