@@ -802,8 +802,7 @@ protected:
   /// \param Field The field whose offset is being queried.
   /// \param ComputedOffset The offset that we've computed for this field.
   uint64_t updateExternalFieldOffset(const FieldDecl *Field,
-                                     uint64_t ComputedOffset,
-                                     uint64_t PreviousOffset);
+                                     uint64_t ComputedOffset);
 
   void CheckFieldPadding(uint64_t Offset, uint64_t UnpaddedOffset,
                           uint64_t UnpackedOffset, unsigned UnpackedAlign,
@@ -1764,8 +1763,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // If we're using external layout, give the external layout a chance
   // to override this information.
   if (UseExternalLayout)
-    FieldOffset = updateExternalFieldOffset(
-        D, FieldOffset, FieldOffsets.empty() ? 0 : FieldOffsets.back());
+    FieldOffset = updateExternalFieldOffset(D, FieldOffset);
 
   // Okay, place the bitfield at the calculated offset.
   FieldOffsets.push_back(FieldOffset);
@@ -2058,9 +2056,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   UnpackedFieldOffset = UnpackedFieldOffset.alignTo(UnpackedFieldAlign);
 
   if (UseExternalLayout) {
-    FieldOffset = Context.toCharUnitsFromBits(updateExternalFieldOffset(
-        D, Context.toBits(FieldOffset),
-        FieldOffsets.empty() ? 0 : FieldOffsets.back()));
+    FieldOffset = Context.toCharUnitsFromBits(
+        updateExternalFieldOffset(D, Context.toBits(FieldOffset)));
 
     if (!IsUnion && EmptySubobjects) {
       // Record the fact that we're placing a field at this offset.
@@ -2246,16 +2243,30 @@ void ItaniumRecordLayoutBuilder::UpdateAlignment(
   }
 }
 
-uint64_t ItaniumRecordLayoutBuilder::updateExternalFieldOffset(
-    const FieldDecl *Field, uint64_t ComputedOffset, uint64_t PreviousOffset) {
+uint64_t
+ItaniumRecordLayoutBuilder::updateExternalFieldOffset(const FieldDecl *Field,
+                                                      uint64_t ComputedOffset) {
   uint64_t ExternalFieldOffset = External.getExternalFieldOffset(Field);
 
-  // If the externally-supplied field offset is before the field offset we
-  // computed. Check against the previous field offset to make sure we don't
-  // misinterpret overlapping fields as packedness of the structure.
+  // DWARF doesn't tell us whether a structure was declared as packed.
+  // So we try to figure out if the supplied Field is at a packed offset
+  // (i.e., the externally-supplied offset is less than the layout builder
+  // expected).
+  //
+  // There are cases where fields are placed at overlapping offsets (e.g.,
+  // as a result of [[no_unique_address]]). In those cases we don't want
+  // to incorrectly deduce that they are placed at packed offsets. Hence,
+  // ignore empty fields (which are the only fields that can overlap).
+  //
+  // FIXME: emit enough information in DWARF to get rid of InferAlignment.
+  //
+  CXXRecordDecl *CXX = nullptr;
+  if (auto *RT = dyn_cast<RecordType>(Field->getType()))
+    CXX = RT->getAsCXXRecordDecl();
+
   const bool assume_packed = ExternalFieldOffset > 0 &&
                              ExternalFieldOffset < ComputedOffset &&
-                             ExternalFieldOffset > PreviousOffset;
+                             !(CXX && CXX->isEmpty());
 
   if (InferAlignment && assume_packed) {
     Alignment = CharUnits::One();
