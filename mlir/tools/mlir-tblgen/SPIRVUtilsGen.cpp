@@ -98,15 +98,15 @@ public:
   StringRef getMergeInstance() const;
 
   // Returns the underlying LLVM TableGen Record.
-  const llvm::Record *getDef() const { return def; }
+  const Record *getDef() const { return def; }
 
 private:
   // The TableGen definition of this availability.
-  const llvm::Record *def;
+  const Record *def;
 };
 } // namespace
 
-Availability::Availability(const llvm::Record *def) : def(def) {
+Availability::Availability(const Record *def) : def(def) {
   assert(def->isSubClassOf("Availability") &&
          "must be subclass of TableGen 'Availability' class");
 }
