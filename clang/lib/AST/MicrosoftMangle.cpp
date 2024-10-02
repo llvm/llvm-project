@@ -3756,28 +3756,7 @@ void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
 
 void MicrosoftCXXNameMangler::mangleType(const HLSLAttributedResourceType *T,
                                          Qualifiers, SourceRange Range) {
-  mangleType(T->getWrappedType(), SourceRange(), QMM_Escape);
-  const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
-  // map resource class to HLSL virtual register letter
-  switch (Attrs.ResourceClass) {
-  case llvm::dxil::ResourceClass::UAV:
-    Out << 'u';
-    break;
-  case llvm::dxil::ResourceClass::SRV:
-    Out << 't';
-    break;
-  case llvm::dxil::ResourceClass::CBuffer:
-    Out << 'b';
-    break;
-  case llvm::dxil::ResourceClass::Sampler:
-    Out << 's';
-    break;
-  }
-  mangleNumber(Attrs.IsROV);
-  mangleNumber(Attrs.RawBuffer);
-
-  if (T->hasContainedType())
-    mangleType(T->getContainedType(), SourceRange(), QMM_Escape);
+  mangleArtificialTagType(TagTypeKind::Struct, "HLSLAttributedResourceType", {"__hlsl"});
 }
 
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |

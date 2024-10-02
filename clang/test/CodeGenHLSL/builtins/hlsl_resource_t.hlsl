@@ -5,9 +5,9 @@ using handle_float_t = __hlsl_resource_t [[hlsl::resource_class(UAV)]] [[hlsl::c
 // CHECK: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct = type { <4 x float>, <2 x i32>, [8 x i8] }, 1, 0)
 
-// CHECK: define void @"?fa@@YAXU__hlsl_resource_t@@uA@A@M@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
-// CHECK: call void @"?foo1@@YAXU__hlsl_resource_t@@uA@A@M@Z"(target("dx.TypedBuffer", float, 1, 0, 0)
-// CHECK: declare void @"?foo1@@YAXU__hlsl_resource_t@@uA@A@M@Z"(target("dx.TypedBuffer", float, 1, 0, 0))
+// CHECK: define void @"?fa@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
+// CHECK: call void @"?foo1@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %0)
+// CHECK: declare void @"?foo1@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0))
 
 void foo1(handle_float_t res);
 
@@ -15,7 +15,7 @@ void fa(handle_float_t a) {
     foo1(a);
 }
 
-// CHECK: define void @"?fb@@YAXU__hlsl_resource_t@@uA@A@M@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
+// CHECK: define void @"?fb@@YAXUHLSLAttributedResourceType@__hlsl@@@Z"(target("dx.TypedBuffer", float, 1, 0, 0) %a)
 void fb(handle_float_t a) {
     handle_float_t b = a;
 }

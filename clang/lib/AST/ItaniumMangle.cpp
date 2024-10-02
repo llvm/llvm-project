@@ -4493,28 +4493,34 @@ void CXXNameMangler::mangleType(const ArrayParameterType *T) {
 }
 
 void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
-  mangleType(T->getWrappedType());
+  llvm::SmallString<64> Str("_Res");
   const HLSLAttributedResourceType::Attributes &Attrs = T->getAttrs();
   // map resource class to HLSL virtual register letter
   switch (Attrs.ResourceClass) {
-  case llvm::dxil::ResourceClass::UAV:
-    Out << 'u';
+  case llvm::dxil::ResourceClass::UAV: 
+    Str += "_u";
     break;
-  case llvm::dxil::ResourceClass::SRV:
-    Out << 't';
+  case llvm::dxil::ResourceClass::SRV: 
+    Str += "_t";
     break;
   case llvm::dxil::ResourceClass::CBuffer:
-    Out << 'b';
+    Str += "_b";
     break;
   case llvm::dxil::ResourceClass::Sampler:
-    Out << 's';
+    Str += "_s";
     break;
   }
-  mangleNumber(Attrs.IsROV);
-  mangleNumber(Attrs.RawBuffer);
+  mangleVendorQualifier(Str);
+  if (Attrs.IsROV)
+    mangleVendorQualifier("_ROV");
+  if (Attrs.RawBuffer)
+    mangleVendorQualifier("_Raw");
 
-  if (!T->hasContainedType())
+  if (!T->hasContainedType()) {
+    mangleVendorQualifier("__CT");
     mangleType(T->getContainedType());
+  }
+  mangleType(T->getWrappedType());
 }
 
 void CXXNameMangler::mangleIntegerLiteral(QualType T,
