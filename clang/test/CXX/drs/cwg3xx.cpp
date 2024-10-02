@@ -1017,7 +1017,7 @@ namespace cwg357 { // cwg357: yes
   };
   template<typename T> void A<T>::f() {}
   // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'A<T>'}}
-  // expected-note@#defined-here-cwg357 {{defined here}}
+  // expected-note@#defined-here-cwg357-A {{defined here}}
   // expected-note@#cwg357-f {{member declaration does not match because it is const qualified}}
 
   struct B { // #defined-here-cwg357-B
