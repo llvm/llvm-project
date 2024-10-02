@@ -67,6 +67,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       return std::nullopt;
     return llvmType;
   });
+  addConversion([&](amx::TileType type) { return convertAMXTileType(type); });
 
   // LLVM-compatible types are legal, so add a pass-through conversion. Do this
   // before the conversions below since conversions are attempted in reverse
@@ -592,6 +593,12 @@ FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
   for (int i = shape.size() - 2; i >= 0; --i)
     vectorType = LLVM::LLVMArrayType::get(vectorType, shape[i]);
   return vectorType;
+}
+
+/// Convert an AMX tile type to LLVM x86_amx type.
+/// Shape and element type of the tile are ignored.
+Type LLVMTypeConverter::convertAMXTileType(amx::TileType type) const {
+  return LLVM::LLVMX86AMXType::get(&getContext());
 }
 
 /// Convert a type in the context of the default or bare pointer calling
