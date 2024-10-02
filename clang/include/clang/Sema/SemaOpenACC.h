@@ -64,7 +64,20 @@ private:
     /// 'collapse inner loop not a 'for' loop' diagnostic.
     LLVM_PREFERRED_TYPE(bool)
     unsigned TopLevelLoopSeen : 1;
-  } CollapseInfo{nullptr, std::nullopt, false};
+
+    /// Records whether this 'tier' of the loop has already seen a 'for' loop,
+    /// used to diagnose if there are multiple 'for' loops at any one level.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CurLevelHasLoopAlready : 1;
+
+    /// Records whether we've hit a CurCollapseCount of '0' on the way down,
+    /// which allows us to diagnose if the value of 'N' is too large for the
+    /// current number of 'for' loops.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CollapseDepthSatisfied : 1;
+  } CollapseInfo{nullptr, std::nullopt, /*TopLevelLoopSeen=*/false,
+                 /*CurLevelHasLoopAlready=*/false,
+                 /*CollapseDepthSatisfied=*/true};
 
 public:
   // Redeclaration of the version in OpenACCClause.h.
@@ -515,11 +528,26 @@ public:
   class LoopInConstructRAII {
     SemaOpenACC &SemaRef;
     CollapseCheckingInfo OldCollapseInfo;
+    bool PreserveDepth;
 
   public:
-    LoopInConstructRAII(SemaOpenACC &SemaRef)
-        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo) {}
-    ~LoopInConstructRAII() { SemaRef.CollapseInfo = OldCollapseInfo; }
+    LoopInConstructRAII(SemaOpenACC &SemaRef, bool PreserveDepth = true)
+        : SemaRef(SemaRef), OldCollapseInfo(SemaRef.CollapseInfo),
+          PreserveDepth(PreserveDepth) {}
+    ~LoopInConstructRAII() {
+      // The associated-statement level of this should NOT preserve this, as it
+      // is a new construct, but other loop uses need to preserve the depth so
+      // it makes it to the 'top level' for diagnostics.
+      bool CollapseDepthSatisified =
+          PreserveDepth ? SemaRef.CollapseInfo.CollapseDepthSatisfied
+                        : OldCollapseInfo.CollapseDepthSatisfied;
+      bool CurLevelHasLoopAlready =
+          PreserveDepth ? SemaRef.CollapseInfo.CurLevelHasLoopAlready
+                        : OldCollapseInfo.CurLevelHasLoopAlready;
+      SemaRef.CollapseInfo = OldCollapseInfo;
+      SemaRef.CollapseInfo.CollapseDepthSatisfied = CollapseDepthSatisified;
+      SemaRef.CollapseInfo.CurLevelHasLoopAlready = CurLevelHasLoopAlready;
+    }
   };
 
   /// Helper type for the registration/assignment of constructs that need to
