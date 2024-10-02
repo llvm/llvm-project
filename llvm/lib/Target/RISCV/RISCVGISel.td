@@ -95,10 +95,6 @@ def : Pat<(XLenVT (sub GPR:$rs1, simm12Plus1:$imm)),
 let Predicates = [IsRV64] in {
 def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (NegImm $imm)))>;
-
-def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
 }
 
 // Ptr type used in patterns with GlobalISelEmitter
@@ -196,9 +192,9 @@ def : PatGprGpr<sub, SUBW, i32, i32>;
 def : PatGprGpr<and, AND, i32, i32>;
 def : PatGprGpr<or, OR, i32, i32>;
 def : PatGprGpr<xor, XOR, i32, i32>;
-def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
-def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
-def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
+def : PatGprGpr<shl, SLLW, i32, i32>;
+def : PatGprGpr<srl, SRLW, i32, i32>;
+def : PatGprGpr<sra, SRAW, i32, i32>;
 
 def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
@@ -209,9 +205,12 @@ def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
 def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
           (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
-def : PatGprImm<shl, SLLIW, uimm5, i32>;
-def : PatGprImm<srl, SRLIW, uimm5, i32>;
-def : PatGprImm<sra, SRAIW, uimm5, i32>;
+def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
+          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
+          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
+          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : Pat<(i32 (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (i32 (SLLI $rs, (i64 (XLenSubTrailingOnes $mask)))),
@@ -372,7 +371,7 @@ def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
-  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
+  def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i32 i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i32 (riscv_shl_add GPR:$rs1, (i32 i), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
