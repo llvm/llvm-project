@@ -31,6 +31,7 @@
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/Timer.h"
@@ -1073,6 +1074,7 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
 }
 
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
+  llvm::InitializeAllTargetInfos();
   std::string ErrorMessage;
   std::unique_ptr<tooling::CompilationDatabase> Compilations =
       getCompilationDatabase(argc, argv, ErrorMessage);
@@ -1087,6 +1089,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   // when adjusting below.
   Compilations = expandResponseFiles(std::move(Compilations),
                                      llvm::vfs::getRealFileSystem());
+
+  Compilations = inferTargetAndDriverMode(std::move(Compilations));
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
