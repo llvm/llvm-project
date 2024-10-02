@@ -3,6 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: wasm-ld -m wasm32 -Bdynamic %t.o %t.lib.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
 	.functype	ret32 (f32) -> (i32)
 	.functype	_start () -> ()
@@ -27,3 +28,10 @@ f_p:
 # CHECK:   - Type:            EXPORT
 # CHECK:       - Name:            __wasm_apply_data_relocs
 # CHECK-NEXT:         Kind:            FUNCTION
+
+# DIS:    <__wasm_apply_data_relocs>:
+# DIS-EMPTY:
+# DIS-NEXT:    i32.const       1024
+# DIS-NEXT:    global.get      0
+# DIS-NEXT:    i32.store       0
+# DIS-NEXT:    end
