@@ -840,7 +840,7 @@ buildDefaultVLOps(const DstOp &Dst, MachineIRBuilder &MIB,
   assert(VecTy.isScalableVector() && "Expecting scalable container type");
   const RISCVSubtarget &STI = MIB.getMF().getSubtarget<RISCVSubtarget>();
   LLT XLenTy(STI.getXLenVT());
-  auto VL = MIB.buildConstant(XLenTy, RISCV::VLMaxSentinel);
+  auto VL = MIB.buildConstant(XLenTy, -1);
   auto Mask = buildAllOnesMask(VecTy, VL, MIB, MRI);
   return {Mask, VL};
 }
