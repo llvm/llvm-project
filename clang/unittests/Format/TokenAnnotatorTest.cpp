@@ -636,6 +636,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsTernaryInTemplate) {
   EXPECT_TOKEN(Tokens[8], tok::greater, TT_TemplateCloser);
 }
 
+TEST_F(TokenAnnotatorTest, FatArrowInAngleBrackets) {
+  auto Tokens = annotate("foo = new Bar<(id: int) => X | Y>();",
+                         getLLVMStyle(FormatStyle::LK_JavaScript));
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[10], tok::equal, TT_FatArrow);
+  EXPECT_TOKEN(Tokens[14], tok::greater, TT_TemplateCloser);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsNonTemplateAngleBrackets) {
   auto Tokens = annotate("return a < b && c > d;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
