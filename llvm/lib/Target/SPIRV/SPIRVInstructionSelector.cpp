@@ -229,6 +229,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectRadians(Register ResVReg, const SPIRVType *ResType,
+                     MachineInstr &I) const;
+
   bool selectUnmergeValues(MachineInstr &I) const;
 
   // Utilities
@@ -1751,6 +1754,45 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+<<<<<<< HEAD
+=======
+bool SPIRVInstructionSelector::selectStep(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Step)
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectRadians(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+  assert(I.getOperand(2).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Radians)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+>>>>>>> c520937ac3f9 (Added radians selection for spirv)
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I) const {
@@ -2533,6 +2575,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
   case Intrinsic::spv_step:
+<<<<<<< HEAD
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
@@ -2542,6 +2585,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::instrprof_value_profile:
     break;
   // Discard internal intrinsics.
+=======
+    return selectStep(ResVReg, ResType, I);
+  case Intrinsic::spv_radians:
+    return selectRadians(ResVReg, ResType, I);
+>>>>>>> c520937ac3f9 (Added radians selection for spirv)
   case Intrinsic::spv_value_md:
     break;
   default: {
