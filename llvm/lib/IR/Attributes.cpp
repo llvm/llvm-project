@@ -1802,9 +1802,9 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
     return *this;
 
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  auto IndexIt = index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
   for (unsigned Idx : IndexIt) {
-    fprintf(stderr, "Checking Idx: %u\n", Idx);
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.
