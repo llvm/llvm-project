@@ -259,6 +259,99 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   llvm::copy(A, getFinalsConditions().begin());
 }
 
+OMPOpaqueBlockDirective *OMPOpaqueBlockDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses,
+    Stmt *AssociatedStmt, Expr *TaskRedRef, bool HasCancel,
+    OpenMPDirectiveKind CancelRegion, const DeclarationNameInfo &DirName) {
+  // The child is TaskReductionRefExpr.
+  auto *Dir = createDirective<OMPOpaqueBlockDirective>(
+      C, Clauses, AssociatedStmt, /*NumChildren=*/1, DKind, StartLoc, EndLoc);
+  Dir->setTaskReductionRefExpr(TaskRedRef);
+  Dir->setHasCancel(HasCancel);
+  Dir->setCancelRegion(CancelRegion);
+  Dir->setDirectiveName(DirName);
+  return Dir;
+}
+
+OMPOpaqueBlockDirective *OMPOpaqueBlockDirective::CreateEmpty(
+    const ASTContext &C, OpenMPDirectiveKind DKind, unsigned NumClauses,
+    bool HasAssociatedStmt, EmptyShell) {
+  // The child is TaskReductionRefExpr.
+  return createEmptyDirective<OMPOpaqueBlockDirective>(
+      C, NumClauses, HasAssociatedStmt, /*NumChildren=*/1, DKind);
+}
+
+OMPOpaqueLoopDirective *OMPOpaqueLoopDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    OpenMPDirectiveKind Kind, unsigned CollapsedNum,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+    const HelperExprs &Exprs, Expr *TaskRedRef, bool HasCancel) {
+  // The +1 in the number of children is for TaskReductionRefExpr.
+  auto *Dir = createDirective<OMPOpaqueLoopDirective>(
+      C, Clauses, AssociatedStmt, numLoopChildren(CollapsedNum, Kind) + 1, Kind,
+      StartLoc, EndLoc, CollapsedNum);
+  Dir->setIterationVariable(Exprs.IterationVarRef);
+  Dir->setLastIteration(Exprs.LastIteration);
+  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
+  Dir->setPreCond(Exprs.PreCond);
+  Dir->setCond(Exprs.Cond);
+  Dir->setInit(Exprs.Init);
+  Dir->setInc(Exprs.Inc);
+  Dir->setPreInits(Exprs.PreInits);
+
+  if (isOpenMPWorksharingDirective(Kind) ||
+      isOpenMPGenericLoopDirective(Kind) || isOpenMPTaskLoopDirective(Kind) ||
+      isOpenMPDistributeDirective(Kind)) {
+    Dir->setIsLastIterVariable(Exprs.IL);
+    Dir->setLowerBoundVariable(Exprs.LB);
+    Dir->setUpperBoundVariable(Exprs.UB);
+    Dir->setStrideVariable(Exprs.ST);
+    Dir->setEnsureUpperBound(Exprs.EUB);
+    Dir->setNextLowerBound(Exprs.NLB);
+    Dir->setNextUpperBound(Exprs.NUB);
+    Dir->setNumIterations(Exprs.NumIterations);
+  }
+
+  if (isOpenMPLoopBoundSharingDirective(Kind)) {
+    Dir->setPrevLowerBoundVariable(Exprs.PrevLB);
+    Dir->setPrevUpperBoundVariable(Exprs.PrevUB);
+    Dir->setDistInc(Exprs.DistInc);
+    Dir->setPrevEnsureUpperBound(Exprs.PrevEUB);
+    Dir->setCombinedLowerBoundVariable(Exprs.DistCombinedFields.LB);
+    Dir->setCombinedUpperBoundVariable(Exprs.DistCombinedFields.UB);
+    Dir->setCombinedEnsureUpperBound(Exprs.DistCombinedFields.EUB);
+    Dir->setCombinedInit(Exprs.DistCombinedFields.Init);
+    Dir->setCombinedCond(Exprs.DistCombinedFields.Cond);
+    Dir->setCombinedNextLowerBound(Exprs.DistCombinedFields.NLB);
+    Dir->setCombinedNextUpperBound(Exprs.DistCombinedFields.NUB);
+    Dir->setCombinedDistCond(Exprs.DistCombinedFields.DistCond);
+    Dir->setCombinedParForInDistCond(Exprs.DistCombinedFields.ParForInDistCond);
+  }
+
+  Dir->setCounters(Exprs.Counters);
+  Dir->setPrivateCounters(Exprs.PrivateCounters);
+  Dir->setInits(Exprs.Inits);
+  Dir->setUpdates(Exprs.Updates);
+  Dir->setFinals(Exprs.Finals);
+  Dir->setDependentCounters(Exprs.DependentCounters);
+  Dir->setDependentInits(Exprs.DependentInits);
+  Dir->setFinalsConditions(Exprs.FinalsConditions);
+
+  Dir->setTaskReductionRefExpr(TaskRedRef);
+  Dir->setHasCancel(HasCancel);
+  return Dir;
+}
+
+OMPOpaqueLoopDirective *OMPOpaqueLoopDirective::CreateEmpty(
+    const ASTContext &C, OpenMPDirectiveKind Kind, unsigned NumClauses,
+    unsigned CollapsedNum, EmptyShell) {
+  // The +1 in the number of children is for TaskReductionRefExpr.
+  return createEmptyDirective<OMPOpaqueLoopDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true,
+      numLoopChildren(CollapsedNum, Kind) + 1, Kind, CollapsedNum);
+}
+
 OMPMetaDirective *OMPMetaDirective::Create(const ASTContext &C,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc,

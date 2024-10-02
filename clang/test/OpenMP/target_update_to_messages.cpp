@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=40 -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp -fopenmp-version=45 -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,le51 -fopenmp-simd -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=40 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le51 -fopenmp-simd -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=40 -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,le45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 150 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -105,24 +105,24 @@ T tmain(T argc) {
   const T (&l)[5] = da;
   S7 s7;
 
-#pragma omp target update to // expected-error {{expected '(' after 'to'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to() // expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update() // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
-#pragma omp target update to(alloc) // expected-error {{use of undeclared identifier 'alloc'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to // expected-error {{expected '(' after 'to'}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to( // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected expression}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to() // expected-error {{expected expression}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update() // expected-warning {{extra tokens at the end of '#pragma omp target update' are ignored}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(alloc) // expected-error {{use of undeclared identifier 'alloc'}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(x)
 #pragma omp target update to(t[:I])
-#pragma omp target update to(T) // expected-error {{'T' does not refer to a value}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(T) // expected-error {{'T' does not refer to a value}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(I) // le51-error 2 {{expected addressable lvalue in 'to' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update to(S2::S2s)
 #pragma omp target update to(S2::S2sc)
 #pragma omp target update to(to)
 #pragma omp target update to(y x) // expected-error {{expected ',' or ')' in 'to' clause}}
 #pragma omp target update to(argc > 0 ? x : y) // le51-error 2 {{expected addressable lvalue in 'to' clause}} le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
-#pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(S1) // expected-error {{'S1' does not refer to a value}}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
 #pragma omp target update to(ba)
-#pragma omp target update to(h) // expected-error {{threadprivate variables are not allowed in 'to' clause}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(h) // expected-error {{threadprivate variables are not allowed in 'to' clause}} expected-error 2 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update to(k), from(k) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
 #pragma omp target update to(t), to(t[:5]) // expected-error 2 {{variable can appear only once in OpenMP 'target update' construct}} expected-note 2 {{used here}}
 #pragma omp target update to(da)

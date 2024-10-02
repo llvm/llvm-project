@@ -71,7 +71,7 @@ int template_test() {
 //DUMP: FunctionTemplateDecl {{.*}}run
 //DUMP: TemplateTypeParmDecl {{.*}}referenced typename depth 0 index 0 T
 //DUMP: FunctionDecl {{.*}}run 'T ()'
-//DUMP: OMPScopeDirective
+//DUMP: OMPOpaqueBlockDirective{{.*}}'scope'
 //DUMP: OMPPrivateClause
 //DUMP: DeclRefExpr {{.*}}'T' lvalue Var {{.*}} 'a' 'T'
 //DUMP: OMPReductionClause

@@ -1410,6 +1410,12 @@ class CursorKind(BaseEnumeration):
     # OpenMP scope directive.
     OMP_SCOPE_DIRECTIVE = 306
 
+    # OpenMP opaque block-associated directive.
+    OMP_OPAQUE_BLOCK_DIRECTIVE = 310
+
+    # OpenMP opaque loop-associated directive.
+    OMP_OPAQUE_LOOP_DIRECTIVE = 311
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
