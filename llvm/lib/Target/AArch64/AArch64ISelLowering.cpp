@@ -4301,6 +4301,29 @@ static SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(1));
 }
 
+// Converts SETCC (AND X Y) Z ULT -> SETCC (AND X (Y & ~(Z - 1)) 0 EQ when Y is
+// a power of 2. This is then lowered to ANDS X (Y & ~(Z - 1)) instead of SUBS
+// (AND X Y) Z which produces a better opt with EmitComparison
+static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
+                                SelectionDAG &DAG, const SDLoc dl) {
+  if (CC == ISD::SETULT && LHS.getOpcode() == ISD::AND && LHS->hasOneUse()) {
+    ConstantSDNode *LHSConstOp = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+    if (LHSConstOp && RHSConst) {
+      uint64_t lhsConstValue = LHSConstOp->getZExtValue();
+      uint64_t rhsConstant = RHSConst->getZExtValue();
+      if (isPowerOf2_64(rhsConstant)) {
+        uint64_t newMaskValue = lhsConstValue & ~(rhsConstant - 1);
+        LHS =
+            DAG.getNode(ISD::AND, dl, LHS.getValueType(), LHS.getOperand(0),
+                        DAG.getConstant(newMaskValue, dl, LHS.getValueType()));
+        RHS = DAG.getConstant(0, dl, RHS.getValueType());
+        CC = ISD::SETEQ;
+      }
+    }
+  }
+}
+
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -10589,6 +10612,9 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
+
+    simplifySetCCIntoEq(CC, LHS, RHS, DAG, dl);
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(
         LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);

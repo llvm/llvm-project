@@ -5,9 +5,8 @@
 define i1 @lt8_u8(i8 %0) {
 ; CHECK-LABEL: lt8_u8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, #8
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w0, #0xf8
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = icmp ult i8 %0, 8
   ret i1 %2
@@ -16,9 +15,8 @@ define i1 @lt8_u8(i8 %0) {
 define i1 @lt32_u8(i8 %0) {
 ; CHECK-LABEL: lt32_u8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, #32
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w0, #0xe0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = icmp ult i8 %0, 32
   ret i1 %2
@@ -27,9 +25,8 @@ define i1 @lt32_u8(i8 %0) {
 define i1 @lt64_u8(i8 %0) {
 ; CHECK-LABEL: lt64_u8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    cmp w8, #64
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w0, #0xc0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = icmp ult i8 %0, 64
   ret i1 %2
@@ -98,10 +95,9 @@ define i1 @lt64_u64(i64 %0) {
 define i1 @lt8_u16_and_5(i8 %0) {
 ; CHECK-LABEL: lt8_u16_and_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5 // =0x5
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i8 %0, 5
   %3 = icmp ult i8 %2, 16
@@ -111,10 +107,8 @@ define i1 @lt8_u16_and_5(i8 %0) {
 define i1 @lt8_u16_and_19(i8 %0) {
 ; CHECK-LABEL: lt8_u16_and_19:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #19 // =0x13
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w0, #0x10
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i8 %0, 19
   %3 = icmp ult i8 %2, 16
@@ -124,9 +118,9 @@ define i1 @lt8_u16_and_19(i8 %0) {
 define i1 @lt32_u16_and_7(i32 %0) {
 ; CHECK-LABEL: lt32_u16_and_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x7
-; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 7
   %3 = icmp ult i32 %2, 16
@@ -136,10 +130,8 @@ define i1 @lt32_u16_and_7(i32 %0) {
 define i1 @lt32_u16_and_21(i32 %0) {
 ; CHECK-LABEL: lt32_u16_and_21:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #21 // =0x15
-; CHECK-NEXT:    and w8, w0, w8
-; CHECK-NEXT:    cmp w8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst w0, #0x10
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 21
   %3 = icmp ult i32 %2, 16
@@ -149,10 +141,9 @@ define i1 @lt32_u16_and_21(i32 %0) {
 define i1 @lt64_u16_and_9(i64 %0) {
 ; CHECK-LABEL: lt64_u16_and_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #9 // =0x9
-; CHECK-NEXT:    and x8, x0, x8
-; CHECK-NEXT:    cmp x8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 9
   %3 = icmp ult i64 %2, 16
@@ -162,10 +153,8 @@ define i1 @lt64_u16_and_9(i64 %0) {
 define i1 @lt64_u16_and_23(i64 %0) {
 ; CHECK-LABEL: lt64_u16_and_23:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23 // =0x17
-; CHECK-NEXT:    and x8, x0, x8
-; CHECK-NEXT:    cmp x8, #16
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    tst x0, #0x10
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 23
   %3 = icmp ult i64 %2, 16
