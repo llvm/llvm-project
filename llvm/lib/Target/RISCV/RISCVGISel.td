@@ -50,10 +50,13 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
-def GIVLOpS32 : GIComplexOperandMatcher<s32, "renderVLOp">,
-                GIComplexPatternEquiv<VLOp>;
-def GIVLOpS64 : GIComplexOperandMatcher<s64, "renderVLOp">,
-                GIComplexPatternEquiv<VLOp>;
+// FIXME: This is labelled as handling 's32', however the ComplexPattern it
+// refers to handles both i32 and i64 based on the HwMode. Currently this LLT
+// parameter appears to be ignored so this pattern works for both, however we
+// should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
+// here.
+def GIVLOp : GIComplexOperandMatcher<s32, "renderVLOp">,
+             GIComplexPatternEquiv<VLOp>;
 
 // Convert from i32 immediate to i64 target immediate to make SelectionDAG type
 // checking happy so we can use ADDIW which expects an XLen immediate.
