@@ -18892,6 +18892,14 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         retType, CGM.getHLSLRuntime().getSignIntrinsic(),
         ArrayRef<Value *>{Op0}, nullptr, "hlsl.sign");
   }
+  case Builtin::BI__builtin_hlsl_elementwise_radians: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    if (!E->getArg(0)->getType()->hasFloatingRepresentation())
+      llvm_unreachable("radians operand must have a float representation");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getRadiansIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.radians");
+  }
   }
   return nullptr;
 }
