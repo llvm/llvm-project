@@ -494,15 +494,14 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
     return false;
 
   const unsigned Size = Ty.getSizeInBits();
+  if (Ty.isPointerVector())
+    return true;
   if (Size <= 64)
     return false;
   // Address space 8 pointers get their own workaround.
   if (hasBufferRsrcWorkaround(Ty))
     return false;
   if (!Ty.isVector())
-    return true;
-
-  if (Ty.isPointerVector())
     return true;
 
   unsigned EltSize = Ty.getScalarSizeInBits();
@@ -5806,7 +5805,7 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(MachineIRBuilder &B,
   if (hasBufferRsrcWorkaround(Ty))
     return castBufferRsrcToV4I32(VData, B);
 
-  if (shouldBitcastLoadStoreType(ST, Ty, MemTy) || Ty.isPointerVector()) {
+  if (shouldBitcastLoadStoreType(ST, Ty, MemTy)) {
     Ty = getBitcastRegisterType(Ty);
     VData = B.buildBitcast(Ty, VData).getReg(0);
   }
@@ -6000,7 +5999,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     Dst = MI.getOperand(0).getReg();
     B.setInsertPt(B.getMBB(), MI);
   }
-  if (shouldBitcastLoadStoreType(ST, Ty, MemTy) || Ty.isPointerVector()) {
+  if (shouldBitcastLoadStoreType(ST, Ty, MemTy)) {
     Ty = getBitcastRegisterType(Ty);
     Observer.changingInstr(MI);
     Helper.bitcastDst(MI, Ty, 0);
