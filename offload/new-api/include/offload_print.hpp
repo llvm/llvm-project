@@ -13,9 +13,11 @@
 #include <offload_api.h>
 #include <ostream>
 
-
-template <typename T> inline offload_result_t printPtr(std::ostream &os, const T *ptr);
-template <typename T> inline void printTagged(std::ostream &os, const void *ptr, T value, size_t size);
+template <typename T>
+inline offload_result_t printPtr(std::ostream &os, const T *ptr);
+template <typename T>
+inline void printTagged(std::ostream &os, const void *ptr, T value,
+                        size_t size);
 template <typename T> struct is_handle : std::false_type {};
 template <> struct is_handle<offload_platform_handle_t> : std::true_type {};
 template <> struct is_handle<offload_device_handle_t> : std::true_type {};
@@ -23,10 +25,14 @@ template <> struct is_handle<offload_context_handle_t> : std::true_type {};
 template <typename T> inline constexpr bool is_handle_v = is_handle<T>::value;
 
 inline std::ostream &operator<<(std::ostream &os, enum offload_result_t value);
-inline std::ostream &operator<<(std::ostream &os, enum offload_platform_info_t value);
-inline std::ostream &operator<<(std::ostream &os, enum offload_platform_backend_t value);
-inline std::ostream &operator<<(std::ostream &os, enum offload_device_type_t value);
-inline std::ostream &operator<<(std::ostream &os, enum offload_device_info_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_platform_info_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_platform_backend_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_device_type_t value);
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_device_info_t value);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the offload_result_t type
@@ -94,7 +100,8 @@ inline std::ostream &operator<<(std::ostream &os, enum offload_result_t value) {
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the offload_platform_info_t type
 /// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum offload_platform_info_t value) {
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_platform_info_t value) {
   switch (value) {
   case OFFLOAD_PLATFORM_INFO_NAME:
     os << "OFFLOAD_PLATFORM_INFO_NAME";
@@ -119,7 +126,8 @@ inline std::ostream &operator<<(std::ostream &os, enum offload_platform_info_t v
 /// @brief Print type-tagged offload_platform_info_t enum value
 /// @returns std::ostream &
 template <>
-inline void printTagged(std::ostream &os, const void *ptr, offload_platform_info_t value, size_t size) {
+inline void printTagged(std::ostream &os, const void *ptr,
+                        offload_platform_info_t value, size_t size) {
   if (ptr == NULL) {
     printPtr(os, ptr);
     return;
@@ -127,19 +135,20 @@ inline void printTagged(std::ostream &os, const void *ptr, offload_platform_info
 
   switch (value) {
   case OFFLOAD_PLATFORM_INFO_NAME: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   case OFFLOAD_PLATFORM_INFO_VENDOR_NAME: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   case OFFLOAD_PLATFORM_INFO_VERSION: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   case OFFLOAD_PLATFORM_INFO_BACKEND: {
-    const offload_platform_backend_t * const tptr = (const offload_platform_backend_t * const)ptr;
+    const offload_platform_backend_t *const tptr =
+        (const offload_platform_backend_t *const)ptr;
     os << (const void *)tptr << " (";
     os << *tptr;
     os << ")";
@@ -153,7 +162,8 @@ inline void printTagged(std::ostream &os, const void *ptr, offload_platform_info
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the offload_platform_backend_t type
 /// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum offload_platform_backend_t value) {
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_platform_backend_t value) {
   switch (value) {
   case OFFLOAD_PLATFORM_BACKEND_UNKNOWN:
     os << "OFFLOAD_PLATFORM_BACKEND_UNKNOWN";
@@ -174,7 +184,8 @@ inline std::ostream &operator<<(std::ostream &os, enum offload_platform_backend_
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the offload_device_type_t type
 /// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum offload_device_type_t value) {
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_device_type_t value) {
   switch (value) {
   case OFFLOAD_DEVICE_TYPE_DEFAULT:
     os << "OFFLOAD_DEVICE_TYPE_DEFAULT";
@@ -198,7 +209,8 @@ inline std::ostream &operator<<(std::ostream &os, enum offload_device_type_t val
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the offload_device_info_t type
 /// @returns std::ostream &
-inline std::ostream &operator<<(std::ostream &os, enum offload_device_info_t value) {
+inline std::ostream &operator<<(std::ostream &os,
+                                enum offload_device_info_t value) {
   switch (value) {
   case OFFLOAD_DEVICE_INFO_TYPE:
     os << "OFFLOAD_DEVICE_INFO_TYPE";
@@ -226,7 +238,8 @@ inline std::ostream &operator<<(std::ostream &os, enum offload_device_info_t val
 /// @brief Print type-tagged offload_device_info_t enum value
 /// @returns std::ostream &
 template <>
-inline void printTagged(std::ostream &os, const void *ptr, offload_device_info_t value, size_t size) {
+inline void printTagged(std::ostream &os, const void *ptr,
+                        offload_device_info_t value, size_t size) {
   if (ptr == NULL) {
     printPtr(os, ptr);
     return;
@@ -234,29 +247,31 @@ inline void printTagged(std::ostream &os, const void *ptr, offload_device_info_t
 
   switch (value) {
   case OFFLOAD_DEVICE_INFO_TYPE: {
-    const offload_device_type_t * const tptr = (const offload_device_type_t * const)ptr;
+    const offload_device_type_t *const tptr =
+        (const offload_device_type_t *const)ptr;
     os << (const void *)tptr << " (";
     os << *tptr;
     os << ")";
     break;
   }
   case OFFLOAD_DEVICE_INFO_PLATFORM: {
-    const offload_platform_handle_t * const tptr = (const offload_platform_handle_t * const)ptr;
+    const offload_platform_handle_t *const tptr =
+        (const offload_platform_handle_t *const)ptr;
     os << (const void *)tptr << " (";
     os << *tptr;
     os << ")";
     break;
   }
   case OFFLOAD_DEVICE_INFO_NAME: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   case OFFLOAD_DEVICE_INFO_VENDOR: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   case OFFLOAD_DEVICE_INFO_DRIVER_VERSION: {
-    printPtr(os, (const char*) ptr);
+    printPtr(os, (const char *)ptr);
     break;
   }
   default:
@@ -265,7 +280,9 @@ inline void printTagged(std::ostream &os, const void *ptr, offload_device_info_t
   }
 }
 
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct offload_get_error_details_params_t *params) {
+inline std::ostream &operator<<(
+    std::ostream &os,
+    [[maybe_unused]] const struct offload_get_error_details_params_t *params) {
   os << ".SizeRet = ";
   printPtr(os, *params->pSizeRet);
   os << ", ";
@@ -274,15 +291,17 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct offload_platform_get_params_t *params) {
+inline std::ostream &operator<<(
+    std::ostream &os,
+    [[maybe_unused]] const struct offload_platform_get_params_t *params) {
   os << ".NumEntries = ";
   os << *params->pNumEntries;
   os << ", ";
   os << ".phPlatforms = ";
   os << "{";
-  for (size_t i = 0; i < *params->pNumEntries; i++){
+  for (size_t i = 0; i < *params->pNumEntries; i++) {
     if (i > 0) {
-       os << ", ";
+      os << ", ";
     }
     printPtr(os, (*params->pphPlatforms)[i]);
   }
@@ -293,7 +312,9 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct offload_platform_get_info_params_t *params) {
+inline std::ostream &operator<<(
+    std::ostream &os,
+    [[maybe_unused]] const struct offload_platform_get_info_params_t *params) {
   os << ".hPlatform = ";
   printPtr(os, *params->phPlatform);
   os << ", ";
@@ -311,7 +332,9 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct offload_device_get_params_t *params) {
+inline std::ostream &
+operator<<(std::ostream &os,
+           [[maybe_unused]] const struct offload_device_get_params_t *params) {
   os << ".hPlatform = ";
   printPtr(os, *params->phPlatform);
   os << ", ";
@@ -323,9 +346,9 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
   os << ", ";
   os << ".phDevices = ";
   os << "{";
-  for (size_t i = 0; i < *params->pNumEntries; i++){
+  for (size_t i = 0; i < *params->pNumEntries; i++) {
     if (i > 0) {
-       os << ", ";
+      os << ", ";
     }
     printPtr(os, (*params->pphDevices)[i]);
   }
@@ -336,7 +359,9 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
   return os;
 }
 
-inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct offload_device_get_info_params_t *params) {
+inline std::ostream &operator<<(
+    std::ostream &os,
+    [[maybe_unused]] const struct offload_device_get_info_params_t *params) {
   os << ".hDevice = ";
   printPtr(os, *params->phDevice);
   os << ", ";
@@ -356,25 +381,25 @@ inline std::ostream &operator<<(std::ostream &os, [[maybe_unused]] const struct 
 
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename T> inline offload_result_t printPtr(std::ostream &os, const T *ptr) {
-    if (ptr == nullptr) {
-        os << "nullptr";
-    } else if constexpr (std::is_pointer_v<T>) {
-        os << (const void *)(ptr) << " (";
-        printPtr(os, *ptr);
-        os << ")";
-    } else if constexpr (std::is_void_v<T> || is_handle_v<T *>) {
-        os << (const void *)ptr;
-    } else if constexpr (std::is_same_v<std::remove_cv_t< T >, char>) {
-        os << (const void *)(ptr) << " (";
-        os << ptr;
-        os << ")";
-    } else {
-        os << (const void *)(ptr) << " (";
-        os << *ptr;
-        os << ")";
-    }
+template <typename T>
+inline offload_result_t printPtr(std::ostream &os, const T *ptr) {
+  if (ptr == nullptr) {
+    os << "nullptr";
+  } else if constexpr (std::is_pointer_v<T>) {
+    os << (const void *)(ptr) << " (";
+    printPtr(os, *ptr);
+    os << ")";
+  } else if constexpr (std::is_void_v<T> || is_handle_v<T *>) {
+    os << (const void *)ptr;
+  } else if constexpr (std::is_same_v<std::remove_cv_t<T>, char>) {
+    os << (const void *)(ptr) << " (";
+    os << ptr;
+    os << ")";
+  } else {
+    os << (const void *)(ptr) << " (";
+    os << *ptr;
+    os << ")";
+  }
 
-    return OFFLOAD_RESULT_SUCCESS;
+  return OFFLOAD_RESULT_SUCCESS;
 }
-  

@@ -70,6 +70,6 @@ void EmitOffloadImplFuncDecls(RecordKeeper &Records, raw_ostream &OS) {
         OS << ");";
       }
     }
-    OS << "\n";
+    OS << "\n\n";
   }
 }
