@@ -328,11 +328,11 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
         continue;
     } else {
       // Check we did not make it worse for other instructions.
-      auto I = std::lower_bound(Candidates.begin(), &C, MinInd,
+      auto *I = std::lower_bound(Candidates.begin(), &C, MinInd,
                                 [this](const Candidate &C, SlotIndex I) {
                                   return LIS->getInstructionIndex(*C.first) < I;
                                 });
-      for (auto E = Candidates.end(); Success && I != E &&
+      for (auto *E = Candidates.end(); Success && I != E &&
               LIS->getInstructionIndex(*I->first) < MaxInd; ++I) {
         if (I->second && CheckNSA(*I->first, true) < NSA_Status::CONTIGUOUS) {
           Success = false;

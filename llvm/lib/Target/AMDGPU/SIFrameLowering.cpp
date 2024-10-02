@@ -749,7 +749,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     // at offset 0 (or offset 16 for a compute shader).
     MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
     const MCInstrDesc &LoadDwordX4 = TII->get(AMDGPU::S_LOAD_DWORDX4_IMM);
-    auto MMO = MF.getMachineMemOperand(PtrInfo,
+    auto *MMO = MF.getMachineMemOperand(PtrInfo,
                                        MachineMemOperand::MOLoad |
                                            MachineMemOperand::MOInvariant |
                                            MachineMemOperand::MODereferenceable,
@@ -800,7 +800,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
 
         MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
-        auto MMO = MF.getMachineMemOperand(
+        auto *MMO = MF.getMachineMemOperand(
             PtrInfo,
             MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                 MachineMemOperand::MODereferenceable,
