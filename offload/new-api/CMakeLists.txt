@@ -1,27 +1,8 @@
-set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/API/OffloadAPI.td)
-list(APPEND LLVM_TABLEGEN_FLAGS -I ${CMAKE_CURRENT_SOURCE_DIR}/API)
-
-tablegen(OFFLOAD offload_api.h -gen-api)
-tablegen(OFFLOAD offload_funcs.inc -gen-func-names)
-tablegen(OFFLOAD offload_impl_func_decls.inc -gen-impl-func-decls)
-tablegen(OFFLOAD offload_entry_points.inc -gen-entry-points)
-tablegen(OFFLOAD offload_print.hpp -gen-print-header)
-tablegen(OFFLOAD offload_exports -gen-exports)
-
-foreach(itm IN LISTS TABLEGEN_OUTPUT)
-    message(${itm})
-endforeach()
-
-set(OFFLOAD_GENERATED_FILES ${TABLEGEN_OUTPUT})
-add_public_tablegen_target(OffloadGenerate)
-
-add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E copy_if_different ${OFFLOAD_GENERATED_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/include")
+add_subdirectory(API)
 
 add_llvm_library(offload_new SHARED
                 src/offload_lib.cpp
-                src/offload_impl.cpp
-                DEPENDS OffloadGenerate)
+                src/offload_impl.cpp)
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
     target_link_libraries(offload_new PRIVATE omptarget.rtl.${plugin})
