@@ -282,7 +282,7 @@ void SPIRVModuleAnalysis::collectGlobalEntities(
 void SPIRVModuleAnalysis::processDefInstrs(const Module &M) {
   std::vector<SPIRV::DTSortableEntry *> DepsGraph;
 
-  GR->buildDepsGraph(DepsGraph, SPVDumpDeps ? MMI : nullptr);
+  GR->buildDepsGraph(DepsGraph, TII, SPVDumpDeps ? MMI : nullptr);
 
   collectGlobalEntities(
       DepsGraph, SPIRV::MB_TypeConstVars,
