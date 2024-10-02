@@ -5517,12 +5517,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         auto *Inst2 = dyn_cast<Instruction>(EE2->getOperand(0));
         auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
         auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
-        if ((!Inst1 && !Inst2) || (!P1 && !P2))
-          return false;
+        if (!Inst2 && !P2)
+          return Inst1 || P1;
         if (EE1->getOperand(0) == EE2->getOperand(0))
           return getElementIndex(EE1) < getElementIndex(EE2);
-        if (Inst1 && !Inst2)
-          return true;
         if (!Inst1 && Inst2)
           return false;
         if (Inst1 && Inst2) {
@@ -5530,8 +5528,6 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
             return CompareByBasicBlocks(Inst1->getParent(), Inst2->getParent());
           return Inst1->comesBefore(Inst2);
         }
-        if (P1 && !P2)
-          return true;
         if (!P1 && P2)
           return false;
         assert(P1 && P2 &&
