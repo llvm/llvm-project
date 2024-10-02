@@ -46,13 +46,13 @@ A(T...) -> A<int, sizeof...(T)> requires (sizeof...(T) == 2); // #cwg2707-guide-
 A a = {1, 2};
 
 A b = {3, 4, 5};
-// since-cxx20-error@-1 {{no viable constructor or deduction guide}} \
-// since-cxx20-note@#cwg2707-A {{candidate function template not viable}} \
-// since-cxx20-note@#cwg2707-A {{implicit deduction guide}} \
-// since-cxx20-note@#cwg2707-guide-A {{constraints not satisfied}} \
-// since-cxx20-note@#cwg2707-guide-A {{because 'sizeof...(T) == 2' (3 == 2) evaluated to false}} \
-// since-cxx20-note@#cwg2707-A {{candidate function template not viable}} \
-// since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
+// since-cxx20-error@-1 {{no viable constructor or deduction guide}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
+//   since-cxx20-note@#cwg2707-guide-A {{constraints not satisfied}}
+//   since-cxx20-note@#cwg2707-guide-A {{because 'sizeof...(T) == 2' (3 == 2) evaluated to false}}
+//   since-cxx20-note@#cwg2707-A {{candidate function template not viable}}
+//   since-cxx20-note@#cwg2707-A {{implicit deduction guide}}
 
 #endif
 
