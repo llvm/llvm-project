@@ -25,6 +25,10 @@ f_p:
 # CHECK-NEXT:   - Type:            CUSTOM
 # CHECK-NEXT:     Name:            dylink.0
 
+# non-pie executable doesn't import __memory_base
+# CHECK:   - Type:            IMPORT
+# CHECK-NOT: Field:           __memory_base
+
 # CHECK:   - Type:            EXPORT
 # CHECK:       - Name:            __wasm_apply_data_relocs
 # CHECK-NEXT:         Kind:            FUNCTION
