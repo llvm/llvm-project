@@ -95,7 +95,7 @@ define <vscale x 2 x i32> @masked_gather_and_zero_inactive_7(<vscale x 2 x ptr> 
 define <vscale x 2 x float> @masked_gather_and_zero_inactive_8(<vscale x 2 x ptr> %ptr, <vscale x 2 x i1> %inv_mask, <vscale x 2 x i1> %cond) {
 ; CHECK-LABEL: @masked_gather_and_zero_inactive_8(
 ; CHECK-NEXT:    [[MASK:%.*]] = xor <vscale x 2 x i1> [[INV_MASK:%.*]], shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[PG:%.*]] = and <vscale x 2 x i1> [[MASK]], [[COND:%.*]]
+; CHECK-NEXT:    [[PG:%.*]] = and <vscale x 2 x i1> [[COND:%.*]], [[MASK]]
 ; CHECK-NEXT:    [[GATHER:%.*]] = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> [[PTR:%.*]], i32 4, <vscale x 2 x i1> [[PG]], <vscale x 2 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[GATHER]]
 ;

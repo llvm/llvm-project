@@ -139,7 +139,7 @@ define float @test15_reassoc_nsz(float %b, float %a) {
 define float @test15_reassoc(float %b, float %a) {
 ; CHECK-LABEL: @test15_reassoc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc float [[A:%.*]], 1.234000e+03
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc float [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc float [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc float 0.000000e+00, [[A]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc float [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[TMP4]]

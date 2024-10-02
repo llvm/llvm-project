@@ -18,6 +18,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -45,6 +46,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -351,6 +353,7 @@ private:
       AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -362,6 +365,7 @@ INITIALIZE_PASS_BEGIN(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StackSafetyGlobalInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                     false, false)
 
@@ -483,12 +487,11 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
       IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
-  // This is not a stable ABI for now, so only allow in dev builds with API
-  // level 10000.
+  // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000) &&
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35) &&
       !AllocasToInstrument.empty()) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
@@ -531,10 +534,12 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  OptimizationRemarkEmitter &ORE =
+      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-  memtag::StackInfoBuilder SIB(SSI);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (Instruction &I : instructions(F))
-    SIB.visit(I);
+    SIB.visit(ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   if (SInfo.AllocasToInstrument.empty())
@@ -578,7 +583,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
-    assert(Info.AI && SIB.isInterestingAlloca(*Info.AI));
+    assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
+                          llvm::memtag::AllocaInterestingness::kInteresting);
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
     AllocaInst *AI = Info.AI;
     int Tag = NextTag;

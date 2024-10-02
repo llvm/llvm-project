@@ -349,11 +349,10 @@ int main(int argc, const char **argv) {
   // Standardize target names to include env field
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
-    if (ParsedTargets.contains(Target)) {
+    if (!ParsedTargets.insert(Target).second) {
       reportError(createStringError(errc::invalid_argument,
                                     "Duplicate targets are not allowed"));
     }
-    ParsedTargets.insert(Target);
 
     auto OffloadInfo = OffloadTargetInfo(Target, BundlerConfig);
     bool KindIsValid = OffloadInfo.isOffloadKindValid();

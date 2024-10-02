@@ -392,16 +392,14 @@ define void @vec_shuff_reorder() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @fb, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 2), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x float> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP12]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr @fc, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP1]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP2]], i64 0)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP7]], <2 x float> [[TMP4]], i64 2)
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fsub <4 x float> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr @fc, align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load float, ptr @fb, align 4

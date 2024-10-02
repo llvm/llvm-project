@@ -1,0 +1,123 @@
+# Prevent the machine scheduler from moving instructions past FAKE_USE.
+# RUN: llc -run-pass machine-scheduler -mtriple=x86_64-unknown-linux -debug-only=machine-scheduler 2>&1 -o - %s | FileCheck %s
+# REQUIRES: asserts
+#
+# We make sure that, beginning with the first FAKE_USE instruction,
+# no changes to the sequence of instructions are undertaken by the
+# scheduler. We don't bother to check that the order of the FAKE_USEs
+# remains the same. They should, but it is irrelevant.
+#
+# CHECK: ********** MI Scheduling **********
+# CHECK-NEXT: foo:%bb.0 entry
+# CHECK-NEXT:   From: %0:gr64 = COPY $rdi
+# CHECK-NEXT:     To: FAKE_USE %5:gr64
+# CHECK-NEXT:  RegionInstrs: 7
+#
+# CHECK: ********** MI Scheduling **********
+# CHECK-NEXT: bar:%bb.0 entry
+# CHECK-NEXT:   From: %0:gr64 = COPY $rdi
+# CHECK-NEXT:     To: RET 0, killed $rax
+# CHECK-NEXT:  RegionInstrs: 7
+#
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  
+  @glb = common dso_local local_unnamed_addr global [100 x i32] zeroinitializer, align 16
+  
+  define dso_local i64 @foo(ptr %p) local_unnamed_addr optdebug {
+  entry:
+    %0 = load i32, ptr @glb, align 16
+    store i32 %0, ptr %p, align 4
+    %conv = sext i32 %0 to i64
+    %1 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @glb, i64 0, i64 1), align 4
+    %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 1
+    store i32 %1, ptr %arrayidx1, align 4
+    %conv2 = sext i32 %1 to i64
+    %add3 = add nsw i64 %conv2, %conv
+    notail call void (...) @llvm.fake.use(i64 %add3)
+    notail call void (...) @llvm.fake.use(i32 %1)
+    notail call void (...) @llvm.fake.use(i32 %0)
+    notail call void (...) @llvm.fake.use(ptr %p)
+    ret i64 %add3
+  }
+  
+  define dso_local i64 @bar(ptr %p) local_unnamed_addr optdebug {
+  entry:
+    %0 = load i32, ptr @glb, align 16
+    store i32 %0, ptr %p, align 4
+    %conv = sext i32 %0 to i64
+    %1 = load i32, ptr getelementptr inbounds ([100 x i32], ptr @glb, i64 0, i64 1), align 4
+    %arrayidx1 = getelementptr inbounds i32, ptr %p, i64 1
+    store i32 %1, ptr %arrayidx1, align 4
+    %conv2 = sext i32 %1 to i64
+    %add3 = add nsw i64 %conv2, %conv
+    ret i64 %add3
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn
+  declare void @llvm.stackprotector(ptr, ptr)
+  
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef:   true
+registers:
+  - { id: 0, class: gr64, preferred-register: '' }
+  - { id: 1, class: gr64_with_sub_8bit, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr64_with_sub_8bit, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr64, preferred-register: '' }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi
+  
+    %0:gr64 = COPY $rdi
+    %1:gr64_with_sub_8bit = MOVSX64rm32 $rip, 1, $noreg, @glb, $noreg
+    MOV32mr %0, 1, $noreg, 0, $noreg, %1.sub_32bit
+    %3:gr64_with_sub_8bit = MOVSX64rm32 $rip, 1, $noreg, @glb + 4, $noreg
+    MOV32mr %0, 1, $noreg, 4, $noreg, %3.sub_32bit
+    %5:gr64 = COPY %3
+    %5:gr64 = nsw ADD64rr %5, %1, implicit-def dead $eflags
+    FAKE_USE %5
+    FAKE_USE %3.sub_32bit
+    FAKE_USE %1.sub_32bit
+    FAKE_USE %0
+    $rax = COPY %5
+    RET 0, killed $rax
+
+...
+---
+name:            bar
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef:   true
+registers:
+  - { id: 0, class: gr64, preferred-register: '' }
+  - { id: 1, class: gr64_with_sub_8bit, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr64_with_sub_8bit, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr64_with_sub_8bit, preferred-register: '' }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $rdi
+  
+    %0:gr64 = COPY $rdi
+    %1:gr64_with_sub_8bit = MOVSX64rm32 $rip, 1, $noreg, @glb, $noreg
+    MOV32mr %0, 1, $noreg, 0, $noreg, %1.sub_32bit
+    %5:gr64_with_sub_8bit = MOVSX64rm32 $rip, 1, $noreg, @glb + 4, $noreg
+    MOV32mr %0, 1, $noreg, 4, $noreg, %5.sub_32bit
+    %5:gr64_with_sub_8bit = nsw ADD64rr %5, %1, implicit-def dead $eflags
+    $rax = COPY %5
+    RET 0, killed $rax
+
+...

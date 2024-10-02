@@ -284,6 +284,8 @@ endif()
 option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
+option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
 include(config-ix)
 
 #================================
@@ -379,7 +381,7 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+
   set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.

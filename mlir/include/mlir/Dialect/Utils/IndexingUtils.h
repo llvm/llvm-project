@@ -202,6 +202,9 @@ SmallVector<T> applyPermutation(ArrayRef<T> input,
                                 ArrayRef<int64_t> permutation) {
   assert(input.size() == permutation.size() &&
          "expected input rank to equal permutation rank");
+  assert(
+      llvm::all_of(permutation, [&](size_t s) { return s < input.size(); }) &&
+      "permutation must be within input bounds");
   auto permutationRange = llvm::map_range(
       llvm::seq<unsigned>(0, input.size()),
       [&](int64_t idx) -> T { return input[permutation[idx]]; });

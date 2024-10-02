@@ -329,7 +329,7 @@ define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 define i1 @test60_addrspacecast(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_addrspacecast(
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[I:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[J:%.*]], [[GEP1_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr %foo to ptr addrspace(3)
@@ -359,7 +359,7 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_larger(
 ; CHECK-NEXT:    [[I_TR:%.*]] = trunc i32 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[I_TR]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[J:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr addrspace(1) %foo to ptr addrspace(2)
@@ -515,10 +515,10 @@ define i1 @test_scalable_xy(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_scalable_xy(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[I:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[GEP2_IDX]], [[GEP1_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -534,10 +534,10 @@ define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_scalable_ij(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[I:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[J:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[GEP2_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

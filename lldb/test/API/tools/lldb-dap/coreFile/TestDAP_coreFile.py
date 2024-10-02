@@ -12,7 +12,6 @@ import os
 
 
 class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
     @skipIfLLVMTargetMissing("X86")
     def test_core_file(self):
         current_dir = os.path.dirname(__file__)
@@ -58,7 +57,6 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_next(threadId=32259)
         self.assertEqual(self.get_stackFrames(), expected_frames)
 
-    @skipIfWindows
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping(self):
         """Test that sourceMap property is correctly applied when loading a core"""

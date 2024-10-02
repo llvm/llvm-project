@@ -2,7 +2,7 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -debug -disable-output %s 2>&1 | FileCheck %s
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
-; CHECK:      VPlan 'Final VPlan for VF={2},UF>=1' {
+; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -16,7 +16,7 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%12>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
@@ -59,12 +59,11 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): if.then.1.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   if.then.1.1:
-; CHECK-NEXT:     EMIT vp<[[C3:%.+]]> = or vp<[[DEFAULT_MASK]]>, vp<[[DEFAULT_MASK]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C3]]>
+; CHECK-NEXT:       BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
@@ -77,8 +76,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   Successor(s): default.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_CMP:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_CMP]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block

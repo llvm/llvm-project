@@ -340,6 +340,13 @@ public:
       return false;
   }
 
+  /// Set the command input as it appeared in the terminal. This
+  /// is used to have errors refer directly to the original command.
+  void SetOriginalCommandString(std::string s) { m_original_command = s; }
+
+  /// \param offset_in_command is on what column \c args_string
+  /// appears, if applicable. This enables diagnostics that refer back
+  /// to the user input.
   virtual void Execute(const char *args_string,
                        CommandReturnObject &result) = 0;
 
@@ -404,6 +411,7 @@ protected:
   std::string m_cmd_help_short;
   std::string m_cmd_help_long;
   std::string m_cmd_syntax;
+  std::string m_original_command;
   Flags m_flags;
   std::vector<CommandArgumentEntry> m_arguments;
   lldb::CommandOverrideCallback m_deprecated_command_override_callback;

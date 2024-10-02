@@ -22,6 +22,7 @@
 ; CHECK-NEXT:       Expand large div/rem
 ; CHECK-NEXT:       Expand large fp convert
 ; CHECK-NEXT:       Expand Atomic instructions
+; CHECK-NEXT:       RISC-V Zacas ABI fix 
 ; CHECK-NEXT:       Module Verifier
 ; CHECK-NEXT:       Lower Garbage Collection Instructions
 ; CHECK-NEXT:       Shadow Stack GC Lowering
@@ -63,6 +64,7 @@
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       RISC-V Make Compressible
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata

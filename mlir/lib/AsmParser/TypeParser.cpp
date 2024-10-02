@@ -39,6 +39,9 @@ OptionalParseResult Parser::parseOptionalType(Type &type) {
   case Token::kw_tuple:
   case Token::kw_vector:
   case Token::inttype:
+  case Token::kw_f4E2M1FN:
+  case Token::kw_f6E2M3FN:
+  case Token::kw_f6E3M2FN:
   case Token::kw_f8E5M2:
   case Token::kw_f8E4M3:
   case Token::kw_f8E4M3FN:
@@ -303,6 +306,15 @@ Type Parser::parseNonFunctionType() {
   }
 
   // float-type
+  case Token::kw_f4E2M1FN:
+    consumeToken(Token::kw_f4E2M1FN);
+    return builder.getFloat4E2M1FNType();
+  case Token::kw_f6E2M3FN:
+    consumeToken(Token::kw_f6E2M3FN);
+    return builder.getFloat6E2M3FNType();
+  case Token::kw_f6E3M2FN:
+    consumeToken(Token::kw_f6E3M2FN);
+    return builder.getFloat6E3M2FNType();
   case Token::kw_f8E5M2:
     consumeToken(Token::kw_f8E5M2);
     return builder.getFloat8E5M2Type();
@@ -458,31 +470,24 @@ Type Parser::parseTupleType() {
 /// static-dim-list ::= decimal-literal (`x` decimal-literal)*
 ///
 VectorType Parser::parseVectorType() {
+  SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_vector);
 
   if (parseToken(Token::less, "expected '<' in vector type"))
     return nullptr;
 
+  // Parse the dimensions.
   SmallVector<int64_t, 4> dimensions;
   SmallVector<bool, 4> scalableDims;
   if (parseVectorDimensionList(dimensions, scalableDims))
     return nullptr;
-  if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
-    return emitError(getToken().getLoc(),
-                     "vector types must have positive constant sizes"),
-           nullptr;
 
   // Parse the element type.
-  auto typeLoc = getToken().getLoc();
   auto elementType = parseType();
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
 
-  if (!VectorType::isValidElementType(elementType))
-    return emitError(typeLoc, "vector elements must be int/index/float type"),
-           nullptr;
-
-  return VectorType::get(dimensions, elementType, scalableDims);
+  return getChecked<VectorType>(loc, dimensions, elementType, scalableDims);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.

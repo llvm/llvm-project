@@ -141,7 +141,6 @@ end
 ! CHECK:              @_FortranAioBeginExternalListOutput
 ! CHECK:              %[[LOAD:.*]] = fir.load %[[OMP_LOOP_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:              @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]])
-! CHECK:             } else {
 ! CHECK:             }
 ! CHECK-NEXT:        omp.yield
 ! CHECK-NEXT:      }
@@ -331,7 +330,7 @@ end
 
 ! CHECK-LABEL: func @_QPss9() {
 ! CHECK:    omp.parallel  {
-! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+! CHECK-NEXT: omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:      br ^[[BB1:.*]]
 ! CHECK:         ^[[BB1]]:
 ! CHECK:      cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]

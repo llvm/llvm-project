@@ -43,8 +43,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2_setne:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_bfe_i32 v1, v0, 0, 6
-; CHECK-NEXT:    v_bfe_u32 v1, v1, 9, 2
+; CHECK-NEXT:    v_bfe_i32 v1, v0, 5, 1
+; CHECK-NEXT:    v_and_b32_e32 v1, 3, v1
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v0, v1
 ; CHECK-NEXT:    v_and_b32_e32 v1, 60, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1

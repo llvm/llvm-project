@@ -215,8 +215,7 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : RPOT) {
     bool InWWM = false;
     for (MachineInstr &MI : *MBB) {
-      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32 ||
-          MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
+      if (MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B32)
         RegsAssigned |= processDef(MI.getOperand(0));
 
       if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {

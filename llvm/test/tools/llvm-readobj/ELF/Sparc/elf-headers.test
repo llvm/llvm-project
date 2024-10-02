@@ -1,0 +1,78 @@
+## Test various combinations of ELF flag values for SPARC.
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC" -DFLAG_NAME=""
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON -DFLAG_VALUE=0x0
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x0 -DGNU_FLAG_NAME=""
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC32PLUS" -DFLAG_NAME="EF_SPARC_32PLUS"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0 \
+# RUN:   -DFLAG0_NAME=EF_SPARC_32PLUS -DFLAG_VALUE=0x100
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x100 -DGNU_FLAG_NAME=", V8+ ABI"
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC32PLUS" \
+# RUN:   -DFLAG_NAME="EF_SPARC_32PLUS, EF_SPARC_SUN_US1"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0,LLVM-FLAG1\
+# RUN:   -DFLAG_VALUE=0x300 \
+# RUN:   -DFLAG0_NAME=EF_SPARC_32PLUS -DFLAG1_NAME=EF_SPARC_SUN_US1
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x300 \
+# RUN:   -DGNU_FLAG_NAME=", V8+ ABI, Sun UltraSPARC I extensions"
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS32" -DMACHINE_NAME="EM_SPARC32PLUS" \
+# RUN:   -DFLAG_NAME="EF_SPARC_32PLUS, EF_SPARC_SUN_US1, EF_SPARC_HAL_R1, EF_SPARC_SUN_US3"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0,LLVM-FLAG1,LLVM-FLAG2,LLVM-FLAG3 \
+# RUN:   -DFLAG_VALUE=0xF00 \
+# RUN:   -DFLAG0_NAME=EF_SPARC_32PLUS -DFLAG1_NAME=EF_SPARC_HAL_R1 \
+# RUN:   -DFLAG2_NAME=EF_SPARC_SUN_US1 -DFLAG3_NAME=EF_SPARC_SUN_US3
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0xF00 \
+# RUN:   -DGNU_FLAG_NAME=", V8+ ABI, Sun UltraSPARC I extensions, HAL/Fujitsu R1 extensions, Sun UltraSPARC III extensions"
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME=""
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON -DFLAG_VALUE=0x0
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x0 -DGNU_FLAG_NAME=""
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME="EF_SPARC_SUN_US1"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0 \
+# RUN:   -DFLAG_VALUE=0x200 -DFLAG0_NAME=EF_SPARC_SUN_US1
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x200 -DGNU_FLAG_NAME=", Sun UltraSPARC I extensions"
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" \
+# RUN:   -DFLAG_NAME="EF_SPARC_SUN_US1, EF_SPARCV9_RMO"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0,LLVM-FLAG1 \
+# RUN:   -DFLAG_VALUE=0x202 \
+# RUN:   -DFLAG0_NAME=EF_SPARCV9_RMO -DFLAG1_NAME=EF_SPARC_SUN_US1
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0x202 \
+# RUN:   -DGNU_FLAG_NAME=", Sun UltraSPARC I extensions, Relaxed Memory Ordering"
+
+# RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" \
+# RUN:   -DFLAG_NAME="EF_SPARC_SUN_US1, EF_SPARC_HAL_R1, EF_SPARC_SUN_US3, EF_SPARCV9_PSO"
+# RUN: llvm-readobj -h %t | FileCheck %s --check-prefixes=LLVM-COMMON,LLVM-FLAG0,LLVM-FLAG1,LLVM-FLAG2,LLVM-FLAG3 \
+# RUN:   -DFLAG_VALUE=0xE01 \
+# RUN:   -DFLAG0_NAME=EF_SPARCV9_PSO -DFLAG1_NAME=EF_SPARC_HAL_R1 \
+# RUN:   -DFLAG2_NAME=EF_SPARC_SUN_US1 -DFLAG3_NAME=EF_SPARC_SUN_US3
+# RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
+# RUN:   -DFLAG_VALUE=0xE01\
+# RUN:   -DGNU_FLAG_NAME=", Sun UltraSPARC I extensions, HAL/Fujitsu R1 extensions, Sun UltraSPARC III extensions, Partial Store Ordering"
+
+--- !ELF
+FileHeader:
+  Class:           [[CLASS_NAME]]
+  Data:            ELFDATA2MSB
+  Type:            ET_REL
+  Machine:         [[MACHINE_NAME]]
+  Flags:           [ [[FLAG_NAME]] ]
+
+# LLVM-COMMON:          Flags [ ([[FLAG_VALUE]])
+# LLVM-FLAG0-NEXT:       [[FLAG0_NAME]]
+# LLVM-FLAG1-NEXT:       [[FLAG1_NAME]]
+# LLVM-FLAG2-NEXT:       [[FLAG2_NAME]]
+# LLVM-FLAG3-NEXT:       [[FLAG3_NAME]]
+# LLVM-COMMON-NEXT:     ]
+
+# GNU: Flags: [[FLAG_VALUE]][[GNU_FLAG_NAME]]

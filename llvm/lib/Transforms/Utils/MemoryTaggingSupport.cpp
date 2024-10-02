@@ -111,12 +111,14 @@ Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
   return nullptr;
 }
 
-void StackInfoBuilder::visit(Instruction &Inst) {
+void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
+                             Instruction &Inst) {
   // Visit non-intrinsic debug-info records attached to Inst.
   for (DbgVariableRecord &DVR : filterDbgVars(Inst.getDbgRecordRange())) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (!isInterestingAlloca(*AI))
+        if (getAllocaInterestingness(*AI) !=
+            AllocaInterestingness::kInteresting)
           return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVRVec = AInfo.DbgVariableRecords;
@@ -136,8 +138,19 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     }
   }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (isInterestingAlloca(*AI)) {
+    switch (getAllocaInterestingness(*AI)) {
+    case AllocaInterestingness::kInteresting:
       Info.AllocasToInstrument[AI].AI = AI;
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DebugType, "safeAlloca", &Inst);
+      });
+      break;
+    case AllocaInterestingness::kSafe:
+      ORE.emit(
+          [&]() { return OptimizationRemark(DebugType, "safeAlloca", &Inst); });
+      break;
+    case AllocaInterestingness::kUninteresting:
+      break;
     }
     return;
   }
@@ -149,7 +162,7 @@ void StackInfoBuilder::visit(Instruction &Inst) {
       Info.UnrecognizedLifetimes.push_back(&Inst);
       return;
     }
-    if (!isInterestingAlloca(*AI))
+    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
@@ -160,7 +173,8 @@ void StackInfoBuilder::visit(Instruction &Inst) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
     auto AddIfInteresting = [&](Value *V) {
       if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (!isInterestingAlloca(*AI))
+        if (getAllocaInterestingness(*AI) !=
+            AllocaInterestingness::kInteresting)
           return;
         AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
         auto &DVIVec = AInfo.DbgVariableIntrinsics;
@@ -178,24 +192,30 @@ void StackInfoBuilder::visit(Instruction &Inst) {
     Info.RetVec.push_back(ExitUntag);
 }
 
-bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
-  return (AI.getAllocatedType()->isSized() &&
-          // FIXME: support vscale.
-          !AI.getAllocatedType()->isScalableTy() &&
-          // FIXME: instrument dynamic allocas, too
-          AI.isStaticAlloca() &&
-          // alloca() may be called with 0 size, ignore it.
-          memtag::getAllocaSizeInBytes(AI) > 0 &&
-          // We are only interested in allocas not promotable to registers.
-          // Promotable allocas are common under -O0.
-          !isAllocaPromotable(&AI) &&
-          // inalloca allocas are not treated as static, and we don't want
-          // dynamic alloca instrumentation for them as well.
-          !AI.isUsedWithInAlloca() &&
-          // swifterror allocas are register promoted by ISel
-          !AI.isSwiftError()) &&
-         // safe allocas are not interesting
-         !(SSI && SSI->isSafe(AI));
+AllocaInterestingness
+StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
+  if (AI.getAllocatedType()->isSized() &&
+      // FIXME: support vscale.
+      !AI.getAllocatedType()->isScalableTy() &&
+      // FIXME: instrument dynamic allocas, too
+      AI.isStaticAlloca() &&
+      // alloca() may be called with 0 size, ignore it.
+      memtag::getAllocaSizeInBytes(AI) > 0 &&
+      // We are only interested in allocas not promotable to registers.
+      // Promotable allocas are common under -O0.
+      !isAllocaPromotable(&AI) &&
+      // inalloca allocas are not treated as static, and we don't want
+      // dynamic alloca instrumentation for them as well.
+      !AI.isUsedWithInAlloca() &&
+      // swifterror allocas are register promoted by ISel
+      !AI.isSwiftError()) {
+    if (!(SSI && SSI->isSafe(AI))) {
+      return AllocaInterestingness::kInteresting;
+    }
+    // safe allocas are not interesting
+    return AllocaInterestingness::kSafe;
+  }
+  return AllocaInterestingness::kUninteresting;
 }
 
 uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {

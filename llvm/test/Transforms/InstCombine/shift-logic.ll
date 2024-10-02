@@ -189,7 +189,7 @@ define i32 @ashr_xor(i32 %x, i32 %py) {
 define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shr_mismatch_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 5
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = lshr i32 [[R]], 7
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
@@ -202,7 +202,7 @@ define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 define i32 @ashr_overshift_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_overshift_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr i32 [[R]], 17
 ; CHECK-NEXT:    ret i32 [[SH1]]
 ;
@@ -215,7 +215,7 @@ define i32 @ashr_overshift_xor(i32 %x, i32 %y) {
 define <2 x i32> @ashr_poison_poison_xor(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_poison_poison_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 15, i32 poison>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[SH0]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[Y:%.*]], [[SH0]]
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr <2 x i32> [[R]], <i32 poison, i32 17>
 ; CHECK-NEXT:    ret <2 x i32> [[SH1]]
 ;

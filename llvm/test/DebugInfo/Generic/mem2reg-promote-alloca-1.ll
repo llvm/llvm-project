@@ -21,7 +21,7 @@
 ; CHECK: define dso_local void @fun(i32 %param)
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: #dbg_value(i32 %param, ![[PARAM:[0-9]+]], !DIExpression(),
-; CHECK-NOT: #dbg_value({{.*}}, ![[PARAM]]
+; CHECK-NEXT: #dbg_value(i32 %param, ![[PARAM]], !DIExpression(),
 ; CHECK: ![[PARAM]] = !DILocalVariable(name: "param",
 
 @g = dso_local global i32 0, align 4, !dbg !0

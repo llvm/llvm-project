@@ -1103,6 +1103,14 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p << getOperand(0);
   p << '(' << (*this)->getOperands().drop_front(isDirect ? 0 : 1) << ')';
 
+  // Print `proc_attrs<...>`, if present.
+  fir::FortranProcedureFlagsEnumAttr procAttrs = getProcedureAttrsAttr();
+  if (procAttrs &&
+      procAttrs.getValue() != fir::FortranProcedureFlagsEnum::none) {
+    p << ' ' << fir::FortranProcedureFlagsEnumAttr::getMnemonic();
+    p.printStrippedAttrOrType(procAttrs);
+  }
+
   // Print 'fastmath<...>' (if it has non-default value) before
   // any other attributes.
   mlir::arith::FastMathFlagsAttr fmfAttr = getFastmathAttr();
@@ -1111,9 +1119,9 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p.printStrippedAttrOrType(fmfAttr);
   }
 
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      {fir::CallOp::getCalleeAttrNameStr(), getFastmathAttrName()});
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {fir::CallOp::getCalleeAttrNameStr(),
+                           getFastmathAttrName(), getProcedureAttrsAttrName()});
   auto resultTypes{getResultTypes()};
   llvm::SmallVector<mlir::Type> argTypes(
       llvm::drop_begin(getOperandTypes(), isDirect ? 0 : 1));
@@ -1137,6 +1145,15 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
   mlir::Type type;
   if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::Paren))
     return mlir::failure();
+
+  // Parse `proc_attrs<...>`, if present.
+  fir::FortranProcedureFlagsEnumAttr procAttr;
+  if (mlir::succeeded(parser.parseOptionalKeyword(
+          fir::FortranProcedureFlagsEnumAttr::getMnemonic())))
+    if (parser.parseCustomAttributeWithFallback(
+            procAttr, mlir::Type{}, getProcedureAttrsAttrName(result.name),
+            attrs))
+      return mlir::failure();
 
   // Parse 'fastmath<...>', if present.
   mlir::arith::FastMathFlagsAttr fmfAttr;
@@ -1288,40 +1305,6 @@ mlir::ParseResult fir::CmpcOp::parse(mlir::OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ConstcOp
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult fir::ConstcOp::parse(mlir::OpAsmParser &parser,
-                                       mlir::OperationState &result) {
-  fir::RealAttr realp;
-  fir::RealAttr imagp;
-  mlir::Type type;
-  if (parser.parseLParen() ||
-      parser.parseAttribute(realp, fir::ConstcOp::getRealAttrName(),
-                            result.attributes) ||
-      parser.parseComma() ||
-      parser.parseAttribute(imagp, fir::ConstcOp::getImagAttrName(),
-                            result.attributes) ||
-      parser.parseRParen() || parser.parseColonType(type) ||
-      parser.addTypesToList(type, result.types))
-    return mlir::failure();
-  return mlir::success();
-}
-
-void fir::ConstcOp::print(mlir::OpAsmPrinter &p) {
-  p << '(';
-  p << getOperation()->getAttr(fir::ConstcOp::getRealAttrName()) << ", ";
-  p << getOperation()->getAttr(fir::ConstcOp::getImagAttrName()) << ") : ";
-  p.printType(getType());
-}
-
-llvm::LogicalResult fir::ConstcOp::verify() {
-  if (!mlir::isa<fir::ComplexType>(getType()))
-    return emitOpError("must be a !fir.complex type");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // ConvertOp
 //===----------------------------------------------------------------------===//
 
@@ -1370,7 +1353,7 @@ bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
 bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
   return mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType,
                    fir::LLVMPointerType, mlir::MemRefType, mlir::FunctionType,
-                   fir::TypeDescType>(ty);
+                   fir::TypeDescType, mlir::LLVM::LLVMPointerType>(ty);
 }
 
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {

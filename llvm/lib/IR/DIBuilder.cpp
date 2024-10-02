@@ -509,7 +509,7 @@ DICompositeType *DIBuilder::createClassType(
          "createClassType should be called with a valid Context");
 
   auto *R = DICompositeType::get(
-      VMContext, dwarf::DW_TAG_structure_type, Name, File, LineNumber,
+      VMContext, dwarf::DW_TAG_class_type, Name, File, LineNumber,
       getNonCompileUnitScope(Context), DerivedFrom, SizeInBits, AlignInBits,
       OffsetInBits, Flags, Elements, RunTimeLang, VTableHolder,
       cast_or_null<MDTuple>(TemplateParams), UniqueIdentifier);

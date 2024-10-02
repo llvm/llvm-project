@@ -11,3 +11,19 @@ func.func @c(%x : !fir.complex<4>) -> !fir.complex<8> {
   %1 = fir.convert %x : (!fir.complex<4>) -> !fir.complex<8>
   return %1 : !fir.complex<8>
 }
+
+func.func @convert_to_llvm_pointer(%x : !fir.llvm_ptr<i32>) -> !llvm.ptr {
+  %0 = fir.convert %x : (!fir.llvm_ptr<i32>) -> !llvm.ptr
+  return %0 : !llvm.ptr
+}
+// CHECK-LABEL: convert_to_llvm_pointer(
+// CHECK-SAME: ptr %[[X:.*]])
+// CHECK-NEXT: ret ptr %[[X]]
+
+func.func @convert_from_llvm_pointer(%x : !llvm.ptr) -> !fir.llvm_ptr<i32> {
+  %0 = fir.convert %x : (!llvm.ptr) -> !fir.llvm_ptr<i32>
+  return %0 : !fir.llvm_ptr<i32>
+}
+// CHECK-LABEL: convert_from_llvm_pointer(
+// CHECK-SAME: ptr %[[X:.*]])
+// CHECK-NEXT: ret ptr %[[X]]

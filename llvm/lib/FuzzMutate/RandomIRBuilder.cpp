@@ -67,7 +67,7 @@ AllocaInst *RandomIRBuilder::createStackMemory(Function *F, Type *Ty,
                                                Value *Init) {
   /// TODO: For all Allocas, maybe allocate an array.
   BasicBlock *EntryBB = &F->getEntryBlock();
-  DataLayout DL(F->getParent());
+  const DataLayout &DL = F->getDataLayout();
   AllocaInst *Alloca = new AllocaInst(Ty, DL.getAllocaAddrSpace(), "A",
                                       EntryBB->getFirstInsertionPt());
   if (Init)
@@ -423,7 +423,7 @@ Function *RandomIRBuilder::createFunctionDefinition(Module &M,
   // TODO: Some arguments and a return value would probably be more
   // interesting.
   LLVMContext &Context = M.getContext();
-  DataLayout DL(&M);
+  const DataLayout &DL = M.getDataLayout();
   BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
   Type *RetTy = F->getReturnType();
   if (RetTy != Type::getVoidTy(Context)) {

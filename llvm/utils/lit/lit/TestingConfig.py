@@ -41,6 +41,7 @@ class TestingConfig(object):
             "LSAN_OPTIONS",
             "HWASAN_OPTIONS",
             "MSAN_OPTIONS",
+            "RTSAN_OPTIONS",
             "TSAN_OPTIONS",
             "UBSAN_OPTIONS",
             "ADB",

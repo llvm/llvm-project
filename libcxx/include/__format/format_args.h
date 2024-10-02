@@ -71,7 +71,7 @@ private:
 template <class _Context, class... _Args>
 basic_format_args(__format_arg_store<_Context, _Args...>) -> basic_format_args<_Context>;
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

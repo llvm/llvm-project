@@ -30,7 +30,6 @@ namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
 struct ImageTypeStorage;
-struct JointMatrixTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
@@ -414,35 +413,6 @@ public:
   uint32_t getColumns() const;
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
-
-  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
-                     std::optional<StorageClass> storage = std::nullopt);
-  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
-                       std::optional<StorageClass> storage = std::nullopt);
-};
-
-// SPIR-V joint matrix type
-class JointMatrixINTELType
-    : public Type::TypeBase<JointMatrixINTELType, CompositeType,
-                            detail::JointMatrixTypeStorage> {
-public:
-  using Base::Base;
-
-  static constexpr StringLiteral name = "spirv.jointmatrix";
-
-  static JointMatrixINTELType get(Type elementType, Scope scope, unsigned rows,
-                                  unsigned columns, MatrixLayout matrixLayout);
-  Type getElementType() const;
-
-  /// Return the scope of the joint matrix.
-  Scope getScope() const;
-  /// return the number of rows of the matrix.
-  unsigned getRows() const;
-  /// return the number of columns of the matrix.
-  unsigned getColumns() const;
-
-  /// return the layout of the matrix
-  MatrixLayout getMatrixLayout() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      std::optional<StorageClass> storage = std::nullopt);

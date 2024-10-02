@@ -51,6 +51,14 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
 __nsan_default_options();
 }
 
+// Unwind the stack for fatal error, as the parameter `stack` is
+// empty without origins.
+#define GET_FATAL_STACK_TRACE_IF_EMPTY(STACK)                                  \
+  if (nsan_initialized && (STACK)->size == 0) {                                \
+    (STACK)->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,  \
+                    common_flags()->fast_unwind_on_fatal);                     \
+  }
+
 namespace __nsan {
 
 extern bool nsan_initialized;

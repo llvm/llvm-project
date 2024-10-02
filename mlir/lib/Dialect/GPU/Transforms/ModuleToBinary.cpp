@@ -99,7 +99,8 @@ LogicalResult moduleSerializer(GPUModuleOp op,
       return failure();
     }
 
-    Attribute object = target.createObject(*serializedModule, targetOptions);
+    Attribute object =
+        target.createObject(op, *serializedModule, targetOptions);
     if (!object) {
       op.emitError("An error happened while creating the object.");
       return failure();

@@ -656,6 +656,12 @@ public:
   GlobalFunctionInfo() {}
 };
 
+/// Describes API notes data for a C/C++ record field.
+class FieldInfo : public VariableInfo {
+public:
+  FieldInfo() {}
+};
+
 /// Describes API notes data for a C++ method.
 class CXXMethodInfo : public FunctionInfo {
 public:
@@ -684,6 +690,9 @@ public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+
+  /// The Swift protocol that this type should be automatically conformed to.
+  std::optional<std::string> SwiftConformance;
 
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
@@ -720,6 +729,9 @@ public:
     if (!SwiftReleaseOp)
       SwiftReleaseOp = RHS.SwiftReleaseOp;
 
+    if (!SwiftConformance)
+      SwiftConformance = RHS.SwiftConformance;
+
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
 
@@ -742,6 +754,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftImportAs == RHS.SwiftImportAs &&
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
+         LHS.SwiftConformance == RHS.SwiftConformance &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;

@@ -22,6 +22,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/remove_const.h>
+#include <cstdint>
 #include <string>
 #include <string_view>
 
@@ -233,6 +234,11 @@ struct __packed_format_arg_store {
   uint64_t __types_ = 0;
 };
 
+template <class _Context>
+struct __packed_format_arg_store<_Context, 0> {
+  uint64_t __types_ = 0;
+};
+
 template <class _Context, size_t _Np>
 struct __unpacked_format_arg_store {
   basic_format_arg<_Context> __args_[_Np];
@@ -259,7 +265,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _Storage __storage;
 };
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 
