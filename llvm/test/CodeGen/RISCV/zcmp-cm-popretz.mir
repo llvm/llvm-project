@@ -25,11 +25,7 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -4
     ; CHECK-ZCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POP 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
-    ; CHECK-ZCMP32-NEXT: PseudoRET
+    ; CHECK-ZCMP32-NEXT: CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL32-LABEL: name: popret_rvlist5
     ; CHECK-LIBCALL32: liveins: $x1, $x8
@@ -51,11 +47,7 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-ZCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POP 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
-    ; CHECK-ZCMP64-NEXT: PseudoRET
+    ; CHECK-ZCMP64-NEXT: CM_POPRET 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL64-LABEL: name: popret_rvlist5
     ; CHECK-LIBCALL64: liveins: $x1, $x8
@@ -123,12 +115,7 @@ body:                   |
     ; CHECK-ZCMP32-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -4
     ; CHECK-ZCMP32-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP32-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP32-NEXT: $x10 = ADDI $x0, 0
-    ; CHECK-ZCMP32-NEXT: frame-destroy CM_POP 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
-    ; CHECK-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
-    ; CHECK-ZCMP32-NEXT: PseudoRET implicit $x10
+    ; CHECK-ZCMP32-NEXT: CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL32-LABEL: name: popretz_rvlist5
     ; CHECK-LIBCALL32: liveins: $x1, $x8
@@ -151,12 +138,7 @@ body:                   |
     ; CHECK-ZCMP64-NEXT: frame-setup CFI_INSTRUCTION offset $x8, -8
     ; CHECK-ZCMP64-NEXT: $x1 = IMPLICIT_DEF
     ; CHECK-ZCMP64-NEXT: $x8 = IMPLICIT_DEF
-    ; CHECK-ZCMP64-NEXT: $x10 = ADDI $x0, 0
-    ; CHECK-ZCMP64-NEXT: frame-destroy CM_POP 5, 0, implicit-def $x2, implicit $x2, implicit-def $x1, implicit-def $x8
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
-    ; CHECK-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
-    ; CHECK-ZCMP64-NEXT: PseudoRET implicit $x10
+    ; CHECK-ZCMP64-NEXT: CM_POPRETZ 5, 0, implicit-def $x2, implicit-def $x10, implicit $x2, implicit-def $x1, implicit-def $x8
     ;
     ; CHECK-LIBCALL64-LABEL: name: popretz_rvlist5
     ; CHECK-LIBCALL64: liveins: $x1, $x8
