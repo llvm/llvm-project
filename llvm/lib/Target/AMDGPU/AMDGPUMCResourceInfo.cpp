@@ -71,6 +71,8 @@ void MCResourceInfo::assignMaxRegs(MCContext &OutContext) {
   assignMaxRegSym(MaxSGPRSym, MaxSGPR);
 }
 
+void MCResourceInfo::reset() { *this = MCResourceInfo(); }
+
 void MCResourceInfo::finalize(MCContext &OutContext) {
   assert(!Finalized && "Cannot finalize ResourceInfo again.");
   Finalized = true;
