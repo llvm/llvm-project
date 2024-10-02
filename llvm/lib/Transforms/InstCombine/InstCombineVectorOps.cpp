@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1132,7 +1131,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       // If UseBB is the single successor of Pred, we can add InsertValue to
       // Pred.
       auto *BI = dyn_cast<BranchInst>(Pred->getTerminator());
-      if (!(BI && BI->isUnconditional()))
+      if (!BI || !BI->isUnconditional())
         return nullptr;
     }
   }
