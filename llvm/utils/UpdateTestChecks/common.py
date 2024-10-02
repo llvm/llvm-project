@@ -1534,14 +1534,35 @@ def remap_metavar_names(
 
         candidate_matches = find_diff_matching(lhs_lines, rhs_lines)
 
-        # Apply commits greedily on a match-by-match basis
-        matches = [(-1, -1)]
-        committed_anything = False
-        for lhs_idx, rhs_idx in candidate_matches:
+        candidate_matches = [
+            (old_begin + lhs_idx, new_begin + rhs_idx)
+            for lhs_idx, rhs_idx in candidate_matches
+        ]
+
+        # Candidate matches may conflict if they require conflicting mappings of
+        # names.
+        #
+        # Treat the candidate matches as vertices in a conflict graph. Greedily
+        # color the vertices.
+        class Color:
+            def __init__(self):
+                # (lhs_idx, rhs_idx) of matches in this color
+                self.matches = []
+
+                # rhs_name -> lhs_name mappings required by this color
+                self.mapping = {}
+
+                # lhs_names committed for this color
+                self.committed = set()
+        colors = []
+
+        for match_idx, (lhs_idx, rhs_idx) in enumerate(candidate_matches):
             lhs_line = old_line_infos[lhs_idx]
             rhs_line = new_line_infos[rhs_idx]
 
-            local_commits = {}
+            compatible_colors = colors[:]
+            new_color = Color()
+            new_color.matches.append((lhs_idx, rhs_idx))
 
             for lhs_value, rhs_value in zip(lhs_line.values, rhs_line.values):
                 if new_mapping[rhs_value.name] in committed_names:
@@ -1554,39 +1575,62 @@ def remap_metavar_names(
                     else:
                         break
 
-                if rhs_value.name in local_commits:
+                if rhs_value.name in new_color.mapping:
                     # Same, but for a possible commit happening on the same line
-                    if local_commits[rhs_value.name] == lhs_value.name:
+                    if new_color.color[rhs_value.name] == lhs_value.name:
                         continue
                     else:
                         break
 
-                if lhs_value.name in committed_names:
-                    # We can't map this value because the name we would map it to has already been
-                    # committed for something else. Give up on this line.
+                if lhs_value.name in committed_names or lhs_value.name in new_color.committed:
+                    # We can't map this value because the name we would map it
+                    # to has already been committed for something else. Give up
+                    # on this line.
                     break
 
-                local_commits[rhs_value.name] = lhs_value.name
+                new_color.mapping[rhs_value.name] = lhs_value.name
+                new_color.committed.add(lhs_value.name)
+
+                color_idx = 0
+                while color_idx < len(compatible_colors):
+                    color = compatible_colors[color_idx]
+                    compatible = True
+                    if rhs_value.name in color.mapping:
+                        compatible = color.mapping[rhs_value.name] == lhs_value.name
+                    else:
+                        compatible = lhs_value.name not in color.committed
+                    if compatible:
+                        color_idx += 1
+                    else:
+                        del compatible_colors[color_idx]
             else:
-                # No reason not to add any commitments for this line
-                for rhs_var, lhs_var in local_commits.items():
-                    new_mapping[rhs_var] = lhs_var
-                    committed_names.add(lhs_var)
-                    committed_anything = True
+                # At a minimum, this line is viable standalone
+                if compatible_colors:
+                    compatible_colors[0].mapping.update(new_color.mapping)
+                    compatible_colors[0].committed.update(new_color.committed)
+                    compatible_colors[0].matches.append((lhs_idx, rhs_idx))
+                else:
+                    colors.append(new_color)
 
-                    if (
-                        lhs_var != rhs_var
-                        and lhs_var in new_mapping
-                        and new_mapping[lhs_var] == lhs_var
-                    ):
-                        new_mapping[lhs_var] = "conflict_" + lhs_var
+        if colors:
+            # Pick the largest color class. This gives us a large independent
+            # (non-conflicting) set of candidate matches. Assign all names
+            # required by the independent set and recurse.
+            max_color = max(colors, key=lambda color: len(color.matches))
 
-                matches.append((lhs_idx, rhs_idx))
+            for rhs_var, lhs_var in max_color.mapping.items():
+                new_mapping[rhs_var] = lhs_var
+                committed_names.add(lhs_var)
 
-        matches.append((old_end, new_end))
+                if (
+                    lhs_var != rhs_var
+                    and lhs_var in new_mapping
+                    and new_mapping[lhs_var] == lhs_var
+                ):
+                    new_mapping[lhs_var] = "conflict_" + lhs_var
 
-        # Recursively handle sequences between matches
-        if committed_anything:
+            matches = [(old_begin - 1, new_begin - 1)] + max_color.matches + [(old_end, new_end)]
+
             for (lhs_prev, rhs_prev), (lhs_next, rhs_next) in zip(matches, matches[1:]):
                 recurse(lhs_prev + 1, lhs_next, rhs_prev + 1, rhs_next)
 
