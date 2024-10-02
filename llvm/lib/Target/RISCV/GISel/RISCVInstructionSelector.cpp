@@ -100,6 +100,8 @@ private:
     return selectSHXADD_UWOp(Root, ShAmt);
   }
 
+  ComplexRendererFns selectVLOp(MachineOperand &Root) const;
+
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
@@ -373,6 +375,26 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
     }
   }
 
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectVLOp(MachineOperand &Root) const {
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+  assert(Root.isReg() && "Expected operand to be a Register");
+  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+
+  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT &&
+      RootDef->getOperand(1).getCImm()->getSExtValue() == RISCV::VLMaxSentinel)
+    // If the operand is a G_CONSTANT with value VLMaxSentinel, convert it
+    // to an immediate with value VLMaxSentinel. This is recognized specially by
+    // the vsetvli insertion pass.
+    return {
+        {[=](MachineInstrBuilder &MIB) { MIB.addImm(RISCV::VLMaxSentinel); }}};
+
+  // FIXME: Implement non-VLMAX case. ISEL will fail gracefully by returning
+  // like this for now.
   return std::nullopt;
 }
 

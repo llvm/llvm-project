@@ -50,6 +50,11 @@ def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
 
+def GIVLOpS32 : GIComplexOperandMatcher<s32, "selectVLOp">,
+                GIComplexPatternEquiv<VLOp>;
+def GIVLOpS64 : GIComplexOperandMatcher<s64, "selectVLOp">,
+                GIComplexPatternEquiv<VLOp>;
+
 // Convert from i32 immediate to i64 target immediate to make SelectionDAG type
 // checking happy so we can use ADDIW which expects an XLen immediate.
 def as_i64imm : SDNodeXForm<imm, [{
