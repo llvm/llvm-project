@@ -44,6 +44,50 @@ body:             |
     SI_RETURN implicit $vgpr0
 ...
 
+
+
+---
+name:  fold_frame_index__v_add_u32_e64__const_v_fi
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__v_add_u32_e64__const_v_fi
+    ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 128, [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; CHECK-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
+    %1:vgpr_32 = V_ADD_U32_e64 128, %0, 0, implicit $exec
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
+---
+name:  fold_frame_index__v_add_u32_e64___v_fi_const
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  localFrameSize:  16384
+stack:
+  - { id: 0, size: 16384, alignment: 4, local-offset: 0 }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fold_frame_index__v_add_u32_e64___v_fi_const
+    ; CHECK: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], 128, 0, implicit $exec
+    ; CHECK-NEXT: $sgpr4 = COPY [[V_ADD_U32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $sgpr4
+    %0:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
+    %1:vgpr_32 = V_ADD_U32_e64 %0, 128, 0, implicit $exec
+    $sgpr4 = COPY %1
+    SI_RETURN implicit $sgpr4
+...
+
 ---
 name:  fold_frame_index__v_add_co_u32_e64___fi_const_v
 tracksRegLiveness: true
