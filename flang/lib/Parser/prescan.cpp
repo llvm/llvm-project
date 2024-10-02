@@ -243,7 +243,8 @@ void Prescanner::Statement() {
   }
   if (continuationLines_ > 255) {
     if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
-      Say(GetProvenance(statementStart),
+      Say(common::LanguageFeature::MiscSourceExtensions,
+          GetProvenance(statementStart),
           "%d continuation lines is more than the Fortran standard allows"_port_en_US,
           continuationLines_);
     }
@@ -265,7 +266,8 @@ void Prescanner::Statement() {
     case LineClassification::Kind::DefinitionDirective:
     case LineClassification::Kind::PreprocessorDirective:
       if (features_.ShouldWarn(common::UsageWarning::Preprocessing)) {
-        Say(preprocessed->GetProvenanceRange(),
+        Say(common::UsageWarning::Preprocessing,
+            preprocessed->GetProvenanceRange(),
             "Preprocessed line resembles a preprocessor directive"_warn_en_US);
       }
       CheckAndEmitLine(preprocessed->ToLowerCase(), newlineProvenance);
@@ -400,7 +402,7 @@ void Prescanner::LabelField(TokenSequence &token) {
       // CookedSource::Marshal().
       cooked_.MarkPossibleFixedFormContinuation();
     } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-      Say(GetProvenance(start + *badColumn - 1),
+      Say(common::UsageWarning::Scanning, GetProvenance(start + *badColumn - 1),
           *badColumn == 6
               ? "Statement should not begin with a continuation line"_warn_en_US
               : "Character in fixed-form label field must be a digit"_warn_en_US);
@@ -424,7 +426,7 @@ void Prescanner::LabelField(TokenSequence &token) {
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
     if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
-      Say(GetCurrentProvenance(),
+      Say(common::LanguageFeature::MiscSourceExtensions, GetCurrentProvenance(),
           "Label digit is not in fixed-form label field"_port_en_US);
     }
   }
@@ -627,7 +629,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Recognize and skip over classic C style /*comments*/ when
       // outside a character literal.
       if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(GetCurrentProvenance(),
+        Say(LanguageFeature::ClassicCComments, GetCurrentProvenance(),
             "nonstandard usage: C-style comment"_port_en_US);
       }
       SkipCComments();
@@ -795,7 +797,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       if (IsDecimalDigit(*at_)) {
         if (features_.ShouldWarn(
                 common::LanguageFeature::MiscSourceExtensions)) {
-          Say(GetProvenanceRange(at_, at_ + 1),
+          Say(common::LanguageFeature::MiscSourceExtensions,
+              GetProvenanceRange(at_, at_ + 1),
               "Label should be in the label field"_port_en_US);
         }
       }
@@ -923,7 +926,7 @@ void Prescanner::Hollerith(
     if (PadOutCharacterLiteral(tokens)) {
     } else if (*at_ == '\n') {
       if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-        Say(GetProvenanceRange(start, at_),
+        Say(common::UsageWarning::Scanning, GetProvenanceRange(start, at_),
             "Possible truncated Hollerith literal"_warn_en_US);
       }
       break;
@@ -1087,7 +1090,7 @@ void Prescanner::FortranInclude(const char *firstQuote) {
     for (; *p != '\n' && *p != '!'; ++p) {
     }
     if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-      Say(GetProvenanceRange(garbage, p),
+      Say(common::UsageWarning::Scanning, GetProvenanceRange(garbage, p),
           "excess characters after path name"_warn_en_US);
     }
   }
@@ -1228,7 +1231,8 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       // Extension: '&' as continuation marker
       if (features_.ShouldWarn(
               LanguageFeature::FixedFormContinuationWithColumn1Ampersand)) {
-        Say(GetProvenance(nextLine_), "nonstandard usage"_port_en_US);
+        Say(LanguageFeature::FixedFormContinuationWithColumn1Ampersand,
+            GetProvenance(nextLine_), "nonstandard usage"_port_en_US);
       }
       return nextLine_ + 1;
     }
@@ -1294,7 +1298,8 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
         //   'b'
         if (features_.ShouldWarn(
                 common::LanguageFeature::MiscSourceExtensions)) {
-          Say(GetProvenanceRange(p, p + 1),
+          Say(common::LanguageFeature::MiscSourceExtensions,
+              GetProvenanceRange(p, p + 1),
               "Character literal continuation line should have been preceded by '&'"_port_en_US);
         }
       } else if (p > nextLine_) {
@@ -1339,7 +1344,8 @@ bool Prescanner::FreeFormContinuation() {
     } else if (ampersand && isPossibleMacroCall_ && (*p == ',' || *p == ')')) {
       return false; // allow & at end of a macro argument
     } else if (features_.ShouldWarn(LanguageFeature::CruftAfterAmpersand)) {
-      Say(GetProvenance(p), "missing ! before comment after &"_warn_en_US);
+      Say(LanguageFeature::CruftAfterAmpersand, GetProvenance(p),
+          "missing ! before comment after &"_warn_en_US);
     }
   }
   do {
