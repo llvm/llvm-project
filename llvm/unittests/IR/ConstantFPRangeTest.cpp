@@ -633,4 +633,65 @@ TEST_F(ConstantFPRangeTest, makeSatisfyingFCmpRegion) {
   }
 }
 
+TEST_F(ConstantFPRangeTest, fcmp) {
+  std::vector<ConstantFPRange> InterestingRanges;
+  const fltSemantics &Sem = APFloat::Float8E4M3();
+  auto FpImm = [&](double V) {
+    bool ignored;
+    APFloat APF(V);
+    APF.convert(Sem, APFloat::rmNearestTiesToEven, &ignored);
+    return APF;
+  };
+
+  InterestingRanges.push_back(ConstantFPRange::getEmpty(Sem));
+  InterestingRanges.push_back(ConstantFPRange::getFull(Sem));
+  InterestingRanges.push_back(ConstantFPRange::getFinite(Sem));
+  InterestingRanges.push_back(ConstantFPRange(FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getZero(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getInf(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getSmallest(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getSmallest(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/false)));
+  InterestingRanges.push_back(
+      ConstantFPRange(APFloat::getLargest(Sem, /*Negative=*/true)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNaNOnly(Sem, /*MayBeQNaN=*/true, /*MayBeSNaN=*/true));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(0.0), FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(2.0), FpImm(3.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(-1.0), FpImm(1.0)));
+  InterestingRanges.push_back(
+      ConstantFPRange::getNonNaN(FpImm(-1.0), FpImm(-0.0)));
+  InterestingRanges.push_back(ConstantFPRange::getNonNaN(
+      APFloat::getInf(Sem, /*Negative=*/true), FpImm(-1.0)));
+  InterestingRanges.push_back(ConstantFPRange::getNonNaN(
+      FpImm(1.0), APFloat::getInf(Sem, /*Negative=*/false)));
+
+  for (auto &LHS : InterestingRanges) {
+    for (auto &RHS : InterestingRanges) {
+      for (auto Pred : FCmpInst::predicates()) {
+        if (LHS.fcmp(Pred, RHS)) {
+          EnumerateValuesInConstantFPRange(LHS, [&](const APFloat &LHSC) {
+            EnumerateValuesInConstantFPRange(RHS, [&](const APFloat &RHSC) {
+              EXPECT_TRUE(FCmpInst::compare(LHSC, RHSC, Pred))
+                  << LHS << " " << Pred << " " << RHS << " doesn't hold";
+            });
+          });
+        }
+      }
+    }
+  }
+}
+
 } // anonymous namespace
