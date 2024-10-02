@@ -135,10 +135,11 @@ static cl::opt<int> ICPMaxNumVTableLastCandidate(
 static cl::list<std::string> ICPIgnoredBaseTypes(
     "icp-ignored-base-types", cl::Hidden,
     cl::desc(
-        "A list of mangled vtable names. Classes specified by the vtables "
-        "and their derived ones will not be vtable-ICP'ed. Useful when the "
-        "profiled types and actual types in the optimized binary could be "
-        "different due to profiling limitations."));
+        "A list of mangled vtable type info names. Classes specified by the "
+        "type info names and their derived ones will not be vtable-ICP'ed. "
+        "Useful when the profiled types and actual types in the optimized "
+        "binary could be different due to profiling limitations. Type info "
+        "names are those string literals used in LLVM type metadata"));
 
 namespace {
 
@@ -375,6 +376,10 @@ private:
   // Return true if it's profitable to compare vtables for the callsite.
   bool isProfitableToCompareVTables(const CallBase &CB,
                                     ArrayRef<PromotionCandidate> Candidates);
+
+  // Return true if the vtable corresponding to VTableGUID should be skipped
+  // for vtable-based comparison.
+  bool shouldSkipVTable(uint64_t VTableGUID);
 
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and return vtable
@@ -866,21 +871,9 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
 
     for (auto &[GUID, Count] : VTableGUIDAndCounts) {
       CandidateVTableCount += Count;
-      auto *VTableVar = Symtab->getGlobalVariable(GUID);
 
-      assert(VTableVar &&
-             "VTableVar must exist for GUID in VTableGUIDAndCounts");
-
-      SmallVector<MDNode *, 2> Types;
-      VTableVar->getMetadata(LLVMContext::MD_type, Types);
-
-      for (auto *Type : Types)
-        if (auto *TypeId = dyn_cast<MDString>(Type->getOperand(1).get()))
-          if (IgnoredBaseTypes.contains(TypeId->getString())) {
-            LLVM_DEBUG(dbgs() << "    vtable profiles should be ignored. Bail "
-                                 "out vtable comparison.");
-            return false;
-          }
+      if (shouldSkipVTable(GUID))
+        return false;
     }
 
     if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
@@ -910,6 +903,27 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
   }
 
   return true;
+}
+
+bool IndirectCallPromoter::shouldSkipVTable(uint64_t VTableGUID) {
+  if (IgnoredBaseTypes.empty())
+    return false;
+
+  auto *VTableVar = Symtab->getGlobalVariable(VTableGUID);
+
+  assert(VTableVar && "VTableVar must exist for GUID in VTableGUIDAndCounts");
+
+  SmallVector<MDNode *, 2> Types;
+  VTableVar->getMetadata(LLVMContext::MD_type, Types);
+
+  for (auto *Type : Types)
+    if (auto *TypeId = dyn_cast<MDString>(Type->getOperand(1).get()))
+      if (IgnoredBaseTypes.contains(TypeId->getString())) {
+        LLVM_DEBUG(dbgs() << "    vtable profiles should be ignored. Bail "
+                             "out of vtable comparison.");
+        return true;
+      }
+  return false;
 }
 
 // For virtual calls in the module, collect per-callsite information which will
