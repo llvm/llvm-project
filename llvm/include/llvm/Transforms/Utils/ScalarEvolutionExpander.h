@@ -427,8 +427,6 @@ public:
   static const SCEV *rewriteExpressionToRemoveUB(const SCEV *BTC, Loop *L,
                                                  ScalarEvolution &SE);
 
-  void setSafeUDivMode() { SafeUDivMode = true; }
-
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
