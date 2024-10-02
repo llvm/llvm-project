@@ -139,8 +139,6 @@ private:
   void UpdateTOCSaves(std::map<MachineInstr *, bool> &TOCSaves,
                       MachineInstr *MI);
 
-  bool eliminateTruncWhenLoweringUADDO(MachineInstr &MI,
-                                       MachineInstr *&ToErase);
   // A number of transformations will eliminate the definition of a register
   // as all of its uses will be removed. However, this leaves a register
   // without a definition for LiveVariables. Such transformations should
@@ -1073,18 +1071,6 @@ bool PPCMIPeephole::simplifyCode() {
         break;
       }
       case PPC::RLDICL: {
-        Register SrcReg = MI.getOperand(1).getReg();
-        if (!SrcReg.isVirtual())
-          break;
-
-        MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-        // We can eliminate clearing the left 63 bits when only the carry-bit is
-        // set.
-        if (eliminateTruncWhenLoweringUADDO(MI, ToErase)) {
-          Simplified = true;
-          break;
-        }
-
         // We can eliminate RLDICL (e.g. for zero-extension)
         // if all bits to clear are already zero in the input.
         // This code assume following code sequence for zero-extension.
@@ -1096,6 +1082,11 @@ bool PPCMIPeephole::simplifyCode() {
         if (MI.getOperand(2).getImm() != 0)
           break;
 
+        Register SrcReg = MI.getOperand(1).getReg();
+        if (!SrcReg.isVirtual())
+          break;
+
+        MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
         if (!(SrcMI && SrcMI->getOpcode() == PPC::INSERT_SUBREG &&
               SrcMI->getOperand(0).isReg() && SrcMI->getOperand(1).isReg()))
           break;
@@ -1286,15 +1277,7 @@ bool PPCMIPeephole::simplifyCode() {
         Simplified = true;
         break;
       }
-      case PPC::RLWINM: {
-        // We can eliminate clearing the left 31 bits when only the carry-bit is
-        // set.
-        if (eliminateTruncWhenLoweringUADDO(MI, ToErase)) {
-          Simplified = true;
-          break;
-        }
-      }
-        LLVM_FALLTHROUGH;
+      case PPC::RLWINM:
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
       case PPC::RLWINM8_rec: {
@@ -1905,38 +1888,6 @@ bool PPCMIPeephole::eliminateRedundantCompare() {
   }
 
   return Simplified;
-}
-bool PPCMIPeephole::eliminateTruncWhenLoweringUADDO(MachineInstr &MI,
-                                                    MachineInstr *&ToErase) {
-  Register SrcReg = MI.getOperand(1).getReg();
-  if (!SrcReg.isVirtual())
-    return false;
-  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-
-  bool Is64Bit = MI.getOpcode() == PPC::RLDICL;
-  int Imm = Is64Bit ? 63 : 31;
-  if (MI.getOperand(2).getImm() != 0 || MI.getOperand(3).getImm() != Imm)
-    return false;
-  if (SrcMI->getOpcode() != (Is64Bit ? PPC::ADDZE8 : PPC::ADDZE))
-    return false;
-  MachineInstr *LI = MRI->getVRegDef(SrcMI->getOperand(1).getReg());
-  if (LI->getOpcode() != (Is64Bit ? PPC::LI8 : PPC::LI))
-    return false;
-  if (LI->getOperand(1).getImm() != 0 || MI.getOperand(2).getImm() != 0)
-    return false;
-  Register NewReg = SrcMI->getOperand(0).getReg();
-  ToErase = &MI;
-  Register MIDestReg = MI.getOperand(0).getReg();
-  for (MachineInstr &UseMI : MRI->use_instructions(MIDestReg)) {
-    for (MachineOperand &MO : UseMI.operands()) {
-      if (MO.isReg() && MO.getReg() == MIDestReg) {
-        MO.setReg(NewReg);
-        addRegToUpdate(NewReg);
-        break;
-      }
-    }
-  }
-  return true;
 }
 
 // We miss the opportunity to emit an RLDIC when lowering jump tables

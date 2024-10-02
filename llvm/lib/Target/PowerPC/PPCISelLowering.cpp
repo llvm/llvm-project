@@ -11986,21 +11986,15 @@ SDValue PPCTargetLowering::LowerUaddo(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
 
   EVT VT = Op.getNode()->getValueType(0);
-  bool is64Bit = Subtarget.isPPC64();
 
   SDValue ADDC;
   SDValue Overflow;
   SDVTList VTs = Op.getNode()->getVTList();
 
-  ADDC = SDValue(DAG.getMachineNode(is64Bit ? PPC::ADDC8 : PPC::ADDC, dl, VT,
-                                    MVT::Glue, LHS, RHS),
-                 0);
-  SDValue Li = SDValue(DAG.getMachineNode(is64Bit ? PPC::LI8 : PPC::LI, dl, VT,
-                                          DAG.getTargetConstant(0, dl, VT)),
-                       0);
-  Overflow = SDValue(DAG.getMachineNode(is64Bit ? PPC::ADDZE8 : PPC::ADDZE, dl,
-                                        VT, MVT::Glue, Li, ADDC.getValue(1)),
-                     0);
+  ADDC = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(VT, MVT::Glue), LHS, RHS);
+  Overflow = DAG.getNode(ISD::ADDE, dl, DAG.getVTList(VT, MVT::Glue),
+                         DAG.getConstant(0, dl, VT), DAG.getConstant(0, dl, VT),
+                         ADDC.getValue(1));
   SDValue OverflowTrunc =
       DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
   SDValue Res =
