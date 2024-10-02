@@ -382,4 +382,5 @@ void nb26() [[clang::nonblocking]] {
 
 void needs_noexcept() [[clang::nonblocking]] // expected-warning {{function with 'nonblocking' attribute should be declared noexcept}}
 {
+	auto lambda = []() [[clang::nonblocking]] {}; // expected-warning {{lambda with 'nonblocking' attribute should be declared noexcept}}
 }

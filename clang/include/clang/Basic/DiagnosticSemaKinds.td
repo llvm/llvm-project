@@ -11010,7 +11010,8 @@ def note_func_effect_call_disallows_inference : Note<
 def note_func_effect_call_indirect : Note<
   "%select{virtual method|function pointer}0 cannot be inferred '%1'">;
 def warn_perf_constraint_implies_noexcept : Warning<
-  "function with '%0' attribute should be declared noexcept">,
+  "%select{function|constructor|destructor|lambda|block}0 "
+  "with '%1' attribute should be declared noexcept">,
   InGroup<PerfConstraintImpliesNoexcept>, DefaultIgnore;
 
 // FIXME: It would be nice if we could provide fuller template expansion notes.

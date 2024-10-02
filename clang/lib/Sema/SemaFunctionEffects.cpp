@@ -631,7 +631,7 @@ private:
         }
         if (!IsNoexcept)
           S.Diag(D->getBeginLoc(), diag::warn_perf_constraint_implies_noexcept)
-              << Effect.name();
+              << GetCallableDeclKind(D, nullptr) << Effect.name();
         break;
       }
     }
@@ -763,6 +763,40 @@ private:
       Check1Effect(Effect, true);
   }
 
+  // Describe a callable Decl for a diagnostic.
+  // (Not an enum class because the value is always converted to an integer for
+  // use in a diagnostic.)
+  enum CallableDeclKind {
+    CDK_Function,
+    CDK_Constructor,
+    CDK_Destructor,
+    CDK_Lambda,
+    CDK_Block,
+    CDK_MemberInitializer,
+  };
+
+  // Describe a call site or target using an enum mapping to a %select{}
+  // in a diagnostic, e.g. warn_func_effect_violation,
+  // warn_perf_constraint_implies_noexcept, and others.
+  static CallableDeclKind GetCallableDeclKind(const Decl *D,
+                                              const Violation *V) {
+    if (V != nullptr &&
+        V->Site.kind() == ViolationSite::Kind::MemberInitializer)
+      return CDK_MemberInitializer;
+    if (isa<BlockDecl>(D))
+      return CDK_Block;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(D)) {
+      if (isa<CXXConstructorDecl>(D))
+        return CDK_Constructor;
+      if (isa<CXXDestructorDecl>(D))
+        return CDK_Destructor;
+      const CXXRecordDecl *Rec = Method->getParent();
+      if (Rec->isLambda())
+        return CDK_Lambda;
+    }
+    return CDK_Function;
+  };
+
   // Should only be called when function's analysis is determined to be
   // complete.
   void emitDiagnostics(ArrayRef<Violation> Viols, const CallableInfo &CInfo) {
@@ -781,35 +815,6 @@ private:
 
     // For note_func_effect_call_indirect.
     enum { Indirect_VirtualMethod, Indirect_FunctionPtr };
-
-    // Describe a call site or target using an enum mapping to a %select{}
-    // in a diagnostic.
-    auto SiteDescIndex = [](const Decl *D, const Violation *V) {
-      enum {
-        VS_Function,
-        VS_Constructor,
-        VS_Destructor,
-        VS_Lambda,
-        VS_Block,
-        VS_MemberInitializer,
-      };
-
-      if (V != nullptr &&
-          V->Site.kind() == ViolationSite::Kind::MemberInitializer)
-        return VS_MemberInitializer;
-      if (isa<BlockDecl>(D))
-        return VS_Block;
-      if (auto *Method = dyn_cast<CXXMethodDecl>(D)) {
-        if (isa<CXXConstructorDecl>(D))
-          return VS_Constructor;
-        if (isa<CXXDestructorDecl>(D))
-          return VS_Destructor;
-        const CXXRecordDecl *Rec = Method->getParent();
-        if (Rec->isLambda())
-          return VS_Lambda;
-      }
-      return VS_Function;
-    };
 
     auto MaybeAddSiteContext = [&](const Decl *D, const Violation &V) {
       // If a violation site is a member initializer, add a note pointing to
@@ -845,14 +850,14 @@ private:
       case ViolationID::AccessesThreadLocalVariable:
       case ViolationID::AccessesObjCMethodOrProperty:
         S.Diag(Viol1.Loc, diag::warn_func_effect_violation)
-            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName
+            << GetCallableDeclKind(CInfo.CDecl, &Viol1) << effectName
             << Viol1.diagnosticSelectIndex();
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
       case ViolationID::CallsExprWithoutEffect:
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_expr_without_effect)
-            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName;
+            << GetCallableDeclKind(CInfo.CDecl, &Viol1) << effectName;
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
         break;
@@ -862,8 +867,8 @@ private:
         std::string CalleeName = CalleeInfo.getNameForDiagnostic(S);
 
         S.Diag(Viol1.Loc, diag::warn_func_effect_calls_func_without_effect)
-            << SiteDescIndex(CInfo.CDecl, &Viol1) << effectName
-            << SiteDescIndex(CalleeInfo.CDecl, nullptr) << CalleeName;
+            << GetCallableDeclKind(CInfo.CDecl, &Viol1) << effectName
+            << GetCallableDeclKind(CalleeInfo.CDecl, nullptr) << CalleeName;
         MaybeAddSiteContext(CInfo.CDecl, Viol1);
         MaybeAddTemplateNote(CInfo.CDecl);
 
@@ -891,7 +896,7 @@ private:
             else if (CalleeInfo.Effects.contains(Viol1.Effect.oppositeKind()))
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_disallows_inference)
-                  << SiteDescIndex(CInfo.CDecl, nullptr) << effectName
+                  << GetCallableDeclKind(CInfo.CDecl, nullptr) << effectName
                   << FunctionEffect(Viol1.Effect.oppositeKind()).name();
             else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
                      FD == nullptr || FD->getBuiltinID() == 0) {
@@ -914,7 +919,7 @@ private:
             break;
           case ViolationID::DeclDisallowsInference:
             S.Diag(Viol2.Loc, diag::note_func_effect_call_disallows_inference)
-                << SiteDescIndex(CalleeInfo.CDecl, nullptr) << effectName
+                << GetCallableDeclKind(CalleeInfo.CDecl, nullptr) << effectName
                 << Viol2.CalleeEffectPreventingInference->name();
             break;
           case ViolationID::CallsExprWithoutEffect:
@@ -927,15 +932,15 @@ private:
           case ViolationID::AccessesThreadLocalVariable:
           case ViolationID::AccessesObjCMethodOrProperty:
             S.Diag(Viol2.Loc, diag::note_func_effect_violation)
-                << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
+                << GetCallableDeclKind(CalleeInfo.CDecl, &Viol2) << effectName
                 << Viol2.diagnosticSelectIndex();
             MaybeAddSiteContext(CalleeInfo.CDecl, Viol2);
             break;
           case ViolationID::CallsDeclWithoutEffect:
             MaybeNextCallee.emplace(*Viol2.Callee);
             S.Diag(Viol2.Loc, diag::note_func_effect_calls_func_without_effect)
-                << SiteDescIndex(CalleeInfo.CDecl, &Viol2) << effectName
-                << SiteDescIndex(Viol2.Callee, nullptr)
+                << GetCallableDeclKind(CalleeInfo.CDecl, &Viol2) << effectName
+                << GetCallableDeclKind(Viol2.Callee, nullptr)
                 << MaybeNextCallee->getNameForDiagnostic(S);
             break;
           }
