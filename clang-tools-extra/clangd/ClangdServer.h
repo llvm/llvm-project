@@ -268,6 +268,8 @@ public:
   void locateSymbolAt(PathRef File, Position Pos,
                       Callback<std::vector<LocatedSymbol>> CB);
 
+  void findAST(const SearchASTArgs &Args, Callback<BoundASTNodes> CB);
+
   /// Switch to a corresponding source file when given a header file, and vice
   /// versa.
   void switchSourceHeader(PathRef Path,
