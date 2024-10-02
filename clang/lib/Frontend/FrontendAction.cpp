@@ -922,14 +922,17 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (!BeginSourceFileAction(CI))
     return false;
 
-  // If we were asked to load any module map files, do so now.
-  for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
+  auto LoadModuleMap = [&](StringRef Filename) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
           *File, /*IsSystem*/false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
-  }
+  };
+  // If we were asked to load any module map files, do so now.
+  for (StringRef Filename : CI.getFrontendOpts().ModuleMapFiles)
+    LoadModuleMap(Filename);
+  // Note that late module maps will be loaded after modules.
 
   // If compiling implementation of a module, load its module map file now.
   (void)CI.getPreprocessor().getCurrentModuleImplementation();
@@ -1040,6 +1043,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       CI.getDiagnostics().Report(
           diag::warn_eagerly_load_for_standard_cplusplus_modules);
   }
+
+  // Some module maps are loaded after modules to allow avoiding redundant
+  // processing if they were processed by modules.
+  for (StringRef Filename : CI.getFrontendOpts().LateModuleMapFiles)
+    LoadModuleMap(Filename);
 
   // If there is a layout overrides file, attach an external AST source that
   // provides the layouts from that file.

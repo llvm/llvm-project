@@ -247,6 +247,8 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
   // Remove directly passed modulemap files. They will get added back if they
   // were actually used.
   CI.getMutFrontendOpts().ModuleMapFiles.clear();
+  // Late module maps can only be readded into ModuleMapFiles.
+  CI.getMutFrontendOpts().LateModuleMapFiles.clear();
 
   auto DepModuleMapFiles = collectModuleMapFiles(Deps.ClangModuleDeps);
   for (StringRef ModuleMapFile : Deps.ModuleMapFileDeps) {
