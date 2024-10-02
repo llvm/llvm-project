@@ -23,7 +23,7 @@ Lead maintainer
 The lead maintainer is responsible for all parts of LLVM not covered by somebody else.
 
 | Chris Lattner
-| sabre\@nondot.org (email), lattner (GitHub), clattner (Discourse)
+| sabre\@nondot.org (email), `lattner <https://github.com/lattner>`_ (GitHub), clattner (Discourse)
 
 
 
@@ -33,52 +33,52 @@ Transforms and analyses
 AliasAnalysis
 ~~~~~~~~~~~~~~
 | Hal Finkel
-| hfinkel\@anl.gov (email), hfinkel (GitHub)
+| hfinkel\@anl.gov (email), `hfinkel <https://github.com/hfinkel>`_ (GitHub)
 
 Attributor, OpenMPOpt
 ~~~~~~~~~~~~~~~~~~~~~
 | Johannes Doerfert
-| jdoerfert\@llnl.gov (email), jdoerfert (GitHub)
+| jdoerfert\@llnl.gov (email), `jdoerfert <https://github.com/jdoerfert>`_ (GitHub)
 
 InferAddressSpaces
 ~~~~~~~~~~~~~~~~~~
 | Matt Arsenault
-| Matthew.Arsenault\@amd.com, arsenm2\@gmail.com (email), arsenm (GitHub)
+| Matthew.Arsenault\@amd.com, arsenm2\@gmail.com (email), `arsenm <https://github.com/arsenm>`_ (GitHub)
 
 Inlining
 ~~~~~~~~
 | Chandler Carruth
-| chandlerc\@gmail.com, chandlerc\@google.com (email), chandlerc (GitHub)
+| chandlerc\@gmail.com, chandlerc\@google.com (email), `chandlerc <https://github.com/chandlerc>`_ (GitHub)
 
 InstCombine, ConstantFold
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 | David Majnemer
-| david.majnemer\@gmail.com (email), majnemer (GitHub)
+| david.majnemer\@gmail.com (email), `majnemer <https://github.com/majnemer>`_ (GitHub)
 
 InstrProfiling and related parts of ProfileData
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Justin Bogner
-| mail\@justinbogner.com (email), bogner (GitHub)
+| mail\@justinbogner.com (email), `bogner <https://github.com/bogner>`_ (GitHub)
 
 SampleProfile and related parts of ProfileData
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Diego Novillo
-| dnovillo\@google.com (email), dnovillo (GitHub)
+| dnovillo\@google.com (email), `dnovillo <https://github.com/dnovillo>`_ (GitHub)
 
 LoopStrengthReduce
 ~~~~~~~~~~~~~~~~~~
 | Quentin Colombet
-| quentin.colombet\@gmail.com (email), qcolombet (GitHub)
+| quentin.colombet\@gmail.com (email), `qcolombet <https://github.com/qcolombet>`_ (GitHub)
 
 LoopVectorize
 ~~~~~~~~~~~~~
 | Florian Hahn
-| flo\@fhahn.com (email), fhahn (GitHub)
+| flo\@fhahn.com (email), `fhahn <https://github.com/fhahn>`_ (GitHub)
 
 ScalarEvolution, IndVarSimplify
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Philip Reames
-| listmail\@philipreames.com (email), preames (GitHub)
+| listmail\@philipreames.com (email), `preames <https://github.com/preames>`_ (GitHub)
 
 SLPVectorizer
 ~~~~~~~~~~~~~
@@ -88,7 +88,7 @@ SLPVectorizer
 SROA, Mem2Reg
 ~~~~~~~~~~~~~
 | Chandler Carruth
-| chandlerc\@gmail.com, chandlerc\@google.com (email), chandlerc (GitHub)
+| chandlerc\@gmail.com, chandlerc\@google.com (email), `chandlerc <https://github.com/chandlerc>`_ (GitHub)
 
 
 
@@ -98,19 +98,19 @@ Instrumentation and sanitizers
 AddressSanitizer, ThreadSanitizer
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Kostya Serebryany
-| kcc\@google.com (email), kcc (GitHub)
+| kcc\@google.com (email), `kcc <https://github.com/kcc>`_ (GitHub)
 
 MemorySanitizer
 ~~~~~~~~~~~~~~~
 | Evgeniy Stepanov
-| eugenis\@google.com (email), eugenis (GitHub)
+| eugenis\@google.com (email), `eugenis <https://github.com/eugenis>`_ (GitHub)
 
 RealtimeSanitizer
 ~~~~~~~~~~~~~~~~~
 | Christopher Apple
-| cja-private\@pm.me (email), cjappl (GitHub)
+| cja-private\@pm.me (email), `cjappl <https://github.com/cjappl>`_ (GitHub)
 | David Trevelyan
-| david.trevelyan\@gmail.com (email), davidtrevelyan (GitHub)
+| david.trevelyan\@gmail.com (email), `davidtrevelyan <https://github.com/davidtrevelyan>`_ (GitHub)
 
 
 
@@ -125,7 +125,7 @@ Parts of code generator not covered by someone else
 SelectionDAG
 ~~~~~~~~~~~~
 | Justin Bogner
-| mail\@justinbogner.com (email), bogner (GitHub)
+| mail\@justinbogner.com (email), `bogner <https://github.com/bogner>`_ (GitHub)
 
 FastISel
 ~~~~~~~~
@@ -135,7 +135,7 @@ FastISel
 Instruction scheduling
 ~~~~~~~~~~~~~~~~~~~~~~
 | Matthias Braun
-| matze\@braunis.de (email), MatzeB (GitHub)
+| matze\@braunis.de (email), `MatzeB <https://github.com/MatzeB>`_ (GitHub)
 
 VLIW Instruction Scheduling, Packetization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -145,7 +145,7 @@ VLIW Instruction Scheduling, Packetization
 Register allocation
 ~~~~~~~~~~~~~~~~~~~
 | Quentin Colombet
-| quentin.colombet\@gmail.com (email), qcolombet (GitHub)
+| quentin.colombet\@gmail.com (email), `qcolombet <https://github.com/qcolombet>`_ (GitHub)
 
 MC layer
 ~~~~~~~~
@@ -155,7 +155,7 @@ MC layer
 Windows codegen
 ~~~~~~~~~~~~~~~
 | Anton Korobeynikov
-| anton\@korobeynikov.info (email), asl (GitHub)
+| anton\@korobeynikov.info (email), `asl <https://github.com/asl>`_ (GitHub)
 
 
 Backends / Targets
@@ -164,32 +164,32 @@ Backends / Targets
 AArch64 backend
 ~~~~~~~~~~~~~~~
 | Tim Northover
-| t.p.northover\@gmail.com (email), TNorthover (GitHub)
+| t.p.northover\@gmail.com (email), `TNorthover <https://github.com/TNorthover>`_ (GitHub)
 
 AMDGPU backend
 ~~~~~~~~~~~~~~
 | Matt Arsenault
-| Matthew.Arsenault\@amd.com, arsenm2\@gmail.com (email), arsenm (GitHub)
+| Matthew.Arsenault\@amd.com, arsenm2\@gmail.com (email), `arsenm <https://github.com/arsenm>`_ (GitHub)
 
 ARC backend
 ~~~~~~~~~~~
 | Mark Schimmel
-| marksl\@synopsys.com (email), markschimmel (GitHub)
+| marksl\@synopsys.com (email), `markschimmel <https://github.com/markschimmel>`_ (GitHub)
 
 ARM backend
 ~~~~~~~~~~~
 | Renato Golin
-| rengolin\@systemcall.eu (email), rengolin (GitHub)
+| rengolin\@systemcall.eu (email), `rengolin <https://github.com/rengolin>`_ (GitHub)
 
 AVR backend
 ~~~~~~~~~~~
 | Ben Shi
-| 2283975856\@qq.com, powerman1st\@163.com (email), benshi001 (GitHub)
+| 2283975856\@qq.com, powerman1st\@163.com (email), `benshi001 <https://github.com/benshi001>`_ (GitHub)
 
 BPF backend
 ~~~~~~~~~~~
 | Alexei Starovoitov
-| alexei.starovoitov\@gmail.com (email), 4ast (GitHub)
+| alexei.starovoitov\@gmail.com (email), `4ast <https://github.com/4ast>`_ (GitHub)
 
 CSKY backend
 ~~~~~~~~~~~~
@@ -204,42 +204,42 @@ Hexagon backend
 Lanai backend
 ~~~~~~~~~~~~~
 | Jacques Pienaar
-| jpienaar\@google.com (email), jpienaar (GitHub)
+| jpienaar\@google.com (email), `jpienaar <https://github.com/jpienaar>`_ (GitHub)
 
 LoongArch backend
 ~~~~~~~~~~~~~~~~~
 | Weining Lu
-| luweining\@loongson.cn (email), SixWeining (GitHub)
+| luweining\@loongson.cn (email), `SixWeining <https://github.com/SixWeining>`_ (GitHub)
 
 M68k backend
 ~~~~~~~~~~~~
 | Min-Yih Hsu
-| min\@myhsu.dev (email), mshockwave (GitHub)
+| min\@myhsu.dev (email), `mshockwave <https://github.com/mshockwave>`_ (GitHub)
 
 MSP430 backend
 ~~~~~~~~~~~~~~
 | Anton Korobeynikov
-| anton\@korobeynikov.info (email), asl (GitHub)
+| anton\@korobeynikov.info (email), `asl <https://github.com/asl>`_ (GitHub)
 
 NVPTX backend
 ~~~~~~~~~~~~~
 | Justin Holewinski
-| jholewinski\@nvidia.com (email), jholewinski (GitHub)
+| jholewinski\@nvidia.com (email), `jholewinski <https://github.com/jholewinski>`_ (GitHub)
 
 PowerPC backend
 ~~~~~~~~~~~~~~~
 | Zheng Chen
-| czhengsz\@cn.ibm.com (email), chenzheng1030 (GitHub)
+| czhengsz\@cn.ibm.com (email), `chenzheng1030 <https://github.com/chenzheng1030>`_ (GitHub)
 
 RISCV backend
 ~~~~~~~~~~~~~
 | Alex Bradbury
-| asb\@igalia.com (email), asb (GitHub)
+| asb\@igalia.com (email), `asb <https://github.com/asb>`_ (GitHub)
 
 Sparc backend
 ~~~~~~~~~~~~~
 | Venkatraman Govindaraju
-| venkatra\@cs.wisc.edu (email), vegovin (GitHub)
+| venkatra\@cs.wisc.edu (email), `vegovin <https://github.com/vegovin>`_ (GitHub)
 
 SPIRV backend
 ~~~~~~~~~~~~~
@@ -249,24 +249,24 @@ SPIRV backend
 SystemZ backend
 ~~~~~~~~~~~~~~~
 | Ulrich Weigand
-| uweigand\@de.ibm.com (email), uweigand (GitHub)
+| uweigand\@de.ibm.com (email), `uweigand <https://github.com/uweigand>`_ (GitHub)
 
 VE backend
 ~~~~~~~~~~
 | Kazushi Marukawa
-| marukawa\@nec.com (email), kaz7 (GitHub)
+| marukawa\@nec.com (email), `kaz7 <https://github.com/kaz7>`_ (GitHub)
 
 WebAssembly backend
 ~~~~~~~~~~~~~~~~~~~
 | Dan Gohman
-| llvm\@sunfishcode.online (email), sunfishcode (GitHub)
+| llvm\@sunfishcode.online (email), `sunfishcode <https://github.com/sunfishcode>`_ (GitHub)
 
 X86 backend
 ~~~~~~~~~~~
 | Simon Pilgrim
-| llvm-dev\@redking.me.uk (email), RKSimon (GitHub)
+| llvm-dev\@redking.me.uk (email), `RKSimon <https://github.com/RKSimon>`_ (GitHub)
 | Phoebe Wang
-| phoebe.wang\@intel.com (email), phoebewang (GitHub)
+| phoebe.wang\@intel.com (email), `phoebewang <https://github.com/phoebewang>`_ (GitHub)
 
 XCore backend
 ~~~~~~~~~~~~~
@@ -276,7 +276,7 @@ XCore backend
 Xtensa backend
 ~~~~~~~~~~~~~~
 | Andrei Safronov
-| andrei.safronov\@espressif.com (email), andreisfr (GitHub)
+| andrei.safronov\@espressif.com (email), `andreisfr <https://github.com/andreisfr>`_ (GitHub)
 
 
 
@@ -286,42 +286,42 @@ Libraries and shared infrastructure
 ADT, Support
 ~~~~~~~~~~~~
 | Chandler Carruth
-| chandlerc\@gmail.com, chandlerc\@google.com (email), chandlerc (GitHub)
+| chandlerc\@gmail.com, chandlerc\@google.com (email), `chandlerc <https://github.com/chandlerc>`_ (GitHub)
 
 Bitcode
 ~~~~~~~
 | Peter Collingbourne
-| peter\@pcc.me.uk (email), pcc (GitHub)
+| peter\@pcc.me.uk (email), `pcc <https://github.com/pcc>`_ (GitHub)
 
 CMake and library layering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Chandler Carruth
-| chandlerc\@gmail.com, chandlerc\@google.com (email), chandlerc (GitHub)
+| chandlerc\@gmail.com, chandlerc\@google.com (email), `chandlerc <https://github.com/chandlerc>`_ (GitHub)
 
 Debug info
 ~~~~~~~~~~
 | Eric Christopher
-| echristo\@gmail.com (email), echristo (GitHub)
+| echristo\@gmail.com (email), `echristo <https://github.com/echristo>`_ (GitHub)
 
 DWARF Parser
 ~~~~~~~~~~~~
 | Benjamin Kramer
-| benny.kra\@gmail.com (email), d0k (GitHub)
+| benny.kra\@gmail.com (email), `d0k <https://github.com/d0k>`_ (GitHub)
 
 IR Linker
 ~~~~~~~~~
 | Teresa Johnson
-| tejohnson\@google.com (email), teresajohnson (GitHub)
+| tejohnson\@google.com (email), `teresajohnson <https://github.com/teresajohnson>`_ (GitHub)
 
 LTO
 ~~~
 | Peter Collingbourne
-| peter\@pcc.me.uk (email), pcc (GitHub)
+| peter\@pcc.me.uk (email), `pcc <https://github.com/pcc>`_ (GitHub)
 
 MCJIT, Orc, RuntimeDyld, PerfJITEvents
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Lang Hames
-| lhames\@gmail.com (email), lhames (GitHub)
+| lhames\@gmail.com (email), `lhames <https://github.com/lhames>`_ (GitHub)
 
 TableGen
 ~~~~~~~~
@@ -331,7 +331,7 @@ TableGen
 TextAPI
 ~~~~~~~
 | Cyndy Ishida
-| cyndyishida\@gmail.com (email), cyndyishida (GitHub)
+| cyndyishida\@gmail.com (email), `cyndyishida <https://github.com/cyndyishida>`_ (GitHub)
 
 
 
@@ -341,17 +341,17 @@ Tools
 llvm-mca and MCA library
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | Andrea Di Biagio
-| andrea.dibiagio\@sony.com, andrea.dibiagio\@gmail.com (email), adibiagio (GitHub)
+| andrea.dibiagio\@sony.com, andrea.dibiagio\@gmail.com (email), `adibiagio <https://github.com/adibiagio>`_ (GitHub)
 
 llvm-objcopy and ObjCopy library
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Jake Ehrlich
-| jakehehrlich\@google.com (email), jakehehrlich (GitHub)
+| jakehehrlich\@google.com (email), `jakehehrlich <https://github.com/jakehehrlich>`_ (GitHub)
 
 Gold plugin
 ~~~~~~~~~~~
 | Teresa Johnson
-| tejohnson\@google.com (email), teresajohnson (GitHub)
+| tejohnson\@google.com (email), `teresajohnson <https://github.com/teresajohnson>`_ (GitHub)
 
 
 Other
@@ -363,48 +363,48 @@ Release management
 For x.y.0 releases:
 
 | Hans Wennborg
-| hans\@chromium.org (email), zmodem (GitHub)
+| hans\@chromium.org (email), `zmodem <https://github.com/zmodem>`_ (GitHub)
 |
 
 For x.y.[1-9] releases:
 
 | Tom Stellard
-| tstellar\@redhat.com (email), tstellar (GitHub)
+| tstellar\@redhat.com (email), `tstellar <https://github.com/tstellar>`_ (GitHub)
 
 MinGW support
 ~~~~~~~~~~~~~
 | Martin Storsjö
-| martin\@martin.st (email), mstrorsjo (GitHub)
+| martin\@martin.st (email), `mstrorsjo <https://github.com/mstrorsjo>`_ (GitHub)
 
 Windows support in object tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Michael Spencer
-| bigcheesegs\@gmail.com (email), Bigcheese (GitHub)
+| bigcheesegs\@gmail.com (email), `Bigcheese <https://github.com/Bigcheese>`_ (GitHub)
 
 Sony PlayStation®4 support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 | Paul Robinson
-| paul.robinson\@sony.com (email), pogo59 (GitHub)
+| paul.robinson\@sony.com (email), `pogo59 <https://github.com/pogo59>`_ (GitHub)
 
 Inline assembly
 ~~~~~~~~~~~~~~~
 | Eric Christopher
-| echristo\@gmail.com (email), echristo (GitHub)
+| echristo\@gmail.com (email), `echristo <https://github.com/echristo>`_ (GitHub)
 
 Exception handling
 ~~~~~~~~~~~~~~~~~~
 | Anton Korobeynikov
-| anton\@korobeynikov.info (email), asl (GitHub)
+| anton\@korobeynikov.info (email), `asl <https://github.com/asl>`_ (GitHub)
 
 ARM EABI
 ~~~~~~~~
 | Anton Korobeynikov
-| anton\@korobeynikov.info (email), asl (GitHub)
+| anton\@korobeynikov.info (email), `asl <https://github.com/asl>`_ (GitHub)
 
 LLVM Buildbot
 ~~~~~~~~~~~~~
 | Galina Kistanova
-| gkistanova\@gmail.com (email), gkistanova (GitHub)
+| gkistanova\@gmail.com (email), `gkistanova <https://github.com/gkistanova>`_ (GitHub)
 
 
 
@@ -431,22 +431,22 @@ Others only have a lead maintainer listed here.
 libc++
 ~~~~~~
 | Louis Dionne
-| ldionne.2\@gmail.com (email), ldionne (GitHub)
+| ldionne.2\@gmail.com (email), `ldionne <https://github.com/ldionne>`_ (GitHub)
 
 libclc
 ~~~~~~
 | Tom Stellard
-| tstellar\@redhat.com (email), tstellar (GitHub)
+| tstellar\@redhat.com (email), `tstellar <https://github.com/tstellar>`_ (GitHub)
 
 OpenMP (runtime library)
 ~~~~~~~~~~~~~~~~~~~~~~~~
 | Andrey Churbanov
-| andrey.churbanov\@intel.com (email), AndreyChurbanov (GitHub)
+| andrey.churbanov\@intel.com (email), `AndreyChurbanov <https://github.com/AndreyChurbanov>`_ (GitHub)
 
 Polly
 ~~~~~
 | Tobias Grosser
-| tobias\@grosser.es (email), tobiasgrosser (GitHub)
+| tobias\@grosser.es (email), `tobiasgrosser <https://github.com/tobiasgrosser>`_ (GitHub)
 
 
 Inactive Maintainers
@@ -463,5 +463,5 @@ Inactive component maintainers
 
 Former maintainers of removed components
 ----------------------------------------
-| Duncan Sands (baldrick\@free.fr, CunningBaldrick) -- DragonEgg
-| Hal Finkel (hfinkel\@anl.gov, hfinkel) -- LoopReroll
+| Duncan Sands (baldrick\@free.fr, `CunningBaldrick <https://github.com/CunningBaldrick>`_) -- DragonEgg
+| Hal Finkel (hfinkel\@anl.gov, `hfinkel <https://github.com/hfinkel>`_) -- LoopReroll
