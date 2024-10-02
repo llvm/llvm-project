@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "offload_impl.hpp"
 #include "PluginManager.h"
 #include "helpers.hpp"
-#include "offload_impl.hpp"
 #include "llvm/Support/FormatVariadic.h"
 #include <offload_api.h>
 
