@@ -3698,7 +3698,7 @@ static bool hasNullFragReference(DagInit *DI) {
   DefInit *OpDef = dyn_cast<DefInit>(DI->getOperator());
   if (!OpDef)
     return false;
-  Record *Operator = OpDef->getDef();
+  const Record *Operator = OpDef->getDef();
 
   // If this is the null fragment, return true.
   if (Operator->getName() == "null_frag")

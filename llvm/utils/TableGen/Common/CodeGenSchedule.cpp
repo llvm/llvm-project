@@ -552,7 +552,7 @@ void CodeGenSchedModels::addProcModel(const Record *ProcDef) {
 
   std::string Name = std::string(ModelKey->getName());
   if (ModelKey->isSubClassOf("SchedMachineModel")) {
-    Record *ItinsDef = ModelKey->getValueAsDef("Itineraries");
+    const Record *ItinsDef = ModelKey->getValueAsDef("Itineraries");
     ProcModels.emplace_back(ProcModels.size(), Name, ModelKey, ItinsDef);
   } else {
     // An itinerary is defined without a machine model. Infer a new model.
@@ -674,9 +674,9 @@ void CodeGenSchedModels::collectSchedRW() {
   }
   // Initialize Aliases vectors.
   for (const Record *ADef : AliasDefs) {
-    Record *AliasDef = ADef->getValueAsDef("AliasRW");
+    const Record *AliasDef = ADef->getValueAsDef("AliasRW");
     getSchedRW(AliasDef).IsAlias = true;
-    Record *MatchDef = ADef->getValueAsDef("MatchRW");
+    const Record *MatchDef = ADef->getValueAsDef("MatchRW");
     CodeGenSchedRW &RW = getSchedRW(MatchDef);
     if (RW.IsAlias)
       PrintFatalError(ADef->getLoc(), "Cannot Alias an Alias");
@@ -781,7 +781,7 @@ void CodeGenSchedModels::expandRWSeqForProc(
   for (const Record *Rec : SchedWrite.Aliases) {
     const CodeGenSchedRW &AliasRW = getSchedRW(Rec->getValueAsDef("AliasRW"));
     if (Rec->getValueInit("SchedModel")->isComplete()) {
-      Record *ModelDef = Rec->getValueAsDef("SchedModel");
+      const Record *ModelDef = Rec->getValueAsDef("SchedModel");
       if (&getProcModel(ModelDef) != &ProcModel)
         continue;
     }
@@ -854,7 +854,7 @@ void CodeGenSchedModels::collectSchedClasses() {
   // Create a SchedClass for each unique combination of itinerary class and
   // SchedRW list.
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
-    Record *ItinDef = Inst->TheDef->getValueAsDef("Itinerary");
+    const Record *ItinDef = Inst->TheDef->getValueAsDef("Itinerary");
     IdxVec Writes, Reads;
     if (!Inst->TheDef->isValueUnset("SchedRW"))
       findRWs(Inst->TheDef->getValueAsListOfDefs("SchedRW"), Writes, Reads);
@@ -1050,7 +1050,7 @@ void CodeGenSchedModels::createInstRWClass(const Record *InstRWDef) {
         if (OrigNumInstrs == InstDefs.size()) {
           assert(SchedClasses[OldSCIdx].ProcIndices[0] == 0 &&
                  "expected a generic SchedClass");
-          Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
+          const Record *RWModelDef = InstRWDef->getValueAsDef("SchedModel");
           // Make sure we didn't already have a InstRW containing this
           // instruction on this model.
           for (const Record *RWD : RWDefs) {
@@ -1279,7 +1279,7 @@ struct PredCheck {
   unsigned RWIdx;
   const Record *Predicate;
 
-  PredCheck(bool r, unsigned w, Record *p)
+  PredCheck(bool r, unsigned w, const Record *p)
       : IsRead(r), RWIdx(w), Predicate(p) {}
 };
 
@@ -1318,7 +1318,7 @@ public:
 #endif
 
 private:
-  bool mutuallyExclusive(Record *PredDef, ArrayRef<Record *> Preds,
+  bool mutuallyExclusive(const Record *PredDef, ArrayRef<const Record *> Preds,
                          ArrayRef<PredCheck> Term);
   void getIntersectingVariants(const CodeGenSchedRW &SchedRW, unsigned TransIdx,
                                std::vector<TransVariant> &IntersectingVariants);
@@ -1336,8 +1336,8 @@ private:
 // predicates are not exclusive because the predicates for a given SchedWrite
 // are always checked in the order they are defined in the .td file. Later
 // conditions implicitly negate any prior condition.
-bool PredTransitions::mutuallyExclusive(Record *PredDef,
-                                        ArrayRef<Record *> Preds,
+bool PredTransitions::mutuallyExclusive(const Record *PredDef,
+                                        ArrayRef<const Record *> Preds,
                                         ArrayRef<PredCheck> Term) {
   for (const PredCheck &PC : Term) {
     if (PC.Predicate == PredDef)
@@ -1382,9 +1382,9 @@ bool PredTransitions::mutuallyExclusive(Record *PredDef,
   return false;
 }
 
-static std::vector<Record *> getAllPredicates(ArrayRef<TransVariant> Variants,
-                                              unsigned ProcId) {
-  std::vector<Record *> Preds;
+static std::vector<const Record *>
+getAllPredicates(ArrayRef<TransVariant> Variants, unsigned ProcId) {
+  std::vector<const Record *> Preds;
   for (auto &Variant : Variants) {
     if (!Variant.VarOrSeqDef->isSubClassOf("SchedVar"))
       continue;
@@ -1406,7 +1406,7 @@ void PredTransitions::getIntersectingVariants(
   if (SchedRW.HasVariants) {
     unsigned VarProcIdx = 0;
     if (SchedRW.TheDef->getValueInit("SchedModel")->isComplete()) {
-      Record *ModelDef = SchedRW.TheDef->getValueAsDef("SchedModel");
+      const Record *ModelDef = SchedRW.TheDef->getValueAsDef("SchedModel");
       VarProcIdx = SchedModels.getProcModel(ModelDef).Index;
     }
     if (VarProcIdx == 0 || VarProcIdx == TransVec[TransIdx].ProcIndex) {
@@ -1425,7 +1425,7 @@ void PredTransitions::getIntersectingVariants(
     // that processor.
     unsigned AliasProcIdx = 0;
     if ((*AI)->getValueInit("SchedModel")->isComplete()) {
-      Record *ModelDef = (*AI)->getValueAsDef("SchedModel");
+      const Record *ModelDef = (*AI)->getValueAsDef("SchedModel");
       AliasProcIdx = SchedModels.getProcModel(ModelDef).Index;
     }
     if (AliasProcIdx && AliasProcIdx != TransVec[TransIdx].ProcIndex)
@@ -1451,13 +1451,13 @@ void PredTransitions::getIntersectingVariants(
     if (AliasProcIdx == 0)
       GenericRW = true;
   }
-  std::vector<Record *> AllPreds =
+  std::vector<const Record *> AllPreds =
       getAllPredicates(Variants, TransVec[TransIdx].ProcIndex);
   for (TransVariant &Variant : Variants) {
     // Don't expand variants if the processor models don't intersect.
     // A zero processor index means any processor.
     if (Variant.VarOrSeqDef->isSubClassOf("SchedVar")) {
-      Record *PredDef = Variant.VarOrSeqDef->getValueAsDef("Predicate");
+      const Record *PredDef = Variant.VarOrSeqDef->getValueAsDef("Predicate");
       if (mutuallyExclusive(PredDef, AllPreds, TransVec[TransIdx].PredTerm))
         continue;
     }
@@ -1489,7 +1489,7 @@ void PredTransitions::pushVariant(const TransVariant &VInfo, bool IsRead) {
   // then the whole transition is specific to this processor.
   IdxVec SelectedRWs;
   if (VInfo.VarOrSeqDef->isSubClassOf("SchedVar")) {
-    Record *PredDef = VInfo.VarOrSeqDef->getValueAsDef("Predicate");
+    const Record *PredDef = VInfo.VarOrSeqDef->getValueAsDef("Predicate");
     Trans.PredTerm.emplace_back(IsRead, VInfo.RWIdx, PredDef);
     ConstRecVec SelectedDefs =
         VInfo.VarOrSeqDef->getValueAsListOfDefs("Selected");
@@ -1861,7 +1861,7 @@ void CodeGenSchedModels::collectProcResources() {
     // This class may have a default ReadWrite list which can be overriden by
     // InstRW definitions.
     for (const Record *RW : SC.InstRWs) {
-      Record *RWModelDef = RW->getValueAsDef("SchedModel");
+      const Record *RWModelDef = RW->getValueAsDef("SchedModel");
       unsigned PIdx = getProcModel(RWModelDef).Index;
       IdxVec Writes, Reads;
       findRWs(RW->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
