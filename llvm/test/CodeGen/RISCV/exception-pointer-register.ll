@@ -23,6 +23,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    .cfi_offset s0, -8
 ; RV32I-NEXT:    .cfi_offset s1, -12
+; RV32I-NEXT:    .cfi_remember_state
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    beqz a0, .LBB0_2
 ; RV32I-NEXT:  # %bb.1: # %bb2
@@ -47,6 +48,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_4: # %lpad
+; RV32I-NEXT:    .cfi_restore_state
 ; RV32I-NEXT:  .Ltmp4:
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    mv a0, s0
@@ -64,6 +66,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
+; RV64I-NEXT:    .cfi_remember_state
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    beqz a0, .LBB0_2
 ; RV64I-NEXT:  # %bb.1: # %bb2
@@ -88,6 +91,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_4: # %lpad
+; RV64I-NEXT:    .cfi_restore_state
 ; RV64I-NEXT:  .Ltmp4:
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    mv a0, s0

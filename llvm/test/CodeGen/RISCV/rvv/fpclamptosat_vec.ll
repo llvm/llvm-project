@@ -340,6 +340,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 16(a1)
@@ -404,6 +405,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB6_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
 ; CHECK-NOV-NEXT:    blt s1, a4, .LBB6_2
@@ -538,6 +540,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 16(a1)
@@ -594,6 +597,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB7_6: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
 ; CHECK-NOV-NEXT:    bltu s1, a1, .LBB7_2
@@ -714,6 +718,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 16(a1)
@@ -782,6 +787,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB8_6: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
 ; CHECK-NOV-NEXT:    blt s1, a2, .LBB8_2
@@ -1241,6 +1247,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 48(a1)
@@ -1362,6 +1369,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB15_18: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
 ; CHECK-NOV-NEXT:    blt s1, a7, .LBB15_2
@@ -1623,6 +1631,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu s3, 48(a1)
@@ -1727,6 +1736,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB16_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs5, rtz
 ; CHECK-NOV-NEXT:    bltu s1, a1, .LBB16_2
@@ -1961,6 +1971,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 48(a1)
@@ -2089,6 +2100,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB17_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
 ; CHECK-NOV-NEXT:    blt s1, a3, .LBB17_2
@@ -3885,6 +3897,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 16(a1)
@@ -3949,6 +3962,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB33_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
 ; CHECK-NOV-NEXT:    blt s1, a4, .LBB33_2
@@ -4081,6 +4095,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 16(a1)
@@ -4137,6 +4152,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB34_6: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
 ; CHECK-NOV-NEXT:    bltu s1, a1, .LBB34_2
@@ -4256,6 +4272,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs0, -48
 ; CHECK-NOV-NEXT:    .cfi_offset fs1, -56
 ; CHECK-NOV-NEXT:    .cfi_offset fs2, -64
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 0(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 16(a1)
@@ -4324,6 +4341,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB35_6: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
 ; CHECK-NOV-NEXT:    blt s1, a2, .LBB35_2
@@ -4771,6 +4789,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 48(a1)
@@ -4892,6 +4911,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB42_18: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
 ; CHECK-NOV-NEXT:    blt s1, a7, .LBB42_2
@@ -5151,6 +5171,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu s3, 48(a1)
@@ -5255,6 +5276,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB43_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs5, rtz
 ; CHECK-NOV-NEXT:    bltu s1, a1, .LBB43_2
@@ -5488,6 +5510,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset fs4, -112
 ; CHECK-NOV-NEXT:    .cfi_offset fs5, -120
 ; CHECK-NOV-NEXT:    .cfi_offset fs6, -128
+; CHECK-NOV-NEXT:    .cfi_remember_state
 ; CHECK-NOV-NEXT:    lhu s1, 32(a1)
 ; CHECK-NOV-NEXT:    lhu s2, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a2, 48(a1)
@@ -5616,6 +5639,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NOV-NEXT:    ret
 ; CHECK-NOV-NEXT:  .LBB44_10: # %entry
+; CHECK-NOV-NEXT:    .cfi_restore_state
 ; CHECK-NOV-NEXT:    mv a0, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
 ; CHECK-NOV-NEXT:    blt s1, a3, .LBB44_2
