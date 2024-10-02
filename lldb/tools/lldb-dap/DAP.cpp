@@ -512,9 +512,8 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
 
     // If the first token is not fully finished yet, we can't
     // determine whether this will be a variable or a lldb command.
-    if (partial_expression && token.second.empty()) {
+    if (partial_expression && token.second.empty())
       return ReplMode::Auto;
-    }
 
     std::string term = token.first.str();
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
