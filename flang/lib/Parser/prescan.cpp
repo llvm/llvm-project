@@ -1031,6 +1031,9 @@ const char *Prescanner::IsFreeFormComment(const char *p) const {
 }
 
 std::optional<std::size_t> Prescanner::IsIncludeLine(const char *start) const {
+  if (!expandIncludeLines_) {
+    return std::nullopt;
+  }
   const char *p{SkipWhiteSpace(start)};
   if (*p == '0' && inFixedForm_ && p == start + 5) {
     // Accept "     0INCLUDE" in fixed form.

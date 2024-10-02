@@ -1200,6 +1200,14 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix);
     Reqs.addCapability(SPIRV::Capability::CooperativeMatrixKHR);
     break;
+  case SPIRV::OpArithmeticFenceEXT:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence))
+      report_fatal_error("OpArithmeticFenceEXT requires the "
+                         "following SPIR-V extension: SPV_EXT_arithmetic_fence",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_arithmetic_fence);
+    Reqs.addCapability(SPIRV::Capability::ArithmeticFenceEXT);
+    break;
   default:
     break;
   }

@@ -485,8 +485,14 @@ public:
            RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.RegNum);
   }
 
+  bool isGPRF32() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRF32RegClassID].contains(Reg.RegNum);
+  }
+
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
   bool isGPRAsFPR16() const { return isGPRF16() && Reg.IsGPRAsFPR; }
+  bool isGPRAsFPR32() const { return isGPRF32() && Reg.IsGPRAsFPR; }
   bool isGPRPairAsFPR() const { return isGPRPair() && Reg.IsGPRAsFPR; }
 
   bool isGPRPair() const {
@@ -1350,6 +1356,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
   if (Kind == MCK_GPRAsFPR16 && Op.isGPRAsFPR()) {
     Op.Reg.RegNum = Reg - RISCV::X0 + RISCV::X0_H;
+    return Match_Success;
+  }
+  if (Kind == MCK_GPRAsFPR32 && Op.isGPRAsFPR()) {
+    Op.Reg.RegNum = Reg - RISCV::X0 + RISCV::X0_W;
     return Match_Success;
   }
 
