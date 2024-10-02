@@ -1414,14 +1414,14 @@ private:
           CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
 
       // At here, `RegionPushedBytesDelta` is more than half of
-      // `TryReleaseThreshold`. If the last release was happened 2 release
-      // interval before, we will still try to see if there's any chance to
-      // release some memory even it doesn't exceed the threshold.
+      // `TryReleaseThreshold`. If the last release happened 2 release interval
+      // before, we will still try to see if there's any chance to release some
+      // memory even it doesn't exceed the threshold.
       if (RegionPushedBytesDelta < Region->ReleaseInfo.TryReleaseThreshold) {
         // We want the threshold to have a shorter response time to the variant
-        // memory usage patterns. By having some experiments (which was done
-        // with 1, 2, 4, 8 intervals), `2` strikes the better balance between
-        // the memory usage and number of page release attempts.
+        // memory usage patterns. According to data collected during experiments
+        // (which were done with 1, 2, 4, 8 intervals), `2` strikes the better
+        // balance between the memory usage and number of page release attempts.
         if (DiffSinceLastReleaseNs < 2 * IntervalNs)
           return false;
       } else if (DiffSinceLastReleaseNs < IntervalNs) {
