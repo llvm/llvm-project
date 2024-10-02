@@ -8,6 +8,10 @@
 
 #include "IsCanonicalTest.h"
 
+// The testing framework might include math.h and iscanonical macro definition
+// in overlay mode.
+#undef iscanonical
+
 #include "src/math/iscanonical.h"
 
 LIST_ISCANONICAL_TESTS(double, LIBC_NAMESPACE::iscanonical)

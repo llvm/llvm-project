@@ -17,9 +17,10 @@ body:             |
     ;
     ; NoF64-LABEL: name: splatvector_nxv1i64
     ; NoF64: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL $x0
+    ; NoF64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 1 x s1>) = G_VMSET_VL [[C]](s32)
     ; NoF64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], $x0
+    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], [[C]](s32)
     ; NoF64-NEXT: $v8 = COPY [[SPLAT_VECTOR_SPLIT_I64_VL]](<vscale x 1 x s64>)
     ; NoF64-NEXT: PseudoRET implicit $v8
     %0:_(s64) = G_IMPLICIT_DEF
@@ -43,9 +44,10 @@ body:             |
     ;
     ; NoF64-LABEL: name: splatvector_nxv2i64
     ; NoF64: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL $x0
+    ; NoF64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 2 x s1>) = G_VMSET_VL [[C]](s32)
     ; NoF64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], $x0
+    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], [[C]](s32)
     ; NoF64-NEXT: $v8m2 = COPY [[SPLAT_VECTOR_SPLIT_I64_VL]](<vscale x 2 x s64>)
     ; NoF64-NEXT: PseudoRET implicit $v8m2
     %0:_(s64) = G_IMPLICIT_DEF
@@ -69,9 +71,10 @@ body:             |
     ;
     ; NoF64-LABEL: name: splatvector_nxv4i64
     ; NoF64: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL $x0
+    ; NoF64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 4 x s1>) = G_VMSET_VL [[C]](s32)
     ; NoF64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], $x0
+    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], [[C]](s32)
     ; NoF64-NEXT: $v8m4 = COPY [[SPLAT_VECTOR_SPLIT_I64_VL]](<vscale x 4 x s64>)
     ; NoF64-NEXT: PseudoRET implicit $v8m4
     %0:_(s64) = G_IMPLICIT_DEF
@@ -95,9 +98,10 @@ body:             |
     ;
     ; NoF64-LABEL: name: splatvector_nxv8i64
     ; NoF64: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL $x0
+    ; NoF64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; NoF64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x s1>) = G_VMSET_VL [[C]](s32)
     ; NoF64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], $x0
+    ; NoF64-NEXT: [[SPLAT_VECTOR_SPLIT_I64_VL:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR_SPLIT_I64_VL [[DEF1]], [[DEF]](s32), [[DEF]], [[C]](s32)
     ; NoF64-NEXT: $v8m8 = COPY [[SPLAT_VECTOR_SPLIT_I64_VL]](<vscale x 8 x s64>)
     ; NoF64-NEXT: PseudoRET implicit $v8m8
     %0:_(s64) = G_IMPLICIT_DEF
