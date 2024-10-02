@@ -15927,6 +15927,9 @@ and :ref:`llvm.cos <t_llvm_cos>` on the argument.
 The first result is the sine of the argument and the second result is the cosine
 of the argument.
 
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
 '``llvm.pow.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
