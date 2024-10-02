@@ -159,8 +159,12 @@ void MCResourceInfo::gatherResourceInfo(
       ArgExprs.push_back(
           MCConstantExpr::create(FRI.CalleeSegmentSize, OutContext));
 
-    if (!FRI.HasIndirectCall) {
-      for (const Function *Callee : FRI.Callees) {
+    SmallPtrSet<const Function *, 8> Seen;
+    Seen.insert(&MF.getFunction());
+    for (const Function *Callee : FRI.Callees) {
+      if (!Seen.insert(Callee).second)
+        continue;
+      if (!Callee->isDeclaration()) {
         MCSymbol *calleeValSym =
             getSymbol(Callee->getName(), RIK_PrivateSegSize, OutContext);
         ArgExprs.push_back(MCSymbolRefExpr::create(calleeValSym, OutContext));
