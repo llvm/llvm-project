@@ -2685,6 +2685,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
+
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
