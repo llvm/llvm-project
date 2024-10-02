@@ -6,6 +6,9 @@
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
+
+// This test file contains tests for the AArch64 NEON load/store intrinsics.
+
 #include <arm_neon.h>
 
 int8x8_t test_vld1_lane_s8(int8_t const * ptr, int8x8_t src) {

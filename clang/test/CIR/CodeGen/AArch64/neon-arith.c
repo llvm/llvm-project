@@ -8,6 +8,9 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 #include <arm_neon.h>
 
+// This test file contains tests for aarch64 NEON arithmetic intrinsics 
+// that are not vector type related.
+
 float32_t test_vrndns_f32(float32_t a) {
   return vrndns_f32(a);
 }
