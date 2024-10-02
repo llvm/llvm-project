@@ -100,7 +100,7 @@ def HasValueSemanticsPred : CPred<"$_self.hasTrait<::mlir::ValueSemantics>()">;
 class Type<Pred condition, string descr = "",
            string cppType = "::mlir::Type"> :
     TypeConstraint<condition, descr, cppType> {
-  string description = "";
+  string description = descr;
   string builderCall = "";
 }
 
