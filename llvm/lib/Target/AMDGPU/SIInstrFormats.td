@@ -327,7 +327,7 @@ def VOPDstOperand_VGPR_32 : VOPDstOperand <VGPR_32_STAGING> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
-def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_Lo128_STAGING> {
+def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
@@ -336,7 +336,7 @@ def VOPDstOperand_t16 : VOPDstOperand <VGPR_16_STAGING> {
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
 }
 
-def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128_STAGING> {
+def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_STAGING_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
 }

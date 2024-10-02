@@ -16725,7 +16725,8 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), PrevDst);
   for (; SizeLeft; SizeLeft--, CurrIdx++) {
-    NewDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+    NewDst = MRI.createVirtualRegister(
+        TRI.getAllocatableClass(TII->getOpRegClass(MI, DstIdx)));
     // Initialize dword
     Register SubReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     // clang-format off
@@ -16939,9 +16940,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         RC = &AMDGPU::VGPR_32_Lo256RegClass;
         break;
       default:
-        RC = Subtarget->has1024AddressableVGPRs()
-                 ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
-                 : TRI->getVGPRClassForBitWidth(BitWidth);
+        RC = TRI->getAllocatableClass(
+            Subtarget->has1024AddressableVGPRs()
+                ? TRI->getAlignedLo256VGPRClassForBitWidth(BitWidth)
+                : TRI->getVGPRClassForBitWidth(BitWidth));
         if (!RC)
           return std::pair(0U, nullptr);
         break;
@@ -16995,9 +16997,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             return std::pair(0U, nullptr);
           MCRegister Reg = RC->getRegister(Idx);
           if (SIRegisterInfo::isVGPRClass(RC))
-            RC = Subtarget->has1024AddressableVGPRs()
-                     ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
-                     : TRI->getVGPRClassForBitWidth(Width);
+            RC = TRI->getAllocatableClass(
+                Subtarget->has1024AddressableVGPRs()
+                    ? TRI->getAlignedLo256VGPRClassForBitWidth(Width)
+                    : TRI->getVGPRClassForBitWidth(Width));
           else if (SIRegisterInfo::isSGPRClass(RC))
             RC = TRI->getSGPRClassForBitWidth(Width);
           else if (SIRegisterInfo::isAGPRClass(RC))
@@ -17022,8 +17025,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   if (Ret.first) {
     Ret.second = TRI->getPhysRegBaseClass(Ret.first);
     if (Subtarget->has1024AddressableVGPRs() && TRI->isVGPRClass(Ret.second))
-      Ret.second = TRI->getAlignedLo256VGPRClassForBitWidth(
-          Ret.second->MC->getSizeInBits());
+      Ret.second =
+          TRI->getAllocatableClass(TRI->getAlignedLo256VGPRClassForBitWidth(
+              Ret.second->MC->getSizeInBits()));
   }
 
   return Ret;
@@ -18033,7 +18037,7 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   if (TRI->isSGPRClass(RC) && isDivergent)
     return TRI->getEquivalentVGPRClass(RC);
 
-  return RC;
+  return TRI->getAllocatableClass(RC);
 }
 
 // FIXME: This is a workaround for DivergenceAnalysis not understanding always
