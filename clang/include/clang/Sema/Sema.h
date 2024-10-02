@@ -1974,6 +1974,36 @@ public:
   ActOnPragmaMSFunction(SourceLocation Loc,
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
+  /// A label from a C++ #pragma export, for a symbol that we
+  /// haven't seen the declaration for yet. The TypeList is the argument list
+  /// the function must match if HasTypeList is true.
+  struct SymbolLabel {
+    std::optional<SmallVector<QualType, 4>> TypeList;
+    StringRef MappedName;
+    SourceLocation NameLoc;
+    bool HasTypeList;
+    Qualifiers CVQual;
+  };
+
+  typedef SmallVector<SymbolLabel, 1> PendingSymbolOverloads;
+  typedef llvm::DenseMap<NestedNameSpecifier *, PendingSymbolOverloads>
+      SymbolNames;
+  SymbolNames PendingExportNames;
+
+  FunctionDecl *tryFunctionLookUp(NestedNameSpecifier *NestedName,
+                                  SourceLocation NameLoc);
+
+  /// trySymbolLookUp try to look up a decl matching the nested specifier
+  /// with optional type list.
+  NamedDecl *trySymbolLookUp(NestedNameSpecifier *NestedName,
+                             const clang::Sema::SymbolLabel &Label);
+
+  /// ActonPragmaExport - called on well-formed '\#pragma export'.
+  void ActOnPragmaExport(NestedNameSpecifier *NestedId,
+                         SourceLocation ExportNameLoc,
+                         std::optional<SmallVector<QualType, 4>> &&TypeList,
+                         Qualifiers CVQual);
+
   /// Only called on function definitions; if there is a pragma in scope
   /// with the effect of a range-based optnone, consider marking the function
   /// with attribute optnone.

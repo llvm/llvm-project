@@ -6418,6 +6418,19 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
+  if (D.IsExport()) {
+    VisibilityAttr *existingAttr = New->getAttr<VisibilityAttr>();
+    if (existingAttr) {
+      VisibilityAttr::VisibilityType existingValue =
+          existingAttr->getVisibility();
+      if (existingValue != VisibilityAttr::Default)
+        Diag(D.getExportLoc(), diag::err_mismatched_visibility);
+    } else {
+      New->addAttr(
+          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
+    }
+  }
+
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)

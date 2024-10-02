@@ -314,7 +314,11 @@ namespace {
       Builder->EmitExternalDeclaration(D);
     }
 
-    void HandleVTable(CXXRecordDecl *RD) override {
+    void CompletePragmaExport(Decl *D) override {
+      Builder->EmitPragmaExport(D);
+    }
+
+  void HandleVTable(CXXRecordDecl *RD) override {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 

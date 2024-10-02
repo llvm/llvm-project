@@ -37,6 +37,11 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
 
+  if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
+                         options::OPT_fvisibility_ms_compat)) {
+    CC1Args.push_back("-fvisibility=hidden");
+  }
+
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
@@ -149,11 +154,10 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef OutputName = Output.getFilename();
     // Strip away the last file suffix in presence from output name and add
     // a new .x suffix.
-    size_t Suffix = OutputName.find_last_of('.');
-    const char *SideDeckName =
-        Args.MakeArgString(OutputName.substr(0, Suffix) + ".x");
+    SmallString<128> SideDeckName = OutputName;
+    llvm::sys::path::replace_extension(SideDeckName, "x");
     CmdArgs.push_back("-x");
-    CmdArgs.push_back(SideDeckName);
+    CmdArgs.push_back(Args.MakeArgString(SideDeckName));
   } else {
     // We need to direct side file to /dev/null to suppress linker warning when
     // the object file contains exported symbols, and -shared or

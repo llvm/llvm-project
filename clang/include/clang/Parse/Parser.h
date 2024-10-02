@@ -220,6 +220,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
+  std::unique_ptr<PragmaHandler> ExportHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
@@ -853,6 +854,18 @@ private:
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  /// Helper functions for handling zOS pragmas.
+  NestedNameSpecifier *zOSParseIdentifier(StringRef PragmaName,
+                                          IdentifierInfo *IdentName);
+  bool zOSParseParameterList(StringRef PragmaName,
+                             std::optional<SmallVector<QualType, 4>> &TypeList,
+                             Qualifiers &CVQual);
+  bool zOSHandlePragmaHelper(tok::TokenKind);
+
+  /// Handle the annotation token produced for
+  /// #pragma export ...
+  void HandlePragmaExport();
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)

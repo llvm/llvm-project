@@ -4520,6 +4520,12 @@ def ReleaseHandle : InheritableParamAttr {
   let Documentation = [ReleaseHandleDocs];
 }
 
+def zOSExport : InheritableAttr {
+  let Spellings = [CustomKeyword<"_Export">];
+  let Subjects = SubjectList<[Function, Var, CXXRecord]>;
+  let Documentation = [zOSExportDocs];
+}
+
 def UnsafeBufferUsage : InheritableAttr {
   let Spellings = [Clang<"unsafe_buffer_usage">];
   let Subjects = SubjectList<[Function, Field]>;
