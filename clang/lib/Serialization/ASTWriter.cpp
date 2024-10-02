@@ -5713,8 +5713,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
     // efficent becuase it allows lazy deserialization.
     RecordData FunctionToLambdasMapRecord;
     for (const auto &Pair : FunctionToLambdasMap) {
-      FunctionToLambdasMapRecord.push_back(
-          GetDeclRef(Pair.first).getRawValue());
+      FunctionToLambdasMapRecord.push_back(Pair.first.getRawValue());
       FunctionToLambdasMapRecord.push_back(Pair.second.size());
       for (const auto &Lambda : Pair.second)
         FunctionToLambdasMapRecord.push_back(Lambda.getRawValue());
@@ -8149,6 +8148,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     // Nothing to do here, there is no additional information beyond the
     // begin/end loc and clause kind.
     return;
+  case OpenACCClauseKind::Collapse: {
+    const auto *CC = cast<OpenACCCollapseClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->hasForce());
+    AddStmt(const_cast<Expr *>(CC->getLoopCount()));
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -8162,7 +8168,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Context.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 
 namespace llvm::sandboxir {
 
@@ -409,6 +411,10 @@ Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
   return cast<Argument>(It->second.get());
 }
 
+Constant *Context::getOrCreateConstant(llvm::Constant *LLVMC) {
+  return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
+}
+
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   assert(getValue(LLVMBB) == nullptr && "Already exists!");
   auto NewBBPtr = std::unique_ptr<BasicBlock>(new BasicBlock(LLVMBB, *this));
@@ -661,6 +667,12 @@ Value *Context::getValue(llvm::Value *V) const {
     return It->second.get();
   return nullptr;
 }
+
+Context::Context(LLVMContext &LLVMCtx)
+    : LLVMCtx(LLVMCtx), IRTracker(*this),
+      LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
+
+Context::~Context() {}
 
 Module *Context::getModule(llvm::Module *LLVMM) const {
   auto It = LLVMModuleToModuleMap.find(LLVMM);

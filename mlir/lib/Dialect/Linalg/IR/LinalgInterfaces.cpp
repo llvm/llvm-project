@@ -222,7 +222,7 @@ bool mlir::linalg::detail::isContractionBody(
   Value contributed = getSourceSkipUnary(
       isa<BlockArgument>(reductionLHS) ? reductionRHS : reductionLHS);
   Operation *elementwiseOp = contributed.getDefiningOp();
-  if (elementwiseOp->getNumResults() != 1 ||
+  if (!elementwiseOp || elementwiseOp->getNumResults() != 1 ||
       elementwiseOp->getNumOperands() != 2) {
     errs << "expected elementwise op to be binary";
     return false;

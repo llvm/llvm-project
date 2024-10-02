@@ -189,6 +189,7 @@ class LocalDeclID : public DeclIDBase {
   // Every Decl ID is a local decl ID to the module being writing in ASTWriter.
   friend class ASTWriter;
   friend class GlobalDeclID;
+  friend struct llvm::DenseMapInfo<clang::LocalDeclID>;
 
 public:
   LocalDeclID() : Base() {}
@@ -263,6 +264,27 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
+    return L == R;
+  }
+};
+
+template <> struct DenseMapInfo<clang::LocalDeclID> {
+  using LocalDeclID = clang::LocalDeclID;
+  using DeclID = LocalDeclID::DeclID;
+
+  static LocalDeclID getEmptyKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static LocalDeclID getTombstoneKey() {
+    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const LocalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
+  }
+
+  static bool isEqual(const LocalDeclID &L, const LocalDeclID &R) {
     return L == R;
   }
 };

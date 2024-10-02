@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/LangOptions.h"
 #include "flang/Common/OpenMP-features.h"
 #include "flang/Common/Version.h"
 #include "flang/Common/default-kinds.h"
@@ -508,6 +509,21 @@ int main(int argc, char **argv) {
   options.predefinitions.emplace_back(
       "__flang_patchlevel__"s, std::string{FLANG_VERSION_PATCHLEVEL_STRING});
 
+  Fortran::common::LangOptions langOpts;
+  langOpts.NoGPULib = setNoGPULib;
+  langOpts.OpenMPVersion = setOpenMPVersion;
+  langOpts.OpenMPIsTargetDevice = enableOpenMPDevice;
+  langOpts.OpenMPIsGPU = enableOpenMPGPU;
+  langOpts.OpenMPForceUSM = enableOpenMPForceUSM;
+  langOpts.OpenMPTargetDebug = setOpenMPTargetDebug;
+  langOpts.OpenMPThreadSubscription = setOpenMPThreadSubscription;
+  langOpts.OpenMPTeamSubscription = setOpenMPTeamSubscription;
+  langOpts.OpenMPNoThreadState = setOpenMPNoThreadState;
+  langOpts.OpenMPNoNestedParallelism = setOpenMPNoNestedParallelism;
+  std::transform(targetTriplesOpenMP.begin(), targetTriplesOpenMP.end(),
+                 std::back_inserter(langOpts.OMPTargetTriples),
+                 [](const std::string &str) { return llvm::Triple(str); });
+
   // enable parsing of OpenMP
   if (enableOpenMP) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
@@ -539,7 +555,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allCookedSources};
+      defaultKinds, options.features, langOpts, allCookedSources};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)

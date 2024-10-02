@@ -35451,11 +35451,11 @@ static MachineInstrBuilder createPHIsForCMOVsInSinkBB(
     if (MIIt->getOperand(3).getImm() == OppCC)
       std::swap(Op1Reg, Op2Reg);
 
-    if (RegRewriteTable.contains(Op1Reg))
-      Op1Reg = RegRewriteTable[Op1Reg].first;
+    if (auto It = RegRewriteTable.find(Op1Reg); It != RegRewriteTable.end())
+      Op1Reg = It->second.first;
 
-    if (RegRewriteTable.contains(Op2Reg))
-      Op2Reg = RegRewriteTable[Op2Reg].second;
+    if (auto It = RegRewriteTable.find(Op2Reg); It != RegRewriteTable.end())
+      Op2Reg = It->second.second;
 
     MIB =
         BuildMI(*SinkMBB, SinkInsertionPoint, MIMD, TII->get(X86::PHI), DestReg)

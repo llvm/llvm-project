@@ -224,10 +224,10 @@ struct VectorizationState {
   /// Masks an operation with the canonical vector mask if the operation needs
   /// masking. Returns the masked operation or the original operation if masking
   /// is not needed. If provided, the canonical mask for this operation is
-  /// permuted using `maybeMaskingMap`.
+  /// permuted using `maybeIndexingMap`.
   Operation *
   maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
-                std::optional<AffineMap> maybeMaskingMap = std::nullopt);
+                std::optional<AffineMap> maybeIndexingMap = std::nullopt);
 
 private:
   /// Initializes the iteration space static sizes using the Linalg op
@@ -422,15 +422,27 @@ Value VectorizationState::getOrCreateMaskFor(
   return mask;
 }
 
-/// Masks an operation with the canonical vector mask if the operation needs
-/// masking. Returns the masked operation or the original operation if masking
-/// is not needed. If provided, the canonical mask for this operation is
-/// permuted using `maybeMaskingMap`.
 Operation *
 VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   LinalgOp linalgOp,
-                                  std::optional<AffineMap> maybeMaskingMap) {
+                                  std::optional<AffineMap> maybeIndexingMap) {
   LDBG("Trying to mask: " << *opToMask << "\n");
+
+  std::optional<AffineMap> maybeMaskingMap = std::nullopt;
+  // The Operand indexing map may contain "zero" results, e.g.:
+  //    (d0, d1, d2, d3) -> (d0, d1, d2, 0)
+  // When applied to canonical vector shapes like these:
+  //    (1, 16, 16, 4)
+  // we would get:
+  //    (1, 16, 16, 0)
+  // Instead, we should extract the following map permutation map for masking:
+  //    (d0, d1, d2, d3) -> (d0, d1, d2)
+  // This way, the corresponding vector/mask type will be:
+  //    vector<1x16x16xty>
+  // rather than:
+  //    vector<1x16x16x0xty>
+  if (maybeIndexingMap)
+    maybeMaskingMap = maybeIndexingMap->dropZeroResults();
 
   // Create or retrieve mask for this operation.
   Value mask =
@@ -476,7 +488,8 @@ static AffineMap reindexIndexingMap(AffineMap map) {
   assert(map.isProjectedPermutation(/*allowZeroInResults=*/true) &&
          "expected projected permutation");
   auto res = compressUnusedDims(map);
-  assert(res.getNumDims() == res.getNumResults() &&
+  assert(res.getNumDims() ==
+             (res.getNumResults() - res.getNumOfZeroResults()) &&
          "expected reindexed map with same number of dims and results");
   return res;
 }
@@ -1349,16 +1362,6 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // permutation map and masking map.
     AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
 
-    // Remove zeros from indexing map to use it as masking map.
-    SmallVector<int64_t> zeroPos;
-    auto results = indexingMap.getResults();
-    for (const auto &result : llvm::enumerate(results)) {
-      if (isa<AffineConstantExpr>(result.value())) {
-        zeroPos.push_back(result.index());
-      }
-    }
-    AffineMap maskingMap = indexingMap.dropResults(zeroPos);
-
     AffineMap readMap;
     VectorType readType;
     Type elemType = getElementTypeOrSelf(opOperand->get());
@@ -1388,7 +1391,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     Operation *read = rewriter.create<vector::TransferReadOp>(
         loc, readType, opOperand->get(), indices, readMap,
         ArrayRef<bool>(inBounds));
-    read = state.maskOperation(rewriter, read, linalgOp, maskingMap);
+    read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
 
     // 3.b. If masked, set in-bounds to true. Masking guarantees that the access

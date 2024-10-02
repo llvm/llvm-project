@@ -2381,7 +2381,8 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   /// Handles the checks for format strings, non-POD arguments to vararg
@@ -2573,7 +2574,8 @@ private:
   ExprResult AtomicOpsOverloaded(ExprResult TheCallResult,
                                  AtomicExpr::AtomicOp Op);
 
-  bool BuiltinElementwiseMath(CallExpr *TheCall);
+  /// \param FPOnly restricts the arguments to floating-point types.
+  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -7423,7 +7425,8 @@ public:
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
-                                      SourceLocation Loc);
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
 
   /// Context in which we're performing a usual arithmetic conversion.
   enum ArithConvKind {
@@ -11252,6 +11255,7 @@ public:
                             ConceptDecl *NamedConcept, NamedDecl *FoundDecl,
                             const TemplateArgumentListInfo *TemplateArgs,
                             TemplateTypeParmDecl *ConstrainedParameter,
+                            QualType ConstrainedType,
                             SourceLocation EllipsisLoc);
 
   bool AttachTypeConstraint(AutoTypeLoc TL,
@@ -12480,8 +12484,9 @@ public:
                                     sema::TemplateDeductionInfo &Info);
 
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
-      TemplateParameterList *PParam, TemplateDecl *AArg,
-      const DefaultArguments &DefaultArgs, SourceLocation Loc, bool IsDeduced);
+      TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
+      const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
+      bool IsDeduced);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -12790,6 +12795,9 @@ public:
 
       /// We are instantiating a type alias template declaration.
       TypeAliasTemplateInstantiation,
+
+      /// We are performing partial ordering for template template parameters.
+      PartialOrderingTTP,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -13009,6 +13017,12 @@ public:
     /// \brief Note that we are building deduction guides.
     InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
                           TemplateDecl *Entity, BuildingDeductionGuidesTag,
+                          SourceRange InstantiationRange = SourceRange());
+
+    struct PartialOrderingTTP {};
+    /// \brief Note that we are partial ordering template template parameters.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation ArgLoc,
+                          PartialOrderingTTP, TemplateDecl *PArg,
                           SourceRange InstantiationRange = SourceRange());
 
     /// Note that we have finished instantiating this template.

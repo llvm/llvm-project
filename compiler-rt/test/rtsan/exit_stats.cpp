@@ -21,3 +21,4 @@ int main() {
 
 // CHECK: RealtimeSanitizer exit stats:
 // CHECK-NEXT: Total error count: 10
+// CHECK-NEXT: Unique error count: 1

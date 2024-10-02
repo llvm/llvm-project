@@ -4974,6 +4974,9 @@ void Sema::setTagNameForLinkagePurposes(TagDecl *TagFromDeclSpec,
 
   // Otherwise, set this as the anon-decl typedef for the tag.
   TagFromDeclSpec->setTypedefNameForAnonDecl(NewTD);
+
+  // Now that we have a name for the tag, process API notes again.
+  ProcessAPINotes(TagFromDeclSpec);
 }
 
 static unsigned GetDiagnosticTypeSpecifierID(const DeclSpec &DS) {
@@ -9086,9 +9089,14 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   SemaRef.Diag(NewFD->getLocation(), DiagMsg)
       << Name << NewDC << IsDefinition << NewFD->getLocation();
 
-  bool NewFDisConst = false;
-  if (CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD))
-    NewFDisConst = NewMD->isConst();
+  CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD);
+  if (NewMD && DiagMsg == diag::err_member_decl_does_not_match) {
+    CXXRecordDecl *RD = NewMD->getParent();
+    SemaRef.Diag(RD->getLocation(), diag::note_defined_here)
+        << RD->getName() << RD->getLocation();
+  }
+
+  bool NewFDisConst = NewMD && NewMD->isConst();
 
   for (SmallVectorImpl<std::pair<FunctionDecl *, unsigned> >::iterator
        NearMatch = NearMatches.begin(), NearMatchEnd = NearMatches.end();
@@ -9293,15 +9301,12 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         TrailingRequiresClause);
 
   } else if (Name.getNameKind() == DeclarationName::CXXDeductionGuideName) {
-    if (TrailingRequiresClause)
-      SemaRef.Diag(TrailingRequiresClause->getBeginLoc(),
-                   diag::err_trailing_requires_clause_on_deduction_guide)
-          << TrailingRequiresClause->getSourceRange();
     if (SemaRef.CheckDeductionGuideDeclarator(D, R, SC))
       return nullptr;
-    return CXXDeductionGuideDecl::Create(SemaRef.Context, DC, D.getBeginLoc(),
-                                         ExplicitSpecifier, NameInfo, R, TInfo,
-                                         D.getEndLoc());
+    return CXXDeductionGuideDecl::Create(
+        SemaRef.Context, DC, D.getBeginLoc(), ExplicitSpecifier, NameInfo, R,
+        TInfo, D.getEndLoc(), /*Ctor=*/nullptr,
+        /*Kind=*/DeductionCandidate::Normal, TrailingRequiresClause);
   } else if (DC->isRecord()) {
     // If the name of the function is the same as the name of the record,
     // then this must be an invalid constructor that has a return type.

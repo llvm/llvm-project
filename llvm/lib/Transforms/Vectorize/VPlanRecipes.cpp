@@ -22,6 +22,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -48,6 +49,24 @@ extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    if (Instruction::isBinaryOp(cast<VPInstruction>(this)->getOpcode()))
+      return false;
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::Or:
+    case Instruction::ICmp:
+    case Instruction::Select:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
+    case VPInstruction::LogicalAnd:
+    case VPInstruction::PtrAdd:
+      return false;
+    default:
+      return true;
+    }
   case VPInterleaveSC:
     return cast<VPInterleaveRecipe>(this)->getNumStoreOperands() > 0;
   case VPWidenStoreEVLSC:
@@ -137,21 +156,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPScalarCastSC:
     return false;
   case VPInstructionSC:
-    switch (cast<VPInstruction>(this)->getOpcode()) {
-    case Instruction::Or:
-    case Instruction::ICmp:
-    case Instruction::Select:
-    case VPInstruction::Not:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::ExtractFromEnd:
-    case VPInstruction::FirstOrderRecurrenceSplice:
-    case VPInstruction::LogicalAnd:
-    case VPInstruction::PtrAdd:
-      return false;
-    default:
-      return true;
-    }
+    return mayWriteToMemory();
   case VPWidenCallSC: {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
@@ -606,14 +611,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
                              : Builder.CreateZExt(ReducedPartRdx, PhiTy);
     }
 
-    // If there were stores of the reduction value to a uniform memory address
-    // inside the loop, create the final store here.
-    if (StoreInst *SI = RdxDesc.IntermediateStore) {
-      auto *NewSI = Builder.CreateAlignedStore(
-          ReducedPartRdx, SI->getPointerOperand(), SI->getAlign());
-      propagateMetadata(NewSI, SI);
-    }
-
     return ReducedPartRdx;
   }
   case VPInstruction::ExtractFromEnd: {
@@ -938,8 +935,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  if (isa<FPMathOperator>(V))
-    V->copyFastMathFlags(CI);
+  setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -954,11 +950,6 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                     Variant->getFunctionType()->params(),
                                     CostKind);
   }
-
-  FastMathFlags FMF;
-  // TODO: Manage flags via VPRecipeWithIRFlags.
-  if (auto *FPMO = dyn_cast_or_null<FPMathOperator>(getUnderlyingValue()))
-    FMF = FPMO->getFastMathFlags();
 
   // Some backends analyze intrinsic arguments to determine cost. Use the
   // underlying value for the operand if it has one. Otherwise try to use the
@@ -987,6 +978,7 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
+  FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
       VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
       dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
@@ -1006,7 +998,9 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " = ";
   }
 
-  O << "call @" << CalledFn->getName() << "(";
+  O << "call";
+  printFlags(O);
+  O << "  @" << CalledFn->getName() << "(";
   interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });
@@ -1019,6 +1013,94 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     if (Variant->hasName())
       O << ": " << Variant->getName();
     O << ")";
+  }
+}
+#endif
+
+void VPHistogramRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
+  IRBuilderBase &Builder = State.Builder;
+
+  Value *Address = State.get(getOperand(0));
+  Value *IncAmt = State.get(getOperand(1), /*IsScalar=*/true);
+  VectorType *VTy = cast<VectorType>(Address->getType());
+
+  // The histogram intrinsic requires a mask even if the recipe doesn't;
+  // if the mask operand was omitted then all lanes should be executed and
+  // we just need to synthesize an all-true mask.
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask =
+        Builder.CreateVectorSplat(VTy->getElementCount(), Builder.getInt1(1));
+
+  // If this is a subtract, we want to invert the increment amount. We may
+  // add a separate intrinsic in future, but for now we'll try this.
+  if (Opcode == Instruction::Sub)
+    IncAmt = Builder.CreateNeg(IncAmt);
+  else
+    assert(Opcode == Instruction::Add && "only add or sub supported for now");
+
+  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
+                                {VTy, IncAmt->getType()},
+                                {Address, IncAmt, Mask});
+}
+
+InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
+                                               VPCostContext &Ctx) const {
+  // FIXME: Take the gather and scatter into account as well. For now we're
+  //        generating the same cost as the fallback path, but we'll likely
+  //        need to create a new TTI method for determining the cost, including
+  //        whether we can use base + vec-of-smaller-indices or just
+  //        vec-of-pointers.
+  assert(VF.isVector() && "Invalid VF for histogram cost");
+  Type *AddressTy = Ctx.Types.inferScalarType(getOperand(0));
+  VPValue *IncAmt = getOperand(1);
+  Type *IncTy = Ctx.Types.inferScalarType(IncAmt);
+  VectorType *VTy = VectorType::get(IncTy, VF);
+
+  // Assume that a non-constant update value (or a constant != 1) requires
+  // a multiply, and add that into the cost.
+  InstructionCost MulCost =
+      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy);
+  if (IncAmt->isLiveIn()) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(IncAmt->getLiveInIRValue());
+
+    if (CI && CI->getZExtValue() == 1)
+      MulCost = TTI::TCC_Free;
+  }
+
+  // Find the cost of the histogram operation itself.
+  Type *PtrTy = VectorType::get(AddressTy, VF);
+  Type *MaskTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+  IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
+                              Type::getVoidTy(Ctx.LLVMCtx),
+                              {PtrTy, IncTy, MaskTy});
+
+  // Add the costs together with the add/sub operation.
+  return Ctx.TTI.getIntrinsicInstrCost(
+             ICA, TargetTransformInfo::TCK_RecipThroughput) +
+         MulCost + Ctx.TTI.getArithmeticInstrCost(Opcode, VTy);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-HISTOGRAM buckets: ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+
+  if (Opcode == Instruction::Sub)
+    O << ", dec: ";
+  else {
+    assert(Opcode == Instruction::Add);
+    O << ", inc: ";
+  }
+  getOperand(1)->printAsOperand(O, SlotTracker);
+
+  if (VPValue *Mask = getMask()) {
+    O << ", mask: ";
+    Mask->printAsOperand(O, SlotTracker);
   }
 }
 
@@ -1739,7 +1821,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   Type *IndexTy = State.VF.isScalable() && (IsReverse || CurrentPart > 0)
-                      ? DL.getIndexType(IndexedTy->getPointerTo())
+                      ? DL.getIndexType(Builder.getPtrTy(0))
                       : Builder.getInt32Ty();
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   bool InBounds = isInBounds();

@@ -816,6 +816,7 @@ def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
 def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>,
   Group<gfortran_Group>;
 def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
+    Visibility<[ClangOption, FlangOption]>,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
 def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
@@ -1055,6 +1056,7 @@ def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def Xoffload_linker : JoinedAndSeparate<["-"], "Xoffload-linker">,
+  Visibility<[ClangOption, CLOption, FlangOption, DXCOption]>,
   HelpText<"Pass <arg> to the offload linkers or the ones identified by -<triple>">,
   MetaVarName<"<triple> <arg>">, Group<Link_Group>;
 def Xpreprocessor : Separate<["-"], "Xpreprocessor">, Group<Preprocessor_Group>,
@@ -1975,10 +1977,15 @@ def fno_color_diagnostics : Flag<["-"], "fno-color-diagnostics">, Group<f_Group>
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Disable colors in diagnostics">;
 def : Flag<["-"], "fdiagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fcolor_diagnostics>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fcolor_diagnostics>;
 def : Flag<["-"], "fno-diagnostics-color">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>, Alias<fno_color_diagnostics>;
-def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Alias<fno_color_diagnostics>;
+def fdiagnostics_color_EQ : Joined<["-"], "fdiagnostics-color=">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
+  Values<"auto,always,never">,
+  HelpText<"When to use colors in diagnostics">;
 def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
   HelpText<"Use ANSI escape codes for diagnostics">,
@@ -2973,7 +2980,7 @@ def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Grou
                     "LangOptions::LaxVectorConversionKind::Integer",
                     "LangOptions::LaxVectorConversionKind::All"]>,
   MarshallingInfoEnum<LangOpts<"LaxVectorConversions">,
-                      open_cl.KeyPath #
+                      !strconcat("(", open_cl.KeyPath, " || ", hlsl.KeyPath, ")") #
                           " ? LangOptions::LaxVectorConversionKind::None" #
                           " : LangOptions::LaxVectorConversionKind::All">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>,
@@ -6892,6 +6899,8 @@ def module_suffix : Separate<["-"], "module-suffix">,  Group<f_Group>, MetaVarNa
   HelpText<"Use <suffix> as the suffix for module files (the default value is `.mod`)">;
 def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
   HelpText<"Dump the cooked character stream in -E mode">;
+def fpreprocess_include_lines : Flag<["-"], "fpreprocess-include-lines">, Group<Preprocessor_Group>,
+  HelpText<"Treat INCLUDE lines like #include directives in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
