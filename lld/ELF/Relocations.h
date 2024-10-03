@@ -17,6 +17,7 @@
 
 namespace lld::elf {
 struct Ctx;
+class Defined;
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -175,6 +176,8 @@ private:
   std::pair<Thunk *, bool> getThunk(InputSection *isec, Relocation &rel,
                                     uint64_t src);
 
+  std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
+
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
                                 uint64_t off);
 
@@ -201,8 +204,17 @@ private:
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
-  // The Mips LA25 Thunk is an example of an inline ThunkSection.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection, as is
+  // the AArch64BTLandingPadThunk.
   llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+
+  // Record landing pads, generated for a section + offset destination.
+  // Landling pads are alternative entry points for destinations that need
+  // to be reached via thunks that use indirect branches. A destination
+  // needs at most one landing pad as that can be reused by all callers.
+  llvm::DenseMap<std::pair<std::pair<SectionBase *, uint64_t>, int64_t>,
+                 Thunk *>
+      landingPadsBySectionAndAddend;
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the
