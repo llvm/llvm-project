@@ -1142,6 +1142,9 @@ bool AMDGPUCallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
+  // FIXME: We need to check if any arguments passed in SGPR are uniform. If
+  // they are not, this cannot be a tail call. If they are uniform, but may be
+  // VGPR, we need to insert readfirstlanes.
   if (!areCalleeOutgoingArgsTailCallable(Info, MF, OutArgs))
     return false;
 
