@@ -412,6 +412,13 @@ ANALYZER_OPTION(unsigned, MaxSymbolComplexity, "max-symbol-complexity",
 ANALYZER_OPTION(unsigned, MaxTaintedSymbolComplexity, "max-tainted-symbol-complexity",
                 "[DEPRECATED] The maximum complexity of a symbol to carry taint", 9)
 
+ANALYZER_OPTION(bool, AnalyzerInlineTaintOnly, "analyzer-inline-taint-only",
+                "Only inline on a call-path to a taint source or sink", false)
+
+ANALYZER_OPTION(bool, AnalyzerFocusedTaint, "analyzer-focused-taint",
+                "Only inline top-level functions on a call-path to a taint source or sink", false)
+
+
 ANALYZER_OPTION(unsigned, MaxTimesInlineLarge, "max-times-inline-large",
                 "The maximum times a large function could be inlined.", 32)
 

@@ -227,8 +227,6 @@ public:
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
-  unsigned AnalyzerFocusedTaint : 1;
-  unsigned AnalyzerInlineTaintOnly : 1;
   unsigned AnalyzerNoteAnalysisEntryPoints : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
