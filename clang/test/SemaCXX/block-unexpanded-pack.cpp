@@ -40,7 +40,7 @@ void gh109148() {
   ([] {
     Ts s;
     (^Ts); // expected-error {{expected expression}}
-  }, ...)
+  }, ...);
 
   [] { // expected-error {{unexpanded parameter pack 'Ts'}}
     ^ { Ts s; return not_defined; }; // expected-error {{use of undeclared identifier 'not_defined'}}
