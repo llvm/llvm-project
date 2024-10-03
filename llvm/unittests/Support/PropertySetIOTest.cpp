@@ -1,4 +1,4 @@
-//===- llvm/unittest/Support/PropertySetIO.cpp - Property set I/O tests ---===//
+//=- llvm/unittest/Support/PropertySetIOTest.cpp - Property set I/O tests ---=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +40,7 @@ TEST(PropertySet, IntValuesIO) {
     PropSetsPtr->get()->write(OS);
   }
   // Check that the original and the serialized version are equal
-  ASSERT_EQ(Serialized, Content);
+  EXPECT_EQ(Serialized, Content);
 }
 
 TEST(PropertySet, ByteArrayValuesIO) {
@@ -67,6 +67,6 @@ TEST(PropertySet, ByteArrayValuesIO) {
     PropSetsPtr->get()->write(OS);
   }
   // Check that the original and the serialized version are equal
-  ASSERT_EQ(Serialized, Content);
+  EXPECT_EQ(Serialized, Content);
 }
 } // namespace

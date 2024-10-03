@@ -120,13 +120,13 @@ private:
   static inline int decode(char Ch) {
     if (Ch >= 'A' && Ch <= 'Z') // 0..25
       return Ch - 'A';
-    else if (Ch >= 'a' && Ch <= 'z') // 26..51
+    if (Ch >= 'a' && Ch <= 'z') // 26..51
       return Ch - 'a' + 26;
-    else if (Ch >= '0' && Ch <= '9') // 52..61
+    if (Ch >= '0' && Ch <= '9') // 52..61
       return Ch - '0' + 52;
-    else if (Ch == '+') // 62
+    if (Ch == '+') // 62
       return 62;
-    else if (Ch == '/') // 63
+    if (Ch == '/') // 63
       return 63;
     return -1;
   }
@@ -160,7 +160,7 @@ public:
   static size_t encode(const byte *Src, raw_ostream &Out, size_t SrcSize) {
     size_t Off = 0;
 
-    // encode full byte triples
+    // Encode full byte triples
     for (size_t TriB = 0; TriB < SrcSize / 3; ++TriB) {
       Off = TriB * 3;
       byte Byte0 = Src[Off++];
@@ -172,7 +172,7 @@ public:
       Out << EncodingTable[composeInd(Byte1, Byte2, 4)];
       Out << EncodingTable[(int)(Byte2 >> 2) & 0x3F];
     }
-    // encode the remainder
+    // Encode the remainder
     int RemBytes = SrcSize - Off;
 
     if (RemBytes > 0) {
@@ -196,14 +196,14 @@ public:
     size_t SrcOff = 0;
     size_t DstOff = 0;
 
-    // decode full quads
+    // Decode full quads.
     for (size_t Qch = 0; Qch < SrcSize / 4; ++Qch, SrcOff += 4, DstOff += 3) {
       byte Ch[4];
       Expected<bool> TrRes = decode4(Src + SrcOff, Ch);
 
       if (!TrRes)
         return TrRes.takeError();
-      // each quad of chars produces three bytes of output
+      // Each quad of chars produces three bytes of output.
       Dst[DstOff + 0] = Ch[0] | (Ch[1] << 6);
       Dst[DstOff + 1] = (Ch[1] >> 2) | (Ch[2] << 4);
       Dst[DstOff + 2] = (Ch[2] >> 4) | (Ch[3] << 2);
@@ -212,7 +212,7 @@ public:
 
     if (RemChars == 0)
       return DstOff;
-    // decode the remainder; variants:
+    // Decode the remainder; variants:
     // 2 chars remain - produces single byte
     // 3 chars remain - produces two bytes
 

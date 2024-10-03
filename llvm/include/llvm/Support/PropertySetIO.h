@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 // Models a sequence of property sets and their input and output operations.
-// TODO use Yaml as I/O engine.
 // PropertyValue set format:
 //   '['<PropertyValue set name>']'
 //   <property name>=<property type>'|'<property value>
@@ -83,7 +82,7 @@ public:
   template <typename C, typename T = typename C::value_type>
   PropertyValue(const C &Data)
       : PropertyValue(reinterpret_cast<const byte *>(Data.data()),
-                      Data.size() * sizeof(T) * /* bits in one byte */ 8) {}
+                      Data.size() * sizeof(T) * CHAR_BIT) {}
   PropertyValue(const llvm::StringRef &Str)
       : PropertyValue(reinterpret_cast<const byte *>(Str.data()),
                       Str.size() * sizeof(char) * /* bits in one byte */ 8) {}
@@ -94,7 +93,7 @@ public:
 
   PropertyValue &operator=(const PropertyValue &P);
 
-  // get property value as unsigned 32-bit integer
+  // Get property value as unsigned 32-bit integer
   uint32_t asUint32() const {
     if (Ty != UINT32)
       llvm_unreachable("must be UINT32 value");
@@ -131,7 +130,7 @@ public:
   const byte *asRawByteArray() const {
     if (Ty != BYTE_ARRAY)
       llvm_unreachable("must be BYTE_ARRAY value");
-    auto &ByteArrayVal = std::get<byte *>(Val);
+    auto *ByteArrayVal = std::get<byte *>(Val);
     return ByteArrayVal;
   }
 
@@ -146,7 +145,7 @@ public:
 
   bool isValid() const { return getType() != NONE; }
 
-  // set property value; the 'T' type must be convertible to a property type tag
+  // Set property value; the 'T' type must be convertible to a property type tag
   template <typename T> void set(T V) {
     if (getTypeTag<T>() != Ty)
       llvm_unreachable("invalid type tag for this operation");
@@ -158,7 +157,7 @@ public:
   SizeTy size() const {
     switch (Ty) {
     case UINT32:
-      return sizeof(std::get<uint32_t>(Val));
+      return sizeof(uint32_t);
     case BYTE_ARRAY:
       return getRawByteArraySize();
     default:
@@ -220,8 +219,8 @@ public:
            "category already added");
     auto &PropSet = PropSetMap[Category];
 
-    for (const auto &Prop : Props)
-      PropSet.insert_or_assign(Prop.first, PropertyValue(Prop.second));
+    for (const auto &[PropName, PropVal] : Props)
+      PropSet.insert_or_assign(PropName, PropertyValue(PropVal));
   }
 
   /// Adds the given \p PropVal with the given \p PropName into the given \p

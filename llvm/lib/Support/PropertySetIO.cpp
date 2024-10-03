@@ -36,9 +36,9 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
   PropertySet *CurPropSet = nullptr;
 
   for (line_iterator LI(*Buf); !LI.is_at_end(); LI++) {
-    // see if this line starts a new property set
+    // See if this line starts a new property set
     if (LI->starts_with("[")) {
-      // yes - parse the category (property name)
+      // Parse the category (property name)
       auto EndPos = LI->rfind(']');
       if (EndPos == StringRef::npos)
         return makeError("invalid line: " + *LI);
@@ -48,7 +48,7 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
     }
     if (!CurPropSet)
       return makeError("property category missing");
-    // parse name and type+value
+    // Parse name and type+value
     auto Parts = LI->split('=');
 
     if (Parts.first.empty() || Parts.second.empty())
@@ -59,7 +59,7 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
       return makeError("invalid property value: " + Parts.second);
     APInt Tint;
 
-    // parse type
+    // Parse type
     if (TypeVal.first.getAsInteger(10, Tint))
       return makeError("invalid property type: " + TypeVal.first);
     Expected<PropertyValue::Type> Ttag =
@@ -70,7 +70,7 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
       return Ttag.takeError();
     PropertyValue Prop(Ttag.get());
 
-    // parse value depending on its type
+    // Parse value depending on its type
     switch (Ttag.get()) {
     case PropertyValue::Type::UINT32: {
       APInt ValV;
@@ -101,9 +101,9 @@ PropertySetRegistry::read(const MemoryBuffer *Buf) {
 }
 
 namespace llvm {
-// output a property to a stream
+// Output a property to a stream
 raw_ostream &operator<<(raw_ostream &Out, const PropertyValue &Prop) {
-  Out << static_cast<int>(Prop.getType()) << "|";
+  Out << static_cast<int>(Prop.getType()) << '|';
   switch (Prop.getType()) {
   case PropertyValue::Type::UINT32:
     Out << Prop.asUint32();
@@ -123,11 +123,10 @@ raw_ostream &operator<<(raw_ostream &Out, const PropertyValue &Prop) {
 
 void PropertySetRegistry::write(raw_ostream &Out) const {
   for (const auto &PropSet : PropSetMap) {
-    Out << "[" << PropSet.first << "]\n";
+    Out << '[' << PropSet.first << "]\n";
 
-    for (const auto &Props : PropSet.second) {
-      Out << Props.first << "=" << Props.second << "\n";
-    }
+    for (const auto &Props : PropSet.second)
+      Out << Props.first << '=' << Props.second << '\n';
   }
 }
 
@@ -142,9 +141,8 @@ template <> PropertyValue::Type PropertyValue::getTypeTag<byte *>() {
   return BYTE_ARRAY;
 }
 
-PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize) {
+PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize) : Ty(BYTE_ARRAY) {
   constexpr int ByteSizeInBits = 8;
-  Ty = BYTE_ARRAY;
   SizeTy DataSize = (DataBitSize + (ByteSizeInBits - 1)) / ByteSizeInBits;
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
 
