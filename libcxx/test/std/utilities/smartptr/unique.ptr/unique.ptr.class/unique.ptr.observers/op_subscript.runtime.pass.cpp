@@ -48,7 +48,7 @@ struct CustomDeleter : std::default_delete<T> {};
 
 struct NoopDeleter {
   template <class T>
-  TEST_CONSTEXPR void operator()(T*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(T*) const {}
 };
 
 TEST_CONSTEXPR_CXX23 bool test() {
