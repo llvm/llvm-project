@@ -248,7 +248,37 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
   ``@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*`` ``fence.proxy.tensormap::generic.acquire.* [addr], size``
   ====================================================== =========================================================
 
-The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see PTX ISA `<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+
+'``llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.*.sync.aligned``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.cta.sync.aligned(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.cluster.sync.aligned(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.gpu.sync.aligned(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size)
+  declare void @llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.sync.sync.aligned(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release.*.sync.aligned`` is a fused copy and fence operation. The Intrinsic performs the following operations in order:
+
+1. Copies data of size specified by the ``size`` argument, in bytes, from the location specified by the address operand ``src`` in shared memory to the location specified by the address operand ``dst`` in the global memory, using the generic proxy.
+
+2. Establishes a uni-directional proxy ``release`` pattern on the ordering from the copy operation to subsequent accesses performed in the ``tensormap proxy`` on the address ``dst``.
+
+The only valid value of ``size`` operand is ``128`` and must be an immediate.
+
+The operands ``src`` and ``dst`` specify non-generic addresses in ``shared::cta`` and ``global`` state space respectively.
+
+The mandatory ``.sync`` qualifier indicates that ``tensormap.cp_fenceproxy`` causes the executing thread to wait until all threads in the warp execute the same ``tensormap.cp_fenceproxy`` intrinsic before resuming execution.
+
+The mandatory ``.aligned`` qualifier indicates that all threads in the warp must execute the same ``tensormap.cp_fenceproxy`` intrinsic. In conditionally executed code, an aligned ``tensormap.cp_fenceproxy`` intrinsic should only be used if it is known that all threads in the warp evaluate the condition identically, otherwise behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-tensormap-cp-fenceproxy>`_.
 
 Arithmetic Intrinsics
 ---------------------

@@ -4837,6 +4837,14 @@ def int_nvvm_setmaxnreg_dec_sync_aligned_u32
               [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
               "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
 
+// tensormap.cp_fenceproxy
+foreach scope = ["cta", "cluster", "gpu", "sys"] in {
+  def int_nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_ # scope # _sync_aligned:
+    Intrinsic<[], [llvm_global_ptr_ty, llvm_shared_ptr_ty, llvm_i32_ty],
+    [IntrConvergent, IntrNoCallback, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>],
+    "llvm.nvvm.tensormap.cp_fenceproxy.global.shared.tensormap_generic.release." # scope # ".sync.aligned">;
+}
+
 // Exit
 def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;

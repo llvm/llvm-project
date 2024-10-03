@@ -6852,4 +6852,29 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 
 } // isConvergent
 
+class TENSORMAP_CP_FENCE_PROXY_GLOBAL_SHARED_TENSORMAP_GENERIC_RELEASE<string Scope, Intrinsic Intr> :
+        NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, i32imm:$size),
+                  "tensormap.cp_fenceproxy.global.shared::cta.tensormap::generic.release." # Scope # ".sync.aligned [$dst], [$src], $size;", [(Intr Int64Regs:$dst, Int64Regs:$src, timm:$size)]>,
+        Requires<[hasPTX<83>, hasSM<90>]>;
+
+let isConvergent = true in {
+
+def INT_PTX_TENSORMAP_CP_FENCEPROXY_GLOBAL_SHARED_TENSORMAP_RELEASE_CTA_SYNC_ALIGNED:
+      TENSORMAP_CP_FENCE_PROXY_GLOBAL_SHARED_TENSORMAP_GENERIC_RELEASE<"cta",
+        int_nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_cta_sync_aligned>;
+
+def INT_PTX_TENSORMAP_CP_FENCEPROXY_GLOBAL_SHARED_TENSORMAP_RELEASE_CLUSTER_SYNC_ALIGNED:
+      TENSORMAP_CP_FENCE_PROXY_GLOBAL_SHARED_TENSORMAP_GENERIC_RELEASE<"cluster",
+        int_nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_cluster_sync_aligned>;
+
+def INT_PTX_TENSORMAP_CP_FENCEPROXY_GLOBAL_SHARED_TENSORMAP_RELEASE_GPU_SYNC_ALIGNED:
+      TENSORMAP_CP_FENCE_PROXY_GLOBAL_SHARED_TENSORMAP_GENERIC_RELEASE<"gpu",
+        int_nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_gpu_sync_aligned>;
+
+def INT_PTX_TENSORMAP_CP_FENCEPROXY_GLOBAL_SHARED_TENSORMAP_RELEASE_SYS_SYNC_ALIGNED:
+      TENSORMAP_CP_FENCE_PROXY_GLOBAL_SHARED_TENSORMAP_GENERIC_RELEASE<"sys",
+        int_nvvm_tensormap_cp_fenceproxy_global_shared_tensormap_generic_release_sys_sync_aligned>;
+
+}
+
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;
