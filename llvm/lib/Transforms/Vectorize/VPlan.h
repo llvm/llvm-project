@@ -882,6 +882,7 @@ public:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
     case VPRecipeBase::VPVectorPointerSC:
+    case VPRecipeBase::VPReverseVectorPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
     case VPRecipeBase::VPWidenCastSC:
@@ -1078,6 +1079,7 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
+           R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
   }
 
@@ -1785,20 +1787,65 @@ public:
 #endif
 };
 
+/// A recipe to compute the pointers for widened memory accesses of IndexTy
+/// in reverse order per part.
+class VPReverseVectorPointerRecipe : public VPRecipeWithIRFlags,
+                                     public VPUnrollPartAccessor<2> {
+  Type *IndexedTy;
+
+public:
+  VPReverseVectorPointerRecipe(VPValue *Ptr, VPValue *VF, Type *IndexedTy,
+                               bool IsInBounds, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPReverseVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, VF}),
+                            GEPFlagsTy(IsInBounds), DL),
+        IndexedTy(IndexedTy) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPReverseVectorPointerSC)
+
+  VPValue *getVFValue() { return getOperand(1); }
+  const VPValue *getVFValue() const { return getOperand(1); }
+
+  void execute(VPTransformState &State) override;
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    assert(getNumOperands() <= 2 && "must have at most two operands");
+    return true;
+  }
+
+  VPReverseVectorPointerRecipe *clone() override {
+    return new VPReverseVectorPointerRecipe(
+        getOperand(0), getVFValue(), IndexedTy, isInBounds(), getDebugLoc());
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe to compute the pointers for widened memory accesses of IndexTy for
-/// all parts. If IsReverse is true, compute pointers for accessing the input in
-/// reverse order per part.
+/// all parts.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
-  bool IsReverse;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsReverse,
-                        bool IsInBounds, DebugLoc DL)
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, bool IsInBounds,
+                        DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
                             GEPFlagsTy(IsInBounds), DL),
-        IndexedTy(IndexedTy), IsReverse(IsReverse) {}
+        IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
@@ -1819,8 +1866,8 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
-                                     isInBounds(), getDebugLoc());
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, isInBounds(),
+                                     getDebugLoc());
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

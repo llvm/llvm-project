@@ -38,10 +38,8 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nuw nsw i64 1, [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 1, [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 0, [[TMP9]]
+; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 1, [[TMP9]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP14]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP19]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), i32 [[TMP11]])

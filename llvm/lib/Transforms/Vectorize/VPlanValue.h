@@ -346,6 +346,7 @@ public:
     VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
+    VPReverseVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
