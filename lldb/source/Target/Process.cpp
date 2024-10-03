@@ -6551,30 +6551,30 @@ static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
   if (!reg_info)
     return;
 
-  lldb_private::RegisterValue reg_value;
-  bool success = reg_ctx->ReadRegister(reg_info, reg_value);
+  lldb_private::RegisterValue thread_local_register_value;
+  bool success = reg_ctx->ReadRegister(reg_info, thread_local_register_value);
   if (!success)
     return;
 
   const uint64_t fail_value = UINT64_MAX;
   bool readSuccess = false;
   const lldb::addr_t reg_value_addr =
-      reg_value.GetAsUInt64(fail_value, &readSuccess);
+      thread_local_register_value.GetAsUInt64(fail_value, &readSuccess);
   if (!readSuccess || reg_value_addr == fail_value)
     return;
 
-  MemoryRegionInfo register_region;
-  Status err = process.GetMemoryRegionInfo(reg_value_addr, register_region);
+  MemoryRegionInfo thread_local_region;
+  Status err = process.GetMemoryRegionInfo(reg_value_addr, thread_local_region);
   if (err.Fail())
     return;
 
   // We already saved off this truncated stack range.
-  if (register_region.GetRange().GetRangeEnd() == range_end)
+  if (thread_local_region.GetRange().GetRangeEnd() == range_end)
     return;
 
   // We don't need to worry about duplication because the CoreFileMemoryRanges
   // will unique them
-  AddRegion(register_region, true, ranges);
+  AddRegion(thread_local_region, true, ranges);
 }
 
 static void AddLinkMapSections(Process &process, CoreFileMemoryRanges &ranges) {
@@ -6593,12 +6593,12 @@ static void AddLinkMapSections(Process &process, CoreFileMemoryRanges &ranges) {
     if (load_addr == LLDB_INVALID_ADDRESS)
       continue;
 
-    MemoryRegionInfo tls_storage_region;
-    Status err = process.GetMemoryRegionInfo(load_addr, tls_storage_region);
+    MemoryRegionInfo link_map_section;
+    Status err = process.GetMemoryRegionInfo(load_addr, link_map_section);
     if (err.Fail())
       continue;
 
-    AddRegion(tls_storage_region, true, ranges);
+    AddRegion(link_map_section, true, ranges);
   }
 }
 
