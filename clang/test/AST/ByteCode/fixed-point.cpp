@@ -9,3 +9,6 @@ static_assert(1.0k == 1.0k);
 static_assert(1.0k != 1.0k); // both-error {{failed due to requirement '1.0k != 1.0k'}}
 static_assert(-12.0k == -(-(-12.0k)));
 
+/// Zero-init.
+constexpr _Accum A{};
+static_assert(A == 0.0k);

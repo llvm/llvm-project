@@ -8,7 +8,7 @@
 
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
-#include "llvm/SandboxIR/SandboxIR.h" // TODO: remove this
+#include "llvm/SandboxIR/Instruction.h"
 
 namespace llvm::sandboxir {
 

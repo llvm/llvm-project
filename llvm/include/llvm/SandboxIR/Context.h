@@ -159,6 +159,7 @@ protected:
 
 public:
   Context(LLVMContext &LLVMCtx);
+  ~Context();
 
   Tracker &getTracker() { return IRTracker; }
   /// Convenience function for `getTracker().save()`
