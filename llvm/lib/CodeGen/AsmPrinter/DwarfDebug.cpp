@@ -2062,6 +2062,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+<<<<<<< HEAD
   if (!DL && MI == PrologEndLoc) {
     // In rare situations, we might want to place the end of the prologue
     // somewhere that doesn't have a source location already. It should be in
@@ -2072,8 +2073,13 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     return;
   }
 
+=======
+  bool PrevInstInSameSection =
+      (!PrevInstBB ||
+       PrevInstBB->getSectionID() == MI->getParent()->getSectionID());
+>>>>>>> ac5931e8f979 (Re-add unnecessarily removed code)
   bool ForceIsStmt = ForceIsStmtInstrs.contains(MI);
-  if (DL == PrevInstLoc && !ForceIsStmt) {
+  if (DL == PrevInstLoc && PrevInstInSameSection && !ForceIsStmt) {
     // If we have an ongoing unspecified location, nothing to do here.
     if (!DL)
       return;
@@ -2102,8 +2108,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     //   possibly debug information; we want it to have a source location.
     // - Instruction is at the top of a block; we don't want to inherit the
     //   location from the physically previous (maybe unrelated) block.
-    bool PrevInstInDiffBB = PrevInstBB && PrevInstBB != MI->getParent();
-    if (UnknownLocations == Enable || PrevLabel || PrevInstInDiffBB) {
+    if (UnknownLocations == Enable || PrevLabel ||
+        (PrevInstBB && PrevInstBB != MI->getParent())) {
       // Preserve the file and column numbers, if we can, to save space in
       // the encoded line table.
       // Do not update PrevInstLoc, it remembers the last non-0 line.
