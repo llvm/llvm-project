@@ -59,17 +59,17 @@ if.end.i:                                         ; preds = %if.then.i, %if.end1
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 20.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test.cpp", directory: "/tmp")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = !DILocation(line: 63, column: 12, scope: !4)
+!3 = !DILocation(line: 13, column: 12, scope: !4)
 !4 = distinct !DISubprogram(name: "operator=", linkageName: "_ZN11btMatrix3x3aSERKS_", scope: null, file: !1, line: 61, type: !5, scopeLine: 62, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !6)
 !5 = distinct !DISubroutineType(types: !6)
 !6 = !{}
-!7 = !DILocation(line: 63, column: 15, scope: !4)
-!8 = !DILocation(line: 64, scope: !4)
+!7 = !DILocation(line: 13, column: 15, scope: !4)
+!8 = !DILocation(line: 100, scope: !4)
 !9 = !{!"Test String"}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK: [[META1]] = !DIFile(filename: "test.cpp", directory: {{.*}})
-; CHECK: [[DBG3]] = !DILocation(line: 63, scope: [[META4:![0-9]+]])
+; CHECK: [[DBG3]] = !DILocation(line: 13, scope: [[META4:![0-9]+]])
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "operator=", linkageName: "_ZN11btMatrix3x3aSERKS_", scope: null, file: [[META1]], line: 61, type: [[META5:![0-9]+]], scopeLine: 62, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META6:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6]])
 ; CHECK: [[META6]] = !{}
