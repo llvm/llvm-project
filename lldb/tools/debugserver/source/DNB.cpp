@@ -475,9 +475,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
         extern int communication_fd;
 
         if (communication_fd == -1) {
-          fprintf(stderr, "Trying to attach to a translated process with the "
-                          "native debugserver, exiting...\n");
-          exit(1);
+          DNBLogError("Trying to attach to a translated process with the "
+                      "native debugserver, exiting...\n");
+          return INVALID_NUB_PROCESS_ARCH;
         }
 
         struct stat st;
