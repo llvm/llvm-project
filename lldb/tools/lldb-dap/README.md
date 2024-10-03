@@ -228,9 +228,13 @@ the following `lldb-dap` specific key/value pairs:
 ## Debug Console
 
 The debug console allows printing variables / expressions and executing lldb commands.
-By default, all provided commands are interpreteted as variable names / expressions whose values will be printed to the Debug Console.
-To execute regular LLDB commands, prefix them with the `\`` character.
-The escape character can be changed via the `commandEscapePrefix` configuration option.
+By default, lldb-dap tries to auto-detect whether a provided commands is a variable
+name / expressions whose values will be printed to the Debug Console or a LLDB command.
+To side-step this auto-dection and execute a LLDB command, prefix it with the `\``
+character.
+
+The auto-detection can be disabled using the `lldb-dap repl-mode` command.
+The escape character can be adjusted via the `commandEscapePrefix` configuration option.
 
 ### lldb-dap specific commands
 

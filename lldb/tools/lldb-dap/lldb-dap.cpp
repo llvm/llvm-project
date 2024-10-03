@@ -1396,9 +1396,20 @@ void request_completions(const llvm::json::Object &request) {
   }
   llvm::json::Array targets;
 
-  if (!text.empty() &&
-      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix)) {
-    text = text.substr(g_dap.command_escape_prefix.size());
+  bool had_escape_prefix =
+      llvm::StringRef(text).starts_with(g_dap.command_escape_prefix);
+  ReplMode completion_mode = g_dap.DetectReplMode(frame, text, true);
+
+  // Handle the offset change introduced by stripping out the
+  // `command_escape_prefix`.
+  if (had_escape_prefix) {
+    if (offset < g_dap.command_escape_prefix.size()) {
+      body.try_emplace("targets", std::move(targets));
+      response.try_emplace("body", std::move(body));
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+    offset -= g_dap.command_escape_prefix.size();
   }
 
   // While the user is typing then we likely have an incomplete input and cannot
@@ -1410,7 +1421,7 @@ void request_completions(const llvm::json::Object &request) {
        std::make_tuple(ReplMode::Variable, expr_prefix + text,
                        offset + expr_prefix.size())}};
   for (const auto &[mode, line, cursor] : exprs) {
-    if (g_dap.repl_mode != ReplMode::Auto && g_dap.repl_mode != mode)
+    if (completion_mode != ReplMode::Auto && completion_mode != mode)
       continue;
 
     lldb::SBStringList matches;
@@ -1572,10 +1583,10 @@ void request_evaluate(const llvm::json::Object &request) {
   bool repeat_last_command =
       expression.empty() && g_dap.last_nonempty_var_expression.empty();
 
-  if (context == "repl" && (repeat_last_command ||
-                            (!expression.empty() &&
-                             g_dap.DetectExpressionContext(frame, expression) ==
-                                 ExpressionContext::Command))) {
+  if (context == "repl" &&
+      (repeat_last_command ||
+       (!expression.empty() &&
+        g_dap.DetectReplMode(frame, expression, false) == ReplMode::Command))) {
     // Since the current expression is not for a variable, clear the
     // last_nonempty_var_expression field.
     g_dap.last_nonempty_var_expression.clear();
