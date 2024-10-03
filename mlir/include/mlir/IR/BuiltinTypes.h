@@ -67,6 +67,7 @@ public:
   static FloatType getFloat8E4M3FNUZ(MLIRContext *ctx);
   static FloatType getFloat8E4M3B11FNUZ(MLIRContext *ctx);
   static FloatType getFloat8E3M4(MLIRContext *ctx);
+  static FloatType getFloat4E2M1FN(MLIRContext *ctx);
   static FloatType getFloat6E2M3FN(MLIRContext *ctx);
   static FloatType getFloat6E3M2FN(MLIRContext *ctx);
 
@@ -415,11 +416,15 @@ inline bool BaseMemRefType::isValidElementType(Type type) {
 }
 
 inline bool FloatType::classof(Type type) {
-  return llvm::isa<Float6E2M3FNType, Float6E3M2FNType, Float8E5M2Type,
-                   Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
-                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
-                   BFloat16Type, Float16Type, FloatTF32Type, Float32Type,
-                   Float64Type, Float80Type, Float128Type>(type);
+  return llvm::isa<
+      Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType, Float8E5M2Type,
+      Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType, Float8E4M3FNUZType,
+      Float8E4M3B11FNUZType, Float8E3M4Type, BFloat16Type, Float16Type,
+      FloatTF32Type, Float32Type, Float64Type, Float80Type, Float128Type>(type);
+}
+
+inline FloatType FloatType::getFloat4E2M1FN(MLIRContext *ctx) {
+  return Float4E2M1FNType::get(ctx);
 }
 
 inline FloatType FloatType::getFloat6E2M3FN(MLIRContext *ctx) {

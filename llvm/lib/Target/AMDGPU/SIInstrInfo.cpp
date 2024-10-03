@@ -528,13 +528,13 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
     return false;
 
-  auto MO1 = *MI1.memoperands_begin();
-  auto MO2 = *MI2.memoperands_begin();
+  auto *MO1 = *MI1.memoperands_begin();
+  auto *MO2 = *MI2.memoperands_begin();
   if (MO1->getAddrSpace() != MO2->getAddrSpace())
     return false;
 
-  auto Base1 = MO1->getValue();
-  auto Base2 = MO2->getValue();
+  const auto *Base1 = MO1->getValue();
+  const auto *Base2 = MO2->getValue();
   if (!Base1 || !Base2)
     return false;
   Base1 = getUnderlyingObject(Base1);
@@ -2008,7 +2008,7 @@ void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
 }
 
 void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
-  auto MF = MBB.getParent();
+  auto *MF = MBB.getParent();
   SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   assert(Info->isEntryFunction());
@@ -3819,7 +3819,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
         SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
         auto &LI = LIS->getInterval(Def.getReg());
         auto UpdateDefIndex = [&](LiveRange &LR) {
-          auto S = LR.find(OldIndex);
+          auto *S = LR.find(OldIndex);
           if (S != LR.end() && S->start == OldIndex) {
             assert(S->valno && S->valno->def == OldIndex);
             S->start = NewIndex;
@@ -4514,7 +4514,6 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
         // of vcc was already added during the initial BuildMI, but we
         // 1) may need to change vcc to vcc_lo to preserve the original register
         // 2) have to preserve the original flags.
-        fixImplicitOperands(*Inst32);
         copyFlagsToImplicitVCC(*Inst32, *Src2);
         continue;
       }
@@ -4524,7 +4523,7 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
   }
 
   // FIXME: Losing implicit operands
-
+  fixImplicitOperands(*Inst32);
   return Inst32;
 }
 
@@ -5062,7 +5061,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   if (isSOPK(MI)) {
-    auto Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
+    const auto *Op = getNamedOperand(MI, AMDGPU::OpName::simm16);
     if (Desc.isBranch()) {
       if (!Op->isMBB()) {
         ErrInfo = "invalid branch target for SOPK instruction";
@@ -6089,10 +6088,14 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
     legalizeOpWithMove(MI, VOP3Idx[2]);
 }
 
-Register SIInstrInfo::readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                                         MachineRegisterInfo &MRI) const {
+Register SIInstrInfo::readlaneVGPRToSGPR(
+    Register SrcReg, MachineInstr &UseMI, MachineRegisterInfo &MRI,
+    const TargetRegisterClass *DstRC /*=nullptr*/) const {
   const TargetRegisterClass *VRC = MRI.getRegClass(SrcReg);
   const TargetRegisterClass *SRC = RI.getEquivalentSGPRClass(VRC);
+  if (DstRC)
+    SRC = RI.getCommonSubClass(SRC, DstRC);
+
   Register DstReg = MRI.createVirtualRegister(SRC);
   unsigned SubRegs = RI.getRegSizeInBits(*VRC) / 32;
 
@@ -6245,7 +6248,10 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   if (moveFlatAddrToVGPR(MI))
     return;
 
-  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI);
+  const TargetRegisterClass *DeclaredRC = getRegClass(
+      MI.getDesc(), SAddr->getOperandNo(), &RI, *MI.getParent()->getParent());
+
+  Register ToSGPR = readlaneVGPRToSGPR(SAddr->getReg(), MI, MRI, DeclaredRC);
   SAddr->setReg(ToSGPR);
 }
 
@@ -6396,7 +6402,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
         }
       } // End for loop.
 
-      auto SScalarOpRC =
+      const auto *SScalarOpRC =
           TRI->getEquivalentSGPRClass(MRI.getRegClass(VScalarOp));
       Register SScalarOp = MRI.createVirtualRegister(SScalarOpRC);
 
@@ -8893,11 +8899,10 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   }
 
   uint16_t Opcode = MI.getOpcode();
-  // FIXME: Copies inserted in the block prolog for live-range split should also
-  // be included.
   return IsNullOrVectorRegister &&
-         (isSpill(Opcode) || (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
-                              MI.modifiesRegister(AMDGPU::EXEC, &RI)));
+         (isSGPRSpill(Opcode) ||
+          (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
+           MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
 MachineInstrBuilder
@@ -9183,13 +9188,43 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
   }
 }
 
+#define GENERATE_RENAMED_GFX9_CASES(OPCODE)                                    \
+  case OPCODE##_dpp:                                                           \
+  case OPCODE##_e32:                                                           \
+  case OPCODE##_e64:                                                           \
+  case OPCODE##_e64_dpp:                                                       \
+  case OPCODE##_sdwa:
+
+static bool isRenamedInGFX9(int Opcode) {
+  switch (Opcode) {
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_ADDC_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_ADD_CO_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_ADD_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUBBREV_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUBB_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUBREV_CO_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUBREV_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUB_CO_U32)
+    GENERATE_RENAMED_GFX9_CASES(AMDGPU::V_SUB_U32)
+  //
+  case AMDGPU::V_DIV_FIXUP_F16_gfx9_e64:
+  case AMDGPU::V_FMA_F16_gfx9_e64:
+  case AMDGPU::V_INTERP_P2_F16:
+  case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_MAD_U16_e64:
+  case AMDGPU::V_MAD_I16_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Opcode);
 
   unsigned Gen = subtargetEncodingFamily(ST);
 
-  if ((get(Opcode).TSFlags & SIInstrFlags::renamedInGFX9) != 0 &&
-    ST.getGeneration() == AMDGPUSubtarget::GFX9)
+  if (ST.getGeneration() == AMDGPUSubtarget::GFX9 && isRenamedInGFX9(Opcode))
     Gen = SIEncodingFamily::GFX9;
 
   // Adjust the encoding family to GFX80 for D16 buffer instructions when the
@@ -9785,6 +9820,9 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
+    // A valid Mask is required to have a single bit set, hence a non-zero and
+    // power-of-two value. This verifies that we will not do 64-bit shift below.
+    assert(llvm::has_single_bit<uint64_t>(Mask) && "Invalid mask.");
     unsigned BitNo = llvm::countr_zero((uint64_t)Mask);
     if (IsSigned && BitNo == SrcSize - 1)
       return false;

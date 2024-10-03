@@ -129,7 +129,6 @@ def libc_function(
 
 def libc_math_function(
         name,
-        specializations = None,
         additional_deps = None):
     """Add a target for a math function.
 
@@ -142,14 +141,6 @@ def libc_math_function(
                        math function.
     """
     additional_deps = additional_deps or []
-    specializations = specializations or ["generic"]
-    select_map = {}
-    if "generic" in specializations:
-        select_map["//conditions:default"] = ["src/math/generic/" + name + ".cpp"]
-    if "aarch64" in specializations:
-        select_map[PLATFORM_CPU_ARM64] = ["src/math/aarch64/" + name + ".cpp"]
-    if "x86_64" in specializations:
-        select_map[PLATFORM_CPU_X86_64] = ["src/math/x86_64/" + name + ".cpp"]
 
     #TODO(michaelrj): Fix the floating point dependencies
     OLD_FPUTIL_DEPS = [
@@ -166,7 +157,7 @@ def libc_math_function(
     ]
     libc_function(
         name = name,
-        srcs = selects.with_or(select_map),
+        srcs = ["src/math/generic/" + name + ".cpp"],
         hdrs = ["src/math/" + name + ".h"],
         deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
     )

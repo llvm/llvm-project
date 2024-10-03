@@ -377,7 +377,7 @@ bool elf::isMipsN32Abi(const InputFile *f) {
   case ELF64BEKind:
     return isN32Abi<ELF64BE>(f);
   default:
-    llvm_unreachable("unknown Config->EKind");
+    llvm_unreachable("unknown ctx.arg.ekind");
   }
 }
 

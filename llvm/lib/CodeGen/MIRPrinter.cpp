@@ -223,6 +223,13 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.TracksDebugUserValues = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
+  YamlMF.NoPHIs = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoPHIs);
+  YamlMF.IsSSA = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::IsSSA);
+  YamlMF.NoVRegs = MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::NoVRegs);
+
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker MST(MMI, &MF);
   MST.incorporateFunction(MF.getFunction());

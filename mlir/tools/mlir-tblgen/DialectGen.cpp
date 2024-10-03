@@ -30,6 +30,8 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+using llvm::Record;
+using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
 llvm::cl::opt<std::string>
@@ -39,8 +41,8 @@ llvm::cl::opt<std::string>
 /// Utility iterator used for filtering records for a specific dialect.
 namespace {
 using DialectFilterIterator =
-    llvm::filter_iterator<ArrayRef<llvm::Record *>::iterator,
-                          std::function<bool(const llvm::Record *)>>;
+    llvm::filter_iterator<ArrayRef<Record *>::iterator,
+                          std::function<bool(const Record *)>>;
 } // namespace
 
 static void populateDiscardableAttributes(
@@ -62,8 +64,8 @@ static void populateDiscardableAttributes(
 /// the given dialect.
 template <typename T>
 static iterator_range<DialectFilterIterator>
-filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
-  auto filterFn = [&](const llvm::Record *record) {
+filterForDialect(ArrayRef<Record *> records, Dialect &dialect) {
+  auto filterFn = [&](const Record *record) {
     return T(record).getDialect() == dialect;
   };
   return {DialectFilterIterator(records.begin(), records.end(), filterFn),
@@ -295,7 +297,7 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
-static bool emitDialectDecls(const llvm::RecordKeeper &recordKeeper,
+static bool emitDialectDecls(const RecordKeeper &recordKeeper,
                              raw_ostream &os) {
   emitSourceFileHeader("Dialect Declarations", os, recordKeeper);
 
@@ -340,8 +342,7 @@ static const char *const dialectDestructorStr = R"(
 
 )";
 
-static void emitDialectDef(Dialect &dialect,
-                           const llvm::RecordKeeper &recordKeeper,
+static void emitDialectDef(Dialect &dialect, const RecordKeeper &recordKeeper,
                            raw_ostream &os) {
   std::string cppClassName = dialect.getCppClassName();
 
@@ -389,8 +390,7 @@ static void emitDialectDef(Dialect &dialect,
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
 
-static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
-                            raw_ostream &os) {
+static bool emitDialectDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Dialect Definitions", os, recordKeeper);
 
   auto dialectDefs = recordKeeper.getAllDerivedDefinitions("Dialect");
@@ -411,12 +411,12 @@ static bool emitDialectDefs(const llvm::RecordKeeper &recordKeeper,
 
 static mlir::GenRegistration
     genDialectDecls("gen-dialect-decls", "Generate dialect declarations",
-                    [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                    [](const RecordKeeper &records, raw_ostream &os) {
                       return emitDialectDecls(records, os);
                     });
 
 static mlir::GenRegistration
     genDialectDefs("gen-dialect-defs", "Generate dialect definitions",
-                   [](const llvm::RecordKeeper &records, raw_ostream &os) {
+                   [](const RecordKeeper &records, raw_ostream &os) {
                      return emitDialectDefs(records, os);
                    });

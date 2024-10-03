@@ -31,7 +31,7 @@ using namespace lld::elf;
 namespace {
 class MSP430 final : public TargetInfo {
 public:
-  MSP430();
+  MSP430(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
@@ -39,7 +39,7 @@ public:
 };
 } // namespace
 
-MSP430::MSP430() {
+MSP430::MSP430(Ctx &ctx) : TargetInfo(ctx) {
   // mov.b #0, r3
   trapInstr = {0x43, 0x43, 0x43, 0x43};
 }
@@ -88,7 +88,7 @@ void MSP430::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-TargetInfo *elf::getMSP430TargetInfo() {
-  static MSP430 target;
+TargetInfo *elf::getMSP430TargetInfo(Ctx &ctx) {
+  static MSP430 target(ctx);
   return &target;
 }

@@ -411,8 +411,7 @@ public:
 // Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API enumerant
-static void emitOneEnumToConversion(const llvm::Record *record,
-                                    raw_ostream &os) {
+static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
   LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -441,8 +440,7 @@ static void emitOneEnumToConversion(const llvm::Record *record,
 // Emits conversion function "LLVMClass convertEnumToLLVM(Enum)" and containing
 // switch-based logic to convert from the MLIR LLVM dialect enum attribute case
 // (Enum) to the corresponding LLVM API C-style enumerant
-static void emitOneCEnumToConversion(const llvm::Record *record,
-                                     raw_ostream &os) {
+static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
   LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -472,8 +470,7 @@ static void emitOneCEnumToConversion(const llvm::Record *record,
 // Emits conversion function "Enum convertEnumFromLLVM(LLVMClass)" and
 // containing switch-based logic to convert from the LLVM API enumerant to MLIR
 // LLVM dialect enum attribute (Enum).
-static void emitOneEnumFromConversion(const llvm::Record *record,
-                                      raw_ostream &os) {
+static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
   LLVMEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();
@@ -508,8 +505,7 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
 // Emits conversion function "Enum convertEnumFromLLVM(LLVMEnum)" and
 // containing switch-based logic to convert from the LLVM API C-style enumerant
 // to MLIR LLVM dialect enum attribute (Enum).
-static void emitOneCEnumFromConversion(const llvm::Record *record,
-                                       raw_ostream &os) {
+static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
   LLVMCEnumAttr enumAttr(record);
   StringRef llvmClass = enumAttr.getLLVMClassName();
   StringRef cppClassName = enumAttr.getEnumClassName();

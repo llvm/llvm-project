@@ -103,6 +103,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
+
+  Gives warnings for tagged unions, where the number of tags is
+  different from the number of data members inside the union.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -125,10 +131,23 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/forwarding-reference-overload>` check by fixing
   a crash when determining if an ``enable_if[_t]`` was found.
 
+- Improved :doc:`bugprone-posix-return
+  <clang-tidy/checks/bugprone/posix-return>` check to support integer literals
+  as LHS and posix call as RHS of comparison.
+
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check to find suspicious
   usages of ``sizeof()``, ``alignof()``, and ``offsetof()`` when adding or
   subtracting from a pointer.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
+  `bsl::optional` and `bdlb::NullableValue` from
+  <https://github.com/bloomberg/bde>_.
+
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
+  additional functions to match.
 
 - Improved :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` check to
   fix false positive that floating point variable is only used in increment
@@ -143,32 +162,35 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
 
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
+  false positive for C++23 deducing this.
+
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using ``std::span``
   as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
 
-- Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check to support replacing
-  member function calls too.
-
-- Improved :doc:`misc-unconventional-assign-operator
-  <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
-  false positive for C++23 deducing this.
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
+  using loop variable in initializer of lambda capture.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to also recognize
+  ``NULL``/``__null`` (but not ``0``) when used with a templated type.
+
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check to support replacing
+  member function calls too.
+
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
   member function calls too.
-
-- Improved :doc:`readability-enum-initial-value
-  <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
-  diagnostics for the definition of an ``enum``, and by fixing a typo in the
-  diagnostic.
 
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
@@ -177,6 +199,11 @@ Changes in existing checks
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` check to let it work on
   any class that has a ``contains`` method.
+
+- Improved :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check by only issuing
+  diagnostics for the definition of an ``enum``, and by fixing a typo in the
+  diagnostic.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check

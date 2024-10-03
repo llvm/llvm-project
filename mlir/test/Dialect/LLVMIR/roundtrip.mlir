@@ -751,3 +751,86 @@ llvm.func @vector_predication_intrinsics(%A: vector<8xi32>, %B: vector<8xi32>,
          (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   llvm.return
 }
+
+llvm.func @op_bundle_target()
+
+// CHECK-LABEL: @test_call_with_empty_opbundle
+llvm.func @test_call_with_empty_opbundle() {
+  // CHECK: llvm.call @op_bundle_target() : () -> ()
+  llvm.call @op_bundle_target() [] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_with_empty_opbundle_operands
+llvm.func @test_call_with_empty_opbundle_operands() {
+  // CHECK: llvm.call @op_bundle_target() ["tag"()] : () -> ()
+  llvm.call @op_bundle_target() ["tag"()] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_with_opbundle
+llvm.func @test_call_with_opbundle() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  %2 = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: llvm.call @op_bundle_target() ["tag1"(%{{.+}}, %{{.+}} : i32, i32), "tag2"(%{{.+}} : i32)] : () -> ()
+  llvm.call @op_bundle_target() ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_empty_opbundle
+llvm.func @test_invoke_with_empty_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 [] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_empty_opbundle_operands
+llvm.func @test_invoke_with_empty_opbundle_operands() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} ["tag"()] : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 ["tag"()] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_invoke_with_opbundle
+llvm.func @test_invoke_with_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK: llvm.invoke @op_bundle_target() to ^{{.+}} unwind ^{{.+}} ["tag1"(%{{.+}}, %{{.+}} : i32, i32), "tag2"(%{{.+}} : i32)] : () -> ()
+  llvm.invoke @op_bundle_target() to ^bb2 unwind ^bb1 ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+// CHECK-LABEL: @test_call_intrin_with_opbundle
+llvm.func @test_call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: llvm.call_intrinsic "llvm.assume"(%{{.+}}) ["align"(%{{.+}}, %{{.+}} : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.return
+}
