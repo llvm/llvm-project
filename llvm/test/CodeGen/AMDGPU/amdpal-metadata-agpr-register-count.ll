@@ -77,4 +77,4 @@ bb:
 ; GFX908: agpr_count:  0x20
 ; GFX908: vgpr_count:  0x20
 
-attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" }
+attributes #0 = { nounwind noinline norecurse "amdgpu-flat-work-group-size"="1,512" }

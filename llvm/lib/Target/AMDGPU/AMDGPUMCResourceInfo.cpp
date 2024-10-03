@@ -109,10 +109,13 @@ void MCResourceInfo::assignResourceInfoExpr(
     for (const Function *Callee : Callees) {
       if (!Seen.insert(Callee).second)
         continue;
+      if (!F.doesNotRecurse() && !Callee->doesNotRecurse())
+        continue;
       MCSymbol *CalleeValSym = getSymbol(Callee->getName(), RIK, OutContext);
       ArgExprs.push_back(MCSymbolRefExpr::create(CalleeValSym, OutContext));
     }
-    SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
+    if (ArgExprs.size() > 1)
+      SymVal = AMDGPUMCExpr::create(Kind, ArgExprs, OutContext);
   }
   MCSymbol *Sym = getSymbol(MF.getName(), RIK, OutContext);
   Sym->setVariableValue(SymVal);
@@ -163,6 +166,8 @@ void MCResourceInfo::gatherResourceInfo(
     Seen.insert(&MF.getFunction());
     for (const Function *Callee : FRI.Callees) {
       if (!Seen.insert(Callee).second)
+        continue;
+      if (!MF.getFunction().doesNotRecurse() && !Callee->doesNotRecurse())
         continue;
       if (!Callee->isDeclaration()) {
         MCSymbol *calleeValSym =

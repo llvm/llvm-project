@@ -131,6 +131,6 @@ bb:
 declare dso_local void @eggs()
 
 
-attributes #0 = { nounwind }
-attributes #1 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { nounwind norecurse }
+attributes #1 = { nounwind noinline norecurse "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #2 = { norecurse }
