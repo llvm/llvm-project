@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
 #include "ABIInfoImpl.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
@@ -1164,14 +1163,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     return nullptr;
 
   llvm::Value *Res = nullptr;
-  if (StructBase->isLValue()) {
-    LValue LV = EmitLValue(StructBase);
-    Address Addr = LV.getAddress();
-    Res = Addr.emitRawPointer(*this);
-  } else {
+  if (StructBase->getType()->isPointerType()) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
+    Res = Addr.emitRawPointer(*this);
+  } else {
+    LValue LV = EmitLValue(StructBase);
+    Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
   }
 
