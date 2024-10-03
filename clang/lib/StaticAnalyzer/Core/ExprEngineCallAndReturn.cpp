@@ -1090,9 +1090,11 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
         return false;
       } else {
         llvm::errs()
-            << "inlining taint related function:\n";
+            << "tyring to inline taint related function:\n";
         llvm::errs() << FD->getNameInfo().getAsString() << "\n";
-        return true;
+        //leave the other budget limits to kick in
+        //otherwise the analysis may hang
+        //return true;
       }
   }
   // The auto-synthesized bodies are essential to inline as they are
