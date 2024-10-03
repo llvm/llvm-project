@@ -65,10 +65,9 @@ LIBC_INLINE void quick_sort(Array array) {
     if (array_size <= 1)
       return;
     size_t split_index = partition(array);
-    if (array_size <= 2) {
+    if (array_size <= 2)
       // The partition operation sorts the two element array.
       return;
-    }
 
     // Make Arrays describing the two sublists that still need sorting.
     Array left = array.make_array(0, split_index);
