@@ -15567,7 +15567,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   }
 
   // When there's only one expansion, the parentheses can be safely eliminated
-  // to avoid any extra redundancy that may result in incorrect checks
+  // to avoid any extra redundancy that may result in incorrect checks.
   // For example, transforming (((args == 0) || ...)) into (args == 0)
   // allows the omission of parentheses while ensuring precise representation
   // and avoiding warnings regarding redundant parentheses.
