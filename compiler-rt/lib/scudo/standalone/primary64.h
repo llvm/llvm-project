@@ -1403,12 +1403,11 @@ private:
       if (RegionPushedBytesDelta < Region->ReleaseInfo.TryReleaseThreshold / 2)
         return false;
 
-      const u64 IntervalNs =
-          static_cast<u64>(atomic_load_relaxed(&ReleaseToOsIntervalMs)) *
-          1000000;
-      if (IntervalNs < 0)
+      const s64 IntervalMs = atomic_load_relaxed(&ReleaseToOsIntervalMs);
+      if (IntervalMs < 0)
         return false;
 
+      const u64 IntervalNs = static_cast<u64>(IntervalMs) * 1000000;
       const u64 CurTimeNs = getMonotonicTimeFast();
       const u64 DiffSinceLastReleaseNs =
           CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
