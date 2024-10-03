@@ -12685,6 +12685,9 @@ def err_acc_collapse_multiple_loops
 def err_acc_collapse_insufficient_loops
     : Error<"'collapse' clause specifies a loop count greater than the number "
             "of available loops">;
+def err_acc_collapse_intervening_code
+    : Error<"inner loops must be tightly nested inside a 'collapse' clause on "
+            "a 'loop' construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

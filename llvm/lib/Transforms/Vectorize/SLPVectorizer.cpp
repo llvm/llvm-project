@@ -831,8 +831,7 @@ static bool isValidForAlternation(unsigned Opcode) {
 }
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI,
-                                       unsigned BaseIndex = 0);
+                                       const TargetLibraryInfo &TLI);
 
 /// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
 /// compatible instructions or constants, or just some other regular values.
@@ -873,8 +872,8 @@ static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
 /// InstructionsState, the Opcode that we suppose the whole list
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI,
-                                       unsigned BaseIndex) {
+                                       const TargetLibraryInfo &TLI) {
+  constexpr unsigned BaseIndex = 0;
   // Make sure these are all Instructions.
   if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
     return InstructionsState(VL[BaseIndex], nullptr, nullptr);

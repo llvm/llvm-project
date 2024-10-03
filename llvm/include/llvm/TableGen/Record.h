@@ -1347,11 +1347,12 @@ public:
 class VarDefInit final : public TypedInit,
                          public FoldingSetNode,
                          public TrailingObjects<VarDefInit, ArgumentInit *> {
+  SMLoc Loc;
   Record *Class;
   DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
 
-  explicit VarDefInit(Record *Class, unsigned N);
+  explicit VarDefInit(SMLoc Loc, Record *Class, unsigned N);
 
   DefInit *instantiate();
 
@@ -1365,7 +1366,8 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static VarDefInit *get(Record *Class, ArrayRef<ArgumentInit *> Args);
+  static VarDefInit *get(SMLoc Loc, Record *Class,
+                         ArrayRef<ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
