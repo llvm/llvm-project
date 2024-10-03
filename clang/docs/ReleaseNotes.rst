@@ -144,6 +144,9 @@ C++ Language Changes
 
 - Add ``__builtin_elementwise_fmod`` builtin for floating point types only.
 
+- Add ``__builtin_elementwise_minimum`` and ``__builtin_elementwise_maximum``
+  builtin for floating point types only.
+
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
 
