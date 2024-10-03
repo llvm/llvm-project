@@ -1043,7 +1043,8 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 //===----------------------------------------------------------------------===//
 
 def TargetOp : OpenMP_Op<"target", traits = [
-    AttrSizedOperandSegments, IsolatedFromAbove, OutlineableOpenMPOpInterface
+    AttrSizedOperandSegments, BlockArgOpenMPOpInterface, IsolatedFromAbove,
+    OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
     OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
@@ -1064,6 +1065,10 @@ def TargetOp : OpenMP_Op<"target", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetOperands &">:$clauses)>
   ];
+
+  let extraClassDeclaration = [{
+    unsigned numMapBlockArgs() { return getMapVars().size(); }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
