@@ -90,14 +90,9 @@ void test() {
 #endif
 
   // Make sure that we carry the bounds information properly through conversions, assignments, etc.
-  // These tests are mostly relevant when the ABI setting is enabled (with a stateful bounds-checker),
-  // but we still run them for types with an array cookie either way.
+  // These tests are only relevant when the ABI setting is enabled (with a stateful bounds-checker).
 #if defined(_LIBCPP_ABI_BOUNDED_UNIQUE_PTR)
-  using Types = types::type_list<NoCookie, WithCookie>;
-#else
-  using Types = types::type_list<WithCookie>;
-#endif
-  types::for_each(Types(), []<class T> {
+  types::for_each(types::type_list<NoCookie, WithCookie>(), []<class T> {
     // Bounds carried through move construction
     {
       std::unique_ptr<T[]> ptr = std::make_unique<T[]>(5);
@@ -128,6 +123,7 @@ void test() {
       TEST_LIBCPP_ASSERT_FAILURE(other[6], "unique_ptr<T[]>::operator[](index): index out of range");
     }
   });
+#endif
 }
 
 template <std::size_t Size>
