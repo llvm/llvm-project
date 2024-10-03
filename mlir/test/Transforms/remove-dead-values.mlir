@@ -18,7 +18,7 @@ module {
 module @named_module_acceptable {
   func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
     %0 = tensor.empty() : tensor<10xbf16>
-    // CHECK-NOT: %[[C:.*]] = tensor.empty[[C:.*]]
+    // CHECK-NOT: tensor.empty
     return %arg0 : tensor<10xf32>
   }
 }
