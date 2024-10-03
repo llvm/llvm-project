@@ -129,6 +129,11 @@ elseif ("${LIBCXX_CXX_ABI}" STREQUAL "libcxxabi")
     # libc++abi symbols (on platforms where it can) because libc++abi is only an
     # implementation detail of libc++.
     target_link_libraries(libcxx-abi-shared INTERFACE cxxabi-reexports)
+
+    # Populate the OUTPUT_NAME property of libcxx-abi-shared because that is used when
+    # generating a linker script.
+    get_target_property(_output_name cxxabi_shared OUTPUT_NAME)
+    set_target_properties(libcxx-abi-shared PROPERTIES "OUTPUT_NAME" "${_output_name}")
   endif()
 
   if (TARGET cxxabi_static)
