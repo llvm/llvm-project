@@ -142,7 +142,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
                             const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemTy,
         inferAlignFromPtrInfo(MF, MPO));
     MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
@@ -244,7 +244,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     uint64_t LocMemOffset = VA.getLocMemOffset();
     const auto &ST = MF.getSubtarget<GCNSubtarget>();
 
-    auto MMO = MF.getMachineMemOperand(
+    auto *MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, MemTy,
         commonAlignment(ST.getStackAlignment(), LocMemOffset));
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);
@@ -1018,7 +1018,7 @@ bool AMDGPUCallLowering::doCallerAndCalleePassArgsTheSameWay(
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // Make sure that the caller and callee preserve all of the same registers.
-  auto TRI = ST.getRegisterInfo();
+  const auto *TRI = ST.getRegisterInfo();
 
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);

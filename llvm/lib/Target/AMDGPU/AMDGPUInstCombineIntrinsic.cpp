@@ -144,7 +144,7 @@ static std::optional<Instruction *> modifyIntrinsicCall(
 
   bool RemoveOldIntr = &OldIntr != &InstToReplace;
 
-  auto RetValue = IC.eraseInstFromFunction(InstToReplace);
+  auto *RetValue = IC.eraseInstFromFunction(InstToReplace);
   if (RemoveOldIntr)
     IC.eraseInstFromFunction(OldIntr);
 

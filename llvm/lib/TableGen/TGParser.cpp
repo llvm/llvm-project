@@ -2719,7 +2719,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
 
     if (TrackReferenceLocs)
       Class->appendReferenceLoc(NameLoc);
-    return VarDefInit::get(Class, Args)->Fold();
+    return VarDefInit::get(NameLoc.Start, Class, Args)->Fold();
   }
   case tgtok::l_brace: {           // Value ::= '{' ValueList '}'
     SMLoc BraceLoc = Lex.getLoc();
