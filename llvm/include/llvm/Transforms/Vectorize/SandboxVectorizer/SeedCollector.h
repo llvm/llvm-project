@@ -31,8 +31,7 @@ public:
   explicit SeedBundle(sandboxir::Instruction *I) { insertAt(begin(), I); }
   explicit SeedBundle(SeedList &&L) : Seeds(std::move(L)) {
     for (auto &S : Seeds)
-      NumUnusedBits +=
-          Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout());
+      NumUnusedBits += Utils::getNumBits(S);
   }
   /// No need to allow copies.
   SeedBundle(const SeedBundle &) = delete;
@@ -58,8 +57,7 @@ public:
     }
 #endif
     Seeds.insert(Pos, I);
-    NumUnusedBits +=
-        Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout());
+    NumUnusedBits += Utils::getNumBits(I);
   }
 
   unsigned getFirstUnusedElementIdx() const {
@@ -69,8 +67,7 @@ public:
     return Seeds.size();
   }
   /// Marks elements as 'used' so that we skip them in `getSlice()`.
-  void setUsed(unsigned ElementIdx, const DataLayout &DL, unsigned Sz = 1,
-               bool VerifyUnused = true) {
+  void setUsed(unsigned ElementIdx, unsigned Sz = 1, bool VerifyUnused = true) {
     if (ElementIdx + Sz >= UsedLanes.size())
       UsedLanes.resize(ElementIdx + Sz);
     for (unsigned Idx : seq<unsigned>(ElementIdx, ElementIdx + Sz)) {
@@ -79,19 +76,20 @@ public:
       UsedLanes.set(Idx);
       UsedLaneCount++;
     }
-    NumUnusedBits -= sandboxir::Utils::getNumBits(
-        Seeds[ElementIdx],
-        Utils::getNumBits(S, S->getTopmostLLVMInstruction()->getDataLayout()););
+    NumUnusedBits -= sandboxir::Utils::getNumBits(Seeds[ElementIdx]);
   }
-
-  void setUsed(sandboxir::Instruction *V, const DataLayout &DL) {
-    auto It = std::find(begin(), end(), V);
-    assert(It != end() && "V not in the bundle!");
+  /// Marks instruction \p I "used" within the bundle. Clients
+  /// use this property when assembling a vectorized instruction from
+  /// the seeds in a bundle. This allows constant time evaluation
+  /// and "removal" from the list.
+  void setUsed(sandboxir::Instruction *I) {
+    auto It = std::find(begin(), end(), I);
+    assert(It != end() && "Instruction not in the bundle!");
     auto Idx = It - begin();
-    setUsed(Idx, DL, 1, /*VerifyUnused=*/false);
+    setUsed(Idx, 1, /*VerifyUnused=*/false);
   }
+  /// \Returns whether or not \p Element has been used.
   bool isUsed(unsigned Element) const {
-    // return Element >= UsedLanes.size() ? false : UsedLanes.test(Element);
     return Element < UsedLanes.size() && UsedLanes.test(Element);
   }
   bool allUsed() const { return UsedLaneCount == Seeds.size(); }
