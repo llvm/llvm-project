@@ -141,7 +141,8 @@ template <> PropertyValue::Type PropertyValue::getTypeTag<byte *>() {
   return BYTE_ARRAY;
 }
 
-PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize) : Ty(BYTE_ARRAY) {
+PropertyValue::PropertyValue(const byte *Data, SizeTy DataBitSize)
+    : Ty(BYTE_ARRAY) {
   constexpr int ByteSizeInBits = 8;
   SizeTy DataSize = (DataBitSize + (ByteSizeInBits - 1)) / ByteSizeInBits;
   constexpr size_t SizeFieldSize = sizeof(SizeTy);
