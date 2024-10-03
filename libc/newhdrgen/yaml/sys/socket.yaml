@@ -61,8 +61,8 @@ functions:
       - type: void *
       - type: size_t
       - type: int
-      - type: struct sockaddr *
-      - type: socklen_t *
+      - type: struct sockaddr *__restrict
+      - type: socklen_t *__restrict
   - name: recvmsg
     standards:
       - POSIX
