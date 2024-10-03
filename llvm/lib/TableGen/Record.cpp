@@ -2292,11 +2292,12 @@ static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
     ID.AddPointer(I);
 }
 
-VarDefInit::VarDefInit(Record *Class, unsigned N)
-    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Class(Class),
+VarDefInit::VarDefInit(SMLoc Loc, Record *Class, unsigned N)
+    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(N) {}
 
-VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
+VarDefInit *VarDefInit::get(SMLoc Loc, Record *Class,
+                            ArrayRef<ArgumentInit *> Args) {
   FoldingSetNodeID ID;
   ProfileVarDefInit(ID, Class, Args);
 
@@ -2307,7 +2308,7 @@ VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<ArgumentInit *>(Args.size()), alignof(VarDefInit));
-  VarDefInit *I = new (Mem) VarDefInit(Class, Args.size());
+  VarDefInit *I = new (Mem) VarDefInit(Loc, Class, Args.size());
   std::uninitialized_copy(Args.begin(), Args.end(),
                           I->getTrailingObjects<ArgumentInit *>());
   RK.TheVarDefInitPool.InsertNode(I, IP);
@@ -2323,9 +2324,8 @@ DefInit *VarDefInit::instantiate() {
     return Def;
 
   RecordKeeper &Records = Class->getRecords();
-  auto NewRecOwner =
-      std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
-                               Records, Record::RK_AnonymousDef);
+  auto NewRecOwner = std::make_unique<Record>(
+      Records.getNewAnonymousName(), Loc, Records, Record::RK_AnonymousDef);
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
@@ -2389,7 +2389,7 @@ Init *VarDefInit::resolveReferences(Resolver &R) const {
   }
 
   if (Changed) {
-    auto New = VarDefInit::get(Class, NewArgs);
+    auto *New = VarDefInit::get(Loc, Class, NewArgs);
     if (!UR.foundUnresolved())
       return New->instantiate();
     return New;
@@ -3275,24 +3275,20 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
+ArrayRef<const Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   // We cache the record vectors for single classes. Many backends request
   // the same vectors multiple times.
-  auto Pair = Cache.try_emplace(ClassName.str());
-  if (Pair.second)
-    Pair.first->second =
-        getAllDerivedDefinitionsImpl<VecTy>(ArrayRef(ClassName));
-
-  return Pair.first->second;
+  auto [Iter, Inserted] = Cache.try_emplace(ClassName.str());
+  if (Inserted)
+    Iter->second = getAllDerivedDefinitions(ArrayRef(ClassName));
+  return Iter->second;
 }
 
-template <typename VecTy>
-VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
-    ArrayRef<StringRef> ClassNames) const {
+std::vector<const Record *>
+RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   SmallVector<const Record *, 2> ClassRecs;
-  VecTy Defs;
+  std::vector<const Record *> Defs;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (const auto &ClassName : ClassNames) {
@@ -3312,46 +3308,11 @@ VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
   return Defs;
 }
 
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsIfDefinedImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
-  return getClass(ClassName)
-             ? getAllDerivedDefinitionsImpl<VecTy>(ClassName, Cache)
-             : Cache[""];
-}
-
-ArrayRef<const Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassName,
-                                                             ClassRecordsMap);
-}
-
-std::vector<const Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(ClassNames);
-}
-
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassNames);
-}
-
 ArrayRef<const Record *>
 RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<Record *>>(
-      ClassName, ClassRecordsMap);
+  if (getClass(ClassName))
+    return getAllDerivedDefinitions(ClassName);
+  return Cache[""];
 }
 
 void RecordKeeper::dumpAllocationStats(raw_ostream &OS) const {

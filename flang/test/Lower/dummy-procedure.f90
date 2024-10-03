@@ -115,8 +115,8 @@ end subroutine
 ! CHECK-LABEL: func @_QPtest_aimag
 subroutine test_aimag()
   intrinsic :: aimag
-  !CHECK: %[[f:.*]] = fir.address_of(@fir.aimag.f32.ref_z4) : (!fir.ref<!fir.complex<4>>) -> f32
-  !CHECK: %[[fcast:.*]] = fir.emboxproc %[[f]] : ((!fir.ref<!fir.complex<4>>) -> f32) -> !fir.boxproc<() -> ()>
+  !CHECK: %[[f:.*]] = fir.address_of(@fir.aimag.f32.ref_z32) : (!fir.ref<complex<f32>>) -> f32
+  !CHECK: %[[fcast:.*]] = fir.emboxproc %[[f]] : ((!fir.ref<complex<f32>>) -> f32) -> !fir.boxproc<() -> ()>
   !CHECK: fir.call @_QPfoo_aimag(%[[fcast]]) {{.*}}: (!fir.boxproc<() -> ()>) -> ()
   call foo_aimag(aimag)
 end subroutine
@@ -164,9 +164,9 @@ end subroutine
   ! CHECK: %[[atan2:.*]] = math.atan2 %[[xload]], %[[yload]] fastmath<contract> : f32
   ! CHECK: return %[[atan2]] : f32
 
-!CHECK-LABEL: func private @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)
+!CHECK-LABEL: func private @fir.aimag.f32.ref_z32(%arg0: !fir.ref<complex<f32>>)
   !CHECK: %[[load:.*]] = fir.load %arg0
-  !CHECK: %[[imag:.*]] = fir.extract_value %[[load]], [1 : index] : (!fir.complex<4>) -> f32
+  !CHECK: %[[imag:.*]] = fir.extract_value %[[load]], [1 : index] : (complex<f32>) -> f32
   !CHECK: return %[[imag]] : f32
 
 !CHECK-LABEL: func private @fir.len.i32.bc1(%arg0: !fir.boxchar<1>)
