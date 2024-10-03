@@ -1358,7 +1358,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   bool Registered = false;
   PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered](
                                                StringRef P, Any IR) mutable {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(&PassStack.emplace_back(P));
 #endif
     (void)this;
@@ -1387,7 +1387,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
 #endif
@@ -1396,7 +1396,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassCallback([this, &MAM](StringRef P, Any IR,
                                              const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
 #endif
