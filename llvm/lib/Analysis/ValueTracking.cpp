@@ -1408,6 +1408,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::PHI: {
     const PHINode *P = cast<PHINode>(I);
+
+    // Unreachable blocks may have zero-operand PHI nodes. Skip if every
+    // incoming value references to ourself.
+    if (P->getNumIncomingValues() == 0 ||
+        isa_and_nonnull<UndefValue>(P->hasConstantValue()))
+      break;
+
+    // Cache computed KnownBits for R so we don't recompute unnecessarily.
+    std::optional<KnownBits> CachedKnown;
+
     BinaryOperator *BO = nullptr;
     Value *R = nullptr, *L = nullptr;
     if (matchSimpleRecurrence(P, BO, R, L)) {
@@ -1427,13 +1437,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // %iv = [R, %entry], [%iv.next, %backedge]
         // %iv.next = shift_op %iv, L
 
-        // Recurse with the phi context to avoid concern about whether facts
-        // inferred hold at original context instruction.  TODO: It may be
-        // correct to use the original context.  IF warranted, explore and
-        // add sufficient tests to cover.
         SimplifyQuery RecQ = Q.getWithoutCondContext();
-        RecQ.CxtI = P;
+        unsigned OpNum = P->getIncomingValue(0) == R ? 0 : 1;
+        Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
+
+        RecQ.CxtI = RInst;
         computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
+        CachedKnown = Known2;
+
         switch (Opcode) {
         case Instruction::Shl:
           // A shl recurrence will only increase the tailing zeros
@@ -1465,8 +1476,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
         SimplifyQuery RecQ = Q.getWithoutCondContext();
-
-        unsigned OpNum = P->getOperand(0) == R ? 0 : 1;
+        unsigned OpNum = P->getIncomingValue(0) == R ? 0 : 1;
         Instruction *RInst = P->getIncomingBlock(OpNum)->getTerminator();
         Instruction *LInst = P->getIncomingBlock(1 - OpNum)->getTerminator();
 
@@ -1474,6 +1484,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // zero bits.
         RecQ.CxtI = RInst;
         computeKnownBits(R, DemandedElts, Known2, Depth + 1, RecQ);
+        CachedKnown = Known2;
 
         // We need to take the minimum number of known bits
         KnownBits Known3(BitWidth);
@@ -1518,78 +1529,82 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
     }
 
-    // Unreachable blocks may have zero-operand PHI nodes.
-    if (P->getNumIncomingValues() == 0)
+    // Only continue if the KnownBits are not yet refined by previous code.
+    if (!Known.isUnknown())
       break;
 
-    // Otherwise take the unions of the known bit sets of the operands,
-    // taking conservative care to avoid excessive recursion.
-    if (Depth < MaxAnalysisRecursionDepth - 1 && Known.isUnknown()) {
-      // Skip if every incoming value references to ourself.
-      if (isa_and_nonnull<UndefValue>(P->hasConstantValue()))
-        break;
+    // The following code is expensive, so bail early if the Depth limit will be
+    // hit.
+    if (Depth > MaxAnalysisRecursionDepth - 2)
+      break;
 
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
-      for (unsigned u = 0, e = P->getNumIncomingValues(); u < e; ++u) {
-        Value *IncValue = P->getIncomingValue(u);
-        // Skip direct self references.
-        if (IncValue == P) continue;
+    // Take the unions of the known bit sets of the operands.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    for (unsigned u = 0, e = P->getNumIncomingValues(); u < e; ++u) {
+      Value *IncValue = P->getIncomingValue(u);
+      // Skip direct self references.
+      if (IncValue == P)
+        continue;
 
-        // Change the context instruction to the "edge" that flows into the
-        // phi. This is important because that is where the value is actually
-        // "evaluated" even though it is used later somewhere else. (see also
-        // D69571).
-        SimplifyQuery RecQ = Q.getWithoutCondContext();
-        RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
+      // Change the context instruction to the "edge" that flows into the phi.
+      // This is important because that is where the value is actually
+      // "evaluated" even though it is used later somewhere else. (see also
+      // D69571).
+      SimplifyQuery RecQ = Q.getWithoutCondContext();
+      RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
+      // If IncValue's KnownBits were already computed, use it.
+      if (IncValue == R && CachedKnown) {
+        Known2 = *CachedKnown;
+      } else {
         Known2 = KnownBits(BitWidth);
 
-        // Recurse, but cap the recursion to one level, because we don't
-        // want to waste time spinning around in loops.
+        // Cap the recursion to one level, because we don't want to waste time
+        // spinning around in loops.
         // TODO: See if we can base recursion limiter on number of incoming phi
         // edges so we don't overly clamp analysis.
         computeKnownBits(IncValue, DemandedElts, Known2,
                          MaxAnalysisRecursionDepth - 1, RecQ);
+      }
 
-        // See if we can further use a conditional branch into the phi
-        // to help us determine the range of the value.
-        if (!Known2.isConstant()) {
-          ICmpInst::Predicate Pred;
-          const APInt *RHSC;
-          BasicBlock *TrueSucc, *FalseSucc;
-          // TODO: Use RHS Value and compute range from its known bits.
-          if (match(RecQ.CxtI,
-                    m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
-                         m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
-            // Check for cases of duplicate successors.
-            if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
-              // If we're using the false successor, invert the predicate.
-              if (FalseSucc == P->getParent())
-                Pred = CmpInst::getInversePredicate(Pred);
-              // Get the knownbits implied by the incoming phi condition.
-              auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
-              KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
-              // We can have conflicts here if we are analyzing deadcode (its
-              // impossible for us reach this BB based the icmp).
-              if (KnownUnion.hasConflict()) {
-                // No reason to continue analyzing in a known dead region, so
-                // just resetAll and break. This will cause us to also exit the
-                // outer loop.
-                Known.resetAll();
-                break;
-              }
-              Known2 = KnownUnion;
+      // See if we can further use a conditional branch into the phi to help us
+      // determine the range of the value.
+      if (!Known2.isConstant()) {
+        ICmpInst::Predicate Pred;
+        const APInt *RHSC;
+        BasicBlock *TrueSucc, *FalseSucc;
+        // TODO: Use RHS Value and compute range from its known bits.
+        if (match(RecQ.CxtI,
+                  m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
+                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
+          // Check for cases of duplicate successors.
+          if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
+            // If we're using the false successor, invert the predicate.
+            if (FalseSucc == P->getParent())
+              Pred = CmpInst::getInversePredicate(Pred);
+            // Get the knownbits implied by the incoming phi condition.
+            auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
+            KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
+            // We can have conflicts here if we are analyzing deadcode (it's
+            // impossible for us reach this BB based the icmp).
+            if (KnownUnion.hasConflict()) {
+              // No reason to continue analyzing in a known dead region, so just
+              // resetAll and break. This will cause us to also exit the outer
+              // loop.
+              Known.resetAll();
+              break;
             }
+            Known2 = KnownUnion;
           }
         }
-
-        Known = Known.intersectWith(Known2);
-        // If all bits have been ruled out, there's no need to check
-        // more operands.
-        if (Known.isUnknown())
-          break;
       }
+
+      Known = Known.intersectWith(Known2);
+      // If all bits have been ruled out, there's no need to check more
+      // operands.
+      if (Known.isUnknown())
+        break;
     }
     break;
   }
