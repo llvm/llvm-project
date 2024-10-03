@@ -98,6 +98,14 @@ static SDValue emitRepstos(const X86Subtarget &Subtarget, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::REP_STOS, dl, Tys, Ops);
 }
 
+/// Emit a single REP STOSB instruction for a particular constant size.
+static SDValue emitRepstosB(const X86Subtarget &Subtarget, SelectionDAG &DAG,
+                            const SDLoc &dl, SDValue Chain, SDValue Dst,
+                            SDValue Val, uint64_t Size) {
+  return emitRepstos(Subtarget, DAG, dl, Chain, Dst, Val,
+                     DAG.getIntPtrConstant(Size, dl), MVT::i8);
+}
+
 /// Returns a REP STOS instruction, possibly with a few load/stores to implement
 /// a constant size memory set. In some cases where we know REP MOVS is
 /// inefficient we return an empty SDValue so the calling code can either
@@ -109,6 +117,26 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
                                        EVT SizeVT, Align Alignment,
                                        bool isVolatile, bool AlwaysInline,
                                        MachinePointerInfo DstPtrInfo) {
+  /// In case we optimize for size, we use repstosb even if it's less efficient
+  /// so we can save the loads/stores of the leftover.
+  if (DAG.getMachineFunction().getFunction().hasMinSize()) {
+    if (auto *ValC = dyn_cast<ConstantSDNode>(Val)) {
+      // Special case 0 because otherwise we get large literals,
+      // which causes larger encoding.
+      if ((Size & 31) == 0 && (ValC->getZExtValue() & 255) == 0) {
+        MVT BlockType = MVT::i32;
+        const uint64_t BlockBits = BlockType.getSizeInBits();
+        const uint64_t BlockBytes = BlockBits / 8;
+        const uint64_t BlockCount = Size / BlockBytes;
+
+        Val = DAG.getConstant(0, dl, BlockType);
+        // repstosd is same size as repstosb
+        return emitRepstos(Subtarget, DAG, dl, Chain, Dst, Val,
+                           DAG.getIntPtrConstant(BlockCount, dl), BlockType);
+      }
+    }
+    return emitRepstosB(Subtarget, DAG, dl, Chain, Dst, Val, Size);
+  }
 
   if (Size > Subtarget.getMaxInlineSizeThreshold())
     return SDValue();
@@ -230,6 +258,10 @@ static SDValue emitConstantSizeRepmov(
     SDValue Chain, SDValue Dst, SDValue Src, uint64_t Size, EVT SizeVT,
     Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) {
+  /// In case we optimize for size, we use repmovsb even if it's less efficient
+  /// so we can save the loads/stores of the leftover.
+  if (DAG.getMachineFunction().getFunction().hasMinSize())
+    return emitRepmovsB(Subtarget, DAG, dl, Chain, Dst, Src, Size);
 
   /// TODO: Revisit next line: big copy with ERMSB on march >= haswell are very
   /// efficient.
@@ -259,11 +291,6 @@ static SDValue emitConstantSizeRepmov(
     return RepMovs;
 
   assert(BytesLeft && "We have leftover at this point");
-
-  /// In case we optimize for size, we use repmovsb even if it's less efficient
-  /// so we can save the loads/stores of the leftover.
-  if (DAG.getMachineFunction().getFunction().hasMinSize())
-    return emitRepmovsB(Subtarget, DAG, dl, Chain, Dst, Src, Size);
 
   // Handle the last 1 - 7 bytes.
   SmallVector<SDValue, 4> Results;
