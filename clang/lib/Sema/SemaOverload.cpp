@@ -2245,7 +2245,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   bool argIsLValue = From->isGLValue();
   if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isConstantArrayType()) {
+      ToType->isConstantArrayType()) {
     // HLSL constant array parameters do not decay, so if the argument is a
     // constant array and the parameter is an ArrayParameterType we have special
     // handling here.
@@ -2266,7 +2266,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.setAllToTypes(ToType);
     return true;
   } else if (argIsLValue && !FromType->canDecayToPointerType() &&
-      S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+             S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
     // Lvalue-to-rvalue conversion (C++11 4.1):
     //   A glvalue (3.10) of a non-function, non-array type T can
     //   be converted to a prvalue.

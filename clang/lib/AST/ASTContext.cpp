@@ -3858,8 +3858,8 @@ QualType ASTContext::getConstantArrayFromArrayParameterType(QualType Ty) const {
   assert(Ty->isArrayParameterType() && "Ty must be an array parameter type.");
   const auto *ATy = cast<ArrayParameterType>(Ty);
   return getConstantArrayType(ATy->getElementType(), ATy->getSize(),
-			      ATy->getSizeExpr(), ATy->getSizeModifier(),
-			      ATy->getIndexTypeQualifiers().getAsOpaqueValue());
+                              ATy->getSizeExpr(), ATy->getSizeModifier(),
+                              ATy->getIndexTypeQualifiers().getAsOpaqueValue());
 }
 
 QualType ASTContext::getArrayParameterType(QualType Ty) const {

@@ -4435,12 +4435,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       FromType = Context.getArrayParameterType(FromType);
       From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
-               .get();
+                 .get();
     } else { // FromType must be ArrayParameterType
       FromType = Context.getConstantArrayFromArrayParameterType(FromType);
       From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-			       /*BasePath=*/nullptr, CCK)
-               .get();
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
     }
     break;
 
