@@ -166,6 +166,12 @@ _mm_tzcnt_64(unsigned long long __X)
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("bmi")))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 /// Performs a bitwise AND of the second operand with the one's
 ///    complement of the first operand.
 ///
@@ -223,9 +229,8 @@ __andn_u32(unsigned int __X, unsigned int __Y)
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see _bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__bextr_u32(unsigned int __X, unsigned int __Y)
-{
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+__bextr_u32(unsigned int __X, unsigned int __Y) {
   return __builtin_ia32_bextr_u32(__X, __Y);
 }
 
@@ -248,10 +253,9 @@ __bextr_u32(unsigned int __X, unsigned int __Y)
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z)
-{
-  return __builtin_ia32_bextr_u32 (__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
+_bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z) {
+  return __builtin_ia32_bextr_u32(__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
 }
 
 /* Intel-specified, single-leading-underscore version of BEXTR2 */
@@ -271,7 +275,7 @@ _bextr_u32(unsigned int __X, unsigned int __Y, unsigned int __Z)
 /// \returns An unsigned integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u32
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 _bextr2_u32(unsigned int __X, unsigned int __Y) {
   return __builtin_ia32_bextr_u32(__X, __Y);
 }
@@ -444,9 +448,8 @@ __andn_u64 (unsigned long long __X, unsigned long long __Y)
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see _bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-__bextr_u64(unsigned long long __X, unsigned long long __Y)
-{
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+__bextr_u64(unsigned long long __X, unsigned long long __Y) {
   return __builtin_ia32_bextr_u64(__X, __Y);
 }
 
@@ -469,10 +472,9 @@ __bextr_u64(unsigned long long __X, unsigned long long __Y)
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-_bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z)
-{
-  return __builtin_ia32_bextr_u64 (__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
+_bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z) {
+  return __builtin_ia32_bextr_u64(__X, ((__Y & 0xff) | ((__Z & 0xff) << 8)));
 }
 
 /* Intel-specified, single-leading-underscore version of BEXTR2 */
@@ -492,7 +494,7 @@ _bextr_u64(unsigned long long __X, unsigned int __Y, unsigned int __Z)
 /// \returns An unsigned 64-bit integer whose least significant bits contain the
 ///    extracted bits.
 /// \see __bextr_u64
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 _bextr2_u64(unsigned long long __X, unsigned long long __Y) {
   return __builtin_ia32_bextr_u64(__X, __Y);
 }

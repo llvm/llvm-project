@@ -484,22 +484,16 @@ public:
 
 private:
   DbgOpID insertConstOp(MachineOperand &MO) {
-    auto ExistingIt = ConstOpToID.find(MO);
-    if (ExistingIt != ConstOpToID.end())
-      return ExistingIt->second;
-    DbgOpID ID(true, ConstOps.size());
-    ConstOpToID.insert(std::make_pair(MO, ID));
-    ConstOps.push_back(MO);
-    return ID;
+    auto [It, Inserted] = ConstOpToID.try_emplace(MO, true, ConstOps.size());
+    if (Inserted)
+      ConstOps.push_back(MO);
+    return It->second;
   }
   DbgOpID insertValueOp(ValueIDNum VID) {
-    auto ExistingIt = ValueOpToID.find(VID);
-    if (ExistingIt != ValueOpToID.end())
-      return ExistingIt->second;
-    DbgOpID ID(false, ValueOps.size());
-    ValueOpToID.insert(std::make_pair(VID, ID));
-    ValueOps.push_back(VID);
-    return ID;
+    auto [It, Inserted] = ValueOpToID.try_emplace(VID, false, ValueOps.size());
+    if (Inserted)
+      ValueOps.push_back(VID);
+    return It->second;
   }
 };
 
@@ -1076,9 +1070,7 @@ public:
                        : DbgValue(Properties, DbgValue::Undef);
 
     // Attempt insertion; overwrite if it's already mapped.
-    auto Result = Vars.insert(std::make_pair(VarID, Rec));
-    if (!Result.second)
-      Result.first->second = Rec;
+    Vars.insert_or_assign(VarID, Rec);
     Scopes[VarID] = MI.getDebugLoc().get();
 
     considerOverlaps(Var, MI.getDebugLoc().get());
@@ -1106,9 +1098,7 @@ public:
       DbgValue Rec = DbgValue(EmptyProperties, DbgValue::Undef);
 
       // Attempt insertion; overwrite if it's already mapped.
-      auto Result = Vars.insert(std::make_pair(OverlappedID, Rec));
-      if (!Result.second)
-        Result.first->second = Rec;
+      Vars.insert_or_assign(OverlappedID, Rec);
       Scopes[OverlappedID] = Loc;
     }
   }

@@ -1123,13 +1123,13 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAligned(clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_simd, clauseOps);
+  cp.processNontemporal(clauseOps);
   cp.processOrder(clauseOps);
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
 
-  cp.processTODO<clause::Linear, clause::Nontemporal>(
-      loc, llvm::omp::Directive::OMPD_simd);
+  cp.processTODO<clause::Linear>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -1223,12 +1223,10 @@ static void genTargetEnterExitUpdateDataClauses(
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(directive, clauseOps);
 
-  if (directive == llvm::omp::Directive::OMPD_target_update) {
-    cp.processMotionClauses<clause::To>(stmtCtx, clauseOps);
-    cp.processMotionClauses<clause::From>(stmtCtx, clauseOps);
-  } else {
+  if (directive == llvm::omp::Directive::OMPD_target_update)
+    cp.processMotionClauses(stmtCtx, clauseOps);
+  else
     cp.processMap(loc, stmtCtx, clauseOps);
-  }
 
   cp.processNowait(clauseOps);
 }
@@ -1683,7 +1681,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    mapTypes, deviceAddrSyms, deviceAddrLocs, deviceAddrTypes,
                    devicePtrSyms, devicePtrLocs, devicePtrTypes);
 
-  llvm::SmallVector<const semantics::Symbol *> privateSyms;
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
                            lower::omp::isLastItemInQueue(item, queue),
@@ -1938,24 +1935,26 @@ static void genStandaloneDistribute(lower::AbstractConverter &converter,
   genDistributeClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                        distributeClauseOps);
 
-  // TODO: Support delayed privatization.
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, &symTable);
-  dsp.processStep1();
+                           enableDelayedPrivatizationStaging, &symTable);
+  dsp.processStep1(&distributeClauseOps);
+  llvm::SmallVector<mlir::Type> privateVarTypes{};
+
+  for (mlir::Value privateVar : distributeClauseOps.privateVars)
+    privateVarTypes.push_back(privateVar.getType());
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
 
-  // TODO: Populate entry block arguments with private variables.
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
-      converter, loc, distributeClauseOps, /*blockArgTypes=*/{});
+      converter, loc, distributeClauseOps, privateVarTypes);
 
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                loopNestClauseOps, iv,
-                /*wrapperSyms=*/{}, distributeOp.getRegion().getArguments(),
+                loopNestClauseOps, iv, dsp.getDelayedPrivSymbols(),
+                distributeOp.getRegion().getArguments(),
                 llvm::omp::Directive::OMPD_distribute, dsp);
 }
 

@@ -16,6 +16,7 @@ _TOOLS = {
     "llvm-ar": "//llvm:llvm-ar-lib",
     "llvm-cgdata": "//llvm:llvm-cgdata-lib",
     "llvm-cxxfilt": "//llvm:llvm-cxxfilt-lib",
+    "llvm-debuginfod-find": "//llvm:llvm-debuginfod-find-lib",
     "llvm-dwp": "//llvm:llvm-dwp-lib",
     "llvm-gsymutil": "//llvm:llvm-gsymutil-lib",
     "llvm-ifs": "//llvm:llvm-ifs-lib",

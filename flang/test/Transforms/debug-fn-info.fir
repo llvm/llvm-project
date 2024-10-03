@@ -52,10 +52,16 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %11 = fir.load %5 : !fir.ref<i32>
     return %11 : i32
   } loc(#loc3)
+  func.func private @_QFPfn3(%arg0: !fir.ref<i32> {fir.bindc_name = "abc"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
+    %0 = fir.undefined !fir.dscope
+    %1 = fircg.ext_declare %arg0 dummy_scope %0 {uniq_name = "_QFFfn3Eabc"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+    return
+  } loc(#loc4)
 }
 #loc1 = loc("test.f90":15:1)
 #loc2 = loc("test.f90":26:22)
 #loc3 = loc("test2.f90":43:22)
+#loc4 = loc("test2.f90":53:22)
 
 
 // CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
@@ -64,12 +70,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[REAL4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[LOG4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 32, encoding = DW_ATE_boolean>
-// CHECK: #[[TY0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+// CHECK: #[[TY0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_program, types = #di_null_type>
 // CHECK: #[[TY1:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[INT8]], #[[INT4]], #[[REAL8]], #[[LOG1]]>
 // CHECK: #[[TY2:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[INT4]], #[[INT8]], #[[REAL4]], #[[LOG4]]>
+// CHECK: #[[TY3:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #di_null_type, #[[INT4]]>
 
 // Line numbers should match the number in corresponding loc entry.
 // CHECK: #llvm.di_subprogram<{{.*}}name = "_QQmain", linkageName = "_QQmain", file = {{.*}}, line = 15, scopeLine = 15, subprogramFlags = Definition, type = #[[TY0]]>
 // CHECK: #llvm.di_subprogram<{{.*}}name = "fn1", linkageName = "_QFPfn1", file = {{.*}}, line = 26, scopeLine = 26, subprogramFlags = Definition, type = #[[TY1]]>
 // CHECK: #llvm.di_subprogram<{{.*}}name = "fn2", linkageName = "_QFPfn2", file = {{.*}}, line = 43, scopeLine = 43, subprogramFlags = Definition, type = #[[TY2]]>
+// CHECK: #llvm.di_subprogram<{{.*}}name = "fn3", linkageName = "_QFPfn3", file = {{.*}}, line = 53, scopeLine = 53, subprogramFlags = Definition, type = #[[TY3]]>
 

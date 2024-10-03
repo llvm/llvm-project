@@ -14,6 +14,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -35,6 +36,7 @@ using namespace llvm;
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
+  case Intrinsic::atan2:
   case Intrinsic::exp:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -50,6 +52,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sdot:
   case Intrinsic::dx_udot:
   case Intrinsic::dx_sign:
+  case Intrinsic::dx_step:
     return true;
   }
   return false;
@@ -305,6 +308,54 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, MultiplicandVec);
 }
 
+static Value *expandAtan2Intrinsic(CallInst *Orig) {
+  Value *Y = Orig->getOperand(0);
+  Value *X = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+  Builder.setFastMathFlags(Orig->getFastMathFlags());
+
+  Value *Tan = Builder.CreateFDiv(Y, X);
+
+  CallInst *Atan =
+      Builder.CreateIntrinsic(Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
+  Atan->setTailCall(Orig->isTailCall());
+  Atan->setAttributes(Orig->getAttributes());
+
+  // Modify atan result based on https://en.wikipedia.org/wiki/Atan2.
+  Constant *Pi = ConstantFP::get(Ty, llvm::numbers::pi);
+  Constant *HalfPi = ConstantFP::get(Ty, llvm::numbers::pi / 2);
+  Constant *NegHalfPi = ConstantFP::get(Ty, -llvm::numbers::pi / 2);
+  Constant *Zero = ConstantFP::get(Ty, 0);
+  Value *AtanAddPi = Builder.CreateFAdd(Atan, Pi);
+  Value *AtanSubPi = Builder.CreateFSub(Atan, Pi);
+
+  // x > 0 -> atan.
+  Value *Result = Atan;
+  Value *XLt0 = Builder.CreateFCmpOLT(X, Zero);
+  Value *XEq0 = Builder.CreateFCmpOEQ(X, Zero);
+  Value *YGe0 = Builder.CreateFCmpOGE(Y, Zero);
+  Value *YLt0 = Builder.CreateFCmpOLT(Y, Zero);
+
+  // x < 0, y >= 0 -> atan + pi.
+  Value *XLt0AndYGe0 = Builder.CreateAnd(XLt0, YGe0);
+  Result = Builder.CreateSelect(XLt0AndYGe0, AtanAddPi, Result);
+
+  // x < 0, y < 0 -> atan - pi.
+  Value *XLt0AndYLt0 = Builder.CreateAnd(XLt0, YLt0);
+  Result = Builder.CreateSelect(XLt0AndYLt0, AtanSubPi, Result);
+
+  // x == 0, y < 0 -> -pi/2
+  Value *XEq0AndYLt0 = Builder.CreateAnd(XEq0, YLt0);
+  Result = Builder.CreateSelect(XEq0AndYLt0, NegHalfPi, Result);
+
+  // x == 0, y > 0 -> pi/2
+  Value *XEq0AndYGe0 = Builder.CreateAnd(XEq0, YGe0);
+  Result = Builder.CreateSelect(XEq0AndYGe0, HalfPi, Result);
+
+  return Result;
+}
+
 static Value *expandPowIntrinsic(CallInst *Orig) {
 
   Value *X = Orig->getOperand(0);
@@ -320,6 +371,28 @@ static Value *expandPowIntrinsic(CallInst *Orig) {
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
+}
+
+static Value *expandStepIntrinsic(CallInst *Orig) {
+
+  Value *X = Orig->getOperand(0);
+  Value *Y = Orig->getOperand(1);
+  Type *Ty = X->getType();
+  IRBuilder<> Builder(Orig);
+
+  Constant *One = ConstantFP::get(Ty->getScalarType(), 1.0);
+  Constant *Zero = ConstantFP::get(Ty->getScalarType(), 0.0);
+  Value *Cond = Builder.CreateFCmpOLT(Y, X);
+
+  if (Ty != Ty->getScalarType()) {
+    auto *XVec = dyn_cast<FixedVectorType>(Ty);
+    One = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), One);
+    Zero = ConstantVector::getSplat(
+        ElementCount::getFixed(XVec->getNumElements()), Zero);
+  }
+
+  return Builder.CreateSelect(Cond, Zero, One);
 }
 
 static Intrinsic::ID getMaxForClamp(Type *ElemTy,
@@ -394,6 +467,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
     break;
+  case Intrinsic::atan2:
+    Result = expandAtan2Intrinsic(Orig);
+    break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
     break;
@@ -433,8 +509,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_sign:
     Result = expandSignIntrinsic(Orig);
     break;
+  case Intrinsic::dx_step:
+    Result = expandStepIntrinsic(Orig);
   }
-
   if (Result) {
     Orig->replaceAllUsesWith(Result);
     Orig->eraseFromParent();
@@ -469,6 +546,10 @@ PreservedAnalyses DXILIntrinsicExpansion::run(Module &M,
 
 bool DXILIntrinsicExpansionLegacy::runOnModule(Module &M) {
   return expansionIntrinsics(M);
+}
+
+void DXILIntrinsicExpansionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DXILResourceWrapperPass>();
 }
 
 char DXILIntrinsicExpansionLegacy::ID = 0;

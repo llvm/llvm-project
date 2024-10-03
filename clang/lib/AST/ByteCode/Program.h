@@ -84,7 +84,7 @@ public:
                                             const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
+  std::optional<unsigned> getOrCreateDummy(const DeclTy &D);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *Init);
@@ -209,7 +209,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
+  llvm::DenseMap<const void *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {

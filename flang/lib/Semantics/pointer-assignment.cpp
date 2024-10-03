@@ -353,7 +353,7 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
       std::string buf;
       llvm::raw_string_ostream ss{buf};
       d.AsFortran(ss);
-      Say(*m, description_, ss.str());
+      Say(*m, description_, buf);
     } else {
       Say(std::get<MessageFormattedText>(*msg));
     }

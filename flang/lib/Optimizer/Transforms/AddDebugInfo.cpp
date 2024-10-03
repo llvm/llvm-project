@@ -271,6 +271,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         typeGen.convertType(resTy, fileAttr, cuAttr, /*declOp=*/nullptr);
     types.push_back(tyAttr);
   }
+  // If no return type then add a null type as a place holder for that.
+  if (types.empty())
+    types.push_back(mlir::LLVM::DINullTypeAttr::get(context));
   for (auto inTy : funcOp.getArgumentTypes()) {
     auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
                                       cuAttr, /*declOp=*/nullptr);

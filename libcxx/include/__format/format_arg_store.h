@@ -22,6 +22,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/remove_const.h>
+#include <cstdint>
 #include <string>
 #include <string_view>
 

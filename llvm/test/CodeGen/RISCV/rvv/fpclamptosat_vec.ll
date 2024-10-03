@@ -2261,10 +2261,7 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    fld fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
@@ -2394,10 +2391,7 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixunsdfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    fld fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixunsdfti
 ; CHECK-V-NEXT:    snez a1, a1
 ; CHECK-V-NEXT:    snez a2, s1
@@ -2506,10 +2500,7 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    fld fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv a2, s1
 ; CHECK-V-NEXT:    blez s1, .LBB20_2
@@ -2668,10 +2659,7 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    flw fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
@@ -2801,10 +2789,7 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixunssfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    flw fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixunssfti
 ; CHECK-V-NEXT:    snez a1, a1
 ; CHECK-V-NEXT:    snez a2, s1
@@ -2913,10 +2898,7 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    flw fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv a2, s1
 ; CHECK-V-NEXT:    blez s1, .LBB23_2
@@ -5597,10 +5579,7 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    fld fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
@@ -5831,10 +5810,7 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    fld fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixdfti
 ; CHECK-V-NEXT:    mv a2, a1
 ; CHECK-V-NEXT:    blez a1, .LBB47_2
@@ -5983,10 +5959,7 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    flw fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
@@ -6217,10 +6190,7 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    addi a0, sp, 32
-; CHECK-V-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-V-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-V-NEXT:    vfmv.f.s fa0, v8
+; CHECK-V-NEXT:    flw fa0, 32(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv a2, a1
 ; CHECK-V-NEXT:    blez a1, .LBB50_2

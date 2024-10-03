@@ -83,3 +83,53 @@ non-zero exit code.
     #13 0x00010230dd64 in main main.cpp:9
     #14 0x0001958960dc  (<unknown module>)
     #15 0x2f557ffffffffffc  (<unknown module>)
+
+Disabling
+---------
+
+In some circumstances, you may want to suppress error reporting in a specific scope.
+
+In C++, this is achieved via  ``__rtsan::ScopedDisabler``. Within the scope where the ``ScopedDisabler`` object is instantiated, all sanitizer error reports are suppressed. This suppression applies to the current scope as well as all invoked functions, including any functions called transitively. 
+
+.. code-block:: c++
+
+    #include <sanitizer/rtsan_interface.h>
+
+    void process(const std::vector<float>& buffer) [[clang::nonblocking]] {
+        {
+            __rtsan::ScopedDisabler d;
+            ...
+        }
+    }
+
+If RealtimeSanitizer is not enabled at compile time (i.e., the code is not compiled with the ``-fsanitize=realtime`` flag), the ``ScopedDisabler`` is compiled as a no-op.
+
+In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to manually disable and re-enable RealtimeSanitizer checks. 
+
+.. code-block:: c++
+
+    #include <sanitizer/rtsan_interface.h>
+
+    int process(const float* buffer) [[clang::nonblocking]]
+    {
+        {
+            __rtsan_disable();
+
+            ...
+
+            __rtsan_enable();
+        }
+    }
+
+Each call to ``__rtsan_disable()`` must be paired with a subsequent call to ``__rtsan_enable()`` to restore normal sanitizer functionality. If a corresponding ``rtsan_enable()`` call is not made, the behavior is undefined.
+
+Compile-time sanitizer detection
+--------------------------------
+
+Clang provides the pre-processor macro ``__has_feature`` which may be used to detect if RealtimeSanitizer is enabled at compile-time.
+
+.. code-block:: c++
+
+    #if defined(__has_feature) && __has_feature(realtime_sanitizer)
+    ...
+    #endif

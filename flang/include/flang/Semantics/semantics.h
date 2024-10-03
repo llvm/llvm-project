@@ -12,6 +12,7 @@
 #include "scope.h"
 #include "symbol.h"
 #include "flang/Common/Fortran-features.h"
+#include "flang/Common/LangOptions.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/target.h"
@@ -65,7 +66,8 @@ using ConstructStack = std::vector<ConstructNode>;
 class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
-      const common::LanguageFeatureControl &, parser::AllCookedSources &);
+      const common::LanguageFeatureControl &, const common::LangOptions &,
+      parser::AllCookedSources &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -73,7 +75,8 @@ public:
   }
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
-  };
+  }
+  const common::LangOptions &langOptions() const { return langOpts_; }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -273,6 +276,7 @@ private:
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl &languageFeatures_;
+  const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;

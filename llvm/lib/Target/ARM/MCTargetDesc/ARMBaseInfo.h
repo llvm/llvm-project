@@ -157,9 +157,9 @@ namespace ARM_ISB {
 
 /// isARMLowRegister - Returns true if the register is a low register (r0-r7).
 ///
-static inline bool isARMLowRegister(unsigned Reg) {
+static inline bool isARMLowRegister(MCRegister Reg) {
   using namespace ARM;
-  switch (Reg) {
+  switch (Reg.id()) {
   case R0:  case R1:  case R2:  case R3:
   case R4:  case R5:  case R6:  case R7:
     return true;

@@ -1,7 +1,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64 -passes machinelicm -o - %s | FileCheck %s
 ---
 name: test
 tracksRegLiveness: true
+isSSA: false
 registers:
   - { id: 0, class: gpr64 }
 stack:
@@ -29,11 +31,11 @@ body: |
   bb.2:
     liveins: $x0
     %0 = COPY $x0
-    %0 = COPY $x0  ; Force isSSA = false.
 ...
 ---
 name: test2
 tracksRegLiveness: true
+isSSA: false
 registers:
   - { id: 0, class: gpr64 }
 stack:
@@ -61,5 +63,4 @@ body: |
   bb.2:
     liveins: $x0
     %0 = COPY $x0
-    %0 = COPY $x0  ; Force isSSA = false.
 ...

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +tbm -emit-llvm -o - | FileCheck %s
 
 #include <x86intrin.h>
 
@@ -176,4 +177,17 @@ unsigned long long test__tzmsk_u64(unsigned long long a) {
   // CHECK-NEXT: {{.*}} = and i64 [[TMP1]], [[TMP2]]
   return __tzmsk_u64(a);
 }
+#endif
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+char bextri32_0[__bextri_u32(0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextri32_1[__bextri_u32(0x000003F0, 0xFFFF1004) == 0x0000003F ? 1 : -1];
+char bextri32_2[__bextri_u32(0x000003F0, 0xFFFF3008) == 0x00000003 ? 1 : -1];
+
+#ifdef __x86_64__
+char bextri64_0[__bextri_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextri64_1[__bextri_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextri64_2[__bextri_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL ? 1 : -1];
+#endif
 #endif

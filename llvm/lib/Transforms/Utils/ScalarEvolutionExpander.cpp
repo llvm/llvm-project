@@ -1911,43 +1911,17 @@ template<typename T> static InstructionCost costAndCollectOperands(
     break;
   }
   case scAddRecExpr: {
-    // In this polynominal, we may have some zero operands, and we shouldn't
-    // really charge for those. So how many non-zero coefficients are there?
-    int NumTerms = llvm::count_if(S->operands(), [](const SCEV *Op) {
-                                    return !Op->isZero();
-                                  });
-
-    assert(NumTerms >= 1 && "Polynominal should have at least one term.");
-    assert(!(*std::prev(S->operands().end()))->isZero() &&
-           "Last operand should not be zero");
-
-    // Ignoring constant term (operand 0), how many of the coefficients are u> 1?
-    int NumNonZeroDegreeNonOneTerms =
-      llvm::count_if(S->operands(), [](const SCEV *Op) {
-                      auto *SConst = dyn_cast<SCEVConstant>(Op);
-                      return !SConst || SConst->getAPInt().ugt(1);
-                    });
-
-    // Much like with normal add expr, the polynominal will require
-    // one less addition than the number of it's terms.
-    InstructionCost AddCost = ArithCost(Instruction::Add, NumTerms - 1,
-                                        /*MinIdx*/ 1, /*MaxIdx*/ 1);
-    // Here, *each* one of those will require a multiplication.
-    InstructionCost MulCost =
-        ArithCost(Instruction::Mul, NumNonZeroDegreeNonOneTerms);
-    Cost = AddCost + MulCost;
-
-    // What is the degree of this polynominal?
-    int PolyDegree = S->getNumOperands() - 1;
-    assert(PolyDegree >= 1 && "Should be at least affine.");
-
-    // The final term will be:
-    //   Op_{PolyDegree} * x ^ {PolyDegree}
-    // Where  x ^ {PolyDegree}  will again require PolyDegree-1 mul operations.
-    // Note that  x ^ {PolyDegree} = x * x ^ {PolyDegree-1}  so charging for
-    // x ^ {PolyDegree}  will give us  x ^ {2} .. x ^ {PolyDegree-1}  for free.
-    // FIXME: this is conservatively correct, but might be overly pessimistic.
-    Cost += MulCost * (PolyDegree - 1);
+    // Addrec expands to a phi and add per recurrence.
+    unsigned NumRecurrences = S->getNumOperands() - 1;
+    Cost += TTI.getCFInstrCost(Instruction::PHI, CostKind) * NumRecurrences;
+    Cost +=
+        TTI.getArithmeticInstrCost(Instruction::Add, S->getType(), CostKind) *
+        NumRecurrences;
+    // AR start is used in phi.
+    Worklist.emplace_back(Instruction::PHI, 0, S->getOperand(0));
+    // Other operands are used in add.
+    for (const SCEV *Op : S->operands().drop_front())
+      Worklist.emplace_back(Instruction::Add, 1, Op);
     break;
   }
   }

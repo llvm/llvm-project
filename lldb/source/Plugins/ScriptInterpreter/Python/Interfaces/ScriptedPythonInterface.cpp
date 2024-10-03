@@ -159,4 +159,23 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   return m_interpreter.GetOpaqueTypeFromSBMemoryRegionInfo(*sb_mem_reg_info);
 }
 
+template <>
+lldb::ExecutionContextRefSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ExecutionContextRefSP>(python::PythonObject &p, Status &error) {
+
+  lldb::SBExecutionContext *sb_exe_ctx =
+      reinterpret_cast<lldb::SBExecutionContext *>(
+          python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(p.get()));
+
+  if (!sb_exe_ctx) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBExecutionContext to "
+        "lldb::ExecutionContextRefSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
+}
+
 #endif

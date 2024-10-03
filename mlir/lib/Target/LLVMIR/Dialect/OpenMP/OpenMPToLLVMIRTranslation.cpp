@@ -2451,7 +2451,7 @@ static void collectMapDataFromMapOperands(
         mapData.Names.push_back(LLVM::createMappingInformation(
             mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
         mapData.DevicePointers.push_back(devInfoTy);
-        mapData.IsAMapping.push_back(true);
+        mapData.IsAMapping.push_back(false);
         mapData.IsAMember.push_back(checkIsAMember(useDevOperands, mapOp));
       }
     }
@@ -3359,8 +3359,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
   llvm::Value *v = builder.CreateAlloca(arg.getType(), allocaAS);
 
   if (allocaAS != defaultAS && arg.getType()->isPointerTy())
-    v = builder.CreatePointerBitCastOrAddrSpaceCast(
-        v, arg.getType()->getPointerTo(defaultAS));
+    v = builder.CreateAddrSpaceCast(v, builder.getPtrTy(defaultAS));
 
   builder.CreateStore(&arg, v);
 

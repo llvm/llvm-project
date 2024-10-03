@@ -54,4 +54,7 @@ namespace Casts {
     B b;
     (void)*reinterpret_cast<void*>(&b); // both-error {{indirection not permitted on operand of type 'void *'}}
   }
+
+  /// Just make sure this doesn't crash.
+  float PR9558 = reinterpret_cast<const float&>("asd");
 }

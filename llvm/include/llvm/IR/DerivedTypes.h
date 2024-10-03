@@ -733,16 +733,16 @@ public:
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters.
   static TargetExtType *get(LLVMContext &Context, StringRef Name,
-                            ArrayRef<Type *> Types = std::nullopt,
-                            ArrayRef<unsigned> Ints = std::nullopt);
+                            ArrayRef<Type *> Types = {},
+                            ArrayRef<unsigned> Ints = {});
 
   /// Return a target extension type having the specified name and optional
   /// type and integer parameters, or an appropriate Error if it fails the
   /// parameters check.
-  static Expected<TargetExtType *>
-  getOrError(LLVMContext &Context, StringRef Name,
-             ArrayRef<Type *> Types = std::nullopt,
-             ArrayRef<unsigned> Ints = std::nullopt);
+  static Expected<TargetExtType *> getOrError(LLVMContext &Context,
+                                              StringRef Name,
+                                              ArrayRef<Type *> Types = {},
+                                              ArrayRef<unsigned> Ints = {});
 
   /// Check that a newly created target extension type has the expected number
   /// of type parameters and integer parameters, returning the type itself if OK

@@ -1181,8 +1181,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
                             PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
-  const bool IsCtxProfUse = !UseCtxProfile.empty() && !PGOOpt &&
-                            Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
+  const bool IsCtxProfUse =
+      !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse)
@@ -1673,7 +1673,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // In pre-link, for ctx prof use, we stop here with an instrumented IR. We let
   // thinlto use the contextual info to perform imports; then use the contextual
   // profile in the post-thinlink phase.
-  if (!UseCtxProfile.empty() && !PGOOpt) {
+  if (!UseCtxProfile.empty()) {
     addRequiredLTOPreLinkPasses(MPM);
     return MPM;
   }

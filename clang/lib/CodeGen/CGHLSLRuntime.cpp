@@ -338,6 +338,14 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 NumThreadsAttr->getZ());
     Fn->addFnAttr(NumThreadsKindStr, NumThreadsStr);
   }
+  if (HLSLWaveSizeAttr *WaveSizeAttr = FD->getAttr<HLSLWaveSizeAttr>()) {
+    const StringRef WaveSizeKindStr = "hlsl.wavesize";
+    std::string WaveSizeStr =
+        formatv("{0},{1},{2}", WaveSizeAttr->getMin(), WaveSizeAttr->getMax(),
+                WaveSizeAttr->getPreferred());
+    Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
+  }
+  Fn->addFnAttr(llvm::Attribute::NoInline);
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {

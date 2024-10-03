@@ -1322,6 +1322,18 @@ def ElementwiseLog10 : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwisePopcount : Builtin {
+  let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFmod : Builtin {
+  let Spellings = ["__builtin_elementwise_fmod"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwisePow : Builtin {
   let Spellings = ["__builtin_elementwise_pow"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -4697,12 +4709,6 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLCreateHandle : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_create_handle"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void*(unsigned char)";
-}
-
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
   let Attributes = [NoThrow, Const];
@@ -4763,6 +4769,7 @@ def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+
 def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_select"];
   let Attributes = [NoThrow, Const];
@@ -4771,6 +4778,12 @@ def HLSLSelect : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLSign : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_sign"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLStep: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_step"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

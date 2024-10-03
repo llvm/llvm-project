@@ -130,11 +130,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
-  bool doesRegClassHavePseudoInitUndef(
-      const TargetRegisterClass *RC) const override {
-    return isVRRegClass(RC);
-  }
-
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&
            RISCVRI::getNF(RC->TSFlags) == 1;

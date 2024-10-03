@@ -132,11 +132,8 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     RecursiveMemoryEffects
   ], clauses = [
-    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
-    OpenMP_IfClauseSkip<assemblyFormat = true>,
-    OpenMP_NumThreadsClauseSkip<assemblyFormat = true>,
-    OpenMP_PrivateClauseSkip<assemblyFormat = true>,
-    OpenMP_ProcBindClauseSkip<assemblyFormat = true>,
+    OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumThreadsClause,
+    OpenMP_PrivateClauseSkip<assemblyFormat = true>, OpenMP_ProcBindClause,
     OpenMP_ReductionClauseSkip<assemblyFormat = true>
   ], singleRegion = true> {
   let summary = "parallel construct";
@@ -158,20 +155,12 @@ def ParallelOp : OpenMP_Op<"parallel", traits = [
   // and parsing of the parallel region is not intermingled with printing and
   // parsing of reduction and private clauses. `assemblyFormat` should also be
   // no longer skipped for clauses added to this operation at that time.
-  let assemblyFormat = [{
-    oilist(
-          `if` `(` $if_expr `)`
-          | `num_threads` `(` $num_threads `:` type($num_threads) `)`
-          | `allocate` `(`
-              custom<AllocateAndAllocator>(
-                $allocate_vars, type($allocate_vars),
-                $allocator_vars, type($allocator_vars)
-              ) `)`
-          | `proc_bind` `(` custom<ClauseAttr>($proc_bind_kind) `)`
-    ) custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
-                             $reduction_byref, $reduction_syms, $private_vars,
-                             type($private_vars), $private_syms) attr-dict
-  }];
+  let assemblyFormat =
+    clausesReqAssemblyFormat # " oilist(" # clausesOptAssemblyFormat # ")" # [{
+      custom<ParallelRegion>($region, $reduction_vars, type($reduction_vars),
+                            $reduction_byref, $reduction_syms, $private_vars,
+                            type($private_vars), $private_syms) attr-dict
+    }];
 
   let hasVerifier = 1;
 }
@@ -361,14 +350,9 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
     DeclareOpInterfaceMethods<LoopWrapperInterface>,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
-    OpenMP_AllocateClauseSkip<assemblyFormat = true>,
-    OpenMP_LinearClauseSkip<assemblyFormat = true>,
-    OpenMP_NowaitClauseSkip<assemblyFormat = true>,
-    OpenMP_OrderClauseSkip<assemblyFormat = true>,
-    OpenMP_OrderedClauseSkip<assemblyFormat = true>,
-    OpenMP_PrivateClauseSkip<assemblyFormat = true>,
-    OpenMP_ReductionClauseSkip<assemblyFormat = true>,
-    OpenMP_ScheduleClauseSkip<assemblyFormat = true>
+    OpenMP_AllocateClause, OpenMP_LinearClause, OpenMP_NowaitClause,
+    OpenMP_OrderClause, OpenMP_OrderedClause, OpenMP_PrivateClause,
+    OpenMP_ReductionClauseSkip<assemblyFormat = true>, OpenMP_ScheduleClause
   ], singleRegion = true> {
   let summary = "worksharing-loop construct";
   let description = [{
@@ -404,27 +388,11 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
   // and parsing of the workshare loop region is not intermingled with printing
   // and parsing of reduction clauses. `assemblyFormat` should also be no longer
   // skipped for clauses added to this operation at that time.
-  let assemblyFormat = [{
-    oilist(`linear` `(`
-              custom<LinearClause>($linear_vars, type($linear_vars),
-                                   $linear_step_vars) `)`
-          |`schedule` `(`
-              custom<ScheduleClause>(
-                $schedule_kind, $schedule_mod, $schedule_simd,
-                $schedule_chunk, type($schedule_chunk)) `)`
-          |`nowait` $nowait
-          |`ordered` `(` $ordered `)`
-          |`order` `(` custom<OrderClause>($order, $order_mod) `)`
-          |`allocate` `(`
-                custom<AllocateAndAllocator>(
-                  $allocate_vars, type($allocate_vars), $allocator_vars,
-                  type($allocator_vars)) `)`
-          |`private` `(`
-                custom<PrivateList>(
-                  $private_vars, type($private_vars), $private_syms) `)`
-    ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
-                     $reduction_byref, $reduction_syms) attr-dict
-  }];
+  let assemblyFormat =
+    clausesReqAssemblyFormat # " oilist(" # clausesOptAssemblyFormat # ")" # [{
+      custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
+                    $reduction_byref, $reduction_syms) attr-dict
+    }];
 
   let hasVerifier = 1;
 }
@@ -1249,12 +1217,8 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
                             TypeAttr:$element_type), clausesArgs);
 
   // Override clause-based assemblyFormat.
-  let assemblyFormat = [{
-    $v `=` $x
-    oilist( `memory_order` `(` custom<ClauseAttr>($memory_order) `)`
-          | `hint` `(` custom<SynchronizationHint>($hint) `)`)
-    `:` type($x) `,` $element_type attr-dict
-  }];
+  let assemblyFormat = "$v `=` $x" # clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `:` type($x) `,` $element_type attr-dict";
 
   let extraClassDeclaration = [{
     /// The number of variable operands.
@@ -1293,13 +1257,8 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write", traits = [
                             AnyType:$expr), clausesArgs);
 
   // Override clause-based assemblyFormat.
-  let assemblyFormat = [{
-    $x `=` $expr
-    oilist( `hint` `(` custom<SynchronizationHint>($hint) `)`
-          | `memory_order` `(` custom<ClauseAttr>($memory_order) `)`)
-    `:` type($x) `,` type($expr)
-    attr-dict
-  }];
+  let assemblyFormat = "$x `=` $expr" # clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `:` type($x) `,` type($expr) attr-dict";
 
   let extraClassDeclaration = [{
     /// The number of variable operands.
@@ -1357,11 +1316,8 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
   let regions = (region SizedRegion<1>:$region);
 
   // Override clause-based assemblyFormat.
-  let assemblyFormat = [{
-    oilist( `memory_order` `(` custom<ClauseAttr>($memory_order) `)`
-          | `hint` `(` custom<SynchronizationHint>($hint) `)`)
-    $x `:` type($x) $region attr-dict
-  }];
+  let assemblyFormat = clausesAssemblyFormat #
+    "$x `:` type($x) $region attr-dict";
 
   let extraClassDeclaration = [{
     /// The number of variable operands.

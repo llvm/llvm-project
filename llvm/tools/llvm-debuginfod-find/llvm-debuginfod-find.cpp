@@ -98,45 +98,6 @@ static void parseArgs(int argc, char **argv) {
   exit(1);
 }
 
-/*
-cl::OptionCategory DebuginfodFindCategory("llvm-debuginfod-find Options");
-
-cl::opt<std::string> InputBuildID(cl::Positional, cl::Required,
-                                  cl::desc("<input build_id>"), cl::init("-"),
-                                  cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    FetchExecutable("executable", cl::init(false),
-                    cl::desc("If set, fetch a binary file associated with this "
-                             "build id, containing the executable sections."),
-                    cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    FetchDebuginfo("debuginfo", cl::init(false),
-                   cl::desc("If set, fetch a binary file associated with this "
-                            "build id, containing the debuginfo sections."),
-                   cl::cat(DebuginfodFindCategory));
-
-static cl::opt<std::string> FetchSource(
-    "source", cl::init(""),
-    cl::desc("Fetch a source file associated with this build id, which is at "
-             "this relative path relative to the compilation directory."),
-    cl::cat(DebuginfodFindCategory));
-
-static cl::opt<bool>
-    DumpToStdout("dump", cl::init(false),
-                 cl::desc("If set, dumps the contents of the fetched artifact "
-                          "to standard output. Otherwise, dumps the absolute "
-                          "path to the cached artifact on disk."),
-                 cl::cat(DebuginfodFindCategory));
-
-static cl::list<std::string> DebugFileDirectory(
-    "debug-file-directory",
-    cl::desc("Path to directory where to look for debug files."),
-    cl::cat(DebuginfodFindCategory));
-
-*/
-
 ExitOnError ExitOnDebuginfodFindError;
 
 static std::string fetchDebugInfo(object::BuildIDRef BuildID);

@@ -179,6 +179,7 @@ namespace std {
 
 #include <__assert>
 #include <__compare/compare_three_way_result.h>
+#include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/invocable.h>
 #include <__config>
@@ -195,6 +196,8 @@ namespace std {
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>

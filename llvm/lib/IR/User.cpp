@@ -145,10 +145,7 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
       ::operator new(Size + sizeof(Use) * Us + DescBytesToAllocate));
   Use *Start = reinterpret_cast<Use *>(Storage + DescBytesToAllocate);
   Use *End = Start + Us;
-  User *Obj = reinterpret_cast<User*>(End);
-  Obj->NumUserOperands = Us;
-  Obj->HasHungOffUses = false;
-  Obj->HasDescriptor = DescBytes != 0;
+  User *Obj = reinterpret_cast<User *>(End);
   for (; Start != End; Start++)
     new (Start) Use(Obj);
 
@@ -160,22 +157,21 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   return Obj;
 }
 
-void *User::operator new(size_t Size, unsigned Us) {
-  return allocateFixedOperandUser(Size, Us, 0);
+void *User::operator new(size_t Size, IntrusiveOperandsAllocMarker allocTrait) {
+  return allocateFixedOperandUser(Size, allocTrait.NumOps, 0);
 }
 
-void *User::operator new(size_t Size, unsigned Us, unsigned DescBytes) {
-  return allocateFixedOperandUser(Size, Us, DescBytes);
+void *User::operator new(size_t Size,
+                         IntrusiveOperandsAndDescriptorAllocMarker allocTrait) {
+  return allocateFixedOperandUser(Size, allocTrait.NumOps,
+                                  allocTrait.DescBytes);
 }
 
-void *User::operator new(size_t Size) {
+void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
   // Allocate space for a single Use*
   void *Storage = ::operator new(Size + sizeof(Use *));
   Use **HungOffOperandList = static_cast<Use **>(Storage);
   User *Obj = reinterpret_cast<User *>(HungOffOperandList + 1);
-  Obj->NumUserOperands = 0;
-  Obj->HasHungOffUses = true;
-  Obj->HasDescriptor = false;
   *HungOffOperandList = nullptr;
   return Obj;
 }

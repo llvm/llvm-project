@@ -189,6 +189,10 @@ public:
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
+
+private:
+  void CheckDuplicateIntrinsics() const;
+  void CheckTargetIndependentIntrinsics() const;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.

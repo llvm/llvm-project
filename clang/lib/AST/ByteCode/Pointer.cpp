@@ -665,5 +665,28 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{this->Desc, this->Value + FieldOffset};
+  return IntPointer{F->Desc, this->Value + FieldOffset};
+}
+
+IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
+                                unsigned BaseOffset) const {
+  const Record *R = Desc->ElemRecord;
+  const Descriptor *BaseDesc = nullptr;
+
+  // This iterates over bases and checks for the proper offset. That's
+  // potentially slow but this case really shouldn't happen a lot.
+  for (const Record::Base &B : R->bases()) {
+    if (B.Offset == BaseOffset) {
+      BaseDesc = B.Desc;
+      break;
+    }
+  }
+  assert(BaseDesc);
+
+  // Adjust the offset value based on the information from the record layout.
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+  CharUnits BaseLayoutOffset =
+      Layout.getBaseClassOffset(cast<CXXRecordDecl>(BaseDesc->asDecl()));
+
+  return {BaseDesc, Value + BaseLayoutOffset.getQuantity()};
 }

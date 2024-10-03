@@ -1054,7 +1054,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around region");
+    MF->verify(this, "After splitting live range around region", &errs());
 }
 
 MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
@@ -1323,7 +1323,7 @@ unsigned RAGreedy::tryBlockSplit(const LiveInterval &VirtReg,
   }
 
   if (VerifyEnabled)
-    MF->verify(this, "After splitting live range around basic blocks");
+    MF->verify(this, "After splitting live range around basic blocks", &errs());
   return 0;
 }
 
@@ -2507,7 +2507,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     DebugVars->splitRegister(VirtReg.reg(), LRE.regs(), *LIS);
 
     if (VerifyEnabled)
-      MF->verify(this, "After spilling");
+      MF->verify(this, "After spilling", &errs());
   }
 
   // The live virtual register requesting allocation was spilled, so tell
@@ -2711,7 +2711,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before greedy register allocator");
+    MF->verify(this, "Before greedy register allocator", &errs());
 
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
                      getAnalysis<LiveIntervalsWrapperPass>().getLIS(),
@@ -2770,7 +2770,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   tryHintsRecoloring();
 
   if (VerifyEnabled)
-    MF->verify(this, "Before post optimization");
+    MF->verify(this, "Before post optimization", &errs());
   postOptimization();
   reportStats();
 

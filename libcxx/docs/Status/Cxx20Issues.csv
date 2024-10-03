@@ -27,7 +27,7 @@
 "`LWG2964 <https://wg21.link/LWG2964>`__","Apparently redundant requirement for dynamic_pointer_cast","2017-11 (Albuquerque)","","",""
 "`LWG2965 <https://wg21.link/LWG2965>`__","Non-existing path::native_string() in filesystem_error::what() specification","2017-11 (Albuquerque)","|Nothing To Do|","",""
 "`LWG2972 <https://wg21.link/LWG2972>`__","What is ``is_trivially_destructible_v<int>``\ ?","2017-11 (Albuquerque)","|Complete|","",""
-"`LWG2976 <https://wg21.link/LWG2976>`__","Dangling uses_allocator specialization for packaged_task","2017-11 (Albuquerque)","|Complete|","",""
+"`LWG2976 <https://wg21.link/LWG2976>`__","Dangling uses_allocator specialization for packaged_task","2017-11 (Albuquerque)","|Complete|","20.0","Originally implemented in LLVM 6.0 but reverted later. Old documentation incorrectly said it was implemented."
 "`LWG2977 <https://wg21.link/LWG2977>`__","unordered_meow::merge() has incorrect Throws: clause","2017-11 (Albuquerque)","|Nothing To Do|","",""
 "`LWG2978 <https://wg21.link/LWG2978>`__","Hash support for pmr::string and friends","2017-11 (Albuquerque)","|Complete|","16.0",""
 "`LWG2979 <https://wg21.link/LWG2979>`__","aligned_union should require complete object types","2017-11 (Albuquerque)","|Complete|","",""

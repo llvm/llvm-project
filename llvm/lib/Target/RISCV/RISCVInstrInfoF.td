@@ -400,23 +400,10 @@ def FMV_W_X : FPUnaryOp_r<0b1111000, 0b00000, 0b000, FPR32, GPR, "fmv.w.x">,
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtF] in {
-def : InstAlias<"flw $rd, (${rs1})",  (FLW FPR32:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsw $rs2, (${rs1})", (FSW FPR32:$rs2, GPR:$rs1, 0), 0>;
-
-def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
-def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
-def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
-
-// fgt.s/fge.s are recognised by the GNU assembler but the canonical
-// flt.s/fle.s forms will always be printed. Therefore, set a zero weight.
-def : InstAlias<"fgt.s $rd, $rs, $rt",
-                (FLT_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
-def : InstAlias<"fge.s $rd, $rs, $rt",
-                (FLE_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
-
+let Predicates = [HasStdExtFOrZfinx] in {
 // The following csr instructions actually alias instructions from the base ISA.
-// However, it only makes sense to support them when the F extension is enabled.
+// However, it only makes sense to support them when the F or Zfinx extension is
+// enabled.
 // NOTE: "frcsr", "frrm", and "frflags" are more specialized version of "csrr".
 def : InstAlias<"frcsr $rd",      (CSRRS GPR:$rd, SysRegFCSR.Encoding, X0), 2>;
 def : InstAlias<"fscsr $rd, $rs", (CSRRW GPR:$rd, SysRegFCSR.Encoding, GPR:$rs)>;
@@ -439,6 +426,22 @@ def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, SysRegFFLAGS.Encoding, GP
 def : InstAlias<"fsflags $rs",        (CSRRW       X0, SysRegFFLAGS.Encoding, GPR:$rs), 2>;
 def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, SysRegFFLAGS.Encoding, uimm5:$imm)>;
 def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, SysRegFFLAGS.Encoding, uimm5:$imm), 2>;
+} // Predicates = [HasStdExtFOrZfinx]
+
+let Predicates = [HasStdExtF] in {
+def : InstAlias<"flw $rd, (${rs1})",  (FLW FPR32:$rd,  GPR:$rs1, 0), 0>;
+def : InstAlias<"fsw $rs2, (${rs1})", (FSW FPR32:$rs2, GPR:$rs1, 0), 0>;
+
+def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
+
+// fgt.s/fge.s are recognised by the GNU assembler but the canonical
+// flt.s/fle.s forms will always be printed. Therefore, set a zero weight.
+def : InstAlias<"fgt.s $rd, $rs, $rt",
+                (FLT_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
+def : InstAlias<"fge.s $rd, $rs, $rt",
+                (FLE_S GPR:$rd, FPR32:$rt, FPR32:$rs), 0>;
 
 // fmv.w.x and fmv.x.w were previously known as fmv.s.x and fmv.x.s. Both
 // spellings should be supported by standard tools.
