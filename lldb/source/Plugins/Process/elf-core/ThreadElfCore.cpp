@@ -542,15 +542,8 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
   }
 }
 
-static bool IsSignalWithAddrValue(int signo) {
-  // SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGTRAP
-  // We can't use the enum here because it may not be available on windows or
-  // other platforms. We should make an LLDB platform agnostic enum for this
-  // in the future.
-  return signo == 8 || signo == 4 || signo == 11 || signo == 7 || signo == 5;
-}
-
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
+Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
+                              const lldb::UnixSignalsSP unix_signals_sp) {
   Status error;
   uint64_t size = GetSize(arch);
   if (size > data.GetByteSize()) {
@@ -569,7 +562,9 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   // 64b ELF have a 4 byte pad.
   if (data.GetAddressByteSize() == 8)
     offset += 4;
-  if (IsSignalWithAddrValue(si_signo)) {
+  // Not every stop signal has a valid address, but that will get resolved in
+  // the unix_signals_sp->GetSignalDescription() call below.
+  if (unix_signals_sp->GetShouldStop(si_signo)) {
     addr = data.GetAddress(&offset);
     addr_lsb = data.GetU16(&offset);
   }
@@ -577,11 +572,11 @@ Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   return error;
 }
 
-std::string ELFLinuxSigInfo::GetDescription() {
-  if (IsSignalWithAddrValue(si_signo))
-    return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
+std::string
+ELFLinuxSigInfo::GetDescription(const lldb::UnixSignalsSP unix_signals_sp) {
+  if (unix_signals_sp->GetShouldStop(si_signo))
+    return unix_signals_sp->GetSignalDescription(
         si_signo, si_code, reinterpret_cast<uintptr_t>(addr));
 
-  return lldb_private::UnixSignals::CreateForHost()->GetSignalDescription(
-      si_signo, si_code);
+  return unix_signals_sp->GetSignalDescription(si_signo, si_code);
 }
