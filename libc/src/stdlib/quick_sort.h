@@ -79,10 +79,10 @@ LIBC_INLINE void quick_sort(Array array) {
     // by log2 of the total array size, because every recursive call is sorting
     // a list at most half the length of the one in its caller.
     if (left.size() < right.size()) {
-      quick_sort(left, depth + 1);
+      quick_sort(left);
       array.reset_bounds(right.get(0), right.size());
     } else {
-      quick_sort(right, depth + 1);
+      quick_sort(right);
       array.reset_bounds(left.get(0), left.size());
     }
   }
