@@ -45,6 +45,7 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
   }
 
   MSAN_UNPOISON(buf, ret);
+  MSAN_UNPOISON(addrlen, sizeof(socklen_t));
 
   return ret;
 }

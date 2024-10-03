@@ -62,7 +62,7 @@ functions:
       - type: size_t
       - type: int
       - type: const struct sockaddr *
-      - type: socklen_t
+      - type: socklen_t *
   - name: recvmsg
     standards:
       - POSIX
