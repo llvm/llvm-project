@@ -552,6 +552,7 @@ def MissingFieldInitializers : DiagGroup<"missing-field-initializers",
                                          [MissingDesignatedFieldInitializers]>;
 def ModuleLock : DiagGroup<"module-lock">;
 def ModuleBuild : DiagGroup<"module-build">;
+def ModuleBuildDaemon : DiagGroup<"module-build-daemon">;
 def ModuleImport : DiagGroup<"module-import">;
 def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
