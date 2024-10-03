@@ -885,6 +885,10 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       assert(!Reg.isVirtual() &&
              "MachineCopyPropagation should be run after register allocation!");
 
+      // Skip invalidating constant registers.
+      if (MRI->isReserved(Reg) && MRI->isConstantPhysReg(Reg))
+        continue;
+
       if (MO.isDef() && !MO.isEarlyClobber()) {
         Defs.push_back(Reg.asMCReg());
         continue;

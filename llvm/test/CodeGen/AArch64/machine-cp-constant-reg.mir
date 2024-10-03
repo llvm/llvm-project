@@ -9,9 +9,8 @@ body: |
     ; CHECK-LABEL: name: test
     ; CHECK: liveins: $w2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $w1 = COPY $wzr
     ; CHECK-NEXT: dead $wzr = SUBSWri killed renamable $w2, 0, 0, implicit-def $nzcv
-    ; CHECK-NEXT: renamable $w0 = COPY killed renamable $w1
+    ; CHECK-NEXT: renamable $w0 = COPY $wzr
     ; CHECK-NEXT: RET_ReallyLR implicit killed $w0
     renamable $w1 = COPY $wzr
     dead $wzr = SUBSWri killed renamable $w2, 0, 0, implicit-def $nzcv
