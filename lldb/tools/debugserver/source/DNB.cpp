@@ -480,6 +480,14 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
           exit(1);
         }
 
+        struct stat st;
+        if (::stat(translated_debugserver, &st) != 0) {
+          DNBLogError("Translated inferior process but Rosetta debugserver not "
+                      "found at %s",
+                      translated_debugserver);
+          return INVALID_NUB_PROCESS_ARCH;
+        }
+
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
         snprintf(pidstr, sizeof(pidstr), "--attach=%d", attach_pid);
         execl(translated_debugserver, translated_debugserver, "--native-regs",
