@@ -286,3 +286,12 @@ is evaluated as a command.
 The initial repl-mode can be configured with the cli flag `--repl-mode=<mode>`
 and may also be adjusted at runtime using the lldb command
 `lldb-dap repl-mode <mode>`.
+
+## Contributing
+
+`lldb-dap` and `lldb` are developed under the umbrella of the [LLVM project](https://llvm.org/).
+The source code is [part of the LLVM repository](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap) on Github.
+We use Github's [issue tracker](https://github.com/llvm/llvm-project/tree/main/lldb/tools/lldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls).
+Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
+
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)"
