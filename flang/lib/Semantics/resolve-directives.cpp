@@ -718,7 +718,7 @@ private:
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
-  void CheckObjectInNamelistOrAssociate(
+  void CheckObjectIsPrivatisable(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckSourceLabel(const parser::Label &);
   void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
@@ -2225,20 +2225,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         return;
     }
 
-    if (auto *stmtFunction{symbol->detailsIf<semantics::SubprogramDetails>()};
-        stmtFunction && stmtFunction->stmtFunction()) {
-      // Each non-dummy argument from a statement function must be handled too,
-      // as if it was explicitly referenced.
-      semantics::UnorderedSymbolSet symbols{
-          CollectSymbols(stmtFunction->stmtFunction().value())};
-      for (const auto &sym : symbols) {
-        if (!IsStmtFunctionDummy(sym) && !IsObjectWithDSA(*sym)) {
-          CreateImplicitSymbols(&*sym, Symbol::Flag::OmpFromStmtFunction);
-        }
-      }
-    } else {
-      CreateImplicitSymbols(symbol);
-    }
+    CreateImplicitSymbols(symbol);
   } // within OpenMP construct
 }
 
@@ -2357,7 +2344,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
                   if (privateDataSharingAttributeFlags.test(ompFlag)) {
-                    CheckObjectInNamelistOrAssociate(*name, *symbol, ompFlag);
+                    CheckObjectIsPrivatisable(*name, *symbol, ompFlag);
                   }
 
                   if (ompFlag == Symbol::Flag::OmpAllocate) {
@@ -2729,7 +2716,7 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
   }
 }
 
-void OmpAttributeVisitor::CheckObjectInNamelistOrAssociate(
+void OmpAttributeVisitor::CheckObjectIsPrivatisable(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto &ultimateSymbol{symbol.GetUltimate()};
   llvm::StringRef clauseName{"PRIVATE"};
