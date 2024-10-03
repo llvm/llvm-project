@@ -447,8 +447,8 @@ TEST(Attributes, SetIntersect) {
 
     ConstantRange CR0(APInt(32, 0), APInt(32, 10));
     ConstantRange CR1(APInt(32, 15), APInt(32, 20));
-    ArrayRef<ConstantRange> CRL0 = {CR0};
-    ArrayRef<ConstantRange> CRL1 = {CR0, CR1};
+    ConstantRange CRL0[] = {CR0};
+    ConstantRange CRL1[] = {CR0, CR1};
     Type *T0 = Type::getInt32Ty(C0);
     Type *T1 = Type::getInt64Ty(C0);
     Attribute Attr0 = BuildAttr(C0, Kind, V0, T0, CR0, CRL0);
