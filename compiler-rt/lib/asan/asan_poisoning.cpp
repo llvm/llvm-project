@@ -601,7 +601,8 @@ static void SlowCopyContainerAnnotations(uptr src_beg, uptr src_end,
     uptr granule_end = granule_beg + granularity;
     uptr unpoisoned_bytes = 0;
 
-    for (; dst_ptr != granule_end && dst_ptr != dst_end; ++dst_ptr, ++src_ptr)
+    uptr end = Min(granule_end, dst_end);
+    for (; dst_ptr != end; ++dst_ptr, ++src_ptr)
       if (!AddressIsPoisoned(src_ptr))
         unpoisoned_bytes = dst_ptr - granule_beg + 1;
     if (dst_ptr < dst_end || dst_ptr == dst_end_down ||
@@ -629,7 +630,8 @@ static void SlowReversedCopyContainerAnnotations(uptr src_beg, uptr src_end,
     uptr granule_beg = RoundDownTo(dst_ptr - 1, granularity);
     uptr unpoisoned_bytes = 0;
 
-    for (; dst_ptr != granule_beg && dst_ptr != dst_beg; --dst_ptr, --src_ptr)
+    uptr end = Max(granule_beg, dst_beg);
+    for (; dst_ptr != end; --dst_ptr, --src_ptr)
       if (unpoisoned_bytes == 0 && !AddressIsPoisoned(src_ptr - 1))
         unpoisoned_bytes = dst_ptr - granule_beg;
 
@@ -716,6 +718,7 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   //
   // The only remaining edge cases involve edge granules,
   // when the container starts or ends within a granule.
+  uptr src_beg_up = RoundUpTo(src_beg, granularity);
   uptr src_end_up = RoundUpTo(src_end, granularity);
   bool copy_in_reversed_order = src_beg < dst_beg && dst_beg <= src_end_up;
   if (src_beg % granularity != dst_beg % granularity ||
@@ -739,11 +742,10 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
       CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
   }
 
-  if (dst_end_down > dst_beg_up) {
-    uptr src_internal_beg = RoundUpTo(src_beg, granularity);
-    __builtin_memmove((u8 *)MemToShadow(dst_beg_up),
-                      (u8 *)MemToShadow(src_internal_beg),
-                      (dst_end_down - dst_beg_up) / granularity);
+  if (dst_beg_up < dst_end_down) {
+    internal_memmove((u8 *)MemToShadow(dst_beg_up),
+                    (u8 *)MemToShadow(src_beg_up),
+                    (dst_end_down - dst_beg_up) / granularity);
   }
 
   if (copy_in_reversed_order) {
