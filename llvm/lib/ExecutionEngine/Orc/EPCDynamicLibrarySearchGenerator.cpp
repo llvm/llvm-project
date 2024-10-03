@@ -35,9 +35,9 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     return Error::success();
 
   LLVM_DEBUG({
-      dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate "
-             << Symbols << "\n";
-    });
+    dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate " << Symbols
+           << "\n";
+  });
 
   SymbolLookupSet LookupSymbols;
 
@@ -87,6 +87,101 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
 
     LS.continueLookup(std::move(Err));
   });
+
+  return Error::success();
+}
+
+Error AutoLoadDynamicLibrarySearchGenerator::tryToGenerate(
+    LookupState &LS, LookupKind K, JITDylib &JD,
+    JITDylibLookupFlags JDLookupFlags, const SymbolLookupSet &Symbols) {
+
+  if (Symbols.empty())
+    return Error::success();
+
+  LLVM_DEBUG({
+    dbgs() << "AutoLoadDynamicLibrarySearchGenerator trying to generate "
+           << Symbols << "\n";
+  });
+
+  SymbolNameSet CandidateSyms;
+  for (auto &KV : Symbols) {
+    if (GlobalFilter.IsInitialized() && !GlobalFilter.MayContain(*KV.first) &&
+        !ExcludedSymbols.count(*KV.first))
+      continue;
+
+    CandidateSyms.insert(KV.first);
+  }
+
+  if (CandidateSyms.empty())
+    return Error::success();
+
+  auto Err = tryToResolve(CandidateSyms, [this, &JD, LS = std::move(LS),
+                                          CandidateSyms](auto Result) mutable {
+    auto &ResolveRes = Result->front();
+    bool IsFilter = GlobalFilter.IsInitialized();
+    if (!IsFilter && ResolveRes.Filter.has_value()) {
+      GlobalFilter = std::move(ResolveRes.Filter.value());
+    }
+
+    if (!Result) {
+      LLVM_DEBUG({
+        dbgs() << "AutoLoadDynamicLibrarySearchGenerator resolve failed due to "
+                  "error";
+      });
+      return LS.continueLookup(Result.takeError());
+    }
+
+    auto &Symbols = ResolveRes.SymbolDef;
+    assert(Result->size() == 1 && "Results for more than one library returned");
+    assert(Symbols.size() == CandidateSyms.size() &&
+           "Result has incorrect number of elements");
+
+    SymbolMap NewSymbols;
+    auto ResultI = Symbols.begin();
+    for (auto &S : CandidateSyms) {
+      if (ResultI->getAddress())
+        NewSymbols[S] = *ResultI;
+      else if (IsFilter)
+        ExcludedSymbols.insert(*S);
+      ++ResultI;
+    }
+
+    LLVM_DEBUG({
+      dbgs() << "AutoLoadDynamicLibrarySearchGenerator resolve returned "
+             << NewSymbols << "\n";
+    });
+
+    // If there were no resolved symbols bail out.
+    if (NewSymbols.empty())
+      return LS.continueLookup(Error::success());
+
+    // Define resolved symbols.
+    Error Err = AddAbsoluteSymbols
+                    ? AddAbsoluteSymbols(JD, std::move(NewSymbols))
+                    : JD.define(absoluteSymbols(std::move(NewSymbols)));
+
+    LS.continueLookup(std::move(Err));
+  });
+
+  return Err;
+}
+
+Error AutoLoadDynamicLibrarySearchGenerator::tryToResolve(
+    SymbolNameSet CandidateSyms,
+    ExecutorProcessControl::ResolveSymbolsCompleteFn OnCompleteFn) {
+
+  LLVM_DEBUG({
+    dbgs() << "AutoLoadDynamicLibrarySearchGenerator trying to resolve "
+           << CandidateSyms << "\n";
+  });
+
+  SymbolLookupSet LookupSymbols;
+
+  for (auto &S : CandidateSyms) {
+    LookupSymbols.add(S, SymbolLookupFlags::WeaklyReferencedSymbol);
+  }
+
+  EPC.resolveSymbolsAsync(LookupSymbols, std::move(OnCompleteFn));
 
   return Error::success();
 }

@@ -17,11 +17,13 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ExecutionEngine/Orc/Shared/AutoLoadDylibUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/AutoLoadDylibLookup.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -41,6 +43,8 @@ public:
   Expected<std::vector<ExecutorSymbolDef>>
   lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &L);
 
+  Expected<ResolveResult> resolve(const RemoteSymbolLookupSet &L);
+
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
@@ -53,8 +57,12 @@ private:
   static llvm::orc::shared::CWrapperFunctionResult
   lookupWrapper(const char *ArgData, size_t ArgSize);
 
+  static llvm::orc::shared::CWrapperFunctionResult
+  resolveWrapper(const char *ArgData, size_t ArgSize);
+
   std::mutex M;
   DylibSet Dylibs;
+  std::optional<AutoLoadDynamicLibraryLookup> DylibLookup;
 };
 
 } // end namespace rt_bootstrap
