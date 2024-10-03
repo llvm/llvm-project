@@ -374,7 +374,7 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
       if (compareTypes(SentTypes, DestBlockInfo.Sig.Returns)) {
         std::string ErrorMsg =
             ErrorMsgBase + "type mismatch, catch tag type is " +
-            getTypesString(SentTypes) + ", but destination's return type is " +
+            getTypesString(SentTypes) + ", but destination's type is " +
             getTypesString(DestBlockInfo.Sig.Returns);
         Error |= typeError(ErrorLoc, ErrorMsg);
       }
