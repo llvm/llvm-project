@@ -1,4 +1,4 @@
-// RUN: %clang --target=s390x-ibm-zos -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clangxx --target=s390x-ibm-zos -S -emit-llvm %s -o - | FileCheck %s
 
 // Check the variables
 // CHECK: @var1 = global i32 0, align 4

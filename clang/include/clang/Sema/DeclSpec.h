@@ -1965,6 +1965,7 @@ private:
   unsigned InlineStorageUsed : 1;
 
   /// Indicates whether this is set as _Export
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ExportSpecified : 1;
 
   /// Indicates whether this declarator has an initializer.
@@ -2045,7 +2046,8 @@ public:
                                    FunctionDefinitionKind::Declaration)),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
-        HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
+        ExportSpecified(false), HasInitializer(false), 
+        Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
         InventedTemplateParameterList(nullptr) {
@@ -2152,6 +2154,7 @@ public:
     HasInitializer = false;
     ObjCIvar = false;
     ObjCWeakProperty = false;
+    ExportSpecified = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
     PackIndexingExpr = nullptr;
