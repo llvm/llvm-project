@@ -615,6 +615,7 @@ clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Adds ``TemplateNames`` option.
 
 libclang
 --------
