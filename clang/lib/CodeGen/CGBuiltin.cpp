@@ -19001,7 +19001,29 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
 
       EmitWritebacks(*this, Args);
       return s;
+    } 
+
+
+    if(!Op0->getType()->isVectorTy()){
+        FixedVectorType *destTy = FixedVectorType::get(Int32Ty, 2);
+        Value *bitcast = Builder.CreateBitCast(Op0, destTy);
+
+        Value *arg0 = Builder.CreateExtractElement(bitcast, 0.0);
+        Value *arg1 = Builder.CreateExtractElement(bitcast, 1.0);
+
+        Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
+        auto *s = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+
+        EmitWritebacks(*this, Args);
+        return s;
     }
+    
+    auto *Op0VecTy = E->getArg(0)->getType()->getAs<VectorType>();
+
+    for(int idx = 0 ; idx < Op0VecTy -> getNumElements(); idx += 2){
+      
+    }
+
   }
   }
   return nullptr;
