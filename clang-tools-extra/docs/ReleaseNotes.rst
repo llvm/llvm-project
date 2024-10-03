@@ -171,6 +171,10 @@ Changes in existing checks
   as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
 
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
+  using loop variable in initializer of lambda capture.
+
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing
   a false positive when only an implicit conversion happened inside an
