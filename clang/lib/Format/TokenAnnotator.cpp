@@ -149,35 +149,35 @@ private:
   }
 
   bool parseAngle() {
-    if (!CurrentToken || !CurrentToken->Previous)
-      return false;
-    if (NonTemplateLess.count(CurrentToken->Previous) > 0)
+    if (!CurrentToken)
       return false;
 
-    if (const auto &Previous = *CurrentToken->Previous; // The '<'.
-        Previous.Previous) {
-      if (Previous.Previous->Tok.isLiteral())
+    auto *Left = CurrentToken->Previous; // The '<'.
+    if (!Left)
+      return false;
+
+    if (NonTemplateLess.count(Left) > 0)
+      return false;
+
+    const auto *BeforeLess = Left->Previous;
+
+    if (BeforeLess) {
+      if (BeforeLess->Tok.isLiteral())
         return false;
-      if (Previous.Previous->is(tok::r_brace))
+      if (BeforeLess->is(tok::r_brace))
         return false;
-      if (Previous.Previous->is(tok::r_paren) && Contexts.size() > 1 &&
-          (!Previous.Previous->MatchingParen ||
-           Previous.Previous->MatchingParen->isNot(
-               TT_OverloadedOperatorLParen))) {
+      if (BeforeLess->is(tok::r_paren) && Contexts.size() > 1 &&
+          !(BeforeLess->MatchingParen &&
+            BeforeLess->MatchingParen->is(TT_OverloadedOperatorLParen))) {
         return false;
       }
-      if (Previous.Previous->is(tok::kw_operator) &&
-          CurrentToken->is(tok::l_paren)) {
+      if (BeforeLess->is(tok::kw_operator) && CurrentToken->is(tok::l_paren))
         return false;
-      }
     }
 
-    FormatToken *Left = CurrentToken->Previous;
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::less, 12);
     Contexts.back().IsExpression = false;
-
-    const auto *BeforeLess = Left->Previous;
 
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
@@ -228,6 +228,10 @@ private:
           return false;
         next();
         return true;
+      }
+      if (BeforeLess && BeforeLess->is(TT_TemplateName)) {
+        next();
+        continue;
       }
       if (CurrentToken->is(tok::question) &&
           Style.Language == FormatStyle::LK_Java) {
