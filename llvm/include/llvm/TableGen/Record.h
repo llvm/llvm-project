@@ -1991,14 +1991,14 @@ public:
   }
 
   /// Get the concrete record with the specified name.
-  Record *getDef(StringRef Name) const {
+  const Record *getDef(StringRef Name) const {
     auto I = Defs.find(Name);
     return I == Defs.end() ? nullptr : I->second.get();
   }
 
   /// Get the \p Init value of the specified global variable.
   Init *getGlobal(StringRef Name) const {
-    if (Record *R = getDef(Name))
+    if (const Record *R = getDef(Name))
       return R->getDefInit();
     auto It = ExtraGlobals.find(Name);
     return It == ExtraGlobals.end() ? nullptr : It->second;

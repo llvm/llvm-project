@@ -871,7 +871,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
 
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
-        Record *D = RK.getDef(Name->getValue());
+        const Record *D = RK.getDef(Name->getValue());
         if (!D && CurRec) {
           // Self-references are allowed, but their resolution is delayed until
           // the final resolve to ensure that we get the correct type for them.
@@ -2113,7 +2113,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
   if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
 
     // Look up all defined records to see if we can find one.
-    Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
+    const Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
     if (D) {
       // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
