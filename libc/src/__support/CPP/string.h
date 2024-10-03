@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
@@ -133,9 +134,8 @@ public:
                               new_capacity)) {
       buffer_ = static_cast<char *>(Ptr);
       capacity_ = new_capacity;
-    } else {
-      __builtin_unreachable(); // out of memory
-    }
+    } else
+      LIBC_CHECK_UNREACHABLE();
   }
 
   LIBC_INLINE void resize(size_t size) {
