@@ -30,14 +30,8 @@ constexpr float PI_OVER_32 = 0x1.921fb6p-4f;
 // > TL = chebyshevform(sin(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float SIN_COEFF[10] = {
-<<<<<<< HEAD
-  0x1.d333p-26, 0x1.000048p0, -0x1.a5d2p-14, -0x1.628588p-3, 0x1.c1eep-5,
-  0x1.4455p1, -0x1.317a8p3, -0x1.6bb9p8, 0x1.00ef8p9, 0x1.0edcp14
-};
-=======
     0x1.d333p-26, 0x1.000048p0, -0x1.a5d2p-14, -0x1.628588p-3, 0x1.c1eep-5,
     0x1.4455p1,   -0x1.317a8p3, -0x1.6bb9p8,   0x1.00ef8p9,    0x1.0edcp14};
->>>>>>> 1e0a1f667 (add implementation of sinpif16 function)
 // In Sollya generate 10 coefficients for a degree-9 chebyshev polynomial
 // approximating the sine function in [-pi/32, pi/32] with the following
 // commands:
@@ -45,56 +39,14 @@ const float SIN_COEFF[10] = {
 // > TL = chebyshevform(cos(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float COS_COEFF[10] = {
-<<<<<<< HEAD
-  0x1.000006p0, 0x1.e1eap-15, -0x1.0071p-1, -0x1.3b56p-4, 0x1.f3dfp-2,
-  0x1.ccbap4, -0x1.3034p6, -0x1.f817p11, 0x1.fc59p11, 0x1.7079p17
-};
-=======
     0x1.000006p0, 0x1.e1eap-15, -0x1.0071p-1, -0x1.3b56p-4, 0x1.f3dfp-2,
     0x1.ccbap4,   -0x1.3034p6,  -0x1.f817p11, 0x1.fc59p11,  0x1.7079p17};
->>>>>>> 1e0a1f667 (add implementation of sinpif16 function)
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follows:
 // > display = hexadecimmal;
 // > prec = 24;
 // > for k from 0 to 63 do {sin(k * pi/32);};
 
-<<<<<<< HEAD
-const float SIN_K_PI_OVER_32[64] = {
-  0, 0x1.917a6cp-4,
-  0x1.8f8b84p-3, 0x1.294062p-2,
-  0x1.87de2ap-2, 0x1.e2b5d4p-2,
-  0x1.1c73b4p-1, 0x1.44cf32p-1,
-  0x1.6a09e6p-1, 0x1.8bc806p-1,
-  0x1.a9b662p-1, 0x1.c38b3p-1,
-  0x1.d906bcp-1, 0x1.e9f416p-1,
-  0x1.f6297cp-1, 0x1.fd88dap-1,
-  0x1p0, 0x1.fd88dap-1,
-  0x1.f6297cp-1, 0x1.e9f416p-1,
-  0x1.d906bcp-1, 0x1.c38b3p-1,
-  0x1.a9b662p-1, 0x1.8bc806p-1,
-  0x1.6a09e6p-1, 0x1.44cf32p-1,
-  0x1.1c73b4p-1, 0x1.e2b5d4p-2,
-  0x1.87de2ap-2, 0x1.294062p-2,
-  0x1.8f8b84p-3, 0x1.917a6cp-4,
-  0, -0x1.917a6cp-4,
-  -0x1.8f8b84p-3, -0x1.294062p-2,
-  -0x1.87de2ap-2, -0x1.e2b5d4p-2,
-  -0x1.1c73b4p-1, -0x1.44cf32p-1,
-  -0x1.6a09e6p-1, -0x1.8bc806p-1,
-  -0x1.a9b662p-1, -0x1.c38b3p-1,
-  -0x1.d906bcp-1, -0x1.e9f416p-1,
-  -0x1.f6297ep-1, -0x1.fd88dap-1,
-  -0x1p0, -0x1.fd88dap-1,
-  -0x1.f6297cp-1, -0x1.e9f416p-1,
-  -0x1.d906bcp-1, -0x1.c38b3p-1,
-  -0x1.a9b662p-1, -0x1.8bc806p-1,
-  -0x1.6a09e6p-1, -0x1.44cf32p-1,
-  -0x1.1c73b4p-1, -0x1.e2b5d4p-2,
-  -0x1.87de2ap-2, -0x1.294062p-2,
-  -0x1.8f8b84p-3, -0x1.917a6cp-4
-};
-=======
 const float SIN_K_PI_OVER_32[64] = {0,
                                     0x1.917a6cp-4,
                                     0x1.8f8b84p-3,
@@ -159,7 +111,6 @@ const float SIN_K_PI_OVER_32[64] = {0,
                                     -0x1.294062p-2,
                                     -0x1.8f8b84p-3,
                                     -0x1.917a6cp-4};
->>>>>>> 1e0a1f667 (add implementation of sinpif16 function)
 
 int32_t range_reduction(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
@@ -209,15 +160,9 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
       // If value is equal to infinity
       if (x_abs == 0x7c00) {
         fputil::set_errno_if_required(EDOM);
-<<<<<<< HEAD
-	fputil::raise_except_if_required(FE_INVALID);
-      }
-      
-=======
         fputil::raise_except_if_required(FE_INVALID);
       }
 
->>>>>>> 1e0a1f667 (add implementation of sinpif16 function)
       // If value is NaN
       return x + FPBits::quiet_nan().get_val();
     }
@@ -236,20 +181,6 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
     cos_y = 1;
     sin_y = 0;
   } else {
-<<<<<<< HEAD
-    cos_y = fputil::polyeval(y * PI_OVER_32,
-	COS_COEFF[0], COS_COEFF[1],
-	COS_COEFF[2], COS_COEFF[3],
-	COS_COEFF[4], COS_COEFF[5],
-	COS_COEFF[6], COS_COEFF[7],
-	COS_COEFF[8], COS_COEFF[9]);
-    sin_y = fputil::polyeval(y * PI_OVER_32,
-        SIN_COEFF[0], SIN_COEFF[1],
-	SIN_COEFF[2], SIN_COEFF[3],
-	SIN_COEFF[4], SIN_COEFF[5],
-	SIN_COEFF[6], SIN_COEFF[7],
-	SIN_COEFF[8], SIN_COEFF[9]);
-=======
     cos_y = fputil::polyeval(y * PI_OVER_32, COS_COEFF[0], COS_COEFF[1],
                              COS_COEFF[2], COS_COEFF[3], COS_COEFF[4],
                              COS_COEFF[5], COS_COEFF[6], COS_COEFF[7],
@@ -258,7 +189,6 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
                              SIN_COEFF[2], SIN_COEFF[3], SIN_COEFF[4],
                              SIN_COEFF[5], SIN_COEFF[6], SIN_COEFF[7],
                              SIN_COEFF[8], SIN_COEFF[9]);
->>>>>>> 1e0a1f667 (add implementation of sinpif16 function)
   }
 
   return static_cast<float16>(fputil::multiply_add(
