@@ -184,26 +184,17 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&FBB,
                                    SmallVectorImpl<MachineOperand> &Cond,
                                    bool AllowModify) const {
-  TBB = nullptr;
-  FBB = nullptr;
-  if (MBB.empty())
-    return false;
-  auto MI = MBB.getLastNonDebugInstr();
-  if (!MI.isValid())
-    return false;
-
-  // We do not allow to restructure blocks ending with OpBranchConditional,
-  // because there is no way to encode `if (Cond) then Stmt` logic, only
-  // full if-then-else is supported by OpBranchConditional.
-  // If we supported splitting of blocks ending with OpBranchConditional
-  // MachineBasicBlock.cpp would expect successfull implementation of calls
-  // to insertBranch() setting FBB to null that is not feasible.
-  if (MI->getOpcode() != SPIRV::OpBranch)
-    return true;
-
-  // Allow only 'unconditional branch' modifications of the basic block.
-  TBB = MI->getOperand(0).getMBB();
-  return false;
+  // We do not allow to restructure blocks by results of analyzeBranch(),
+  // because it may potentially break structured control flow and anyway
+  // doubtedly may be useful in SPIRV, including such reasons as, e.g.:
+  // 1) there is no way to encode `if (Cond) then Stmt` logic, only full
+  // if-then-else is supported by OpBranchConditional, so if we supported
+  // splitting of blocks ending with OpBranchConditional MachineBasicBlock.cpp
+  // would expect successfull implementation of calls to insertBranch() setting
+  // FBB to null that is not feasible; 2) it's not possible to delete
+  // instructions after the unconditional branch, because this instruction must
+  // be the last instruction in a block.
+  return true;
 }
 
 // Remove the branching code at the end of the specific MBB.
