@@ -150,7 +150,7 @@ public:
   template <typename T> void set(T V) {
     if (getTypeTag<T>() != Ty)
       llvm_unreachable("invalid type tag for this operation");
-    getValueRef<T>() = V;
+    Val = V;
   }
 
   Type getType() const { return Ty; }
@@ -167,7 +167,6 @@ public:
   }
 
 private:
-  template <typename T> T &getValueRef();
   void copy(const PropertyValue &P);
 
   Type Ty = NONE;

@@ -134,15 +134,6 @@ void PropertySetRegistry::write(raw_ostream &Out) const {
 namespace llvm {
 namespace util {
 
-template <> uint32_t &PropertyValue::getValueRef<uint32_t>() {
-  return std::get<uint32_t>(Val);
-}
-
-template <> byte *&PropertyValue::getValueRef<byte *>() {
-  auto &ByteArrayVal = std::get<byte *>(Val);
-  return ByteArrayVal;
-}
-
 template <> PropertyValue::Type PropertyValue::getTypeTag<uint32_t>() {
   return UINT32;
 }
