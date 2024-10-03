@@ -14,6 +14,7 @@ class Pattern:
     def substitute(self, input: str) -> str:
         return re.sub(self.match, self.substitution, input, 0, re.MULTILINE)
 
+
 SUBSTITUTIONS = [
     # Insert additional constant with 0
     Pattern(
