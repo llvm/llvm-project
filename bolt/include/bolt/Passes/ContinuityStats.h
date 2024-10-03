@@ -21,7 +21,7 @@
 // satisfies the CFG continuity property.
 
 // The default value of 1000 above can be changed via the hidden BOLT option
-// `-num-hottest-functions-for-continuity-check=[N]`.
+// `-num-functions-for-continuity-check=[N]`.
 // If more detailed stats are needed, `-v=1` can be used: the hottest N
 // functions will be grouped into 5 equally-sized buckets, from the hottest
 // to the coldest; for each bucket, various summary statistics of the
