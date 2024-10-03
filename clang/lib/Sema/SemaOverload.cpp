@@ -2232,16 +2232,21 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
   } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isArrayParameterType()) {
+             ToType->isConstantArrayType()) {
     // HLSL constant array parameters do not decay, so if the argument is a
     // constant array and the parameter is an ArrayParameterType we have special
     // handling here.
-    FromType = S.Context.getArrayParameterType(FromType);
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
     if (S.Context.getCanonicalType(FromType) !=
         S.Context.getCanonicalType(ToType))
       return false;
 
-    SCS.First = ICK_HLSL_Array_RValue;
     SCS.setAllToTypes(ToType);
     return true;
   } else if (FromType->isArrayType()) {
