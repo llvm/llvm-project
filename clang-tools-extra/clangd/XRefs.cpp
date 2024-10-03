@@ -209,29 +209,6 @@ getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
   return Result;
 }
 
-// Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
-// figure out a filename.
-std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
-                                     llvm::StringRef TUPath) {
-  const auto &SM = AST.getSourceManager();
-  const auto F = SM.getFileEntryRefForID(SM.getFileID(Loc));
-  if (!F)
-    return std::nullopt;
-  auto FilePath = getCanonicalPath(*F, SM.getFileManager());
-  if (!FilePath) {
-    log("failed to get path!");
-    return std::nullopt;
-  }
-  Location L;
-  L.uri = URIForFile::canonicalize(*FilePath, TUPath);
-  // We call MeasureTokenLength here as TokenBuffer doesn't store spelled tokens
-  // outside the main file.
-  auto TokLen = Lexer::MeasureTokenLength(Loc, SM, AST.getLangOpts());
-  L.range = halfOpenToRange(
-      SM, CharSourceRange::getCharRange(Loc, Loc.getLocWithOffset(TokLen)));
-  return L;
-}
-
 // Treat #included files as symbols, to enable go-to-definition on them.
 std::optional<LocatedSymbol> locateFileReferent(const Position &Pos,
                                                 ParsedAST &AST,

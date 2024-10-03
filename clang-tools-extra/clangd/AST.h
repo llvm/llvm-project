@@ -45,6 +45,12 @@ bool isImplementationDetail(const Decl *D);
 /// this function.
 SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM);
 
+/// Convert a \p SourceLocation to an LSP \p Location.
+/// Expects Loc to be a SpellingLocation, will bail out otherwise as it can't
+/// figure out a filename.
+std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
+                                     llvm::StringRef TUPath);
+
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
