@@ -504,6 +504,8 @@ struct AllRegionParseArgs {
   std::optional<PrivateParseArgs> privateArgs;
   std::optional<ReductionParseArgs> reductionArgs;
   std::optional<ReductionParseArgs> taskReductionArgs;
+  std::optional<MapParseArgs> useDeviceAddrArgs;
+  std::optional<MapParseArgs> useDevicePtrArgs;
 };
 } // namespace
 
@@ -648,6 +650,16 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
     return parser.emitError(parser.getCurrentLocation())
            << "invalid `task_reduction` format";
 
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "use_device_addr",
+                                 args.useDeviceAddrArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `use_device_addr` format";
+
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "use_device_ptr",
+                                 args.useDevicePtrArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `use_device_addr` format";
+
   return parser.parseRegion(region, entryBlockArgs);
 }
 
@@ -735,6 +747,18 @@ static ParseResult parseTaskReductionRegion(
   return parseBlockArgRegion(parser, region, args);
 }
 
+static ParseResult parseUseDeviceAddrUseDevicePtrRegion(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &useDeviceAddrVars,
+    SmallVectorImpl<Type> &useDeviceAddrTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &useDevicePtrVars,
+    SmallVectorImpl<Type> &useDevicePtrTypes) {
+  AllRegionParseArgs args;
+  args.useDeviceAddrArgs.emplace(useDeviceAddrVars, useDeviceAddrTypes);
+  args.useDevicePtrArgs.emplace(useDevicePtrVars, useDevicePtrTypes);
+  return parseBlockArgRegion(parser, region, args);
+}
+
 //===----------------------------------------------------------------------===//
 // Printers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
@@ -767,6 +791,8 @@ struct AllRegionPrintArgs {
   std::optional<PrivatePrintArgs> privateArgs;
   std::optional<ReductionPrintArgs> reductionArgs;
   std::optional<ReductionPrintArgs> taskReductionArgs;
+  std::optional<MapPrintArgs> useDeviceAddrArgs;
+  std::optional<MapPrintArgs> useDevicePtrArgs;
 };
 } // namespace
 
@@ -849,6 +875,11 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   printBlockArgClause(p, ctx, "task_reduction",
                       iface.getTaskReductionBlockArgs(),
                       args.taskReductionArgs);
+  printBlockArgClause(p, ctx, "use_device_addr",
+                      iface.getUseDeviceAddrBlockArgs(),
+                      args.useDeviceAddrArgs);
+  printBlockArgClause(p, ctx, "use_device_ptr",
+                      iface.getUseDevicePtrBlockArgs(), args.useDevicePtrArgs);
 
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
@@ -922,6 +953,18 @@ static void printTaskReductionRegion(OpAsmPrinter &p, Operation *op,
   AllRegionPrintArgs args;
   args.taskReductionArgs.emplace(taskReductionVars, taskReductionTypes,
                                  taskReductionByref, taskReductionSyms);
+  printBlockArgRegion(p, op, region, args);
+}
+
+static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
+                                                 Region &region,
+                                                 ValueRange useDeviceAddrVars,
+                                                 TypeRange useDeviceAddrTypes,
+                                                 ValueRange useDevicePtrVars,
+                                                 TypeRange useDevicePtrTypes) {
+  AllRegionPrintArgs args;
+  args.useDeviceAddrArgs.emplace(useDeviceAddrVars, useDeviceAddrTypes);
+  args.useDevicePtrArgs.emplace(useDevicePtrVars, useDevicePtrTypes);
   printBlockArgRegion(p, op, region, args);
 }
 
