@@ -11,7 +11,7 @@ define ptr @test(ptr %Q, ptr %L) nounwind {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    jmp LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    incl %eax
