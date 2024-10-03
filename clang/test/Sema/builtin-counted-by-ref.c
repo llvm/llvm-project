@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c99 -fsyntax-only -verify %s
 
+typedef unsigned long int size_t;
+
 struct fam_struct {
   int x;
   char count;
@@ -12,9 +14,9 @@ void test1(struct fam_struct *ptr, int size, int idx) {
 
   {
       size_t __ignored_assignment;
-      *_Generic(__builtin_counted_by_ref(p->array),
+      *_Generic(__builtin_counted_by_ref(ptr->array),
                void *: &__ignored_assignment,
-               default: __builtin_counted_by_ref(p->array)) = 42; // ok
+               default: __builtin_counted_by_ref(ptr->array)) = 42; // ok
   }
 }
 
