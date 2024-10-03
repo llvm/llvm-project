@@ -1051,7 +1051,6 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
     // The whole struct is specificed in the __bdos.
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
 
-
     // Get the full size of the struct.
     llvm::Constant *SizeofStruct =
         ConstantInt::get(ResType, Layout.getSize().getQuantity(), IsSigned);
