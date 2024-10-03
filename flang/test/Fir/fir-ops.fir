@@ -805,8 +805,8 @@ func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,
   fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
   // CHECK: fir.dispatch "proc1"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
-  fir.dispatch "proc2"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>)
-  // CHECK: fir.dispatch "proc2"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>)
+  fir.dispatch "proc2"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) proc_attrs<pure>
+  // CHECK: fir.dispatch "proc2"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) proc_attrs <pure>
 
   fir.dispatch "proc3"(%arg0 : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%arg1, %arg0 : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
   // CHECK: fir.dispatch "proc3"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[INTARG]], %[[CLASS]] : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
