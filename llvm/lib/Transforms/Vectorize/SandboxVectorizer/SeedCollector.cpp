@@ -18,46 +18,45 @@
 #include <span>
 
 using namespace llvm;
+namespace llvm::sandboxir {
 
-MutableArrayRef<sandboxir::SeedBundle::SeedList>
-sandboxir::SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                bool ForcePowerOf2) {
-  // Use uint32_t for counts to make it clear we are also using the proper
-  // isPowerOf2_[32|64].
+MutableArrayRef<SeedBundle::SeedList>
+SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
+                     bool ForcePowerOf2) {
+  // Use uint32_t here for compatibility with IsPowerOf2_32
 
-  // Count both the bits and the elements of the slice we are about to build.
-  // The bits tell us whether this is a legal slice (that is <= MaxVecRegBits),
-  // and the num of elements help us do the actual slicing.
-  uint32_t BitsSum = 0;
-  // As we are collecting slice elements we may go over the limit, so we need to
-  // remember the last legal one. This is used for the creation of the slice.
-  uint32_t LastGoodBitsSum = 0;
-  uint32_t LastGoodNumSliceElements = 0;
-  // Skip any used elements (which have already been handled) and all below
-  // `StartIdx`.
-  assert(StartIdx >= getFirstUnusedElementIdx() &&
-         "Expected unused at StartIdx");
-  uint32_t FirstGoodElementIdx = StartIdx;
-  // Go through elements starting at FirstGoodElementIdx.
-  for (auto [ElementCnt, S] : enumerate(make_range(
-           std::next(Seeds.begin(), FirstGoodElementIdx), Seeds.end()))) {
-    // Stop if we found a used element.
-    if (isUsed(FirstGoodElementIdx + ElementCnt))
+  // BitCount tracks the size of the working slice. From that we can tell
+  // when the working slice's size is a power-of-two and when it exceeds
+  // the legal size in MaxVecBits.
+  uint32_t BitCount = 0;
+  uint32_t NumElements = 0;
+  // Can't start a slice with a used instruction.
+  assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
+  for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
+    uint32_t InstBits = Utils::getNumBits(S);
+    // Stop if this instruction is used, or if adding it puts the slice over
+    // the limit.
+    if (isUsed(StartIdx + NumElements) || BitCount + InstBits > MaxVecRegBits)
       break;
-    BitsSum += sandboxir::Utils::getNumBits(S);
-    // Stop if the bits sum is over the limit.
-    if (BitsSum > MaxVecRegBits)
-      break;
-    // If forcing a power-of-2 bit-size we check if this bit size is accepted.
-    if (ForcePowerOf2 && !isPowerOf2_32(BitsSum))
-      continue;
-    LastGoodBitsSum = BitsSum;
-    LastGoodNumSliceElements = ElementCnt + 1;
+    NumElements++;
+    BitCount += Utils::getNumBits(S);
   }
-  if (LastGoodNumSliceElements < 2)
+  // Most slices will already be power-of-two-sized. But this one isn't, remove
+  // instructions until it is. This could be tracked in the loop above but the
+  // logic is harder to follow. TODO: Move if performance is unacceptable.
+  if (ForcePowerOf2) {
+    while (!isPowerOf2_32(BitCount) && NumElements > 1) {
+      BitCount -= Utils::getNumBits(Seeds[StartIdx + NumElements - 1]);
+      NumElements--;
+    }
+  }
+
+  // Return any non-empty slice
+  if (NumElements > 1)
+    return MutableArrayRef<SeedBundle::SeedList>(&Seeds + StartIdx,
+                                                 NumElements);
+  else
     return {};
-  if (LastGoodBitsSum == 0)
-    return {};
-  return MutableArrayRef<sandboxir::SeedBundle::SeedList>(
-      &Seeds + FirstGoodElementIdx, LastGoodNumSliceElements);
 }
+
+} // namespace llvm::sandboxir

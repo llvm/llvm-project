@@ -26,9 +26,9 @@ namespace llvm::sandboxir {
 /// A set of candidate Instructions for vectorizing together.
 class SeedBundle {
 public:
-  using SeedList = SmallVector<sandboxir::Instruction *>;
+  using SeedList = SmallVector<Instruction *>;
   /// Initialize a bundle with \p I.
-  explicit SeedBundle(sandboxir::Instruction *I) { insertAt(begin(), I); }
+  explicit SeedBundle(Instruction *I) { insertAt(begin(), I); }
   explicit SeedBundle(SeedList &&L) : Seeds(std::move(L)) {
     for (auto &S : Seeds)
       NumUnusedBits += Utils::getNumBits(S);
@@ -45,12 +45,12 @@ public:
   const_iterator begin() const { return Seeds.begin(); }
   const_iterator end() const { return Seeds.end(); }
 
-  sandboxir::Instruction *operator[](unsigned Idx) const { return Seeds[Idx]; }
+  Instruction *operator[](unsigned Idx) const { return Seeds[Idx]; }
 
   /// Insert \p I into position \p P. Clients should choose Pos
   /// by symbol, symbol-offset, and program order (which depends if scheduling
   /// bottom-up or top-down).
-  void insertAt(iterator Pos, sandboxir::Instruction *I) {
+  void insertAt(iterator Pos, Instruction *I) {
 #ifdef EXPENSIVE_CHECKS
     for (auto Itr : Seeds) {
       assert(*Itr != I && "Attempt to insert an instruction twice.");
@@ -66,7 +66,17 @@ public:
         return ElmIdx;
     return Seeds.size();
   }
-  /// Marks elements as 'used' so that we skip them in `getSlice()`.
+  /// Marks instruction \p I "used" within the bundle. Clients
+  /// use this property when assembling a vectorized instruction from
+  /// the seeds in a bundle. This allows constant time evaluation
+  /// and "removal" from the list.
+  void setUsed(Instruction *I) {
+    auto It = std::find(begin(), end(), I);
+    assert(It != end() && "Instruction not in the bundle!");
+    auto Idx = It - begin();
+    setUsed(Idx, 1, /*VerifyUnused=*/false);
+  }
+
   void setUsed(unsigned ElementIdx, unsigned Sz = 1, bool VerifyUnused = true) {
     if (ElementIdx + Sz >= UsedLanes.size())
       UsedLanes.resize(ElementIdx + Sz);
@@ -76,17 +86,7 @@ public:
       UsedLanes.set(Idx);
       UsedLaneCount++;
     }
-    NumUnusedBits -= sandboxir::Utils::getNumBits(Seeds[ElementIdx]);
-  }
-  /// Marks instruction \p I "used" within the bundle. Clients
-  /// use this property when assembling a vectorized instruction from
-  /// the seeds in a bundle. This allows constant time evaluation
-  /// and "removal" from the list.
-  void setUsed(sandboxir::Instruction *I) {
-    auto It = std::find(begin(), end(), I);
-    assert(It != end() && "Instruction not in the bundle!");
-    auto Idx = It - begin();
-    setUsed(Idx, 1, /*VerifyUnused=*/false);
+    NumUnusedBits -= Utils::getNumBits(Seeds[ElementIdx]);
   }
   /// \Returns whether or not \p Element has been used.
   bool isUsed(unsigned Element) const {
@@ -96,8 +96,9 @@ public:
   unsigned getNumUnusedBits() const { return NumUnusedBits; }
 
   /// \Returns a slice of seed elements, starting at the element \p StartIdx,
-  /// with a total size <= \p MaxVecRegBits. If \p ForcePowOf2 is true, then the
-  /// returned slice should have a total number of bits that is a power of 2.
+  /// with a total size <= \p MaxVecRegBits, or an empty slice if the
+  /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
+  /// slice will have a total number of bits that is a power of 2.
   MutableArrayRef<SeedList> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
                                      bool ForcePowOf2);
 
