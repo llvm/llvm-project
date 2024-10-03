@@ -275,7 +275,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .lowerFor({s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({s32, s64})
+      .libcallFor({s32, s64, s128})
       .minScalar(0, s32)
       .scalarize(0);
 
