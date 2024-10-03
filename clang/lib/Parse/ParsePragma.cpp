@@ -709,6 +709,11 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
 
+  if (getLangOpts().ZOSExt) {
+    PP.RemovePragmaHandler(ExportHandler.get());
+    ExportHandler.reset();
+  }
+
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
