@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include <queue>
 #include <string>
 #include <unordered_set>
 
@@ -62,7 +63,9 @@ class SPIRVSubtarget;
 class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
-  std::unordered_set<BasicBlock *> Visited = {};
+
+  std::unordered_set<BasicBlock *> Queued = {};
+  std::queue<BasicBlock *> ToVisit = {};
 
   struct OrderInfo {
     size_t Rank;
@@ -80,6 +83,9 @@ class PartialOrderingVisitor {
   // Visits |BB| with the current rank being |Rank|.
   size_t visit(BasicBlock *BB, size_t Rank);
 
+  size_t GetNodeRank(BasicBlock *BB) const;
+  bool CanBeVisited(BasicBlock *BB) const;
+
 public:
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
@@ -88,6 +94,14 @@ public:
   // If |LHS| and |RHS| have the same rank, the traversal order determines the
   // order (order is stable).
   bool compare(const BasicBlock *LHS, const BasicBlock *RHS) const;
+
+  size_t getRank(const BasicBlock *BB) const {
+    return BlockToOrder.at(const_cast<BasicBlock *>(BB)).Rank;
+  }
+
+  size_t getTraversalIndex(const BasicBlock *BB) const {
+    return BlockToOrder.at(const_cast<BasicBlock *>(BB)).TraversalIndex;
+  }
 
   // Visit the function starting from the basic block |Start|, and calling |Op|
   // on each visited BB. This traversal ignores back-edges, meaning this won't
