@@ -190,7 +190,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
 }
 
 static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
-  auto Node = Kernel.getMetadata("reqd_work_group_size");
+  auto *Node = Kernel.getMetadata("reqd_work_group_size");
   if (Node && Node->getNumOperands() == 3)
     return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
   return std::numeric_limits<unsigned>::max();
