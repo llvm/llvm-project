@@ -18,11 +18,10 @@
 
 using namespace llvm;
 
-static llvm::cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
-static llvm::cl::opt<std::string>
-    selectedBcDialect("bytecode-dialect",
-                      llvm::cl::desc("The dialect to gen for"),
-                      llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
+static cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
+static cl::opt<std::string>
+    selectedBcDialect("bytecode-dialect", cl::desc("The dialect to gen for"),
+                      cl::cat(dialectGenCat), cl::CommaSeparated);
 
 namespace {
 
@@ -306,7 +305,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   auto funScope = os.scope("{\n", "}\n\n");
 
   // Check that predicates specified if multiple bytecode instances.
-  for (const llvm::Record *rec : make_second_range(vec)) {
+  for (const Record *rec : make_second_range(vec)) {
     StringRef pred = rec->getValueAsString("printerPredicate");
     if (vec.size() > 1 && pred.empty()) {
       for (auto [index, rec] : vec) {
