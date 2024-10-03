@@ -611,14 +611,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
                              : Builder.CreateZExt(ReducedPartRdx, PhiTy);
     }
 
-    // If there were stores of the reduction value to a uniform memory address
-    // inside the loop, create the final store here.
-    if (StoreInst *SI = RdxDesc.IntermediateStore) {
-      auto *NewSI = Builder.CreateAlignedStore(
-          ReducedPartRdx, SI->getPointerOperand(), SI->getAlign());
-      propagateMetadata(NewSI, SI);
-    }
-
     return ReducedPartRdx;
   }
   case VPInstruction::ExtractFromEnd: {
@@ -943,8 +935,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
-  if (isa<FPMathOperator>(V))
-    V->copyFastMathFlags(CI);
+  setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -959,11 +950,6 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                     Variant->getFunctionType()->params(),
                                     CostKind);
   }
-
-  FastMathFlags FMF;
-  // TODO: Manage flags via VPRecipeWithIRFlags.
-  if (auto *FPMO = dyn_cast_or_null<FPMathOperator>(getUnderlyingValue()))
-    FMF = FPMO->getFastMathFlags();
 
   // Some backends analyze intrinsic arguments to determine cost. Use the
   // underlying value for the operand if it has one. Otherwise try to use the
@@ -992,6 +978,7 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
         ToVectorTy(Ctx.Types.inferScalarType(getOperand(I)), VF));
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
+  FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
       VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
       dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
@@ -1011,7 +998,9 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " = ";
   }
 
-  O << "call @" << CalledFn->getName() << "(";
+  O << "call";
+  printFlags(O);
+  O << "  @" << CalledFn->getName() << "(";
   interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });

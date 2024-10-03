@@ -315,10 +315,10 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
   }
 }
 
-void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 #if !defined(NDEBUG)
-  switch (RegNo) {
+  switch (Reg.id()) {
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
   case AMDGPU::PRIVATE_RSRC_REG:
@@ -328,7 +328,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  O << getRegisterName(RegNo);
+  O << getRegisterName(Reg);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,

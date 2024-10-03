@@ -168,7 +168,7 @@ enum class LegacyToPrefixMask : uint64_t {
 
 class PPC64 final : public TargetInfo {
 public:
-  PPC64();
+  PPC64(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
@@ -578,7 +578,7 @@ static uint64_t readPrefixedInstruction(const uint8_t *loc) {
   return ctx.arg.isLE ? (fullInstr << 32 | fullInstr >> 32) : fullInstr;
 }
 
-PPC64::PPC64() {
+PPC64::PPC64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_PPC64_COPY;
   gotRel = R_PPC64_GLOB_DAT;
   pltRel = R_PPC64_JMP_SLOT;
@@ -1750,7 +1750,7 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
   return true;
 }
 
-TargetInfo *elf::getPPC64TargetInfo() {
-  static PPC64 target;
+TargetInfo *elf::getPPC64TargetInfo(Ctx &ctx) {
+  static PPC64 target(ctx);
   return &target;
 }

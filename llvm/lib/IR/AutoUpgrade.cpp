@@ -846,6 +846,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      // 'aarch64.sve.fcvt.bf16f32' || 'aarch64.sve.fcvtnt.bf16f32'
+      if (Name == "fcvt.bf16f32" || Name == "fcvtnt.bf16f32") {
+        NewFn = nullptr;
+        return true;
+      }
+
       if (Name.consume_front("addqv")) {
         // 'aarch64.sve.addqv'.
         if (!F->getReturnType()->isFPOrFPVectorTy())
@@ -1275,6 +1281,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("rotate."))
         // nvvm.rotate.{b32,b64,right.b64}
         Expand = Name == "b32" || Name == "b64" || Name == "right.b64";
+      else if (Name.consume_front("ptr.gen.to."))
+        // nvvm.ptr.gen.to.{local,shared,global,constant}
+        Expand = Name.starts_with("local") || Name.starts_with("shared") ||
+                 Name.starts_with("global") || Name.starts_with("constant");
+      else if (Name.consume_front("ptr."))
+        // nvvm.ptr.{local,shared,global,constant}.to.gen
+        Expand =
+            (Name.consume_front("local") || Name.consume_front("shared") ||
+             Name.consume_front("global") || Name.consume_front("constant")) &&
+            Name.starts_with(".to.gen");
       else
         Expand = false;
 
@@ -2338,6 +2354,15 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if ((Name.consume_front("ptr.gen.to.") &&
+              (Name.starts_with("local") || Name.starts_with("shared") ||
+               Name.starts_with("global") || Name.starts_with("constant"))) ||
+             (Name.consume_front("ptr.") &&
+              (Name.consume_front("local") || Name.consume_front("shared") ||
+               Name.consume_front("global") ||
+               Name.consume_front("constant")) &&
+              Name.starts_with(".to.gen"))) {
+    Rep = Builder.CreateAddrSpaceCast(CI->getArgOperand(0), CI->getType());
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
@@ -4053,6 +4078,35 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   return Rep;
 }
 
+static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
+                                          Function *F, IRBuilder<> &Builder) {
+  Intrinsic::ID NewID =
+      StringSwitch<Intrinsic::ID>(Name)
+          .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
+          .Case("sve.fcvtnt.bf16f32", Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
+          .Default(Intrinsic::not_intrinsic);
+  if (NewID == Intrinsic::not_intrinsic)
+    llvm_unreachable("Unhandled Intrinsic!");
+
+  SmallVector<Value *, 3> Args(CI->args());
+
+  // The original intrinsics incorrectly used a predicate based on the smallest
+  // element type rather than the largest.
+  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+
+  if (Args[1]->getType() != BadPredTy)
+    llvm_unreachable("Unexpected predicate type!");
+
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                    BadPredTy, Args[1]);
+  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
+                                    GoodPredTy, Args[1]);
+
+  Function *NewF = Intrinsic::getDeclaration(CI->getModule(), NewID);
+  return Builder.CreateCall(NewF, Args, CI->getName());
+}
+
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                                       IRBuilder<> &Builder) {
   if (Name == "mve.vctp64.old") {
@@ -4306,6 +4360,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     bool IsX86 = Name.consume_front("x86.");
     bool IsNVVM = Name.consume_front("nvvm.");
+    bool IsAArch64 = Name.consume_front("aarch64.");
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
@@ -4317,6 +4372,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsX86) {
       Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
+    } else if (IsAArch64) {
+      Rep = upgradeAArch64IntrinsicCall(Name, CI, F, Builder);
     } else if (IsARM) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
@@ -5495,6 +5552,18 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // Add "-Fn32"
     if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
+    return Res;
+  }
+
+  if (T.isSPARC()) {
+    // Add "-i128:128"
+    std::string I64 = "-i64:64";
+    std::string I128 = "-i128:128";
+    if (!StringRef(Res).contains(I128)) {
+      size_t Pos = Res.find(I64);
+      if (Pos != size_t(-1))
+        Res.insert(Pos + I64.size(), I128);
+    }
     return Res;
   }
 
