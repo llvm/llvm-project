@@ -22,8 +22,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
-                   (int sockfd, const void *buf, size_t len, int flags,
-                    const struct sockaddr *dest_addr, socklen_t *addrlen)) {
+                   (int sockfd, void *buf, size_t len, int flags,
+                    struct sockaddr *__restrict dest_addr,
+                    socklen_t *__restrict addrlen)) {
 #ifdef SYS_recvfrom
   ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
       SYS_recvfrom, sockfd, buf, len, flags, dest_addr, addrlen);
@@ -45,6 +46,7 @@ LLVM_LIBC_FUNCTION(ssize_t, recvfrom,
   }
 
   MSAN_UNPOISON(buf, ret);
+  MSAN_UNPOISON(addrlen, sizeof(socklen_t));
 
   return ret;
 }
