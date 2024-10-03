@@ -17,7 +17,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include "llvm/SandboxIR/IntrinsicInst.h"
 #include <optional>
 
 namespace llvm::sandboxir {
@@ -100,31 +99,8 @@ public:
       return false;
     return *Diff > 0;
   }
-
-  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
-    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      auto IID = II->getIntrinsicID();
-      return IID == Intrinsic::stackrestore || IID == Intrinsic::stacksave;
-    }
-    return false;
-  }
-
-  /// \Returns true if intrinsic \p I touches memory. This is used by the
-  /// dependency graph.
-  static bool isMemIntrinsic(IntrinsicInst *II) {
-    auto IID = II->getIntrinsicID();
-    return IID != Intrinsic::sideeffect && IID != Intrinsic::pseudoprobe;
-  }
-
-  /// We consider \p I as a Memory Dependency Candidate instruction if it
-  /// reads/write memory or if it has side-effects. This is used by the
-  /// dependency graph.
-  static bool isMemDepCandidate(Instruction *I) {
-    IntrinsicInst *II;
-    return I->mayReadOrWriteMemory() &&
-           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
-  }
 };
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_UTILS_H
