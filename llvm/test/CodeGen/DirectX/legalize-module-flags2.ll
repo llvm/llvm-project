@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-prepare < %s | FileCheck %s
+; RUN: opt -S -dxil-prepare -mtriple=dxil-unknown-shadermodel6.0-library %s | FileCheck %s
 
 ; CHECK: define void @main()
 ; Make sure behavior flag > 6 is fixed.

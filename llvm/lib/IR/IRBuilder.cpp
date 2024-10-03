@@ -117,8 +117,8 @@ Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
     if (STy->getScalarSizeInBits() < 8)
       StepVecType =
           VectorType::get(getInt8Ty(), cast<ScalableVectorType>(DstType));
-    Value *Res = CreateIntrinsic(Intrinsic::experimental_stepvector,
-                                 {StepVecType}, {}, nullptr, Name);
+    Value *Res = CreateIntrinsic(Intrinsic::stepvector, {StepVecType}, {},
+                                 nullptr, Name);
     if (StepVecType != DstType)
       Res = CreateTrunc(Res, DstType);
     return Res;
@@ -346,8 +346,8 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
                                       Value *AllocSize, Value *ArraySize,
                                       Function *MallocF, const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, std::nullopt,
-                      MallocF, Name);
+  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
+                      Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.

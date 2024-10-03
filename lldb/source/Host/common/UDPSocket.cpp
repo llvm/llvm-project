@@ -47,10 +47,6 @@ Status UDPSocket::Listen(llvm::StringRef name, int backlog) {
   return Status::FromErrorStringWithFormat("%s", g_not_supported_error);
 }
 
-Status UDPSocket::Accept(Socket *&socket) {
-  return Status::FromErrorStringWithFormat("%s", g_not_supported_error);
-}
-
 llvm::Expected<std::unique_ptr<UDPSocket>>
 UDPSocket::Connect(llvm::StringRef name, bool child_processes_inherit) {
   std::unique_ptr<UDPSocket> socket;

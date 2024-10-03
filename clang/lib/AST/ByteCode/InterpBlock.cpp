@@ -110,6 +110,8 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
   Prev = nullptr;
   Root = this;
 
+  B.IsDynamic = Blk->IsDynamic;
+
   // Transfer pointers.
   B.Pointers = Blk->Pointers;
   for (Pointer *P = Blk->Pointers; P; P = P->Next)

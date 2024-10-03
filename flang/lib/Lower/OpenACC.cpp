@@ -2080,6 +2080,13 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), *combinedConstructs));
 
+  // TODO: retrieve directives from NonLabelDoStmt pft::Evaluation, and add them
+  // as attribute to the acc.loop as an extra attribute. It is not quite clear
+  // how useful these $dir are in acc contexts, but they could still provide
+  // more information about the loop acc codegen. They can be obtained by
+  // looking for the first lexicalSuccessor of eval that is a NonLabelDoStmt,
+  // and using the related `dirs` member.
+
   return loopOp;
 }
 
@@ -4286,23 +4293,30 @@ void Fortran::lower::attachDeclarePostAllocAction(
     const Fortran::semantics::Symbol &sym) {
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
-  mlir::Operation &op = builder.getInsertionBlock()->back();
+  mlir::Operation *op = &builder.getInsertionBlock()->back();
 
-  if (op.hasAttr(mlir::acc::getDeclareActionAttrName())) {
-    auto attr = op.getAttrOfType<mlir::acc::DeclareActionAttr>(
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
+    op = op->getPrevNode();
+  }
+  assert(op && "expect operation to attach the post allocation action");
+
+  if (op->hasAttr(mlir::acc::getDeclareActionAttrName())) {
+    auto attr = op->getAttrOfType<mlir::acc::DeclareActionAttr>(
         mlir::acc::getDeclareActionAttrName());
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(), attr.getPreAlloc(),
-                   /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
-                   attr.getPreDealloc(), attr.getPostDealloc()));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(), attr.getPreAlloc(),
+                    /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
+                    attr.getPreDealloc(), attr.getPostDealloc()));
   } else {
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(),
-                   /*preAlloc=*/{},
-                   /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
-                   /*preDealloc=*/{}, /*postDealloc=*/{}));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(),
+                    /*preAlloc=*/{},
+                    /*postAlloc=*/builder.getSymbolRefAttr(fctName.str()),
+                    /*preDealloc=*/{}, /*postDealloc=*/{}));
   }
 }
 

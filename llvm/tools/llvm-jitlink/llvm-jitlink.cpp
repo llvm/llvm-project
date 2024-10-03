@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
-
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
@@ -29,7 +29,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/LoadRelocatableObject.h"
+#include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
@@ -60,7 +60,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
-
 #include <cstring>
 #include <deque>
 #include <string>
@@ -1108,7 +1107,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     HarnessFiles.insert(HarnessFile);
 
     auto ObjBuffer =
-        ExitOnErr(loadRelocatableObject(HarnessFile, ES.getTargetTriple()));
+        ExitOnErr(loadLinkableFile(HarnessFile, ES.getTargetTriple(),
+                                   LoadArchives::Never))
+            .first;
 
     auto ObjInterface =
         ExitOnErr(getObjectFileInterface(ES, ObjBuffer->getMemBufferRef()));
@@ -1772,10 +1773,11 @@ static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
     LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
-    auto ObjBuffer = loadRelocatableObject(HarnessFile, S.ES.getTargetTriple());
-    if (!ObjBuffer)
-      return ObjBuffer.takeError();
-    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(*ObjBuffer)))
+    auto Linkable = loadLinkableFile(HarnessFile, S.ES.getTargetTriple(),
+                                     LoadArchives::Never);
+    if (!Linkable)
+      return Linkable.takeError();
+    if (auto Err = S.ObjLayer.add(*S.MainJD, std::move(Linkable->first)))
       return Err;
   }
   return Error::success();
@@ -1797,21 +1799,22 @@ static Error addObjects(Session &S,
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
-    auto ObjBuffer = loadRelocatableObject(InputFile, S.ES.getTargetTriple());
+    auto ObjBuffer = loadLinkableFile(InputFile, S.ES.getTargetTriple(),
+                                      LoadArchives::Never);
     if (!ObjBuffer)
       return ObjBuffer.takeError();
 
     if (S.HarnessFiles.empty()) {
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer)))
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first)))
         return Err;
     } else {
       // We're in -harness mode. Use a custom interface for this
       // test object.
       auto ObjInterface =
-          getTestObjectFileInterface(S, (*ObjBuffer)->getMemBufferRef());
+          getTestObjectFileInterface(S, ObjBuffer->first->getMemBufferRef());
       if (!ObjInterface)
         return ObjInterface.takeError();
-      if (auto Err = S.ObjLayer.add(JD, std::move(*ObjBuffer),
+      if (auto Err = S.ObjLayer.add(JD, std::move(ObjBuffer->first),
                                     std::move(*ObjInterface)))
         return Err;
     }

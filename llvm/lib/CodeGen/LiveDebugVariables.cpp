@@ -1873,12 +1873,10 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
         Builder.addImm(regSizeInBits);
       }
 
-      LLVM_DEBUG(
-      if (SpillOffset != 0) {
-        dbgs() << "DBG_PHI for Vreg " << Reg << " subreg " << SubReg <<
-                  " has nonzero offset\n";
-      }
-      );
+      LLVM_DEBUG(if (SpillOffset != 0) {
+        dbgs() << "DBG_PHI for " << printReg(Reg, TRI, SubReg)
+               << " has nonzero offset\n";
+      });
     }
     // If there was no mapping for a value ID, it's optimized out. Create no
     // DBG_PHI, and any variables using this value will become optimized out.

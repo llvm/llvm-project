@@ -498,7 +498,7 @@ Status NativeFile::Sync() {
 #ifdef _WIN32
     int err = FlushFileBuffers((HANDLE)_get_osfhandle(m_descriptor));
     if (err == 0)
-      error.SetErrorToGenericError();
+      error = Status::FromErrorString("unknown error");
 #else
     if (llvm::sys::RetryAfterSignal(-1, ::fsync, m_descriptor) == -1)
       error = Status::FromErrno();

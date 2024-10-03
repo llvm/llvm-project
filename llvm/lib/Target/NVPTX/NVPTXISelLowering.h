@@ -51,8 +51,8 @@ enum NodeType : unsigned {
   CallSeqEnd,
   CallPrototype,
   ProxyReg,
-  FUN_SHFL_CLAMP,
-  FUN_SHFR_CLAMP,
+  FSHL_CLAMP,
+  FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
   IMAD,
@@ -61,6 +61,7 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   BrxStart,
   BrxItem,
@@ -622,6 +623,8 @@ private:
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;

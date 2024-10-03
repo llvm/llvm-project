@@ -175,6 +175,9 @@ namespace llvm {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
     }
 
+    /// Return true if this is a vector value type.
+    bool isRISCVVectorTuple() const { return V.isRISCVVectorTuple(); }
+
     bool isFixedLengthVector() const {
       return isSimple() ? V.isFixedLengthVector()
                         : isExtendedFixedLengthVector();
@@ -349,6 +352,11 @@ namespace llvm {
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
       return getVectorElementCount().getKnownMinValue();
+    }
+
+    /// Given a RISCV vector tuple type, return the num_fields.
+    unsigned getRISCVVectorTupleNumFields() const {
+      return V.getRISCVVectorTupleNumFields();
     }
 
     /// Return the size of the specified value type in bits.

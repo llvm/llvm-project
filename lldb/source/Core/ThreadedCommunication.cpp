@@ -178,7 +178,7 @@ bool ThreadedCommunication::StartReadThread(Status *error_ptr) {
     m_read_thread = *maybe_thread;
   } else {
     if (error_ptr)
-      *error_ptr = Status(maybe_thread.takeError());
+      *error_ptr = Status::FromError(maybe_thread.takeError());
     else {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Host), maybe_thread.takeError(),
                      "failed to launch host thread: {0}");

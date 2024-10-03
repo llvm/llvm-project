@@ -184,6 +184,12 @@
 #  define TEST_CONSTEXPR_CXX23
 #endif
 
+#if TEST_STD_VER >= 26
+#  define TEST_CONSTEXPR_CXX26 constexpr
+#else
+#  define TEST_CONSTEXPR_CXX26
+#endif
+
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
@@ -208,12 +214,6 @@
 #define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_NORETURN)
-#define TEST_NORETURN _LIBCPP_NORETURN
-#else
-#define TEST_NORETURN [[noreturn]]
-#endif
-
 #if defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) || \
   (!(TEST_STD_VER > 14 || \
     (defined(__cpp_aligned_new) && __cpp_aligned_new >= 201606L)))
@@ -221,9 +221,11 @@
 #endif
 
 #if TEST_STD_VER > 17
-#define TEST_CONSTINIT constinit
+#  define TEST_CONSTINIT constinit
+#elif __has_cpp_attribute(clang::require_constant_initialization)
+#  define TEST_CONSTINIT [[clang::require_constant_initialization]]
 #else
-#define TEST_CONSTINIT
+#  define TEST_CONSTINIT
 #endif
 
 #if TEST_STD_VER < 11
@@ -495,6 +497,18 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 // Clang-18 has support for deducing this, but it does not set the FTM.
 #ifdef _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
 #  define TEST_HAS_EXPLICIT_THIS_PARAMETER
+#endif
+
+// Placement `operator new`/`operator new[]` are not yet constexpr in C++26
+// when using MS ABI, because they are from <vcruntime_new.h>.
+#if defined(__cpp_lib_constexpr_new) && __cpp_lib_constexpr_new >= 202406L
+#  define TEST_CONSTEXPR_OPERATOR_NEW constexpr
+#else
+#  define TEST_CONSTEXPR_OPERATOR_NEW
+#endif
+
+#if __SIZEOF_LONG_DOUBLE__ == __SIZEOF_DOUBLE__
+#  define TEST_LONG_DOUBLE_IS_DOUBLE
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

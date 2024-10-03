@@ -1661,8 +1661,9 @@ CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(unsigned PtrAuthABIVersion,
   assert((PtrAuthABIVersion <= 0xF) &&
          "ptrauth abi version must fit in 4 bits");
   return CPU_SUBTYPE_ARM64E | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK |
-         (PtrAuthKernelABIVersion ? CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
-                                  : 0) |
+         (PtrAuthKernelABIVersion
+              ? (uint32_t)CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK
+              : 0) |
          (PtrAuthABIVersion << 24);
 }
 

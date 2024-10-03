@@ -120,7 +120,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
         break;
 
       default:
-        return Status(
+        return Status::FromErrorStringWithFormat(
             "NativeProcessWindows::%s (): unexpected state %s specified "
             "for pid %" PRIu64 ", tid %" PRIu64,
             __FUNCTION__, StateAsCString(action->state), GetID(),
@@ -361,7 +361,7 @@ Status NativeProcessWindows::CacheLoadedModules() {
       return Status();
   }
 
-  error.SetError(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
+  error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
 }
 
@@ -548,7 +548,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
                   << " encountered at address "
                   << llvm::format_hex(record.GetExceptionAddress(), 8);
       StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-                 desc_stream.str().c_str());
+                 desc.c_str());
 
       SetState(eStateStopped, true);
     }

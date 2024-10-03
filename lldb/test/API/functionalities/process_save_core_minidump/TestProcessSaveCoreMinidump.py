@@ -17,6 +17,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         expected_modules,
         expected_threads,
         stacks_to_sps_map,
+        stacks_to_registers_map,
     ):
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
@@ -62,6 +63,29 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # Try to read just past the red zone and fail
             process.ReadMemory(sp - red_zone - 1, 1, error)
             self.assertTrue(error.Fail(), "No failure when reading past the red zone")
+            # Verify the registers are the same
+            self.assertIn(thread_id, stacks_to_registers_map)
+            register_val_list = stacks_to_registers_map[thread_id]
+            frame_register_list = frame.GetRegisters()
+            # explicitly verify we collected fs and gs base for x86_64
+            explicit_registers = ["fs_base", "gs_base"]
+            for reg in explicit_registers:
+                register = frame_register_list.GetFirstValueByName(reg)
+                self.assertNotEqual(None, register)
+                self.assertEqual(
+                    register.GetValueAsUnsigned(),
+                    stacks_to_registers_map[thread_id]
+                    .GetFirstValueByName("fs_base")
+                    .GetValueAsUnsigned(),
+                )
+
+            for x in register_val_list:
+                self.assertEqual(
+                    x.GetValueAsUnsigned(),
+                    frame_register_list.GetFirstValueByName(
+                        x.GetName()
+                    ).GetValueAsUnsigned(),
+                )
 
         self.dbg.DeleteTarget(target)
 
@@ -93,12 +117,16 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_number_of_threads = process.GetNumThreads()
             expected_threads = []
             stacks_to_sp_map = {}
+            stakcs_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
+                stakcs_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # save core and, kill process and verify corefile existence
             base_command = "process save-core --plugin-name=minidump "
@@ -110,6 +138,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=modified-memory '%s'" % (core_dirty))
@@ -120,6 +149,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.runCmd(base_command + " --style=full '%s'" % (core_full))
@@ -130,6 +160,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -147,6 +178,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             options = lldb.SBSaveCoreOptions()
@@ -163,6 +195,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             # Minidump can now save full core files, but they will be huge and
@@ -181,6 +214,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stakcs_to_registers_map,
             )
 
             self.assertSuccess(process.Kill())
@@ -276,12 +310,16 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             expected_threads = []
             stacks_to_sp_map = {}
             expected_pid = process.GetProcessInfo().GetProcessID()
+            stacks_to_registers_map = {}
 
             for thread_idx in range(process.GetNumThreads()):
                 thread = process.GetThreadAtIndex(thread_idx)
                 thread_id = thread.GetThreadID()
                 expected_threads.append(thread_id)
                 stacks_to_sp_map[thread_id] = thread.GetFrameAtIndex(0).GetSP()
+                stacks_to_registers_map[thread_id] = thread.GetFrameAtIndex(
+                    0
+                ).GetRegisters()
 
             # This is almost identical to the single thread test case because
             # minidump defaults to stacks only, so we want to see if the
@@ -299,6 +337,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 expected_modules,
                 expected_threads,
                 stacks_to_sp_map,
+                stacks_to_registers_map,
             )
 
         finally:
@@ -451,6 +490,78 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             # at various indices.
             self.save_core_with_region(process, 0)
             self.save_core_with_region(process, len(memory_list) - 1)
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+
+    @skipUnlessPlatform(["linux"])
+    def minidump_deleted_on_save_failure(self):
+        """Test that verifies the minidump file is deleted after an error"""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            custom_file = self.getBuildArtifact("core.should.be.deleted.custom.dmp")
+            options = lldb.SBSaveCoreOptions()
+            options.SetOutputFile(lldb.SBFileSpec(custom_file))
+            options.SetPluginName("minidump")
+            options.SetStyle(lldb.eSaveCoreCustomOnly)
+            # We set custom only and have no thread list and have no memory.
+            error = process.SaveCore(options)
+            self.assertTrue(error.Fail())
+            self.assertIn(
+                "no valid address ranges found for core style", error.GetCString()
+            )
+            self.assertTrue(not os.path.isfile(custom_file))
+
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+
+    def minidump_deterministic_difference(self):
+        """Test that verifies that two minidumps produced are identical."""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        try:
+            target = self.dbg.CreateTarget(exe)
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(process.GetState(), lldb.eStateStopped)
+
+            core_styles = [
+                lldb.eSaveCoreStackOnly,
+                lldb.eSaveCoreDirtyOnly,
+                lldb.eSaveCoreFull,
+            ]
+            for style in core_styles:
+                spec_one = lldb.SBFileSpec(self.getBuildArtifact("core.one.dmp"))
+                spec_two = lldb.SBFileSpec(self.getBuildArtifact("core.two.dmp"))
+                options = lldb.SBSaveCoreOptions()
+                options.SetOutputFile(spec_one)
+                options.SetPluginName("minidump")
+                options.SetStyle(style)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+                options.SetOutputFile(spec_two)
+                error = process.SaveCore(options)
+                self.assertTrue(error.Success())
+
+                file_one = None
+                file_two = None
+                with open(spec_one.GetFileName(), mode="rb") as file:
+                    file_one = file.read()
+                with open(spec_two.GetFileName(), mode="rb") as file:
+                    file_two = file.read()
+                self.assertEqual(file_one, file_two)
+                self.assertTrue(os.unlink(spec_one.GetFileName()))
+                self.assertTrue(os.unlink(spec_two.GetFileName()))
 
         finally:
             self.assertTrue(self.dbg.DeleteTarget(target))

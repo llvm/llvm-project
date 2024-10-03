@@ -73,8 +73,9 @@ private:
   RecTyKind Kind;
   /// The RecordKeeper that uniqued this Type.
   RecordKeeper &RK;
-  /// ListRecTy of the list that has elements of this type.
-  ListRecTy *ListTy = nullptr;
+  /// ListRecTy of the list that has elements of this type. Its a cache that
+  /// is populated on demand.
+  mutable const ListRecTy *ListTy = nullptr;
 
 public:
   RecTy(RecTyKind K, RecordKeeper &RK) : Kind(K), RK(RK) {}
@@ -98,7 +99,7 @@ public:
   virtual bool typeIsA(const RecTy *RHS) const;
 
   /// Returns the type representing list<thistype>.
-  ListRecTy *getListTy();
+  const ListRecTy *getListTy() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const RecTy &Ty) {
@@ -117,7 +118,7 @@ public:
     return RT->getRecTyKind() == BitRecTyKind;
   }
 
-  static BitRecTy *get(RecordKeeper &RK);
+  static const BitRecTy *get(RecordKeeper &RK);
 
   std::string getAsString() const override { return "bit"; }
 
@@ -136,7 +137,7 @@ public:
     return RT->getRecTyKind() == BitsRecTyKind;
   }
 
-  static BitsRecTy *get(RecordKeeper &RK, unsigned Sz);
+  static const BitsRecTy *get(RecordKeeper &RK, unsigned Sz);
 
   unsigned getNumBits() const { return Size; }
 
@@ -156,7 +157,7 @@ public:
     return RT->getRecTyKind() == IntRecTyKind;
   }
 
-  static IntRecTy *get(RecordKeeper &RK);
+  static const IntRecTy *get(RecordKeeper &RK);
 
   std::string getAsString() const override { return "int"; }
 
@@ -174,7 +175,7 @@ public:
     return RT->getRecTyKind() == StringRecTyKind;
   }
 
-  static StringRecTy *get(RecordKeeper &RK);
+  static const StringRecTy *get(RecordKeeper &RK);
 
   std::string getAsString() const override;
 
@@ -184,11 +185,11 @@ public:
 /// 'list<Ty>' - Represent a list of element values, all of which must be of
 /// the specified type. The type is stored in ElementTy.
 class ListRecTy : public RecTy {
-  friend ListRecTy *RecTy::getListTy();
+  friend const ListRecTy *RecTy::getListTy() const;
 
-  RecTy *ElementTy;
+  const RecTy *ElementTy;
 
-  explicit ListRecTy(RecTy *T)
+  explicit ListRecTy(const RecTy *T)
       : RecTy(ListRecTyKind, T->getRecordKeeper()), ElementTy(T) {}
 
 public:
@@ -196,8 +197,8 @@ public:
     return RT->getRecTyKind() == ListRecTyKind;
   }
 
-  static ListRecTy *get(RecTy *T) { return T->getListTy(); }
-  RecTy *getElementType() const { return ElementTy; }
+  static const ListRecTy *get(const RecTy *T) { return T->getListTy(); }
+  const RecTy *getElementType() const { return ElementTy; }
 
   std::string getAsString() const override;
 
@@ -217,7 +218,7 @@ public:
     return RT->getRecTyKind() == DagRecTyKind;
   }
 
-  static DagRecTy *get(RecordKeeper &RK);
+  static const DagRecTy *get(RecordKeeper &RK);
 
   std::string getAsString() const override;
 };
@@ -226,8 +227,9 @@ public:
 ///
 /// The list of superclasses is non-redundant, i.e. only contains classes that
 /// are not the superclass of some other listed class.
-class RecordRecTy final : public RecTy, public FoldingSetNode,
-                          public TrailingObjects<RecordRecTy, Record *> {
+class RecordRecTy final : public RecTy,
+                          public FoldingSetNode,
+                          public TrailingObjects<RecordRecTy, const Record *> {
   friend class Record;
   friend detail::RecordKeeperImpl;
 
@@ -248,23 +250,24 @@ public:
   }
 
   /// Get the record type with the given non-redundant list of superclasses.
-  static RecordRecTy *get(RecordKeeper &RK, ArrayRef<Record *> Classes);
-  static RecordRecTy *get(Record *Class);
+  static const RecordRecTy *get(RecordKeeper &RK,
+                                ArrayRef<const Record *> Classes);
+  static const RecordRecTy *get(const Record *Class);
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  ArrayRef<Record *> getClasses() const {
-    return ArrayRef(getTrailingObjects<Record *>(), NumClasses);
+  ArrayRef<const Record *> getClasses() const {
+    return ArrayRef(getTrailingObjects<const Record *>(), NumClasses);
   }
 
-  using const_record_iterator = Record * const *;
+  using const_record_iterator = const Record *const *;
 
   const_record_iterator classes_begin() const { return getClasses().begin(); }
   const_record_iterator classes_end() const { return getClasses().end(); }
 
   std::string getAsString() const override;
 
-  bool isSubClassOf(Record *Class) const;
+  bool isSubClassOf(const Record *Class) const;
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 
   bool typeIsA(const RecTy *RHS) const override;
@@ -272,7 +275,7 @@ public:
 
 /// Find a common type that T1 and T2 convert to.
 /// Return 0 if no such type exists.
-RecTy *resolveTypes(RecTy *T1, RecTy *T2);
+const RecTy *resolveTypes(const RecTy *T1, const RecTy *T2);
 
 //===----------------------------------------------------------------------===//
 //  Initializer Classes
@@ -370,12 +373,12 @@ public:
   /// If this value is convertible to type \p Ty, return a value whose
   /// type is \p Ty, generating a !cast operation if required.
   /// Otherwise, return null.
-  virtual Init *getCastTo(RecTy *Ty) const = 0;
+  virtual Init *getCastTo(const RecTy *Ty) const = 0;
 
   /// Convert to a value whose type is \p Ty, or return null if this
   /// is not possible. This can happen if the value's type is convertible
   /// to \p Ty, but there are unresolved references.
-  virtual Init *convertInitializerTo(RecTy *Ty) const = 0;
+  virtual Init *convertInitializerTo(const RecTy *Ty) const = 0;
 
   /// This function is used to implement the bit range
   /// selection operator. Given a value, it selects the specified bits,
@@ -388,7 +391,7 @@ public:
   /// This function is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named
   /// field if they are of type record.
-  virtual RecTy *getFieldType(StringInit *FieldName) const {
+  virtual const RecTy *getFieldType(StringInit *FieldName) const {
     return nullptr;
   }
 
@@ -411,10 +414,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
 /// This is the common superclass of types that have a specific,
 /// explicit type, stored in ValueTy.
 class TypedInit : public Init {
-  RecTy *ValueTy;
+  const RecTy *ValueTy;
 
 protected:
-  explicit TypedInit(InitKind K, RecTy *T, uint8_t Opc = 0)
+  explicit TypedInit(InitKind K, const RecTy *T, uint8_t Opc = 0)
       : Init(K, Opc), ValueTy(T) {}
 
 public:
@@ -427,20 +430,20 @@ public:
   }
 
   /// Get the type of the Init as a RecTy.
-  RecTy *getType() const { return ValueTy; }
+  const RecTy *getType() const { return ValueTy; }
 
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const { return ValueTy->getRecordKeeper(); }
 
-  Init *getCastTo(RecTy *Ty) const override;
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *getCastTo(const RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
   /// they are of type record.
-  RecTy *getFieldType(StringInit *FieldName) const override;
+  const RecTy *getFieldType(StringInit *FieldName) const override;
 };
 
 /// '?' - Represents an uninitialized value.
@@ -466,8 +469,8 @@ public:
   /// Get the record keeper that initialized this Init.
   RecordKeeper &getRecordKeeper() const { return RK; }
 
-  Init *getCastTo(RecTy *Ty) const override;
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *getCastTo(const RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
   Init *getBit(unsigned Bit) const override {
     return const_cast<UnsetInit*>(this);
@@ -538,8 +541,10 @@ public:
   bool isComplete() const override { return false; }
   bool isConcrete() const override { return false; }
   Init *getBit(unsigned Bit) const override { return Value->getBit(Bit); }
-  Init *getCastTo(RecTy *Ty) const override { return Value->getCastTo(Ty); }
-  Init *convertInitializerTo(RecTy *Ty) const override {
+  Init *getCastTo(const RecTy *Ty) const override {
+    return Value->getCastTo(Ty);
+  }
+  Init *convertInitializerTo(const RecTy *Ty) const override {
     return Value->convertInitializerTo(Ty);
   }
 };
@@ -550,7 +555,8 @@ class BitInit final : public TypedInit {
 
   bool Value;
 
-  explicit BitInit(bool V, RecTy *T) : TypedInit(IK_BitInit, T), Value(V) {}
+  explicit BitInit(bool V, const RecTy *T)
+      : TypedInit(IK_BitInit, T), Value(V) {}
 
 public:
   BitInit(const BitInit &) = delete;
@@ -564,7 +570,7 @@ public:
 
   bool getValue() const { return Value; }
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
   Init *getBit(unsigned Bit) const override {
     assert(Bit < 1 && "Bit index out of range!");
@@ -601,8 +607,9 @@ public:
 
   unsigned getNumBits() const { return NumBits; }
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
+  std::optional<int64_t> convertInitializerToInt() const;
 
   bool isComplete() const override {
     for (unsigned i = 0; i != getNumBits(); ++i)
@@ -646,7 +653,7 @@ public:
 
   int64_t getValue() const { return Value; }
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
 
   bool isConcrete() const override { return true; }
@@ -721,7 +728,7 @@ public:
   StringFormat getFormat() const { return Format; }
   bool hasCodeFormat() const { return Format == SF_Code; }
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
   bool isConcrete() const override { return true; }
 
@@ -751,7 +758,7 @@ public:
   using const_iterator = Init *const *;
 
 private:
-  explicit ListInit(unsigned N, RecTy *EltTy)
+  explicit ListInit(unsigned N, const RecTy *EltTy)
       : TypedInit(IK_ListInit, ListRecTy::get(EltTy)), NumValues(N) {}
 
 public:
@@ -764,7 +771,7 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_ListInit;
   }
-  static ListInit *get(ArrayRef<Init *> Range, RecTy *EltTy);
+  static ListInit *get(ArrayRef<Init *> Range, const RecTy *EltTy);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -772,13 +779,13 @@ public:
     assert(i < NumValues && "List element index out of range!");
     return getTrailingObjects<Init *>()[i];
   }
-  RecTy *getElementType() const {
+  const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
 
-  Record *getElementAsRecord(unsigned i) const;
+  const Record *getElementAsRecord(unsigned i) const;
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
   /// This method is used by classes that refer to other
   /// variables which may not be defined at the time they expression is formed.
@@ -810,8 +817,8 @@ public:
 ///
 class OpInit : public TypedInit {
 protected:
-  explicit OpInit(InitKind K, RecTy *Type, uint8_t Opc)
-    : TypedInit(K, Type, Opc) {}
+  explicit OpInit(InitKind K, const RecTy *Type, uint8_t Opc)
+      : TypedInit(K, Type, Opc) {}
 
 public:
   OpInit(const OpInit &) = delete;
@@ -846,14 +853,15 @@ public:
     EMPTY,
     GETDAGOP,
     LOG2,
-    REPR
+    REPR,
+    LISTFLATTEN,
   };
 
 private:
   Init *LHS;
 
-  UnOpInit(UnaryOp opc, Init *lhs, RecTy *Type)
-    : OpInit(IK_UnOpInit, Type, opc), LHS(lhs) {}
+  UnOpInit(UnaryOp opc, Init *lhs, const RecTy *Type)
+      : OpInit(IK_UnOpInit, Type, opc), LHS(lhs) {}
 
 public:
   UnOpInit(const UnOpInit &) = delete;
@@ -863,7 +871,7 @@ public:
     return I->getKind() == IK_UnOpInit;
   }
 
-  static UnOpInit *get(UnaryOp opc, Init *lhs, RecTy *Type);
+  static UnOpInit *get(UnaryOp opc, Init *lhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -930,8 +938,8 @@ public:
 private:
   Init *LHS, *RHS;
 
-  BinOpInit(BinaryOp opc, Init *lhs, Init *rhs, RecTy *Type) :
-      OpInit(IK_BinOpInit, Type, opc), LHS(lhs), RHS(rhs) {}
+  BinOpInit(BinaryOp opc, Init *lhs, Init *rhs, const RecTy *Type)
+      : OpInit(IK_BinOpInit, Type, opc), LHS(lhs), RHS(rhs) {}
 
 public:
   BinOpInit(const BinOpInit &) = delete;
@@ -941,8 +949,7 @@ public:
     return I->getKind() == IK_BinOpInit;
   }
 
-  static BinOpInit *get(BinaryOp opc, Init *lhs, Init *rhs,
-                        RecTy *Type);
+  static BinOpInit *get(BinaryOp opc, Init *lhs, Init *rhs, const RecTy *Type);
   static Init *getStrConcat(Init *lhs, Init *rhs);
   static Init *getListConcat(TypedInit *lhs, Init *rhs);
 
@@ -998,9 +1005,8 @@ public:
 private:
   Init *LHS, *MHS, *RHS;
 
-  TernOpInit(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs,
-             RecTy *Type) :
-      OpInit(IK_TernOpInit, Type, opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
+  TernOpInit(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs, const RecTy *Type)
+      : OpInit(IK_TernOpInit, Type, opc), LHS(lhs), MHS(mhs), RHS(rhs) {}
 
 public:
   TernOpInit(const TernOpInit &) = delete;
@@ -1010,9 +1016,8 @@ public:
     return I->getKind() == IK_TernOpInit;
   }
 
-  static TernOpInit *get(TernaryOp opc, Init *lhs,
-                         Init *mhs, Init *rhs,
-                         RecTy *Type);
+  static TernOpInit *get(TernaryOp opc, Init *lhs, Init *mhs, Init *rhs,
+                         const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1058,11 +1063,10 @@ public:
 class CondOpInit final : public TypedInit, public FoldingSetNode,
                       public TrailingObjects<CondOpInit, Init *> {
   unsigned NumConds;
-  RecTy *ValType;
+  const RecTy *ValType;
 
-  CondOpInit(unsigned NC, RecTy *Type)
-    : TypedInit(IK_CondOpInit, Type),
-      NumConds(NC), ValType(Type) {}
+  CondOpInit(unsigned NC, const RecTy *Type)
+      : TypedInit(IK_CondOpInit, Type), NumConds(NC), ValType(Type) {}
 
   size_t numTrailingObjects(OverloadToken<Init *>) const {
     return 2*NumConds;
@@ -1076,12 +1080,12 @@ public:
     return I->getKind() == IK_CondOpInit;
   }
 
-  static CondOpInit *get(ArrayRef<Init*> C, ArrayRef<Init*> V,
-                        RecTy *Type);
+  static CondOpInit *get(ArrayRef<Init *> C, ArrayRef<Init *> V,
+                         const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  RecTy *getValType() const { return ValType; }
+  const RecTy *getValType() const { return ValType; }
 
   unsigned getNumConds() const { return NumConds; }
 
@@ -1138,7 +1142,8 @@ private:
   Init *B;
   Init *Expr;
 
-  FoldOpInit(Init *Start, Init *List, Init *A, Init *B, Init *Expr, RecTy *Type)
+  FoldOpInit(Init *Start, Init *List, Init *A, Init *B, Init *Expr,
+             const RecTy *Type)
       : TypedInit(IK_FoldOpInit, Type), Start(Start), List(List), A(A), B(B),
         Expr(Expr) {}
 
@@ -1149,7 +1154,7 @@ public:
   static bool classof(const Init *I) { return I->getKind() == IK_FoldOpInit; }
 
   static FoldOpInit *get(Init *Start, Init *List, Init *A, Init *B, Init *Expr,
-                         RecTy *Type);
+                         const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1169,10 +1174,10 @@ public:
 /// !isa<type>(expr) - Dynamically determine the type of an expression.
 class IsAOpInit : public TypedInit, public FoldingSetNode {
 private:
-  RecTy *CheckType;
+  const RecTy *CheckType;
   Init *Expr;
 
-  IsAOpInit(RecTy *CheckType, Init *Expr)
+  IsAOpInit(const RecTy *CheckType, Init *Expr)
       : TypedInit(IK_IsAOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
         CheckType(CheckType), Expr(Expr) {}
 
@@ -1182,7 +1187,7 @@ public:
 
   static bool classof(const Init *I) { return I->getKind() == IK_IsAOpInit; }
 
-  static IsAOpInit *get(RecTy *CheckType, Init *Expr);
+  static IsAOpInit *get(const RecTy *CheckType, Init *Expr);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1203,10 +1208,10 @@ public:
 /// `expr` exists.
 class ExistsOpInit : public TypedInit, public FoldingSetNode {
 private:
-  RecTy *CheckType;
+  const RecTy *CheckType;
   Init *Expr;
 
-  ExistsOpInit(RecTy *CheckType, Init *Expr)
+  ExistsOpInit(const RecTy *CheckType, Init *Expr)
       : TypedInit(IK_ExistsOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
         CheckType(CheckType), Expr(Expr) {}
 
@@ -1216,7 +1221,7 @@ public:
 
   static bool classof(const Init *I) { return I->getKind() == IK_ExistsOpInit; }
 
-  static ExistsOpInit *get(RecTy *CheckType, Init *Expr);
+  static ExistsOpInit *get(const RecTy *CheckType, Init *Expr);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1237,7 +1242,7 @@ public:
 class VarInit : public TypedInit {
   Init *VarName;
 
-  explicit VarInit(Init *VN, RecTy *T)
+  explicit VarInit(Init *VN, const RecTy *T)
       : TypedInit(IK_VarInit, T), VarName(VN) {}
 
 public:
@@ -1248,8 +1253,8 @@ public:
     return I->getKind() == IK_VarInit;
   }
 
-  static VarInit *get(StringRef VN, RecTy *T);
-  static VarInit *get(Init *VN, RecTy *T);
+  static VarInit *get(StringRef VN, const RecTy *T);
+  static VarInit *get(Init *VN, const RecTy *T);
 
   StringRef getName() const;
   Init *getNameInit() const { return VarName; }
@@ -1311,9 +1316,9 @@ public:
 class DefInit : public TypedInit {
   friend class Record;
 
-  Record *Def;
+  const Record *Def;
 
-  explicit DefInit(Record *D);
+  explicit DefInit(const Record *D);
 
 public:
   DefInit(const DefInit &) = delete;
@@ -1323,15 +1328,11 @@ public:
     return I->getKind() == IK_DefInit;
   }
 
-  static DefInit *get(Record*);
+  Init *convertInitializerTo(const RecTy *Ty) const override;
 
-  Init *convertInitializerTo(RecTy *Ty) const override;
+  const Record *getDef() const { return Def; }
 
-  Record *getDef() const { return Def; }
-
-  //virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits);
-
-  RecTy *getFieldType(StringInit *FieldName) const override;
+  const RecTy *getFieldType(StringInit *FieldName) const override;
 
   bool isConcrete() const override { return true; }
   std::string getAsString() const override;
@@ -1472,7 +1473,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   Init *getOperator() const { return Val; }
-  Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
+  const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
 
   StringInit *getName() const { return ValName; }
 
@@ -1553,7 +1554,7 @@ public:
 private:
   Init *Name;
   SMLoc Loc; // Source location of definition of name.
-  PointerIntPair<RecTy *, 2, FieldKind> TyAndKind;
+  PointerIntPair<const RecTy *, 2, FieldKind> TyAndKind;
   Init *Value;
   bool IsUsed = false;
 
@@ -1561,8 +1562,8 @@ private:
   SmallVector<SMRange> ReferenceLocs;
 
 public:
-  RecordVal(Init *N, RecTy *T, FieldKind K);
-  RecordVal(Init *N, SMLoc Loc, RecTy *T, FieldKind K);
+  RecordVal(Init *N, const RecTy *T, FieldKind K);
+  RecordVal(Init *N, SMLoc Loc, const RecTy *T, FieldKind K);
 
   /// Get the record keeper used to unique this value.
   RecordKeeper &getRecordKeeper() const { return Name->getRecordKeeper(); }
@@ -1592,7 +1593,7 @@ public:
   }
 
   /// Get the type of the field value as a RecTy.
-  RecTy *getType() const { return TyAndKind.getPointer(); }
+  const RecTy *getType() const { return TyAndKind.getPointer(); }
 
   /// Get the type of the field for printing purposes.
   std::string getPrintType() const;
@@ -1659,7 +1660,7 @@ private:
   // this record.
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
-  SmallVector<SMRange, 0> ReferenceLocs;
+  mutable SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1667,13 +1668,13 @@ private:
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
-  SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
+  SmallVector<std::pair<const Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
 
   // The DefInit corresponding to this record.
-  DefInit *CorrespondingDefInit = nullptr;
+  mutable DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1728,7 +1729,7 @@ public:
   }
 
   /// Add a reference to this record value.
-  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+  void appendReferenceLoc(SMRange Loc) const { ReferenceLocs.push_back(Loc); }
 
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
@@ -1737,10 +1738,10 @@ public:
   void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
-  RecordRecTy *getType();
+  const RecordRecTy *getType() const;
 
   /// get the corresponding DefInit.
-  DefInit *getDefInit();
+  DefInit *getDefInit() const;
 
   bool isClass() const { return Kind == RK_Class; }
 
@@ -1757,7 +1758,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>>  getSuperClasses() const {
+  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -1765,7 +1766,7 @@ public:
   bool hasDirectSuperClass(const Record *SuperClass) const;
 
   /// Append the direct superclasses of this record to Classes.
-  void getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const;
+  void getDirectSuperClasses(SmallVectorImpl<const Record *> &Classes) const;
 
   bool isTemplateArg(Init *Name) const {
     return llvm::is_contained(TemplateArgs, Name);
@@ -1831,25 +1832,25 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const auto &SCPair : SuperClasses)
-      if (SCPair.first == R)
+    for (const auto &[SC, _] : SuperClasses)
+      if (SC == R)
         return true;
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &SCPair : SuperClasses) {
-      if (const auto *SI = dyn_cast<StringInit>(SCPair.first->getNameInit())) {
+    for (const auto &[SC, _] : SuperClasses) {
+      if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
-      } else if (SCPair.first->getNameInitAsString() == Name) {
+      } else if (SC->getNameInitAsString() == Name) {
         return true;
       }
     }
     return false;
   }
 
-  void addSuperClass(Record *R, SMRange Range) {
+  void addSuperClass(const Record *R, SMRange Range) {
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
@@ -1915,7 +1916,7 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// vector of records, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
+  std::vector<const Record *> getValueAsListOfDefs(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of integers, throwing an exception if the field does not exist or
@@ -1930,13 +1931,13 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// Record, throwing an exception if the field does not exist or if the value
   /// is not the right type.
-  Record *getValueAsDef(StringRef FieldName) const;
+  const Record *getValueAsDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// Record, returning null if the field exists but is "uninitialized" (i.e.
   /// set to `?`), and throwing an exception if the field does not exist or if
   /// its value is not the right type.
-  Record *getValueAsOptionalDef(StringRef FieldName) const;
+  const Record *getValueAsOptionalDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a bit,
   /// throwing an exception if the field does not exist or if the value is not
@@ -2036,7 +2037,7 @@ public:
   }
 
   /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name);
+  void startTimer(StringRef Name) const;
 
   /// Stop timing a phase.
   void stopTimer();
@@ -2057,21 +2058,32 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
+  // Non-const methods return std::vector<Record *> by value or reference.
+  // Const methods return std::vector<const Record *> by value or
+  // ArrayRef<const Record *>.
+
   /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  ArrayRef<const Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  const std::vector<Record *> &getAllDerivedDefinitions(StringRef ClassName);
 
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(
-      ArrayRef<StringRef> ClassNames) const;
+  std::vector<const Record *>
+  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const;
+  std::vector<Record *>
+  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames);
 
   /// Get all the concrete records that inherit from specified class, if the
   /// class is defined. Returns an empty vector if the class is not defined.
-  std::vector<Record *>
+  ArrayRef<const Record *>
   getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
+  const std::vector<Record *> &
+  getAllDerivedDefinitionsIfDefined(StringRef ClassName);
 
   void dump() const;
+
+  void dumpAllocationStats(raw_ostream &OS) const;
 
 private:
   RecordKeeper(RecordKeeper &&) = delete;
@@ -2079,17 +2091,33 @@ private:
   RecordKeeper &operator=(RecordKeeper &&) = delete;
   RecordKeeper &operator=(const RecordKeeper &) = delete;
 
+  // Helper template functions for backend accessors.
+  template <typename VecTy>
+  const VecTy &
+  getAllDerivedDefinitionsImpl(StringRef ClassName,
+                               std::map<std::string, VecTy> &Cache) const;
+
+  template <typename VecTy>
+  VecTy getAllDerivedDefinitionsImpl(ArrayRef<StringRef> ClassNames) const;
+
+  template <typename VecTy>
+  const VecTy &getAllDerivedDefinitionsIfDefinedImpl(
+      StringRef ClassName, std::map<std::string, VecTy> &Cache) const;
+
   std::string InputFilename;
   RecordMap Classes, Defs;
-  mutable StringMap<std::vector<Record *>> ClassRecordsMap;
+  mutable std::map<std::string, std::vector<const Record *>>
+      ClassRecordsMapConst;
+  mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
   GlobalMap ExtraGlobals;
 
+  // TODO: Move timing related code out of RecordKeeper.
   // These members are for the phase timing feature. We need a timer group,
   // the last timer started, and a flag to say whether the last timer
   // is the special "backend overall timer."
-  TimerGroup *TimingGroup = nullptr;
-  Timer *LastTimer = nullptr;
-  bool BackendTimer = false;
+  mutable TimerGroup *TimingGroup = nullptr;
+  mutable Timer *LastTimer = nullptr;
+  mutable bool BackendTimer = false;
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;

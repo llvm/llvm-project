@@ -419,6 +419,12 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
       break;
+    case OpenACCClauseKind::Collapse:
+      OS << " clause";
+      if (cast<OpenACCCollapseClause>(C)->hasForce())
+        OS << ": force";
+      break;
+
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
@@ -1196,6 +1202,18 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
     dumpTemplateName(STS->getReplacement(), "replacement");
+    return;
+  }
+  case TemplateName::DeducedTemplate: {
+    OS << " deduced";
+    const DeducedTemplateStorage *DTS = TN.getAsDeducedTemplateName();
+    dumpTemplateName(DTS->getUnderlying(), "underlying");
+    AddChild("defaults", [=] {
+      auto [StartPos, Args] = DTS->getDefaultArguments();
+      OS << " start " << StartPos;
+      for (const TemplateArgument &Arg : Args)
+        AddChild([=] { Visit(Arg, SourceRange()); });
+    });
     return;
   }
   // FIXME: Implement these.
@@ -2877,6 +2895,10 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
+  OS << (E->isInOut() ? " inout" : " out");
 }
 
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {

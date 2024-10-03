@@ -54,8 +54,8 @@ public:
   virtual void switchContext(StringRef Name) {}
 
 protected:
-  MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NrInputs)
-      : Ctx(Ctx), Type(Type), InputBuffers(NrInputs) {
+  MLModelRunner(LLVMContext &Ctx, Kind Type, size_t NumInputs)
+      : Ctx(Ctx), Type(Type), InputBuffers(NumInputs) {
     assert(Type != Kind::Unknown);
   }
   virtual void *evaluateUntyped() = 0;

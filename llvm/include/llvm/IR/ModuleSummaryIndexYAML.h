@@ -219,9 +219,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       io.setError("key not an integer");
       return;
     }
-    if (!V.count(KeyInt))
-      V.emplace(KeyInt, /*IsAnalysis=*/false);
-    auto &Elem = V.find(KeyInt)->second;
+    auto &Elem = V.try_emplace(KeyInt, /*IsAnalysis=*/false).first->second;
     for (auto &GVSum : GVSums) {
       GlobalValueSummary::GVFlags GVFlags(
           static_cast<GlobalValue::LinkageTypes>(GVSum.Linkage),
@@ -241,15 +239,15 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
         Elem.SummaryList.push_back(std::move(ASum));
         continue;
       }
-      std::vector<ValueInfo> Refs;
+      SmallVector<ValueInfo, 0> Refs;
+      Refs.reserve(GVSum.Refs.size());
       for (auto &RefGUID : GVSum.Refs) {
-        if (!V.count(RefGUID))
-          V.emplace(RefGUID, /*IsAnalysis=*/false);
-        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*V.find(RefGUID)));
+        auto It = V.try_emplace(RefGUID, /*IsAnalysis=*/false).first;
+        Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*It));
       }
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
-          GVFlags, /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
-          Refs, ArrayRef<FunctionSummary::EdgeTy>{}, std::move(GVSum.TypeTests),
+          GVFlags, /*NumInsts=*/0, FunctionSummary::FFlags{}, std::move(Refs),
+          SmallVector<FunctionSummary::EdgeTy, 0>{}, std::move(GVSum.TypeTests),
           std::move(GVSum.TypeTestAssumeVCalls),
           std::move(GVSum.TypeCheckedLoadVCalls),
           std::move(GVSum.TypeTestAssumeConstVCalls),
@@ -264,6 +262,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
       for (auto &Sum : P.second.SummaryList) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get())) {
           std::vector<uint64_t> Refs;
+          Refs.reserve(FSum->refs().size());
           for (auto &VI : FSum->refs())
             Refs.push_back(VI.getGUID());
           GVSums.push_back(GlobalValueSummaryYaml{

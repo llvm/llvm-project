@@ -329,8 +329,11 @@ void OpenStatementState::CompleteOperation() {
   }
   if (!wasExtant_ && InError()) {
     // Release the new unit on failure
-    unit().CloseUnit(CloseStatus::Delete, *this);
-    unit().DestroyClosed();
+    if (ExternalFileUnit *
+        toClose{unit().LookUpForClose(unit().unitNumber())}) {
+      toClose->Close(CloseStatus::Delete, *this);
+      toClose->DestroyClosed();
+    }
   }
   IoStatementBase::CompleteOperation();
 }

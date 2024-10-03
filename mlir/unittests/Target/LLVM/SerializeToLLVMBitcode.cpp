@@ -102,6 +102,7 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(SerializeToLLVMBitcode)) {
 std::optional<SmallVector<char, 0>>
 TargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                   const gpu::TargetOptions &options) const {
+  // Set a dummy attr to be retrieved by `createObject`.
   module->setAttr("serialize_attr", UnitAttr::get(module->getContext()));
   std::string targetTriple = llvm::sys::getProcessTriple();
   LLVM::ModuleToObject serializer(*module, targetTriple, "", "");
@@ -112,13 +113,18 @@ Attribute
 TargetAttrImpl::createObject(Attribute attribute, Operation *module,
                              const SmallVector<char, 0> &object,
                              const gpu::TargetOptions &options) const {
+  // Create a GPU object with the GPU module dictionary as the object
+  // properties.
   return gpu::ObjectAttr::get(
       module->getContext(), attribute, gpu::CompilationTarget::Offload,
       StringAttr::get(module->getContext(),
                       StringRef(object.data(), object.size())),
-      module->getAttrDictionary());
+      module->getAttrDictionary(), /*kernels=*/nullptr);
 }
 
+// This test checks the correct functioning of `TargetAttrInterface` as an API.
+// In particular, it shows how `TargetAttrInterface::createObject` can leverage
+// the `module` operation argument to retrieve information from the module.
 TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(TargetAttrAPI)) {
   MLIRContext context(registry);
   context.loadAllAvailableDialects();

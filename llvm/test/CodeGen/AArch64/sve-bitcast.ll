@@ -1426,11 +1426,8 @@ define <vscale x 1 x i64> @bitcast_nxv4f16_to_nxv1i64(<vscale x 4 x half> %v) #0
 ;
 ; CHECK_BE-LABEL: bitcast_nxv4f16_to_nxv1i64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.h
-; CHECK_BE-NEXT:    ptrue p1.s
-; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
-; CHECK_BE-NEXT:    revb z0.s, p1/m, z0.s
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
@@ -1447,13 +1444,11 @@ define <vscale x 1 x i64> @bitcast_nxv2f32_to_nxv1i64(<vscale x 2 x float> %v) #
 ;
 ; CHECK_BE-LABEL: bitcast_nxv2f32_to_nxv1i64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.s
-; CHECK_BE-NEXT:    ptrue p1.d
-; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    revb z0.d, p1/m, z0.d
 ; CHECK_BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    revb z0.d, p1/m, z0.d
+; CHECK_BE-NEXT:    ptrue p0.d
+; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK_BE-NEXT:    ret
   %bc = bitcast <vscale x 2 x float> %v to <vscale x 1 x i64>
   ret <vscale x 1 x i64> %bc
@@ -1479,11 +1474,8 @@ define <vscale x 1 x i64> @bitcast_nxv4bf16_to_nxv1i64(<vscale x 4 x bfloat> %v)
 ;
 ; CHECK_BE-LABEL: bitcast_nxv4bf16_to_nxv1i64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.h
-; CHECK_BE-NEXT:    ptrue p1.s
-; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
-; CHECK_BE-NEXT:    revb z0.s, p1/m, z0.s
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
@@ -1888,11 +1880,8 @@ define <vscale x 1 x double> @bitcast_nxv4f16_to_nxv1f64(<vscale x 4 x half> %v)
 ;
 ; CHECK_BE-LABEL: bitcast_nxv4f16_to_nxv1f64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.h
-; CHECK_BE-NEXT:    ptrue p1.s
-; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
-; CHECK_BE-NEXT:    revb z0.s, p1/m, z0.s
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
@@ -1909,13 +1898,11 @@ define <vscale x 1 x double> @bitcast_nxv2f32_to_nxv1f64(<vscale x 2 x float> %v
 ;
 ; CHECK_BE-LABEL: bitcast_nxv2f32_to_nxv1f64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.s
-; CHECK_BE-NEXT:    ptrue p1.d
-; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    revb z0.d, p1/m, z0.d
 ; CHECK_BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK_BE-NEXT:    ptrue p0.s
 ; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    revb z0.d, p1/m, z0.d
+; CHECK_BE-NEXT:    ptrue p0.d
+; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK_BE-NEXT:    ret
   %bc = bitcast <vscale x 2 x float> %v to <vscale x 1 x double>
   ret <vscale x 1 x double> %bc
@@ -1929,11 +1916,8 @@ define <vscale x 1 x double> @bitcast_nxv4bf16_to_nxv1f64(<vscale x 4 x bfloat> 
 ;
 ; CHECK_BE-LABEL: bitcast_nxv4bf16_to_nxv1f64:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    ptrue p0.h
-; CHECK_BE-NEXT:    ptrue p1.s
-; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
-; CHECK_BE-NEXT:    revb z0.s, p1/m, z0.s
 ; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
 ; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.d
 ; CHECK_BE-NEXT:    revb z0.d, p0/m, z0.d
@@ -2333,29 +2317,18 @@ define <vscale x 1 x i32> @bitcast_nxv2i16_to_nxv1i32(<vscale x 2 x i16> %v) #0 
 define <vscale x 1 x i32> @bitcast_nxv2f16_to_nxv1i32(<vscale x 2 x half> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2f16_to_nxv1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp]
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; CHECK_BE-LABEL: bitcast_nxv2f16_to_nxv1i32:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.d
-; CHECK_BE-NEXT:    ptrue p1.h
-; CHECK_BE-NEXT:    st1h { z0.d }, p0, [sp]
+; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
+; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.s
-; CHECK_BE-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK_BE-NEXT:    revb z0.h, p1/m, z0.h
 ; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    addvl sp, sp, #1
-; CHECK_BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK_BE-NEXT:    ret
   %bc = bitcast <vscale x 2 x half> %v to <vscale x 1 x i32>
   ret <vscale x 1 x i32> %bc
@@ -2366,29 +2339,18 @@ define <vscale x 1 x i32> @bitcast_nxv2f16_to_nxv1i32(<vscale x 2 x half> %v) #0
 define <vscale x 1 x i32> @bitcast_nxv2bf16_to_nxv1i32(<vscale x 2 x bfloat> %v) #0 {
 ; CHECK-LABEL: bitcast_nxv2bf16_to_nxv1i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    st1h { z0.d }, p0, [sp]
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [sp]
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    ret
 ;
 ; CHECK_BE-LABEL: bitcast_nxv2bf16_to_nxv1i32:
 ; CHECK_BE:       // %bb.0:
-; CHECK_BE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK_BE-NEXT:    addvl sp, sp, #-1
-; CHECK_BE-NEXT:    ptrue p0.d
-; CHECK_BE-NEXT:    ptrue p1.h
-; CHECK_BE-NEXT:    st1h { z0.d }, p0, [sp]
+; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    ptrue p0.h
+; CHECK_BE-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK_BE-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK_BE-NEXT:    ptrue p0.s
-; CHECK_BE-NEXT:    ld1h { z0.h }, p1/z, [sp]
-; CHECK_BE-NEXT:    revb z0.h, p1/m, z0.h
 ; CHECK_BE-NEXT:    revb z0.s, p0/m, z0.s
-; CHECK_BE-NEXT:    addvl sp, sp, #1
-; CHECK_BE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK_BE-NEXT:    ret
   %bc = bitcast <vscale x 2 x bfloat> %v to <vscale x 1 x i32>
   ret <vscale x 1 x i32> %bc

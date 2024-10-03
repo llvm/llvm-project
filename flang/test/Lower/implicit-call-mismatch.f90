@@ -135,8 +135,7 @@ subroutine test_conversion_from_proc
 
   ! CHECK: %[[proc:.*]] = fir.address_of(@_QPproc) : () -> ()
   ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : (() -> ()) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: %[[len:.*]] = fir.undefined index
-  ! CHECK: %[[box:.*]] = fir.emboxchar %[[convert]], %[[len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[box:.*]] = fir.emboxchar %[[convert]], %c0{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPpass_char_to_proc(%[[box]])
   call pass_char_to_proc(proc)
 

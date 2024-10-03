@@ -16,6 +16,8 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LIBC_NAMESPACE::Sign;
+
 using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {

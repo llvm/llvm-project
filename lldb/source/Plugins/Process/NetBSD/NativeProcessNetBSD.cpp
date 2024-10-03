@@ -41,12 +41,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -391,7 +391,7 @@ Status NativeProcessNetBSD::StopProcess(lldb::pid_t pid) {
   ret = kill(pid, SIGSTOP);
 
   if (ret == -1)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   LLDB_LOG(log, "kill({0}, SIGSTOP)", pid);
 
@@ -412,7 +412,7 @@ Status NativeProcessNetBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   ret = ptrace(req, static_cast<::pid_t>(pid), addr, data);
 
   if (ret == -1)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   if (result)
     *result = ret;
@@ -576,7 +576,7 @@ Status NativeProcessNetBSD::Signal(int signo) {
   Status error;
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
@@ -612,7 +612,7 @@ Status NativeProcessNetBSD::Kill() {
   }
 
   if (kill(GetID(), SIGKILL) != 0) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 

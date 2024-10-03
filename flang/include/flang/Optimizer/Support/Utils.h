@@ -185,6 +185,10 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
     return {Fortran::common::TypeCategory::Complex, complexType.getFKind()};
   else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
     return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
+  else if (auto charType = mlir::dyn_cast<fir::CharacterType>(type))
+    return {Fortran::common::TypeCategory::Character, charType.getFKind()};
+  else if (mlir::isa<fir::RecordType>(type))
+    return {Fortran::common::TypeCategory::Derived, 0};
   else
     fir::emitFatalError(loc,
                         "unsupported type: " + fir::mlirTypeToString(type));

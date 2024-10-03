@@ -1378,7 +1378,7 @@ void OpEmitter::genPropertiesSupport() {
                ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
         {0}
       };
-      {2};
+      {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
       if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
@@ -1411,7 +1411,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now, TODO: Remove at some point.
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << "{\n"
                     << formatv(propFromAttrFmt,
@@ -1419,7 +1418,7 @@ void OpEmitter::genPropertiesSupport() {
                                      &fctx.addSubst("_attr", propertyAttr)
                                           .addSubst("_storage", propertyStorage)
                                           .addSubst("_diag", propertyDiag)),
-                               name, getAttr);
+                               getAttr);
       if (prop.hasStorageTypeValueOverride()) {
         setPropMethod << formatv(attrGetDefaultFmt, name,
                                  prop.getStorageTypeValueOverride());
@@ -1445,7 +1444,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << formatv(R"decl(
   {{
@@ -2768,11 +2766,10 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
          << "u && \"mismatched number of return types\");";
   body << "\n    " << builderOpState << ".addTypes(inferredReturnTypes);";
 
-  body << formatv(R"(
-  } else {{
+  body << R"(
+  } else {
     ::llvm::report_fatal_error("Failed to infer result type(s).");
-  })",
-                  opClass.getClassName(), builderOpState);
+  })";
 }
 
 void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
@@ -3882,7 +3879,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
 
     auto getSuccessor =
         formatv(successor.isVariadic() ? "{0}()" : getSingleSuccessor,
-                successor.name, it.index())
+                successor.name)
             .str();
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
@@ -4189,10 +4186,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                     "    bool operator!=(const Properties &rhs) const {\n"
                     "      return !(*this == rhs);\n"
                     "    }\n";
-    comparatorOs.flush();
     os << comparator;
     os << "  };\n";
-    os.flush();
 
     genericAdaptorBase.declare<ExtraClassDeclaration>(std::move(declarations));
   }
@@ -4504,7 +4499,7 @@ void OpOperandAdaptorEmitter::emitDef(
 /// Emit the class declarations or definitions for the given op defs.
 static void
 emitOpClasses(const RecordKeeper &recordKeeper,
-              const std::vector<Record *> &defs, raw_ostream &os,
+              const std::vector<const Record *> &defs, raw_ostream &os,
               const StaticVerifierFunctionEmitter &staticVerifierEmitter,
               bool emitDecl) {
   if (defs.empty())
@@ -4541,7 +4536,7 @@ emitOpClasses(const RecordKeeper &recordKeeper,
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &recordKeeper,
-                             const std::vector<Record *> &defs,
+                             const std::vector<const Record *> &defs,
                              raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
@@ -4563,7 +4558,7 @@ static void emitOpClassDecls(const RecordKeeper &recordKeeper,
 
 /// Emit the definitions for the provided op classes.
 static void emitOpClassDefs(const RecordKeeper &recordKeeper,
-                            ArrayRef<Record *> defs, raw_ostream &os,
+                            ArrayRef<const Record *> defs, raw_ostream &os,
                             StringRef constraintPrefix = "") {
   if (defs.empty())
     return;
@@ -4584,12 +4579,12 @@ static void emitOpClassDefs(const RecordKeeper &recordKeeper,
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClassDecls(recordKeeper, defs, os);
 
   // If we are generating sharded op definitions, emit the sharded op
   // registration hooks.
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
   if (defs.empty() || shardedDefs.size() <= 1)
     return false;
@@ -4612,9 +4607,9 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 /// Generate the dialect op registration hook and the op class definitions for a
 /// shard of ops.
 static void emitOpDefShard(const RecordKeeper &recordKeeper,
-                           ArrayRef<Record *> defs, const Dialect &dialect,
-                           unsigned shardIndex, unsigned shardCount,
-                           raw_ostream &os) {
+                           ArrayRef<const Record *> defs,
+                           const Dialect &dialect, unsigned shardIndex,
+                           unsigned shardCount, raw_ostream &os) {
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
@@ -4638,7 +4633,7 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
                 "Op Registration Hook")
      << formatv(opRegistrationHook, dialect.getCppNamespace(),
                 dialect.getCppClassName(), shardIndex);
-  for (Record *def : defs) {
+  for (const Record *def : defs) {
     os << formatv("  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
                   Operator(def).getQualCppClassName());
   }
@@ -4652,8 +4647,8 @@ static void emitOpDefShard(const RecordKeeper &recordKeeper,
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, recordKeeper);
 
-  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
-  SmallVector<ArrayRef<Record *>, 4> shardedDefs;
+  std::vector<const Record *> defs = getRequestedOpDefinitions(recordKeeper);
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
   shardOpDefinitions(defs, shardedDefs);
 
   // If no shard was requested, emit the regular op list and class definitions.
@@ -4662,7 +4657,7 @@ static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
       IfDefScope scope("GET_OP_LIST", os);
       interleave(
           defs, os,
-          [&](Record *def) { os << Operator(def).getQualCppClassName(); },
+          [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {

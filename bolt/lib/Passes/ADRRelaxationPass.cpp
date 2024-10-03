@@ -59,10 +59,15 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
       // Don't relax adr if it points to the same function and it is not split
       // and BF initial size is < 1MB.
       const unsigned OneMB = 0x100000;
-      if (!BF.isSplit() && BF.getSize() < OneMB) {
+      if (BF.getSize() < OneMB) {
         BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
-        if (TargetBF && TargetBF == &BF)
+        if (TargetBF == &BF && !BF.isSplit())
           continue;
+        // No relaxation needed if ADR references a basic block in the same
+        // fragment.
+        if (BinaryBasicBlock *TargetBB = BF.getBasicBlockForLabel(Symbol))
+          if (BB.getFragmentNum() == TargetBB->getFragmentNum())
+            continue;
       }
 
       MCPhysReg Reg;

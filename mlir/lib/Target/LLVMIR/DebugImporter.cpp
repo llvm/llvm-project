@@ -89,10 +89,9 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   if (node->getTag() == llvm::dwarf::DW_TAG_array_type && !baseType)
     return nullptr;
   return DICompositeTypeAttr::get(
-      context, node->getTag(), /*recId=*/{},
-      getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
-      node->getLine(), translate(node->getScope()), baseType,
-      flags.value_or(DIFlags::Zero), node->getSizeInBits(),
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      translate(node->getFile()), node->getLine(), translate(node->getScope()),
+      baseType, flags.value_or(DIFlags::Zero), node->getSizeInBits(),
       node->getAlignInBits(), elements,
       translateExpression(node->getDataLocationExp()),
       translateExpression(node->getRankExp()),
@@ -217,8 +216,8 @@ DebugImporter::translateImpl(llvm::DIImportedEntity *node) {
   }
 
   return DIImportedEntityAttr::get(
-      context, node->getTag(), translate(node->getEntity()),
-      translate(node->getFile()), node->getLine(),
+      context, node->getTag(), translate(node->getScope()),
+      translate(node->getEntity()), translate(node->getFile()), node->getLine(),
       getStringAttrOrNull(node->getRawName()), elements);
 }
 
@@ -227,6 +226,7 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   mlir::DistinctAttr id;
   if (node->isDistinct())
     id = getOrCreateDistinctID(node);
+
   // Return nullptr if the scope or type is invalid.
   DIScopeAttr scope = translate(node->getScope());
   if (node->getScope() && !scope)
@@ -238,9 +238,12 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
   if (node->getType() && !type)
     return nullptr;
 
+  // Convert the retained nodes but drop all of them if one of them is invalid.
   SmallVector<DINodeAttr> retainedNodes;
   for (llvm::DINode *retainedNode : node->getRetainedNodes())
     retainedNodes.push_back(translate(retainedNode));
+  if (llvm::is_contained(retainedNodes, nullptr))
+    retainedNodes.clear();
 
   return DISubprogramAttr::get(context, id, translate(node->getUnit()), scope,
                                getStringAttrOrNull(node->getRawName()),
@@ -373,6 +376,9 @@ getRecSelfConstructor(llvm::DINode *node) {
   return TypeSwitch<llvm::DINode *, CtorType>(node)
       .Case([&](llvm::DICompositeType *) {
         return CtorType(DICompositeTypeAttr::getRecSelf);
+      })
+      .Case([&](llvm::DISubprogram *) {
+        return CtorType(DISubprogramAttr::getRecSelf);
       })
       .Default(CtorType());
 }

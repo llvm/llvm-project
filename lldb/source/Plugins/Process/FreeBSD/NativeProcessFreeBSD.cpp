@@ -36,12 +36,12 @@ static Status EnsureFDFlags(int fd, int flags) {
 
   int status = fcntl(fd, F_GETFL);
   if (status == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
   if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
     return error;
   }
 
@@ -319,9 +319,12 @@ void NativeProcessFreeBSD::MonitorSIGTRAP(lldb::pid_t pid) {
                info.pl_siginfo.si_addr);
 
       if (thread) {
+        auto &regctx = static_cast<NativeRegisterContextFreeBSD &>(
+            thread->GetRegisterContext());
         auto thread_info =
             m_threads_stepping_with_breakpoint.find(thread->GetID());
-        if (thread_info != m_threads_stepping_with_breakpoint.end()) {
+        if (thread_info != m_threads_stepping_with_breakpoint.end() &&
+            thread_info->second == regctx.GetPC()) {
           thread->SetStoppedByTrace();
           Status brkpt_error = RemoveBreakpoint(thread_info->second);
           if (brkpt_error.Fail())
@@ -414,7 +417,7 @@ Status NativeProcessFreeBSD::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   if (ret == -1) {
     error = CanTrace();
     if (error.Success())
-      error.SetErrorToErrno();
+      error = Status::FromErrno();
   }
 
   if (result)
@@ -523,7 +526,7 @@ Status NativeProcessFreeBSD::Halt() {
   if (StateIsStoppedState(m_state, false))
     return error;
   if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
   return error;
 }
 
@@ -544,7 +547,7 @@ Status NativeProcessFreeBSD::Signal(int signo) {
   Status error;
 
   if (kill(GetID(), signo))
-    error.SetErrorToErrno();
+    error = Status::FromErrno();
 
   return error;
 }
