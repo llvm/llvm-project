@@ -468,16 +468,18 @@ private:
         OpeningParen.Previous && OpeningParen.Previous->is(tok::kw_for);
     FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
-      if (CurrentToken->Previous->is(TT_PointerOrReference) &&
-          CurrentToken->Previous->Previous->isOneOf(tok::l_paren,
-                                                    tok::coloncolon)) {
+      const auto &Prev = *CurrentToken->Previous;
+      if (Prev.is(TT_PointerOrReference) &&
+          Prev.Previous->isOneOf(tok::l_paren, tok::coloncolon)) {
         ProbablyFunctionType = true;
       }
       if (CurrentToken->is(tok::comma))
         MightBeFunctionType = false;
-      if (CurrentToken->Previous->is(TT_BinaryOperator))
+      if (Prev.is(TT_BinaryOperator))
         Contexts.back().IsExpression = true;
       if (CurrentToken->is(tok::r_paren)) {
+        if (Prev.is(TT_PointerOrReference) && Prev.Previous == &OpeningParen)
+          MightBeFunctionType = true;
         if (OpeningParen.isNot(TT_CppCastLParen) && MightBeFunctionType &&
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
@@ -550,8 +552,8 @@ private:
       bool ProbablyFunctionTypeLParen =
           (CurrentToken->is(tok::l_paren) && CurrentToken->Next &&
            CurrentToken->Next->isOneOf(tok::star, tok::amp, tok::caret));
-      if ((CurrentToken->Previous->isOneOf(tok::kw_const, tok::kw_auto) ||
-           CurrentToken->Previous->isTypeName(LangOpts)) &&
+      if ((Prev.isOneOf(tok::kw_const, tok::kw_auto) ||
+           Prev.isTypeName(LangOpts)) &&
           !(CurrentToken->is(tok::l_brace) ||
             (CurrentToken->is(tok::l_paren) && !ProbablyFunctionTypeLParen))) {
         Contexts.back().IsExpression = false;
