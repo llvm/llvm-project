@@ -64,36 +64,42 @@ def Throws : IntrinsicProperty;
 class AttrIndex<int idx> {
   int Value = idx;
 }
-def FuncIndex : AttrIndex<-1>;
 def RetIndex : AttrIndex<0>;
 class ArgIndex<int argNo> : AttrIndex<!add(argNo, 1)>;
 
+// Note: Properties that are applicable either to arguments or return values
+// use AttrIndex. Properties applicable only to arguments use ArgIndex. Please
+// refer to Attributes.td.
+
 // NoCapture - The specified argument pointer is not captured by the intrinsic.
-class NoCapture<AttrIndex idx> : IntrinsicProperty {
+class NoCapture<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// NoAlias - The specified argument pointer is not aliasing other "noalias" pointer
-// arguments of the intrinsic wrt. the intrinsic scope.
+// NoAlias - The return value or the specified argument pointer is not aliasing
+// other "noalias" pointer arguments of the intrinsic wrt. the intrinsic scope.
 class NoAlias<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// NoUndef - The specified argument is neither undef nor poison.
+// NoUndef - The return value or specified argument is neither undef nor poison.
 class NoUndef<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// NonNull - The specified argument is not null.
+// NonNull - The return value or specified argument is not null.
 class NonNull<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// Align - Alignment for return value or the specified argument.
 class Align<AttrIndex idx, int align> : IntrinsicProperty {
   int ArgNo = idx.Value;
   int Align = align;
 }
 
+// Dereferenceable -- Return value or the specified argument is dereferenceable
+// upto `bytes` bytes in size.
 class Dereferenceable<AttrIndex idx, int bytes> : IntrinsicProperty {
   int ArgNo = idx.Value;
   int Bytes = bytes;
@@ -101,30 +107,30 @@ class Dereferenceable<AttrIndex idx, int bytes> : IntrinsicProperty {
 
 // Returned - The specified argument is always the return value of the
 // intrinsic.
-class Returned<AttrIndex idx> : IntrinsicProperty {
+class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
 // ImmArg - The specified argument must be an immediate.
-class ImmArg<AttrIndex idx> : IntrinsicProperty {
+class ImmArg<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
 // ReadOnly - The specified argument pointer is not written to through the
 // pointer by the intrinsic.
-class ReadOnly<AttrIndex idx> : IntrinsicProperty {
+class ReadOnly<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
 // WriteOnly - The intrinsic does not read memory through the specified
 // argument pointer.
-class WriteOnly<AttrIndex idx> : IntrinsicProperty {
+class WriteOnly<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
 // ReadNone - The specified argument pointer is not dereferenced by the
 // intrinsic.
-class ReadNone<AttrIndex idx> : IntrinsicProperty {
+class ReadNone<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 

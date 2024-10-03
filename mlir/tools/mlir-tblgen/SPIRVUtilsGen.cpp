@@ -98,15 +98,15 @@ public:
   StringRef getMergeInstance() const;
 
   // Returns the underlying LLVM TableGen Record.
-  const llvm::Record *getDef() const { return def; }
+  const Record *getDef() const { return def; }
 
 private:
   // The TableGen definition of this availability.
-  const llvm::Record *def;
+  const Record *def;
 };
 } // namespace
 
-Availability::Availability(const llvm::Record *def) : def(def) {
+Availability::Availability(const Record *def) : def(def) {
   assert(def->isSubClassOf("Availability") &&
          "must be subclass of TableGen 'Availability' class");
 }
@@ -166,7 +166,8 @@ std::vector<Availability> getAvailabilities(const Record &def) {
   std::vector<Availability> availabilities;
 
   if (def.getValue("availability")) {
-    std::vector<Record *> availDefs = def.getValueAsListOfDefs("availability");
+    std::vector<const Record *> availDefs =
+        def.getValueAsListOfDefs("availability");
     availabilities.reserve(availDefs.size());
     for (const Record *avail : availDefs)
       availabilities.emplace_back(avail);
@@ -1449,7 +1450,8 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
     if (!def.getValue("implies"))
       continue;
 
-    std::vector<Record *> impliedCapsDefs = def.getValueAsListOfDefs("implies");
+    std::vector<const Record *> impliedCapsDefs =
+        def.getValueAsListOfDefs("implies");
     os << "  case spirv::Capability::" << enumerant.getSymbol()
        << ": {static const spirv::Capability implies[" << impliedCapsDefs.size()
        << "] = {";

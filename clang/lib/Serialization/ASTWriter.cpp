@@ -4642,6 +4642,17 @@ void ASTWriter::WriteFloatControlPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(FLOAT_CONTROL_PRAGMA_OPTIONS, Record);
 }
 
+/// Write Sema's collected list of declarations with unverified effects.
+void ASTWriter::WriteDeclsWithEffectsToVerify(Sema &SemaRef) {
+  if (SemaRef.DeclsWithEffectsToVerify.empty())
+    return;
+  RecordData Record;
+  for (const auto *D : SemaRef.DeclsWithEffectsToVerify) {
+    AddDeclRef(D, Record);
+  }
+  Stream.EmitRecord(DECLS_WITH_EFFECTS_TO_VERIFY, Record);
+}
+
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
                                          ModuleFileExtensionWriter &Writer) {
   // Enter the extension block.
@@ -5599,6 +5610,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   }
   WritePackPragmaOptions(SemaRef);
   WriteFloatControlPragmaOptions(SemaRef);
+  WriteDeclsWithEffectsToVerify(SemaRef);
 
   // Some simple statistics
   RecordData::value_type Record[] = {
@@ -8148,6 +8160,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     // Nothing to do here, there is no additional information beyond the
     // begin/end loc and clause kind.
     return;
+  case OpenACCClauseKind::Collapse: {
+    const auto *CC = cast<OpenACCCollapseClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->hasForce());
+    AddStmt(const_cast<Expr *>(CC->getLoopCount()));
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -8161,7 +8180,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:

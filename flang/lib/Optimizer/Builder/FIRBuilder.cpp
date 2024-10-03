@@ -768,14 +768,23 @@ mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
 
 void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
   auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
-  if (!fmi)
-    return;
-  // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
-  //       For now set the attribute by the name.
-  llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
-  if (fastMathFlags != mlir::arith::FastMathFlags::none)
-    op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(
-                                      op->getContext(), fastMathFlags));
+  if (fmi) {
+    // TODO: use fmi.setFastMathFlagsAttr() after D137114 is merged.
+    //       For now set the attribute by the name.
+    llvm::StringRef arithFMFAttrName = fmi.getFastMathAttrName();
+    if (fastMathFlags != mlir::arith::FastMathFlags::none)
+      op->setAttr(arithFMFAttrName, mlir::arith::FastMathFlagsAttr::get(
+                                        op->getContext(), fastMathFlags));
+  }
+  auto iofi =
+      mlir::dyn_cast<mlir::arith::ArithIntegerOverflowFlagsInterface>(*op);
+  if (iofi) {
+    llvm::StringRef arithIOFAttrName = iofi.getIntegerOverflowAttrName();
+    if (integerOverflowFlags != mlir::arith::IntegerOverflowFlags::none)
+      op->setAttr(arithIOFAttrName,
+                  mlir::arith::IntegerOverflowFlagsAttr::get(
+                      op->getContext(), integerOverflowFlags));
+  }
 }
 
 void fir::FirOpBuilder::setFastMathFlags(

@@ -358,6 +358,7 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       report_fatal_error("Unexpected code object version");
     }
   }
+
   return AsmPrinter::doInitialization(M);
 }
 
@@ -510,6 +511,8 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
 
   for (Function &F : M.functions())
     validateMCResourceInfo(F);
+
+  RI.reset();
 
   return AsmPrinter::doFinalization(M);
 }

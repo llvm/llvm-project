@@ -748,7 +748,7 @@ func.func @foo(%lb : index, %ub : index, %step : index) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
 
   // expected-error @below {{accumulator variable used more than once}}
-  omp.wsloop reduction(@add_f32 %0 -> %prv : !llvm.ptr, @add_f32 %0 -> %prv1 : !llvm.ptr) {
+  omp.wsloop reduction(@add_f32 %0 -> %prv, @add_f32 %0 -> %prv1 : !llvm.ptr, !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
       %2 = arith.constant 2.0 : f32
       omp.yield
@@ -1471,6 +1471,7 @@ func.func @omp_sections(%data_var : memref<i32>) -> () {
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.sections" (%data_var) ({
+  ^bb0(%arg0: memref<i32>):
     omp.terminator
   }) {operandSegmentSizes = array<i32: 0,0,0,1>} : (memref<i32>) -> ()
   return
@@ -1583,6 +1584,31 @@ func.func @omp_sections() {
 
 // -----
 
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = arith.constant 0.0 : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = arith.addf %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+
+func.func @omp_sections(%x : !llvm.ptr) {
+  omp.sections reduction(@add_f32 %x -> %arg0 : !llvm.ptr) {
+    // expected-error @below {{op expected at least 1 entry block argument(s)}}
+    omp.section {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_single(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.single" (%data_var) ({
@@ -1661,7 +1687,7 @@ func.func @omp_task_depend(%data_var: memref<i32>) {
 
 func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op expected symbol reference @add_f32 to point to a reduction declaration}}
-  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr) {
+  omp.task in_reduction(@add_f32 %ptr -> %arg0 : !llvm.ptr) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1685,7 +1711,7 @@ combiner {
 
 func.func @omp_task(%ptr: !llvm.ptr) {
   // expected-error @below {{op accumulator variable used more than once}}
-  omp.task in_reduction(@add_f32 -> %ptr : !llvm.ptr, @add_f32 -> %ptr : !llvm.ptr) {
+  omp.task in_reduction(@add_f32 %ptr -> %arg0, @add_f32 %ptr -> %arg1 : !llvm.ptr, !llvm.ptr) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1715,7 +1741,7 @@ atomic {
 
 func.func @omp_task(%mem: memref<1xf32>) {
   // expected-error @below {{op expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr')}}
-  omp.task in_reduction(@add_i32 -> %mem : memref<1xf32>) {
+  omp.task in_reduction(@add_i32 %mem -> %arg0 : memref<1xf32>) {
     // CHECK: "test.foo"() : () -> ()
     "test.foo"() : () -> ()
     // CHECK: omp.terminator
@@ -1862,6 +1888,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%testf32, %testf32_2) ({
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -1876,6 +1903,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%testf32) ({
+  ^bb0(%arg0: !llvm.ptr):
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -1891,6 +1919,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%testf32, %testf32_2) ({
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -1905,6 +1934,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{expected as many reduction symbol references as reduction variables}}
   "omp.taskloop"(%testf32) ({
+  ^bb0(%arg0: !llvm.ptr):
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -1931,7 +1961,7 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{if a reduction clause is present on the taskloop directive, the nogroup clause must not be specified}}
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) nogroup {
+  omp.taskloop nogroup reduction(@add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -1957,7 +1987,7 @@ combiner {
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   // expected-error @below {{the same list item cannot appear in both a reduction and an in_reduction clause}}
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr) in_reduction(@add_f32 -> %testf32 : !llvm.ptr) {
+  omp.taskloop in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32 -> %arg1 : !llvm.ptr) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       omp.yield
     }
@@ -2022,7 +2052,7 @@ func.func @omp_target(%map1: memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
   omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
-    ^bb0(%arg0: memref<?xi32>):
+    omp.terminator
   }
   return
 }
@@ -2434,7 +2464,8 @@ omp.private {type = private} @var1.privatizer : !llvm.ptr alloc {
 }
 
 func.func @byref_in_private(%arg0: index) {
-  // expected-error @below {{private clause cannot have byref attributes}}
+  // expected-error @below {{expected attribute value}}
+  // expected-error @below {{custom op 'omp.parallel' invalid `private` format}}
   omp.parallel private(byref @var1.privatizer %arg0 -> %arg2 : index) {
     omp.terminator
   }

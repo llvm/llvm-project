@@ -430,13 +430,14 @@ bool StructType::containsScalableVectorType(
 }
 
 bool StructType::containsHomogeneousScalableVectorTypes() const {
-  Type *FirstTy = getNumElements() > 0 ? elements()[0] : nullptr;
-  if (!FirstTy || !isa<ScalableVectorType>(FirstTy))
+  if (getNumElements() <= 0 || !isa<ScalableVectorType>(elements().front()))
     return false;
-  for (Type *Ty : elements())
-    if (Ty != FirstTy)
-      return false;
-  return true;
+  return containsHomogeneousTypes();
+}
+
+bool StructType::containsHomogeneousTypes() const {
+  ArrayRef<Type *> ElementTys = elements();
+  return !ElementTys.empty() && all_equal(ElementTys);
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
