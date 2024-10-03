@@ -151,6 +151,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                                  explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
+      lastprivateModifierNotSupported(*lastPrivateClause,
+                                      converter.getCurrentLocation());
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
     }
@@ -478,8 +480,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       return existingPrivatizer;
 
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
-                                   moduleOp.getBodyRegion().front().begin());
+    firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate

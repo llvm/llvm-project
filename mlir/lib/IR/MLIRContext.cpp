@@ -221,6 +221,7 @@ public:
   llvm::DenseMap<StringRef, AbstractType *> nameToType;
 
   /// Cached Type Instances.
+  Float4E2M1FNType f4E2M1FNTy;
   Float6E2M3FNType f6E2M3FNTy;
   Float6E3M2FNType f6E3M2FNTy;
   Float8E5M2Type f8E5M2Ty;
@@ -315,6 +316,7 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
 
   //// Types.
   /// Floating-point Types.
+  impl->f4E2M1FNTy = TypeUniquer::get<Float4E2M1FNType>(this);
   impl->f6E2M3FNTy = TypeUniquer::get<Float6E2M3FNType>(this);
   impl->f6E3M2FNTy = TypeUniquer::get<Float6E3M2FNType>(this);
   impl->f8E5M2Ty = TypeUniquer::get<Float8E5M2Type>(this);
@@ -1017,6 +1019,9 @@ AbstractType::lookup(StringRef name, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
+Float4E2M1FNType Float4E2M1FNType::get(MLIRContext *context) {
+  return context->getImpl().f4E2M1FNTy;
+}
 Float6E2M3FNType Float6E2M3FNType::get(MLIRContext *context) {
   return context->getImpl().f6E2M3FNTy;
 }

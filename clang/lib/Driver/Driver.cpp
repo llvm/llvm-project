@@ -1005,6 +1005,17 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
   Copy->setOwnsValues(Opt->getOwnsValues());
   Opt->setOwnsValues(false);
   Args.append(Copy);
+  if (Opt->getAlias()) {
+    const Arg *Alias = Opt->getAlias();
+    unsigned Index = Args.MakeIndex(Alias->getSpelling());
+    auto AliasCopy = std::make_unique<Arg>(Alias->getOption(),
+                                           Args.getArgString(Index), Index);
+    AliasCopy->getValues() = Alias->getValues();
+    AliasCopy->setOwnsValues(false);
+    if (Alias->isClaimed())
+      AliasCopy->claim();
+    Copy->setAlias(std::move(AliasCopy));
+  }
 }
 
 bool Driver::readConfigFile(StringRef FileName,
@@ -6470,6 +6481,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::ZOS:
       TC = std::make_unique<toolchains::ZOS>(*this, Target, Args);
       break;
+    case llvm::Triple::Vulkan:
     case llvm::Triple::ShaderModel:
       TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;

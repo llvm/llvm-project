@@ -149,35 +149,35 @@ private:
   }
 
   bool parseAngle() {
-    if (!CurrentToken || !CurrentToken->Previous)
-      return false;
-    if (NonTemplateLess.count(CurrentToken->Previous) > 0)
+    if (!CurrentToken)
       return false;
 
-    if (const auto &Previous = *CurrentToken->Previous; // The '<'.
-        Previous.Previous) {
-      if (Previous.Previous->Tok.isLiteral())
+    auto *Left = CurrentToken->Previous; // The '<'.
+    if (!Left)
+      return false;
+
+    if (NonTemplateLess.count(Left) > 0)
+      return false;
+
+    const auto *BeforeLess = Left->Previous;
+
+    if (BeforeLess) {
+      if (BeforeLess->Tok.isLiteral())
         return false;
-      if (Previous.Previous->is(tok::r_brace))
+      if (BeforeLess->is(tok::r_brace))
         return false;
-      if (Previous.Previous->is(tok::r_paren) && Contexts.size() > 1 &&
-          (!Previous.Previous->MatchingParen ||
-           Previous.Previous->MatchingParen->isNot(
-               TT_OverloadedOperatorLParen))) {
+      if (BeforeLess->is(tok::r_paren) && Contexts.size() > 1 &&
+          !(BeforeLess->MatchingParen &&
+            BeforeLess->MatchingParen->is(TT_OverloadedOperatorLParen))) {
         return false;
       }
-      if (Previous.Previous->is(tok::kw_operator) &&
-          CurrentToken->is(tok::l_paren)) {
+      if (BeforeLess->is(tok::kw_operator) && CurrentToken->is(tok::l_paren))
         return false;
-      }
     }
 
-    FormatToken *Left = CurrentToken->Previous;
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::less, 12);
     Contexts.back().IsExpression = false;
-
-    const auto *BeforeLess = Left->Previous;
 
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
@@ -232,6 +232,10 @@ private:
           return false;
         next();
         return true;
+      }
+      if (BeforeLess && BeforeLess->is(TT_TemplateName)) {
+        next();
+        continue;
       }
       if (CurrentToken->is(tok::question) &&
           Style.Language == FormatStyle::LK_Java) {
@@ -472,16 +476,18 @@ private:
         OpeningParen.Previous && OpeningParen.Previous->is(tok::kw_for);
     FormatToken *PossibleObjCForInToken = nullptr;
     while (CurrentToken) {
-      if (CurrentToken->Previous->is(TT_PointerOrReference) &&
-          CurrentToken->Previous->Previous->isOneOf(tok::l_paren,
-                                                    tok::coloncolon)) {
+      const auto &Prev = *CurrentToken->Previous;
+      if (Prev.is(TT_PointerOrReference) &&
+          Prev.Previous->isOneOf(tok::l_paren, tok::coloncolon)) {
         ProbablyFunctionType = true;
       }
       if (CurrentToken->is(tok::comma))
         MightBeFunctionType = false;
-      if (CurrentToken->Previous->is(TT_BinaryOperator))
+      if (Prev.is(TT_BinaryOperator))
         Contexts.back().IsExpression = true;
       if (CurrentToken->is(tok::r_paren)) {
+        if (Prev.is(TT_PointerOrReference) && Prev.Previous == &OpeningParen)
+          MightBeFunctionType = true;
         if (OpeningParen.isNot(TT_CppCastLParen) && MightBeFunctionType &&
             ProbablyFunctionType && CurrentToken->Next &&
             (CurrentToken->Next->is(tok::l_paren) ||
@@ -554,8 +560,8 @@ private:
       bool ProbablyFunctionTypeLParen =
           (CurrentToken->is(tok::l_paren) && CurrentToken->Next &&
            CurrentToken->Next->isOneOf(tok::star, tok::amp, tok::caret));
-      if ((CurrentToken->Previous->isOneOf(tok::kw_const, tok::kw_auto) ||
-           CurrentToken->Previous->isTypeName(LangOpts)) &&
+      if ((Prev.isOneOf(tok::kw_const, tok::kw_auto) ||
+           Prev.isTypeName(LangOpts)) &&
           !(CurrentToken->is(tok::l_brace) ||
             (CurrentToken->is(tok::l_paren) && !ProbablyFunctionTypeLParen))) {
         Contexts.back().IsExpression = false;
@@ -1169,19 +1175,26 @@ private:
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
     Contexts.back().ColonIsDictLiteral = true;
-    if (OpeningBrace.is(BK_BracedInit))
+
+    const auto *Prev = OpeningBrace.getPreviousNonComment();
+
+    if (OpeningBrace.is(BK_BracedInit)) {
       Contexts.back().IsExpression = true;
-    if (Style.isJavaScript() && OpeningBrace.Previous &&
-        OpeningBrace.Previous->is(TT_JsTypeColon)) {
+      if (Prev) {
+        for (auto *Tok = Prev->Previous; Tok && Tok->isPointerOrReference();
+             Tok = Tok->Previous) {
+          Tok->setFinalizedType(TT_PointerOrReference);
+        }
+      }
+    }
+
+    if (Style.isJavaScript() && Prev && Prev->is(TT_JsTypeColon))
       Contexts.back().IsExpression = false;
-    }
-    if (Style.isVerilog() &&
-        (!OpeningBrace.getPreviousNonComment() ||
-         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
-      Contexts.back().VerilogMayBeConcatenation = true;
-    }
+
     if (Style.isTableGen())
       Contexts.back().ColonIsDictLiteral = false;
+    else if (Style.isVerilog() && !(Prev && Prev->is(Keywords.kw_apostrophe)))
+      Contexts.back().VerilogMayBeConcatenation = true;
 
     unsigned CommaCount = 0;
     while (CurrentToken) {

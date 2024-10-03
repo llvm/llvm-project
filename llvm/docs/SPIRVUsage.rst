@@ -147,6 +147,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_EXT_arithmetic_fence``
+     - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
@@ -275,6 +277,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Vararg]`
      - Assigns names to types or values, enhancing readability and debuggability of SPIR-V code. Not emitted directly but used for metadata enrichment.
+   * - `int_spv_value_md`
+     - None
+     - `[Metadata]`
+     - Assigns a set of attributes (such as name and data type) to a value that is the argument of the associated `llvm.fake.use` intrinsic call. The latter is used as a mean to map virtual registers created by IRTranslator to the original value.
    * - `int_spv_assign_decoration`
      - None
      - `[Type, Metadata]`

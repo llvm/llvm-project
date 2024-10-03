@@ -10,51 +10,117 @@
 
 // unique_ptr
 
-// test op[](size_t)
+// T& unique_ptr::operator[](size_t) const
 
 #include <memory>
 #include <cassert>
-
-// TODO: Move TEST_IS_CONSTANT_EVALUATED into its own header
 #include <type_traits>
+#include <array>
 
 #include "test_macros.h"
+#include "type_algorithms.h"
 
-class A {
-  int state_;
-  static int next_;
+static int next = 0;
+struct EnumeratedDefaultCtor {
+  EnumeratedDefaultCtor() : value(0) { value = ++next; }
+  int value;
+};
 
-public:
-  TEST_CONSTEXPR_CXX23 A() : state_(0) {
-    if (!TEST_IS_CONSTANT_EVALUATED)
-      state_ = ++next_;
-  }
-
-  TEST_CONSTEXPR_CXX23 int get() const { return state_; }
-
-  friend TEST_CONSTEXPR_CXX23 bool operator==(const A& x, int y) { return x.state_ == y; }
-
-  TEST_CONSTEXPR_CXX23 A& operator=(int i) {
-    state_ = i;
-    return *this;
+template <std::size_t Size>
+struct WithTrivialDtor {
+  std::array<char, Size> padding = {'x'};
+  TEST_CONSTEXPR_CXX23 friend bool operator==(WithTrivialDtor const& x, WithTrivialDtor const& y) {
+    return x.padding == y.padding;
   }
 };
 
-int A::next_ = 0;
+template <std::size_t Size>
+struct WithNonTrivialDtor {
+  std::array<char, Size> padding = {'x'};
+  TEST_CONSTEXPR_CXX23 friend bool operator==(WithNonTrivialDtor const& x, WithNonTrivialDtor const& y) {
+    return x.padding == y.padding;
+  }
+  TEST_CONSTEXPR_CXX23 ~WithNonTrivialDtor() {}
+};
+
+template <class T>
+struct CustomDeleter : std::default_delete<T> {};
 
 TEST_CONSTEXPR_CXX23 bool test() {
-  std::unique_ptr<A[]> p(new A[3]);
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    assert(p[0] == 1);
-    assert(p[1] == 2);
-    assert(p[2] == 3);
+  // Basic test
+  {
+    std::unique_ptr<int[]> p(new int[3]);
+    {
+      int& result = p[0];
+      result      = 0;
+    }
+    {
+      int& result = p[1];
+      result      = 1;
+    }
+    {
+      int& result = p[2];
+      result      = 2;
+    }
+
+    assert(p[0] == 0);
+    assert(p[1] == 1);
+    assert(p[2] == 2);
   }
-  p[0] = 3;
-  p[1] = 2;
-  p[2] = 1;
-  assert(p[0] == 3);
-  assert(p[1] == 2);
-  assert(p[2] == 1);
+
+  // Ensure that the order of access is correct after initializing a unique_ptr but
+  // before actually modifying any of its elements. The implementation would have to
+  // really try for this not to be the case, but we still check it.
+  //
+  // This requires assigning known values to the elements when they are first constructed,
+  // which requires global state.
+  {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      std::unique_ptr<EnumeratedDefaultCtor[]> p(new EnumeratedDefaultCtor[3]);
+      assert(p[0].value == 1);
+      assert(p[1].value == 2);
+      assert(p[2].value == 3);
+    }
+  }
+
+  // Make sure operator[] is const-qualified
+  {
+    std::unique_ptr<int[]> const p(new int[3]);
+    p[0] = 42;
+    assert(p[0] == 42);
+  }
+
+  // Make sure we properly handle types with trivial and non-trivial destructors of different
+  // sizes. This is relevant because some implementations may want to use properties of the
+  // ABI like array cookies and these properties often depend on e.g. the triviality of T's
+  // destructor, T's size and so on.
+#if TEST_STD_VER >= 20 // this test is too painful to write before C++20
+  {
+    using TrickyCookieTypes = types::type_list<
+        WithTrivialDtor<1>,
+        WithTrivialDtor<2>,
+        WithTrivialDtor<3>,
+        WithTrivialDtor<4>,
+        WithTrivialDtor<8>,
+        WithTrivialDtor<16>,
+        WithTrivialDtor<256>,
+        WithNonTrivialDtor<1>,
+        WithNonTrivialDtor<2>,
+        WithNonTrivialDtor<3>,
+        WithNonTrivialDtor<4>,
+        WithNonTrivialDtor<8>,
+        WithNonTrivialDtor<16>,
+        WithNonTrivialDtor<256>>;
+    types::for_each(TrickyCookieTypes(), []<class T> {
+      types::for_each(types::type_list<std::default_delete<T[]>, CustomDeleter<T[]>>(), []<class Deleter> {
+        std::unique_ptr<T[], Deleter> p(new T[3]);
+        assert(p[0] == T());
+        assert(p[1] == T());
+        assert(p[2] == T());
+      });
+    });
+  }
+#endif // C++20
 
   return true;
 }

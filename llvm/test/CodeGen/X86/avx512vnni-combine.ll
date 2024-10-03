@@ -54,7 +54,7 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    andl $-4, %edx
 ; CHECK-NEXT:    leaq 192(%rsi), %rdi
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd -192(%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    vpmaddwd -128(%rdi), %zmm1, %zmm2
@@ -75,7 +75,7 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    addq %rcx, %rsi
 ; CHECK-NEXT:    shll $6, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd (%rsi,%rcx), %zmm1, %zmm0
 ; CHECK-NEXT:    addq $64, %rcx
@@ -179,7 +179,7 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    andl $-2, %edi
 ; CHECK-NEXT:    movl $64, %r8d
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqa64 (%rsi,%r8), %zmm1
 ; CHECK-NEXT:    vpmaddwd -64(%rdx,%r8), %zmm0, %zmm2

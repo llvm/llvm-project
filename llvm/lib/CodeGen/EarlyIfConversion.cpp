@@ -1117,7 +1117,7 @@ public:
 
   void predicateBlock(MachineBasicBlock *MBB, ArrayRef<MachineOperand> Cond,
                       bool Reverse) override {
-    SmallVector<MachineOperand> Condition(Cond.begin(), Cond.end());
+    SmallVector<MachineOperand> Condition(Cond);
     if (Reverse) {
       bool CanRevCond = !TII->reverseBranchCondition(Condition);
       assert(CanRevCond && "Reversed predicate is not supported");

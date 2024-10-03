@@ -235,7 +235,7 @@ let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
 //===----------------------------------------------------------------------===//
 // Pseudo instructions used by unwind info.
 //
-let isPseudo = 1, SchedRW = [WriteSystem] in {
+let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),

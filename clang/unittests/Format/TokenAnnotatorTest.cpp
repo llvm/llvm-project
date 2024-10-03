@@ -308,6 +308,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 
+  Tokens = annotate("if (Foo *&foo{a})");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
+
   FormatStyle Style = getLLVMStyle();
   Style.TypeNames.push_back("MYI");
   Tokens = annotate("if (MYI *p{nullptr})", Style);
@@ -808,6 +813,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   Tokens = annotate("return (Namespace::Class)(1 + 2);");
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("return (Foo (*)(void *, Bar, ...))&foo;");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[14], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[15], tok::amp, TT_UnaryOperator);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
@@ -3503,6 +3514,23 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_SPLIT_PENALTY(Tokens[7], 23u);
+}
+
+TEST_F(TokenAnnotatorTest, TemplateName) {
+  constexpr StringRef Code{"return Foo < A || B > (C ^ D);"};
+
+  auto Tokens = annotate(Code);
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_BinaryOperator);
+
+  auto Style = getLLVMStyle();
+  Style.TemplateNames.push_back("Foo");
+
+  Tokens = annotate(Code, Style);
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_TemplateName);
+  EXPECT_TOKEN(Tokens[2], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[6], tok::greater, TT_TemplateCloser);
 }
 
 TEST_F(TokenAnnotatorTest, TemplateInstantiation) {

@@ -1664,6 +1664,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
+      setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
@@ -1995,8 +1996,8 @@ bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
     return true;
 
   EVT VT = EVT::getEVT(I->getType());
-  return VT != MVT::nxv4i32 && VT != MVT::nxv2i64 && VT != MVT::v4i32 &&
-         VT != MVT::v2i32;
+  return VT != MVT::nxv4i64 && VT != MVT::nxv4i32 && VT != MVT::nxv2i64 &&
+         VT != MVT::v4i64 && VT != MVT::v4i32 && VT != MVT::v2i32;
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
@@ -3241,6 +3242,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZero(MI, BB);
   case AArch64::ZERO_T_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
+  case AArch64::MOVT_TIZ_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
   }
 }
 
@@ -4334,13 +4337,56 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
 SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
                                              SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
-  if (VT.isScalableVector())
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
-
   bool IsStrict = Op->isStrictFPOpcode();
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
+
+  if (VT.isScalableVector()) {
+    if (VT.getScalarType() != MVT::bf16)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+    SDLoc DL(Op);
+    constexpr EVT I32 = MVT::nxv4i32;
+    auto ImmV = [&](int I) -> SDValue { return DAG.getConstant(I, DL, I32); };
+
+    SDValue NaN;
+    SDValue Narrow;
+
+    if (SrcVT == MVT::nxv2f32 || SrcVT == MVT::nxv4f32) {
+      if (Subtarget->hasBF16())
+        return LowerToPredicatedOp(Op, DAG,
+                                   AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+      Narrow = getSVESafeBitCast(I32, SrcVal, DAG);
+
+      // Set the quiet bit.
+      if (!DAG.isKnownNeverSNaN(SrcVal))
+        NaN = DAG.getNode(ISD::OR, DL, I32, Narrow, ImmV(0x400000));
+    } else
+      return SDValue();
+
+    if (!Trunc) {
+      SDValue Lsb = DAG.getNode(ISD::SRL, DL, I32, Narrow, ImmV(16));
+      Lsb = DAG.getNode(ISD::AND, DL, I32, Lsb, ImmV(1));
+      SDValue RoundingBias = DAG.getNode(ISD::ADD, DL, I32, Lsb, ImmV(0x7fff));
+      Narrow = DAG.getNode(ISD::ADD, DL, I32, Narrow, RoundingBias);
+    }
+
+    // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
+    // 0x80000000.
+    if (NaN) {
+      EVT I1 = I32.changeElementType(MVT::i1);
+      EVT CondVT = VT.changeElementType(MVT::i1);
+      SDValue IsNaN = DAG.getSetCC(DL, CondVT, SrcVal, SrcVal, ISD::SETUO);
+      IsNaN = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, I1, IsNaN);
+      Narrow = DAG.getSelect(DL, I32, IsNaN, NaN, Narrow);
+    }
+
+    // Now that we have rounded, shift the bits into position.
+    Narrow = DAG.getNode(ISD::SRL, DL, I32, Narrow, ImmV(16));
+    return getSVESafeBitCast(VT, Narrow, DAG);
+  }
 
   if (useSVEForFixedLengthVectorVT(SrcVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPRoundToSVE(Op, DAG);
@@ -21872,8 +21918,10 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (!(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
+  if (!(ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) &&
+      !(ReducedType == MVT::nxv4i32 && MulSrcType == MVT::nxv16i8) &&
       !(ReducedType == MVT::nxv2i64 && MulSrcType == MVT::nxv8i16) &&
+      !(ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8) &&
       !(ReducedType == MVT::v4i32 && MulSrcType == MVT::v16i8) &&
       !(ReducedType == MVT::v2i32 && MulSrcType == MVT::v8i8))
     return SDValue();
@@ -21886,7 +21934,7 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
 
     bool Scalable = N->getValueType(0).isScalableVT();
     // There's no nxv2i64 version of usdot
-    if (Scalable && ReducedType != MVT::nxv4i32)
+    if (Scalable && ReducedType != MVT::nxv4i32 && ReducedType != MVT::nxv4i64)
       return SDValue();
 
     Opcode = AArch64ISD::USDOT;
@@ -21897,6 +21945,20 @@ SDValue tryLowerPartialReductionToDot(SDNode *N,
     Opcode = AArch64ISD::SDOT;
   else
     Opcode = AArch64ISD::UDOT;
+
+  // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
+  // product followed by a zero / sign extension
+  if ((ReducedType == MVT::nxv4i64 && MulSrcType == MVT::nxv16i8) ||
+      (ReducedType == MVT::v4i64 && MulSrcType == MVT::v16i8)) {
+    EVT ReducedTypeI32 =
+        (ReducedType.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
+
+    auto DotI32 = DAG.getNode(Opcode, DL, ReducedTypeI32,
+                              DAG.getConstant(0, DL, ReducedTypeI32), A, B);
+    auto Extended = DAG.getSExtOrTrunc(DotI32, DL, ReducedType);
+    return DAG.getNode(ISD::ADD, DL, NarrowOp.getValueType(), NarrowOp,
+                       Extended);
+  }
 
   return DAG.getNode(Opcode, DL, ReducedType, NarrowOp, A, B);
 }

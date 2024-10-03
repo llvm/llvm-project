@@ -1411,7 +1411,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now, TODO: Remove at some point.
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << "{\n"
                     << formatv(propFromAttrFmt,
@@ -1445,7 +1444,6 @@ void OpEmitter::genPropertiesSupport() {
         // Backward compat for now
         os << "   if (!attr) attr = dict.get(\"result_segment_sizes\");";
       }
-      os.flush();
 
       setPropMethod << formatv(R"decl(
   {{
@@ -4188,10 +4186,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                     "    bool operator!=(const Properties &rhs) const {\n"
                     "      return !(*this == rhs);\n"
                     "    }\n";
-    comparatorOs.flush();
     os << comparator;
     os << "  };\n";
-    os.flush();
 
     genericAdaptorBase.declare<ExtraClassDeclaration>(std::move(declarations));
   }
