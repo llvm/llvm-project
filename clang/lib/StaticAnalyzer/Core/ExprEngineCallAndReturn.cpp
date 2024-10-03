@@ -1078,6 +1078,23 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   AnalysisDeclContextManager &ADCMgr = AMgr.getAnalysisDeclContextManager();
   AnalysisDeclContext *CalleeADC = ADCMgr.getContext(D);
 
+
+  if (Opts.AnalyzerInlineTaintOnly) {
+      std::set<FunctionDecl*> TaintedFunctions = AMgr.getTaintRelatedFunctions();
+      // if the function is not taint related skip it.
+      auto *FD = dyn_cast<FunctionDecl>(const_cast<Decl*>(D));
+      if (TaintedFunctions.find(FD) == TaintedFunctions.end()) {
+        llvm::errs()
+            << "Skipping inlining of not taint related function from the analysis:\n";
+        llvm::errs() << FD->getNameInfo().getAsString() << "\n";
+        return false;
+      } else {
+        llvm::errs()
+            << "inlining taint related function:\n";
+        llvm::errs() << FD->getNameInfo().getAsString() << "\n";
+        return true;
+      }
+  }
   // The auto-synthesized bodies are essential to inline as they are
   // usually small and commonly used. Note: we should do this check early on to
   // ensure we always inline these calls.

@@ -228,6 +228,7 @@ public:
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzerFocusedTaint : 1;
+  unsigned AnalyzerInlineTaintOnly : 1;
   unsigned AnalyzerNoteAnalysisEntryPoints : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
@@ -295,6 +296,7 @@ public:
         ShouldEmitErrorsOnInvalidConfigValue(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), AnalyzerNoteAnalysisEntryPoints(false),
         AnalyzerFocusedTaint(false),
+        AnalyzerInlineTaintOnly(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
         PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {}

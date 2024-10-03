@@ -7008,6 +7008,11 @@ def analyzer_display_progress : Flag<["-"], "analyzer-display-progress">,
 def analyzer_focused_taint : Flag<["-"], "analyzer-focused-taint">,
   HelpText<"Focus on taint analysis">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerFocusedTaint">>;
+
+def analyzer_inline_taint_only : Flag<["-"], "analyzer-inline-only-tainted">,
+  HelpText<"Inline only tainted functions">,
+  MarshallingInfoFlag<AnalyzerOpts<"AnalyzerInlineTaintOnly">>;
+
 def analyzer_note_analysis_entry_points : Flag<["-"], "analyzer-note-analysis-entry-points">,
   HelpText<"Add a note for each bug report to denote their analysis entry points">,
   MarshallingInfoFlag<AnalyzerOpts<"AnalyzerNoteAnalysisEntryPoints">>;

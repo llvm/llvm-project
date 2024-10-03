@@ -505,6 +505,7 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
   std::set<FunctionDecl*> TaintedFunctions;
   if (Opts.AnalyzerFocusedTaint){
     TaintedFunctions = getDeclsForTaintAnalysis(CG);
+    Mgr->setTaintRelatedFunctions(TaintedFunctions);
     llvm::errs()<<"Tainted functions:\n";
     for (FunctionDecl* FD:TaintedFunctions){
       llvm::errs()<<FD->getNameInfo().getAsString() << "\n";
