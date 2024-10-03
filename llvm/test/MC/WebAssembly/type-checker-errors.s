@@ -620,9 +620,8 @@ catch_superfluous_value_at_end:
   .functype catch_superfluous_value_at_end () -> ()
   try
   catch tag_i32
-  end_try
-# FIXME: Superfluous value should be caught at end_try?
 # CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [i32]
+  end_try
   end_function
 
 ref_is_null_empty_stack_while_popping:
@@ -924,4 +923,24 @@ any_value_on_stack:
   local.set 0
   drop
 
+  end_function
+
+block_param_and_return:
+  .functype block_param_and_return () -> ()
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got []
+  block (i32) -> (f32)
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [i32]
+  end_block
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [i32] but got [f32]
+  i32.popcnt
+  drop
+
+  block f32
+  f32.const 0.0
+  br 0
+  i32.const 0
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [f32] but got [..., i32]
+  end_block
+
+# CHECK: :[[@LINE+1]]:3: error: type mismatch, expected [] but got [f32]
   end_function
