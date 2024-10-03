@@ -26,6 +26,7 @@ add_flang_library(HLFIRTransforms
   FIRTransforms
   HLFIRDialect
   MLIRIR
+  FlangOpenMPTransforms
   ${dialect_libs}
 
   LINK_COMPONENTS
