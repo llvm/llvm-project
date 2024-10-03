@@ -4310,13 +4310,13 @@ static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
     ConstantSDNode *LHSConstOp = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     if (LHSConstOp && RHSConst) {
-      uint64_t lhsConstValue = LHSConstOp->getZExtValue();
-      uint64_t rhsConstant = RHSConst->getZExtValue();
-      if (isPowerOf2_64(rhsConstant)) {
-        uint64_t newMaskValue = lhsConstValue & ~(rhsConstant - 1);
+      uint64_t LHSConstValue = LHSConstOp->getZExtValue();
+      uint64_t RHSConstant = RHSConst->getZExtValue();
+      if (isPowerOf2_64(RHSConstant)) {
+        uint64_t NewMaskValue = LHSConstValue & ~(RHSConstant - 1);
         LHS =
             DAG.getNode(ISD::AND, dl, LHS.getValueType(), LHS.getOperand(0),
-                        DAG.getConstant(newMaskValue, dl, LHS.getValueType()));
+                        DAG.getConstant(NewMaskValue, dl, LHS.getValueType()));
         RHS = DAG.getConstant(0, dl, RHS.getValueType());
         CC = ISD::SETEQ;
       }
