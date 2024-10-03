@@ -18674,10 +18674,10 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            E->getArg(1)->getType()->hasFloatingRepresentation() &&
            "cross operands must have a float representation");
     // make sure each vector has exactly 3 elements
-    auto *XVecTy1 = E->getArg(0)->getType()->getAs<VectorType>();
-    auto *XVecTy2 = E->getArg(1)->getType()->getAs<VectorType>();
-    assert(XVecTy1->getNumElements() == 3 && XVecTy2->getNumElements() == 3 &&
-           "input vectors must have 3 elements each");
+    assert(
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        E->getArg(1)->getType()->getAs<VectorType>()->getNumElements() == 3 &&
+        "input vectors must have 3 elements each");
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getCrossIntrinsic(),
         ArrayRef<Value *>{Op0, Op1}, nullptr, "hlsl.cross");
