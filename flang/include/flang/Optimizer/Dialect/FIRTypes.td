@@ -293,26 +293,6 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RealType : FIR_Type<"Real", "real"> {
-  let summary = "FIR real type";
-
-  let description = [{
-    Model of a Fortran REAL (and DOUBLE PRECISION) intrinsic type, including the
-    KIND type parameter.
-  }];
-
-  let parameters = (ins "KindTy":$fKind);
-  let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-    // Get MLIR float type with same semantics.
-    mlir::Type getFloatType(const fir::KindMapping &kindMap) const;
-  }];
-
-  let genVerifyDecl = 1;
-}
-
 def fir_RecordType : FIR_Type<"Record", "type"> {
   let summary = "FIR derived type";
 
@@ -577,8 +557,7 @@ def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
     AnySignedInteger.predicate, fir_IntegerType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
-def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
-    fir_RealType.predicate]>, "any real">;
+def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,

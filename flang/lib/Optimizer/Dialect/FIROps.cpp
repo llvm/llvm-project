@@ -1347,7 +1347,7 @@ bool fir::ConvertOp::isIntegerCompatible(mlir::Type ty) {
 }
 
 bool fir::ConvertOp::isFloatCompatible(mlir::Type ty) {
-  return mlir::isa<mlir::FloatType, fir::RealType>(ty);
+  return mlir::isa<mlir::FloatType>(ty);
 }
 
 bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {

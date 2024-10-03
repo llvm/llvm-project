@@ -93,10 +93,6 @@ public:
     return mlir::LLVM::LLVMPointerType::get(ty.getContext());
   }
 
-  // convert a front-end kind value to either a std or LLVM IR dialect type
-  // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::Type convertRealType(fir::KindTy kind) const;
-
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
   mlir::Type convertSequenceType(SequenceType seq) const;
 

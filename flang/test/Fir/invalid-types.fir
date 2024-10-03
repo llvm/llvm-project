@@ -47,11 +47,6 @@ func.func private @mem3() -> !fir.ptr<>
 
 // -----
 
-// expected-error@+1 {{expected integer value}}
-func.func private @mem3() -> !fir.real<>
-
-// -----
-
 // expected-error@+1 {{expected valid keyword}}
 func.func private @mem3() -> !fir.type<>
 

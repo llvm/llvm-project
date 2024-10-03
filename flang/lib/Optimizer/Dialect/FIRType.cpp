@@ -839,32 +839,6 @@ llvm::LogicalResult fir::PointerType::verify(
 }
 
 //===----------------------------------------------------------------------===//
-// RealType
-//===----------------------------------------------------------------------===//
-
-// `real` `<` kind `>`
-mlir::Type fir::RealType::parse(mlir::AsmParser &parser) {
-  return parseKindSingleton<fir::RealType>(parser);
-}
-
-void fir::RealType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getFKind() << '>';
-}
-
-llvm::LogicalResult
-fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                      KindTy fKind) {
-  // TODO
-  return mlir::success();
-}
-
-mlir::Type fir::RealType::getFloatType(const fir::KindMapping &kindMap) const {
-  auto fkind = getFKind();
-  auto realTypeID = kindMap.getRealTypeID(fkind);
-  return fir::fromRealTypeID(getContext(), realTypeID, fkind);
-}
-
-//===----------------------------------------------------------------------===//
 // RecordType
 //===----------------------------------------------------------------------===//
 
@@ -1331,7 +1305,7 @@ bool fir::BaseBoxType::isAssumedRank() const {
 void FIROpsDialect::registerTypes() {
   addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, ClassType,
            FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           LLVMPointerType, PointerType, RealType, RecordType, ReferenceType,
+           LLVMPointerType, PointerType, RecordType, ReferenceType,
            SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
            TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
@@ -1364,10 +1338,6 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
     unsigned short alignment = dl.getTypeABIAlignment(ty);
     return std::pair{size, alignment};
   }
-  if (auto real = mlir::dyn_cast<fir::RealType>(ty))
-    return getTypeSizeAndAlignment(loc, real.getFloatType(kindMap), dl,
-                                   kindMap);
-
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
     auto result = getTypeSizeAndAlignment(loc, seqTy.getEleTy(), dl, kindMap);
     if (!result)

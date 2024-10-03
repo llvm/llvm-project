@@ -85,8 +85,6 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
         return convertRecordType(derived, results);
       });
   addConversion(
-      [&](fir::RealType real) { return convertRealType(real.getFKind()); });
-  addConversion(
       [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
   addConversion([&](fir::SequenceType sequence) {
     return convertSequenceType(sequence);
@@ -273,13 +271,6 @@ mlir::Type LLVMTypeConverter::convertCharType(fir::CharacterType charTy) const {
   if (charTy.getLen() == fir::CharacterType::unknownLen())
     return iTy;
   return mlir::LLVM::LLVMArrayType::get(iTy, charTy.getLen());
-}
-
-// convert a front-end kind value to either a std or LLVM IR dialect type
-// fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-mlir::Type LLVMTypeConverter::convertRealType(fir::KindTy kind) const {
-  return fir::fromRealTypeID(&getContext(), kindMapping.getRealTypeID(kind),
-                             kind);
 }
 
 // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
