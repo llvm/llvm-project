@@ -270,7 +270,6 @@ add_lit_testsuite(check-lldb "Running lldb lit test suite"
 # This target covers all targets that are tied to implementation details
 # of libc++, intended to be run by the libc++ pre-merge CI.
 add_lit_testsuite(check-lldb-libcxx-integration "Running lldb libc++ support test suite"
-  ${CMAKE_CURRENT_BINARY_DIR}
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS
     check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
