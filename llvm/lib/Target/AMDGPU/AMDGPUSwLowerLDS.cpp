@@ -368,7 +368,7 @@ void AMDGPUSwLowerLDS::buildSwDynLDSGlobal(Function *Func) {
       LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
     return;
   // Create new global pointer variable
-  auto emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
+  auto *emptyCharArray = ArrayType::get(IRB.getInt8Ty(), 0);
   LDSParams.SwDynLDS = new GlobalVariable(
       M, emptyCharArray, false, GlobalValue::ExternalLinkage, nullptr,
       "llvm.amdgcn." + Func->getName() + ".dynlds", nullptr,
@@ -1070,7 +1070,8 @@ void AMDGPUSwLowerLDS::lowerNonKernelLDSAccesses(
       IRB.CreateLoad(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), BaseLoad);
 
   for (GlobalVariable *GV : LDSGlobals) {
-    auto GVIt = std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
+    const auto *GVIt =
+        std::find(OrdereLDSGlobals.begin(), OrdereLDSGlobals.end(), GV);
     assert(GVIt != OrdereLDSGlobals.end());
     uint32_t GVOffset = std::distance(OrdereLDSGlobals.begin(), GVIt);
 
