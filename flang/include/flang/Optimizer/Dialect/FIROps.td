@@ -2516,7 +2516,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     StrAttr:$method,
     fir_ClassType:$object,
     Variadic<AnyType>:$args,
-    OptionalAttr<I32Attr>:$pass_arg_pos
+    OptionalAttr<I32Attr>:$pass_arg_pos,
+    OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2525,7 +2526,8 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let assemblyFormat = [{
     $method `(` $object `:` qualified(type($object)) `)`
-    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)?
+    (`proc_attrs` $procedure_attrs^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
