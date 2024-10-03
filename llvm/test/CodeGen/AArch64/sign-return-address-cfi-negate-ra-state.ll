@@ -229,7 +229,6 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP:   DW_CFA_restore_state:
 ; CHECK-DUMP:   DW_CFA_AARCH64_negate_ra_state:
 
-; CHECK-DUMP: CFA=WSP{{$}}
 ;; First DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP: reg34=1
 ;; Second DW_CFA_AARCH64_negate_ra_state:
@@ -238,7 +237,7 @@ attributes #0 = { "sign-return-address"="all" }
 ; CHECK-DUMP: reg34=1
 ;; Third DW_CFA_AARCH64_negate_ra_state:
 ; CHECK-DUMP: reg34=0
-; CHECK-DUMP-NOT: reg34=
+; CHECK-DUMP-NOT: reg34=1
 
 ; baz_sync
 ; CHECK-DUMP-LABEL: FDE

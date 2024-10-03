@@ -688,6 +688,16 @@ void MCStreamer::emitCFINegateRAState(SMLoc Loc) {
   CurFrame->Instructions.push_back(Instruction);
 }
 
+void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(Instruction);
+}
+
 void MCStreamer::emitCFIReturnColumn(int64_t Register) {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
