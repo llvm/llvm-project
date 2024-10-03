@@ -105,3 +105,31 @@ PreservedAnalyses RegToMemPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<LoopAnalysis>();
   return PA;
 }
+
+namespace llvm {
+void initializeRegToMemWrapperPassPass(PassRegistry &);
+} // namespace llvm
+
+INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg-to-mem", "", true, true)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
+INITIALIZE_PASS_END(RegToMemWrapperPass, "reg-to-mem", "", true, true)
+
+char RegToMemWrapperPass::ID = 0;
+
+RegToMemWrapperPass::RegToMemWrapperPass() : FunctionPass(ID) {}
+
+bool RegToMemWrapperPass::runOnFunction(Function &F) {
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+  unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
+  bool Changed = runPass(F);
+  if (N == 0 && !Changed)
+    return false;
+  return true;
+}
+
+FunctionPass *llvm::createRegToMemWrapperPass() {
+  return new RegToMemWrapperPass();
+}
