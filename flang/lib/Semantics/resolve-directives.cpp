@@ -718,7 +718,7 @@ private:
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
-  void CheckObjectIsPrivatisable(
+  void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
   void CheckSourceLabel(const parser::Label &);
   void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
@@ -2344,7 +2344,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                     CheckMultipleAppearances(*name, *symbol, ompFlag);
                   }
                   if (privateDataSharingAttributeFlags.test(ompFlag)) {
-                    CheckObjectIsPrivatisable(*name, *symbol, ompFlag);
+                    CheckObjectIsPrivatizable(*name, *symbol, ompFlag);
                   }
 
                   if (ompFlag == Symbol::Flag::OmpAllocate) {
@@ -2716,7 +2716,7 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
   }
 }
 
-void OmpAttributeVisitor::CheckObjectIsPrivatisable(
+void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto &ultimateSymbol{symbol.GetUltimate()};
   llvm::StringRef clauseName{"PRIVATE"};
