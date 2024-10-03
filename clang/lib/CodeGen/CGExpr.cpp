@@ -1168,10 +1168,12 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
     TBAAAccessInfo TBAAInfo;
     Address Addr = EmitPointerWithAlignment(StructBase, &BaseInfo, &TBAAInfo);
     Res = Addr.emitRawPointer(*this);
-  } else {
+  } else if (StructBase->isLValue()) {
     LValue LV = EmitLValue(StructBase);
     Address Addr = LV.getAddress();
     Res = Addr.emitRawPointer(*this);
+  } else {
+    return nullptr;
   }
 
   RecIndicesTy Indices;
