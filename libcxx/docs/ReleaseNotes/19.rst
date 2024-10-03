@@ -74,7 +74,7 @@ Implemented Papers
 - P0019R8 - ``std::atomic_ref``
 - P2389R2 - Alias template ``dims`` for the ``extents`` of ``mdspan``
 - P1223R5 - ``ranges::find_last()``, ``ranges::find_last_if()``, and ``ranges::find_last_if_not()``
-- P2602R2 - Poison Pills are Too Toxic
+- P2602R2 - Poison Pills are Too Toxic (as DR against C++20)
 - P1981R0 - Rename ``leap`` to ``leap_second``
 - P1982R0 - Rename ``link`` to ``time_zone_link``
 
