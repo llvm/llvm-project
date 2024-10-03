@@ -330,7 +330,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (debugLevel == mlir::LLVM::DIEmissionKind::LineTablesOnly) {
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
-        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{});
+        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
+        /*annotations=*/{});
     funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
     return;
   }
@@ -354,7 +355,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   auto spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope, funcName,
       fullName, funcFileAttr, line, line, subprogramFlags, subTypeAttr,
-      /*retainedNodes=*/{});
+      /*retainedNodes=*/{}, /*annotations=*/{});
 
   // There is no direct information in the IR for any 'use' statement in the
   // function. We have to extract that information from the DeclareOp. We do
@@ -387,7 +388,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   spAttr = mlir::LLVM::DISubprogramAttr::get(
       context, recId, /*isRecSelf=*/false, id2, compilationUnit, Scope,
       funcName, fullName, funcFileAttr, line, line, subprogramFlags,
-      subTypeAttr, entities);
+      subTypeAttr, entities, /*annotations=*/{});
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
