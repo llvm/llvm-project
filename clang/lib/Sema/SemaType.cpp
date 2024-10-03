@@ -3045,7 +3045,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3082,7 +3084,9 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam, D.getEllipsisLoc());
+            InventedTemplateParam,
+            S.Context.getTypeDeclType(InventedTemplateParam),
+            D.getEllipsisLoc());
       }
     }
   }
