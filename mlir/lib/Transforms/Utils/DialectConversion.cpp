@@ -2340,7 +2340,7 @@ private:
 
   /// This method is called after the conversion process to legalize any
   /// remaining artifacts and complete the conversion.
-  LogicalResult finalize(ConversionPatternRewriter &rewriter);
+  void finalize(ConversionPatternRewriter &rewriter);
 
   /// Dialect conversion configuration.
   ConversionConfig config;
@@ -2464,8 +2464,7 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // Now that all of the operations have been converted, finalize the conversion
   // process to ensure any lingering conversion artifacts are cleaned up and
   // legalized.
-  if (failed(finalize(rewriter)))
-    return rewriterImpl.undoRewrites(), failure();
+  finalize(rewriter);
 
   // After a successful conversion, apply rewrites if this is not an analysis
   // conversion.
@@ -2542,8 +2541,7 @@ getReplacedValues(IRRewrite *rewrite) {
   return {};
 }
 
-LogicalResult
-OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
+void OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
   DenseMap<Value, SmallVector<Value>> inverseMapping =
       rewriterImpl.mapping.getInverse();
@@ -2578,8 +2576,6 @@ OperationConverter::finalize(ConversionPatternRewriter &rewriter) {
       llvm::erase(inverseMapping[newValue], originalValue);
     }
   }
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

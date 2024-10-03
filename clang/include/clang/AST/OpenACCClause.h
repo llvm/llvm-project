@@ -547,6 +547,32 @@ public:
                                     SourceLocation EndLoc);
 };
 
+/// Represents a 'collapse' clause on a 'loop' construct. This clause takes an
+/// integer constant expression 'N' that represents how deep to collapse the
+/// construct. It also takes an optional 'force' tag that permits intervening
+/// code in the loops.
+class OpenACCCollapseClause : public OpenACCClauseWithSingleIntExpr {
+  bool HasForce = false;
+
+  OpenACCCollapseClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                        bool HasForce, Expr *LoopCount, SourceLocation EndLoc);
+
+public:
+  const Expr *getLoopCount() const { return getIntExpr(); }
+  Expr *getLoopCount() { return getIntExpr(); }
+
+  bool hasForce() const { return HasForce; }
+
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Collapse;
+  }
+
+  static OpenACCCollapseClause *Create(const ASTContext &C,
+                                       SourceLocation BeginLoc,
+                                       SourceLocation LParenLoc, bool HasForce,
+                                       Expr *LoopCount, SourceLocation EndLoc);
+};
+
 /// Represents a clause with one or more 'var' objects, represented as an expr,
 /// as its arguments. Var-list is expected to be stored in trailing storage.
 /// For now, we're just storing the original expression in its entirety, unlike

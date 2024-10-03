@@ -666,3 +666,37 @@ int foo() {
 }
 
 } // namespace eve
+
+namespace GH93099 {
+
+// Issues with sizeof...(expr)
+
+template <typename T = int> struct C {
+  template <int... N>
+    requires(sizeof...(N) > 0)
+  friend class NTTP;
+
+  template <class... Tp>
+    requires(sizeof...(Tp) > 0)
+  friend class TP;
+
+  template <template <typename> class... TTp>
+    requires(sizeof...(TTp) > 0)
+  friend class TTP;
+};
+
+template <int... N>
+  requires(sizeof...(N) > 0)
+class NTTP;
+
+template <class... Tp>
+  requires(sizeof...(Tp) > 0)
+class TP;
+
+template <template <typename> class... TTp>
+  requires(sizeof...(TTp) > 0)
+class TTP;
+
+C v;
+
+} // namespace GH93099
