@@ -664,8 +664,10 @@ let Predicates = [HasSVEorSME] in {
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg", AArch64fneg_mt>;
 
   foreach VT = [nxv2bf16, nxv4bf16, nxv8bf16] in {
+    // No dedicated instruction, so just clear the sign bit.
     def : Pat<(VT (fabs VT:$op)),
               (AND_ZI $op, (i64 (logical_imm64_XFORM(i64 0x7fff7fff7fff7fff))))>;
+    // No dedicated instruction, so just invert the sign bit.
     def : Pat<(VT (fneg VT:$op)),
               (EOR_ZI $op, (i64 (logical_imm64_XFORM(i64 0x8000800080008000))))>;
   }

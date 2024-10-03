@@ -11932,10 +11932,8 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
   if (!VT.isVector() || !VT.getVectorElementCount().isKnownMultipleOf(2))
     return SDValue();
 
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
-
   // Restrict expansion to cases where both parts can be concatenated.
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
   if (LoVT != HiVT || !isTypeLegal(LoVT))
     return SDValue();
 
@@ -11948,8 +11946,7 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
 
   SmallVector<SDValue, 4> LoOps, HiOps;
   for (const SDValue &V : Node->op_values()) {
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitVector(V, DL, LoVT, HiVT);
+    auto [Lo, Hi] = DAG.SplitVector(V, DL, LoVT, HiVT);
     LoOps.push_back(Lo);
     HiOps.push_back(Hi);
   }
