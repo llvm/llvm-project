@@ -191,6 +191,7 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_variant_os;
   IdentifierInfo *Ident__is_target_variant_environment;
   IdentifierInfo *Ident__FLT_EVAL_METHOD__;        // __FLT_EVAL_METHOD
+  IdentifierInfo *Ident__ROUNDING_MODE__;          // __ROUNDING_MODE__
 
   // Weak, only valid (and set) while InMacroArgs is true.
   Token* ArgMacro;
@@ -1160,6 +1161,17 @@ private:
   /// the beginning of a skipped block, to the number of bytes that should be
   /// skipped.
   llvm::DenseMap<const char *, unsigned> RecordedSkippedRanges;
+
+  /// Nesting level of curly braces.
+  unsigned CurlyBraceLevel = 0;
+
+  /// Information about an instance of pragma FENV_ROUND.
+  struct RoundingPragmaRecord {
+    unsigned Level;
+    LangOptions::RoundingMode RM;
+  };
+
+  SmallVector<RoundingPragmaRecord, 8> RoundingPragmas;
 
   void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
 
@@ -2380,6 +2392,10 @@ public:
            "TUPEvalMethod should never be set to FEM_UnsetOnCommandLine");
     TUFPEvalMethod = Val;
   }
+
+  void setRoundingMode(LangOptions::RoundingMode RM);
+
+  LangOptions::RoundingMode getCurrentRoundingMode() const;
 
   /// Retrieves the module that we're currently building, if any.
   Module *getCurrentModule();
