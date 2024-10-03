@@ -209,8 +209,11 @@ multiclass VOP2Inst_e64_t16<string opName,
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOP2Inst<opName, P, node, revOp>;
   }
-  let SubtargetPredicate = HasTrue16BitInsts in {
-    defm _t16 : VOP2Inst_e64<opName#"_t16", VOPProfile_Fake16<P>, node, revOp#"_t16">;
+  let SubtargetPredicate = UseRealTrue16Insts in {
+    defm _t16 : VOP2Inst_e64<opName#"_t16", VOPProfile_True16<P>, node, revOp#"_t16">;
+  }
+  let SubtargetPredicate = UseFakeTrue16Insts in {
+    defm _fake16 : VOP2Inst_e64<opName#"_fake16", VOPProfile_Fake16<P>, node, revOp#"_fake16">;
   }
 }
 
@@ -1657,9 +1660,14 @@ multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
 
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName> :
-  VOP3Only_Realtriple_t16<GFX11Gen, op, asmName>,
-  VOP3Only_Realtriple_t16<GFX12Gen, op, asmName>;
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
+  VOP3Only_Realtriple_t16<GFX11Gen, op, asmName, OpName>,
+  VOP3Only_Realtriple_t16<GFX12Gen, op, asmName, OpName>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
+  defm OpName#"_t16": VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;
+  defm OpName#"_fake16": VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_fake16">;
+}
 
 multiclass VOP3beOnly_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3beOnly_Realtriple<GFX11Gen, op>, VOP3beOnly_Realtriple<GFX12Gen, op>;
