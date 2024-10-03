@@ -732,8 +732,8 @@ Type *LegalizeBufferContentTypesVisitor::legalNonAggregateFor(Type *T) {
     ElemTy = VT->getElementType();
   }
   if (isa<PointerType, ScalableVectorType>(ElemTy))
-    // Pointers are always big enough, and scalable vectors shouldn't crash the
-    // pass.
+    // Pointers are always big enough, and we'll let scalable vectors through to
+    // fail in codegen.
     return T;
   unsigned ElemSize = DL.getTypeSizeInBits(ElemTy).getFixedValue();
   if (isPowerOf2_32(ElemSize) && ElemSize >= 16 && ElemSize <= 128) {
@@ -855,7 +855,10 @@ void LegalizeBufferContentTypesVisitor::getVecSlices(
 
 Value *LegalizeBufferContentTypesVisitor::extractSlice(Value *Vec, VecSlice S,
                                                        const Twine &Name) {
-  if (!isa<FixedVectorType>(Vec->getType()))
+  auto *VecVT = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecVT)
+    return Vec;
+  if (S.Length == VecVT->getNumElements() && S.Index == 0)
     return Vec;
   if (S.Length == 1)
     return IRB.CreateExtractElement(Vec, S.Index,
@@ -868,7 +871,10 @@ Value *LegalizeBufferContentTypesVisitor::extractSlice(Value *Vec, VecSlice S,
 Value *LegalizeBufferContentTypesVisitor::insertSlice(Value *Whole, Value *Part,
                                                       VecSlice S,
                                                       const Twine &Name) {
-  if (!isa<FixedVectorType>(Whole->getType()))
+  auto *WholeVT = dyn_cast<FixedVectorType>(Whole->getType());
+  if (!WholeVT)
+    return Part;
+  if (S.Length == WholeVT->getNumElements() && S.Index == 0)
     return Part;
   if (S.Length == 1) {
     return IRB.CreateInsertElement(Whole, Part, S.Index,
@@ -904,7 +910,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
       Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                               AggByteOff + Offset.getKnownMinValue(), Result,
+                               AggByteOff + Offset.getFixedValue(), Result,
                                Name + "." + Twine(I));
       AggIdxs.pop_back();
     }
@@ -912,15 +918,16 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
   }
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
-    TypeSize AllocSize = DL.getTypeAllocSizeInBits(ElemTy);
+    TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
     if (!(ElemTy->isSingleValueType() &&
-          DL.getTypeSizeInBits(ElemTy) == AllocSize && !ElemTy->isVectorTy())) {
+          DL.getTypeSizeInBits(ElemTy) == 8 * AllocSize &&
+          !ElemTy->isVectorTy())) {
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                                 AggByteOff + I * AllocSize.getKnownMinValue(),
+                                 AggByteOff + I * AllocSize.getFixedValue(),
                                  Result, Name + Twine(I));
         AggIdxs.pop_back();
       }
@@ -1027,25 +1034,26 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     for (auto [I, ElemTy, Offset] :
          llvm::enumerate(ST->elements(), Layout->getMemberOffsets())) {
       AggIdxs.push_back(I);
-      Changed |= std::get<0>(visitStoreImpl(
-          OrigSI, ElemTy, AggIdxs, AggByteOff + Offset.getKnownMinValue(),
-          Name + "." + Twine(I)));
+      Changed |= std::get<0>(visitStoreImpl(OrigSI, ElemTy, AggIdxs,
+                                            AggByteOff + Offset.getFixedValue(),
+                                            Name + "." + Twine(I)));
       AggIdxs.pop_back();
     }
     return std::make_pair(Changed, /*ModifiedInPlace=*/false);
   }
   if (auto *AT = dyn_cast<ArrayType>(PartType)) {
     Type *ElemTy = AT->getElementType();
-    TypeSize AllocSize = DL.getTypeAllocSizeInBits(ElemTy);
+    TypeSize AllocSize = DL.getTypeAllocSize(ElemTy);
     if (!(ElemTy->isSingleValueType() &&
-          DL.getTypeSizeInBits(ElemTy) == AllocSize && !ElemTy->isVectorTy())) {
+          DL.getTypeSizeInBits(ElemTy) == 8 * AllocSize &&
+          !ElemTy->isVectorTy())) {
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= std::get<0>(visitStoreImpl(
-            OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * AllocSize.getKnownMinValue(), Name + Twine(I)));
+            OrigSI, ElemTy, AggIdxs, AggByteOff + I * AllocSize.getFixedValue(),
+            Name + Twine(I)));
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);
