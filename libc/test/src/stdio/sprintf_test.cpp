@@ -22,12 +22,6 @@
 // using ::sprintf;
 // }
 
-class LlvmLibcSPrintfTest : public LIBC_NAMESPACE::testing::Test {
-protected:
-  char buff[1000];
-  int written;
-};
-
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
@@ -806,7 +800,10 @@ TEST(LlvmLibcSPrintfTest, OctConv) {
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
 
-TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
+TEST(LlvmLibcSPrintfTest, FloatHexExpConv) {
+  char buff[128];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1170,7 +1167,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
       " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
+TEST(LlvmLibcSPrintfTest, FloatDecimalConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -1685,7 +1685,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // The long double tests are separated so that their performance can be directly
 // measured.
-TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -2022,7 +2025,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalLongDoubleConv) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
+TEST(LlvmLibcSPrintfTest, FloatExponentConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -2508,7 +2514,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
   ASSERT_STREQ_LEN(written, buff, "+1.256e-01    001.256e+03");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   // Length Modifier Tests.
 
@@ -2629,7 +2638,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentLongDoubleConv) {
 */
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
+TEST(LlvmLibcSPrintfTest, FloatAutoConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
@@ -3137,7 +3149,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001.26e+03");
 }
 
-TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
+TEST(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
+  char buff[1000];
+  int written;
+
   ForceRoundingMode r(RoundingMode::Nearest);
 
   // Length Modifier Tests.
@@ -3292,7 +3307,9 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoLongDoubleConv) {
 
 #if defined(LIBC_COMPILER_HAS_FIXED_POINT) &&                                  \
     !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
-TEST_F(LlvmLibcSPrintfTest, FixedConv) {
+TEST(LlvmLibcSPrintfTest, FixedConv) {
+  char buff[1000];
+  int written;
 
   // These numeric tests are potentially a little weak, but the fuzz test is
   // more thorough than my handwritten tests tend to be.
@@ -3502,7 +3519,10 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
        // !defined(LIBC_COPT_PRINTF_DISABLE_FIXED_POINT)
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
-TEST_F(LlvmLibcSPrintfTest, StrerrorConv) {
+TEST(LlvmLibcSPrintfTest, StrerrorConv) {
+  char buff[1000];
+  int written;
+
   LIBC_NAMESPACE::libc_errno = 0;
   written = LIBC_NAMESPACE::sprintf(buff, "%m");
   ASSERT_STREQ_LEN(written, buff, "Success");
