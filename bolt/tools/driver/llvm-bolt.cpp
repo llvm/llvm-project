@@ -202,9 +202,9 @@ int main(int argc, char **argv) {
 
   ToolName = argv[0];
 
-  if (llvm::sys::path::filename(ToolName) == "perf2bolt")
+  if (llvm::sys::path::filename(ToolName).starts_with("perf2bolt"))
     perf2boltMode(argc, argv);
-  else if (llvm::sys::path::filename(ToolName) == "llvm-boltdiff")
+  else if (llvm::sys::path::filename(ToolName).starts_with("llvm-boltdiff"))
     boltDiffMode(argc, argv);
   else
     boltMode(argc, argv);
