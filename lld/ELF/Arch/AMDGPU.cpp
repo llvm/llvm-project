@@ -28,7 +28,7 @@ private:
   uint32_t calcEFlagsV6() const;
 
 public:
-  AMDGPU();
+  AMDGPU(Ctx &);
   uint32_t calcEFlags() const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -39,7 +39,7 @@ public:
 };
 } // namespace
 
-AMDGPU::AMDGPU() {
+AMDGPU::AMDGPU(Ctx &ctx) : TargetInfo(ctx) {
   relativeRel = R_AMDGPU_RELATIVE64;
   gotRel = R_AMDGPU_ABS64;
   symbolicRel = R_AMDGPU_ABS64;
@@ -219,7 +219,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-TargetInfo *elf::getAMDGPUTargetInfo() {
-  static AMDGPU target;
+TargetInfo *elf::getAMDGPUTargetInfo(Ctx &ctx) {
+  static AMDGPU target(ctx);
   return &target;
 }

@@ -455,7 +455,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpClause::Lastprivate &x) {
-    ResolveOmpObjectList(x.v, Symbol::Flag::OmpLastPrivate);
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpLastPrivate);
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -2384,6 +2385,21 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               GetContext().directive)
                               .str()));
                 }
+                if (ompFlag == Symbol::Flag::OmpReduction) {
+                  const Symbol &ultimateSymbol{symbol->GetUltimate()};
+                  // Using variables inside of a namelist in OpenMP reductions
+                  // is allowed by the standard, but is not allowed for
+                  // privatisation. This looks like an oversight. If the
+                  // namelist is hoisted to a global, we cannot apply the
+                  // mapping for the reduction variable: resulting in incorrect
+                  // results. Disabling this hoisting could make some real
+                  // production code go slower. See discussion in #109303
+                  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+                    context_.Say(name->source,
+                        "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+                        name->ToString());
+                  }
+                }
                 if (GetContext().directive ==
                     llvm::omp::Directive::OMPD_target_data) {
                   checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr,
@@ -2873,8 +2889,7 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   default:
     warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
   }
-  if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-    context_.Say(source, "%s"_warn_en_US, warnStr);
-  }
+  context_.Warn(
+      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
 }
 } // namespace Fortran::semantics

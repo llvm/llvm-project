@@ -536,6 +536,7 @@ set(files
   __memory/allocator_arg_t.h
   __memory/allocator_destructor.h
   __memory/allocator_traits.h
+  __memory/array_cookie.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
   __memory/builtin_new_allocator.h
