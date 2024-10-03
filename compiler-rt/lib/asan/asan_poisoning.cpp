@@ -576,19 +576,6 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
-// Checks if a buffer [p; q) falls into a single granule.
-static bool WithinOneGranule(uptr p, uptr q) {
-  constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (p == q)
-    return true;
-  return RoundDownTo(p, granularity) == RoundDownTo(q - 1, granularity);
-}
-
-// Copies ASan memory annotation (a shadow memory value)
-// from one granule to another.
-static void CopyGranuleAnnotation(uptr dst, uptr src) {
-  *(u8 *)MemToShadow(dst) = *(u8 *)MemToShadow(src);
-}
 
 // Marks the specified number of bytes in a granule as accessible or
 // poisones the whole granule with kAsanContiguousContainerOOBMagic value.
@@ -687,7 +674,8 @@ static void CopyContainerFirstGranuleAnnotation(uptr src_storage_begin,
   uptr dst_external_begin = RoundDownTo(dst_storage_begin, granularity);
   uptr src_external_begin = RoundDownTo(src_storage_begin, granularity);
   if (!AddressIsPoisoned(src_storage_begin)) {
-    CopyGranuleAnnotation(dst_external_begin, src_external_begin);
+    *(u8 *)MemToShadow(dst_external_begin) =
+        *(u8 *)MemToShadow(src_external_begin);
   } else if (!AddressIsPoisoned(dst_storage_begin)) {
     AnnotateContainerGranuleAccessibleBytes(
         dst_external_begin, dst_storage_begin - dst_external_begin);
@@ -703,7 +691,7 @@ static void CopyContainerLastGranuleAnnotation(uptr src_storage_end,
   // Last granule
   uptr src_internal_end = RoundDownTo(src_storage_end, granularity);
   if (AddressIsPoisoned(src_storage_end)) {
-    CopyGranuleAnnotation(dst_internal_end, src_internal_end);
+    *(u8 *)MemToShadow(dst_internal_end) = *(u8 *)MemToShadow(src_internal_end);
   } else {
     AnnotateContainerGranuleAccessibleBytes(dst_internal_end,
                                             src_storage_end - src_internal_end);
@@ -763,7 +751,7 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_begin_p,
   bool copy_in_reversed_order = src_storage_begin < dst_storage_begin &&
                                 dst_storage_begin <= src_external_end;
   if (src_storage_begin % granularity != dst_storage_begin % granularity ||
-      WithinOneGranule(dst_storage_begin, dst_storage_end)) {
+      RoundDownTo(dst_storage_end - 1, granularity) <= dst_storage_begin) {
     if (copy_in_reversed_order) {
       SlowReversedCopyContainerAnnotations(src_storage_begin, src_storage_end,
                                            dst_storage_begin, dst_storage_end);
