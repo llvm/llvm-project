@@ -102,7 +102,7 @@ instructions to be executed at run time:
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -foffload-lto \
         -Rpass=kernel-info -mllvm -kernel-info-end-lto \
         -fprofile-use-gpu=test.profdata | \
-      grep -i "test.c:.*float"
+      grep "test.c:.*Floating\|double"
   test.c:13:0: in artificial function '__omp_offloading_35_1369040_main_l13', FloatingPointOpProfileCount = 0
-  test.c:7:9: in function 'test.internalized', 'fmul' instruction ('%9') is a floating point op where the block profile count is 4
+  test.c:7:9: in function 'test.internalized', double 'fmul' ('%9') executed 4 times
   test.c:4:0: in function 'test.internalized', FloatingPointOpProfileCount = 4

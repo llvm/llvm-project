@@ -86,17 +86,24 @@ static bool isKernelFunction(Function &F) {
 }
 
 // For the purposes of KernelInfo::FloatingPointOpProfileCount, should this be
-// considered a floating point operation?
+// considered a floating point operation?  If so, return the floating point
+// type.  Otherwise, return nullptr.
 //
 // TODO: Does this correctly identify floating point operations we care about?
 // For example, we skip phi and load even when they return floating point
 // values.  Should different operations have different weights?
-static bool isFloatingPointOperation(const Instruction &I) {
-  if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I))
-    return At->isFloatingPointOperation();
-  if (!I.getType()->isFPOrFPVectorTy())
-    return false;
-  return I.isBinaryOp() || I.isUnaryOp();
+static Type *getFloatingPointOpType(const Instruction &I) {
+  if (const AtomicRMWInst *At = dyn_cast<AtomicRMWInst>(&I)) {
+    if (At->isFloatingPointOperation())
+      return At->getType();
+    return nullptr;
+  }
+  if (!I.isBinaryOp() && !I.isUnaryOp())
+    return nullptr;
+  Type *Ty = I.getType();
+  if (Ty->isFPOrFPVectorTy())
+    return Ty;
+  return nullptr;
 }
 
 static void identifyFunction(OptimizationRemark &R, const Function &F) {
@@ -111,7 +118,7 @@ static void identifyInstruction(OptimizationRemark &R, const Instruction &I) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
     R << "'" << II->getCalledFunction()->getName() << "' call";
   else
-    R << "'" << I.getOpcodeName() << "' instruction";
+    R << "'" << I.getOpcodeName() << "'";
   if (!I.getType()->isVoidTy()) {
     SmallString<20> Name;
     raw_svector_ostream OS(Name);
@@ -198,17 +205,23 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
 }
 
 static void remarkFloatingPointOp(OptimizationRemarkEmitter &ORE,
-                                  const Function &Caller,
-                                  const Instruction &I,
-                                  uint64_t BlockProfileCount) {
+                                  const Function &Caller, const Instruction &I,
+                                  Type *Ty,
+                                  std::optional<uint64_t> BlockProfileCount) {
   ORE.emit([&] {
     OptimizationRemark R(DEBUG_TYPE, "FloatingPointOp", &I);
     R << "in ";
     identifyFunction(R, Caller);
     R << ", ";
+    SmallString<10> TyName;
+    raw_svector_ostream OS(TyName);
+    Ty->print(OS);
+    R << TyName << " ";
     identifyInstruction(R, I);
-    R << " is a floating point op where the block profile count is "
-      << utostr(BlockProfileCount);
+    if (BlockProfileCount)
+      R << " executed " << utostr(*BlockProfileCount) << " times";
+    else
+      R << " has no profile data";
     return R;
   });
 }
@@ -220,10 +233,9 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
   const Function &F = *BB.getParent();
   const Module &M = *F.getParent();
   const DataLayout &DL = M.getDataLayout();
-  uint64_t BlockProfileCount = 0;
   // TODO: Is AllowSynthetic what we want?
-  if (auto Val = BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true))
-    BlockProfileCount = *Val;
+  std::optional<uint64_t> BlockProfileCount =
+      BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/true);
   for (const Instruction &I : BB.instructionsWithoutDebug()) {
     if (const AllocaInst *Alloca = dyn_cast<AllocaInst>(&I)) {
       Allocas += Direction;
@@ -303,9 +315,9 @@ void KernelInfo::updateForBB(const BasicBlock &BB, int64_t Direction,
         remarkFlatAddrspaceAccess(ORE, F, I);
       }
     }
-    if (isFloatingPointOperation(I)) {
-      FloatingPointOpProfileCount += Direction * BlockProfileCount;
-      remarkFloatingPointOp(ORE, F, I, BlockProfileCount);
+    if (Type *Ty = getFloatingPointOpType(I)) {
+      FloatingPointOpProfileCount += Direction * BlockProfileCount.value_or(0);
+      remarkFloatingPointOp(ORE, F, I, Ty, BlockProfileCount);
     }
   }
 }
