@@ -1322,21 +1322,23 @@ void DwarfDebug::finalizeModuleInfo() {
     // ranges for all subprogram DIEs for mach-o.
     DwarfCompileUnit &U = SkCU ? *SkCU : TheCU;
 
-    if (Asm->TM.getTargetTriple().isNVPTX() && tuneForGDB()) {
+    if (unsigned NumRanges = TheCU.getRanges().size()) {
       // PTX does not support subtracting labels from the code section in the
       // debug_loc section.  To work around this, the NVPTX backend needs the
       // compile unit to have no low_pc in order to have a zero base_address
       // when handling debug_loc in cuda-gdb.
-    } else if (unsigned NumRanges = TheCU.getRanges().size()) {
-      if (NumRanges > 1 && useRangesSection())
-        // A DW_AT_low_pc attribute may also be specified in combination with
-        // DW_AT_ranges to specify the default base address for use in
-        // location lists (see Section 2.6.2) and range lists (see Section
-        // 2.17.3).
-        U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr, 0);
-      else
-        U.setBaseAddress(TheCU.getRanges().front().Begin);
-      U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      if (!(Asm->TM.getTargetTriple().isNVPTX() && tuneForGDB())) {
+        if (NumRanges > 1 && useRangesSection())
+          // A DW_AT_low_pc attribute may also be specified in combination with
+          // DW_AT_ranges to specify the default base address for use in
+          // location lists (see Section 2.6.2) and range lists (see Section
+          // 2.17.3).
+          U.addUInt(U.getUnitDie(), dwarf::DW_AT_low_pc, dwarf::DW_FORM_addr,
+                    0);
+        else
+          U.setBaseAddress(TheCU.getRanges().front().Begin);
+        U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
+      }
     }
 
     // We don't keep track of which addresses are used in which CU so this
