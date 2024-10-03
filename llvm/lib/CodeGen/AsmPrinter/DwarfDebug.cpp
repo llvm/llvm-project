@@ -2325,26 +2325,15 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
-  // Try to determine what line we would be stepped on before entering each MBB.
-  // This happens in the following ways:
-  // - If this block has a single predecessor, we determine the last line in
-  //   the pred block and we have stepped from that.
-  // - If this block has multiple predecessors, we determine the last line in
-  //   each of them; if they all agree then we have stepped from that line,
-  //   otherwise we do not know what line we have stepped from.
-  // The last line in each MBB is determined as follows:
-  // - If the block contains at least one DebugLoc, we have stepped from the
-  //   last one.
-  // - Otherwise, the last line is line 0.
-  // There is one extra rule however: if a predecessor branches to the current
-  // basic block, we only count DebugLocs on or before that branch, so if we're
-  // looking at the MBB %bb.0, which ends with:
-  //   JCC_1 %bb.1, 0, !debug-location !1
-  //   JMP_1 %bb.2, !debug-location !2
-  // We would consider !1 to be the last loc before %bb.1, and !2 before %bb.2.
-  // We also don't need to make this calculation for any block that doesn't have
-  // a non-0 line number on its first instruction, as we will always emit line 0
-  // without is_stmt for that block regardless.
+  // For each MBB we try to determine whether and what source line is *always*
+  // the last stepped-on line before entering MBB. Such a line exists if every
+  // predecessor has an instruction with source line N, which is the last valid
+  // source line to be seen before entering MBB, and if N is the same for all
+  // predecessors. If this is true, and the first instruction with a valid
+  // source line in MBB also has source line N, then that instruction should
+  // *not* use is_stmt. Otherwise, the first instruction with a valid source
+  // line in MBB should always use is_stmt, since we may step to it from a
+  // different line.
   ForceIsStmtInstrs.clear();
 
   // First, collect the last stepped line for each MBB.
@@ -2363,8 +2352,8 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
       continue;
     for (auto &MI : MBB) {
       if (MI.getDebugLoc() && MI.getDebugLoc()->getLine()) {
-        for (auto Pred : MBB.predecessors())
-          PredMBBsToExamine.insert(&*Pred);
+        for (auto *Pred : MBB.predecessors())
+          PredMBBsToExamine.insert(Pred);
         PotentialIsStmtMBBInstrs.insert({&MBB, &MI});
         break;
       }
@@ -2372,11 +2361,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   }
 
   // For each predecessor MBB, we examine the last DebugLoc seen before each
-  // branch or logical fallthrough. We're generous with applying is_stmt; if
+  // branch or logical fallthrough. We're generous with applying is_stmt: if
   // there's an edge that TargetInstrInfo::analyzeBranch can't understand, we
-  // simply assume that is_stmt ought to be applied to the successors, since
-  // this rule is mainly intended to avoid excessive stepping on lines that
-  // expand to many lines of code.
+  // assume that all successor MBBs use the last DebugLoc seen.
   for (auto *MBB : PredMBBsToExamine) {
     auto CheckMBBEdge = [&](MachineBasicBlock *Succ, unsigned OutgoingLine) {
       auto MBBInstrIt = PotentialIsStmtMBBInstrs.find(Succ);
@@ -2409,7 +2396,6 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
         unsigned FBBLine = MBB->back().getDebugLoc()->getLine();
         assert(MIIt->isBranch() && "Bad result from analyzeBranch?");
         CheckMBBEdge(FBB, FBBLine);
-        FBB = nullptr;
         ++MIIt;
         SuccessorBBs.push_back(TBB);
       } else {
@@ -2441,7 +2427,7 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
       }
       ++MIIt;
     }
-    for (auto Succ : SuccessorBBs)
+    for (auto *Succ : SuccessorBBs)
       CheckMBBEdge(Succ, LastLine);
   }
 }
