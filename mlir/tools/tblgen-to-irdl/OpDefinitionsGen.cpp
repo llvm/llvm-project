@@ -340,6 +340,29 @@ Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   return createPredicate(builder, constraint.getPredicate());
 }
 
+Value createRegionConstraint(OpBuilder &builder, tblgen::Region constraint) {
+  MLIRContext *ctx = builder.getContext();
+  const Record &predRec = constraint.getDef();
+
+  if (predRec.getName() == "AnyRegion") {
+    ValueRange entryBlockArgs = {};
+    auto op =
+        builder.create<irdl::RegionOp>(UnknownLoc::get(ctx), entryBlockArgs);
+    return op.getResult();
+  }
+
+  if (predRec.isSubClassOf("SizedRegion")) {
+    ValueRange entryBlockArgs = {};
+    auto ty = IntegerType::get(ctx, 32);
+    auto op = builder.create<irdl::RegionOp>(
+        UnknownLoc::get(ctx), entryBlockArgs,
+        IntegerAttr::get(ty, predRec.getValueAsInt("blocks")));
+    return op.getResult();
+  }
+
+  return createPredicate(builder, constraint.getPredicate());
+}
+
 /// Returns the name of the operation without the dialect prefix.
 static StringRef getOperatorName(tblgen::Operator &tblgenOp) {
   StringRef opName = tblgenOp.getDef().getValueAsString("opName");
@@ -406,6 +429,12 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
     attrNames.push_back(StringAttr::get(ctx, namedAttr.name));
   }
 
+  SmallVector<Value> regions;
+  for (auto namedRegion : tblgenOp.getRegions()) {
+    regions.push_back(
+        createRegionConstraint(consBuilder, namedRegion.constraint));
+  }
+
   // Create the operands and results operations.
   if (!operands.empty())
     consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands,
@@ -416,6 +445,8 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   if (!attributes.empty())
     consBuilder.create<irdl::AttributesOp>(UnknownLoc::get(ctx), attributes,
                                            ArrayAttr::get(ctx, attrNames));
+  if (!regions.empty())
+    consBuilder.create<irdl::RegionsOp>(UnknownLoc::get(ctx), regions);
 
   return op;
 }
