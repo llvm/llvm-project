@@ -15,7 +15,13 @@
 #define __TBMINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("tbm")))
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("tbm"))) constexpr
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("tbm")))
+#endif
 
 #define __bextri_u32(a, b) \
   ((unsigned int)__builtin_ia32_bextri_u32((unsigned int)(a), \

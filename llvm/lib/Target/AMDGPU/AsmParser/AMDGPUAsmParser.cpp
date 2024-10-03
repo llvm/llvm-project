@@ -229,7 +229,7 @@ private:
   };
 
   struct RegOp {
-    unsigned RegNo;
+    MCRegister RegNo;
     Modifiers Mods;
   };
 
@@ -1295,10 +1295,9 @@ public:
   }
 
   static AMDGPUOperand::Ptr CreateReg(const AMDGPUAsmParser *AsmParser,
-                                      unsigned RegNo, SMLoc S,
-                                      SMLoc E) {
+                                      MCRegister Reg, SMLoc S, SMLoc E) {
     auto Op = std::make_unique<AMDGPUOperand>(Register, AsmParser);
-    Op->Reg.RegNo = RegNo;
+    Op->Reg.RegNo = Reg;
     Op->Reg.Mods = Modifiers();
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1460,7 +1459,7 @@ private:
   bool ParseAMDKernelCodeTValue(StringRef ID, AMDGPUMCKernelCodeT &Header);
   bool ParseDirectiveAMDKernelCodeT();
   // TODO: Possibly make subtargetHasRegister const.
-  bool subtargetHasRegister(const MCRegisterInfo &MRI, unsigned RegNo);
+  bool subtargetHasRegister(const MCRegisterInfo &MRI, MCRegister Reg);
   bool ParseDirectiveAMDGPUHsaKernel();
 
   bool ParseDirectiveISAVersion();
@@ -1475,25 +1474,26 @@ private:
                            const char *AssemblerDirectiveEnd,
                            std::string &CollectString);
 
-  bool AddNextRegisterToList(unsigned& Reg, unsigned& RegWidth,
-                             RegisterKind RegKind, unsigned Reg1, SMLoc Loc);
-  bool ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+  bool AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
+                             RegisterKind RegKind, MCRegister Reg1, SMLoc Loc);
+  bool ParseAMDGPURegister(RegisterKind &RegKind, MCRegister &Reg,
                            unsigned &RegNum, unsigned &RegWidth,
                            bool RestoreOnFailure = false);
-  bool ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
+  bool ParseAMDGPURegister(RegisterKind &RegKind, MCRegister &Reg,
                            unsigned &RegNum, unsigned &RegWidth,
                            SmallVectorImpl<AsmToken> &Tokens);
-  unsigned ParseRegularReg(RegisterKind &RegKind, unsigned &RegNum,
-                           unsigned &RegWidth,
-                           SmallVectorImpl<AsmToken> &Tokens);
-  unsigned ParseSpecialReg(RegisterKind &RegKind, unsigned &RegNum,
-                           unsigned &RegWidth,
-                           SmallVectorImpl<AsmToken> &Tokens);
-  unsigned ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
-                        unsigned &RegWidth, SmallVectorImpl<AsmToken> &Tokens);
+  MCRegister ParseRegularReg(RegisterKind &RegKind, unsigned &RegNum,
+                             unsigned &RegWidth,
+                             SmallVectorImpl<AsmToken> &Tokens);
+  MCRegister ParseSpecialReg(RegisterKind &RegKind, unsigned &RegNum,
+                             unsigned &RegWidth,
+                             SmallVectorImpl<AsmToken> &Tokens);
+  MCRegister ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
+                          unsigned &RegWidth,
+                          SmallVectorImpl<AsmToken> &Tokens);
   bool ParseRegRange(unsigned& Num, unsigned& Width);
-  unsigned getRegularReg(RegisterKind RegKind, unsigned RegNum, unsigned SubReg,
-                         unsigned RegWidth, SMLoc Loc);
+  MCRegister getRegularReg(RegisterKind RegKind, unsigned RegNum,
+                           unsigned SubReg, unsigned RegWidth, SMLoc Loc);
 
   bool isRegister();
   bool isRegister(const AsmToken &Token, const AsmToken &NextToken) const;
@@ -1876,7 +1876,7 @@ private:
   SMLoc getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
                       const OperandVector &Operands) const;
   SMLoc getImmLoc(AMDGPUOperand::ImmTy Type, const OperandVector &Operands) const;
-  SMLoc getRegLoc(unsigned Reg, const OperandVector &Operands) const;
+  SMLoc getRegLoc(MCRegister Reg, const OperandVector &Operands) const;
   SMLoc getLitLoc(const OperandVector &Operands,
                   bool SearchMandatoryLiterals = false) const;
   SMLoc getMandatoryLitLoc(const OperandVector &Operands) const;
@@ -1909,7 +1909,7 @@ private:
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
   bool validateDPP(const MCInst &Inst, const OperandVector &Operands);
-  bool validateVccOperand(unsigned Reg) const;
+  bool validateVccOperand(MCRegister Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
   bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
   bool validateMAISrc2(const MCInst &Inst, const OperandVector &Operands);
@@ -2810,7 +2810,7 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
   return -1;
 }
 
-static unsigned getSpecialRegForName(StringRef RegName) {
+static MCRegister getSpecialRegForName(StringRef RegName) {
   return StringSwitch<unsigned>(RegName)
     .Case("exec", AMDGPU::EXEC)
     .Case("vcc", AMDGPU::VCC)
@@ -2884,9 +2884,9 @@ ParseStatus AMDGPUAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return ParseStatus::Success;
 }
 
-bool AMDGPUAsmParser::AddNextRegisterToList(unsigned &Reg, unsigned &RegWidth,
-                                            RegisterKind RegKind, unsigned Reg1,
-                                            SMLoc Loc) {
+bool AMDGPUAsmParser::AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
+                                            RegisterKind RegKind,
+                                            MCRegister Reg1, SMLoc Loc) {
   switch (RegKind) {
   case IS_SPECIAL:
     if (Reg == AMDGPU::EXEC_LO && Reg1 == AMDGPU::EXEC_HI) {
@@ -2994,7 +2994,7 @@ AMDGPUAsmParser::isRegister(const AsmToken &Token,
     }
   }
 
-  return getSpecialRegForName(Str) != AMDGPU::NoRegister;
+  return getSpecialRegForName(Str).isValid();
 }
 
 bool
@@ -3003,9 +3003,9 @@ AMDGPUAsmParser::isRegister()
   return isRegister(getToken(), peekToken());
 }
 
-unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
-                                        unsigned SubReg, unsigned RegWidth,
-                                        SMLoc Loc) {
+MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
+                                          unsigned SubReg, unsigned RegWidth,
+                                          SMLoc Loc) {
   assert(isRegularReg(RegKind));
 
   unsigned AlignSize = 1;
@@ -3017,14 +3017,14 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   if (RegNum % AlignSize != 0) {
     Error(Loc, "invalid register alignment");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   unsigned RegIdx = RegNum / AlignSize;
   int RCID = getRegClass(RegKind, RegWidth);
   if (RCID == -1) {
     Error(Loc, "invalid or unsupported register size");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
@@ -3036,10 +3036,10 @@ unsigned AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
 
   if (RegKind == IS_VGPR && !isGFX1210Plus() && RegIdx + RegWidth / 32 > 256) {
     Error(Loc, "register index is out of range");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
-  unsigned Reg = RC.getRegister(RegIdx);
+  MCRegister Reg = RC.getRegister(RegIdx);
 
   if (SubReg) {
     Reg = TRI->getSubReg(Reg, SubReg);
@@ -3094,11 +3094,12 @@ bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth) {
   return true;
 }
 
-unsigned AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
-                                          unsigned &RegNum, unsigned &RegWidth,
-                                          SmallVectorImpl<AsmToken> &Tokens) {
+MCRegister AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
+                                            unsigned &RegNum,
+                                            unsigned &RegWidth,
+                                            SmallVectorImpl<AsmToken> &Tokens) {
   assert(isToken(AsmToken::Identifier));
-  unsigned Reg = getSpecialRegForName(getTokenStr());
+  MCRegister Reg = getSpecialRegForName(getTokenStr());
   if (Reg) {
     RegNum = 0;
     RegWidth = 32;
@@ -3109,9 +3110,10 @@ unsigned AMDGPUAsmParser::ParseSpecialReg(RegisterKind &RegKind,
   return Reg;
 }
 
-unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
-                                          unsigned &RegNum, unsigned &RegWidth,
-                                          SmallVectorImpl<AsmToken> &Tokens) {
+MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
+                                            unsigned &RegNum,
+                                            unsigned &RegWidth,
+                                            SmallVectorImpl<AsmToken> &Tokens) {
   assert(isToken(AsmToken::Identifier));
   StringRef RegName = getTokenStr();
   auto Loc = getLoc();
@@ -3119,7 +3121,7 @@ unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   const RegInfo *RI = getRegularRegInfo(RegName);
   if (!RI) {
     Error(Loc, "invalid register name");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   Tokens.push_back(getToken());
@@ -3137,64 +3139,65 @@ unsigned AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
     // Single 32-bit register: vXX.
     if (!getRegNum(RegSuffix, RegNum)) {
       Error(Loc, "invalid register index");
-      return AMDGPU::NoRegister;
+      return MCRegister();
     }
     RegWidth = 32;
   } else {
     // Range of registers: v[XX:YY]. ":YY" is optional.
     if (!ParseRegRange(RegNum, RegWidth))
-      return AMDGPU::NoRegister;
+      return MCRegister();
   }
 
   return getRegularReg(RegKind, RegNum, SubReg, RegWidth, Loc);
 }
 
-unsigned AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
-                                       unsigned &RegWidth,
-                                       SmallVectorImpl<AsmToken> &Tokens) {
-  unsigned Reg = AMDGPU::NoRegister;
+MCRegister AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
+                                         unsigned &RegNum, unsigned &RegWidth,
+                                         SmallVectorImpl<AsmToken> &Tokens) {
+  MCRegister Reg;
   auto ListLoc = getLoc();
 
   if (!skipToken(AsmToken::LBrac,
                  "expected a register or a list of registers")) {
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   // List of consecutive registers, e.g.: [s0,s1,s2,s3]
 
   auto Loc = getLoc();
   if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
-    return AMDGPU::NoRegister;
+    return MCRegister();
   if (RegWidth != 32) {
     Error(Loc, "expected a single 32-bit register");
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   for (; trySkipToken(AsmToken::Comma); ) {
     RegisterKind NextRegKind;
-    unsigned NextReg, NextRegNum, NextRegWidth;
+    MCRegister NextReg;
+    unsigned NextRegNum, NextRegWidth;
     Loc = getLoc();
 
     if (!ParseAMDGPURegister(NextRegKind, NextReg,
                              NextRegNum, NextRegWidth,
                              Tokens)) {
-      return AMDGPU::NoRegister;
+      return MCRegister();
     }
     if (NextRegWidth != 32) {
       Error(Loc, "expected a single 32-bit register");
-      return AMDGPU::NoRegister;
+      return MCRegister();
     }
     if (NextRegKind != RegKind) {
       Error(Loc, "registers in a list must be of the same kind");
-      return AMDGPU::NoRegister;
+      return MCRegister();
     }
     if (!AddNextRegisterToList(Reg, RegWidth, RegKind, NextReg, Loc))
-      return AMDGPU::NoRegister;
+      return MCRegister();
   }
 
   if (!skipToken(AsmToken::RBrac,
                  "expected a comma or a closing square bracket")) {
-    return AMDGPU::NoRegister;
+    return MCRegister();
   }
 
   if (isRegularReg(RegKind))
@@ -3203,22 +3206,23 @@ unsigned AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
   return Reg;
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
-                                          unsigned &RegNum, unsigned &RegWidth,
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind,
+                                          MCRegister &Reg, unsigned &RegNum,
+                                          unsigned &RegWidth,
                                           SmallVectorImpl<AsmToken> &Tokens) {
   auto Loc = getLoc();
-  Reg = AMDGPU::NoRegister;
+  Reg = MCRegister();
 
   if (isToken(AsmToken::Identifier)) {
     Reg = ParseSpecialReg(RegKind, RegNum, RegWidth, Tokens);
-    if (Reg == AMDGPU::NoRegister)
+    if (!Reg)
       Reg = ParseRegularReg(RegKind, RegNum, RegWidth, Tokens);
   } else {
     Reg = ParseRegList(RegKind, RegNum, RegWidth, Tokens);
   }
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
-  if (Reg == AMDGPU::NoRegister) {
+  if (!Reg) {
     assert(Parser.hasPendingError());
     return false;
   }
@@ -3236,10 +3240,11 @@ bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
   return true;
 }
 
-bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind, unsigned &Reg,
-                                          unsigned &RegNum, unsigned &RegWidth,
+bool AMDGPUAsmParser::ParseAMDGPURegister(RegisterKind &RegKind,
+                                          MCRegister &Reg, unsigned &RegNum,
+                                          unsigned &RegWidth,
                                           bool RestoreOnFailure /*=false*/) {
-  Reg = AMDGPU::NoRegister;
+  Reg = MCRegister();
 
   SmallVector<AsmToken, 1> Tokens;
   if (ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth, Tokens)) {
@@ -3307,7 +3312,8 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
   SMLoc StartLoc = Tok.getLoc();
   SMLoc EndLoc = Tok.getEndLoc();
   RegisterKind RegKind;
-  unsigned Reg, RegNum, RegWidth;
+  MCRegister Reg;
+  unsigned RegNum, RegWidth;
 
   if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth)) {
     return nullptr;
@@ -3677,7 +3683,7 @@ ParseStatus AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
 
   auto Loc = getLoc();
   RegisterKind RegKind;
-  unsigned Reg;
+  MCRegister Reg;
   unsigned RegNum;
   unsigned RegWidth;
   if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
@@ -3980,7 +3986,7 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
     const MCInst &Inst, const OperandVector &Operands) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
-  unsigned LastSGPR = AMDGPU::NoRegister;
+  MCRegister LastSGPR;
   unsigned ConstantBusUseCount = 0;
   unsigned NumLiterals = 0;
   unsigned LiteralSize;
@@ -5127,7 +5133,7 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
 }
 
 // Check if VCC register matches wavefront size
-bool AMDGPUAsmParser::validateVccOperand(unsigned Reg) const {
+bool AMDGPUAsmParser::validateVccOperand(MCRegister Reg) const {
   auto FB = getFeatureBits();
   return (FB[AMDGPU::FeatureWavefrontSize64] && Reg == AMDGPU::VCC) ||
     (FB[AMDGPU::FeatureWavefrontSize32] && Reg == AMDGPU::VCC_LO);
@@ -5273,7 +5279,7 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
     if (!Op.isReg())
       continue;
 
-    unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
+    MCRegister Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
     if (!Sub)
       continue;
 
@@ -6793,15 +6799,15 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 }
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
-                                           unsigned RegNo) {
-  if (MRI.regsOverlap(TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
+                                           MCRegister Reg) {
+  if (MRI.regsOverlap(TTMP12_TTMP13_TTMP14_TTMP15, Reg))
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
-  if (MRI.regsOverlap(SGPR104_SGPR105, RegNo))
+  if (MRI.regsOverlap(SGPR104_SGPR105, Reg))
     return hasSGPR104_SGPR105();
 
-  switch (RegNo) {
+  switch (Reg.id()) {
   case SRC_SHARED_BASE_LO:
   case SRC_SHARED_BASE:
   case SRC_SHARED_LIMIT_LO:
@@ -6844,7 +6850,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     // No flat_scr on SI.
     // On GFX10Plus flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
-    switch (RegNo) {
+    switch (Reg.id()) {
     case FLAT_SCR:
     case FLAT_SCR_LO:
     case FLAT_SCR_HI:
@@ -6856,7 +6862,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   // VI only has 102 SGPRs, so make sure we aren't trying to use the 2 more that
   // SI/CI have.
-  if (MRI.regsOverlap(SGPR102_SGPR103, RegNo))
+  if (MRI.regsOverlap(SGPR102_SGPR103, Reg))
     return hasSGPR102_SGPR103();
 
   return true;
@@ -7719,7 +7725,7 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
     if (Op.isOff()) {
       assert(SrcIdx < 4);
       OperandIdx[SrcIdx] = Inst.size();
-      Inst.addOperand(MCOperand::createReg(AMDGPU::NoRegister));
+      Inst.addOperand(MCOperand::createReg(MCRegister()));
       ++SrcIdx;
       continue;
     }
@@ -7742,12 +7748,12 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
   if (OptionalIdx.find(AMDGPUOperand::ImmTyExpCompr) != OptionalIdx.end()) {
     Compr = true;
     Inst.getOperand(OperandIdx[1]) = Inst.getOperand(OperandIdx[2]);
-    Inst.getOperand(OperandIdx[2]).setReg(AMDGPU::NoRegister);
-    Inst.getOperand(OperandIdx[3]).setReg(AMDGPU::NoRegister);
+    Inst.getOperand(OperandIdx[2]).setReg(MCRegister());
+    Inst.getOperand(OperandIdx[3]).setReg(MCRegister());
   }
 
   for (auto i = 0; i < SrcIdx; ++i) {
-    if (Inst.getOperand(OperandIdx[i]).getReg() != AMDGPU::NoRegister) {
+    if (Inst.getOperand(OperandIdx[i]).getReg()) {
       EnMask |= Compr? (0x3 << i * 2) : (0x1 << i);
     }
   }
@@ -8516,9 +8522,8 @@ AMDGPUAsmParser::getImmLoc(AMDGPUOperand::ImmTy Type,
   return getOperandLoc(Test, Operands);
 }
 
-SMLoc
-AMDGPUAsmParser::getRegLoc(unsigned Reg,
-                           const OperandVector &Operands) const {
+SMLoc AMDGPUAsmParser::getRegLoc(MCRegister Reg,
+                                 const OperandVector &Operands) const {
   auto Test = [=](const AMDGPUOperand& Op) {
     return Op.isRegKind() && Op.getReg() == Reg;
   };
@@ -10046,7 +10051,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     if (IsVOP3CvtSrDpp) {
       if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
         Inst.addOperand(MCOperand::createImm(0));
-        Inst.addOperand(MCOperand::createReg(0));
+        Inst.addOperand(MCOperand::createReg(MCRegister()));
       }
     }
 

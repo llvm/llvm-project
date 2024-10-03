@@ -10287,8 +10287,10 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   SDValue LeftOp = ShiftOperand.getOperand(0);
   SDValue RightOp = ShiftOperand.getOperand(1);
 
-  bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
-  bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
+  // Treat zext nneg as sext - we might need to support handling these as zext
+  // as well in the future, but for now just prefer sext.
+  bool IsSignExt = sd_match(LeftOp, m_SExtLike(m_Value()));
+  bool IsZeroExt = sd_match(LeftOp, m_ZExt(m_Value()));
 
   if (!IsSignExt && !IsZeroExt)
     return SDValue();

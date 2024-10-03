@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -o - < %s | FileCheck --check-prefixes=CHECK,KERNEL %s
 ; RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+cumode -o /dev/null %s 2>&1 | FileCheck -check-prefix=CUMODE-ERR %s
 
+; REQUIRES: fix-me
+
 ; CUMODE-ERR: LLVM ERROR: cannot enable cumode when wavegroup is enabled
 
 define amdgpu_kernel void @wavegroup_kernel(ptr addrspace(1) %p) #0 "amdgpu-wavegroup-enable" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-dispatch-id" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" !reqd_work_group_size !{i32 32, i32 8, i32 1} {

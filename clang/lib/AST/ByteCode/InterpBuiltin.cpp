@@ -14,6 +14,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/Support/SipHash.h"
 
@@ -1152,6 +1153,33 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func,
+                                       const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType IndexT = *S.Ctx.classify(Call->getArg(1));
+  APSInt Val = peekToAPSInt(S.Stk, ValT,
+                            align(primSize(ValT)) + align(primSize(IndexT)));
+  APSInt Index = peekToAPSInt(S.Stk, IndexT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  uint64_t Shift = Index.extractBitsAsZExtValue(8, 0);
+  uint64_t Length = Index.extractBitsAsZExtValue(8, 8);
+  Length = Length > BitWidth ? BitWidth : Length;
+
+  // Handle out of bounds cases.
+  if (Length == 0 || Shift >= BitWidth) {
+    pushInteger(S, 0, Call->getType());
+    return true;
+  }
+
+  uint64_t Result = Val.getZExtValue() >> Shift;
+  Result &= llvm::maskTrailingOnes<uint64_t>(Length);
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
@@ -1734,6 +1762,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_align_up:
   case Builtin::BI__builtin_align_down:
     if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_bextr_u32:
+  case clang::X86::BI__builtin_ia32_bextr_u64:
+  case clang::X86::BI__builtin_ia32_bextri_u32:
+  case clang::X86::BI__builtin_ia32_bextri_u64:
+    if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
       return false;
     break;
 

@@ -77,7 +77,7 @@ bool AMDGPUFixWaveGroupEntry::runOnModule(Module &M) {
       continue;
 
     auto MF = MMI.getMachineFunction(F);
-    auto &Info = ResourceUsage->getResourceInfo(&F);
+    auto &Info = ResourceUsage->getResourceInfo();
     auto PerRankVGPRCnt = Info.NumVGPR;
 
     // Replace the "num vgprs" placeholder that was inserted by frame lowering.

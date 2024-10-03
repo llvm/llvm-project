@@ -22,7 +22,7 @@ using namespace lld::elf;
 namespace {
 class X86 : public TargetInfo {
 public:
-  X86();
+  X86(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -42,7 +42,7 @@ public:
 };
 } // namespace
 
-X86::X86() {
+X86::X86(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_386_COPY;
   gotRel = R_386_GLOB_DAT;
   pltRel = R_386_JUMP_SLOT;
@@ -518,7 +518,7 @@ void X86::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 namespace {
 class IntelIBT : public X86 {
 public:
-  IntelIBT();
+  IntelIBT(Ctx &ctx) : X86(ctx) { pltHeaderSize = 0; }
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -527,8 +527,6 @@ public:
   static const unsigned IBTPltHeaderSize = 16;
 };
 } // namespace
-
-IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
@@ -580,7 +578,7 @@ void IntelIBT::writeIBTPlt(uint8_t *buf, size_t numEntries) const {
 namespace {
 class RetpolinePic : public X86 {
 public:
-  RetpolinePic();
+  RetpolinePic(Ctx &);
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -589,7 +587,7 @@ public:
 
 class RetpolineNoPic : public X86 {
 public:
-  RetpolineNoPic();
+  RetpolineNoPic(Ctx &);
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -597,7 +595,7 @@ public:
 };
 } // namespace
 
-RetpolinePic::RetpolinePic() {
+RetpolinePic::RetpolinePic(Ctx &ctx) : X86(ctx) {
   pltHeaderSize = 48;
   pltEntrySize = 32;
   ipltEntrySize = 32;
@@ -651,7 +649,7 @@ void RetpolinePic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 23, -off - 27);
 }
 
-RetpolineNoPic::RetpolineNoPic() {
+RetpolineNoPic::RetpolineNoPic(Ctx &ctx) : X86(ctx) {
   pltHeaderSize = 48;
   pltEntrySize = 32;
   ipltEntrySize = 32;
@@ -710,21 +708,21 @@ void RetpolineNoPic::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 22, -off - 26);
 }
 
-TargetInfo *elf::getX86TargetInfo() {
+TargetInfo *elf::getX86TargetInfo(Ctx &ctx) {
   if (ctx.arg.zRetpolineplt) {
     if (ctx.arg.isPic) {
-      static RetpolinePic t;
+      static RetpolinePic t(ctx);
       return &t;
     }
-    static RetpolineNoPic t;
+    static RetpolineNoPic t(ctx);
     return &t;
   }
 
   if (ctx.arg.andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-    static IntelIBT t;
+    static IntelIBT t(ctx);
     return &t;
   }
 
-  static X86 t;
+  static X86 t(ctx);
   return &t;
 }

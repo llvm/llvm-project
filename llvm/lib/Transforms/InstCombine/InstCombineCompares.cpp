@@ -5282,6 +5282,11 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y)))))) {
       bool NonZero;
       if (ICmpInst::isEquality(Pred)) {
+        // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
+        if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
+            isKnownNonEqual(X, Y, DL, &AC, &I, &DT))
+          return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
+
         KnownBits ZKnown = computeKnownBits(Z, 0, &I);
         // if Z % 2 != 0
         //    X * Z eq/ne Y * Z -> X eq/ne Y

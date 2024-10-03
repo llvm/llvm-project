@@ -20,7 +20,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_INSTRINTERVAL_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_INSTRINTERVAL_H
 
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <iterator>
 
 namespace llvm::sandboxir {
@@ -117,6 +117,64 @@ public:
   const_iterator begin() const { return const_iterator(From, *this); }
   const_iterator end() const {
     return const_iterator(To != nullptr ? To->getNextNode() : nullptr, *this);
+  }
+  /// Equality.
+  bool operator==(const Interval &Other) const {
+    return From == Other.From && To == Other.To;
+  }
+  /// Inequality.
+  bool operator!=(const Interval &Other) const { return !(*this == Other); }
+  /// \Returns true if this and \p Other have nothing in common.
+  bool disjoint(const Interval &Other) const {
+    if (Other.empty())
+      return true;
+    if (empty())
+      return true;
+    return Other.To->comesBefore(From) || To->comesBefore(Other.From);
+  }
+  /// \Returns the intersection between this and \p Other.
+  // Example:
+  // |----|   this
+  //    |---| Other
+  //    |-|   this->getIntersection(Other)
+  Interval intersection(const Interval &Other) const {
+    if (empty())
+      return *this;
+    if (Other.empty())
+      return Interval();
+    // 1. No overlap
+    // A---B      this
+    //       C--D Other
+    if (To->comesBefore(Other.From) || Other.To->comesBefore(From))
+      return Interval();
+    // 2. Overlap.
+    // A---B   this
+    //   C--D  Other
+    auto NewFromI = From->comesBefore(Other.From) ? Other.From : From;
+    auto NewToI = To->comesBefore(Other.To) ? To : Other.To;
+    return Interval(NewFromI, NewToI);
+  }
+  /// Difference operation. This returns up to two intervals.
+  // Example:
+  // |--------| this
+  //    |-|     Other
+  // |-|   |--| this - Other
+  SmallVector<Interval, 2> operator-(const Interval &Other) {
+    if (disjoint(Other))
+      return {*this};
+    if (Other.empty())
+      return {*this};
+    if (*this == Other)
+      return {Interval()};
+    Interval Intersection = intersection(Other);
+    SmallVector<Interval, 2> Result;
+    // Part 1, skip if empty.
+    if (From != Intersection.From)
+      Result.emplace_back(From, Intersection.From->getPrevNode());
+    // Part 2, skip if empty.
+    if (Intersection.To != To)
+      Result.emplace_back(Intersection.To->getNextNode(), To);
+    return Result;
   }
 };
 

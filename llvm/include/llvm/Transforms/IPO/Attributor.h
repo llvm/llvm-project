@@ -1341,6 +1341,9 @@ struct InformationCache {
   const ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return the flat address space if the associated target has.
+  std::optional<unsigned> getFlatAddressSpace() const;
+
 private:
   struct FunctionInfo {
     ~FunctionInfo();
@@ -6267,11 +6270,12 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
     return (AA->getIdAddr() == &ID);
   }
 
-  // No address space which indicates the associated value is dead.
-  static const uint32_t NoAddressSpace = ~0U;
-
   /// Unique ID (due to the unique address)
   static const char ID;
+
+protected:
+  // Invalid address space which indicates the associated value is dead.
+  static const uint32_t InvalidAddressSpace = ~0U;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
