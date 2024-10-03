@@ -405,13 +405,12 @@ filterFastTidyChecks(const tidy::ClangTidyCheckFactories &All,
 std::vector<Fix>
 clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
                      const clang::Diagnostic &Info, const Diag &Diag) {
-  auto RuleName = CTContext.getCheckName(Info.getID());
-  if (RuleName.empty()) {
+  auto RuleName = CTContext.getCheckName(Diag.ID);
+  if (RuleName.empty() || Diag.Severity >= DiagnosticsEngine::Error ||
+      !Diag.InsideMainFile) {
     return {};
   }
-  if (!Diag.InsideMainFile) {
-    return {};
-  }
+
   auto &SrcMgr = Info.getSourceManager();
   auto &DiagLoc = Info.getLocation();
 
