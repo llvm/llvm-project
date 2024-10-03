@@ -207,7 +207,7 @@ For aggregated values, the following keys are used:
 FORMAT OF VERIFY JSON OUTPUT
 ----------------------------
 
-The format of the JSON output created by the :option:`--verify-json=<path>` is::
+The format of the JSON output created by the :option:`--verify-json` is::
 
   { 
     "error-categories": { 
