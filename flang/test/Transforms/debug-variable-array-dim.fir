@@ -35,7 +35,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc4 = loc("test.f90":2:8)
 #loc5 = loc("test.f90":8:11)
 
-// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa0"{{.*}}flags = Artificial>
+// CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa3"{{.*}}flags = Artificial>
 // CHECK-DAG: #[[VAR1:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa1"{{.*}}flags = Artificial>
 // CHECK-DAG: #[[VAR2:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFfooEa2"{{.*}}flags = Artificial>
 // CHECK-DAG: #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = #[[VAR1]], lowerBound = #[[VAR0]]>, #llvm.di_subrange<count = #[[VAR2]]>>

@@ -19,5 +19,5 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc2 = loc("test1.f90":3:16)
 #loc3 = loc("test1.f90":4:16)
 
-// CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFFfnEb0"{{.*}}flags = Artificial>
+// CHECK: #[[VAR:.*]] = #llvm.di_local_variable<{{.*}}name = "._QFFfnEb1"{{.*}}flags = Artificial>
 // CHECK: #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<[{{.*}}]>, lowerBound = #[[VAR]], stride = #llvm.di_expression<[{{.*}}]>>, dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>>

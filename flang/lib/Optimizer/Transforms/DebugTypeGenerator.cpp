@@ -81,27 +81,29 @@ static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
 // Helper function to create DILocalVariableAttr and DbgValueOp when information
 // about the size or dimension of a variable etc lives in an mlir::Value.
 mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
-    mlir::MLIRContext *context, mlir::Value Val,
+    mlir::MLIRContext *context, mlir::Value val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
     fir::cg::XDeclareOp declOp) {
   // There can be multiple artificial variable for a single declOp. To help
-  // distinguish then, we pad the name with a counter. This static variable
-  // helps us achieve that.
-  static unsigned varID = 0;
+  // distinguish them, we pad the name with a counter. The counter is the
+  // position of 'val' in the operands of declOp.
+  auto varID = std::distance(
+      declOp.getOperands().begin(),
+      std::find(declOp.getOperands().begin(), declOp.getOperands().end(), val));
   mlir::OpBuilder builder(context);
   auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
-                                                 std::to_string(varID++));
+                                                 std::to_string(varID));
   builder.setInsertionPoint(declOp);
-  mlir::Type type = Val.getType();
+  mlir::Type type = val.getType();
   if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
     type = builder.getIntegerType(64);
-    Val = builder.create<fir::ConvertOp>(declOp.getLoc(), type, Val);
+    val = builder.create<fir::ConvertOp>(declOp.getLoc(), type, val);
   }
   mlir::LLVM::DITypeAttr Ty = convertType(type, fileAttr, scope, declOp);
   auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
       /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-  builder.create<mlir::LLVM::DbgValueOp>(declOp.getLoc(), Val, lvAttr, nullptr);
+  builder.create<mlir::LLVM::DbgValueOp>(declOp.getLoc(), val, lvAttr, nullptr);
   return lvAttr;
 }
 

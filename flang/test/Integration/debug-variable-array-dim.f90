@@ -8,7 +8,7 @@ subroutine foo(a, n, m, p)
 end subroutine foo
 
 
-! CHECK-DAG: ![[VAR0:.*]] = !DILocalVariable(name: "._QFfooEa0"{{.*}}scope: ![[SCOPE:[0-9]+]]{{.*}}flags: DIFlagArtificial)
+! CHECK-DAG: ![[VAR0:.*]] = !DILocalVariable(name: "._QFfooEa3"{{.*}}scope: ![[SCOPE:[0-9]+]]{{.*}}flags: DIFlagArtificial)
 ! CHECK-DAG: ![[VAR1:.*]] = !DILocalVariable(name: "._QFfooEa1"{{.*}}scope: ![[SCOPE]]{{.*}}flags: DIFlagArtificial)
 ! CHECK-DAG: ![[VAR2:.*]] = !DILocalVariable(name: "._QFfooEa2"{{.*}}scope: ![[SCOPE]]{{.*}}flags: DIFlagArtificial)
 ! CHECK-DAG: ![[SR1:.*]] = !DISubrange(count: ![[VAR1]], lowerBound: ![[VAR0]])
