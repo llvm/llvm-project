@@ -50,6 +50,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
+  case VPInstruction::MergeUntilPivot:
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
     VPValue *OtherV = R->getOperand(2);
