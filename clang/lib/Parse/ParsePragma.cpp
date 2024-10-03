@@ -1448,9 +1448,9 @@ NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
   return NestedId;
 }
 
-bool Parser::zOSParseParameterList(StringRef PragmaName,
-                                   std::optional<SmallVector<QualType, 4>> &TypeList,
-                                   Qualifiers &CVQual) {
+bool Parser::zOSParseParameterList(
+    StringRef PragmaName, std::optional<SmallVector<QualType, 4>> &TypeList,
+    Qualifiers &CVQual) {
   if (Tok.is(tok::l_paren)) {
     TypeList = SmallVector<QualType, 4>();
     PP.Lex(Tok);
@@ -1544,7 +1544,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     Actions.ActOnPragmaExport(NestedId, IdentNameLoc, std::move(TypeList),
                               CVQual);
 
-    //Because export is also a C++ keyword, we also check for that
+    // Because export is also a C++ keyword, we also check for that
     if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
       IsPragmaExport = false;
       PragmaName = Tok.getIdentifierInfo()->getName();
@@ -4298,8 +4298,7 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
 }
 
 /// Helper function for handling z/OS pragmas like #pragma export.
-static void zOSPragmaHandlerHelper(Preprocessor &PP,
-                                   Token &Tok,
+static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
                                    tok::TokenKind TokKind) {
   Token EoF, AnnotTok;
   EoF.startToken();
@@ -4322,9 +4321,8 @@ static void zOSPragmaHandlerHelper(Preprocessor &PP,
   auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
   std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
   auto Value = new (PP.getPreprocessorAllocator())
-    std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
-
-  TokenVector.size());
+      std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
+                                                 TokenVector.size());
   AnnotTok.setAnnotationValue(Value);
   PP.EnterToken(AnnotTok, /*IsReinject*/ false);
 }

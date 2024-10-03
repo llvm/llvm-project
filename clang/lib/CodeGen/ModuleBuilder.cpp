@@ -318,7 +318,7 @@ namespace {
       Builder->EmitPragmaExport(D);
     }
 
-  void HandleVTable(CXXRecordDecl *RD) override {
+    void HandleVTable(CXXRecordDecl *RD) override {
       if (Diags.hasUnrecoverableErrorOccurred())
         return;
 

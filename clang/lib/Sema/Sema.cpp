@@ -1429,8 +1429,8 @@ void Sema::ActOnEndOfTranslationUnit() {
           } else
             Consumer.CompletePragmaExport(D);
         } else
-          Diag(D->getLocation(), diag::warn_pragma_not_applied) << "export"
-              << D;
+          Diag(D->getLocation(), diag::warn_pragma_not_applied) 
+              << "export" << D;
       } else
         Diag(I.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
     }

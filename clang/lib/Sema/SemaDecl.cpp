@@ -5090,12 +5090,13 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.isExportSpecified()) {
     VisibilityAttr *existingAttr = TagD->getAttr<VisibilityAttr>();
     if (existingAttr) {
-      VisibilityAttr::VisibilityType existingValue = existingAttr->getVisibility();
+      VisibilityAttr::VisibilityType existingValue = 
+          existingAttr->getVisibility();
       if (existingValue != VisibilityAttr::Default)
         Diag(DS.getExportSpecLoc(), diag::err_mismatched_visibility);
     } else {
-      Tag->addAttr(VisibilityAttr::CreateImplicit(Context,
-              VisibilityAttr::Default));
+      Tag->addAttr(
+          VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
     }
   }
 
