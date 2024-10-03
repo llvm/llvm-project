@@ -18,8 +18,8 @@
 // arg is set to 0 to prevent dual setting of the HSA coarse-grain attribute.
 // Only the OpenMP runtime table tracking coarse-grain memory is updated.
 
-#if defined(_OPENMP) && __has_include(<hip_runtime_api.h>)
-#include <hip_runtime_api.h>
+#if defined(_OPENMP) && __has_include(<hip/hip_runtime_api.h>) && (defined(__HIP_PLATFORM_AMD__) || defined(__HIP_PLATFORM_NVIDIA__))
+#include <hip/hip_runtime_api.h>
 #include <omp.h>
 
 // Define Overlays for HIP host functions
