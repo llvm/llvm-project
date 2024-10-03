@@ -521,11 +521,13 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   }
 
   // Yk can't tolerate backend optimisations, so we mark every function with
-  // `optnone` from here onwards.
+  // `optnone` from here onwards. Note that `noinline` is a required
+  // prerequisite of `optnone`.
   if (YkOptNoneAfterIRPasses) {
     for (Function &F: Mod) {
       if (!F.isDeclaration()) {
         F.addFnAttr(Attribute::OptimizeNone);
+        F.addFnAttr(Attribute::NoInline);
       }
     }
   }

@@ -658,7 +658,10 @@ private:
                          unsigned &InstIdx) {
     // Tail calls:
     //
-    // - The `tail` keyword is documented as ignorable, so we do.
+    // - The `tail` keyword is ignorable and merely means that the call *could*
+    //   be tail called, should an appropriate calling convention be used for
+    //   the call. It's safe for us to ignore this because we check the calling
+    //   convention of the call separately below.
     //
     // - The `notail` keyword just means don't add `tail` or `musttail`. I
     //   think this has no consequences for us.
@@ -673,11 +676,18 @@ private:
     AttributeList Attrs = I->getAttributes();
     for (unsigned AI = 0; AI < I->arg_size(); AI++) {
       for (auto &Attr : Attrs.getParamAttrs(AI)) {
-        // `nonull`, `noundef` and `dereferencable` are used a lot. I think
-        // for our purposes they can be safely ignored.
+        // `nonull`, `noundef`, `nounwind` and `dereferencable` are used a lot.
+        // I think for our purposes they can be safely ignored.
         if (((Attr.getKindAsEnum() == Attribute::NonNull) ||
              (Attr.getKindAsEnum() == Attribute::NoUndef) ||
+             (Attr.getKindAsEnum() == Attribute::NoUnwind) ||
              (Attr.getKindAsEnum() == Attribute::Dereferenceable))) {
+          continue;
+        }
+        // "indicates that the annotated function will always return at least a
+        // given number of bytes (or null)" -- not relevant for Yk at this
+        // time.
+        if (Attr.getKindAsEnum() == Attribute::AllocSize) {
           continue;
         }
         serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
