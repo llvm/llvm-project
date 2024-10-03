@@ -1432,17 +1432,12 @@ private:
     }
   }
 
-  // Floating point can be mlir::FloatType or fir::real
+  // Floating point can be mlir Float or Complex Type.
   static unsigned getFloatingPointWidth(mlir::Type t) {
     if (auto f{mlir::dyn_cast<mlir::FloatType>(t)})
       return f.getWidth();
     if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)})
       return mlir::cast<mlir::FloatType>(cplx.getElementType()).getWidth();
-    // FIXME: Get width another way for fir.real/complex
-    // - use fir/KindMapping.h and llvm::Type
-    // - or use evaluate/type.h
-    if (auto r{mlir::dyn_cast<fir::RealType>(t)})
-      return r.getFKind() * 4;
     llvm_unreachable("not a floating-point type");
   }
 
@@ -1983,9 +1978,6 @@ static std::string typeToString(mlir::Type t) {
   if (auto cplx{mlir::dyn_cast<mlir::ComplexType>(t)}) {
     auto eleTy = mlir::cast<mlir::FloatType>(cplx.getElementType());
     return "z" + std::to_string(eleTy.getWidth());
-  }
-  if (auto real{mlir::dyn_cast<fir::RealType>(t)}) {
-    return "r" + std::to_string(real.getFKind());
   }
   if (auto f{mlir::dyn_cast<mlir::FloatType>(t)}) {
     return "f" + std::to_string(f.getWidth());

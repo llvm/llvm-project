@@ -601,9 +601,10 @@ def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
     fir_RealType.predicate]>, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
-def AnyFirComplexLike : TypeConstraint<Or<[fir_ComplexType.predicate,
-  AnyComplex.predicate]>, "any FIR or MLIR complex type">;
-def AnyFirComplex : Type<AnyFirComplexLike.predicate, "any FIR or MLIR complex type">;
+def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
+  "any floating point complex type">;
+def AnyFirComplex : Type<AnyFirComplexLike.predicate,
+  "any floating point complex type">;
 
 // Composable types
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
