@@ -17,6 +17,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/IntrinsicInst.h"
 #include <optional>
 
 namespace llvm::sandboxir {
@@ -101,24 +102,27 @@ public:
   }
 
   static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
-           match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      auto IID = II->getIntrinsicID();
+      return IID == Intrinsic::stackrestore || IID == Intrinsic::stacksave;
+    }
+    return false;
+  }
+
+  /// \Returns true if intrinsic \p I touches memory. This is used by the
+  /// dependency graph.
+  static bool isMemIntrinsic(IntrinsicInst *II) {
+    auto IID = II->getIntrinsicID();
+    return IID != Intrinsic::sideeffect && IID != Intrinsic::pseudoprobe;
   }
 
   /// We consider \p I as a Memory Dependency Candidate instruction if it
   /// reads/write memory or if it has side-effects. This is used by the
   /// dependency graph.
   static bool isMemDepCandidate(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return LLVMI->mayReadOrWriteMemory() &&
-           (!isa<llvm::IntrinsicInst>(LLVMI) ||
-            (cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::sideeffect &&
-             cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::pseudoprobe));
+    IntrinsicInst *II;
+    return I->mayReadOrWriteMemory() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
   }
 };
 } // namespace llvm::sandboxir
