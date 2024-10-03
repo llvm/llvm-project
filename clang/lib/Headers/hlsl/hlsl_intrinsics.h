@@ -379,6 +379,22 @@ template <typename T> constexpr float asfloat(T F) {
 }
 
 //===----------------------------------------------------------------------===//
+// asint builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn int asint(T Val)
+/// \brief Interprets the bit pattern of x as an integer.
+/// \param Val The input value.
+
+template <typename T, int N> constexpr vector<int, N> asint(vector<T, N> V) {
+  return __detail::bit_cast<int, T, N>(V);
+}
+
+template <typename T> constexpr int asint(T F) {
+  return __detail::bit_cast<int, T>(F);
+}
+
+//===----------------------------------------------------------------------===//
 // asin builtins
 //===----------------------------------------------------------------------===//
 
@@ -449,6 +465,36 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 float3 atan(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 float4 atan(float4);
+
+//===----------------------------------------------------------------------===//
+// atan2 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T atan2(T y, T x)
+/// \brief Returns the arctangent of y/x, using the signs of the arguments to
+/// determine the correct quadrant.
+/// \param y The y-coordinate.
+/// \param x The x-coordinate.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half atan2(half y, half x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half2 atan2(half2 y, half2 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half3 atan2(half3 y, half3 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+half4 atan2(half4 y, half4 x);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float atan2(float y, float x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float2 atan2(float2 y, float2 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float3 atan2(float3 y, float3 x);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
+float4 atan2(float4 y, float4 x);
 
 //===----------------------------------------------------------------------===//
 // ceil builtins
@@ -912,6 +958,40 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
+
+//===----------------------------------------------------------------------===//
+// fmod builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T fmod(T x, T y)
+/// \brief Returns the linear interpolation of x to y.
+/// \param x [in] The dividend.
+/// \param y [in] The divisor.
+///
+/// Return the floating-point remainder of the x parameter divided by the y
+/// parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half fmod(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half2 fmod(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half3 fmod(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+half4 fmod(half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float fmod(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float2 fmod(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float3 fmod(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
+float4 fmod(float4, float4);
 
 //===----------------------------------------------------------------------===//
 // frac builtins

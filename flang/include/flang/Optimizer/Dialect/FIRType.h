@@ -182,9 +182,11 @@ void printFirType(FIROpsDialect *, mlir::Type ty, mlir::DialectAsmPrinter &p);
 /// Index, or FIR Int). Aborts execution if condition is false.
 void verifyIntegralType(mlir::Type type);
 
-/// Is `t` a FIR or MLIR Complex type?
+/// Is `t` a floating point complex type?
 inline bool isa_complex(mlir::Type t) {
-  return mlir::isa<fir::ComplexType, mlir::ComplexType>(t);
+  return mlir::isa<mlir::ComplexType>(t) &&
+         mlir::isa<mlir::FloatType>(
+             mlir::cast<mlir::ComplexType>(t).getElementType());
 }
 
 /// Is `t` a CHARACTER type? Does not check the length.

@@ -13,8 +13,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
-#include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {

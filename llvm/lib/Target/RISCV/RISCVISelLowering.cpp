@@ -1076,14 +1076,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::VP_SINT_TO_FP,
                           ISD::VP_UINT_TO_FP},
                          VT, Custom);
-      setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
-                          ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_INTERLEAVE,
-                          ISD::VECTOR_DEINTERLEAVE},
+      setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
+                          ISD::INSERT_SUBVECTOR, ISD::EXTRACT_SUBVECTOR,
+                          ISD::VECTOR_DEINTERLEAVE, ISD::VECTOR_INTERLEAVE,
+                          ISD::VECTOR_REVERSE},
                          VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
-        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT}, VT,
-                           Custom);
+        setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
+                            ISD::EXTRACT_VECTOR_ELT},
+                           VT, Custom);
       else
         setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT},
                            EltVT, Custom);
@@ -8755,8 +8757,10 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                     SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VecVT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
   SDValue Vec = Op.getOperand(0);
   SDValue Val = Op.getOperand(1);
+  MVT ValVT = Val.getSimpleValueType();
   SDValue Idx = Op.getOperand(2);
 
   if (VecVT.getVectorElementType() == MVT::i1) {
@@ -8766,6 +8770,16 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Vec);
     Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, WideVT, Vec, Val, Idx);
     return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Vec);
+  }
+
+  if ((ValVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
+      ValVT == MVT::bf16) {
+    // If we don't have vfmv.s.f for f16/bf16, use fmv.x.h first.
+    MVT IntVT = VecVT.changeTypeToInteger();
+    SDValue IntInsert = DAG.getNode(
+        ISD::INSERT_VECTOR_ELT, DL, IntVT, DAG.getBitcast(IntVT, Vec),
+        DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Val), Idx);
+    return DAG.getBitcast(VecVT, IntInsert);
   }
 
   MVT ContainerVT = VecVT;
@@ -8810,8 +8824,6 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         AlignedIdx);
   }
-
-  MVT XLenVT = Subtarget.getXLenVT();
 
   bool IsLegalInsert = Subtarget.is64Bit() || Val.getValueType() != MVT::i64;
   // Even i64-element vectors on RV32 can be lowered without scalar
@@ -8988,6 +9000,16 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     MVT WideVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
     Vec = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Vec);
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec, Idx);
+  }
+
+  if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
+      EltVT == MVT::bf16) {
+    // If we don't have vfmv.f.s for f16/bf16, extract to a gpr then use fmv.h.x
+    MVT IntVT = VecVT.changeTypeToInteger();
+    SDValue IntVec = DAG.getBitcast(IntVT, Vec);
+    SDValue IntExtract =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, XLenVT, IntVec, Idx);
+    return DAG.getNode(RISCVISD::FMV_H_X, DL, EltVT, IntExtract);
   }
 
   // If this is a fixed vector, we need to convert it to a scalable vector.
@@ -19629,8 +19651,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
                         DAG.getIntPtrConstant(HiVA.getLocMemOffset(), DL));
         // Emit the store.
-        MemOpChains.push_back(
-            DAG.getStore(Chain, DL, Hi, Address, MachinePointerInfo()));
+        MemOpChains.push_back(DAG.getStore(
+            Chain, DL, Hi, Address,
+            MachinePointerInfo::getStack(MF, HiVA.getLocMemOffset())));
       } else {
         // Second half of f64 is passed in another GPR.
         Register RegHigh = HiVA.getLocReg();
@@ -19712,7 +19735,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
       // Emit the store.
       MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
+          DAG.getStore(Chain, DL, ArgValue, Address,
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset())));
     }
   }
 
@@ -19741,11 +19765,14 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
+  bool CalleeIsLargeExternalSymbol = false;
   if (getTargetMachine().getCodeModel() == CodeModel::Large) {
     if (auto *S = dyn_cast<GlobalAddressSDNode>(Callee))
       Callee = getLargeGlobalAddress(S, DL, PtrVT, DAG);
-    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee))
+    else if (auto *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
       Callee = getLargeExternalSymbol(S, DL, PtrVT, DAG);
+      CalleeIsLargeExternalSymbol = true;
+    }
   } else if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
     Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, RISCVII::MO_CALL);
@@ -19781,16 +19808,28 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
+  // Use software guarded branch for large code model non-indirect calls
+  // Tail call to external symbol will have a null CLI.CB and we need another
+  // way to determine the callsite type
+  bool NeedSWGuarded = false;
+  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
+      Subtarget.hasStdExtZicfilp() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
+    NeedSWGuarded = true;
+
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    SDValue Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    unsigned CallOpc =
+        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+    SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
-  Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
+  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL : RISCVISD::CALL;
+  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
@@ -20238,6 +20277,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CZERO_EQZ)
   NODE_NAME_CASE(CZERO_NEZ)
   NODE_NAME_CASE(SW_GUARDED_BRIND)
+  NODE_NAME_CASE(SW_GUARDED_CALL)
+  NODE_NAME_CASE(SW_GUARDED_TAIL)
   NODE_NAME_CASE(TUPLE_INSERT)
   NODE_NAME_CASE(TUPLE_EXTRACT)
   NODE_NAME_CASE(SF_VC_XV_SE)
@@ -21263,7 +21304,7 @@ bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
 }
 
 static Value *useTpOffset(IRBuilderBase &IRB, unsigned Offset) {
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  Module *M = IRB.GetInsertBlock()->getModule();
   Function *ThreadPointerFunc =
       Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
@@ -21281,6 +21322,14 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   // https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/tls_defines.h
   if (Subtarget.isTargetAndroid())
     return useTpOffset(IRB, -0x18);
+
+  Module *M = IRB.GetInsertBlock()->getModule();
+
+  if (M->getStackProtectorGuard() == "tls") {
+    // Users must specify the offset explicitly
+    int Offset = M->getStackProtectorGuardOffset();
+    return useTpOffset(IRB, Offset);
+  }
 
   return TargetLowering::getIRStackGuard(IRB);
 }
@@ -21464,7 +21513,6 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
   VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
   const DataLayout &DL = LI->getDataLayout();
 
@@ -21472,18 +21520,15 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                     LI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VlsegNFunc;
-  Value *VL, *Return;
+  Value *Return;
   Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
-  SmallVector<Value *, 10> Ops;
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VlsegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
         LI->getModule(), FixedVlsegIntrIds[Factor - 2],
         {ResVTy, LI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Ops.append({LI->getPointerOperand(), VL});
-    Return = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Return = Builder.CreateCall(VlsegNFunc, {LI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
@@ -21499,13 +21544,13 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                 NumElts * SEW / 8),
         Factor);
 
-    VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
-    VL = Constant::getAllOnesValue(XLenTy);
+    Function *VlsegNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
-    Ops.append({PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
-                ConstantInt::get(XLenTy, Log2_64(SEW))});
-    Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+    Value *Vlseg = Builder.CreateCall(
+        VlsegNFunc, {PoisonValue::get(VecTupTy), LI->getPointerOperand(), VL,
+                     ConstantInt::get(XLenTy, Log2_64(SEW))});
 
     SmallVector<Type *, 2> AggrTypes{Factor, ResVTy};
     Return = PoisonValue::get(StructType::get(LI->getContext(), AggrTypes));
@@ -21535,24 +21580,21 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   const unsigned Factor = 2;
 
-  VectorType *VTy = cast<VectorType>(II->getType());
-  VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+  VectorType *InVTy = cast<VectorType>(II->getArgOperand(0)->getType());
   const DataLayout &DL = SI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
                                     SI->getPointerAddressSpace(), DL))
     return false;
 
-  Function *VssegNFunc;
-  Value *VL;
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    VssegNFunc = Intrinsic::getDeclaration(
+  if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
+    Function *VssegNFunc = Intrinsic::getDeclaration(
         SI->getModule(), FixedVssegIntrIds[Factor - 2],
         {InVTy, SI->getPointerOperandType(), XLenTy});
-    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+    Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    Builder.CreateCall(VssegNFunc, {II->getArgOperand(0), II->getArgOperand(1),
                                     SI->getPointerOperand(), VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
@@ -21569,17 +21611,18 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
                                 NumElts * SEW / 8),
         Factor);
 
-    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
-                                           {VecTupTy, XLenTy});
+    Function *VssegNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), IntrIds[Factor - 2], {VecTupTy, XLenTy});
 
-    VL = Constant::getAllOnesValue(XLenTy);
+    Value *VL = Constant::getAllOnesValue(XLenTy);
 
     Function *VecInsertFunc = Intrinsic::getDeclaration(
         SI->getModule(), Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy});
     Value *StoredVal = PoisonValue::get(VecTupTy);
     for (unsigned i = 0; i < Factor; ++i)
-      StoredVal = Builder.CreateCall(
-          VecInsertFunc, {StoredVal, II->getOperand(i), Builder.getInt32(i)});
+      StoredVal =
+          Builder.CreateCall(VecInsertFunc, {StoredVal, II->getArgOperand(i),
+                                             Builder.getInt32(i)});
 
     Builder.CreateCall(VssegNFunc, {StoredVal, SI->getPointerOperand(), VL,
                                     ConstantInt::get(XLenTy, Log2_64(SEW))});

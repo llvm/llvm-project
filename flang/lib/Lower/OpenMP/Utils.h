@@ -100,6 +100,9 @@ void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
 
+void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
+                                     mlir::Location loc);
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

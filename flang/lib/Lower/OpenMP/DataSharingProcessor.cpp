@@ -151,6 +151,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                                  explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
+      lastprivateModifierNotSupported(*lastPrivateClause,
+                                      converter.getCurrentLocation());
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
     }
@@ -188,12 +190,12 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   for (const omp::Clause &clause : clauses) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
-    // TODO: Add lastprivate support for simd construct
-    if (mlir::isa<mlir::omp::WsloopOp>(op)) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op) ||
+        mlir::isa<mlir::omp::SimdOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
-      // omp.wsloop {             omp.wsloop {
+      // omp.wsloop / omp.simd {             omp.wsloop / omp.simd {
       //   omp.loop_nest {          omp.loop_nest {
       //     ...                      ...
       //     store          ===>      store
@@ -478,8 +480,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       return existingPrivatizer;
 
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
-                                   moduleOp.getBodyRegion().front().begin());
+    firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate

@@ -250,7 +250,7 @@ void Symbol::parseSymbolVersion() {
 void Symbol::extract() const {
   if (file->lazy) {
     file->lazy = false;
-    parseFile(file);
+    parseFile(ctx, file);
   }
 }
 

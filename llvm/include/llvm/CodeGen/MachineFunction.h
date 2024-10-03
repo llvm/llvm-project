@@ -699,11 +699,6 @@ public:
             BBSectionsType == BasicBlockSection::Preset);
   }
 
-  /// Returns true if basic block labels are to be generated for this function.
-  bool hasBBLabels() const {
-    return BBSectionsType == BasicBlockSection::Labels;
-  }
-
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this

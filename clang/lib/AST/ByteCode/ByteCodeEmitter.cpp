@@ -8,6 +8,7 @@
 
 #include "ByteCodeEmitter.h"
 #include "Context.h"
+#include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
 #include "Opcode.h"

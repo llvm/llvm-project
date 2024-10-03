@@ -4,8 +4,8 @@
 !CHECK-LABEL: func @_QPtest_implicit_use
 !CHECK:         %[[IEXP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_useEiexp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         %[[IIMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_useEiimp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         omp.parallel private({{.*firstprivate.*}} %[[IEXP]]#0 -> %[[PRIV_IEXP:.*]] : !fir.ref<i32>,
-!CHECK-SAME:                         {{.*firstprivate.*}} %[[IIMP]]#0 -> %[[PRIV_IIMP:.*]] : !fir.ref<i32>)
+!CHECK:         omp.parallel private({{.*firstprivate.*}} %[[IEXP]]#0 -> %[[PRIV_IEXP:[^,]+]],
+!CHECK-SAME:                         {{.*firstprivate.*}} %[[IIMP]]#0 -> %[[PRIV_IIMP:.*]] : !fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %{{.*}}:2 = hlfir.declare %[[PRIV_IEXP]] {uniq_name = "_QFtest_implicit_useEiexp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:           %{{.*}}:2 = hlfir.declare %[[PRIV_IIMP]] {uniq_name = "_QFtest_implicit_useEiimp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine test_implicit_use()
