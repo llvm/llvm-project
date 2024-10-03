@@ -140,8 +140,8 @@ struct d {
 // X86_64-NEXT:    [[MUL:%.*]] = shl nsw i64 [[CONV]], 2
 // X86_64-NEXT:    [[ADD:%.*]] = add nsw i64 [[MUL]], 4
 // X86_64-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i64 noundef [[ADD]]) #[[ATTR3]]
-// X86_64-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 2
 // X86_64-NEXT:    [[CONV1:%.*]] = trunc i32 [[SIZE]] to i16
+// X86_64-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i64 2
 // X86_64-NEXT:    store i16 [[CONV1]], ptr [[COUNT]], align 2, !tbaa [[TBAA2]]
 // X86_64-NEXT:    ret ptr [[CALL]]
 //
@@ -151,8 +151,8 @@ struct d {
 // I386-NEXT:    [[MUL:%.*]] = shl i32 [[SIZE]], 2
 // I386-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 4
 // I386-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 noundef [[ADD]]) #[[ATTR3]]
-// I386-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 2
 // I386-NEXT:    [[CONV:%.*]] = trunc i32 [[SIZE]] to i16
+// I386-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL]], i32 2
 // I386-NEXT:    store i16 [[CONV]], ptr [[COUNT]], align 2, !tbaa [[TBAA3]]
 // I386-NEXT:    ret ptr [[CALL]]
 //
