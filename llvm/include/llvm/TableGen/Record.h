@@ -2060,28 +2060,19 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
-  // Non-const methods return std::vector<Record *> by value or reference.
-  // Const methods return std::vector<const Record *> by value or
-  // ArrayRef<const Record *>.
-
   /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
   ArrayRef<const Record *> getAllDerivedDefinitions(StringRef ClassName) const;
-  const std::vector<Record *> &getAllDerivedDefinitions(StringRef ClassName);
 
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
   std::vector<const Record *>
   getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const;
-  std::vector<Record *>
-  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames);
 
   /// Get all the concrete records that inherit from specified class, if the
   /// class is defined. Returns an empty vector if the class is not defined.
   ArrayRef<const Record *>
   getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
-  const std::vector<Record *> &
-  getAllDerivedDefinitionsIfDefined(StringRef ClassName);
 
   void dump() const;
 
@@ -2093,24 +2084,9 @@ private:
   RecordKeeper &operator=(RecordKeeper &&) = delete;
   RecordKeeper &operator=(const RecordKeeper &) = delete;
 
-  // Helper template functions for backend accessors.
-  template <typename VecTy>
-  const VecTy &
-  getAllDerivedDefinitionsImpl(StringRef ClassName,
-                               std::map<std::string, VecTy> &Cache) const;
-
-  template <typename VecTy>
-  VecTy getAllDerivedDefinitionsImpl(ArrayRef<StringRef> ClassNames) const;
-
-  template <typename VecTy>
-  const VecTy &getAllDerivedDefinitionsIfDefinedImpl(
-      StringRef ClassName, std::map<std::string, VecTy> &Cache) const;
-
   std::string InputFilename;
   RecordMap Classes, Defs;
-  mutable std::map<std::string, std::vector<const Record *>>
-      ClassRecordsMapConst;
-  mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
+  mutable std::map<std::string, std::vector<const Record *>> Cache;
   GlobalMap ExtraGlobals;
 
   // TODO: Move timing related code out of RecordKeeper.
