@@ -227,7 +227,7 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
     ThreadList &old_thread_list, std::vector<bool> &core_used_map,
     bool *did_create_ptr) {
   ThreadSP thread_sp;
-  tid_t tid = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
   if (!thread_dict.GetValueForKeyAsInteger("tid", tid))
     return ThreadSP();
 
@@ -372,7 +372,7 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
 
     std::vector<bool> core_used_map;
     if (thread_info_dict) {
-      ThreadList core_threads(m_process);
+      ThreadList core_threads(*m_process);
       ThreadList &thread_list = m_process->GetThreadList();
       bool did_create = false;
       ThreadSP thread_sp(

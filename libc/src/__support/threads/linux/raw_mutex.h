@@ -12,6 +12,8 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/sleep.h"
@@ -19,7 +21,6 @@
 
 #ifndef LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
 #define LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY 1
-#warning "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY is not defined, defaulting to 1"
 #endif
 
 #if LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY
@@ -28,11 +29,9 @@
 
 #ifndef LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT
 #define LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT 100
-#warning                                                                       \
-    "LIBC_COPT_RAW_MUTEX_DEFAULT_SPIN_COUNT is not defined, defaulting to 100"
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Lock is a simple timable lock for internal usage.
 // This is separated from Mutex because this one does not need to consider
 // robustness and reentrancy. Also, this one has spin optimization for shorter
@@ -125,6 +124,6 @@ public:
   LIBC_INLINE Futex &get_raw_futex() { return futex; }
   LIBC_INLINE void reset() { futex = UNLOCKED; }
 };
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RAW_MUTEX_H

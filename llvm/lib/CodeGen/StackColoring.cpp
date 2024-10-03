@@ -517,12 +517,12 @@ char &llvm::StackColoringID = StackColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackColoring, DEBUG_TYPE,
                       "Merge disjoint stack slots", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(StackColoring, DEBUG_TYPE,
                     "Merge disjoint stack slots", false, false)
 
 void StackColoring::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<SlotIndexes>();
+  AU.addRequired<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -964,14 +964,14 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       MFI->setObjectSSPLayout(SI.second, FromKind);
 
     // The new alloca might not be valid in a llvm.dbg.declare for this
-    // variable, so undef out the use to make the verifier happy.
+    // variable, so poison out the use to make the verifier happy.
     AllocaInst *FromAI = const_cast<AllocaInst *>(From);
     if (FromAI->isUsedByMetadata())
-      ValueAsMetadata::handleRAUW(FromAI, UndefValue::get(FromAI->getType()));
+      ValueAsMetadata::handleRAUW(FromAI, PoisonValue::get(FromAI->getType()));
     for (auto &Use : FromAI->uses()) {
       if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
         if (BCI->isUsedByMetadata())
-          ValueAsMetadata::handleRAUW(BCI, UndefValue::get(BCI->getType()));
+          ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
     }
 
     // Note that this will not replace uses in MMOs (which we'll update below),
@@ -1183,7 +1183,7 @@ bool StackColoring::runOnMachineFunction(MachineFunction &Func) {
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
   MFI = &MF->getFrameInfo();
-  Indexes = &getAnalysis<SlotIndexes>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   BlockLiveness.clear();
   BasicBlocks.clear();
   BasicBlockNumbering.clear();

@@ -84,7 +84,7 @@ struct T4 {
 void T4::test() {
 // CHECK: [[T0:%.*]] = alloca ptr,
 // CHECK: [[THIS:%.*]] = load ptr, ptr [[T0]]
-// CHECK: [[X:%.*]] = getelementptr inbounds [[T4:%.*]], ptr [[THIS]], i32 0, i32 0
+// CHECK: [[X:%.*]] = getelementptr inbounds nuw [[T4:%.*]], ptr [[THIS]], i32 0, i32 0
   __asm mov eax, x;
   __asm mov y, eax;
 // CHECK: call void asm sideeffect inteldialect

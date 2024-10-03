@@ -94,7 +94,19 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(ptr addrspace(1) %ptr,
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX940-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent(
@@ -304,7 +316,19 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_no_remote_memo
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX940-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_no_remote_memory(
@@ -724,7 +748,19 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX940-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode(
@@ -934,7 +970,19 @@ define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denorma
 ;
 ; GFX90A-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], <2 x half> [[VALUE]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to <2 x half>
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret <2 x half> [[RES]]
 ;
 ; GFX940-LABEL: define <2 x half> @test_atomicrmw_fadd_v2f16_global_agent__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(

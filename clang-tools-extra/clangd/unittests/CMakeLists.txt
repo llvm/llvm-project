@@ -74,6 +74,7 @@ add_unittest(ClangdUnitTests ClangdTests
   LoggerTests.cpp
   LSPBinderTests.cpp
   LSPClient.cpp
+  PrerequisiteModulesTest.cpp
   ModulesTests.cpp
   ParsedASTTests.cpp
   PathMappingTests.cpp

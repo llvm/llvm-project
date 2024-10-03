@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCObjectStreamer;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCObjectStreamer;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -66,7 +68,6 @@ public:
       F = F->Next;
       return *this;
     }
-    iterator operator++(int) { return iterator(F->Next); }
   };
 
   struct FragList {
@@ -84,8 +85,6 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
-  /// The index of this section in the layout order.
-  unsigned LayoutOrder = 0;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
@@ -114,15 +113,6 @@ private:
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
-
-  /// State for tracking labels that don't yet have Fragments
-  struct PendingLabel {
-    MCSymbol* Sym;
-    unsigned Subsection;
-    PendingLabel(MCSymbol* Sym, unsigned Subsection = 0)
-      : Sym(Sym), Subsection(Subsection) {}
-  };
-  SmallVector<PendingLabel, 2> PendingLabels;
 
 protected:
   // TODO Make Name private when possible.
@@ -165,9 +155,6 @@ public:
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }
 
-  unsigned getLayoutOrder() const { return LayoutOrder; }
-  void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
-
   BundleLockStateType getBundleLockState() const { return BundleLockState; }
   void setBundleLockState(BundleLockStateType NewState);
   bool isBundleLocked() const { return BundleLockState != NotBundleLocked; }
@@ -196,20 +183,6 @@ public:
   iterator end() const { return {}; }
   bool empty() const { return !CurFragList->Head; }
 
-  void addFragment(MCFragment &F) {
-    // The formal layout order will be finalized in MCAssembler::layout.
-    if (CurFragList->Tail) {
-      CurFragList->Tail->Next = &F;
-      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
-    } else {
-      CurFragList->Head = &F;
-      assert(F.getLayoutOrder() == 0);
-    }
-    CurFragList->Tail = &F;
-  }
-
-  void switchSubsection(unsigned Subsection);
-
   void dump() const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -225,10 +198,6 @@ public:
   bool isVirtualSection() const { return IsVirtual; }
 
   virtual StringRef getVirtualSectionKind() const;
-
-  /// Add a pending label for the requested subsection. This label will be
-  /// associated with a fragment in flushPendingLabels()
-  void addPendingLabel(MCSymbol* label, unsigned Subsection = 0);
 };
 
 } // end namespace llvm

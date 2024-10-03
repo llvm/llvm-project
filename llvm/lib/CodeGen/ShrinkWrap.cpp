@@ -229,8 +229,8 @@ class ShrinkWrap : public MachineFunctionPass {
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
-    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-    MLI = &getAnalysis<MachineLoopInfo>();
+    MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     EntryFreq = MBFI->getEntryFreq();
     const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
@@ -261,10 +261,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -288,10 +288,10 @@ char ShrinkWrap::ID = 0;
 char &llvm::ShrinkWrapID = ShrinkWrap::ID;
 
 INITIALIZE_PASS_BEGIN(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
@@ -411,8 +411,7 @@ hasDirtyPred(const DenseSet<const MachineBasicBlock *> &ReachableByDirty,
 /// Derives the list of all the basic blocks reachable from MBB.
 static void markAllReachable(DenseSet<const MachineBasicBlock *> &Visited,
                              const MachineBasicBlock &MBB) {
-  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.succ_begin(),
-                                               MBB.succ_end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.successors());
   Visited.insert(&MBB);
   while (!Worklist.empty()) {
     MachineBasicBlock *SuccMBB = Worklist.pop_back_val();
@@ -440,8 +439,7 @@ static bool
 isSaveReachableThroughClean(const MachineBasicBlock *SavePoint,
                             ArrayRef<MachineBasicBlock *> CleanPreds) {
   DenseSet<const MachineBasicBlock *> Visited;
-  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds.begin(),
-                                               CleanPreds.end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(CleanPreds);
   while (!Worklist.empty()) {
     MachineBasicBlock *CleanBB = Worklist.pop_back_val();
     if (CleanBB == SavePoint)

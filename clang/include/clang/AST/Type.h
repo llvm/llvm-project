@@ -44,10 +44,12 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/type_traits.h"
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -118,6 +120,8 @@ class EnumDecl;
 class Expr;
 class ExtQualsTypeCommonBase;
 class FunctionDecl;
+class FunctionEffectsRef;
+class FunctionEffectKindSet;
 class FunctionEffectSet;
 class IdentifierInfo;
 class NamedDecl;
@@ -132,7 +136,6 @@ class TemplateArgument;
 class TemplateArgumentListInfo;
 class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
-template <typename> class TreeTransform;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
 class UsingShadowDecl;
@@ -1618,6 +1621,10 @@ public:
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
   /// Remove all qualifiers including _Atomic.
+  ///
+  /// Like getUnqualifiedType(), the type may still be qualified if it is a
+  /// sugared array type.  To strip qualifiers even from within a sugared array
+  /// type, use in conjunction with ASTContext::getUnqualifiedArrayType.
   QualType getAtomicUnqualifiedType() const;
 
 private:
@@ -1681,6 +1688,7 @@ class ExtQualsTypeCommonBase {
   friend class ExtQuals;
   friend class QualType;
   friend class Type;
+  friend class ASTReader;
 
   /// The "base" type of an extended qualifiers type (\c ExtQuals) or
   /// a self-referential pointer (for \c Type).
@@ -1926,6 +1934,11 @@ protected:
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
+public:
+  static constexpr int FunctionTypeNumParamsWidth = 16;
+  static constexpr int FunctionTypeNumParamsLimit = (1 << 16) - 1;
+
+protected:
   /// FunctionTypeBitfields store various bits belonging to FunctionProtoType.
   /// Only common bits are stored here. Additional uncommon bits are stored
   /// in a trailing object after FunctionProtoType.
@@ -1963,7 +1976,7 @@ protected:
     /// According to [implimits] 8 bits should be enough here but this is
     /// somewhat easy to exceed with metaprogramming and so we would like to
     /// keep NumParams as wide as reasonably possible.
-    unsigned NumParams : 16;
+    unsigned NumParams : FunctionTypeNumParamsWidth;
 
     /// The type of exception specification this function has.
     LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
@@ -2105,8 +2118,8 @@ protected:
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsUnqual : 1; // If true: typeof_unqual, else: typeof
+    LLVM_PREFERRED_TYPE(TypeOfKind)
+    unsigned Kind : 1;
   };
 
   class UsingBitfields {
@@ -2129,6 +2142,23 @@ protected:
     /// True if the underlying type is different from the declared one.
     LLVM_PREFERRED_TYPE(bool)
     unsigned hasTypeDifferentFromDecl : 1;
+  };
+
+  class TemplateTypeParmTypeBitfields {
+    friend class TemplateTypeParmType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    /// The depth of the template parameter.
+    unsigned Depth : 15;
+
+    /// Whether this is a template parameter pack.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ParameterPack : 1;
+
+    /// The index of the template parameter.
+    unsigned Index : 16;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -2254,6 +2284,7 @@ protected:
     TypeWithKeywordBitfields TypeWithKeywordBits;
     ElaboratedTypeBitfields ElaboratedTypeBits;
     VectorTypeBitfields VectorTypeBits;
+    TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
@@ -2506,6 +2537,8 @@ public:
   bool isFunctionNoProtoType() const { return getAs<FunctionNoProtoType>(); }
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
+  bool isPointerOrReferenceType() const;
+  bool isSignableType() const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
@@ -2624,6 +2657,11 @@ public:
   bool isPipeType() const;                      // OpenCL pipe type
   bool isBitIntType() const;                    // Bit-precise integer type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
+
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+  bool isHLSLSpecificType() const; // Any HLSL specific type
+  bool isHLSLIntangibleType() const; // Any HLSL intangible type
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -3015,8 +3053,11 @@ public:
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 // AMDGPU types
-#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) Id,
 #include "clang/Basic/AMDGPUTypes.def"
+// HLSL intangible Types
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/HLSLIntangibleTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -3977,6 +4018,10 @@ enum class VectorKind {
 
   /// is RISC-V RVV fixed-length mask vector
   RVVFixedLengthMask,
+
+  RVVFixedLengthMask_1,
+  RVVFixedLengthMask_2,
+  RVVFixedLengthMask_4
 };
 
 /// Represents a GCC generic vector type. This type is created using
@@ -4670,12 +4715,13 @@ class FunctionEffect {
 public:
   /// Identifies the particular effect.
   enum class Kind : uint8_t {
-    None = 0,
-    NonBlocking = 1,
-    NonAllocating = 2,
-    Blocking = 3,
-    Allocating = 4
+    NonBlocking,
+    NonAllocating,
+    Blocking,
+    Allocating,
+    Last = Allocating
   };
+  constexpr static size_t KindCount = static_cast<size_t>(Kind::Last) + 1;
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;
@@ -4694,26 +4740,23 @@ public:
   };
 
 private:
-  LLVM_PREFERRED_TYPE(Kind)
-  unsigned FKind : 3;
+  Kind FKind;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(unsigned(Kind::None)) {}
-
-  explicit FunctionEffect(Kind K) : FKind(unsigned(K)) {}
+  explicit FunctionEffect(Kind K) : FKind(K) {}
 
   /// The kind of the effect.
-  Kind kind() const { return Kind(FKind); }
+  Kind kind() const { return FKind; }
 
   /// Return the opposite kind, for effects which have opposites.
   Kind oppositeKind() const;
 
   /// For serialization.
-  uint32_t toOpaqueInt32() const { return FKind; }
+  uint32_t toOpaqueInt32() const { return uint32_t(FKind); }
   static FunctionEffect fromOpaqueInt32(uint32_t Value) {
     return FunctionEffect(Kind(Value));
   }
@@ -4732,8 +4775,6 @@ public:
     case Kind::Blocking:
     case Kind::Allocating:
       return 0;
-    case Kind::None:
-      break;
     }
     llvm_unreachable("unknown effect kind");
   }
@@ -4741,26 +4782,36 @@ public:
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
-  /// Return true if the effect is allowed to be inferred on the callee,
-  /// which is either a FunctionDecl or BlockDecl.
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffect &Effect) {
+    OS << Effect.name();
+    return OS;
+  }
+
+  /// Determine whether the effect is allowed to be inferred on the callee,
+  /// which is either a FunctionDecl or BlockDecl. If the returned optional
+  /// is empty, inference is permitted; otherwise it holds the effect which
+  /// blocked inference.
   /// Example: This allows nonblocking(false) to prevent inference for the
   /// function.
-  bool canInferOnFunction(const Decl &Callee) const;
+  std::optional<FunctionEffect>
+  effectProhibitingInference(const Decl &Callee,
+                             FunctionEffectKindSet CalleeFX) const;
 
   // Return false for success. When true is returned for a direct call, then the
   // FE_InferrableOnCallees flag may trigger inference rather than an immediate
   // diagnostic. Caller should be assumed to have the effect (it may not have it
   // explicitly when inferring).
   bool shouldDiagnoseFunctionCall(bool Direct,
-                                  ArrayRef<FunctionEffect> CalleeFX) const;
+                                  FunctionEffectKindSet CalleeFX) const;
 
-  friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator==(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind == RHS.FKind;
   }
-  friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator!=(FunctionEffect LHS, FunctionEffect RHS) {
     return !(LHS == RHS);
   }
-  friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
+  friend bool operator<(FunctionEffect LHS, FunctionEffect RHS) {
     return LHS.FKind < RHS.FKind;
   }
 };
@@ -4788,13 +4839,14 @@ struct FunctionEffectWithCondition {
   FunctionEffect Effect;
   EffectConditionExpr Cond;
 
-  FunctionEffectWithCondition() = default;
-  FunctionEffectWithCondition(const FunctionEffect &E,
-                              const EffectConditionExpr &C)
+  FunctionEffectWithCondition(FunctionEffect E, const EffectConditionExpr &C)
       : Effect(E), Cond(C) {}
 
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
+
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const FunctionEffectWithCondition &CFE);
 };
 
 /// Support iteration in parallel through a pair of FunctionEffect and
@@ -4896,8 +4948,86 @@ public:
     return !(LHS == RHS);
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const;
   void dump(llvm::raw_ostream &OS) const;
+};
+
+/// A mutable set of FunctionEffect::Kind.
+class FunctionEffectKindSet {
+  // For now this only needs to be a bitmap.
+  constexpr static size_t EndBitPos = FunctionEffect::KindCount;
+  using KindBitsT = std::bitset<EndBitPos>;
+
+  KindBitsT KindBits{};
+
+  explicit FunctionEffectKindSet(KindBitsT KB) : KindBits(KB) {}
+
+  // Functions to translate between an effect kind, starting at 1, and a
+  // position in the bitset.
+
+  constexpr static size_t kindToPos(FunctionEffect::Kind K) {
+    return static_cast<size_t>(K);
+  }
+
+  constexpr static FunctionEffect::Kind posToKind(size_t Pos) {
+    return static_cast<FunctionEffect::Kind>(Pos);
+  }
+
+  // Iterates through the bits which are set.
+  class iterator {
+    const FunctionEffectKindSet *Outer = nullptr;
+    size_t Idx = 0;
+
+    // If Idx does not reference a set bit, advance it until it does,
+    // or until it reaches EndBitPos.
+    void advanceToNextSetBit() {
+      while (Idx < EndBitPos && !Outer->KindBits.test(Idx))
+        ++Idx;
+    }
+
+  public:
+    iterator();
+    iterator(const FunctionEffectKindSet &O, size_t I) : Outer(&O), Idx(I) {
+      advanceToNextSetBit();
+    }
+    bool operator==(const iterator &Other) const { return Idx == Other.Idx; }
+    bool operator!=(const iterator &Other) const { return Idx != Other.Idx; }
+
+    iterator operator++() {
+      ++Idx;
+      advanceToNextSetBit();
+      return *this;
+    }
+
+    FunctionEffect operator*() const {
+      assert(Idx < EndBitPos && "Dereference of end iterator");
+      return FunctionEffect(posToKind(Idx));
+    }
+  };
+
+public:
+  FunctionEffectKindSet() = default;
+  explicit FunctionEffectKindSet(FunctionEffectsRef FX) { insert(FX); }
+
+  iterator begin() const { return iterator(*this, 0); }
+  iterator end() const { return iterator(*this, EndBitPos); }
+
+  void insert(FunctionEffect Effect) { KindBits.set(kindToPos(Effect.kind())); }
+  void insert(FunctionEffectsRef FX) {
+    for (FunctionEffect Item : FX.effects())
+      insert(Item);
+  }
+  void insert(FunctionEffectKindSet Set) { KindBits |= Set.KindBits; }
+
+  bool empty() const { return KindBits.none(); }
+  bool contains(const FunctionEffect::Kind EK) const {
+    return KindBits.test(kindToPos(EK));
+  }
+  void dump(llvm::raw_ostream &OS) const;
+
+  static FunctionEffectKindSet difference(FunctionEffectKindSet LHS,
+                                          FunctionEffectKindSet RHS) {
+    return FunctionEffectKindSet(LHS.KindBits & ~RHS.KindBits);
+  }
 };
 
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
@@ -4966,8 +5096,8 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          FunctionEffect, EffectConditionExpr, Qualifiers> {
+          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
+          FunctionEffect, EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -4998,21 +5128,21 @@ class FunctionProtoType final
   //   an ExtParameterInfo for each of the parameters. Present if and
   //   only if hasExtParameterInfos() is true.
   //
+  // * Optionally a Qualifiers object to represent extra qualifiers that can't
+  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
+  //   only if hasExtQualifiers() is true.
+  //
   // * Optionally, an array of getNumFunctionEffects() FunctionEffect.
   //   Present only when getNumFunctionEffects() > 0
   //
   // * Optionally, an array of getNumFunctionEffects() EffectConditionExpr.
   //   Present only when getNumFunctionEffectConditions() > 0.
   //
-  // * Optionally a Qualifiers object to represent extra qualifiers that can't
-  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
-  //   only if hasExtQualifiers() is true.
-  //
   // The optional FunctionTypeExtraBitfields has to be before the data
   // related to the exception specification since it contains the number
   // of exception types.
   //
-  // We put the ExtParameterInfos last.  If all were equal, it would make
+  // We put the ExtParameterInfos later.  If all were equal, it would make
   // more sense to put these before the exception specification, because
   // it's much easier to skip past them compared to the elaborate switch
   // required to skip the exception specification.  However, all is not
@@ -5127,6 +5257,10 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<ExtParameterInfo>) const {
     return hasExtParameterInfos() ? getNumParams() : 0;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<Qualifiers>) const {
+    return hasExtQualifiers() ? 1 : 0;
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionEffect>) const {
@@ -5660,19 +5794,20 @@ public:
 /// extension) or a `typeof_unqual` expression (a C23 feature).
 class TypeOfExprType : public Type {
   Expr *TOExpr;
+  const ASTContext &Context;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can = QualType());
+  TypeOfExprType(const ASTContext &Context, Expr *E, TypeOfKind Kind,
+                 QualType Can = QualType());
 
 public:
   Expr *getUnderlyingExpr() const { return TOExpr; }
 
   /// Returns the kind of 'typeof' type this is.
   TypeOfKind getKind() const {
-    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
-                               : TypeOfKind::Qualified;
+    return static_cast<TypeOfKind>(TypeOfBits.Kind);
   }
 
   /// Remove a single level of sugar.
@@ -5693,7 +5828,8 @@ public:
 class DependentTypeOfExprType : public TypeOfExprType,
                                 public llvm::FoldingSetNode {
 public:
-  DependentTypeOfExprType(Expr *E, TypeOfKind Kind) : TypeOfExprType(E, Kind) {}
+  DependentTypeOfExprType(const ASTContext &Context, Expr *E, TypeOfKind Kind)
+      : TypeOfExprType(Context, E, Kind) {}
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getUnderlyingExpr(),
@@ -5710,32 +5846,23 @@ class TypeOfType : public Type {
   friend class ASTContext; // ASTContext creates these.
 
   QualType TOType;
+  const ASTContext &Context;
 
-  TypeOfType(QualType T, QualType Can, TypeOfKind Kind)
-      : Type(TypeOf,
-             Kind == TypeOfKind::Unqualified ? Can.getAtomicUnqualifiedType()
-                                             : Can,
-             T->getDependence()),
-        TOType(T) {
-    TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
-  }
+  TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+             TypeOfKind Kind);
 
 public:
   QualType getUnmodifiedType() const { return TOType; }
 
   /// Remove a single level of sugar.
-  QualType desugar() const {
-    QualType QT = getUnmodifiedType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
-  }
+  QualType desugar() const;
 
   /// Returns whether this type directly provides sugar.
   bool isSugared() const { return true; }
 
   /// Returns the kind of 'typeof' type this is.
   TypeOfKind getKind() const {
-    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
-                               : TypeOfKind::Qualified;
+    return static_cast<TypeOfKind>(TypeOfBits.Kind);
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == TypeOf; }
@@ -5792,12 +5919,15 @@ class PackIndexingType final
   QualType Pattern;
   Expr *IndexExpr;
 
-  unsigned Size;
+  unsigned Size : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandsToEmptyPack : 1;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
   PackIndexingType(const ASTContext &Context, QualType Canonical,
-                   QualType Pattern, Expr *IndexExpr,
+                   QualType Pattern, Expr *IndexExpr, bool ExpandsToEmptyPack,
                    ArrayRef<QualType> Expansions = {});
 
 public:
@@ -5821,6 +5951,8 @@ public:
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
+  bool expandsToEmptyPack() const { return ExpandsToEmptyPack; }
+
   ArrayRef<QualType> getExpansions() const {
     return {getExpansionsPtr(), Size};
   }
@@ -5833,10 +5965,10 @@ public:
     if (hasSelectedType())
       getSelectedType().Profile(ID);
     else
-      Profile(ID, Context, getPattern(), getIndexExpr());
+      Profile(ID, Context, getPattern(), getIndexExpr(), expandsToEmptyPack());
   }
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Pattern, Expr *E);
+                      QualType Pattern, Expr *E, bool ExpandsToEmptyPack);
 
 private:
   const QualType *getExpansionsPtr() const {
@@ -6121,54 +6253,91 @@ public:
   }
 };
 
+class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
+public:
+  struct Attributes {
+    // Data gathered from HLSL resource attributes
+    llvm::dxil::ResourceClass ResourceClass;
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsROV : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t RawBuffer : 1;
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
+               bool RawBuffer)
+        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
+
+    Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
+  };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  QualType ContainedType;
+  const Attributes Attrs;
+
+  HLSLAttributedResourceType(QualType Canon, QualType Wrapped,
+                             QualType Contained, const Attributes &Attrs)
+      : Type(HLSLAttributedResource, Canon,
+             Contained.isNull() ? TypeDependence::None
+                                : Contained->getDependence()),
+        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  QualType getContainedType() const { return ContainedType; }
+  const Attributes &getAttrs() const { return Attrs; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, ContainedType, Attrs);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      QualType Contained, const Attributes &Attrs) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(Contained.getAsOpaquePtr());
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddBoolean(Attrs.IsROV);
+    ID.AddBoolean(Attrs.RawBuffer);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == HLSLAttributedResource;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  // Helper data collector for canonical types.
-  struct CanonicalTTPTInfo {
-    unsigned Depth : 15;
-    unsigned ParameterPack : 1;
-    unsigned Index : 16;
-  };
+  // The associated TemplateTypeParmDecl for the non-canonical type.
+  TemplateTypeParmDecl *TTPDecl;
 
-  union {
-    // Info for the canonical type.
-    CanonicalTTPTInfo CanTTPTInfo;
-
-    // Info for the non-canonical type.
-    TemplateTypeParmDecl *TTPDecl;
-  };
-
-  /// Build a non-canonical type.
-  TemplateTypeParmType(TemplateTypeParmDecl *TTPDecl, QualType Canon)
+  TemplateTypeParmType(unsigned D, unsigned I, bool PP,
+                       TemplateTypeParmDecl *TTPDecl, QualType Canon)
       : Type(TemplateTypeParm, Canon,
              TypeDependence::DependentInstantiation |
-                 (Canon->getDependence() & TypeDependence::UnexpandedPack)),
-        TTPDecl(TTPDecl) {}
-
-  /// Build the canonical type.
-  TemplateTypeParmType(unsigned D, unsigned I, bool PP)
-      : Type(TemplateTypeParm, QualType(this, 0),
-             TypeDependence::DependentInstantiation |
-                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)) {
-    CanTTPTInfo.Depth = D;
-    CanTTPTInfo.Index = I;
-    CanTTPTInfo.ParameterPack = PP;
-  }
-
-  const CanonicalTTPTInfo& getCanTTPTInfo() const {
-    QualType Can = getCanonicalTypeInternal();
-    return Can->castAs<TemplateTypeParmType>()->CanTTPTInfo;
+                 (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
+        TTPDecl(TTPDecl) {
+    assert(!TTPDecl == Canon.isNull());
+    TemplateTypeParmTypeBits.Depth = D;
+    TemplateTypeParmTypeBits.Index = I;
+    TemplateTypeParmTypeBits.ParameterPack = PP;
   }
 
 public:
-  unsigned getDepth() const { return getCanTTPTInfo().Depth; }
-  unsigned getIndex() const { return getCanTTPTInfo().Index; }
-  bool isParameterPack() const { return getCanTTPTInfo().ParameterPack; }
-
-  TemplateTypeParmDecl *getDecl() const {
-    return isCanonicalUnqualified() ? nullptr : TTPDecl;
+  unsigned getDepth() const { return TemplateTypeParmTypeBits.Depth; }
+  unsigned getIndex() const { return TemplateTypeParmTypeBits.Index; }
+  bool isParameterPack() const {
+    return TemplateTypeParmTypeBits.ParameterPack;
   }
+
+  TemplateTypeParmDecl *getDecl() const { return TTPDecl; }
 
   IdentifierInfo *getIdentifier() const;
 
@@ -7997,9 +8166,15 @@ inline bool Type::isPointerType() const {
   return isa<PointerType>(CanonicalType);
 }
 
+inline bool Type::isPointerOrReferenceType() const {
+  return isPointerType() || isReferenceType();
+}
+
 inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
+
+inline bool Type::isSignableType() const { return isPointerType(); }
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);
@@ -8255,6 +8430,25 @@ inline bool Type::isOpenCLSpecificType() const {
          isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
 }
 
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
+inline bool Type::isHLSLSpecificType() const {
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||
+  return
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      false; // end boolean or operation
+}
+
+inline bool Type::isHLSLIntangibleType() const {
+  // All HLSL specific types are currently intangible type as well, but that
+  // might change in the future.
+  return isHLSLSpecificType();
+}
+
 inline bool Type::isTemplateTypeParmType() const {
   return isa<TemplateTypeParmType>(CanonicalType);
 }
@@ -8432,7 +8626,7 @@ inline bool Type::isUndeducedType() const {
 /// Determines whether this is a type for which one can define
 /// an overloaded operator.
 inline bool Type::isOverloadableType() const {
-  if (!CanonicalType->isDependentType())
+  if (!isDependentType())
     return isRecordType() || isEnumeralType();
   return !isArrayType() && !isFunctionType() && !isAnyPointerType() &&
          !isMemberPointerType();
@@ -8547,6 +8741,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
       Ty = A->getModifiedType().getTypePtr();
     else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
+    else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();
     else if (const auto *P = dyn_cast<ParenType>(Ty))
@@ -8615,6 +8811,18 @@ QualType DecayedType::getPointeeType() const {
 // APFixedPoint instead of APSInt and scale.
 void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
+
+inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
+  while (true) {
+    QualType Pointee = QT->getPointeeType();
+    if (Pointee.isNull())
+      break;
+    QT = Pointee;
+  }
+  if (const auto *FPT = QT->getAs<FunctionProtoType>())
+    return FPT->getFunctionEffects();
+  return {};
+}
 
 } // namespace clang
 

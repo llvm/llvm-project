@@ -183,6 +183,11 @@
 #define SANITIZER_INTERCEPT_FPUTS SI_POSIX
 #define SANITIZER_INTERCEPT_PUTS SI_POSIX
 
+#define SANITIZER_INTERCEPT_CREAT64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_FCNTL64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_OPEN64 (SI_GLIBC || SI_SOLARIS32)
+#define SANITIZER_INTERCEPT_OPENAT64 (SI_GLIBC || SI_SOLARIS32)
+
 #define SANITIZER_INTERCEPT_PREAD64 (SI_GLIBC || SI_SOLARIS32)
 #define SANITIZER_INTERCEPT_PWRITE64 (SI_GLIBC || SI_SOLARIS32)
 
@@ -274,8 +279,9 @@
 #if SI_LINUX_NOT_ANDROID &&                                                \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64)
-#define SANITIZER_INTERCEPT_PTRACE 1
+     defined(__s390__) || defined(__loongarch__) || SANITIZER_RISCV64 ||   \
+     defined(__sparc__))
+#  define SANITIZER_INTERCEPT_PTRACE 1
 #else
 #define SANITIZER_INTERCEPT_PTRACE 0
 #endif
@@ -598,6 +604,9 @@
 #define SANITIZER_INTERCEPT_PROCCTL SI_FREEBSD
 #define SANITIZER_INTERCEPT_ARGP_PARSE SI_GLIBC
 #define SANITIZER_INTERCEPT_CPUSET_GETAFFINITY SI_FREEBSD
+// FIXME: also available from musl 1.2.5
+#define SANITIZER_INTERCEPT_PREADV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
+#define SANITIZER_INTERCEPT_PWRITEV2 (SI_LINUX && __GLIBC_PREREQ(2, 26))
 
 // This macro gives a way for downstream users to override the above
 // interceptor macros irrespective of the platform they are on. They have

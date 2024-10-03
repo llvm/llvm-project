@@ -166,6 +166,9 @@ struct APFloatBase {
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E4M3.
+    S_Float8E4M3,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
     // Unlike IEEE-754 types, there are no infinity values, and NaN is
@@ -185,10 +188,20 @@ struct APFloatBase {
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
+    // 8-bit floating point number following IEEE-754 conventions with bit
+    // layout S1E3M4.
+    S_Float8E3M4,
     // Floating point number that occupies 32 bits or less of storage, providing
     // improved range compared to half (16-bit) formats, at (potentially)
     // greater throughput than single precision (32-bit) formats.
     S_FloatTF32,
+    // 8-bit floating point number with (all the) 8 bits for the exponent
+    // like in FP32. There are no zeroes, no infinities, and no denormal values.
+    // This format has unsigned representation only. (U -> Unsigned only).
+    // NaN is represented with all bits set to 1. Bias is 127.
+    // This format represents the scale data type in the MX specification from:
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float8E8M0FNU,
     // 6-bit floating point number with bit layout S1E3M2. Unlike IEEE-754
     // types, there are no infinity or NaN values. The format is detailed in
     // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
@@ -217,10 +230,13 @@ struct APFloatBase {
   static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
   static const fltSemantics &Float8E5M2() LLVM_READNONE;
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E4M3() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
+  static const fltSemantics &Float8E3M4() LLVM_READNONE;
   static const fltSemantics &FloatTF32() LLVM_READNONE;
+  static const fltSemantics &Float8E8M0FNU() LLVM_READNONE;
   static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
   static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
   static const fltSemantics &Float4E2M1FN() LLVM_READNONE;
@@ -573,7 +589,8 @@ private:
   integerPart addSignificand(const IEEEFloat &);
   integerPart subtractSignificand(const IEEEFloat &, integerPart);
   lostFraction addOrSubtractSignificand(const IEEEFloat &, bool subtract);
-  lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat);
+  lostFraction multiplySignificand(const IEEEFloat &, IEEEFloat,
+                                   bool ignoreAddend = false);
   lostFraction multiplySignificand(const IEEEFloat&);
   lostFraction divideSignificand(const IEEEFloat &);
   void incrementSignificand();
@@ -583,6 +600,7 @@ private:
   unsigned int significandLSB() const;
   unsigned int significandMSB() const;
   void zeroSignificand();
+  unsigned int getNumHighBits() const;
   /// Return true if the significand excluding the integral bit is all ones.
   bool isSignificandAllOnes() const;
   bool isSignificandAllOnesExceptLSB() const;
@@ -638,10 +656,13 @@ private:
   APInt convertPPCDoubleDoubleAPFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E4M3APFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
+  APInt convertFloat8E3M4APFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
+  APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
   APInt convertFloat6E3M2FNAPFloatToAPInt() const;
   APInt convertFloat6E2M3FNAPFloatToAPInt() const;
   APInt convertFloat4E2M1FNAPFloatToAPInt() const;
@@ -656,10 +677,13 @@ private:
   void initFromPPCDoubleDoubleAPInt(const APInt &api);
   void initFromFloat8E5M2APInt(const APInt &api);
   void initFromFloat8E5M2FNUZAPInt(const APInt &api);
+  void initFromFloat8E4M3APInt(const APInt &api);
   void initFromFloat8E4M3FNAPInt(const APInt &api);
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
+  void initFromFloat8E3M4APInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
+  void initFromFloat8E8M0FNUAPInt(const APInt &api);
   void initFromFloat6E3M2FNAPInt(const APInt &api);
   void initFromFloat6E2M3FNAPInt(const APInt &api);
   void initFromFloat4E2M1FNAPInt(const APInt &api);
@@ -1067,6 +1091,9 @@ public:
   /// \param Semantics - type float semantics
   static APFloat getAllOnesValue(const fltSemantics &Semantics);
 
+  /// Returns true if the given semantics supports either NaN or Infinity.
+  ///
+  /// \param Sem - type float semantics
   static bool hasNanOrInf(const fltSemantics &Sem) {
     switch (SemanticsToEnum(Sem)) {
     default:
@@ -1077,6 +1104,13 @@ public:
     case APFloat::S_Float4E2M1FN:
       return false;
     }
+  }
+
+  /// Returns true if the given semantics has actual significand.
+  ///
+  /// \param Sem - type float semantics
+  static bool hasSignificand(const fltSemantics &Sem) {
+    return &Sem != &Float8E8M0FNU();
   }
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
@@ -1471,13 +1505,14 @@ inline APFloat maxnum(const APFloat &A, const APFloat &B) {
 }
 
 /// Implements IEEE 754-2019 minimum semantics. Returns the smaller of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
 LLVM_READONLY
 inline APFloat minimum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
-    return A;
+    return A.makeQuiet();
   if (B.isNaN())
-    return B;
+    return B.makeQuiet();
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? A : B;
   return B < A ? B : A;
@@ -1497,13 +1532,14 @@ inline APFloat minimumnum(const APFloat &A, const APFloat &B) {
 }
 
 /// Implements IEEE 754-2019 maximum semantics. Returns the larger of 2
-/// arguments, propagating NaNs and treating -0 as less than +0.
+/// arguments, returning a quiet NaN if an argument is a NaN and treating -0
+/// as less than +0.
 LLVM_READONLY
 inline APFloat maximum(const APFloat &A, const APFloat &B) {
   if (A.isNaN())
-    return A;
+    return A.makeQuiet();
   if (B.isNaN())
-    return B;
+    return B.makeQuiet();
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
   return A < B ? B : A;
@@ -1520,6 +1556,11 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
   if (A.isZero() && B.isZero() && (A.isNegative() != B.isNegative()))
     return A.isNegative() ? B : A;
   return A < B ? B : A;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
+  V.print(OS);
+  return OS;
 }
 
 // We want the following functions to be available in the header for inlining.

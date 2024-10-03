@@ -26,7 +26,7 @@ public:
                       std::move(Emitter)) {}
 };
 
-}
+} // anonymous namespace
 
 MCELFStreamer *
 llvm::createAMDGPUELFStreamer(const Triple &T, MCContext &Context,

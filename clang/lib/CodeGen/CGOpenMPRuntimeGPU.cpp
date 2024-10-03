@@ -1073,9 +1073,8 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
         CGM.getContext().getTargetInfo().getNewAlign() / 8));
 
     // Cast the void pointer and get the address of the globalized variable.
-    llvm::PointerType *VarPtrTy = CGF.ConvertTypeForMem(VarTy)->getPointerTo();
     llvm::Value *CastedVoidPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        VoidPtr, VarPtrTy, VD->getName() + "_on_stack");
+        VoidPtr, Bld.getPtrTy(0), VD->getName() + "_on_stack");
     LValue VarAddr =
         CGF.MakeNaturalAlignPointeeRawAddrLValue(CastedVoidPtr, VarTy);
     Rec.second.PrivateAddr = VarAddr.getAddress();
@@ -1695,7 +1694,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
+  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(
+      CodeGenIP, CGF.SourceLocToDebugLoc(Loc));
   llvm::SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> ReductionInfos;
 
   CodeGenFunction::OMPPrivateScope Scope(CGF);
@@ -1929,7 +1929,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   if (isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     Address Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
     Address TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+        Src, Bld.getPtrTy(0), CGF.SizeTy);
     llvm::Value *LB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -1938,8 +1938,8 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
     Args.emplace_back(LB);
     ++Idx;
     Src = Bld.CreateConstInBoundsGEP(SharedArgListAddress, Idx);
-    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(
-        Src, CGF.SizeTy->getPointerTo(), CGF.SizeTy);
+    TypedAddress = Bld.CreatePointerBitCastOrAddrSpaceCast(Src, Bld.getPtrTy(0),
+                                                           CGF.SizeTy);
     llvm::Value *UB = CGF.EmitLoadOfScalar(
         TypedAddress,
         /*Volatile=*/false,
@@ -2047,14 +2047,12 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     const auto *A = VD->getAttr<OMPAllocateDeclAttr>();
     auto AS = LangAS::Default;
     switch (A->getAllocatorType()) {
-      // Use the default allocator here as by default local vars are
-      // threadlocal.
     case OMPAllocateDeclAttr::OMPNullMemAlloc:
     case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
-    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
     case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
-      // Follow the user decision - use default allocation.
+      break;
+    case OMPAllocateDeclAttr::OMPThreadMemAlloc:
       return Address::invalid();
     case OMPAllocateDeclAttr::OMPUserDefinedMemAlloc:
       // TODO: implement aupport for user-defined allocators.
@@ -2080,7 +2078,7 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     GV->setAlignment(Align.getAsAlign());
     return Address(
         CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            GV, VarTy->getPointerTo(CGM.getContext().getTargetAddressSpace(
+            GV, CGF.Builder.getPtrTy(CGM.getContext().getTargetAddressSpace(
                     VD->getType().getAddressSpace()))),
         VarTy, Align);
   }
@@ -2207,11 +2205,11 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   case OMPAllocateDeclAttr::OMPNullMemAlloc:
   case OMPAllocateDeclAttr::OMPDefaultMemAlloc:
   // Not supported, fallback to the default mem space.
-  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
   case OMPAllocateDeclAttr::OMPLargeCapMemAlloc:
   case OMPAllocateDeclAttr::OMPCGroupMemAlloc:
   case OMPAllocateDeclAttr::OMPHighBWMemAlloc:
   case OMPAllocateDeclAttr::OMPLowLatMemAlloc:
+  case OMPAllocateDeclAttr::OMPThreadMemAlloc:
     AS = LangAS::Default;
     return true;
   case OMPAllocateDeclAttr::OMPConstMemAlloc:
@@ -2227,113 +2225,112 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-// Get current CudaArch and ignore any unknown values
-static CudaArch getCudaArch(CodeGenModule &CGM) {
+// Get current OffloadArch and ignore any unknown values
+static OffloadArch getOffloadArch(CodeGenModule &CGM) {
   if (!CGM.getTarget().hasFeature("ptx"))
-    return CudaArch::UNKNOWN;
+    return OffloadArch::UNKNOWN;
   for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
     if (Feature.getValue()) {
-      CudaArch Arch = StringToCudaArch(Feature.getKey());
-      if (Arch != CudaArch::UNKNOWN)
+      OffloadArch Arch = StringToOffloadArch(Feature.getKey());
+      if (Arch != OffloadArch::UNKNOWN)
         return Arch;
     }
   }
-  return CudaArch::UNKNOWN;
+  return OffloadArch::UNKNOWN;
 }
 
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
-void CGOpenMPRuntimeGPU::processRequiresDirective(
-    const OMPRequiresDecl *D) {
+void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
     if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
-      CudaArch Arch = getCudaArch(CGM);
+      OffloadArch Arch = getOffloadArch(CGM);
       switch (Arch) {
-      case CudaArch::SM_20:
-      case CudaArch::SM_21:
-      case CudaArch::SM_30:
-      case CudaArch::SM_32_:
-      case CudaArch::SM_35:
-      case CudaArch::SM_37:
-      case CudaArch::SM_50:
-      case CudaArch::SM_52:
-      case CudaArch::SM_53: {
+      case OffloadArch::SM_20:
+      case OffloadArch::SM_21:
+      case OffloadArch::SM_30:
+      case OffloadArch::SM_32_:
+      case OffloadArch::SM_35:
+      case OffloadArch::SM_37:
+      case OffloadArch::SM_50:
+      case OffloadArch::SM_52:
+      case OffloadArch::SM_53: {
         SmallString<256> Buffer;
         llvm::raw_svector_ostream Out(Buffer);
-        Out << "Target architecture " << CudaArchToString(Arch)
+        Out << "Target architecture " << OffloadArchToString(Arch)
             << " does not support unified addressing";
         CGM.Error(Clause->getBeginLoc(), Out.str());
         return;
       }
-      case CudaArch::SM_60:
-      case CudaArch::SM_61:
-      case CudaArch::SM_62:
-      case CudaArch::SM_70:
-      case CudaArch::SM_72:
-      case CudaArch::SM_75:
-      case CudaArch::SM_80:
-      case CudaArch::SM_86:
-      case CudaArch::SM_87:
-      case CudaArch::SM_89:
-      case CudaArch::SM_90:
-      case CudaArch::SM_90a:
-      case CudaArch::GFX600:
-      case CudaArch::GFX601:
-      case CudaArch::GFX602:
-      case CudaArch::GFX700:
-      case CudaArch::GFX701:
-      case CudaArch::GFX702:
-      case CudaArch::GFX703:
-      case CudaArch::GFX704:
-      case CudaArch::GFX705:
-      case CudaArch::GFX801:
-      case CudaArch::GFX802:
-      case CudaArch::GFX803:
-      case CudaArch::GFX805:
-      case CudaArch::GFX810:
-      case CudaArch::GFX9_GENERIC:
-      case CudaArch::GFX900:
-      case CudaArch::GFX902:
-      case CudaArch::GFX904:
-      case CudaArch::GFX906:
-      case CudaArch::GFX908:
-      case CudaArch::GFX909:
-      case CudaArch::GFX90a:
-      case CudaArch::GFX90c:
-      case CudaArch::GFX940:
-      case CudaArch::GFX941:
-      case CudaArch::GFX942:
-      case CudaArch::GFX10_1_GENERIC:
-      case CudaArch::GFX1010:
-      case CudaArch::GFX1011:
-      case CudaArch::GFX1012:
-      case CudaArch::GFX1013:
-      case CudaArch::GFX10_3_GENERIC:
-      case CudaArch::GFX1030:
-      case CudaArch::GFX1031:
-      case CudaArch::GFX1032:
-      case CudaArch::GFX1033:
-      case CudaArch::GFX1034:
-      case CudaArch::GFX1035:
-      case CudaArch::GFX1036:
-      case CudaArch::GFX11_GENERIC:
-      case CudaArch::GFX1100:
-      case CudaArch::GFX1101:
-      case CudaArch::GFX1102:
-      case CudaArch::GFX1103:
-      case CudaArch::GFX1150:
-      case CudaArch::GFX1151:
-      case CudaArch::GFX1152:
-      case CudaArch::GFX12_GENERIC:
-      case CudaArch::GFX1200:
-      case CudaArch::GFX1201:
-      case CudaArch::AMDGCNSPIRV:
-      case CudaArch::Generic:
-      case CudaArch::UNUSED:
-      case CudaArch::UNKNOWN:
+      case OffloadArch::SM_60:
+      case OffloadArch::SM_61:
+      case OffloadArch::SM_62:
+      case OffloadArch::SM_70:
+      case OffloadArch::SM_72:
+      case OffloadArch::SM_75:
+      case OffloadArch::SM_80:
+      case OffloadArch::SM_86:
+      case OffloadArch::SM_87:
+      case OffloadArch::SM_89:
+      case OffloadArch::SM_90:
+      case OffloadArch::SM_90a:
+      case OffloadArch::GFX600:
+      case OffloadArch::GFX601:
+      case OffloadArch::GFX602:
+      case OffloadArch::GFX700:
+      case OffloadArch::GFX701:
+      case OffloadArch::GFX702:
+      case OffloadArch::GFX703:
+      case OffloadArch::GFX704:
+      case OffloadArch::GFX705:
+      case OffloadArch::GFX801:
+      case OffloadArch::GFX802:
+      case OffloadArch::GFX803:
+      case OffloadArch::GFX805:
+      case OffloadArch::GFX810:
+      case OffloadArch::GFX9_GENERIC:
+      case OffloadArch::GFX900:
+      case OffloadArch::GFX902:
+      case OffloadArch::GFX904:
+      case OffloadArch::GFX906:
+      case OffloadArch::GFX908:
+      case OffloadArch::GFX909:
+      case OffloadArch::GFX90a:
+      case OffloadArch::GFX90c:
+      case OffloadArch::GFX940:
+      case OffloadArch::GFX941:
+      case OffloadArch::GFX942:
+      case OffloadArch::GFX10_1_GENERIC:
+      case OffloadArch::GFX1010:
+      case OffloadArch::GFX1011:
+      case OffloadArch::GFX1012:
+      case OffloadArch::GFX1013:
+      case OffloadArch::GFX10_3_GENERIC:
+      case OffloadArch::GFX1030:
+      case OffloadArch::GFX1031:
+      case OffloadArch::GFX1032:
+      case OffloadArch::GFX1033:
+      case OffloadArch::GFX1034:
+      case OffloadArch::GFX1035:
+      case OffloadArch::GFX1036:
+      case OffloadArch::GFX11_GENERIC:
+      case OffloadArch::GFX1100:
+      case OffloadArch::GFX1101:
+      case OffloadArch::GFX1102:
+      case OffloadArch::GFX1103:
+      case OffloadArch::GFX1150:
+      case OffloadArch::GFX1151:
+      case OffloadArch::GFX1152:
+      case OffloadArch::GFX12_GENERIC:
+      case OffloadArch::GFX1200:
+      case OffloadArch::GFX1201:
+      case OffloadArch::AMDGCNSPIRV:
+      case OffloadArch::Generic:
+      case OffloadArch::UNUSED:
+      case OffloadArch::UNKNOWN:
         break;
-      case CudaArch::LAST:
-        llvm_unreachable("Unexpected Cuda arch.");
+      case OffloadArch::LAST:
+        llvm_unreachable("Unexpected GPU arch.");
       }
     }
   }

@@ -266,9 +266,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
 
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       *ErrOrTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,
-      MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-      /*DWARFMustBeAtTheEnd*/ false));
+      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
+      *MSTI));
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 

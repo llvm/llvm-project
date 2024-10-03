@@ -201,13 +201,13 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                                           lldb::ValueObjectSP &new_value_sp) {
   Status error;
   if (!new_value_sp) {
-    error.SetErrorString("Empty value object for return value.");
+    error = Status::FromErrorString("Empty value object for return value.");
     return error;
   }
 
   CompilerType compiler_type = new_value_sp->GetCompilerType();
   if (!compiler_type) {
-    error.SetErrorString("Null clang type for return value.");
+    error = Status::FromErrorString("Null clang type for return value.");
     return error;
   }
 
@@ -220,7 +220,7 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   bool register_write_successful = true;
 
   if (data_error.Fail()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "Couldn't convert return value to raw data: %s",
         data_error.AsCString());
     return error;
@@ -233,7 +233,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   if (type_flags & eTypeIsPointer) // 'Pointer'
   {
     if (num_bytes != sizeof(uint32_t)) {
-      error.SetErrorString("Pointer to be returned is not 4 bytes wide");
+      error =
+          Status::FromErrorString("Pointer to be returned is not 4 bytes wide");
       return error;
     }
     lldb::offset_t offset = 0;
@@ -318,7 +319,8 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         else if (num_bytes == 12)
           value_long_dbl = data.GetLongDouble(&offset);
         else {
-          error.SetErrorString("Invalid number of bytes for this return type");
+          error = Status::FromErrorString(
+              "Invalid number of bytes for this return type");
           return error;
         }
         st0_value.SetLongDouble(value_long_dbl);
@@ -330,22 +332,24 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             reg_ctx->WriteRegister(ftag_info, ftag_value);
       } else if (num_bytes == 16) // handles __float128
       {
-        error.SetErrorString("Implementation is missing for this clang type.");
+        error = Status::FromErrorString(
+            "Implementation is missing for this clang type.");
       }
     } else {
       // Neither 'Integral' nor 'Floating Point'. If flow reaches here then
       // check type_flags. This type_flags is not a valid type.
-      error.SetErrorString("Invalid clang type");
+      error = Status::FromErrorString("Invalid clang type");
     }
   } else {
     /* 'Complex Floating Point', 'Packed', 'Decimal Floating Point' and
     'Aggregate' data types
     are yet to be implemented */
-    error.SetErrorString("Currently only Integral and Floating Point clang "
-                         "types are supported.");
+    error = Status::FromErrorString(
+        "Currently only Integral and Floating Point clang "
+        "types are supported.");
   }
   if (!register_write_successful)
-    error.SetErrorString("Register writing failed");
+    error = Status::FromErrorString("Register writing failed");
   return error;
 }
 

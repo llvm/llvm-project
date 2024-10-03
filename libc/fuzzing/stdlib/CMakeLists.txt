@@ -7,6 +7,14 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  heap_sort_fuzz
+  SRCS
+    heap_sort_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_fuzzer(
   atof_differential_fuzz
   SRCS
     atof_differential_fuzz.cpp

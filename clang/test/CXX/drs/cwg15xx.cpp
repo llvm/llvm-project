@@ -1,10 +1,15 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,cxx11-14,cxx14-17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx23,since-cxx20,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
 
 namespace cwg1512 { // cwg1512: 4
   void f(char *p) {
@@ -556,23 +561,32 @@ auto CWG1579_lambda_invalid = []() -> GenericMoveOnly<char> {
 } // end namespace cwg1579
 
 namespace cwg1584 { // cwg1584: 7 drafting 2015-05
-#if __cplusplus >= 201103L
-  // Deducing function types from cv-qualified types
-  template<typename T> void f(const T *); // #cwg1584-f
-  template<typename T> void g(T *, const T * = 0);
-  template<typename T> void h(T *) { T::error; }
-  // since-cxx11-error@-1 {{type 'void ()' cannot be used prior to '::' because it has no members}}
-  //   since-cxx11-note@#cwg1584-h {{in instantiation of function template specialization 'cwg1584::h<void ()>' requested here}}
-  template<typename T> void h(const T *);
-  void i() {
-    f(&i);
-    // since-cxx11-error@-1 {{no matching function for call to 'f'}}
-    //   since-cxx11-note@#cwg1584-f {{candidate template ignored: could not match 'const T *' against 'void (*)()'}}
-    g(&i);
-    h(&i); // #cwg1584-h
-  }
-#endif
+// Deducing function types from cv-qualified types
+template<typename T> void f(const T *); // #cwg1584-f
+template<typename T> void g(T *, const T * = 0);
+template<typename T> void h(T *) { T::error; }
+// expected-error@-1 {{type 'void ()' cannot be used prior to '::' because it has no members}}
+//   expected-note@#cwg1584-h {{in instantiation of function template specialization 'cwg1584::h<void ()>' requested here}}
+template<typename T> void h(const T *);
+void i() {
+  f(&i);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  //   expected-note@#cwg1584-f {{candidate template ignored: could not match 'const T *' against 'void (*)()'}}
+  g(&i);
+  h(&i); // #cwg1584-h
 }
+
+template<typename T> struct tuple_size {
+  static const bool is_primary = true;
+};
+template<typename T> struct tuple_size<T const> : tuple_size<T> {
+  static const bool is_primary = false;
+};
+
+tuple_size<void()> t;
+static_assert(tuple_size<void()>::is_primary, "");
+static_assert(tuple_size<void()const>::is_primary, "");
+} // namespace cwg1584
 
 namespace cwg1589 {   // cwg1589: 3.7 c++11
 #if __cplusplus >= 201103L

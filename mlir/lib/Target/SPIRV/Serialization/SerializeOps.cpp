@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/RegionGraphTraits.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/StringExtras.h"
@@ -138,7 +137,7 @@ Serializer::processSpecConstantOperationOp(spirv::SpecConstantOperationOp op) {
   std::string enclosedOpName;
   llvm::raw_string_ostream rss(enclosedOpName);
   rss << "Op" << enclosedOp.getName().stripDialect();
-  auto enclosedOpcode = spirv::symbolizeOpcode(rss.str());
+  auto enclosedOpcode = spirv::symbolizeOpcode(enclosedOpName);
 
   if (!enclosedOpcode) {
     op.emitError("Couldn't find op code for op ")

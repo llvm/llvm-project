@@ -638,7 +638,8 @@ def: InstRW<[SBWriteResGroup5], (instrs MMX_PABSBrr,
                                         MMX_PALIGNRrri,
                                         MMX_PSIGNBrr,
                                         MMX_PSIGNDrr,
-                                        MMX_PSIGNWrr)>;
+                                        MMX_PSIGNWrr,
+                                        MMX_PSUBQrr)>;
 
 def SBWriteResGroup11 : SchedWriteRes<[SBPort015]> {
   let Latency = 2;
@@ -685,7 +686,7 @@ def SBWriteResGroup22 : SchedWriteRes<[SBPort0,SBPort5]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup22], (instregex "(V?)EXTRACTPSrr")>;
+def: InstRW<[SBWriteResGroup22], (instregex "(V?)EXTRACTPSrri")>;
 
 def SBWriteResGroup23 : SchedWriteRes<[SBPort05,SBPort015]> {
   let Latency = 2;
@@ -788,7 +789,7 @@ def SBWriteResGroup36 : SchedWriteRes<[SBPort4,SBPort5,SBPort23]> {
 }
 def: InstRW<[SBWriteResGroup36], (instrs CALL64pcrel32)>;
 def: InstRW<[SBWriteResGroup36], (instregex "CALL(16|32|64)r",
-                                            "(V?)EXTRACTPSmr")>;
+                                            "(V?)EXTRACTPSmri")>;
 
 def SBWriteResGroup40 : SchedWriteRes<[SBPort4,SBPort23,SBPort015]> {
   let Latency = 5;
@@ -891,14 +892,15 @@ def SBWriteResGroup58 : SchedWriteRes<[SBPort23,SBPort05]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup58], (instrs VINSERTF128rm)>;
+def: InstRW<[SBWriteResGroup58], (instrs VINSERTF128rmi)>;
 
 def SBWriteResGroup59 : SchedWriteRes<[SBPort23,SBPort15]> {
   let Latency = 7;
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQrm)>;
+def: InstRW<[SBWriteResGroup59], (instrs MMX_PADDQrm,
+                                         MMX_PSUBQrm)>;
 
 def SBWriteResGroup62 : SchedWriteRes<[SBPort5,SBPort23]> {
   let Latency = 7;

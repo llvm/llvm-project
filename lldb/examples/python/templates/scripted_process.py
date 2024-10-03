@@ -11,9 +11,6 @@ class ScriptedProcess(metaclass=ABCMeta):
 
     Most of the base class methods are `@abstractmethod` that need to be
     overwritten by the inheriting class.
-
-    DISCLAIMER: THIS INTERFACE IS STILL UNDER DEVELOPMENT AND NOT STABLE.
-                THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
     capabilities = None
@@ -106,8 +103,8 @@ class ScriptedProcess(metaclass=ABCMeta):
 
         Args:
             addr (int): Address from which we should start reading.
-            data (lldb.SBData): An `lldb.SBData` buffer to write to the
-                process memory.
+            data (lldb.SBData): An `lldb.SBData` buffer to write to the process
+            memory.
             error (lldb.SBError): Error object.
 
         Returns:
@@ -121,13 +118,13 @@ class ScriptedProcess(metaclass=ABCMeta):
     def get_loaded_images(self):
         """Get the list of loaded images for the scripted process.
 
-        ```
-        scripted_image = {
-            uuid = "c6ea2b64-f77c-3d27-9528-74f507b9078b",
-            path = "/usr/lib/dyld"
-            load_addr = 0xbadc0ffee
-        }
-        ```
+        .. code-block:: python
+
+            scripted_image = {
+                uuid = "c6ea2b64-f77c-3d27-9528-74f507b9078b",
+                path = "/usr/lib/dyld"
+                load_addr = 0xbadc0ffee
+            }
 
         Returns:
             List[scripted_image]: A list of `scripted_image` dictionaries
@@ -238,9 +235,6 @@ class ScriptedThread(metaclass=ABCMeta):
 
     Most of the base class methods are `@abstractmethod` that need to be
     overwritten by the inheriting class.
-
-    DISCLAIMER: THIS INTERFACE IS STILL UNDER DEVELOPMENT AND NOT STABLE.
-                THE METHODS EXPOSED MIGHT CHANGE IN THE FUTURE.
     """
 
     @abstractmethod
@@ -305,10 +299,12 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_state(self):
         """Get the scripted thread state type.
 
+        .. code-block:: python
+
             eStateStopped,   ///< Process or thread is stopped and can be examined.
             eStateRunning,   ///< Process or thread is running and can't be examined.
-            eStateStepping,  ///< Process or thread is in the process of stepping and can
-                             /// not be examined.
+            eStateStepping,  ///< Process or thread is in the process of stepping and
+                             /// can not be examined.
             eStateCrashed,   ///< Process or thread has crashed and can be examined.
 
         Returns:
@@ -340,12 +336,12 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_stackframes(self):
         """Get the list of stack frames for the scripted thread.
 
-        ```
-        scripted_frame = {
-            idx = 0,
-            pc = 0xbadc0ffee
-        }
-        ```
+        .. code-block:: python
+
+            scripted_frame = {
+                idx = 0,
+                pc = 0xbadc0ffee
+            }
 
         Returns:
             List[scripted_frame]: A list of `scripted_frame` dictionaries

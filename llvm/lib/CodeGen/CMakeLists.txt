@@ -116,6 +116,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineCheckDebugify.cpp
   MachineCycleAnalysis.cpp
   MachineDebugify.cpp
+  MachineDomTreeUpdater.cpp
   MachineDominanceFrontier.cpp
   MachineDominators.cpp
   MachineFrameInfo.cpp
@@ -199,6 +200,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterUsageInfo.cpp
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp
+  RemoveLoadsIntoFakeUses.cpp
   ReplaceWithVeclib.cpp
   ResetMachineFunctionPass.cpp
   RegisterBank.cpp
@@ -266,6 +268,7 @@ add_llvm_component_library(LLVMCodeGen
   Analysis
   BitReader
   BitWriter
+  CGData
   CodeGenTypes
   Core
   MC

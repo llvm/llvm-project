@@ -86,11 +86,11 @@ _Complex long double pass_complex_longdouble(_Complex long double arg) { return 
 
 struct agg_1byte { char a[1]; };
 struct agg_1byte pass_agg_1byte(struct agg_1byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_1byte(ptr dead_on_unwind noalias writable sret(%struct.agg_1byte) align 1 %{{.*}}, i8 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_1byte(ptr dead_on_unwind noalias writable sret(%struct.agg_1byte) align 1 %{{.*}}, i8 noext %{{.*}})
 
 struct agg_2byte { char a[2]; };
 struct agg_2byte pass_agg_2byte(struct agg_2byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_2byte(ptr dead_on_unwind noalias writable sret(%struct.agg_2byte) align 1 %{{.*}}, i16 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_2byte(ptr dead_on_unwind noalias writable sret(%struct.agg_2byte) align 1 %{{.*}}, i16 noext %{{.*}})
 
 struct agg_3byte { char a[3]; };
 struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
@@ -98,7 +98,7 @@ struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
 
 struct agg_4byte { char a[4]; };
 struct agg_4byte pass_agg_4byte(struct agg_4byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_4byte(ptr dead_on_unwind noalias writable sret(%struct.agg_4byte) align 1 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_4byte(ptr dead_on_unwind noalias writable sret(%struct.agg_4byte) align 1 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_5byte { char a[5]; };
 struct agg_5byte pass_agg_5byte(struct agg_5byte arg) { return arg; }
@@ -126,7 +126,7 @@ struct agg_16byte pass_agg_16byte(struct agg_16byte arg) { return arg; }
 struct agg_float { float a; };
 struct agg_float pass_agg_float(struct agg_float arg) { return arg; }
 // HARD-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, float %{{.*}})
-// SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, i32 %{{.*}})
+// SOFT-FLOAT-LABEL: define{{.*}} void @pass_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, i32 noext %{{.*}})
 
 struct agg_double { double a; };
 struct agg_double pass_agg_double(struct agg_double arg) { return arg; }
@@ -159,36 +159,59 @@ struct agg_nofloat2 pass_agg_nofloat2(struct agg_nofloat2 arg) { return arg; }
 
 struct agg_nofloat3 { float a; int : 0; };
 struct agg_nofloat3 pass_agg_nofloat3(struct agg_nofloat3 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_nofloat3(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat3) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_nofloat3(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat3) align 4 %{{.*}}, i32 noext %{{.*}})
 
 
 // Union types likewise are *not* float-like aggregate types
 
 union union_float { float a; };
 union union_float pass_union_float(union union_float arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_union_float(ptr dead_on_unwind noalias writable sret(%union.union_float) align 4 %{{.*}}, i32 %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_union_float(ptr dead_on_unwind noalias writable sret(%union.union_float) align 4 %{{.*}}, i32 noext %{{.*}})
 
 union union_double { double a; };
 union union_double pass_union_double(union union_double arg) { return arg; }
 // CHECK-LABEL: define{{.*}} void @pass_union_double(ptr dead_on_unwind noalias writable sret(%union.union_double) align 8 %{{.*}}, i64 %{{.*}})
 
 
+// Verify that transparent unions are passed like their first member (but returned like a union)
+
+union tu_char { char a; } __attribute__((transparent_union));
+union tu_char pass_tu_char(union tu_char arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_char(ptr dead_on_unwind noalias writable sret(%union.tu_char) align 1 %{{.*}}, i8 signext %{{.*}})
+
+union tu_short { short a; } __attribute__((transparent_union));
+union tu_short pass_tu_short(union tu_short arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_short(ptr dead_on_unwind noalias writable sret(%union.tu_short) align 2 %{{.*}}, i16 signext %{{.*}})
+
+union tu_int { int a; } __attribute__((transparent_union));
+union tu_int pass_tu_int(union tu_int arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_int(ptr dead_on_unwind noalias writable sret(%union.tu_int) align 4 %{{.*}}, i32 signext %{{.*}})
+
+union tu_long { long a; } __attribute__((transparent_union));
+union tu_long pass_tu_long(union tu_long arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_long(ptr dead_on_unwind noalias writable sret(%union.tu_long) align 8 %{{.*}}, i64 %{{.*}})
+
+union tu_ptr { void *a; } __attribute__((transparent_union));
+union tu_ptr pass_tu_ptr(union tu_ptr arg) { return arg; }
+// CHECK-LABEL: define{{.*}} void @pass_tu_ptr(ptr dead_on_unwind noalias writable sret(%union.tu_ptr) align 8 %{{.*}}, ptr %{{.*}})
+
+
 // Accessing variable argument lists
 
 int va_int(__builtin_va_list l) { return __builtin_va_arg(l, int); }
 // CHECK-LABEL: define{{.*}} signext i32 @va_int(ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 20
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 4
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -199,18 +222,18 @@ int va_int(__builtin_va_list l) { return __builtin_va_arg(l, int); }
 
 long va_long(__builtin_va_list l) { return __builtin_va_arg(l, long); }
 // CHECK-LABEL: define{{.*}} i64 @va_long(ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -221,18 +244,18 @@ long va_long(__builtin_va_list l) { return __builtin_va_arg(l, long); }
 
 long long va_longlong(__builtin_va_list l) { return __builtin_va_arg(l, long long); }
 // CHECK-LABEL: define{{.*}} i64 @va_longlong(ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -243,8 +266,8 @@ long long va_longlong(__builtin_va_list l) { return __builtin_va_arg(l, long lon
 
 double va_double(__builtin_va_list l) { return __builtin_va_arg(l, double); }
 // CHECK-LABEL: define{{.*}} double @va_double(ptr %{{.*}})
-// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
-// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
+// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // HARD-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 4
 // SOFT-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
@@ -252,12 +275,12 @@ double va_double(__builtin_va_list l) { return __builtin_va_arg(l, double); }
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // HARD-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 128
 // SOFT-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -268,18 +291,18 @@ double va_double(__builtin_va_list l) { return __builtin_va_arg(l, double); }
 
 long double va_longdouble(__builtin_va_list l) { return __builtin_va_arg(l, long double); }
 // CHECK-LABEL: define{{.*}} void @va_longdouble(ptr dead_on_unwind noalias writable sret(fp128) align 8 %{{.*}}, ptr %{{.*}})
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -292,18 +315,18 @@ long double va_longdouble(__builtin_va_list l) { return __builtin_va_arg(l, long
 
 _Complex char va_complex_char(__builtin_va_list l) { return __builtin_va_arg(l, _Complex char); }
 // CHECK-LABEL: define{{.*}} void @va_complex_char(ptr dead_on_unwind noalias writable sret({ i8, i8 }) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -314,18 +337,18 @@ _Complex char va_complex_char(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_1byte va_agg_1byte(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_1byte); }
 // CHECK-LABEL: define{{.*}} void @va_agg_1byte(ptr dead_on_unwind noalias writable sret(%struct.agg_1byte) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 23
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 7
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -335,18 +358,18 @@ struct agg_1byte va_agg_1byte(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_2byte va_agg_2byte(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_2byte); }
 // CHECK-LABEL: define{{.*}} void @va_agg_2byte(ptr dead_on_unwind noalias writable sret(%struct.agg_2byte) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 22
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 6
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -356,18 +379,18 @@ struct agg_2byte va_agg_2byte(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_3byte va_agg_3byte(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_3byte); }
 // CHECK-LABEL: define{{.*}} void @va_agg_3byte(ptr dead_on_unwind noalias writable sret(%struct.agg_3byte) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -378,18 +401,18 @@ struct agg_3byte va_agg_3byte(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_4byte va_agg_4byte(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_4byte); }
 // CHECK-LABEL: define{{.*}} void @va_agg_4byte(ptr dead_on_unwind noalias writable sret(%struct.agg_4byte) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 20
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 4
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -399,18 +422,18 @@ struct agg_4byte va_agg_4byte(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_8byte va_agg_8byte(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_8byte); }
 // CHECK-LABEL: define{{.*}} void @va_agg_8byte(ptr dead_on_unwind noalias writable sret(%struct.agg_8byte) align 1 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -420,8 +443,8 @@ struct agg_8byte va_agg_8byte(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_float va_agg_float(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_float); }
 // CHECK-LABEL: define{{.*}} void @va_agg_float(ptr dead_on_unwind noalias writable sret(%struct.agg_float) align 4 %{{.*}}, ptr %{{.*}}
-// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
-// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
+// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // HARD-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 4
 // SOFT-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
@@ -429,12 +452,12 @@ struct agg_float va_agg_float(__builtin_va_list l) { return __builtin_va_arg(l, 
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // HARD-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 128
 // SOFT-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 20
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 4
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -444,8 +467,8 @@ struct agg_float va_agg_float(__builtin_va_list l) { return __builtin_va_arg(l, 
 
 struct agg_double va_agg_double(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_double); }
 // CHECK-LABEL: define{{.*}} void @va_agg_double(ptr dead_on_unwind noalias writable sret(%struct.agg_double) align 8 %{{.*}}, ptr %{{.*}}
-// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
-// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
+// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // HARD-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 4
 // SOFT-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
@@ -453,12 +476,12 @@ struct agg_double va_agg_double(__builtin_va_list l) { return __builtin_va_arg(l
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // HARD-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 128
 // SOFT-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -468,18 +491,18 @@ struct agg_double va_agg_double(__builtin_va_list l) { return __builtin_va_arg(l
 
 struct agg_longdouble va_agg_longdouble(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_longdouble); }
 // CHECK-LABEL: define{{.*}} void @va_agg_longdouble(ptr dead_on_unwind noalias writable sret(%struct.agg_longdouble) align 8 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -490,8 +513,8 @@ struct agg_longdouble va_agg_longdouble(__builtin_va_list l) { return __builtin_
 
 struct agg_float_a8 va_agg_float_a8(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_float_a8); }
 // CHECK-LABEL: define{{.*}} void @va_agg_float_a8(ptr dead_on_unwind noalias writable sret(%struct.agg_float_a8) align 8 %{{.*}}, ptr %{{.*}}
-// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
-// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// HARD-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
+// SOFT-FLOAT: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // HARD-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 4
 // SOFT-FLOAT: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
@@ -499,12 +522,12 @@ struct agg_float_a8 va_agg_float_a8(__builtin_va_list l) { return __builtin_va_a
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // HARD-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 128
 // SOFT-FLOAT: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -514,18 +537,18 @@ struct agg_float_a8 va_agg_float_a8(__builtin_va_list l) { return __builtin_va_a
 
 struct agg_float_a16 va_agg_float_a16(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_float_a16); }
 // CHECK-LABEL: define{{.*}} void @va_agg_float_a16(ptr dead_on_unwind noalias writable sret(%struct.agg_float_a16) align 16 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -536,18 +559,18 @@ struct agg_float_a16 va_agg_float_a16(__builtin_va_list l) { return __builtin_va
 
 struct agg_nofloat1 va_agg_nofloat1(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_nofloat1); }
 // CHECK-LABEL: define{{.*}} void @va_agg_nofloat1(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat1) align 4 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -557,18 +580,18 @@ struct agg_nofloat1 va_agg_nofloat1(__builtin_va_list l) { return __builtin_va_a
 
 struct agg_nofloat2 va_agg_nofloat2(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_nofloat2); }
 // CHECK-LABEL: define{{.*}} void @va_agg_nofloat2(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat2) align 4 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 16
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 0
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8
@@ -578,18 +601,18 @@ struct agg_nofloat2 va_agg_nofloat2(__builtin_va_list l) { return __builtin_va_a
 
 struct agg_nofloat3 va_agg_nofloat3(__builtin_va_list l) { return __builtin_va_arg(l, struct agg_nofloat3); }
 // CHECK-LABEL: define{{.*}} void @va_agg_nofloat3(ptr dead_on_unwind noalias writable sret(%struct.agg_nofloat3) align 4 %{{.*}}, ptr %{{.*}}
-// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
+// CHECK: [[REG_COUNT_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // CHECK: [[REG_COUNT:%[^ ]+]] = load i64, ptr [[REG_COUNT_PTR]]
 // CHECK: [[FITS_IN_REGS:%[^ ]+]] = icmp ult i64 [[REG_COUNT]], 5
 // CHECK: br i1 [[FITS_IN_REGS]],
 // CHECK: [[SCALED_REG_COUNT:%[^ ]+]] = mul i64 [[REG_COUNT]], 8
 // CHECK: [[REG_OFFSET:%[^ ]+]] = add i64 [[SCALED_REG_COUNT]], 20
-// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
+// CHECK: [[REG_SAVE_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 3
 // CHECK: [[REG_SAVE_AREA:%[^ ]+]] = load ptr, ptr [[REG_SAVE_AREA_PTR:[^ ]+]]
 // CHECK: [[RAW_REG_ADDR:%[^ ]+]] = getelementptr i8, ptr [[REG_SAVE_AREA]], i64 [[REG_OFFSET]]
 // CHECK: [[REG_COUNT1:%[^ ]+]] = add i64 [[REG_COUNT]], 1
 // CHECK: store i64 [[REG_COUNT1]], ptr [[REG_COUNT_PTR]]
-// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
+// CHECK: [[OVERFLOW_ARG_AREA_PTR:%[^ ]+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // CHECK: [[OVERFLOW_ARG_AREA:%[^ ]+]] = load ptr, ptr [[OVERFLOW_ARG_AREA_PTR]]
 // CHECK: [[RAW_MEM_ADDR:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 4
 // CHECK: [[OVERFLOW_ARG_AREA2:%[^ ]+]] = getelementptr i8, ptr [[OVERFLOW_ARG_AREA]], i64 8

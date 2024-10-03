@@ -39,16 +39,12 @@ namespace elf {
 class InputSection;
 class Symbol;
 
-// If --reproduce is specified, all input files are written to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
-
 // Opens a given file.
 std::optional<MemoryBufferRef> readFile(StringRef path);
 
 // Add symbols in File to the symbol table.
-void parseFile(InputFile *file);
-void parseFiles(const std::vector<InputFile *> &files,
-                InputFile *armCmseImpLib);
+void parseFile(Ctx &, InputFile *file);
+void parseFiles(Ctx &, const std::vector<InputFile *> &files);
 
 // The root class of input files.
 class InputFile {
@@ -84,6 +80,7 @@ public:
     assert(fileKind == ObjKind || fileKind == BinaryKind);
     return sections;
   }
+  void cacheDecodedCrel(size_t i, InputSectionBase *s) { sections[i] = s; }
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
@@ -107,7 +104,7 @@ public:
   }
 
   template <typename RelT> Symbol &getRelocTargetSym(const RelT &rel) const {
-    uint32_t symIndex = rel.getSymbol(config->isMips64EL);
+    uint32_t symIndex = rel.getSymbol(ctx.arg.isMips64EL);
     return getSymbol(symIndex);
   }
 

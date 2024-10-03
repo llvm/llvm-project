@@ -499,7 +499,7 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
-                  bool CompressionCost) {
+                  bool CompressionCost, bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
                                     STI.hasFeature(RISCV::FeatureStdExtZca));
@@ -510,10 +510,12 @@ int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
+    if (FreeZeroes && Chunk.getSExtValue() == 0)
+      continue;
     InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), STI);
     Cost += getInstSeqCost(MatSeq, HasRVC);
   }
-  return std::max(1, Cost);
+  return std::max(FreeZeroes ? 0 : 1, Cost);
 }
 
 OpndKind Inst::getOpndKind() const {

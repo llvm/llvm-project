@@ -46,8 +46,8 @@ char &llvm::MachineTraceMetricsID = MachineTraceMetrics::ID;
 
 INITIALIZE_PASS_BEGIN(MachineTraceMetrics, DEBUG_TYPE,
                       "Machine Trace Metrics", false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(MachineTraceMetrics, DEBUG_TYPE,
                     "Machine Trace Metrics", false, true)
 
@@ -57,8 +57,8 @@ MachineTraceMetrics::MachineTraceMetrics() : MachineFunctionPass(ID) {
 
 void MachineTraceMetrics::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -68,7 +68,7 @@ bool MachineTraceMetrics::runOnMachineFunction(MachineFunction &Func) {
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &MF->getRegInfo();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   SchedModel.init(&ST);
   BlockInfo.resize(MF->getNumBlockIDs());
   ProcReleaseAtCycles.resize(MF->getNumBlockIDs() *

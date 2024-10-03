@@ -12,9 +12,9 @@ define i32 @test(ptr %sptr, i64 %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP1]], <4 x i32> <i32 1, i32 5, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle <4 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp sle <4 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP10]])

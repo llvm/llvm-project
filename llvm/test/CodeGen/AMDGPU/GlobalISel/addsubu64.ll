@@ -6,8 +6,8 @@ define amdgpu_kernel void @s_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-LABEL: s_add_u64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_add_u32 s0, s6, s0
@@ -22,8 +22,8 @@ define amdgpu_kernel void @s_add_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX12-LABEL: s_add_u64:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX12-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[6:7], s[0:1]
@@ -58,8 +58,8 @@ define amdgpu_kernel void @s_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX11-LABEL: s_sub_u64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_sub_u32 s0, s6, s0
@@ -74,8 +74,8 @@ define amdgpu_kernel void @s_sub_u64(ptr addrspace(1) %out, i64 %a, i64 %b) {
 ; GFX12-LABEL: s_sub_u64:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GFX12-NEXT:    s_load_b128 s[4:7], s[2:3], 0x24
+; GFX12-NEXT:    s_load_b64 s[0:1], s[2:3], 0x34
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_sub_nc_u64 s[0:1], s[6:7], s[0:1]

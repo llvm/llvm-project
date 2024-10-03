@@ -62,6 +62,14 @@ using AggregateStoreMap = llvm::DenseMap<AggregateStoreKey, mlir::Value>;
 void instantiateVariable(AbstractConverter &, const pft::Variable &var,
                          SymMap &symMap, AggregateStoreMap &storeMap);
 
+/// Does this variable have a default initialization?
+bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym);
+
+/// Call default initialization runtime routine to initialize \p var.
+void defaultInitializeAtRuntime(Fortran::lower::AbstractConverter &converter,
+                                const Fortran::semantics::Symbol &sym,
+                                Fortran::lower::SymMap &symMap);
+
 /// Create a fir::GlobalOp given a module variable definition. This is intended
 /// to be used when lowering a module definition, not when lowering variables
 /// used from a module. For used variables instantiateVariable must directly be

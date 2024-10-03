@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-#
 # ====-- Enumeration class for libc function headers ----------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -10,7 +8,7 @@
 
 
 class Enumeration:
-    def __init__(self, name, value=None):
+    def __init__(self, name, value):
         self.name = name
         self.value = value
 

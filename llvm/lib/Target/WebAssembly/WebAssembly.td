@@ -37,9 +37,9 @@ def FeatureExtendedConst :
       SubtargetFeature<"extended-const", "HasExtendedConst", "true",
                        "Enable extended const expressions">;
 
-def FeatureHalfPrecision :
-      SubtargetFeature<"half-precision", "HasHalfPrecision", "true",
-                       "Enable half precision instructions">;
+def FeatureFP16 :
+      SubtargetFeature<"fp16", "HasFP16", "true",
+                       "Enable FP16 instructions">;
 
 def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
@@ -110,13 +110,17 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureSignExt, FeatureMutableGlobals]>;
+                      [FeatureMultivalue, FeatureMutableGlobals,
+                       FeatureReferenceTypes, FeatureSignExt]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureSIMD128, FeatureAtomics,
-                       FeatureNontrappingFPToInt, FeatureSignExt,
-                       FeatureMutableGlobals, FeatureBulkMemory,
+                      [FeatureAtomics, FeatureBulkMemory,
+                       FeatureExceptionHandling, FeatureExtendedConst,
+                       FeatureFP16, FeatureMultiMemory,
+                       FeatureMultivalue, FeatureMutableGlobals,
+                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
+                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
                        FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//

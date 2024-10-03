@@ -6,9 +6,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 declare <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>) nounwind readnone
-declare x86_mmx @llvm.x86.ssse3.pmadd.ub.sw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>) nounwind readnone
 declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
-declare x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx, x86_mmx) nounwind readnone
+declare <1 x i64> @llvm.x86.mmx.psad.bw(<1 x i64>, <1 x i64>) nounwind readnone
 
 define <4 x i32> @Test_sse2_pmadd_wd(<8 x i16> %a, <8 x i16> %b) sanitize_memory {
 entry:
@@ -24,19 +24,19 @@ entry:
 ; CHECK: ret <4 x i32>
 
 
-define x86_mmx @Test_ssse3_pmadd_ub_sw(x86_mmx %a, x86_mmx %b) sanitize_memory {
+define <1 x i64> @Test_ssse3_pmadd_ub_sw(<1 x i64> %a, <1 x i64> %b) sanitize_memory {
 entry:
-  %c = tail call x86_mmx @llvm.x86.ssse3.pmadd.ub.sw(x86_mmx %a, x86_mmx %b) nounwind
-  ret x86_mmx %c
+  %c = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> %a, <1 x i64> %b) nounwind
+  ret <1 x i64> %c
 }
 
 ; CHECK-LABEL: @Test_ssse3_pmadd_ub_sw(
-; CHECK: or i64
-; CHECK: bitcast i64 {{.*}} to <4 x i16>
+; CHECK: or <1 x i64>
+; CHECK: bitcast <1 x i64> {{.*}} to <4 x i16>
 ; CHECK: icmp ne <4 x i16> {{.*}}, zeroinitializer
 ; CHECK: sext <4 x i1> {{.*}} to <4 x i16>
-; CHECK: bitcast <4 x i16> {{.*}} to i64
-; CHECK: ret x86_mmx
+; CHECK: bitcast <4 x i16> {{.*}} to <1 x i64>
+; CHECK: ret <1 x i64>
 
 
 define <2 x i64> @Test_x86_sse2_psad_bw(<16 x i8> %a, <16 x i8> %b) sanitize_memory {
@@ -53,15 +53,15 @@ define <2 x i64> @Test_x86_sse2_psad_bw(<16 x i8> %a, <16 x i8> %b) sanitize_mem
 ; CHECK: ret <2 x i64>
 
 
-define x86_mmx @Test_x86_mmx_psad_bw(x86_mmx %a, x86_mmx %b) sanitize_memory {
+define <1 x i64> @Test_x86_mmx_psad_bw(<1 x i64> %a, <1 x i64> %b) sanitize_memory {
 entry:
-  %c = tail call x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx %a, x86_mmx %b) nounwind
-  ret x86_mmx %c
+  %c = tail call <1 x i64> @llvm.x86.mmx.psad.bw(<1 x i64> %a, <1 x i64> %b) nounwind
+  ret <1 x i64> %c
 }
 
 ; CHECK-LABEL: @Test_x86_mmx_psad_bw(
-; CHECK: or i64
+; CHECK: or <1 x i64>
 ; CHECK: icmp ne i64
 ; CHECK: sext i1 {{.*}} to i64
 ; CHECK: lshr i64 {{.*}}, 48
-; CHECK: ret x86_mmx
+; CHECK: ret <1 x i64>

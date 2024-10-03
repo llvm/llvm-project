@@ -1,11 +1,31 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,debug.ExprInspection %s -std=c++11 -verify
 // RUN: %clang_analyze_cc1 -triple x86_64-pc-windows-msvc19.11.0 -fms-extensions -analyzer-checker=core,debug.ExprInspection %s -std=c++11 -verify
 
+#include "Inputs/system-header-simulator-cxx.h"
+
+namespace std {
+// Intentionally not using an "auto" return type here, as such must also have a definition.
+template <typename T, typename U> constexpr int&& forward_like(U&& x) noexcept;
+template <typename T> const T& move_if_noexcept(T& x) noexcept;
+} // namespace std
+
+template <typename T> void clang_analyzer_dump_ref(T&&);
+template <typename T> void clang_analyzer_dump_ptr(T*);
 void clang_analyzer_eval(bool);
 void clang_analyzer_warnIfReached();
 
 void testAddressof(int x) {
   clang_analyzer_eval(&x == __builtin_addressof(x)); // expected-warning{{TRUE}}
+}
+
+void testStdBuiltinLikeFunctions(int x) {
+  clang_analyzer_dump_ptr(std::addressof(x));           // expected-warning{{&x}}
+  clang_analyzer_dump_ptr(std::__addressof(x));         // expected-warning{{&x}}
+  clang_analyzer_dump_ref(std::as_const(x));            // expected-warning{{&x}}
+  clang_analyzer_dump_ref(std::forward<int &>(x));      // expected-warning{{&x}}
+  clang_analyzer_dump_ref(std::forward_like<int &>(x)); // expected-warning{{&x}}
+  clang_analyzer_dump_ref(std::move(x));                // expected-warning{{&x}}
+  clang_analyzer_dump_ref(std::move_if_noexcept(x));    // expected-warning{{&x}}
 }
 
 void testSize() {

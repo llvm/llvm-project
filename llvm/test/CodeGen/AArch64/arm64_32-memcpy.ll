@@ -2,9 +2,9 @@
 
 define i64 @test_memcpy(ptr %addr, ptr %src, i1 %tst) minsize {
 ; CHECK-LABEL: test_memcpy:
-; CHECK: ldr [[VAL64:x[0-9]+]], [x0]
+; CHECK: ldr x[[VAL64:[0-9]+]], [x0]
 ; [...]
-; CHECK: and x0, [[VAL64]], #0xffffffff
+; CHECK: mov w0, w[[VAL64]]
 ; CHECK: bl _memcpy
 
   %val64 = load i64, ptr %addr
@@ -22,9 +22,9 @@ false:
 
 define i64 @test_memmove(ptr %addr, ptr %src, i1 %tst) minsize {
 ; CHECK-LABEL: test_memmove:
-; CHECK: ldr [[VAL64:x[0-9]+]], [x0]
+; CHECK: ldr x[[VAL64:[0-9]+]], [x0]
 ; [...]
-; CHECK: and x0, [[VAL64]], #0xffffffff
+; CHECK: mov w0, w[[VAL64]]
 ; CHECK: bl _memmove
 
   %val64 = load i64, ptr %addr
@@ -42,9 +42,9 @@ false:
 
 define i64 @test_memset(ptr %addr, ptr %src, i1 %tst) minsize {
 ; CHECK-LABEL: test_memset:
-; CHECK: ldr [[VAL64:x[0-9]+]], [x0]
+; CHECK: ldr x[[VAL64:[0-9]+]], [x0]
 ; [...]
-; CHECK: and x0, [[VAL64]], #0xffffffff
+; CHECK: mov w0, w[[VAL64]]
 ; CHECK: bl _memset
 
   %val64 = load i64, ptr %addr

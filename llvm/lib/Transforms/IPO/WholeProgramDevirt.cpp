@@ -311,7 +311,7 @@ void wholeprogramdevirt::setAfterReturnValues(
 
 VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
     : Fn(Fn), TM(TM),
-      IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()),
+      IsBigEndian(Fn->getDataLayout().isBigEndian()),
       WasDevirt(false) {}
 
 namespace {
@@ -860,8 +860,8 @@ void llvm::updatePublicTypeTestCalls(Module &M,
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
       auto *NewCI = CallInst::Create(
-          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)},
-          std::nullopt, "", CI->getIterator());
+          TypeTestFunc, {CI->getArgOperand(0), CI->getArgOperand(1)}, {}, "",
+          CI->getIterator());
       CI->replaceAllUsesWith(NewCI);
       CI->eraseFromParent();
     }
@@ -1616,7 +1616,7 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
   for (uint64_t Arg : Args)
     OS << '_' << Arg;
   OS << '_' << Name;
-  return OS.str();
+  return FullName;
 }
 
 bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {

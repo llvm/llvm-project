@@ -111,8 +111,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  InstSelector.reset(createARMInstructionSelector(
-      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createARMInstructionSelector(TM, *this, *RBI));
 
   RegBankInfo.reset(RBI);
 }
@@ -303,7 +302,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     LdStMultipleTiming = SingleIssuePlusExtras;
     MaxInterleaveFactor = 4;
     if (!isThumb())
-      PrefLoopLogAlignment = 3;
+      PreferBranchLogAlignment = 3;
     break;
   case Kryo:
     break;

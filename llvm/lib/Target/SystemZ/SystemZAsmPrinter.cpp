@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -345,9 +346,10 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
             *OutStreamer,
             MCInstBuilder(SystemZ::LLILF).addReg(TargetReg).addImm(Disp));
       } else
-        EmitToStreamer(
-            *OutStreamer,
-            MCInstBuilder(SystemZ::ALGFI).addReg(TargetReg).addImm(Disp));
+        EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::ALGFI)
+                                         .addReg(TargetReg)
+                                         .addReg(TargetReg)
+                                         .addImm(Disp));
       Disp = 0;
       Op = Op0;
     }

@@ -17,7 +17,6 @@
 
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/FunctionExtras.h"

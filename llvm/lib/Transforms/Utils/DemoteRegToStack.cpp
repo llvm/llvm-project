@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -27,7 +28,7 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   }
 
   Function *F = I.getParent()->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // Create a stack slot to hold the value.
   AllocaInst *Slot;

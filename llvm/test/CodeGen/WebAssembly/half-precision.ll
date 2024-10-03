@@ -1,5 +1,4 @@
-; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+half-precision,+simd128 | FileCheck %s
-; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+half-precision,+simd128 | FileCheck %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+fp16,+simd128 | FileCheck %s
 
 declare float @llvm.wasm.loadf32.f16(ptr)
 declare void @llvm.wasm.storef16.f32(float, ptr)
@@ -28,12 +27,27 @@ define <8 x half> @splat_v8f16(float %x) {
   ret <8 x half> %v
 }
 
+; CHECK-LABEL: const_splat_v8f16:
+; CHECK:       v128.const      $push0=, 20800, 0, 0, 0, 0, 0, 0, 20800
+; CHECK-NEXT:  return $pop0
+define <8 x half> @const_splat_v8f16() {
+  ret <8 x half> <half 42., half 0., half 0., half 0., half 0., half 0., half 0., half 42.>
+}
+
 ; CHECK-LABEL: extract_lane_v8f16:
 ; CHECK:       f16x8.extract_lane $push0=, $0, 1
 ; CHECK-NEXT:  return $pop0
 define float @extract_lane_v8f16(<8 x half> %v) {
   %r = call float @llvm.wasm.extract.lane.f16x8(<8 x half> %v, i32 1)
   ret float %r
+}
+
+; CHECK-LABEL: replace_lane_v8f16:
+; CHECK:       f16x8.replace_lane $push0=, $0, 1, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @replace_lane_v8f16(<8 x half> %v, float %f) {
+  %r = call <8 x half> @llvm.wasm.replace.lane.f16x8(<8 x half> %v, i32 1, float %f)
+  ret <8 x half> %r
 }
 
 ; CHECK-LABEL: add_v8f16:
@@ -281,4 +295,43 @@ define <8 x i16> @trunc_sat_u_v8i16(<8 x half> %x) {
 ; CHECK-NEXT:    return $pop[[R]]{{$}}
   %a = fptoui <8 x half> %x to <8 x i16>
   ret <8 x i16> %a
+}
+
+define <8 x i16> @trunc_sat_s_v8i16_sat(<8 x half> %x) {
+; CHECK-LABEL: trunc_sat_s_v8i16_sat:
+; CHECK:         .functype trunc_sat_s_v8i16_sat (v128) -> (v128)
+; CHECK-NEXT:    i16x8.trunc_sat_f16x8_s $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> %x)
+  ret <8 x i16> %a
+}
+
+define <8 x i16> @trunc_sat_u_v8i16_sat(<8 x half> %x) {
+; CHECK-LABEL: trunc_sat_u_v8i16_sat:
+; CHECK:         .functype trunc_sat_u_v8i16_sat (v128) -> (v128)
+; CHECK-NEXT:    i16x8.trunc_sat_f16x8_u $push0=, $0
+; CHECK-NEXT:    return $pop[[R]]{{$}}
+  %a = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %x)
+  ret <8 x i16> %a
+}
+
+; ==============================================================================
+; Load and Store
+; ==============================================================================
+define <8 x half> @load_v8f16(ptr %p) {
+; CHECK-LABEL: load_v8f16:
+; CHECK:         .functype load_v8f16 (i32) -> (v128)
+; CHECK-NEXT:    v128.load $push0=, 0($0)
+; CHECK-NEXT:    return $pop0
+  %v = load <8 x half>, ptr %p
+  ret <8 x half> %v
+}
+
+define void @store_v8f16(<8 x half> %v, ptr %p) {
+; CHECK-LABEL: store_v8f16:
+; CHECK:         .functype store_v8f16 (v128, i32) -> ()
+; CHECK-NEXT:    v128.store 0($1), $0
+; CHECK-NEXT:    return
+  store <8 x half> %v , ptr %p
+  ret void
 }

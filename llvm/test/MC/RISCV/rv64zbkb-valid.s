@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbkb < %s \
 # RUN:     | llvm-objdump --mattr=+zbkb --no-print-imm-hex -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: rev8 t0, t1
 # CHECK-ASM: encoding: [0x93,0x52,0x83,0x6b]
@@ -29,8 +29,7 @@ roriw t0, t1, 0
 packw t0, t1, t2
 
 # Test the encoding used for zext.h on RV64
-# CHECK-ASM: packw t0, t1, zero
-# CHECK-OBJ: zext.h t0, t1
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xbb,0x42,0x03,0x08]
 packw t0, t1, zero
 

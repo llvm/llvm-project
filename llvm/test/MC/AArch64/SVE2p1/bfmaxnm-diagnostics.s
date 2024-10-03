@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve2p1,+b16b16 2>&1 < %s | FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sve2p1,+sve-b16b16 2>&1 < %s | FileCheck %s
 
 // --------------------------------------------------------------------------//
 // Invalid predicate register

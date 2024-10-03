@@ -1340,7 +1340,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; GFNI-NEXT:    pushq %r14
 ; GFNI-NEXT:    pushq %rbx
 ; GFNI-NEXT:    movq %rdi, %rax
-; GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [9241421688590303745,9241421688590303745]
+; GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
 ; GFNI-NEXT:    vmovq %xmm1, %r10

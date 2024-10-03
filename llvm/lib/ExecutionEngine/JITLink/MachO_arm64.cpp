@@ -552,7 +552,7 @@ public:
 
 private:
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return aarch64::applyFixup(G, B, E);
+    return aarch64::applyFixup(G, B, E, nullptr);
   }
 
   uint64_t NullValue = 0;

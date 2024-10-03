@@ -280,9 +280,10 @@ enum NodeType : unsigned {
   SADDLP,
   UADDLP,
 
-  // udot/sdot instructions
+  // udot/sdot/usdot instructions
   UDOT,
   SDOT,
+  USDOT,
 
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
@@ -703,11 +704,13 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
-                                        LoadInst *LI) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      IntrinsicInst *DI, LoadInst *LI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
-  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
-                                       StoreInst *SI) const override;
+  bool lowerInterleaveIntrinsicToStore(
+      IntrinsicInst *II, StoreInst *SI,
+      SmallVectorImpl<Instruction *> &DeadInsts) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -742,6 +745,11 @@ public:
 
   bool generateFMAsInMachineCombiner(EVT VT,
                                      CodeGenOptLevel OptLevel) const override;
+
+  /// Return true if the target has native support for
+  /// the specified value type and it is 'desirable' to use the type for the
+  /// given node type.
+  bool isTypeDesirableForOp(unsigned Opc, EVT VT) const override;
 
   const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
@@ -907,6 +915,8 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  bool shouldExpandCmpUsingSelects(EVT VT) const override;
+
   bool isComplexDeinterleavingSupported() const override;
   bool isComplexDeinterleavingOperationSupported(
       ComplexDeinterleavingOperation Operation, Type *Ty) const override;
@@ -988,6 +998,9 @@ public:
                              bool AllowUnknown = false) const override;
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
+
+  bool
+  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const override;
 
   bool shouldExpandCttzElements(EVT VT) const override;
 
@@ -1071,6 +1084,8 @@ private:
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
@@ -1127,6 +1142,12 @@ private:
   SDValue LowerELFTLSDescCallSeq(SDValue SymAddr, const SDLoc &DL,
                                  SelectionDAG &DAG) const;
   SDValue LowerWindowsGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerPtrAuthGlobalAddressStatically(SDValue TGA, SDLoc DL, EVT VT,
+                                              AArch64PACKey::ID Key,
+                                              SDValue Discriminator,
+                                              SDValue AddrDiscriminator,
+                                              SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
@@ -1135,8 +1156,11 @@ private:
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
                          SDValue TVal, SDValue FVal, const SDLoc &dl,
                          SelectionDAG &DAG) const;
+  SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBRIND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAAPCS_VASTART(SDValue Op, SelectionDAG &DAG) const;

@@ -21,8 +21,8 @@ define void @b16() {
 
   ; 32R1:           sll   $[[TMP1:[0-9]+]], $[[A_VAL]], 8
   ; 32R1:           srl   $[[TMP2:[0-9]+]], $[[A_VAL]], 8
-  ; 32R1:           or    $[[TMP3:[0-9]+]], $[[TMP1]], $[[TMP2]]
-  ; 32R1:           andi  $[[TMP4:[0-9]+]], $[[TMP3]], 65535
+  ; 32R1:           andi  $[[TMP3:[0-9]+]], $[[TMP2]], 255
+  ; 32R1:           or    $[[RESULT:[0-9]+]], $[[TMP1]], $[[TMP3]]
 
   ; 32R2:           wsbh  $[[RESULT:[0-9]+]], $[[A_VAL]]
 

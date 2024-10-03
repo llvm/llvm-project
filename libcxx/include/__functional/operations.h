@@ -14,6 +14,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_integral.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -362,7 +363,7 @@ struct _LIBCPP_TEMPLATE_VIS less : __binary_function<_Tp, _Tp, bool> {
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less);
 
 template <class _Tp>
-inline const bool __desugars_to_v<__less_tag, less<_Tp>, _Tp, _Tp> = true;
+inline const bool __desugars_to_v<__totally_ordered_less_tag, less<_Tp>, _Tp, _Tp> = is_integral<_Tp>::value;
 
 #if _LIBCPP_STD_VER >= 14
 template <>
@@ -377,7 +378,7 @@ struct _LIBCPP_TEMPLATE_VIS less<void> {
 };
 
 template <class _Tp>
-inline const bool __desugars_to_v<__less_tag, less<>, _Tp, _Tp> = true;
+inline const bool __desugars_to_v<__totally_ordered_less_tag, less<>, _Tp, _Tp> = is_integral<_Tp>::value;
 #endif
 
 #if _LIBCPP_STD_VER >= 14

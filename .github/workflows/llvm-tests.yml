@@ -43,9 +43,9 @@ jobs:
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
       BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
       BASELINE_VERSION_MINOR: ${{ steps.vars.outputs.BASELINE_VERSION_MINOR }}
-      LLVM_VERSION_MAJOR: ${{ steps.version.outputs.LLVM_VERSION_MAJOR }}
-      LLVM_VERSION_MINOR: ${{ steps.version.outputs.LLVM_VERSION_MINOR }}
-      LLVM_VERSION_PATCH: ${{ steps.version.outputs.LLVM_VERSION_PATCH }}
+      LLVM_VERSION_MAJOR: ${{ steps.version.outputs.major }}
+      LLVM_VERSION_MINOR: ${{ steps.version.outputs.minor }}
+      LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
 
       - name: Get LLVM version
         id: version
-        uses: llvm/actions/get-llvm-version@main
+        uses: ./.github/workflows/get-llvm-version
 
       - name: Setup Variables
         id: vars
@@ -66,14 +66,14 @@ jobs:
           # 18.1.0 We want to check 17.0.x
           # 18.1.1 We want to check 18.1.0
           echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
-          if [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+          if [ ${{ steps.version.outputs.patch }} -eq 0 ]; then
             {
-              echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))"
+              echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.major }} - 1))"
               echo "ABI_HEADERS=llvm-c"
             } >> "$GITHUB_OUTPUT"
           else
             {
-              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}"
+              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.major }}"
               echo "ABI_HEADERS=."
             } >> "$GITHUB_OUTPUT"
           fi

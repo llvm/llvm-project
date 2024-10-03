@@ -56,9 +56,6 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA:%.*]], i64 [[IDXPROM]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 8
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 16
@@ -186,7 +183,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; CHECK-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], [[FOR_BODY]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ]
@@ -251,9 +248,6 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; MAX-BW-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
 ; MAX-BW-NEXT:    [[TMP32:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA:%.*]], i64 [[IDXPROM]], i64 [[TMP0]]
-; MAX-BW-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP8]]
-; MAX-BW-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP16]]
-; MAX-BW-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [100 x i32], ptr [[DATA]], i64 [[IDXPROM]], i64 [[TMP24]]
 ; MAX-BW-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 0
 ; MAX-BW-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 8
 ; MAX-BW-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[TMP32]], i32 16
@@ -381,7 +375,7 @@ define i32 @matrix_row_col(ptr nocapture readonly %data, i32 %i, i32 %j) local_u
 ; MAX-BW-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; MAX-BW:       scalar.ph:
 ; MAX-BW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-BW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ]
+; MAX-BW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP149]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; MAX-BW-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-BW:       for.cond.cleanup:
 ; MAX-BW-NEXT:    [[ADD7_LCSSA:%.*]] = phi i32 [ [[ADD7:%.*]], [[FOR_BODY]] ], [ [[TMP149]], [[MIDDLE_BLOCK]] ]

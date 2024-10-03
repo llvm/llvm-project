@@ -176,6 +176,7 @@ export class MLIRContext implements vscode.Disposable {
     let configsToWatch: string[] = [];
     let filepathsToWatch: string[] = [];
     let additionalServerArgs: string[] = [];
+    additionalServerArgs = config.get<string[]>(languageName + "_additional_server_args", null, []);
 
     // Initialize additional configurations for this server.
     if (languageName === 'pdll') {

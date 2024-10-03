@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -24,30 +25,30 @@ static StringRef getExtensionName(const Record *R) {
 }
 
 static void printExtensionTable(raw_ostream &OS,
-                                const std::vector<Record *> &Extensions,
+                                ArrayRef<const Record *> Extensions,
                                 bool Experimental) {
   OS << "static const RISCVSupportedExtension Supported";
   if (Experimental)
     OS << "Experimental";
   OS << "Extensions[] = {\n";
 
-  for (Record *R : Extensions) {
+  for (const Record *R : Extensions) {
     if (R->getValueAsBit("Experimental") != Experimental)
       continue;
 
-    OS << "    {\"" << getExtensionName(R) << "\", {"
-       << R->getValueAsInt("MajorVersion") << ", "
-       << R->getValueAsInt("MinorVersion") << "}},\n";
+    OS.indent(4) << "{\"" << getExtensionName(R) << "\", {"
+                 << R->getValueAsInt("MajorVersion") << ", "
+                 << R->getValueAsInt("MinorVersion") << "}},\n";
   }
 
   OS << "};\n\n";
 }
 
-static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
+static void emitRISCVExtensions(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
   OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
 
-  std::vector<Record *> Extensions =
+  std::vector<const Record *> Extensions =
       Records.getAllDerivedDefinitionsIfDefined("RISCVExtension");
   llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
     return getExtensionName(Rec1) < getExtensionName(Rec2);
@@ -65,7 +66,7 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
 
   if (!Extensions.empty()) {
     OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
-    for (Record *Ext : Extensions) {
+    for (const Record *Ext : Extensions) {
       auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
       if (ImpliesList.empty())
         continue;
@@ -76,8 +77,8 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
         if (!ImpliedExt->isSubClassOf("RISCVExtension"))
           continue;
 
-        OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
-           << "\"},\n";
+        OS.indent(4) << "{ {\"" << Name << "\"}, \""
+                     << getExtensionName(ImpliedExt) << "\"},\n";
       }
     }
 
@@ -93,12 +94,12 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
-static void printMArch(raw_ostream &OS, const std::vector<Record *> &Features) {
+static void printMArch(raw_ostream &OS, ArrayRef<const Record *> Features) {
   RISCVISAUtils::OrderedExtensionMap Extensions;
   unsigned XLen = 0;
 
   // Convert features to FeatureVector.
-  for (auto *Feature : Features) {
+  for (const Record *Feature : Features) {
     StringRef FeatureName = getExtensionName(Feature);
     if (Feature->isSubClassOf("RISCVExtension")) {
       unsigned Major = Feature->getValueAsInt("MajorVersion");
@@ -123,7 +124,7 @@ static void printMArch(raw_ostream &OS, const std::vector<Record *> &Features) {
 }
 
 static void printProfileTable(raw_ostream &OS,
-                              const std::vector<Record *> &Profiles,
+                              ArrayRef<const Record *> Profiles,
                               bool Experimental) {
   OS << "static constexpr RISCVProfile Supported";
   if (Experimental)
@@ -144,7 +145,7 @@ static void printProfileTable(raw_ostream &OS,
   OS << "};\n\n";
 }
 
-static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
+static void emitRISCVProfiles(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_PROFILES\n";
   OS << "#undef GET_SUPPORTED_PROFILES\n\n";
 
@@ -162,15 +163,16 @@ static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // GET_SUPPORTED_PROFILES\n\n";
 }
 
-static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
+static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
-     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
+     << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN"
+     << ", FAST_VECTOR_UNALIGN)\n"
      << "#endif\n\n";
 
   // Iterate on all definition records.
   for (const Record *Rec :
        RK.getAllDerivedDefinitionsIfDefined("RISCVProcessorModel")) {
-    const std::vector<Record *> &Features =
+    const std::vector<const Record *> &Features =
         Rec->getValueAsListOfDefs("Features");
     bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
       return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
@@ -179,9 +181,6 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
     bool FastVectorUnalignedAccess = any_of(Features, [&](auto &Feature) {
       return Feature->getValueAsString("Name") == "unaligned-vector-mem";
     });
-
-    bool FastUnalignedAccess =
-        FastScalarUnalignedAccess && FastVectorUnalignedAccess;
 
     OS << "PROC(" << Rec->getName() << ", {\"" << Rec->getValueAsString("Name")
        << "\"}, {\"";
@@ -193,7 +192,8 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
       printMArch(OS, Features);
     else
       OS << MArch;
-    OS << "\"}, " << FastUnalignedAccess << ")\n";
+    OS << "\"}, " << FastScalarUnalignedAccess << ", "
+       << FastVectorUnalignedAccess << ")\n";
   }
   OS << "\n#undef PROC\n";
   OS << "\n";
@@ -210,10 +210,45 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef TUNE_PROC\n";
 }
 
-static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
+static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
+  std::vector<const Record *> Extensions =
+      RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
+
+#ifndef NDEBUG
+  llvm::DenseSet<std::pair<uint64_t, uint64_t>> Seen;
+#endif
+
+  OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
+  OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
+  for (const Record *Rec : Extensions) {
+    unsigned GroupIDVal = Rec->getValueAsInt("GroupID");
+    unsigned BitPosVal = Rec->getValueAsInt("BitPos");
+
+    StringRef ExtName = Rec->getValueAsString("Name");
+    ExtName.consume_front("experimental-");
+
+#ifndef NDEBUG
+    assert(Seen.insert(std::make_pair(GroupIDVal, BitPosVal)).second &&
+           "duplicated bitmask");
+#endif
+
+    OS.indent(4) << "{"
+                 << "\"" << ExtName << "\""
+                 << ", " << GroupIDVal << ", " << BitPosVal << "ULL"
+                 << "},\n";
+  }
+  OS << "};\n";
+  OS << "#endif\n";
+}
+
+static void EmitRISCVTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
+  emitRISCVExtensionBitmask(RK, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,

@@ -16,8 +16,31 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+#include "range_reduction_double_fma.h"
+
+// With FMA, we limit the maxmimum exponent to be 2^16, so that the error bound
+// from the fma::range_reduction_small is bounded by 2^-88 instead of 2^-72.
+#define FAST_PASS_EXPONENT 16
+using LIBC_NAMESPACE::fma::ONE_TWENTY_EIGHT_OVER_PI;
+using LIBC_NAMESPACE::fma::range_reduction_small;
+using LIBC_NAMESPACE::fma::SIN_K_PI_OVER_128;
+
+LIBC_INLINE constexpr bool NO_FMA = false;
+#else
+#include "range_reduction_double_nofma.h"
+
+using LIBC_NAMESPACE::nofma::FAST_PASS_EXPONENT;
+using LIBC_NAMESPACE::nofma::ONE_TWENTY_EIGHT_OVER_PI;
+using LIBC_NAMESPACE::nofma::range_reduction_small;
+using LIBC_NAMESPACE::nofma::SIN_K_PI_OVER_128;
+
+LIBC_INLINE constexpr bool NO_FMA = true;
+#endif // LIBC_TARGET_CPU_HAS_FMA
+
+namespace LIBC_NAMESPACE_DECL {
 
 namespace generic {
 
@@ -225,6 +248,6 @@ LIBC_INLINE constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
 
 } // namespace generic
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H

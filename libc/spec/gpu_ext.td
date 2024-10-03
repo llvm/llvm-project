@@ -10,14 +10,6 @@ def GPUExtensions : StandardSpec<"GPUExtensions"> {
             RetValSpec<VoidType>,
             [ArgSpec<VoidPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
         >,
-        FunctionSpec<
-            "rpc_fprintf",
-            RetValSpec<IntType>,
-            [ArgSpec<FILERestrictedPtr>,
-             ArgSpec<ConstCharRestrictedPtr>,
-             ArgSpec<VoidPtr>,
-             ArgSpec<SizeTType>]
-        >,
     ]
   >;
   let Headers = [

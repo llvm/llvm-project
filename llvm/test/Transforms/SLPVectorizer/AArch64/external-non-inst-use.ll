@@ -4,8 +4,9 @@
 define i16 @foo(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, ptr [[P1:%.*]], align 1
-; CHECK-NEXT:    [[CONST_MAT:%.*]] = or i32 0, 0
+; CHECK-NEXT:    [[CONST:%.*]] = bitcast i32 0 to i32
+; CHECK-NEXT:    store i32 [[CONST]], ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[CONST_MAT:%.*]] = or i32 [[CONST]], 0
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[P2:%.*]], align 1
 ; CHECK-NEXT:    ret i16 0
 ;

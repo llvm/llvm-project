@@ -255,7 +255,6 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
   %queue.load = load volatile i8, ptr addrspace(4) %queue.ptr
   %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
   %dispatch.load = load volatile i8, ptr addrspace(4) %dispatch.ptr
-  store volatile i64 %dispatch.id, ptr addrspace(1) %ptr
   ret void
 }
 

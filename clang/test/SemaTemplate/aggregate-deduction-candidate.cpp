@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20 -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s --strict-whitespace
 
 namespace Basic {
-  template<class T> struct A { // cxx17-note 6 {{candidate}}
+  template<class T> struct A { // cxx17-note 6 {{candidate}} cxx17-note 6 {{implicit deduction guide}}
     T x;
     T y;
   };
@@ -36,12 +36,14 @@ namespace Basic {
     T y;
   };
 
-  template <typename T> struct C { // cxx20-note 10 {{candidate}} cxx17-note 12 {{candidate}}
+  template <typename T> struct C { // cxx20-note 10 {{candidate}} cxx17-note 12 {{candidate}} \
+                                      cxx20-note 10 {{implicit deduction guide}} cxx17-note 12 {{implicit deduction guide}}
     S<T> s;
     T t;
   };
 
-  template <typename T> struct D { // cxx20-note 6 {{candidate}} cxx17-note 8 {{candidate}}
+  template <typename T> struct D { // cxx20-note 6 {{candidate}} cxx17-note 8 {{candidate}} \
+                                      cxx20-note 6 {{implicit deduction guide}} cxx17-note 8 {{implicit deduction guide}}
     S<int> s;
     T t;
   };
@@ -99,7 +101,7 @@ namespace Basic {
   // CHECK:   |-ClassTemplateSpecialization {{.*}} 'S'
   // CHECK:   `-BuiltinType {{.*}} 'int'
 
-  template <typename T> struct E { // cxx17-note 4 {{candidate}}
+  template <typename T> struct E { // cxx17-note 4 {{candidate}} cxx17-note 4 {{implicit deduction guide}}
     T t;
     decltype(t) t2;
   };
@@ -133,7 +135,7 @@ namespace Basic {
   };
 
   template <typename T>
-  struct F { // cxx17-note 2 {{candidate}}
+  struct F { // cxx17-note 2 {{candidate}} cxx17-note 2 {{implicit deduction guide}}
     typename I<T>::type i;
     T t;
   };
@@ -161,7 +163,8 @@ namespace Basic {
 
 namespace Array {
   typedef unsigned long size_t;
-  template <typename T, size_t N> struct A { // cxx20-note 2 {{candidate}} cxx17-note 14 {{candidate}}
+  template <typename T, size_t N> struct A { // cxx20-note 2 {{candidate}} cxx17-note 14 {{candidate}} \
+                                                cxx20-note 2 {{implicit deduction guide}} cxx17-note 14 {{implicit deduction guide}}
     T array[N];
   };
 
@@ -217,7 +220,7 @@ namespace Array {
 }
 
 namespace BraceElision {
-  template <typename T> struct A { // cxx17-note 4 {{candidate}}
+  template <typename T> struct A { // cxx17-note 4 {{candidate}} cxx17-note 4 {{implicit deduction guide}}
     T array[2];
   };
 
@@ -247,7 +250,7 @@ namespace BraceElision {
 }
 
 namespace TrailingPack {
-  template<typename... T> struct A : T... { // cxx17-note 4 {{candidate}}
+  template<typename... T> struct A : T... { // cxx17-note 4 {{candidate}} cxx17-note 4 {{implicit deduction guide}}
   };
 
   A a1 = { // cxx17-error {{no viable}}
@@ -286,7 +289,7 @@ namespace TrailingPack {
 }
 
 namespace NonTrailingPack {
-  template<typename... T> struct A : T... { // expected-note 4 {{candidate}}
+  template<typename... T> struct A : T... { // expected-note 4 {{candidate}} expected-note 4 {{implicit deduction guide}}
     int a;
   };
 
@@ -303,7 +306,8 @@ namespace NonTrailingPack {
 
 namespace DeduceArity {
   template <typename... T> struct Types {};
-  template <typename... T> struct F : Types<T...>, T... {}; // cxx20-note 12 {{candidate}} cxx17-note 16 {{candidate}}
+  template <typename... T> struct F : Types<T...>, T... {}; // cxx20-note 12 {{candidate}} cxx17-note 16 {{candidate}} \
+                                                               cxx20-note 12 {{implicit deduction guide}} cxx17-note 16 {{implicit deduction guide}}
 
   struct X {};
   struct Y {};

@@ -134,6 +134,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
                 GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepInRange reached %s.", s.GetData());
   }
+  ClearNextBranchBreakpointExplainedStop();
 
   if (IsPlanComplete())
     return true;

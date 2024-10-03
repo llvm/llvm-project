@@ -17,6 +17,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "RISCV.h"
+#include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVTargetMachine.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -76,6 +78,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
@@ -83,8 +87,8 @@ public:
 
   // Returns whether Inst is compressed.
   bool EmitToStreamer(MCStreamer &S, const MCInst &Inst);
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   typedef std::tuple<unsigned, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
@@ -290,9 +294,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
-
+  }
 
   switch (MI->getOpcode()) {
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
@@ -300,11 +305,6 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   case RISCV::KCFI_CHECK:
     LowerKCFI_CHECK(*MI);
-    return;
-  case RISCV::PseudoRVVInitUndefM1:
-  case RISCV::PseudoRVVInitUndefM2:
-  case RISCV::PseudoRVVInitUndefM4:
-  case RISCV::PseudoRVVInitUndefM8:
     return;
   case TargetOpcode::STACKMAP:
     return LowerSTACKMAP(*OutStreamer, SM, *MI);
@@ -394,6 +394,15 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     OS << MCO.getImm();
   else if (Offset.isGlobal() || Offset.isBlockAddress() || Offset.isMCSymbol())
     OS << *MCO.getExpr();
+
+  if (Offset.isMCSymbol())
+    MMI->getContext().registerInlineAsmLabel(Offset.getMCSymbol());
+  if (Offset.isBlockAddress()) {
+    const BlockAddress *BA = Offset.getBlockAddress();
+    MCSymbol *Sym = GetBlockAddressSymbol(BA);
+    MMI->getContext().registerInlineAsmLabel(Sym);
+  }
+
   OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
   return false;
 }
@@ -974,7 +983,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
     if (hasVLOutput && OpNo == 1)
       continue;
 
-    // Skip merge op. It should be the first operand after the defs.
+    // Skip passthru op. It should be the first operand after the defs.
     if (OpNo == MI->getNumExplicitDefs() && MO.isReg() && MO.isTied()) {
       assert(MCID.getOperandConstraint(OpNo, MCOI::TIED_TO) == 0 &&
              "Expected tied to first def.");
@@ -1073,4 +1082,24 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   }
   }
   return false;
+}
+
+void RISCVAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
+  auto *RCPV = static_cast<RISCVConstantPoolValue *>(MCPV);
+  MCSymbol *MCSym;
+
+  if (RCPV->isGlobalValue()) {
+    auto *GV = RCPV->getGlobalValue();
+    MCSym = getSymbol(GV);
+  } else {
+    assert(RCPV->isExtSymbol() && "unrecognized constant pool type");
+    auto Sym = RCPV->getSymbol();
+    MCSym = GetExternalSymbolSymbol(Sym);
+  }
+
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
+  OutStreamer->emitValue(Expr, Size);
 }

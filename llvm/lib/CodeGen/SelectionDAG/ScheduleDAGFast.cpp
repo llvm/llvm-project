@@ -622,11 +622,11 @@ void ScheduleDAGFast::ListScheduleBottomUp() {
     }
 
     // Add the nodes that aren't ready back onto the available list.
-    for (unsigned i = 0, e = NotReady.size(); i != e; ++i) {
-      NotReady[i]->isPending = false;
+    for (SUnit *SU : NotReady) {
+      SU->isPending = false;
       // May no longer be available due to backtracking.
-      if (NotReady[i]->isAvailable)
-        AvailableQueue.push(NotReady[i]);
+      if (SU->isAvailable)
+        AvailableQueue.push(SU);
     }
     NotReady.clear();
 
@@ -770,7 +770,7 @@ void ScheduleDAGLinearize::Schedule() {
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });
 

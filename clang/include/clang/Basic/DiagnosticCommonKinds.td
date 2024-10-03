@@ -45,11 +45,6 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
-def warn_next_larger_fp_type_same_size_than_fp : Warning<
-  "higher precision floating-point type size has the same size than "
-  "floating-point type size">,
-  InGroup<DiagGroup<"higher-precision-fp">>;
-
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {
@@ -366,6 +361,15 @@ def warn_target_unrecognized_env : Warning<
   InGroup<InvalidCommandLineArgument>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
+
+def err_ppc_impossible_musttail: Error<
+  "'musttail' attribute for this call is impossible because %select{"
+  "long calls can not be tail called on PPC|"
+  "indirect calls can not be tail called on PPC|"
+  "external calls can not be tail called on PPC}0"
+  >;
+def err_aix_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on AIX">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

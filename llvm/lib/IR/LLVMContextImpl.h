@@ -1582,7 +1582,7 @@ public:
   // Basic type instances.
   Type VoidTy, LabelTy, HalfTy, BFloatTy, FloatTy, DoubleTy, MetadataTy,
       TokenTy;
-  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_MMXTy, X86_AMXTy;
+  Type X86_FP80Ty, FP128Ty, PPC_FP128Ty, X86_AMXTy;
   IntegerType Int1Ty, Int8Ty, Int16Ty, Int32Ty, Int64Ty, Int128Ty;
 
   std::unique_ptr<ConstantTokenNone> TheNoneToken;
@@ -1608,7 +1608,6 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   PointerType *AS0PointerType = nullptr; // AddrSpace = 0
   DenseMap<unsigned, PointerType *> PointerTypes;
-  DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;
   DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
@@ -1665,6 +1664,10 @@ public:
   /// synchronization scope names registered with LLVMContext.  Synchronization
   /// scope names are ordered by increasing synchronization scope IDs.
   void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
+
+  /// getSyncScopeName - Returns the name of a SyncScope::ID
+  /// registered with LLVMContext, if any.
+  std::optional<StringRef> getSyncScopeName(SyncScope::ID Id) const;
 
   /// Maintain the GC name for each function.
   ///

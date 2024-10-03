@@ -10,9 +10,13 @@
 #include "test_macros.h"
 
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/is_valid_expansion.h>
-#include <type_traits>
+#include <__type_traits/negation.h>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 struct Bomb;
 template <int N, class T = Bomb >

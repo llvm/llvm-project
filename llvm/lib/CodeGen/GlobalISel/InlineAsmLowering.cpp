@@ -223,7 +223,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();

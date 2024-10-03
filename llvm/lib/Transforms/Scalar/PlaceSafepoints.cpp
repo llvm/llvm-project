@@ -60,6 +60,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -330,18 +331,14 @@ bool PlaceSafepointsPass::runImpl(Function &F, const TargetLibraryInfo &TLI) {
         // and b) edges to distinct loop headers.  We need to insert pools on
         // each.
         SetVector<BasicBlock *> Headers;
-        for (unsigned i = 0; i < Term->getNumSuccessors(); i++) {
-          BasicBlock *Succ = Term->getSuccessor(i);
-          if (DT.dominates(Succ, Term->getParent())) {
+        for (BasicBlock *Succ : successors(Term->getParent()))
+          if (DT.dominates(Succ, Term->getParent()))
             Headers.insert(Succ);
-          }
-        }
         assert(!Headers.empty() && "poll location is not a loop latch?");
 
         // The split loop structure here is so that we only need to recalculate
         // the dominator tree once.  Alternatively, we could just keep it up to
         // date and use a more natural merged loop.
-        SetVector<BasicBlock *> SplitBackedges;
         for (BasicBlock *Header : Headers) {
           BasicBlock *NewBB = SplitEdge(Term->getParent(), Header, &DT);
           PollsNeeded.push_back(NewBB->getTerminator());

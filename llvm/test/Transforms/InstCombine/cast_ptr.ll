@@ -259,7 +259,7 @@ define i32 @ptr_add_in_int(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_2(
 ; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[P2_IDX]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[P2_IDX]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i32 %x to ptr
@@ -271,7 +271,7 @@ define i32 @ptr_add_in_int_2(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_nneg(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_nneg(
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
@@ -308,7 +308,7 @@ define i16 @ptr_add_in_int_different_type_2(i32 %x, i32 %y) {
 define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_different_type_3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i16 %x to ptr
@@ -320,7 +320,7 @@ define i32 @ptr_add_in_int_different_type_3(i16 %x, i32 %y) {
 define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_different_type_4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i64 %x to ptr
@@ -332,12 +332,49 @@ define i32 @ptr_add_in_int_different_type_4(i64 %x, i32 %y) {
 define i32 @ptr_add_in_int_not_inbounds(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_not_inbounds(
 ; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.abs.i32(i32 [[Y:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %z = call i32 @llvm.abs.i32(i32 %y, i1 true)
   %ptr = inttoptr i32 %x to ptr
   %p2 = getelementptr i8, ptr %ptr, i32 %z
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nuw(
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nuw i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nusw(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nusw(
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nusw i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nusw_nneg(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nusw_nneg(
+; CHECK-NEXT:    [[NNEG:%.*]] = icmp sgt i32 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %nneg = icmp sge i32 %y, 0
+  call void @llvm.assume(i1 %nneg)
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nusw i8, ptr %ptr, i32 %y
   %r = ptrtoint ptr %p2 to i32
   ret i32 %r
 }

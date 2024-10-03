@@ -13,22 +13,24 @@ add_clang_unittest(ClangReplInterpreterTests
   InterpreterTest.cpp
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
+
+  EXPORT_SYMBOLS
   )
-target_link_libraries(ClangReplInterpreterTests PUBLIC
+  
+target_link_libraries(ClangReplInterpreterTests PUBLIC LLVMTestingSupport)
+
+clang_target_link_libraries(ClangReplInterpreterTests PRIVATE
   clangAST
   clangBasic
   clangInterpreter
   clangFrontend
   clangSema
-  LLVMTestingSupport
   )
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
 endif()
-
-export_executable_symbols(ClangReplInterpreterTests)
 
 if(MSVC)
   set_target_properties(ClangReplInterpreterTests PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)

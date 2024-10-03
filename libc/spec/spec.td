@@ -119,6 +119,12 @@ def Float16Ptr : PtrType<Float16Type>;
 def Float128Ptr : PtrType<Float128Type>;
 def UnsignedCharPtr : PtrType<UnsignedCharType>;
 
+def ConstDoublePtr : ConstType<DoublePtr>;
+def ConstFloatPtr : ConstType<FloatPtr>;
+def ConstLongDoublePtr : ConstType<LongDoublePtr>;
+def ConstFloat16Ptr : ConstType<Float16Ptr>;
+def ConstFloat128Ptr : ConstType<Float128Ptr>;
+
 def SigHandlerT : NamedType<"__sighandler_t">;
 
 def TimeTType : NamedType<"time_t">;

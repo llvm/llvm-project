@@ -264,6 +264,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   MCOptions.AssemblyLanguage = "masm";
   MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
   MCOptions.MCSaveTempLabels = InputArgs.hasArg(OPT_save_temp_labels);
+  MCOptions.ShowMCInst = InputArgs.hasArg(OPT_show_inst);
+  MCOptions.AsmVerbose = true;
 
   Triple TheTriple = GetTriple(ProgName, InputArgs);
   std::string Error;
@@ -385,10 +387,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(
-        Ctx, std::move(FOut), /*asmverbose*/ true,
-        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
-        InputArgs.hasArg(OPT_show_inst)));
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+                                           std::move(CE), std::move(MAB)));
 
   } else if (FileType == "null") {
     Str.reset(TheTarget->createNullStreamer(Ctx));
@@ -402,9 +402,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, std::unique_ptr<MCAsmBackend>(MAB),
-        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
-        MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false));
+        MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE),
+        *STI));
   } else {
     llvm_unreachable("Invalid file type!");
   }

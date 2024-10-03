@@ -37,7 +37,6 @@
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 
 #if SANITIZER_NETBSD
@@ -185,10 +184,7 @@ INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
 #if !SANITIZER_NETBSD
 INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  void *ptr = msan_memalign(alignment, size, &stack);
-  if (ptr)
-    DTLS_on_libc_memalign(ptr, size);
-  return ptr;
+  return msan_memalign(alignment, size, &stack);
 }
 #define MSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
@@ -1255,7 +1251,7 @@ struct InterceptorContext {
   }
 };
 
-static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
+alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }

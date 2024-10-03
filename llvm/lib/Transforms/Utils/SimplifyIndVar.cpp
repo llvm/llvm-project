@@ -167,8 +167,8 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
       D = ConstantInt::get(UseInst->getContext(),
                            APInt::getOneBitSet(BitWidth, D->getZExtValue()));
     }
-    const auto *LHS = SE->getSCEV(IVSrc);
-    const auto *RHS = SE->getSCEV(D);
+    const SCEV *LHS = SE->getSCEV(IVSrc);
+    const SCEV *RHS = SE->getSCEV(D);
     FoldedExpr = SE->getUDivExpr(LHS, RHS);
     // We might have 'exact' flag set at this point which will no longer be
     // correct after we make the replacement.
@@ -297,8 +297,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
 
 bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
   // Get the SCEVs for the ICmp operands.
-  auto *N = SE->getSCEV(SDiv->getOperand(0));
-  auto *D = SE->getSCEV(SDiv->getOperand(1));
+  const SCEV *N = SE->getSCEV(SDiv->getOperand(0));
+  const SCEV *D = SE->getSCEV(SDiv->getOperand(1));
 
   // Simplify unnecessary loops away.
   const Loop *L = LI->getLoopFor(SDiv->getParent());
@@ -312,6 +312,7 @@ bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
         SDiv->getName() + ".udiv", SDiv->getIterator());
     UDiv->setIsExact(SDiv->isExact());
     SDiv->replaceAllUsesWith(UDiv);
+    UDiv->setDebugLoc(SDiv->getDebugLoc());
     LLVM_DEBUG(dbgs() << "INDVARS: Simplified sdiv: " << *SDiv << '\n');
     ++NumSimplifiedSDiv;
     Changed = true;
@@ -328,6 +329,7 @@ void SimplifyIndvar::replaceSRemWithURem(BinaryOperator *Rem) {
   auto *URem = BinaryOperator::Create(BinaryOperator::URem, N, D,
                                       Rem->getName() + ".urem", Rem->getIterator());
   Rem->replaceAllUsesWith(URem);
+  URem->setDebugLoc(Rem->getDebugLoc());
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified srem: " << *Rem << '\n');
   ++NumSimplifiedSRem;
   Changed = true;
@@ -351,6 +353,7 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
   SelectInst *Sel =
       SelectInst::Create(ICmp, ConstantInt::get(T, 0), N, "iv.rem", Rem->getIterator());
   Rem->replaceAllUsesWith(Sel);
+  Sel->setDebugLoc(Rem->getDebugLoc());
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified rem: " << *Rem << '\n');
   ++NumElimRem;
   Changed = true;
@@ -394,7 +397,7 @@ void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem,
     }
 
     auto *T = Rem->getType();
-    const auto *NLessOne = SE->getMinusSCEV(N, SE->getOne(T));
+    const SCEV *NLessOne = SE->getMinusSCEV(N, SE->getOne(T));
     if (SE->isKnownPredicate(LT, NLessOne, D)) {
       replaceRemWithNumeratorOrZero(Rem);
       return;
@@ -435,6 +438,7 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(WithOverflowInst *WO) {
       else {
         assert(EVI->getIndices()[0] == 0 && "Only two possibilities!");
         EVI->replaceAllUsesWith(NewResult);
+        NewResult->setDebugLoc(EVI->getDebugLoc());
       }
       ToDelete.push_back(EVI);
     }
@@ -464,6 +468,7 @@ bool SimplifyIndvar::eliminateSaturatingIntrinsic(SaturatingInst *SI) {
     BO->setHasNoUnsignedWrap();
 
   SI->replaceAllUsesWith(BO);
+  BO->setDebugLoc(SI->getDebugLoc());
   DeadInsts.emplace_back(SI);
   Changed = true;
   return true;
@@ -1019,7 +1024,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
   SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
   bool Changed = false;
@@ -1098,10 +1103,8 @@ class WidenIV {
 
   void updatePostIncRangeInfo(Value *Def, Instruction *UseI, ConstantRange R) {
     DefUserPair Key(Def, UseI);
-    auto It = PostIncRangeInfos.find(Key);
-    if (It == PostIncRangeInfos.end())
-      PostIncRangeInfos.insert({Key, R});
-    else
+    auto [It, Inserted] = PostIncRangeInfos.try_emplace(Key, R);
+    if (!Inserted)
       It->second = R.intersectWith(It->second);
   }
 
@@ -1923,18 +1926,24 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
     if (!WideAddRec.first)
       return nullptr;
 
-    // Reuse the IV increment that SCEVExpander created. Recompute flags, unless
-    // the flags for both increments agree and it is safe to use the ones from
-    // the original inc. In that case, the new use of the wide increment won't
-    // be more poisonous.
-    bool NeedToRecomputeFlags =
-        !SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
-                                                      DU.NarrowUse, WideInc) ||
-        DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
-        DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+    auto CanUseWideInc = [&]() {
+      if (!WideInc)
+        return false;
+      // Reuse the IV increment that SCEVExpander created. Recompute flags,
+      // unless the flags for both increments agree and it is safe to use the
+      // ones from the original inc. In that case, the new use of the wide
+      // increment won't be more poisonous.
+      bool NeedToRecomputeFlags =
+          !SCEVExpander::canReuseFlagsFromOriginalIVInc(
+              OrigPhi, WidePhi, DU.NarrowUse, WideInc) ||
+          DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
+          DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+      return WideAddRec.first == WideIncExpr &&
+             Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags);
+    };
+
     Instruction *WideUse = nullptr;
-    if (WideAddRec.first == WideIncExpr &&
-        Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags))
+    if (CanUseWideInc())
       WideUse = WideInc;
     else {
       WideUse = cloneIVUser(DU, WideAddRec.first);

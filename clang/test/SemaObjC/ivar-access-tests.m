@@ -2,6 +2,8 @@
 
 @interface MySuperClass
 {
+  int unmarked;
+
 @private
   int private;
 
@@ -17,6 +19,7 @@
 - (void) test {
     int access;
     MySuperClass *s = 0;
+    access = s->unmarked;
     access = s->private;   
     access = s->protected;
 }
@@ -30,9 +33,11 @@
 - (void) test {
     int access;
     MySuperClass *s = 0;
+    access = s->unmarked;
     access = s->private; // expected-error {{instance variable 'private' is private}}
     access = s->protected;
     MyClass *m=0;
+    access = m->unmarked;
     access = m->private; // expected-error {{instance variable 'private' is private}}
     access = m->protected;
 }
@@ -46,9 +51,11 @@
 - (void) test {
     int access;
     MySuperClass *s = 0;
+    access = s->unmarked;
     access = s->private; // expected-error {{instance variable 'private' is private}}
     access = s->protected;
     MyClass *m=0;
+    access = m->unmarked;
     access = m->private; // expected-error {{instance variable 'private' is private}}
     access = m->protected;
 }
@@ -61,9 +68,11 @@
 - (void) test {
     int access;
     MySuperClass *s = 0;
+    access = s->unmarked; // expected-error {{instance variable 'unmarked' is protected}}
     access = s->private; // expected-error {{instance variable 'private' is private}}
     access = s->protected; // expected-error {{instance variable 'protected' is protected}}
     MyClass *m=0;
+    access = m->unmarked; // expected-error {{instance variable 'unmarked' is protected}}
     access = m->private; // expected-error {{instance variable 'private' is private}}
     access = m->protected; // expected-error {{instance variable 'protected' is protected}}
 }
@@ -73,6 +82,7 @@ int main (void)
 {
   MySuperClass *s = 0;
   int access;
+  access = s->unmarked; // expected-error {{instance variable 'unmarked' is protected}}
   access = s->private;   // expected-error {{instance variable 'private' is private}}
   access = s->protected; // expected-error {{instance variable 'protected' is protected}}
   return 0;

@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -89,7 +90,7 @@ void DwarfCFIException::beginFunction(const MachineFunction *MF) {
   shouldEmitLSDA = shouldEmitPersonality &&
     LSDAEncoding != dwarf::DW_EH_PE_omit;
 
-  const MCAsmInfo &MAI = *MF->getMMI().getContext().getAsmInfo();
+  const MCAsmInfo &MAI = *MF->getContext().getAsmInfo();
   if (MAI.getExceptionHandlingType() != ExceptionHandling::None)
     shouldEmitCFI =
         MAI.usesCFIForEH() && (shouldEmitPersonality || shouldEmitMoves);

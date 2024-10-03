@@ -10,6 +10,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"

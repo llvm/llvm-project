@@ -861,7 +861,7 @@ bool CXIndexDataConsumer::handleObjCProperty(const ObjCPropertyDecl *D) {
 }
 
 bool CXIndexDataConsumer::handleNamespace(const NamespaceDecl *D) {
-  DeclInfo DInfo(/*isRedeclaration=*/!D->isOriginalNamespace(),
+  DeclInfo DInfo(/*isRedeclaration=*/!D->isFirstDecl(),
                  /*isDefinition=*/true,
                  /*isContainer=*/true);
   return handleDecl(D, D->getLocation(), getCursor(D), DInfo);

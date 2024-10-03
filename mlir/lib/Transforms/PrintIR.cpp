@@ -25,6 +25,7 @@ struct PrintIRPass : public impl::PrintIRPassBase<PrintIRPass> {
       llvm::dbgs() << " " << this->label;
     llvm::dbgs() << " //----- //\n";
     getOperation()->dump();
+    markAllAnalysesPreserved();
   }
 };
 

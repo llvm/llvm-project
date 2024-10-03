@@ -126,7 +126,8 @@ ICmpInst::Predicate getICmpCondCode(ISD::CondCode Pred);
 /// between it and the return.
 ///
 /// This function only tests target-independent requirements.
-bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM);
+bool isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
+                          bool ReturnsFirstArg = false);
 
 /// Test if given that the input instruction is in the tail call position, if
 /// there is an attribute mismatch between the caller and the callee that will
@@ -144,7 +145,12 @@ bool attributesPermitTailCall(const Function *F, const Instruction *I,
 /// optimization.
 bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const ReturnInst *Ret,
-                                     const TargetLoweringBase &TLI);
+                                     const TargetLoweringBase &TLI,
+                                     bool ReturnsFirstArg = false);
+
+/// Returns true if the parent of \p CI returns CI's first argument after
+/// calling \p CI.
+bool funcReturnsFirstArgOfCall(const CallInst &CI);
 
 DenseMap<const MachineBasicBlock *, int>
 getEHScopeMembership(const MachineFunction &MF);

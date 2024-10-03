@@ -6,83 +6,73 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Routines and classes used to provide useful functionalities like string
-// parsing and environment variables.
+// Routines and classes used to provide useful functionalities for the host and
+// the device.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef OMPTARGET_SHARED_UTILS_H
 #define OMPTARGET_SHARED_UTILS_H
 
-#include "llvm/ADT/StringRef.h"
+#include <stdint.h>
 
-#include "Debug.h"
-
-#include <atomic>
-#include <cassert>
-#include <limits>
-#include <memory>
-
-namespace llvm {
-namespace omp {
-namespace target {
-
-/// Utility class for thread-safe reference counting. Any class that needs
-/// objects' reference counting can inherit from this entity or have it as a
-/// class data member.
-template <typename Ty = uint32_t,
-          std::memory_order MemoryOrder = std::memory_order_relaxed>
-struct RefCountTy {
-  /// Create a refcount object initialized to zero.
-  RefCountTy() : Refs(0) {}
-
-  ~RefCountTy() { assert(Refs == 0 && "Destroying with non-zero refcount"); }
-
-  /// Increase the reference count atomically.
-  void increase() { Refs.fetch_add(1, MemoryOrder); }
-
-  /// Decrease the reference count and return whether it became zero. Decreasing
-  /// the counter in more units than it was previously increased results in
-  /// undefined behavior.
-  bool decrease() {
-    Ty Prev = Refs.fetch_sub(1, MemoryOrder);
-    assert(Prev > 0 && "Invalid refcount");
-    return (Prev == 1);
-  }
-
-  Ty get() const { return Refs.load(MemoryOrder); }
-
-private:
-  /// The atomic reference counter.
-  std::atomic<Ty> Refs;
-};
+namespace utils {
 
 /// Return the difference (in bytes) between \p Begin and \p End.
 template <typename Ty = char>
-ptrdiff_t getPtrDiff(const void *End, const void *Begin) {
+auto getPtrDiff(const void *End, const void *Begin) {
   return reinterpret_cast<const Ty *>(End) -
          reinterpret_cast<const Ty *>(Begin);
 }
 
 /// Return \p Ptr advanced by \p Offset bytes.
-template <typename Ty> Ty *advanceVoidPtr(Ty *Ptr, int64_t Offset) {
-  static_assert(std::is_void<Ty>::value);
-  return const_cast<char *>(reinterpret_cast<const char *>(Ptr) + Offset);
+template <typename Ty1, typename Ty2> Ty1 *advancePtr(Ty1 *Ptr, Ty2 Offset) {
+  return (Ty1 *)(const_cast<char *>((const char *)(Ptr)) + Offset);
 }
 
-/// Return \p Ptr aligned to \p Alignment bytes.
-template <typename Ty> Ty *alignPtr(Ty *Ptr, int64_t Alignment) {
-  size_t Space = std::numeric_limits<size_t>::max();
-  return std::align(Alignment, sizeof(char), Ptr, Space);
+/// Return \p V aligned "upwards" according to \p Align.
+template <typename Ty1, typename Ty2> inline Ty1 alignPtr(Ty1 V, Ty2 Align) {
+  return reinterpret_cast<Ty1>(((uintptr_t(V) + Align - 1) / Align) * Align);
+}
+/// Return \p V aligned "downwards" according to \p Align.
+template <typename Ty1, typename Ty2> inline Ty1 alignDown(Ty1 V, Ty2 Align) {
+  return V - V % Align;
 }
 
 /// Round up \p V to a \p Boundary.
 template <typename Ty> inline Ty roundUp(Ty V, Ty Boundary) {
-  return (V + Boundary - 1) / Boundary * Boundary;
+  return alignPtr(V, Boundary);
 }
 
-} // namespace target
-} // namespace omp
-} // namespace llvm
+/// Return the first bit set in \p V.
+inline uint32_t ffs(uint32_t V) {
+  static_assert(sizeof(int) == sizeof(uint32_t), "type size mismatch");
+  return __builtin_ffs(V);
+}
+
+/// Return the first bit set in \p V.
+inline uint32_t ffs(uint64_t V) {
+  static_assert(sizeof(long) == sizeof(uint64_t), "type size mismatch");
+  return __builtin_ffsl(V);
+}
+
+/// Return the number of bits set in \p V.
+inline uint32_t popc(uint32_t V) {
+  static_assert(sizeof(int) == sizeof(uint32_t), "type size mismatch");
+  return __builtin_popcount(V);
+}
+
+/// Return the number of bits set in \p V.
+inline uint32_t popc(uint64_t V) {
+  static_assert(sizeof(long) == sizeof(uint64_t), "type size mismatch");
+  return __builtin_popcountl(V);
+}
+
+template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
+  static_assert(sizeof(DstTy) == sizeof(SrcTy), "Bad conversion");
+  return *((DstTy *)(&V));
+}
+
+} // namespace utils
 
 #endif // OMPTARGET_SHARED_UTILS_H

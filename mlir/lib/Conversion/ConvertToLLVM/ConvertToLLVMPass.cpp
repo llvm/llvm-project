@@ -35,6 +35,8 @@ namespace {
 /// starting a pass pipeline that involves dialect conversion to LLVM.
 class LoadDependentDialectExtension : public DialectExtensionBase {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LoadDependentDialectExtension)
+
   LoadDependentDialectExtension() : DialectExtensionBase(/*dialectNames=*/{}) {}
 
   void apply(MLIRContext *context,

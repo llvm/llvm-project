@@ -1,0 +1,23 @@
+header: gpu-rpc.h
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: rpc_fprintf
+    standards:
+      - GPUExtensions
+    return_type: int
+    arguments:
+      - type: ::FILE *__restrict
+      - type: const char *__restrict
+      - type: void *
+      - type: size_t
+  - name: rpc_host_call
+    standards:
+      - GPUExtensions
+    return_type: void
+    arguments:
+      - type: void *
+      - type: void *
+      - type: size_t

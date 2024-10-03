@@ -10,11 +10,12 @@
 
 #include "src/__support/File/dir.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <dirent.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(::DIR *, opendir, (const char *name)) {
   auto dir = Dir::open(name);
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(::DIR *, opendir, (const char *name)) {
   return reinterpret_cast<DIR *>(dir.value());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

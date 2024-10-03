@@ -15,9 +15,8 @@
 using namespace __memprof;
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-// The symbol is called __local_memprof_preinit, because it's not intended to
-// be exported. This code linked into the main executable when -fmemory-profile
-// is in the link flags. It can only use exported interface functions.
-__attribute__((section(".preinit_array"),
-               used)) void (*__local_memprof_preinit)(void) = __memprof_preinit;
+// This section is linked into the main executable when -fmemory-profile is
+// specified to perform initialization at a very early stage.
+__attribute__((section(".preinit_array"), used)) static auto preinit =
+    __memprof_preinit;
 #endif

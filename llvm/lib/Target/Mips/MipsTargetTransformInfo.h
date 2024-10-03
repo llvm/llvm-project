@@ -29,7 +29,7 @@ class MipsTTIImpl : public BasicTTIImplBase<MipsTTIImpl> {
 
 public:
   explicit MipsTTIImpl(const MipsTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
   bool hasDivRemOp(Type *DataType, bool IsSigned);

@@ -10,11 +10,14 @@
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -74,7 +77,7 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << "occupancy(";
     break;
   }
-  for (auto It = Args.begin(); It != Args.end(); ++It) {
+  for (const auto *It = Args.begin(); It != Args.end(); ++It) {
     (*It)->print(OS, MAI, /*InParens=*/false);
     if ((It + 1) != Args.end())
       OS << ", ";
@@ -93,12 +96,11 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   }
 }
 
-bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
                                       const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -123,12 +125,11 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
                                         const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -151,12 +152,11 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -173,12 +173,11 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
                                      const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Layout, Fixup) ||
-        !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -218,27 +217,25 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
 }
 
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAsmLayout *Layout,
+                                             const MCAssembler *Asm,
                                              const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
-
   switch (Kind) {
   default:
     break;
   case AGVK_ExtraSGPRs:
-    return evaluateExtraSGPRs(Res, Layout, Fixup);
+    return evaluateExtraSGPRs(Res, Asm, Fixup);
   case AGVK_AlignTo:
-    return evaluateAlignTo(Res, Layout, Fixup);
+    return evaluateAlignTo(Res, Asm, Fixup);
   case AGVK_TotalNumVGPRs:
-    return evaluateTotalNumVGPR(Res, Layout, Fixup);
+    return evaluateTotalNumVGPR(Res, Asm, Fixup);
   case AGVK_Occupancy:
-    return evaluateOccupancy(Res, Layout, Fixup);
+    return evaluateOccupancy(Res, Asm, Fixup);
   }
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
-    if (!Arg->evaluateAsRelocatable(ArgRes, Layout, Fixup) ||
-        !ArgRes.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(ArgRes, Asm, Fixup) || !ArgRes.isAbsolute())
       return false;
 
     if (!Total.has_value())
@@ -307,4 +304,376 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                  CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
                  CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
                 Ctx);
+}
+
+static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
+  static constexpr unsigned BitWidth = 64;
+  const APInt True(BitWidth, 1);
+  const APInt False(BitWidth, 0);
+  if (CompareResult) {
+    return *CompareResult ? KnownBits::makeConstant(True)
+                          : KnownBits::makeConstant(False);
+  }
+
+  KnownBits UnknownBool(/*BitWidth=*/1);
+  return UnknownBool.zext(BitWidth);
+}
+
+using KnownBitsMap = DenseMap<const MCExpr *, KnownBits>;
+static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                               unsigned Depth = 0);
+
+static void binaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                       unsigned Depth) {
+  static constexpr unsigned BitWidth = 64;
+  const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
+  const MCExpr *LHS = BExpr->getLHS();
+  const MCExpr *RHS = BExpr->getRHS();
+
+  knownBitsMapHelper(LHS, KBM, Depth + 1);
+  knownBitsMapHelper(RHS, KBM, Depth + 1);
+  KnownBits LHSKnown = KBM[LHS];
+  KnownBits RHSKnown = KBM[RHS];
+
+  switch (BExpr->getOpcode()) {
+  default:
+    KBM[Expr] = KnownBits(BitWidth);
+    return;
+  case MCBinaryExpr::Opcode::Add:
+    KBM[Expr] = KnownBits::add(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::And:
+    KBM[Expr] = LHSKnown & RHSKnown;
+    return;
+  case MCBinaryExpr::Opcode::Div:
+    KBM[Expr] = KnownBits::sdiv(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::EQ: {
+    std::optional<bool> CompareRes = KnownBits::eq(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::NE: {
+    std::optional<bool> CompareRes = KnownBits::ne(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::GT: {
+    std::optional<bool> CompareRes = KnownBits::sgt(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::GTE: {
+    std::optional<bool> CompareRes = KnownBits::sge(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::LAnd: {
+    std::optional<bool> CompareRes;
+    const APInt False(BitWidth, 0);
+    std::optional<bool> LHSBool =
+        KnownBits::ne(LHSKnown, KnownBits::makeConstant(False));
+    std::optional<bool> RHSBool =
+        KnownBits::ne(RHSKnown, KnownBits::makeConstant(False));
+    if (LHSBool && RHSBool)
+      CompareRes = *LHSBool && *RHSBool;
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::LOr: {
+    const APInt False(BitWidth, 0);
+    KnownBits Bits = LHSKnown | RHSKnown;
+    std::optional<bool> CompareRes =
+        KnownBits::ne(Bits, KnownBits::makeConstant(False));
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::LT: {
+    std::optional<bool> CompareRes = KnownBits::slt(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::LTE: {
+    std::optional<bool> CompareRes = KnownBits::sle(LHSKnown, RHSKnown);
+    KBM[Expr] = fromOptionalToKnownBits(CompareRes);
+    return;
+  }
+  case MCBinaryExpr::Opcode::Mod:
+    KBM[Expr] = KnownBits::srem(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::Mul:
+    KBM[Expr] = KnownBits::mul(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::Or:
+    KBM[Expr] = LHSKnown | RHSKnown;
+    return;
+  case MCBinaryExpr::Opcode::Shl:
+    KBM[Expr] = KnownBits::shl(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::AShr:
+    KBM[Expr] = KnownBits::ashr(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::LShr:
+    KBM[Expr] = KnownBits::lshr(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::Sub:
+    KBM[Expr] = KnownBits::sub(LHSKnown, RHSKnown);
+    return;
+  case MCBinaryExpr::Opcode::Xor:
+    KBM[Expr] = LHSKnown ^ RHSKnown;
+    return;
+  }
+}
+
+static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                      unsigned Depth) {
+  static constexpr unsigned BitWidth = 64;
+  const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
+  knownBitsMapHelper(UExpr->getSubExpr(), KBM, Depth + 1);
+  KnownBits KB = KBM[UExpr->getSubExpr()];
+
+  switch (UExpr->getOpcode()) {
+  default:
+    KBM[Expr] = KnownBits(BitWidth);
+    return;
+  case MCUnaryExpr::Opcode::Minus: {
+    KB.makeNegative();
+    KBM[Expr] = KB;
+    return;
+  }
+  case MCUnaryExpr::Opcode::Not: {
+    KnownBits AllOnes(BitWidth);
+    AllOnes.setAllOnes();
+    KBM[Expr] = KB ^ AllOnes;
+    return;
+  }
+  case MCUnaryExpr::Opcode::Plus: {
+    KB.makeNonNegative();
+    KBM[Expr] = KB;
+    return;
+  }
+  }
+}
+
+static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                       unsigned Depth) {
+  static constexpr unsigned BitWidth = 64;
+  const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
+
+  switch (AGVK->getKind()) {
+  default:
+    KBM[Expr] = KnownBits(BitWidth);
+    return;
+  case AMDGPUMCExpr::VariantKind::AGVK_Or: {
+    knownBitsMapHelper(AGVK->getSubExpr(0), KBM, Depth + 1);
+    KnownBits KB = KBM[AGVK->getSubExpr(0)];
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      knownBitsMapHelper(Arg, KBM, Depth + 1);
+      KB |= KBM[Arg];
+    }
+    KBM[Expr] = KB;
+    return;
+  }
+  case AMDGPUMCExpr::VariantKind::AGVK_Max: {
+    knownBitsMapHelper(AGVK->getSubExpr(0), KBM, Depth + 1);
+    KnownBits KB = KBM[AGVK->getSubExpr(0)];
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      knownBitsMapHelper(Arg, KBM, Depth + 1);
+      KB = KnownBits::umax(KB, KBM[Arg]);
+    }
+    KBM[Expr] = KB;
+    return;
+  }
+  case AMDGPUMCExpr::VariantKind::AGVK_ExtraSGPRs:
+  case AMDGPUMCExpr::VariantKind::AGVK_TotalNumVGPRs:
+  case AMDGPUMCExpr::VariantKind::AGVK_AlignTo:
+  case AMDGPUMCExpr::VariantKind::AGVK_Occupancy: {
+    int64_t Val;
+    if (AGVK->evaluateAsAbsolute(Val)) {
+      APInt APValue(BitWidth, Val);
+      KBM[Expr] = KnownBits::makeConstant(APValue);
+      return;
+    }
+    KBM[Expr] = KnownBits(BitWidth);
+    return;
+  }
+  }
+}
+
+static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                               unsigned Depth) {
+  static constexpr unsigned BitWidth = 64;
+
+  int64_t Val;
+  if (Expr->evaluateAsAbsolute(Val)) {
+    APInt APValue(BitWidth, Val, /*isSigned=*/true);
+    KBM[Expr] = KnownBits::makeConstant(APValue);
+    return;
+  }
+
+  if (Depth == 16) {
+    KBM[Expr] = KnownBits(BitWidth);
+    return;
+  }
+
+  switch (Expr->getKind()) {
+  case MCExpr::ExprKind::Binary: {
+    binaryOpKnownBitsMapHelper(Expr, KBM, Depth);
+    return;
+  }
+  case MCExpr::ExprKind::Constant: {
+    const MCConstantExpr *CE = cast<MCConstantExpr>(Expr);
+    APInt APValue(BitWidth, CE->getValue(), /*isSigned=*/true);
+    KBM[Expr] = KnownBits::makeConstant(APValue);
+    return;
+  }
+  case MCExpr::ExprKind::SymbolRef: {
+    const MCSymbolRefExpr *RExpr = cast<MCSymbolRefExpr>(Expr);
+    const MCSymbol &Sym = RExpr->getSymbol();
+    if (!Sym.isVariable()) {
+      KBM[Expr] = KnownBits(BitWidth);
+      return;
+    }
+
+    // Variable value retrieval is not for actual use but only for knownbits
+    // analysis.
+    knownBitsMapHelper(Sym.getVariableValue(/*SetUsed=*/false), KBM, Depth + 1);
+    KBM[Expr] = KBM[Sym.getVariableValue(/*SetUsed=*/false)];
+    return;
+  }
+  case MCExpr::ExprKind::Unary: {
+    unaryOpKnownBitsMapHelper(Expr, KBM, Depth);
+    return;
+  }
+  case MCExpr::ExprKind::Target: {
+    targetOpKnownBitsMapHelper(Expr, KBM, Depth);
+    return;
+  }
+  }
+}
+
+static const MCExpr *tryFoldHelper(const MCExpr *Expr, KnownBitsMap &KBM,
+                                   MCContext &Ctx) {
+  if (!KBM.count(Expr))
+    return Expr;
+
+  auto ValueCheckKnownBits = [](KnownBits &KB, unsigned Value) -> bool {
+    if (!KB.isConstant())
+      return false;
+
+    return Value == KB.getConstant();
+  };
+
+  if (Expr->getKind() == MCExpr::ExprKind::Constant)
+    return Expr;
+
+  // Resolving unary operations to constants may make the value more ambiguous.
+  // For example, `~62` becomes `-63`; however, to me it's more ambiguous if a
+  // bit mask value is represented through a negative number.
+  if (Expr->getKind() != MCExpr::ExprKind::Unary) {
+    if (KBM[Expr].isConstant()) {
+      APInt ConstVal = KBM[Expr].getConstant();
+      return MCConstantExpr::create(ConstVal.getSExtValue(), Ctx);
+    }
+
+    int64_t EvalValue;
+    if (Expr->evaluateAsAbsolute(EvalValue))
+      return MCConstantExpr::create(EvalValue, Ctx);
+  }
+
+  switch (Expr->getKind()) {
+  default:
+    return Expr;
+  case MCExpr::ExprKind::Binary: {
+    const MCBinaryExpr *BExpr = cast<MCBinaryExpr>(Expr);
+    const MCExpr *LHS = BExpr->getLHS();
+    const MCExpr *RHS = BExpr->getRHS();
+
+    switch (BExpr->getOpcode()) {
+    default:
+      return Expr;
+    case MCBinaryExpr::Opcode::Sub: {
+      if (ValueCheckKnownBits(KBM[RHS], 0))
+        return tryFoldHelper(LHS, KBM, Ctx);
+      break;
+    }
+    case MCBinaryExpr::Opcode::Add:
+    case MCBinaryExpr::Opcode::Or: {
+      if (ValueCheckKnownBits(KBM[LHS], 0))
+        return tryFoldHelper(RHS, KBM, Ctx);
+      if (ValueCheckKnownBits(KBM[RHS], 0))
+        return tryFoldHelper(LHS, KBM, Ctx);
+      break;
+    }
+    case MCBinaryExpr::Opcode::Mul: {
+      if (ValueCheckKnownBits(KBM[LHS], 1))
+        return tryFoldHelper(RHS, KBM, Ctx);
+      if (ValueCheckKnownBits(KBM[RHS], 1))
+        return tryFoldHelper(LHS, KBM, Ctx);
+      break;
+    }
+    case MCBinaryExpr::Opcode::Shl:
+    case MCBinaryExpr::Opcode::AShr:
+    case MCBinaryExpr::Opcode::LShr: {
+      if (ValueCheckKnownBits(KBM[RHS], 0))
+        return tryFoldHelper(LHS, KBM, Ctx);
+      if (ValueCheckKnownBits(KBM[LHS], 0))
+        return MCConstantExpr::create(0, Ctx);
+      break;
+    }
+    case MCBinaryExpr::Opcode::And: {
+      if (ValueCheckKnownBits(KBM[LHS], 0) || ValueCheckKnownBits(KBM[RHS], 0))
+        return MCConstantExpr::create(0, Ctx);
+      break;
+    }
+    }
+    const MCExpr *NewLHS = tryFoldHelper(LHS, KBM, Ctx);
+    const MCExpr *NewRHS = tryFoldHelper(RHS, KBM, Ctx);
+    if (NewLHS != LHS || NewRHS != RHS)
+      return MCBinaryExpr::create(BExpr->getOpcode(), NewLHS, NewRHS, Ctx,
+                                  BExpr->getLoc());
+    return Expr;
+  }
+  case MCExpr::ExprKind::Unary: {
+    const MCUnaryExpr *UExpr = cast<MCUnaryExpr>(Expr);
+    const MCExpr *SubExpr = UExpr->getSubExpr();
+    const MCExpr *NewSubExpr = tryFoldHelper(SubExpr, KBM, Ctx);
+    if (SubExpr != NewSubExpr)
+      return MCUnaryExpr::create(UExpr->getOpcode(), NewSubExpr, Ctx,
+                                 UExpr->getLoc());
+    return Expr;
+  }
+  case MCExpr::ExprKind::Target: {
+    const AMDGPUMCExpr *AGVK = cast<AMDGPUMCExpr>(Expr);
+    SmallVector<const MCExpr *, 8> NewArgs;
+    bool Changed = false;
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      const MCExpr *NewArg = tryFoldHelper(Arg, KBM, Ctx);
+      NewArgs.push_back(NewArg);
+      Changed |= Arg != NewArg;
+    }
+    return Changed ? AMDGPUMCExpr::create(AGVK->getKind(), NewArgs, Ctx) : Expr;
+  }
+  }
+  return Expr;
+}
+
+const MCExpr *llvm::AMDGPU::foldAMDGPUMCExpr(const MCExpr *Expr,
+                                             MCContext &Ctx) {
+  KnownBitsMap KBM;
+  knownBitsMapHelper(Expr, KBM);
+  const MCExpr *NewExpr = tryFoldHelper(Expr, KBM, Ctx);
+
+  return Expr != NewExpr ? NewExpr : Expr;
+}
+
+void llvm::AMDGPU::printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
+                                     const MCAsmInfo *MAI) {
+  int64_t Val;
+  if (Expr->evaluateAsAbsolute(Val)) {
+    OS << Val;
+    return;
+  }
+
+  Expr->print(OS, MAI);
 }

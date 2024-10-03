@@ -22,7 +22,7 @@
 # READELF: 04 .got
 
 # RUN: llvm-bolt %t.exe --relocs -o %t.null -v=1 \
-# RUN:   |& FileCheck --check-prefix=BOLT %s
+# RUN:   2>&1 | FileCheck --check-prefix=BOLT %s
 # BOLT: BOLT-INFO: marking .got as GNU_RELRO
 
   .globl _start

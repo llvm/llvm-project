@@ -108,7 +108,7 @@ class LeakSuppressionContext {
   void PrintMatchedSuppressions();
 };
 
-ALIGNED(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
+alignas(64) static char suppression_placeholder[sizeof(LeakSuppressionContext)];
 static LeakSuppressionContext *suppression_ctx = nullptr;
 static const char kSuppressionLeak[] = "leak";
 static const char *kSuppressionTypes[] = {kSuppressionLeak};

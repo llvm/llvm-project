@@ -35,7 +35,6 @@ struct AffineMapStorage;
 
 class Attribute;
 class Builder;
-struct LogicalResult;
 class OpFoldResult;
 class MLIRContext;
 
@@ -146,6 +145,14 @@ public:
   /// Returns true if this affine map is a minor identity, i.e. an identity
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
+
+  /// Returns the list of broadcast dimensions (i.e. dims indicated by value 0
+  /// in the result).
+  /// Ex:
+  ///  * (d0, d1, d2) -> (0, d1) gives [0]
+  ///  * (d0, d1, d2) -> (d2, d1) gives []
+  ///  * (d0, d1, d2, d4) -> (d0, 0, d1, 0) gives [1, 3]
+  SmallVector<unsigned> getBroadcastDims() const;
 
   /// Returns true if this affine map is a minor identity up to broadcasted
   /// dimensions which are indicated by value 0 in the result. If
@@ -346,6 +353,24 @@ public:
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
   SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
+
+  /// Returns the number of "zero" results (constant values == 0) in this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns 1
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns 0
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns 2
+  size_t getNumOfZeroResults() const;
+
+  /// Returns the AffineMap resulting from removing "zero" results (constant
+  /// values == 0) from this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns `(d0, d1) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns `(d0, d1, d2) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns
+  ///     `(d0, d1, d2) -> (d0, d1, d2)`
+  AffineMap dropZeroResults();
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map. `allowZeroInResults` allows projected

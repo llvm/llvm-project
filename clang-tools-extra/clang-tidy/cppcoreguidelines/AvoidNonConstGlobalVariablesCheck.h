@@ -20,10 +20,13 @@ namespace clang::tidy::cppcoreguidelines {
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables.html
 class AvoidNonConstGlobalVariablesCheck : public ClangTidyCheck {
 public:
-  AvoidNonConstGlobalVariablesCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  AvoidNonConstGlobalVariablesCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const bool AllowInternalLinkage;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

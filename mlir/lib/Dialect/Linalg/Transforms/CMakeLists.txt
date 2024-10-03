@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ElementwiseToLinalg.cpp
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
+  FoldAddIntoDest.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   Generalization.cpp
@@ -38,6 +39,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Transforms.cpp
   TransposeConv2D.cpp
   Vectorization.cpp
+  WinogradConv2D.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
@@ -59,7 +61,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFuncDialect
-  MLIRFuncToLLVM
   MLIRFuncTransforms
   MLIRIndexDialect
   MLIRInferTypeOpInterface
@@ -86,6 +87,5 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRVectorDialect
   MLIRVectorTransforms
   MLIRVectorUtils
-  MLIRX86VectorTransforms
   MLIRVectorToSCF
 )

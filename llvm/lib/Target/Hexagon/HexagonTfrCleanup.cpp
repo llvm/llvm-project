@@ -92,11 +92,7 @@ bool HexagonTfrCleanup::isIntReg(unsigned Reg, bool &Is32) {
 // Assign given value V32 to the specified the register R32 in the map. Only
 // 32-bit registers are valid arguments.
 void HexagonTfrCleanup::setReg(unsigned R32, uint32_t V32, ImmediateMap &IMap) {
-  ImmediateMap::iterator F = IMap.find(R32);
-  if (F == IMap.end())
-    IMap.insert(std::make_pair(R32, V32));
-  else
-    F->second = V32;
+  IMap[R32] = V32;
 }
 
 // Retrieve a value of the provided register Reg and store it into Val.
@@ -282,14 +278,14 @@ bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
   // Map: 32-bit register -> immediate value.
   // 64-bit registers are stored through their subregisters.
   ImmediateMap IMap;
-  SlotIndexes *Indexes = this->getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
 
-  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
-    MachineBasicBlock &B = *I;
+  for (MachineBasicBlock &B : MF) {
     MachineBasicBlock::iterator J, F, NextJ;
     IMap.clear();
     bool Inserted = false, Erased = false;

@@ -103,18 +103,16 @@ TEST_F(LlvmLibcSincosTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcSincosTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'451;
+  constexpr uint64_t COUNT = 123'41;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
 
-  auto test = [&](mpfr::RoundingMode rounding_mode) {
-    for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
-      double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x))
-        continue;
+  for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
+    double x = FPBits(v).get_val();
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
+      continue;
 
-      ASSERT_SINCOS_MATCH_ALL_ROUNDING(x);
-    }
-  };
+    ASSERT_SINCOS_MATCH_ALL_ROUNDING(x);
+  }
 }

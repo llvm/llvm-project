@@ -11,15 +11,11 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,135 +26,9 @@
 
 using namespace llvm;
 
-MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
-  // Compute the section layout order. Virtual sections must go last.
-  for (MCSection &Sec : Asm)
-    if (!Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-  for (MCSection &Sec : Asm)
-    if (Sec.isVirtualSection())
-      SectionOrder.push_back(&Sec);
-}
-
-void MCAsmLayout::invalidateFragmentsFrom(MCFragment *F) {
-  F->getParent()->setHasLayout(false);
-}
-
-// Simple getSymbolOffset helper for the non-variable case.
-static bool getLabelOffset(const MCAsmLayout &Layout, const MCSymbol &S,
-                           bool ReportError, uint64_t &Val) {
-  if (!S.getFragment()) {
-    if (ReportError)
-      report_fatal_error("unable to evaluate offset to undefined symbol '" +
-                         S.getName() + "'");
-    return false;
-  }
-  Val = Layout.getFragmentOffset(S.getFragment()) + S.getOffset();
-  return true;
-}
-
-static bool getSymbolOffsetImpl(const MCAsmLayout &Layout, const MCSymbol &S,
-                                bool ReportError, uint64_t &Val) {
-  if (!S.isVariable())
-    return getLabelOffset(Layout, S, ReportError, Val);
-
-  // If SD is a variable, evaluate it.
-  MCValue Target;
-  if (!S.getVariableValue()->evaluateAsValue(Target, Layout))
-    report_fatal_error("unable to evaluate offset for variable '" +
-                       S.getName() + "'");
-
-  uint64_t Offset = Target.getConstant();
-
-  const MCSymbolRefExpr *A = Target.getSymA();
-  if (A) {
-    uint64_t ValA;
-    // FIXME: On most platforms, `Target`'s component symbols are labels from
-    // having been simplified during evaluation, but on Mach-O they can be
-    // variables due to PR19203. This, and the line below for `B` can be
-    // restored to call `getLabelOffset` when PR19203 is fixed.
-    if (!getSymbolOffsetImpl(Layout, A->getSymbol(), ReportError, ValA))
-      return false;
-    Offset += ValA;
-  }
-
-  const MCSymbolRefExpr *B = Target.getSymB();
-  if (B) {
-    uint64_t ValB;
-    if (!getSymbolOffsetImpl(Layout, B->getSymbol(), ReportError, ValB))
-      return false;
-    Offset -= ValB;
-  }
-
-  Val = Offset;
-  return true;
-}
-
-bool MCAsmLayout::getSymbolOffset(const MCSymbol &S, uint64_t &Val) const {
-  return getSymbolOffsetImpl(*this, S, false, Val);
-}
-
-uint64_t MCAsmLayout::getSymbolOffset(const MCSymbol &S) const {
-  uint64_t Val;
-  getSymbolOffsetImpl(*this, S, true, Val);
-  return Val;
-}
-
-const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
-  if (!Symbol.isVariable())
-    return &Symbol;
-
-  const MCExpr *Expr = Symbol.getVariableValue();
-  MCValue Value;
-  if (!Expr->evaluateAsValue(Value, *this)) {
-    Assembler.getContext().reportError(
-        Expr->getLoc(), "expression could not be evaluated");
-    return nullptr;
-  }
-
-  const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB) {
-    Assembler.getContext().reportError(
-        Expr->getLoc(), Twine("symbol '") + RefB->getSymbol().getName() +
-                     "' could not be evaluated in a subtraction expression");
-    return nullptr;
-  }
-
-  const MCSymbolRefExpr *A = Value.getSymA();
-  if (!A)
-    return nullptr;
-
-  const MCSymbol &ASym = A->getSymbol();
-  const MCAssembler &Asm = getAssembler();
-  if (ASym.isCommon()) {
-    Asm.getContext().reportError(Expr->getLoc(),
-                                 "Common symbol '" + ASym.getName() +
-                                     "' cannot be used in assignment expr");
-    return nullptr;
-  }
-
-  return &ASym;
-}
-
-uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
-  // The size is the last fragment's end offset.
-  const MCFragment &F = *Sec->curFragList()->Tail;
-  return getFragmentOffset(&F) + getAssembler().computeFragmentSize(*this, F);
-}
-
-uint64_t MCAsmLayout::getSectionFileSize(const MCSection *Sec) const {
-  // Virtual sections have no file size.
-  if (Sec->isVirtualSection())
-    return 0;
-
-  // Otherwise, the file size is the same as the address space size.
-  return getSectionAddressSize(Sec);
-}
-
-/* *** */
-
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
-    : Kind(Kind), HasInstructions(HasInstructions), LinkerRelaxable(false) {}
+    : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
+      LinkerRelaxable(false), AllowAutoPadding(false) {}
 
 void MCFragment::destroy() {
   switch (Kind) {
@@ -167,9 +37,6 @@ void MCFragment::destroy() {
       return;
     case FT_Data:
       cast<MCDataFragment>(this)->~MCDataFragment();
-      return;
-    case FT_CompactEncodedInst:
-      cast<MCCompactEncodedInstFragment>(this)->~MCCompactEncodedInstFragment();
       return;
     case FT_Fill:
       cast<MCFillFragment>(this)->~MCFillFragment();
@@ -238,8 +105,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
-  case MCFragment::FT_CompactEncodedInst:
-    OS << "MCCompactEncodedInstFragment"; break;
   case MCFragment::FT_Fill:  OS << "MCFillFragment"; break;
   case MCFragment::FT_Nops:
     OS << "MCFNopsFragment";
@@ -297,19 +162,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       }
       OS << "]";
     }
-    break;
-  }
-  case MCFragment::FT_CompactEncodedInst: {
-    const auto *CEIF =
-      cast<MCCompactEncodedInstFragment>(this);
-    OS << "\n       ";
-    OS << " Contents:[";
-    const SmallVectorImpl<char> &Contents = CEIF->getContents();
-    for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
-      if (i) OS << ",";
-      OS << hexdigit((Contents[i] >> 4) & 0xF) << hexdigit(Contents[i] & 0xF);
-    }
-    OS << "] (" << Contents.size() << " bytes)";
     break;
   }
   case MCFragment::FT_Fill:  {

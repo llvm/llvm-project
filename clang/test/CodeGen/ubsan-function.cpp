@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,GNU,64
 // RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,GNU,32
 
+// RUN: %clang_cc1 -triple arm64e-apple-ios  -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all -fptrauth-calls | FileCheck %s --check-prefixes=CHECK,GNU,64,AUTH
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all -fptrauth-calls | FileCheck %s --check-prefixes=CHECK,GNU,64,AUTH
+
 // GNU:  define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
 // MSVC: define{{.*}} void @"?fun@@YAXXZ"() #0 !func_sanitize ![[FUNCSAN:.*]] {
 void fun() {}
@@ -13,6 +16,8 @@ void fun() {}
 // ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !5
 // ARM:   and i32 {{.*}}, -2, !nosanitize !5
 // ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !5
+// AUTH:  %[[STRIPPED:.*]] = ptrtoint ptr {{.*}} to i64, !nosanitize
+// AUTH:  call i64 @llvm.ptrauth.auth(i64 %[[STRIPPED]], i32 0, i64 0), !nosanitize
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
 // CHECK: icmp eq i32 {{.*}}, -1056584962, !nosanitize

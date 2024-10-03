@@ -18,11 +18,28 @@
 
 namespace clang::sema {
 
+/// Describes an entity that is being assigned.
+struct AssignedEntity {
+  // The left-hand side expression of the assignment.
+  Expr *LHS = nullptr;
+  CXXMethodDecl *AssignmentOperator = nullptr;
+};
+
 /// Check that the lifetime of the given expr (and its subobjects) is
 /// sufficient for initializing the entity, and perform lifetime extension
 /// (when permitted) if not.
 void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
                        Expr *Init);
+
+/// Check that the lifetime of the given expr (and its subobjects) is
+/// sufficient for assigning to the entity.
+void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity, Expr *Init);
+
+/// Check that the lifetime of the given expr (and its subobjects) is
+/// sufficient, assuming that it is passed as an argument to a musttail
+/// function.
+void checkExprLifetimeMustTailArg(Sema &SemaRef,
+                                  const InitializedEntity &Entity, Expr *Init);
 
 } // namespace clang::sema
 

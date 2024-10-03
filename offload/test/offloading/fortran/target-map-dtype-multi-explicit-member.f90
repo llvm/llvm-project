@@ -1,13 +1,7 @@
 ! Offloading test checking interaction of an
 ! derived type mapping of two explicit
 ! members to target
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
-! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
-! UNSUPPORTED: aarch64-unknown-linux-gnu
-! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-! UNSUPPORTED: x86_64-pc-linux-gnu
-! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program main

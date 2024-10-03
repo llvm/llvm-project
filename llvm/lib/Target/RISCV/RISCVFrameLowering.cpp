@@ -1090,26 +1090,36 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   for (int FI : ObjectsToAllocate) {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
-    auto ObjectAlign = std::max(Align(8), MFI.getObjectAlign(FI));
+    auto ObjectAlign =
+        std::max(Align(RISCV::RVVBitsPerBlock / 8), MFI.getObjectAlign(FI));
     // If the data type is the fractional vector type, reserve one vector
     // register for it.
-    if (ObjectSize < 8)
-      ObjectSize = 8;
+    if (ObjectSize < (RISCV::RVVBitsPerBlock / 8))
+      ObjectSize = (RISCV::RVVBitsPerBlock / 8);
     Offset = alignTo(Offset + ObjectSize, ObjectAlign);
     MFI.setObjectOffset(FI, -Offset);
     // Update the maximum alignment of the RVV stack section
     RVVStackAlign = std::max(RVVStackAlign, ObjectAlign);
   }
 
+  uint64_t StackSize = Offset;
+
+  // Multiply by vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize *= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
+
   // Ensure the alignment of the RVV stack. Since we want the most-aligned
   // object right at the bottom (i.e., any padding at the top of the frame),
   // readjust all RVV objects down by the alignment padding.
-  uint64_t StackSize = Offset;
   if (auto AlignmentPadding = offsetToAlignment(StackSize, RVVStackAlign)) {
     StackSize += AlignmentPadding;
     for (int FI : ObjectsToAllocate)
       MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
   }
+
+  // Remove vscale.
+  if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+    StackSize /= ST.getRealMinVLen() / RISCV::RVVBitsPerBlock;
 
   return std::make_pair(StackSize, RVVStackAlign);
 }
@@ -1535,6 +1545,7 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
 
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
@@ -1554,12 +1565,22 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     // Insert the spill to the stack frame.
     int FI = CS.getFrameIdx();
     if (FI >= 0 && MFI.getStackID(FI) == TargetStackID::ScalableVector) {
-      unsigned CFIIndex = MF->addFrameInst(
-          createDefCFAOffset(*STI.getRegisterInfo(), CS.getReg(), -FixedSize,
-                             MFI.getObjectOffset(FI) / 8));
-      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
+      MCRegister BaseReg = TRI.getSubReg(CS.getReg(), RISCV::sub_vrm1_0);
+      // If it's not a grouped vector register, it doesn't have subregister, so
+      // the base register is just itself.
+      if (BaseReg == RISCV::NoRegister)
+        BaseReg = CS.getReg();
+      unsigned NumRegs = RISCV::VRRegClass.contains(CS.getReg())     ? 1
+                         : RISCV::VRM2RegClass.contains(CS.getReg()) ? 2
+                         : RISCV::VRM4RegClass.contains(CS.getReg()) ? 4
+                                                                     : 8;
+      for (unsigned i = 0; i < NumRegs; ++i) {
+        unsigned CFIIndex = MF->addFrameInst(createDefCFAOffset(
+            TRI, BaseReg + i, -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
     }
   }
 }

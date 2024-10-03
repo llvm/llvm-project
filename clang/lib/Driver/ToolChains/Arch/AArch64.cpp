@@ -398,6 +398,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
 
+  if (Args.hasArg(options::OPT_mlr_for_calls_only))
+    Features.push_back("+reserve-lr-for-ra");
+
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");
 
@@ -445,4 +448,25 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
     Features.push_back("+no-bti-at-return-twice");
+}
+
+void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
+                                  llvm::Triple &Triple) {
+  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
+  bool HasPAuthABI =
+      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
+
+  switch (Triple.getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+    if (HasPAuthABI)
+      Triple.setEnvironment(llvm::Triple::PAuthTest);
+    break;
+  case llvm::Triple::PAuthTest:
+    break;
+  default:
+    if (HasPAuthABI)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ABIArg->getAsString(Args) << Triple.getTriple();
+    break;
+  }
 }

@@ -107,6 +107,10 @@ protected:
                              mlir::Value box,
                              mlir::ConversionPatternRewriter &rewriter) const;
 
+  mlir::Value getExtraFromBox(mlir::Location loc, TypePair boxTy,
+                              mlir::Value box,
+                              mlir::ConversionPatternRewriter &rewriter) const;
+
   // Get the element type given an LLVM type that is of the form
   // (array|struct|vector)+ and the provided indexes.
   mlir::Type getBoxEleTy(mlir::Type type,
@@ -205,10 +209,10 @@ public:
     rewrite(mlir::cast<SourceOp>(op),
             OpAdaptor(operands, mlir::cast<SourceOp>(op)), rewriter);
   }
-  mlir::LogicalResult match(mlir::Operation *op) const final {
+  llvm::LogicalResult match(mlir::Operation *op) const final {
     return match(mlir::cast<SourceOp>(op));
   }
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(mlir::Operation *op, mlir::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const final {
     return matchAndRewrite(mlir::cast<SourceOp>(op),
@@ -218,14 +222,14 @@ public:
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
-  virtual mlir::LogicalResult match(SourceOp op) const {
+  virtual llvm::LogicalResult match(SourceOp op) const {
     llvm_unreachable("must override match or matchAndRewrite");
   }
   virtual void rewrite(SourceOp op, OpAdaptor adaptor,
                        mlir::ConversionPatternRewriter &rewriter) const {
     llvm_unreachable("must override rewrite or matchAndRewrite");
   }
-  virtual mlir::LogicalResult
+  virtual llvm::LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const {
     if (mlir::failed(match(op)))
@@ -246,14 +250,14 @@ public:
   using FIROpConversion<FromOp>::FIROpConversion;
   using OpAdaptor = typename FromOp::Adaptor;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(FromOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const final {
     mlir::Type ty = this->convertType(op.getType());
     return doRewrite(op, ty, adaptor, rewriter);
   }
 
-  virtual mlir::LogicalResult
+  virtual llvm::LogicalResult
   doRewrite(FromOp addr, mlir::Type ty, OpAdaptor adaptor,
             mlir::ConversionPatternRewriter &rewriter) const = 0;
 };

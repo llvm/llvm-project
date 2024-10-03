@@ -66,17 +66,6 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
   ++BundleLockNestingDepth;
 }
 
-void MCSection::switchSubsection(unsigned Subsection) {
-  size_t I = 0, E = Subsections.size();
-  while (I != E && Subsections[I].first < Subsection)
-    ++I;
-  // If the subsection number is not in the sorted Subsections list, create a
-  // new fragment list.
-  if (I == E || Subsections[I].first != Subsection)
-    Subsections.insert(Subsections.begin() + I, {Subsection, FragList{}});
-  CurFragList = &Subsections[I].second;
-}
-
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

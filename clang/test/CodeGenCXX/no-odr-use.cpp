@@ -15,14 +15,14 @@ int f(int i) {
   return [] (int n, int A::*p) {
     // CHECK: br i1
     return (n >= 0
-      // CHECK: getelementptr inbounds [3 x i32], ptr getelementptr inbounds ({{.*}} @__const._Z1fi.a, i32 0, i32 2), i64 0, i64 %
+      // CHECK: getelementptr inbounds [3 x i32], ptr getelementptr inbounds nuw ({{.*}} @__const._Z1fi.a, i32 0, i32 2), i64 0, i64 %
       ? a.arr[n]
       // CHECK: br i1
       : (n == -1
         // CHECK: getelementptr inbounds i8, ptr @__const._Z1fi.a, i64 %
         // CHECK: load i32
         ? a.*p
-        // CHECK: getelementptr inbounds [2 x i32], ptr getelementptr inbounds ({{.*}} @__const._Z1fi.a, i32 0, i32 1), i64 0, i64 %
+        // CHECK: getelementptr inbounds [2 x i32], ptr getelementptr inbounds nuw ({{.*}} @__const._Z1fi.a, i32 0, i32 1), i64 0, i64 %
         // CHECK: load i32
         : a.y[2 - n]));
   }(i, &A::x);

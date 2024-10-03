@@ -195,3 +195,12 @@ void F() {
 int a = []<int=0> requires requires { [](auto){}; } { return 0; }();
 
 } // namespace GH78524
+
+
+namespace GH51868 {
+template<auto L>
+concept C = requires {
+  typename decltype(L)::template operator()<int>;
+  // expected-error@-1 {{template name refers to non-type template 'decltype(L)::template operator ()'}}
+};
+}

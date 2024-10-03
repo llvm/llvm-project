@@ -263,3 +263,7 @@ D: C-SKY backend (lib/Target/CSKY/*)
 N: Ilia Diachkov
 E: ilia.diachkov@gmail.com
 D: SPIR-V backend (lib/Target/SPIRV/*)
+
+N: Christopher Apple, David Trevelyan
+E: cja-private@pm.me, david.trevelyan@gmail.com
+D: RealtimeSanitizer (LLVM part)

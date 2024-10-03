@@ -7,7 +7,7 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fcuda-is-device"{{.*}}"-target-cpu" "gfx906"
+// CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx906"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
 // CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
@@ -77,3 +77,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-WARN-ATOMIC
 // CHECK-WARN-ATOMIC-NOT: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-Werror=atomic-alignment"
 // CHECK-WARN-ATOMIC: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-Werror=atomic-alignment"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp --offload-arch=gfx803 \
+// RUN:     -stdlib=libc++ -nogpulib %s 2>&1 | FileCheck %s --check-prefix=LIBCXX
+// LIBCXX-NOT: include/amdgcn-amd-amdhsa/c++/v1

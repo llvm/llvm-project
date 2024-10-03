@@ -2428,7 +2428,9 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
                           ? diag::warn_cxx98_compat_unicode_literal
                           : diag::warn_c99_compat_unicode_literal);
     else if (Kind == tok::utf8_char_constant)
-      Diag(BufferPtr, diag::warn_cxx14_compat_u8_character_literal);
+      Diag(BufferPtr, LangOpts.CPlusPlus
+                          ? diag::warn_cxx14_compat_u8_character_literal
+                          : diag::warn_c17_compat_u8_character_literal);
   }
 
   char C = getAndAdvanceChar(CurPtr, Result);
@@ -3876,7 +3878,7 @@ LexStart:
                                tok::utf16_char_constant);
 
       // UTF-16 raw string literal
-      if (Char == 'R' && LangOpts.CPlusPlus11 &&
+      if (Char == 'R' && LangOpts.RawStringLiterals &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
         return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -3898,7 +3900,7 @@ LexStart:
                                   SizeTmp2, Result),
               tok::utf8_char_constant);
 
-        if (Char2 == 'R' && LangOpts.CPlusPlus11) {
+        if (Char2 == 'R' && LangOpts.RawStringLiterals) {
           unsigned SizeTmp3;
           char Char3 = getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3);
           // UTF-8 raw string literal
@@ -3934,7 +3936,7 @@ LexStart:
                                tok::utf32_char_constant);
 
       // UTF-32 raw string literal
-      if (Char == 'R' && LangOpts.CPlusPlus11 &&
+      if (Char == 'R' && LangOpts.RawStringLiterals &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
         return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -3949,7 +3951,7 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
 
-    if (LangOpts.CPlusPlus11) {
+    if (LangOpts.RawStringLiterals) {
       Char = getCharAndSize(CurPtr, SizeTmp);
 
       if (Char == '"')
@@ -3972,7 +3974,7 @@ LexStart:
                               tok::wide_string_literal);
 
     // Wide raw string literal.
-    if (LangOpts.CPlusPlus11 && Char == 'R' &&
+    if (LangOpts.RawStringLiterals && Char == 'R' &&
         getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == '"')
       return LexRawStringLiteral(Result,
                                ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
@@ -4323,10 +4325,9 @@ LexStart:
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::caretequal;
-    } else if (LangOpts.OpenCL && Char == '^') {
-      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-      Kind = tok::caretcaret;
     } else {
+      if (LangOpts.OpenCL && Char == '^')
+        Diag(CurPtr, diag::err_opencl_logical_exclusive_or);
       Kind = tok::caret;
     }
     break;

@@ -13,13 +13,14 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
 #include "inv_trigf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t N_EXCEPTS = 4;
 
@@ -120,4 +121,4 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   return static_cast<float>(x_sign ? M_MATH_PI - r : r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

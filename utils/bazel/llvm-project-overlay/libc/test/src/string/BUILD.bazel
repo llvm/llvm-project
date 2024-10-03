@@ -121,6 +121,7 @@ libc_support_library(
     deps = [
         "//libc:__support_cpp_span",
         "//libc:__support_libc_assert",
+        "//libc:__support_macros_config",
         "//libc:__support_macros_sanitizer",
         "//libc:string_memory_utils",
     ],

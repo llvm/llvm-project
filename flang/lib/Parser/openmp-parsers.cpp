@@ -31,10 +31,11 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     "SHARED" >> pure(OmpDefaultClause::Type::Shared) ||
     "NONE" >> pure(OmpDefaultClause::Type::None)))
 
-// 2.5 PROC_BIND (MASTER | CLOSE | SPREAD)
+// 2.5 PROC_BIND (MASTER | CLOSE | PRIMARY | SPREAD )
 TYPE_PARSER(construct<OmpProcBindClause>(
     "CLOSE" >> pure(OmpProcBindClause::Type::Close) ||
     "MASTER" >> pure(OmpProcBindClause::Type::Master) ||
+    "PRIMARY" >> pure(OmpProcBindClause::Type::Primary) ||
     "SPREAD" >> pure(OmpProcBindClause::Type::Spread)))
 
 // 2.15.5.1 MAP ([ [ALWAYS[,]] map-type : ] variable-name-list)
@@ -231,6 +232,12 @@ TYPE_PARSER(construct<OmpOrderClause>(
 TYPE_PARSER(
     construct<OmpObject>(designator) || construct<OmpObject>("/" >> name / "/"))
 
+// OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
+TYPE_PARSER(construct<OmpLastprivateClause>(
+    maybe("CONDITIONAL" >>
+        pure(OmpLastprivateClause::LastprivateModifier::Conditional) / ":"),
+    Parser<OmpObjectList>{}))
+
 TYPE_PARSER(
     "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
     "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
@@ -288,7 +295,7 @@ TYPE_PARSER(
     "IS_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::IsDevicePtr>(
                            parenthesized(Parser<OmpObjectList>{}))) ||
     "LASTPRIVATE" >> construct<OmpClause>(construct<OmpClause::Lastprivate>(
-                         parenthesized(Parser<OmpObjectList>{}))) ||
+                         parenthesized(Parser<OmpLastprivateClause>{}))) ||
     "LINEAR" >> construct<OmpClause>(construct<OmpClause::Linear>(
                     parenthesized(Parser<OmpLinearClause>{}))) ||
     "LINK" >> construct<OmpClause>(construct<OmpClause::Link>(

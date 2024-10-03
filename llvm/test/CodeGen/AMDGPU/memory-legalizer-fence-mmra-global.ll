@@ -70,8 +70,6 @@ define amdgpu_kernel void @workgroup_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SE
@@ -138,6 +136,7 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -209,6 +208,7 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -281,6 +281,7 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -353,8 +354,6 @@ define amdgpu_kernel void @workgroup_one_as_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SE
@@ -421,6 +420,7 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -492,6 +492,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -564,6 +565,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -655,8 +657,6 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
@@ -664,8 +664,6 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: agent_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
@@ -739,6 +737,7 @@ define amdgpu_kernel void @agent_release_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -747,6 +746,7 @@ define amdgpu_kernel void @agent_release_fence() {
 ;
 ; GFX12-CU-LABEL: agent_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -835,6 +835,7 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -844,6 +845,7 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: agent_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -933,6 +935,7 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -942,6 +945,7 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: agent_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1029,8 +1033,6 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_one_as_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_DEV
@@ -1038,8 +1040,6 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: agent_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
@@ -1113,6 +1113,7 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_one_as_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1121,6 +1122,7 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ;
 ; GFX12-CU-LABEL: agent_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1209,6 +1211,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_one_as_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1218,6 +1221,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: agent_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1307,6 +1311,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: agent_one_as_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1316,6 +1321,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: agent_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1405,8 +1411,6 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: system_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SYS
@@ -1414,8 +1418,6 @@ define amdgpu_kernel void @system_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: system_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
@@ -1491,6 +1493,7 @@ define amdgpu_kernel void @system_release_fence() {
 ;
 ; GFX12-WGP-LABEL: system_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1499,6 +1502,7 @@ define amdgpu_kernel void @system_release_fence() {
 ;
 ; GFX12-CU-LABEL: system_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1591,6 +1595,7 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: system_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1600,6 +1605,7 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: system_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1693,6 +1699,7 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: system_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1702,6 +1709,7 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: system_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1791,8 +1799,6 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: system_one_as_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
 ; GFX12-WGP-NEXT:    global_inv scope:SCOPE_SYS
@@ -1800,8 +1806,6 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: system_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_SYS
@@ -1877,6 +1881,7 @@ define amdgpu_kernel void @system_one_as_release_fence() {
 ;
 ; GFX12-WGP-LABEL: system_one_as_release_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1885,6 +1890,7 @@ define amdgpu_kernel void @system_one_as_release_fence() {
 ;
 ; GFX12-CU-LABEL: system_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -1977,6 +1983,7 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ;
 ; GFX12-WGP-LABEL: system_one_as_acq_rel_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -1986,6 +1993,7 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: system_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
@@ -2079,6 +2087,7 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ;
 ; GFX12-WGP-LABEL: system_one_as_seq_cst_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
@@ -2088,6 +2097,7 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: system_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0

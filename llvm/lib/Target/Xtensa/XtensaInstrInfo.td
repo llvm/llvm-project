@@ -138,7 +138,8 @@ let Defs = [SAR] in {
 }
 
 def EXTUI : RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
-                    "extui\t$r, $t, $imm1, $imm2", []> {
+                    "extui\t$r, $t, $imm1, $imm2",
+                    [(set AR:$r, (Xtensa_extui AR:$t, uimm5:$imm1, imm1_16:$imm2))]> {
   bits<5> imm1;
   bits<4> imm2;
 
@@ -194,7 +195,7 @@ def SSAI : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins uimm5:$imm),
 //===----------------------------------------------------------------------===//
 
 // Load instructions
-let mayLoad = 1 in {
+let mayLoad = 1, usesCustomInserter = 1 in {
 
   class Load_RRI8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
@@ -215,7 +216,7 @@ def L16UI : Load_RRI8<0x01, "l16ui", zextloadi16, addr_ish2, mem16>;
 def L32I  : Load_RRI8<0x02, "l32i", load, addr_ish4, mem32>;
 
 // Store instructions
-let mayStore = 1 in {
+let mayStore = 1, usesCustomInserter = 1 in {
   class Store_II8<bits<4> oper, string instrAsm, SDPatternOperator opNode,
         ComplexPattern addrOp, Operand memOp>
 	  : RRI8_Inst<0x02, (outs), (ins AR:$t, memOp:$addr),
@@ -416,15 +417,6 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let imm8 = target;
 }
 
-def : Pat<(brcc SETGT, AR:$s, AR:$t, bb:$target),
-          (BLT AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETUGT, AR:$s, AR:$t, bb:$target),
-          (BLTU AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
-          (BGE AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
-          (BGEU AR:$t, AR:$s, bb:$target)>;
-
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -573,4 +565,13 @@ let Defs = [SP], Uses = [SP] in {
   def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                "#ADJCALLSTACKUP",
                                [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
+
+//===----------------------------------------------------------------------===//
+// Generic select instruction
+//===----------------------------------------------------------------------===//
+let usesCustomInserter = 1 in {
+  def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
+                     [(set i32:$dst, (Xtensa_select_cc i32:$lhs, i32:$rhs, i32:$t, i32:$f, imm:$cond))]>;
 }

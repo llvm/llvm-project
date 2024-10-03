@@ -46,6 +46,10 @@ class MCSectionELF final : public MCSection {
   /// section header index of the section where LinkedToSym is defined.
   const MCSymbol *LinkedToSym;
 
+  /// Start/end offset in file, used by ELFWriter.
+  uint64_t StartOffset;
+  uint64_t EndOffset;
+
 private:
   friend class MCContext;
 
@@ -91,6 +95,14 @@ public:
     return &LinkedToSym->getSection();
   }
   const MCSymbol *getLinkedToSymbol() const { return LinkedToSym; }
+
+  void setOffsets(uint64_t Start, uint64_t End) {
+    StartOffset = Start;
+    EndOffset = End;
+  }
+  std::pair<uint64_t, uint64_t> getOffsets() const {
+    return std::make_pair(StartOffset, EndOffset);
+  }
 
   static bool classof(const MCSection *S) {
     return S->getVariant() == SV_ELF;

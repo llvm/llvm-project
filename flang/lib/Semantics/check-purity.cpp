@@ -31,7 +31,7 @@ void PurityChecker::Enter(const parser::FunctionSubprogram &func) {
       stmt.source, std::get<std::list<parser::PrefixSpec>>(stmt.statement.t));
 }
 
-void PurityChecker::Leave(const parser::FunctionSubprogram &) { Left(); }
+void PurityChecker::Leave(const parser::FunctionSubprogram &func) { Left(); }
 
 bool PurityChecker::InPureSubprogram() const {
   return pureDepth_ >= 0 && depth_ >= pureDepth_;

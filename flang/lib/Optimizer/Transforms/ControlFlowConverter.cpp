@@ -47,7 +47,7 @@ public:
       : mlir::OpRewritePattern<fir::DoLoopOp>(ctx),
         forceLoopToExecuteOnce(forceLoopToExecuteOnce), setNSW(setNSW) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(DoLoopOp loop,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = loop.getLoc();
@@ -162,7 +162,7 @@ public:
   CfgIfConv(mlir::MLIRContext *ctx, bool forceLoopToExecuteOnce, bool setNSW)
       : mlir::OpRewritePattern<fir::IfOp>(ctx) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(IfOp ifOp, mlir::PatternRewriter &rewriter) const override {
     auto loc = ifOp.getLoc();
 
@@ -228,7 +228,7 @@ public:
                    bool setNSW)
       : mlir::OpRewritePattern<fir::IterWhileOp>(ctx), setNSW(setNSW) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::IterWhileOp whileOp,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = whileOp.getLoc();

@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 !===============================================================================
 ! Check MapTypes for target implicit captures

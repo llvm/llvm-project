@@ -375,6 +375,10 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   DP << Str;
 }
 
+void DiagnosticInfoInstrumentation::print(DiagnosticPrinter &DP) const {
+  DP << Msg;
+}
+
 void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {
   DP << "Instruction selection used fallback path for " << getFunction();
 }
@@ -403,7 +407,7 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
                                     ? Args.end()
                                     : Args.begin() + FirstExtraArgIndex))
     OS << Arg.Val;
-  return OS.str();
+  return Str;
 }
 
 DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,

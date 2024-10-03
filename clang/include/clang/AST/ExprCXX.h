@@ -2176,8 +2176,9 @@ public:
   const_child_range children() const;
 };
 
-/// An expression "T()" which creates a value-initialized rvalue of type
-/// T, which is a non-class type.  See (C++98 [5.2.3p2]).
+/// An expression "T()" which creates an rvalue of a non-class type T.
+/// For non-void T, the rvalue is value-initialized.
+/// See (C++98 [5.2.3p2]).
 class CXXScalarValueInitExpr : public Expr {
   friend class ASTStmtReader;
 
@@ -3229,7 +3230,7 @@ class UnresolvedLookupExpr final
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-                       bool KnownDependent);
+                       bool KnownDependent, bool KnownInstantiationDependent);
 
   UnresolvedLookupExpr(EmptyShell Empty, unsigned NumResults,
                        bool HasTemplateKWAndArgsInfo);
@@ -3248,7 +3249,7 @@ public:
          NestedNameSpecifierLoc QualifierLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          UnresolvedSetIterator Begin, UnresolvedSetIterator End,
-         bool KnownDependent);
+         bool KnownDependent, bool KnownInstantiationDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of
@@ -3258,7 +3259,8 @@ public:
          NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
          const DeclarationNameInfo &NameInfo, bool RequiresADL,
          const TemplateArgumentListInfo *Args, UnresolvedSetIterator Begin,
-         UnresolvedSetIterator End, bool KnownDependent);
+         UnresolvedSetIterator End, bool KnownDependent,
+         bool KnownInstantiationDependent);
 
   static UnresolvedLookupExpr *CreateEmpty(const ASTContext &Context,
                                            unsigned NumResults,
@@ -4854,15 +4856,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
-        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-        NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[SubExpr::Callee] = Callee;
-    SubExprs[SubExpr::LHS] = LHS;
-    SubExprs[SubExpr::RHS] = RHS;
-    setDependence(computeDependence(this));
-  }
+              std::optional<unsigned> NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 

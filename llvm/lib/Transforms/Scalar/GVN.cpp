@@ -422,7 +422,7 @@ GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   Type *PtrTy = GEP->getType()->getScalarType();
   const DataLayout &DL = GEP->getDataLayout();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
-  MapVector<Value *, APInt> VariableOffsets;
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
   if (GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
     // Convert into offset representation, to recognize equivalent address
@@ -2477,7 +2477,7 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
     const DataLayout &DL =
         isa<Argument>(LHS)
-            ? cast<Argument>(LHS)->getParent()->getParent()->getDataLayout()
+            ? cast<Argument>(LHS)->getParent()->getDataLayout()
             : cast<Instruction>(LHS)->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the

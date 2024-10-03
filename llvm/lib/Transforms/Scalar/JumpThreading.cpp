@@ -596,11 +596,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       CmpInst::Predicate Pred;
       Value *Val;
       Constant *Cst;
-      if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst)))) {
-        auto Res = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
-        if (Res != LazyValueInfo::Unknown)
-          PredCst = ConstantInt::getBool(V->getContext(), Res);
-      }
+      if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst))))
+        PredCst = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
       if (Constant *KC = getKnownConstant(PredCst, Preference))
         Result.emplace_back(KC, P);
     }
@@ -780,13 +777,8 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           if (LHSInst && LHSInst->getParent() == BB)
             continue;
 
-          LazyValueInfo::Tristate
-            ResT = LVI->getPredicateOnEdge(Pred, LHS,
-                                           cast<Constant>(RHS), PredBB, BB,
-                                           CxtI ? CxtI : Cmp);
-          if (ResT == LazyValueInfo::Unknown)
-            continue;
-          Res = ConstantInt::get(Type::getInt1Ty(LHS->getContext()), ResT);
+          Res = LVI->getPredicateOnEdge(Pred, LHS, cast<Constant>(RHS), PredBB,
+                                        BB, CxtI ? CxtI : Cmp);
         }
 
         if (Constant *KC = getKnownConstant(Res, WantInteger))
@@ -806,14 +798,10 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
         for (BasicBlock *P : predecessors(BB)) {
           // If the value is known by LazyValueInfo to be a constant in a
           // predecessor, use that information to try to thread this block.
-          LazyValueInfo::Tristate Res =
-            LVI->getPredicateOnEdge(Pred, CmpLHS,
-                                    CmpConst, P, BB, CxtI ? CxtI : Cmp);
-          if (Res == LazyValueInfo::Unknown)
-            continue;
-
-          Constant *ResC = ConstantInt::get(CmpType, Res);
-          Result.emplace_back(ResC, P);
+          Constant *Res = LVI->getPredicateOnEdge(Pred, CmpLHS, CmpConst, P, BB,
+                                                  CxtI ? CxtI : Cmp);
+          if (Constant *KC = getKnownConstant(Res, WantInteger))
+            Result.emplace_back(KC, P);
         }
 
         return !Result.empty();
@@ -1038,7 +1026,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
     LLVM_DEBUG(dbgs() << "  In block '" << BB->getName()
                       << "' folding undef terminator: " << *BBTerm << '\n');
-    BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    Instruction *NewBI = BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    NewBI->setDebugLoc(BBTerm->getDebugLoc());
     ++NumFolds;
     BBTerm->eraseFromParent();
     DTU->applyUpdatesPermissive(Updates);
@@ -1081,11 +1070,11 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
     // it's value at the branch instruction.  We only handle comparisons
     // against a constant at this time.
     if (Constant *CondConst = dyn_cast<Constant>(CondCmp->getOperand(1))) {
-      LazyValueInfo::Tristate Ret =
+      Constant *Res =
           LVI->getPredicateAt(CondCmp->getPredicate(), CondCmp->getOperand(0),
                               CondConst, BB->getTerminator(),
                               /*UseBlockValue=*/false);
-      if (Ret != LazyValueInfo::Unknown) {
+      if (Res) {
         // We can safely replace *some* uses of the CondInst if it has
         // exactly one value as returned by LVI. RAUW is incorrect in the
         // presence of guards and assumes, that have the `Cond` as the use. This
@@ -1093,10 +1082,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
         // at the end of block, but RAUW unconditionally replaces all uses
         // including the guards/assumes themselves and the uses before the
         // guard/assume.
-        auto *CI = Ret == LazyValueInfo::True ?
-          ConstantInt::getTrue(CondCmp->getType()) :
-          ConstantInt::getFalse(CondCmp->getType());
-        if (replaceFoldableUses(CondCmp, CI, BB))
+        if (replaceFoldableUses(CondCmp, Res, BB))
           return true;
       }
 
@@ -1657,7 +1643,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
       // Finally update the terminator.
       Instruction *Term = BB->getTerminator();
-      BranchInst::Create(OnlyDest, Term->getIterator());
+      Instruction *NewBI = BranchInst::Create(OnlyDest, Term->getIterator());
+      NewBI->setDebugLoc(Term->getDebugLoc());
       ++NumFolds;
       Term->eraseFromParent();
       DTU->applyUpdatesPermissive(Updates);
@@ -2889,15 +2876,13 @@ bool JumpThreadingPass::tryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
     // Now check if one of the select values would allow us to constant fold the
     // terminator in BB. We don't do the transform if both sides fold, those
     // cases will be threaded in any case.
-    LazyValueInfo::Tristate LHSFolds =
+    Constant *LHSRes =
         LVI->getPredicateOnEdge(CondCmp->getPredicate(), SI->getOperand(1),
                                 CondRHS, Pred, BB, CondCmp);
-    LazyValueInfo::Tristate RHSFolds =
+    Constant *RHSRes =
         LVI->getPredicateOnEdge(CondCmp->getPredicate(), SI->getOperand(2),
                                 CondRHS, Pred, BB, CondCmp);
-    if ((LHSFolds != LazyValueInfo::Unknown ||
-         RHSFolds != LazyValueInfo::Unknown) &&
-        LHSFolds != RHSFolds) {
+    if ((LHSRes || RHSRes) && LHSRes != RHSRes) {
       unfoldSelectInstr(Pred, BB, SI, CondLHS, I);
       return true;
     }

@@ -186,28 +186,6 @@ ObjcCategoryChecker::ObjcCategoryChecker()
       roClassLayout(target->wordSize), listHeaderLayout(target->wordSize),
       methodLayout(target->wordSize) {}
 
-// \p r must point to an offset within a CStringInputSection or a
-// ConcatInputSection
-static StringRef getReferentString(const Reloc &r) {
-  if (auto *isec = r.referent.dyn_cast<InputSection *>())
-    return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
-
-  auto *sym = cast<Defined>(r.referent.get<Symbol *>());
-  auto *symIsec = sym->isec();
-  auto symOffset = sym->value + r.addend;
-
-  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
-    return s->getStringRefAtOffset(symOffset);
-
-  if (isa<ConcatInputSection>(symIsec)) {
-    auto strData = symIsec->data.slice(symOffset);
-    const char *pszData = reinterpret_cast<const char *>(strData.data());
-    return StringRef(pszData, strnlen(pszData, strData.size()));
-  }
-
-  llvm_unreachable("unknown reference section in getReferentString");
-}
-
 void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                                        const Symbol *methodContainerSym,
                                        const ConcatInputSection *containerIsec,
@@ -219,7 +197,7 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
         methodLayout.nameOffset)
       continue;
 
-    CachedHashStringRef methodName(getReferentString(r));
+    CachedHashStringRef methodName(r.getReferentString());
     // +load methods are special: all implementations are called by the runtime
     // even if they are part of the same class. Thus there is no need to check
     // for duplicates.
@@ -251,14 +229,14 @@ void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,
                          ->getReferentInputSection();
       nameReloc = roIsec->getRelocAt(roClassLayout.nameOffset);
     }
-    StringRef containerName = getReferentString(*nameReloc);
+    StringRef containerName = nameReloc->getReferentString();
     StringRef methPrefix = mKind == MK_Instance ? "-" : "+";
 
     // We should only ever encounter collisions when parsing category methods
     // (since the Class struct is parsed before any of its categories).
     assert(mcKind == MCK_Category);
     StringRef newCatName =
-        getReferentString(*containerIsec->getRelocAt(catLayout.nameOffset));
+        containerIsec->getRelocAt(catLayout.nameOffset)->getReferentString();
 
     auto formatObjAndSrcFileName = [](const InputSection *section) {
       lld::macho::InputFile *inputFile = section->getFile();
@@ -449,7 +427,6 @@ private:
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
 
   void eraseISec(ConcatInputSection *isec);
-  void removeRefsToErasedIsecs();
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
@@ -490,11 +467,13 @@ private:
   Defined *emitCategoryName(const std::string &name, ObjFile *objFile);
   void createSymbolReference(Defined *refFrom, const Symbol *refTo,
                              uint32_t offset, const Reloc &relocTemplate);
+  Defined *tryFindDefinedOnIsec(const InputSection *isec, uint32_t offset);
   Symbol *tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
                                    uint32_t offset);
   Defined *tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
                                      uint32_t offset);
   Defined *getClassRo(const Defined *classSym, bool getMetaRo);
+  SourceLanguage getClassSymSourceLang(const Defined *classSym);
   void mergeCategoriesIntoBaseClass(const Defined *baseClass,
                                     std::vector<InfoInputCategory> &categories);
   void eraseSymbolAtIsecOffset(ConcatInputSection *isec, uint32_t offset);
@@ -517,8 +496,6 @@ private:
   std::vector<ConcatInputSection *> &allInputSections;
   // Map of base class Symbol to list of InfoInputCategory's for it
   MapVector<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
-  // Set for tracking InputSection erased via eraseISec
-  DenseSet<InputSection *> erasedIsecs;
 
   // Normally, the binary data comes from the input files, but since we're
   // generating binary data ourselves, we use the below array to store it in.
@@ -566,7 +543,25 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
   if (!reloc)
     return nullptr;
 
-  return reloc->referent.get<Symbol *>();
+  Symbol *sym = reloc->referent.get<Symbol *>();
+
+  if (reloc->addend) {
+    assert(isa<Defined>(sym) && "Expected defined for non-zero addend");
+    Defined *definedSym = cast<Defined>(sym);
+    sym = tryFindDefinedOnIsec(definedSym->isec(),
+                               definedSym->value + reloc->addend);
+  }
+
+  return sym;
+}
+
+Defined *ObjcCategoryMerger::tryFindDefinedOnIsec(const InputSection *isec,
+                                                  uint32_t offset) {
+  for (Defined *sym : isec->symbols)
+    if ((sym->value <= offset) && (sym->value + sym->size > offset))
+      return sym;
+
+  return nullptr;
 }
 
 Defined *
@@ -792,7 +787,7 @@ void ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
   assert(extInfo.objFileForMergeData &&
          "Expected to already have valid objextInfo.objFileForMergeData");
 
-  StringRef catName = getReferentString(*catNameReloc);
+  StringRef catName = catNameReloc->getReferentString();
   extInfo.mergedContainerName += catName.str();
 
   // Parse base class
@@ -856,7 +851,6 @@ Defined *ObjcCategoryMerger::emitAndLinkProtocolList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -872,6 +866,7 @@ Defined *ObjcCategoryMerger::emitAndLinkProtocolList(
 
   ptrListSym->used = true;
   parentSym->getObjectFile()->symbols.push_back(ptrListSym);
+  addInputSection(listSec);
 
   createSymbolReference(parentSym, ptrListSym, linkAtOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -916,7 +911,6 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
       infoCategoryWriter.catPtrListInfo.align);
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
   listSec->live = true;
-  addInputSection(listSec);
 
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
@@ -932,6 +926,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
 
   ptrListSym->used = true;
   parentSym->getObjectFile()->symbols.push_back(ptrListSym);
+  addInputSection(listSec);
 
   createSymbolReference(parentSym, ptrListSym, linkAtOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -957,7 +952,6 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
                                bodyData, infoCategoryWriter.catListInfo.align);
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
   newCatList->live = true;
-  addInputSection(newCatList);
 
   newCatList->parent = infoCategoryWriter.catListInfo.outputSection;
 
@@ -973,6 +967,7 @@ ObjcCategoryMerger::emitCatListEntrySec(const std::string &forCategoryName,
 
   catListSym->used = true;
   objFile->symbols.push_back(catListSym);
+  addInputSection(newCatList);
   return catListSym;
 }
 
@@ -995,7 +990,6 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
                                bodyData, infoCategoryWriter.catBodyInfo.align);
   newBodySec->parent = infoCategoryWriter.catBodyInfo.outputSection;
   newBodySec->live = true;
-  addInputSection(newBodySec);
 
   std::string symName =
       objc::symbol_names::category + baseClassName + "(" + name + ")";
@@ -1008,6 +1002,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
 
   catBodySym->used = true;
   objFile->symbols.push_back(catBodySym);
+  addInputSection(newBodySec);
 
   createSymbolReference(catBodySym, nameSym, catLayout.nameOffset,
                         infoCategoryWriter.catBodyInfo.relocTemplate);
@@ -1228,7 +1223,6 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
           infoCategoryWriter.catListInfo.align);
       listSec->parent = infoCategoryWriter.catListInfo.outputSection;
       listSec->live = true;
-      addInputSection(listSec);
 
       std::string slotSymName = "<__objc_catlist slot for category ";
       slotSymName += nonErasedCatBody->getName();
@@ -1243,6 +1237,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
 
       catListSlotSym->used = true;
       objFile->symbols.push_back(catListSlotSym);
+      addInputSection(listSec);
 
       // Now link the category body into the newly created slot
       createSymbolReference(catListSlotSym, nonErasedCatBody, 0,
@@ -1252,8 +1247,6 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
 }
 
 void ObjcCategoryMerger::eraseISec(ConcatInputSection *isec) {
-  erasedIsecs.insert(isec);
-
   isec->live = false;
   for (auto &sym : isec->symbols)
     sym->used = false;
@@ -1289,7 +1282,15 @@ void ObjcCategoryMerger::eraseMergedCategories() {
 
       eraseISec(catInfo.catBodyIsec);
 
-      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
+      // We can't erase 'catLayout.nameOffset' for either Swift or ObjC
+      //   categories because the name will sometimes also be used for other
+      //   purposes.
+      // For Swift, see usages of 'l_.str.11.SimpleClass' in
+      //   objc-category-merging-swift.s
+      // For ObjC, see usages of 'l_OBJC_CLASS_NAME_.1' in
+      //   objc-category-merging-erase-objc-name-test.s
+      // TODO: handle the above in a smarter way
+
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
@@ -1301,33 +1302,6 @@ void ObjcCategoryMerger::eraseMergedCategories() {
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instancePropsOffset);
     }
-  }
-
-  removeRefsToErasedIsecs();
-}
-
-// The compiler may generate references to categories inside the addrsig
-// section. This function will erase these references.
-void ObjcCategoryMerger::removeRefsToErasedIsecs() {
-  for (InputSection *isec : inputSections) {
-    if (isec->getName() != section_names::addrSig)
-      continue;
-
-    auto removeRelocs = [this](Reloc &r) {
-      auto *isec = dyn_cast_or_null<ConcatInputSection>(
-          r.referent.dyn_cast<InputSection *>());
-      if (!isec) {
-        Defined *sym =
-            dyn_cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>());
-        if (sym)
-          isec = dyn_cast<ConcatInputSection>(sym->isec());
-      }
-      if (!isec)
-        return false;
-      return erasedIsecs.count(isec) > 0;
-    };
-
-    llvm::erase_if(isec->relocs, removeRelocs);
   }
 }
 
@@ -1377,6 +1351,29 @@ void objc::mergeCategories() {
 
 void objc::doCleanup() { ObjcCategoryMerger::doCleanup(); }
 
+ObjcCategoryMerger::SourceLanguage
+ObjcCategoryMerger::getClassSymSourceLang(const Defined *classSym) {
+  if (classSym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+    return SourceLanguage::Swift;
+
+  // If the symbol name matches the ObjC prefix, we don't necessarely know this
+  // comes from ObjC, since Swift creates ObjC-like alias symbols for some Swift
+  // classes. Ex:
+  //  .globl	_OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .private_extern _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass
+  //  .set _OBJC_CLASS_$__TtC11MyTestClass11MyTestClass, _$s11MyTestClassAACN
+  //
+  // So we scan for symbols with the same address and check for the Swift class
+  if (classSym->getName().starts_with(objc::symbol_names::klass)) {
+    for (auto &sym : classSym->originalIsec->symbols)
+      if (sym->value == classSym->value)
+        if (sym->getName().starts_with(objc::symbol_names::swift_objc_klass))
+          return SourceLanguage::Swift;
+    return SourceLanguage::ObjC;
+  }
+
+  llvm_unreachable("Unexpected class symbol name during category merging");
+}
 void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
     const Defined *baseClass, std::vector<InfoInputCategory> &categories) {
   assert(categories.size() >= 1 && "Expected at least one category to merge");
@@ -1384,14 +1381,7 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   // Collect all the info from the categories
   ClassExtensionInfo extInfo(catLayout);
   extInfo.baseClass = baseClass;
-
-  if (baseClass->getName().starts_with(objc::symbol_names::klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::ObjC;
-  else if (baseClass->getName().starts_with(
-               objc::symbol_names::swift_objc_klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::Swift;
-  else
-    llvm_unreachable("Unexpected base class symbol name");
+  extInfo.baseClassSourceLanguage = getClassSymSourceLang(baseClass);
 
   for (auto &catInfo : categories) {
     parseCatInfoToExtInfo(catInfo, extInfo);

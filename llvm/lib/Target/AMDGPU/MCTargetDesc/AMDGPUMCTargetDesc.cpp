@@ -88,14 +88,12 @@ static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
                                                 const MCRegisterInfo &MRI) {
   if (T.getArch() == Triple::r600)
     return new R600InstPrinter(MAI, MII, MRI);
-  else
-    return new AMDGPUInstPrinter(MAI, MII, MRI);
+  return new AMDGPUInstPrinter(MAI, MII, MRI);
 }
 
-static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,
-                                                      formatted_raw_ostream &OS,
-                                                      MCInstPrinter *InstPrint,
-                                                      bool isVerboseAsm) {
+static MCTargetStreamer *
+createAMDGPUAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                              MCInstPrinter *InstPrint) {
   return new AMDGPUTargetAsmStreamer(S, OS);
 }
 
@@ -132,10 +130,8 @@ public:
       return false;
 
     int64_t Imm = Inst.getOperand(0).getImm();
-    // Our branches take a simm16, but we need two extra bits to account for
-    // the factor of 4.
-    APInt SignedOffset(18, Imm * 4, true);
-    Target = (SignedOffset.sext(64) + Addr + Size).getZExtValue();
+    // Our branches take a simm16.
+    Target = SignExtend64<16>(Imm) * 4 + Addr + Size;
     return true;
   }
 };

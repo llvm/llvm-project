@@ -22,8 +22,8 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR]], [[BUILD_VECTOR3]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[AND]], [[AND1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[OR]](<2 x s32>)
+    ; CHECK-NEXT: %6:_(<2 x s32>) = disjoint G_OR [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %6(<2 x s32>)
     ; CHECK-NEXT: %fcopysign:_(s32) = COPY [[UV]](s32)
     ; CHECK-NEXT: $s0 = COPY %fcopysign(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
@@ -54,8 +54,8 @@ body:             |
     ; CHECK-NEXT: [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(<2 x s64>) = G_AND [[BUILD_VECTOR]], [[BUILD_VECTOR3]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[OR]](<2 x s64>)
+    ; CHECK-NEXT: %6:_(<2 x s64>) = disjoint G_OR [[AND]], [[AND1]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES %6(<2 x s64>)
     ; CHECK-NEXT: %fcopysign:_(s64) = COPY [[UV]](s64)
     ; CHECK-NEXT: $d0 = COPY %fcopysign(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0

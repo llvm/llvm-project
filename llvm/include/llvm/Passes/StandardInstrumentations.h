@@ -171,7 +171,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 
@@ -461,7 +461,8 @@ class VerifyInstrumentation {
 
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                         ModuleAnalysisManager *MAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.

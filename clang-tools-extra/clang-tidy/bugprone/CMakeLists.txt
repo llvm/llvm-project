@@ -48,6 +48,7 @@ add_clang_library(clangTidyBugproneModule
   NotNullTerminatedResultCheck.cpp
   OptionalValueConversionCheck.cpp
   ParentVirtualCallCheck.cpp
+  PointerArithmeticOnPolymorphicObjectCheck.cpp
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
@@ -72,6 +73,7 @@ add_clang_library(clangTidyBugproneModule
   SuspiciousSemicolonCheck.cpp
   SuspiciousStringCompareCheck.cpp
   SwappedArgumentsCheck.cpp
+  TaggedUnionMemberCountCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
   TooSmallLoopVariableCheck.cpp

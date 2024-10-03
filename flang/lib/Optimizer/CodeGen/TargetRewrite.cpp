@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -89,6 +90,9 @@ public:
     if (!forcedTargetCPU.empty())
       fir::setTargetCPU(mod, forcedTargetCPU);
 
+    if (!forcedTuneCPU.empty())
+      fir::setTuneCPU(mod, forcedTuneCPU);
+
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 
@@ -106,16 +110,10 @@ public:
 
     auto specifics = fir::CodeGenSpecifics::get(
         mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod),
-        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl);
+        fir::getTargetCPU(mod), fir::getTargetFeatures(mod), *dl,
+        fir::getTuneCPU(mod));
 
     setMembers(specifics.get(), &rewriter, &*dl);
-
-    // We may need to call stacksave/stackrestore later, so
-    // create the FuncOps beforehand.
-    fir::FirOpBuilder builder(rewriter, mod);
-    builder.setInsertionPointToStart(mod.getBody());
-    stackSaveFn = fir::factory::getLlvmStackSave(builder);
-    stackRestoreFn = fir::factory::getLlvmStackRestore(builder);
 
     // Perform type conversion on signatures and call sites.
     if (mlir::failed(convertTypes(mod))) {
@@ -509,7 +507,8 @@ public:
       fir::DispatchOp dispatchOp = rewriter->create<A>(
           loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
           callOp.getOperands()[0], newOpers,
-          rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift));
+          rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
+          callOp.getProcedureAttrsAttr());
       if (wrap)
         newCallResults.push_back((*wrap)(dispatchOp.getOperation()));
       else
@@ -667,16 +666,22 @@ public:
   /// Convert the type signatures on all the functions present in the module.
   /// As the type signature is being changed, this must also update the
   /// function itself to use any new arguments, etc.
-  mlir::LogicalResult convertTypes(mlir::ModuleOp mod) {
+  llvm::LogicalResult convertTypes(mlir::ModuleOp mod) {
     mlir::MLIRContext *ctx = mod->getContext();
     auto targetCPU = specifics->getTargetCPU();
     mlir::StringAttr targetCPUAttr =
         targetCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, targetCPU);
+    auto tuneCPU = specifics->getTuneCPU();
+    mlir::StringAttr tuneCPUAttr =
+        tuneCPU.empty() ? nullptr : mlir::StringAttr::get(ctx, tuneCPU);
     auto targetFeaturesAttr = specifics->getTargetFeatures();
 
     for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
       if (targetCPUAttr)
         fn->setAttr("target_cpu", targetCPUAttr);
+
+      if (tuneCPUAttr)
+        fn->setAttr("tune_cpu", tuneCPUAttr);
 
       if (targetFeaturesAttr)
         fn->setAttr("target_features", targetFeaturesAttr);
@@ -1235,19 +1240,19 @@ private:
   // Inserts a call to llvm.stacksave at the current insertion
   // point and the given location. Returns the call's result Value.
   inline mlir::Value genStackSave(mlir::Location loc) {
-    return rewriter->create<fir::CallOp>(loc, stackSaveFn).getResult(0);
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackSave(loc);
   }
 
   // Inserts a call to llvm.stackrestore at the current insertion
   // point and the given location and argument.
   inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
-    rewriter->create<fir::CallOp>(loc, stackRestoreFn, mlir::ValueRange{sp});
+    fir::FirOpBuilder builder(*rewriter, getModule());
+    return builder.genStackRestore(loc, sp);
   }
 
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;
   mlir::DataLayout *dataLayout = nullptr;
-  mlir::func::FuncOp stackSaveFn = nullptr;
-  mlir::func::FuncOp stackRestoreFn = nullptr;
 };
 } // namespace

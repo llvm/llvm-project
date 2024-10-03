@@ -469,7 +469,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // except if the token is equal, then a space is needed.
     if ((Style.PointerAlignment == FormatStyle::PAS_Right ||
          Style.ReferenceAlignment == FormatStyle::RAS_Right) &&
-        CurrentChange.Spaces != 0 && CurrentChange.Tok->isNot(tok::equal)) {
+        CurrentChange.Spaces != 0 &&
+        !CurrentChange.Tok->isOneOf(tok::equal, tok::r_paren,
+                                    TT_TemplateCloser)) {
       const bool ReferenceNotRightAligned =
           Style.ReferenceAlignment != FormatStyle::RAS_Right &&
           Style.ReferenceAlignment != FormatStyle::RAS_Pointer;
@@ -1116,7 +1118,7 @@ void WhitespaceManager::alignTrailingComments() {
       // leave the comments.
       if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit > 0)
         break;
-      C.Spaces = OriginalSpaces;
+      C.Spaces = C.NewlinesBefore > 0 ? C.Tok->OriginalColumn : OriginalSpaces;
       continue;
     }
 

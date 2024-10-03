@@ -23,7 +23,7 @@ using namespace lld::elf;
 namespace {
 class SystemZ : public TargetInfo {
 public:
-  SystemZ();
+  SystemZ(Ctx &);
   int getTlsGdRelaxSkip(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -51,7 +51,7 @@ private:
 };
 } // namespace
 
-SystemZ::SystemZ() {
+SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_390_COPY;
   gotRel = R_390_GLOB_DAT;
   pltRel = R_390_JMP_SLOT;
@@ -179,7 +179,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
 void SystemZ::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] holds the value of _DYNAMIC.
   // _GLOBAL_OFFSET_TABLE_[1] and [2] are reserved.
-  write64be(buf, mainPart->dynamic->getVA());
+  write64be(buf, ctx.mainPart->dynamic->getVA());
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -187,7 +187,7 @@ void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64be(buf, s.getVA());
 }
 
@@ -203,15 +203,15 @@ void SystemZ::writePltHeader(uint8_t *buf) const {
       0x07, 0x00,                         // nopr
   };
   memcpy(buf, pltData, sizeof(pltData));
-  uint64_t got = in.got->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t got = ctx.in.got->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
   write32be(buf + 8, (got - plt - 6) >> 1);
 }
 
 void SystemZ::addPltHeaderSymbols(InputSection &isec) const {
   // The PLT header needs a reference to _GLOBAL_OFFSET_TABLE_, so we
   // must ensure the .got section is created even if otherwise unused.
-  in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+  ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
 }
 
 void SystemZ::writePlt(uint8_t *buf, const Symbol &sym,
@@ -228,8 +228,8 @@ void SystemZ::writePlt(uint8_t *buf, const Symbol &sym,
   memcpy(buf, inst, sizeof(inst));
 
   write32be(buf + 2, (sym.getGotPltVA() - pltEntryAddr) >> 1);
-  write32be(buf + 24, (in.plt->getVA() - pltEntryAddr - 22) >> 1);
-  write32be(buf + 28, in.relaPlt->entsize * sym.getPltIdx());
+  write32be(buf + 24, (ctx.in.plt->getVA() - pltEntryAddr - 22) >> 1);
+  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx());
 }
 
 int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -417,7 +417,7 @@ void SystemZ::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
 RelExpr SystemZ::adjustGotPcExpr(RelType type, int64_t addend,
                                  const uint8_t *loc) const {
   // Only R_390_GOTENT with addend 2 can be relaxed.
-  if (!config->relax || addend != 2 || type != R_390_GOTENT)
+  if (!ctx.arg.relax || addend != 2 || type != R_390_GOTENT)
     return R_GOT_PC;
   const uint16_t op = read16be(loc - 2);
 
@@ -438,7 +438,7 @@ bool SystemZ::relaxOnce(int pass) const {
   // we need to validate the target symbol is in-range and aligned.
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
-  for (OutputSection *osec : outputSections) {
+  for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
@@ -453,7 +453,7 @@ bool SystemZ::relaxOnce(int pass) const {
           continue;
         if (rel.sym->auxIdx == 0) {
           rel.sym->allocateAux();
-          addGotEntry(*rel.sym);
+          addGotEntry(ctx, *rel.sym);
           changed = true;
         }
         rel.expr = R_GOT_PC;
@@ -601,7 +601,7 @@ void SystemZ::relocate(uint8_t *loc, const Relocation &rel,
   }
 }
 
-TargetInfo *elf::getSystemZTargetInfo() {
-  static SystemZ t;
+TargetInfo *elf::getSystemZTargetInfo(Ctx &ctx) {
+  static SystemZ t(ctx);
   return &t;
 }

@@ -11,9 +11,9 @@
 # RUN: llvm-readelf --dynamic-table --pretty-print --elf-output-style=JSON %t1 \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=JSON64
 
-#      LLVM64:DynamicSection [ (61 entries)
+#      LLVM64:DynamicSection [ (62 entries)
 # LLVM64-NEXT:  Tag                Type                 Name/Value
-# LLVM64-NEXT:  0x0000000000000001 NEEDED               Shared library: D
+# LLVM64-NEXT:  0x0000000000000001 NEEDED               Shared library: [D]
 # LLVM64-NEXT:  0x0000000000000002 PLTRELSZ             16 (bytes)
 # LLVM64-NEXT:  0x0000000000000003 PLTGOT               0x1000
 # LLVM64-NEXT:  0x0000000000000004 HASH                 0x1000
@@ -26,8 +26,8 @@
 # LLVM64-NEXT:  0x000000000000000B SYMENT               2439 (bytes)
 # LLVM64-NEXT:  0x000000000000000C INIT                 0x1000
 # LLVM64-NEXT:  0x000000000000000D FINI                 0x1000
-# LLVM64-NEXT:  0x000000000000000E SONAME               Library soname: U
-# LLVM64-NEXT:  0x000000000000000F RPATH                Library rpath: [x:w:U]
+# LLVM64-NEXT:  0x000000000000000E SONAME               Library soname: [U]
+# LLVM64-NEXT:  0x000000000000000F RPATH                Library rpath: [f]
 # LLVM64-NEXT:  0x0000000000000010 SYMBOLIC             0x1234567890ABCDEF
 # LLVM64-NEXT:  0x0000000000000011 REL                  0x1000
 # LLVM64-NEXT:  0x0000000000000012 RELSZ                16 (bytes)
@@ -49,6 +49,7 @@
 # LLVM64-NEXT:  0x0000000000000023 RELRSZ               16 (bytes)
 # LLVM64-NEXT:  0x0000000000000024 RELR                 0x1000
 # LLVM64-NEXT:  0x0000000000000025 RELRENT              17185 (bytes)
+# LLVM64-NEXT:  0x0000000040000026 CREL                 0x40
 # LLVM64-NEXT:  0x000000006000000F ANDROID_REL          0x1000
 # LLVM64-NEXT:  0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # LLVM64-NEXT:  0x0000000060000011 ANDROID_RELA         0x1000
@@ -67,18 +68,18 @@
 # LLVM64-NEXT:  0x000000006FFFFFFD VERDEFNUM            0
 # LLVM64-NEXT:  0x000000006FFFFFFE VERNEED              0x1000
 # LLVM64-NEXT:  0x000000006FFFFFFF VERNEEDNUM           0
-# LLVM64-NEXT:  0x000000007FFFFFFD AUXILIARY            Auxiliary library: D
-# LLVM64-NEXT:  0x000000007FFFFFFE USED                 Not needed object: U
-# LLVM64-NEXT:  0x000000007FFFFFFF FILTER               Filter library: U
+# LLVM64-NEXT:  0x000000007FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM64-NEXT:  0x000000007FFFFFFE USED                 Not needed object: [U]
+# LLVM64-NEXT:  0x000000007FFFFFFF FILTER               Filter library: [U]
 # LLVM64-NEXT:  0x0000000012345678 <unknown:>0x12345678 0x8765432187654321
 # LLVM64-NEXT:  0x000000006ABCDEF0 <unknown:>0x6abcdef0 0x9988776655443322
 # LLVM64-NEXT:  0x0000000076543210 <unknown:>0x76543210 0x5555666677778888
 # LLVM64-NEXT:  0x0000000000000000 NULL                 0x0
 # LLVM64-NEXT:]
 
-#      GNU64:Dynamic section at offset {{.*}} contains 61 entries:
+#      GNU64:Dynamic section at offset {{.*}} contains 62 entries:
 # GNU64-NEXT:  Tag                Type                   Name/Value
-# GNU64-NEXT:  0x0000000000000001 (NEEDED)               Shared library: D
+# GNU64-NEXT:  0x0000000000000001 (NEEDED)               Shared library: [D]
 # GNU64-NEXT:  0x0000000000000002 (PLTRELSZ)             16 (bytes)
 # GNU64-NEXT:  0x0000000000000003 (PLTGOT)               0x1000
 # GNU64-NEXT:  0x0000000000000004 (HASH)                 0x1000
@@ -91,8 +92,8 @@
 # GNU64-NEXT:  0x000000000000000b (SYMENT)               2439 (bytes)
 # GNU64-NEXT:  0x000000000000000c (INIT)                 0x1000
 # GNU64-NEXT:  0x000000000000000d (FINI)                 0x1000
-# GNU64-NEXT:  0x000000000000000e (SONAME)               Library soname: U
-# GNU64-NEXT:  0x000000000000000f (RPATH)                Library rpath: [x:w:U]
+# GNU64-NEXT:  0x000000000000000e (SONAME)               Library soname: [U]
+# GNU64-NEXT:  0x000000000000000f (RPATH)                Library rpath: [f]
 # GNU64-NEXT:  0x0000000000000010 (SYMBOLIC)             0x1234567890abcdef
 # GNU64-NEXT:  0x0000000000000011 (REL)                  0x1000
 # GNU64-NEXT:  0x0000000000000012 (RELSZ)                16 (bytes)
@@ -114,6 +115,7 @@
 # GNU64-NEXT:  0x0000000000000023 (RELRSZ)               16 (bytes)
 # GNU64-NEXT:  0x0000000000000024 (RELR)                 0x1000
 # GNU64-NEXT:  0x0000000000000025 (RELRENT)              17185 (bytes)
+# GNU64-NEXT:  0x0000000040000026 (CREL)                 0x40
 # GNU64-NEXT:  0x000000006000000f (ANDROID_REL)          0x1000
 # GNU64-NEXT:  0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU64-NEXT:  0x0000000060000011 (ANDROID_RELA)         0x1000
@@ -132,9 +134,9 @@
 # GNU64-NEXT:  0x000000006ffffffd (VERDEFNUM)            0
 # GNU64-NEXT:  0x000000006ffffffe (VERNEED)              0x1000
 # GNU64-NEXT:  0x000000006fffffff (VERNEEDNUM)           0
-# GNU64-NEXT:  0x000000007ffffffd (AUXILIARY)            Auxiliary library: D
-# GNU64-NEXT:  0x000000007ffffffe (USED)                 Not needed object: U
-# GNU64-NEXT:  0x000000007fffffff (FILTER)               Filter library: U
+# GNU64-NEXT:  0x000000007ffffffd (AUXILIARY)            Auxiliary library: [D]
+# GNU64-NEXT:  0x000000007ffffffe (USED)                 Not needed object: [U]
+# GNU64-NEXT:  0x000000007fffffff (FILTER)               Filter library: [U]
 # GNU64-NEXT:  0x0000000012345678 (<unknown:>0x12345678) 0x8765432187654321
 # GNU64-NEXT:  0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
 # GNU64-NEXT:  0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
@@ -216,11 +218,9 @@
 # JSON64-NEXT:  {
 # JSON64-NEXT:      "Tag": 15,
 # JSON64-NEXT:      "Type": "RPATH",
-# JSON64-NEXT:      "Value": 9,
+# JSON64-NEXT:      "Value": 5,
 # JSON64-NEXT:      "Path": [
-# JSON64-NEXT:          "x",
-# JSON64-NEXT:          "w",
-# JSON64-NEXT:          "U"
+# JSON64-NEXT:          "f"
 # JSON64-NEXT:      ]
 # JSON64-NEXT:  },
 # JSON64-NEXT:  {
@@ -337,6 +337,11 @@
 # JSON64-NEXT:      "Tag": 37,
 # JSON64-NEXT:      "Type": "RELRENT",
 # JSON64-NEXT:      "Value": 17185
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1073741862,
+# JSON64-NEXT:      "Type": "CREL",
+# JSON64-NEXT:      "Value": 64
 # JSON64-NEXT:  },
 # JSON64-NEXT:  {
 # JSON64-NEXT:      "Tag": 1610612751,
@@ -508,7 +513,7 @@ Sections:
     Type:    SHT_STRTAB
     Address: 0x1000
     Size:    0x10
-    Content: "004400550066007700783A773A5500"
+    Content: "004400550066007700"
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Address: 0x1010
@@ -542,7 +547,7 @@ Sections:
       - Tag:   DT_SONAME
         Value: 0x3
       - Tag:   DT_RPATH
-        Value: 0x9
+        Value: 0x5
       - Tag:   DT_SYMBOLIC
         Value: [[SYMBOLIC=0x1234567890abcdef]]
       - Tag:   DT_REL
@@ -585,6 +590,8 @@ Sections:
         Value: 0x1000
       - Tag:   DT_RELRENT
         Value: 0x4321
+      - Tag:   DT_CREL
+        Value: 0x40
       - Tag:   DT_ANDROID_REL
         Value: 0x1000
       - Tag:   DT_ANDROID_RELSZ
@@ -659,9 +666,9 @@ ProgramHeaders:
 # RUN:   | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 # RUN: llvm-readelf -d %t2 | FileCheck %s --check-prefix=GNU32 --strict-whitespace --match-full-lines
 
-#      LLVM32:DynamicSection [ (61 entries)
+#      LLVM32:DynamicSection [ (62 entries)
 # LLVM32-NEXT:  Tag        Type                 Name/Value
-# LLVM32-NEXT:  0x00000001 NEEDED               Shared library: D
+# LLVM32-NEXT:  0x00000001 NEEDED               Shared library: [D]
 # LLVM32-NEXT:  0x00000002 PLTRELSZ             16 (bytes)
 # LLVM32-NEXT:  0x00000003 PLTGOT               0x1000
 # LLVM32-NEXT:  0x00000004 HASH                 0x1000
@@ -674,8 +681,8 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x0000000B SYMENT               2439 (bytes)
 # LLVM32-NEXT:  0x0000000C INIT                 0x1000
 # LLVM32-NEXT:  0x0000000D FINI                 0x1000
-# LLVM32-NEXT:  0x0000000E SONAME               Library soname: U
-# LLVM32-NEXT:  0x0000000F RPATH                Library rpath: [x:w:U]
+# LLVM32-NEXT:  0x0000000E SONAME               Library soname: [U]
+# LLVM32-NEXT:  0x0000000F RPATH                Library rpath: [f]
 # LLVM32-NEXT:  0x00000010 SYMBOLIC             0x12345678
 # LLVM32-NEXT:  0x00000011 REL                  0x1000
 # LLVM32-NEXT:  0x00000012 RELSZ                16 (bytes)
@@ -697,6 +704,7 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x00000023 RELRSZ               16 (bytes)
 # LLVM32-NEXT:  0x00000024 RELR                 0x1000
 # LLVM32-NEXT:  0x00000025 RELRENT              17185 (bytes)
+# LLVM32-NEXT:  0x40000026 CREL                 0x40
 # LLVM32-NEXT:  0x6000000F ANDROID_REL          0x1000
 # LLVM32-NEXT:  0x60000010 ANDROID_RELSZ        16 (bytes)
 # LLVM32-NEXT:  0x60000011 ANDROID_RELA         0x1000
@@ -715,18 +723,18 @@ ProgramHeaders:
 # LLVM32-NEXT:  0x6FFFFFFD VERDEFNUM            0
 # LLVM32-NEXT:  0x6FFFFFFE VERNEED              0x1000
 # LLVM32-NEXT:  0x6FFFFFFF VERNEEDNUM           0
-# LLVM32-NEXT:  0x7FFFFFFD AUXILIARY            Auxiliary library: D
-# LLVM32-NEXT:  0x7FFFFFFE USED                 Not needed object: U
-# LLVM32-NEXT:  0x7FFFFFFF FILTER               Filter library: U
+# LLVM32-NEXT:  0x7FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM32-NEXT:  0x7FFFFFFE USED                 Not needed object: [U]
+# LLVM32-NEXT:  0x7FFFFFFF FILTER               Filter library: [U]
 # LLVM32-NEXT:  0x12345678 <unknown:>0x12345678 0x87654321
 # LLVM32-NEXT:  0x6ABCDEF0 <unknown:>0x6abcdef0 0x99887766
 # LLVM32-NEXT:  0x76543210 <unknown:>0x76543210 0x55556666
 # LLVM32-NEXT:  0x00000000 NULL                 0x0
 # LLVM32-NEXT:]
 
-#      GNU32:Dynamic section at offset 0x84 contains 61 entries:
+#      GNU32:Dynamic section at offset 0x84 contains 62 entries:
 # GNU32-NEXT:  Tag        Type                   Name/Value
-# GNU32-NEXT:  0x00000001 (NEEDED)               Shared library: D
+# GNU32-NEXT:  0x00000001 (NEEDED)               Shared library: [D]
 # GNU32-NEXT:  0x00000002 (PLTRELSZ)             16 (bytes)
 # GNU32-NEXT:  0x00000003 (PLTGOT)               0x1000
 # GNU32-NEXT:  0x00000004 (HASH)                 0x1000
@@ -739,8 +747,8 @@ ProgramHeaders:
 # GNU32-NEXT:  0x0000000b (SYMENT)               2439 (bytes)
 # GNU32-NEXT:  0x0000000c (INIT)                 0x1000
 # GNU32-NEXT:  0x0000000d (FINI)                 0x1000
-# GNU32-NEXT:  0x0000000e (SONAME)               Library soname: U
-# GNU32-NEXT:  0x0000000f (RPATH)                Library rpath: [x:w:U]
+# GNU32-NEXT:  0x0000000e (SONAME)               Library soname: [U]
+# GNU32-NEXT:  0x0000000f (RPATH)                Library rpath: [f]
 # GNU32-NEXT:  0x00000010 (SYMBOLIC)             0x12345678
 # GNU32-NEXT:  0x00000011 (REL)                  0x1000
 # GNU32-NEXT:  0x00000012 (RELSZ)                16 (bytes)
@@ -762,6 +770,7 @@ ProgramHeaders:
 # GNU32-NEXT:  0x00000023 (RELRSZ)               16 (bytes)
 # GNU32-NEXT:  0x00000024 (RELR)                 0x1000
 # GNU32-NEXT:  0x00000025 (RELRENT)              17185 (bytes)
+# GNU32-NEXT:  0x40000026 (CREL)                 0x40
 # GNU32-NEXT:  0x6000000f (ANDROID_REL)          0x1000
 # GNU32-NEXT:  0x60000010 (ANDROID_RELSZ)        16 (bytes)
 # GNU32-NEXT:  0x60000011 (ANDROID_RELA)         0x1000
@@ -780,9 +789,9 @@ ProgramHeaders:
 # GNU32-NEXT:  0x6ffffffd (VERDEFNUM)            0
 # GNU32-NEXT:  0x6ffffffe (VERNEED)              0x1000
 # GNU32-NEXT:  0x6fffffff (VERNEEDNUM)           0
-# GNU32-NEXT:  0x7ffffffd (AUXILIARY)            Auxiliary library: D
-# GNU32-NEXT:  0x7ffffffe (USED)                 Not needed object: U
-# GNU32-NEXT:  0x7fffffff (FILTER)               Filter library: U
+# GNU32-NEXT:  0x7ffffffd (AUXILIARY)            Auxiliary library: [D]
+# GNU32-NEXT:  0x7ffffffe (USED)                 Not needed object: [U]
+# GNU32-NEXT:  0x7fffffff (FILTER)               Filter library: [U]
 # GNU32-NEXT:  0x12345678 (<unknown:>0x12345678) 0x87654321
 # GNU32-NEXT:  0x6abcdef0 (<unknown:>0x6abcdef0) 0x99887766
 # GNU32-NEXT:  0x76543210 (<unknown:>0x76543210) 0x55556666
@@ -848,15 +857,16 @@ Sections:
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB_SHNDX: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_CREL: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
 
 # PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
 # PHENTSIZE-LLVM-NEXT: LoadName: <?>
 
-# PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
+# PHENTSIZE-LLVM:      DynamicSection [ (62 entries)
 # PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
-# PHENTSIZE-LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: <?>
+# PHENTSIZE-LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000003 PLTGOT               0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000004 HASH                 0x1000
@@ -869,7 +879,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x000000000000000B SYMENT               2439 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x000000000000000C INIT                 0x1000
 # PHENTSIZE-LLVM-NEXT:   0x000000000000000D FINI                 0x1000
-# PHENTSIZE-LLVM-NEXT:   0x000000000000000E SONAME               Library soname: <?>
+# PHENTSIZE-LLVM-NEXT:   0x000000000000000E SONAME               Library soname: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x000000000000000F RPATH                Library rpath: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000010 SYMBOLIC             0x1234567890ABCDEF
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000011 REL                  0x1000
@@ -892,6 +902,7 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000023 RELRSZ               16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000024 RELR                 0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000025 RELRENT              17185 (bytes)
+# PHENTSIZE-LLVM-NEXT:   0x0000000040000026 CREL                 0x40
 # PHENTSIZE-LLVM-NEXT:   0x000000006000000F ANDROID_REL          0x1000
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
 # PHENTSIZE-LLVM-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
@@ -910,19 +921,19 @@ Sections:
 # PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFD VERDEFNUM            0
 # PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFE VERNEED              0x1000
 # PHENTSIZE-LLVM-NEXT:   0x000000006FFFFFFF VERNEEDNUM           0
-# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: <?>
-# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFE USED                 Not needed object: <?>
-# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFF FILTER               Filter library: <?>
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFE USED                 Not needed object: [<?>]
+# PHENTSIZE-LLVM-NEXT:   0x000000007FFFFFFF FILTER               Filter library: [<?>]
 # PHENTSIZE-LLVM-NEXT:   0x0000000012345678 <unknown:>0x12345678 0x8765432187654321
 # PHENTSIZE-LLVM-NEXT:   0x000000006ABCDEF0 <unknown:>0x6abcdef0 0x9988776655443322
 # PHENTSIZE-LLVM-NEXT:   0x0000000076543210 <unknown:>0x76543210 0x5555666677778888
 # PHENTSIZE-LLVM-NEXT:   0x0000000000000000 NULL                 0x0
 # PHENTSIZE-LLVM-NEXT: ]
 
-# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
+# PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 62 entries:
 # PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
 # PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
-# PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: <?>
+# PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x0000000000000002 (PLTRELSZ)             16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000003 (PLTGOT)               0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000000000004 (HASH)                 0x1000
@@ -935,7 +946,7 @@ Sections:
 # PHENTSIZE-GNU-NEXT:   0x000000000000000b (SYMENT)               2439 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x000000000000000c (INIT)                 0x1000
 # PHENTSIZE-GNU-NEXT:   0x000000000000000d (FINI)                 0x1000
-# PHENTSIZE-GNU-NEXT:   0x000000000000000e (SONAME)               Library soname: <?>
+# PHENTSIZE-GNU-NEXT:   0x000000000000000e (SONAME)               Library soname: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x000000000000000f (RPATH)                Library rpath: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x0000000000000010 (SYMBOLIC)             0x1234567890abcdef
 # PHENTSIZE-GNU-NEXT:   0x0000000000000011 (REL)                  0x1000
@@ -958,6 +969,7 @@ Sections:
 # PHENTSIZE-GNU-NEXT:   0x0000000000000023 (RELRSZ)               16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000024 (RELR)                 0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000000000025 (RELRENT)              17185 (bytes)
+# PHENTSIZE-GNU-NEXT:   0x0000000040000026 (CREL)                 0x40
 # PHENTSIZE-GNU-NEXT:   0x000000006000000f (ANDROID_REL)          0x1000
 # PHENTSIZE-GNU-NEXT:   0x0000000060000010 (ANDROID_RELSZ)        16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000060000011 (ANDROID_RELA)         0x1000
@@ -976,9 +988,9 @@ Sections:
 # PHENTSIZE-GNU-NEXT:   0x000000006ffffffd (VERDEFNUM)            0
 # PHENTSIZE-GNU-NEXT:   0x000000006ffffffe (VERNEED)              0x1000
 # PHENTSIZE-GNU-NEXT:   0x000000006fffffff (VERNEEDNUM)           0
-# PHENTSIZE-GNU-NEXT:   0x000000007ffffffd (AUXILIARY)            Auxiliary library: <?>
-# PHENTSIZE-GNU-NEXT:   0x000000007ffffffe (USED)                 Not needed object: <?>
-# PHENTSIZE-GNU-NEXT:   0x000000007fffffff (FILTER)               Filter library: <?>
+# PHENTSIZE-GNU-NEXT:   0x000000007ffffffd (AUXILIARY)            Auxiliary library: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000007ffffffe (USED)                 Not needed object: [<?>]
+# PHENTSIZE-GNU-NEXT:   0x000000007fffffff (FILTER)               Filter library: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x0000000012345678 (<unknown:>0x12345678) 0x8765432187654321
 # PHENTSIZE-GNU-NEXT:   0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
 # PHENTSIZE-GNU-NEXT:   0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
