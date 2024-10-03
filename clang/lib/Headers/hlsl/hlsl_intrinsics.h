@@ -2015,6 +2015,13 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
+// \brief Returns the value of the expression for the given lane index within
+// the specified wave.
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+    __attribute__((convergent)) T WaveReadLaneAt(T, int32_t);
+
 //===----------------------------------------------------------------------===//
 // sign builtins
 //===----------------------------------------------------------------------===//
