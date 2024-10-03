@@ -524,7 +524,7 @@ X86 Support
 
 - All intrinsics in bmiintrin.h can now be used in constant expressions.
 
-- All bzhi/pdep/pext intrinsics in bmi2intrin.h can now be used in constant expressions.
+- All intrinsics in bmi2intrin.h can now be used in constant expressions.
 
 - All intrinsics in tbmintrin.h can now be used in constant expressions.
 
