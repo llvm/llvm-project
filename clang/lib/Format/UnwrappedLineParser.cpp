@@ -3528,6 +3528,17 @@ bool UnwrappedLineParser::parseRequires() {
         return false;
       }
       break;
+    case tok::equalequal:
+    case tok::greaterequal:
+    case tok::lessequal:
+    case tok::r_paren:
+    case tok::pipepipe:
+      if (OpenAngles == 0) {
+        FormatTok = Tokens->setPosition(StoredPosition);
+        parseRequiresClause(RequiresToken);
+        return true;
+      }
+      break;
     case tok::eof:
       // Break out of the loop.
       Lookahead = 50;
