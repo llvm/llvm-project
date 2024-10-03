@@ -395,9 +395,10 @@ RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
         MIB.addImm(RISCV::VLMaxSentinel);
       }}};
 
-    if (isUInt<5>(C->getZExtValue()))
-      return {
-          {[=](MachineInstrBuilder &MIB) { MIB.addImm(C->getZExtValue()); }}};
+    if (isUInt<5>(C->getZExtValue())) {
+      uint64_t ZExtC = C->getZExtValue();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(ZExtC); }}};
+    }
   }
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); }}};
 }
