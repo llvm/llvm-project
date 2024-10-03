@@ -12588,7 +12588,7 @@ class <t_firstclass>` type.
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
-   <fastmath_return_types>`..
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
