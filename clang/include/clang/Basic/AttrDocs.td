@@ -8482,9 +8482,9 @@ compiler warnings:
 - A redeclaration of a ``nonblocking`` or ``nonallocating`` function must also be declared with
   the same attribute (or a stronger one). A redeclaration may add an attribute.
 
-The warnings are controlled by ``-Wfunction-effects``, which is enabled by default.
+The warnings are controlled by ``-Wfunction-effects``, which is disabled by default.
 
-In a future commit, the compiler will diagnose function calls from ``nonblocking`` and ``nonallocating``
+The compiler also diagnoses function calls from ``nonblocking`` and ``nonallocating``
 functions to other functions which lack the appropriate attribute.
   }];
 }
