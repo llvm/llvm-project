@@ -871,7 +871,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
 
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
-        Record *D = RK.getDef(Name->getValue());
+        const Record *D = RK.getDef(Name->getValue());
         if (!D && CurRec) {
           // Self-references are allowed, but their resolution is delayed until
           // the final resolve to ensure that we get the correct type for them.
@@ -2113,7 +2113,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
   if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
 
     // Look up all defined records to see if we can find one.
-    Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
+    const Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
     if (D) {
       // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
@@ -3275,24 +3275,20 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
+ArrayRef<const Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   // We cache the record vectors for single classes. Many backends request
   // the same vectors multiple times.
-  auto Pair = Cache.try_emplace(ClassName.str());
-  if (Pair.second)
-    Pair.first->second =
-        getAllDerivedDefinitionsImpl<VecTy>(ArrayRef(ClassName));
-
-  return Pair.first->second;
+  auto [Iter, Inserted] = Cache.try_emplace(ClassName.str());
+  if (Inserted)
+    Iter->second = getAllDerivedDefinitions(ArrayRef(ClassName));
+  return Iter->second;
 }
 
-template <typename VecTy>
-VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
-    ArrayRef<StringRef> ClassNames) const {
+std::vector<const Record *>
+RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   SmallVector<const Record *, 2> ClassRecs;
-  VecTy Defs;
+  std::vector<const Record *> Defs;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (const auto &ClassName : ClassNames) {
@@ -3312,46 +3308,11 @@ VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
   return Defs;
 }
 
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsIfDefinedImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
-  return getClass(ClassName)
-             ? getAllDerivedDefinitionsImpl<VecTy>(ClassName, Cache)
-             : Cache[""];
-}
-
-ArrayRef<const Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassName,
-                                                             ClassRecordsMap);
-}
-
-std::vector<const Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(ClassNames);
-}
-
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassNames);
-}
-
 ArrayRef<const Record *>
 RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<Record *>>(
-      ClassName, ClassRecordsMap);
+  if (getClass(ClassName))
+    return getAllDerivedDefinitions(ClassName);
+  return Cache[""];
 }
 
 void RecordKeeper::dumpAllocationStats(raw_ostream &OS) const {
