@@ -30,7 +30,7 @@ else:
 define ptr @test_hoist_int_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_hoist_int_attrs2
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @foo(ptr dereferenceable(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call ptr @foo(ptr dereferenceable(50) dereferenceable_or_null(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret ptr [[R]]
@@ -52,7 +52,7 @@ else:
 define ptr @test_hoist_int_attrs3(i1 %c, ptr %p, ptr %p2, i64 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_hoist_int_attrs3
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @foo2(ptr align 32 [[P]], ptr align 32 [[P2]], i64 range(i64 10, 100000) [[X]]) #[[ATTR0]]
+; CHECK-NEXT:    [[R:%.*]] = call ptr @foo2(ptr align 32 dereferenceable_or_null(100) [[P]], ptr align 32 dereferenceable_or_null(100) [[P2]], i64 range(i64 10, 100000) [[X]]) #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret ptr [[R]]
@@ -75,7 +75,7 @@ else:
 define ptr @test_hoist_bool_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test_hoist_bool_attrs2
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call noundef ptr @foo(ptr nonnull [[P]], i64 noundef [[X]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call noundef ptr @foo(ptr nonnull readonly [[P]], i64 noundef [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label [[COMMON_RET:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret ptr [[R]]

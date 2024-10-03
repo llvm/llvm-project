@@ -93,7 +93,7 @@ define ptr @test_sink_int_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    call void @side.effect()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr dereferenceable(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr dereferenceable(50) dereferenceable_or_null(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
@@ -118,7 +118,7 @@ define ptr @test_sink_int_attrs3(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    call void @side.effect()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR2]]
+; CHECK-NEXT:    [[R2:%.*]] = call ptr @foo(ptr dereferenceable_or_null(50) [[P]], i64 range(i64 10, 1000) [[X]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
@@ -143,7 +143,7 @@ define ptr @test_sink_bool_attrs2(i1 %c, ptr %p, i64 %x) {
 ; CHECK-NEXT:    call void @side.effect()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R2:%.*]] = call noundef ptr @foo(ptr nonnull [[P]], i64 noundef [[X]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[R2:%.*]] = call noundef ptr @foo(ptr nonnull readonly [[P]], i64 noundef [[X]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[R2]]
 ;
   br i1 %c, label %if, label %else
