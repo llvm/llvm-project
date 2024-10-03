@@ -929,12 +929,6 @@ def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
 
-def FeatureVGPRSingleUseHintInsts : SubtargetFeature<"vgpr-singleuse-hint",
-  "HasVGPRSingleUseHintInsts",
-  "true",
-  "Has single-use VGPR hint instructions"
->;
-
 def FeaturePseudoScalarTrans : SubtargetFeature<"pseudo-scalar-trans",
   "HasPseudoScalarTrans",
   "true",
@@ -1615,14 +1609,12 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      Feature1_5xVGPRs,
      FeatureRequiredExportPriority])>;
 
@@ -1630,7 +1622,6 @@ def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureVGPRSingleUseHintInsts,
      FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion12 : FeatureSet<
@@ -1663,7 +1654,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureSALUFloatInsts,
    FeaturePseudoScalarTrans,
    FeatureHasRestrictedSOffset,
-   FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
@@ -1899,6 +1889,10 @@ def isGFX908orGFX90A :
 def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
+
+def isNotGFX940Plus :
+  Predicate<"!Subtarget->hasGFX940Insts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX940Insts))>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -2253,9 +2247,6 @@ def HasDefaultComponentBroadcast
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
-def EnableLateCFGStructurize : Predicate<
-  "EnableLateStructurizeCFG">;
-
 def EnableFlatScratch : Predicate<"Subtarget->enableFlatScratch()">;
 
 def DisableFlatScratch : Predicate<"!Subtarget->enableFlatScratch()">;
@@ -2269,9 +2260,6 @@ def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
-
-def HasVGPRSingleUseHintInsts : Predicate<"Subtarget->hasVGPRSingleUseHintInsts()">,
-  AssemblerPredicate<(all_of FeatureVGPRSingleUseHintInsts)>;
 
 def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
   AssemblerPredicate<(all_of FeaturePseudoScalarTrans)>;

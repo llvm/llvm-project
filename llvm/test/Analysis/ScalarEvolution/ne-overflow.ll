@@ -240,6 +240,9 @@ define void @test_zext(i64 %N) mustprogress {
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {0,+,2}<nuw><%for.body> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {0,+,2}<nuw><%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (%N /u 2)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {0,+,2}<nuw><%for.body> Added Flags: <nusw>

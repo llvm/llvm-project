@@ -131,11 +131,13 @@ private:
 /// will be executed following the internal logic of the operation. It must
 /// have the `PossibleTopLevelTransformOp` trait and not have any operands.
 /// This function internally keeps track of the transformation state.
-LogicalResult
-applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
-                const RaggedArray<MappedValue> &extraMapping = {},
-                const TransformOptions &options = TransformOptions(),
-                bool enforceToplevelTransformOp = true);
+LogicalResult applyTransforms(
+    Operation *payloadRoot, TransformOpInterface transform,
+    const RaggedArray<MappedValue> &extraMapping = {},
+    const TransformOptions &options = TransformOptions(),
+    bool enforceToplevelTransformOp = true,
+    function_ref<void(TransformState &)> stateInitializer = nullptr,
+    function_ref<LogicalResult(TransformState &)> stateExporter = nullptr);
 
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
@@ -215,9 +217,11 @@ private:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   };
 
-  friend LogicalResult applyTransforms(Operation *, TransformOpInterface,
-                                       const RaggedArray<MappedValue> &,
-                                       const TransformOptions &, bool);
+  friend LogicalResult
+  applyTransforms(Operation *, TransformOpInterface,
+                  const RaggedArray<MappedValue> &, const TransformOptions &,
+                  bool, function_ref<void(TransformState &)>,
+                  function_ref<LogicalResult(TransformState &)>);
 
   friend TransformState
   detail::makeTransformStateForTesting(Region *region, Operation *payloadRoot);

@@ -15,7 +15,7 @@
 !CHECK:  } copy {
 !CHECK:  ^bb0(%[[ORIG_W:.*]]: !fir.ref<i32>, %[[PRIV_W:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_W_VAL:.*]] = fir.load %[[ORIG_W]]
-!CHECK:    hlfir.assign %[[ORIG_W_VAL]] to %[[PRIV_W]] temporary_lhs
+!CHECK:    hlfir.assign %[[ORIG_W_VAL]] to %[[PRIV_W]]
 !CHECK:    omp.yield(%[[PRIV_W]] : !fir.ref<i32>)
 !CHECK:  }
 
@@ -27,7 +27,7 @@
 !CHECK:  } copy {
 !CHECK:  ^bb0(%[[ORIG_Y:.*]]: !fir.ref<i32>, %[[PRIV_Y:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_Y_VAL:.*]] = fir.load %[[ORIG_Y]]
-!CHECK:    hlfir.assign %[[ORIG_Y_VAL]] to %[[PRIV_Y]] temporary_lhs
+!CHECK:    hlfir.assign %[[ORIG_Y_VAL]] to %[[PRIV_Y]]
 !CHECK:    omp.yield(%[[PRIV_Y]] : !fir.ref<i32>)
 !CHECK:  }
 
@@ -60,7 +60,7 @@
 !CHECK:  } copy {
 !CHECK:  ^bb0(%[[ORIG_X:.*]]: !fir.ref<i32>, %[[PRIV_X:.*]]: !fir.ref<i32>):
 !CHECK:    %[[ORIG_X_VAL:.*]] = fir.load %[[ORIG_X]]
-!CHECK:    hlfir.assign %[[ORIG_X_VAL]] to %[[PRIV_X]] temporary_lhs
+!CHECK:    hlfir.assign %[[ORIG_X_VAL]] to %[[PRIV_X]]
 !CHECK:    omp.yield(%[[PRIV_X]] : !fir.ref<i32>)
 !CHECK:  }
 

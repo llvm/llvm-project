@@ -1464,7 +1464,7 @@ static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
     ToRemove.push_back(I);
     return true;
   }
-  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info)) {
+  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info).value_or(false)) {
     I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
     ToRemove.push_back(I);
     return true;
@@ -1857,7 +1857,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
     std::string S;
     raw_string_ostream StringS(S);
     ReproducerModule->print(StringS, nullptr);
-    StringS.flush();
     OptimizationRemark Rem(DEBUG_TYPE, "Reproducer", &F);
     Rem << ore::NV("module") << S;
     ORE.emit(Rem);

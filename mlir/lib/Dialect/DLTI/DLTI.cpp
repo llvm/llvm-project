@@ -424,8 +424,16 @@ getClosestQueryable(Operation *op) {
   return std::pair(queryable, op);
 }
 
-FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringAttr> keys,
-                                 bool emitError) {
+FailureOr<Attribute>
+dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
+  if (keys.empty()) {
+    if (emitError) {
+      auto diag = op->emitError() << "target op of failed DLTI query";
+      diag.attachNote(op->getLoc()) << "no keys provided to attempt query with";
+    }
+    return failure();
+  }
+
   auto [queryable, queryOp] = getClosestQueryable(op);
   Operation *reportOp = (queryOp ? queryOp : op);
 
@@ -438,6 +446,15 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringAttr> keys,
     return failure();
   }
 
+  auto keyToStr = [](DataLayoutEntryKey key) -> std::string {
+    std::string buf;
+    llvm::TypeSwitch<DataLayoutEntryKey>(key)
+        .Case<StringAttr, Type>( // The only two kinds of key we know of.
+            [&](auto key) { llvm::raw_string_ostream(buf) << key; })
+        .Default([](auto) { llvm_unreachable("unexpected entry key kind"); });
+    return buf;
+  };
+
   Attribute currentAttr = queryable;
   for (auto &&[idx, key] : llvm::enumerate(keys)) {
     if (auto map = llvm::dyn_cast<DLTIQueryInterface>(currentAttr)) {
@@ -446,17 +463,24 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringAttr> keys,
         if (emitError) {
           auto diag = op->emitError() << "target op of failed DLTI query";
           diag.attachNote(reportOp->getLoc())
-              << "key " << key << " has no DLTI-mapping per attr: " << map;
+              << "key " << keyToStr(key)
+              << " has no DLTI-mapping per attr: " << map;
         }
         return failure();
       }
       currentAttr = *maybeAttr;
     } else {
       if (emitError) {
+        std::string commaSeparatedKeys;
+        llvm::interleave(
+            keys.take_front(idx), // All prior keys.
+            [&](auto key) { commaSeparatedKeys += keyToStr(key); },
+            [&]() { commaSeparatedKeys += ","; });
+
         auto diag = op->emitError() << "target op of failed DLTI query";
         diag.attachNote(reportOp->getLoc())
             << "got non-DLTI-queryable attribute upon looking up keys ["
-            << keys.take_front(idx) << "] at op";
+            << commaSeparatedKeys << "] at op";
       }
       return failure();
     }

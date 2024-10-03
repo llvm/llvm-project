@@ -213,7 +213,7 @@ protected:
 
   StringRef getOwningModuleName(const Decl &D) {
     if (auto *OwningModule = D.getImportedOwningModule())
-      return OwningModule->Name;
+      return OwningModule->getTopLevelModule()->Name;
 
     return {};
   }

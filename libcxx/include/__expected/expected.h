@@ -17,9 +17,11 @@
 #include <__functional/invoke.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
@@ -503,25 +505,24 @@ public:
 
 private:
   template <class _Up, class _OtherErr, class _UfQual, class _OtherErrQual>
-  using __can_convert =
-      _And< is_constructible<_Tp, _UfQual>,
-            is_constructible<_Err, _OtherErrQual>,
-            _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
-                _And< 
-                      _Not<_And<is_same<_Tp, _Up>, is_same<_Err, _OtherErr>>>, // use the copy constructor instead, see #92676
-                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
-                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
-                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
-                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
-                      _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
-                      _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
-                      _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
-                      _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>>,
-                true_type>,
-            _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>>>,
-            _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>> >;
+  using __can_convert = _And<
+      is_constructible<_Tp, _UfQual>,
+      is_constructible<_Err, _OtherErrQual>,
+      _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
+          _And< _Not<_And<is_same<_Tp, _Up>, is_same<_Err, _OtherErr>>>, // use the copy constructor instead, see #92676
+                _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
+                _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
+                _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
+                _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
+                _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
+                _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
+                _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
+                _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>>,
+          true_type>,
+      _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
+      _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>>>,
+      _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
+      _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>> >;
 
   template <class _Func, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(

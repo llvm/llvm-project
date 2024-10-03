@@ -998,31 +998,9 @@ bool Vectorizer::isSafeToMove(
   LLVM_DEBUG(dbgs() << "LSV: isSafeToMove(" << *ChainElem << " -> "
                     << *ChainBegin << ")\n");
 
-  assert(isa<LoadInst>(ChainElem) == IsLoadChain &&
-         isa<LoadInst>(ChainBegin) == IsLoadChain);
-
+  assert(isa<LoadInst>(ChainElem) == IsLoadChain);
   if (ChainElem == ChainBegin)
     return true;
-
-  if constexpr (IsLoadChain) {
-    // If ChainElem depends on ChainBegin, they're not safe to reorder.
-    SmallVector<Instruction *, 8> Worklist;
-    Worklist.emplace_back(ChainElem);
-    while (!Worklist.empty()) {
-      Instruction *I = Worklist.pop_back_val();
-      for (Use &O : I->operands()) {
-        if (isa<PHINode>(O))
-          continue;
-        if (auto *J = dyn_cast<Instruction>(O)) {
-          if (J == ChainBegin) {
-            LLVM_DEBUG(dbgs() << "LSV: dependent loads; not safe to reorder\n");
-            return false;
-          }
-          Worklist.emplace_back(J);
-        }
-      }
-    }
-  }
 
   // Invariant loads can always be reordered; by definition they are not
   // clobbered by stores.

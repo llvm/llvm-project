@@ -1122,7 +1122,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("apple-a16", "armv8.6-a"),
                       AArch64CPUTestParams("apple-m3", "armv8.6-a"),
                       AArch64CPUTestParams("apple-a17", "armv8.6-a"),
-                      AArch64CPUTestParams("apple-m4", "armv9.2-a"),
+                      AArch64CPUTestParams("apple-m4", "armv8.7-a"),
                       AArch64CPUTestParams("exynos-m3", "armv8-a"),
                       AArch64CPUTestParams("exynos-m4", "armv8.2-a"),
                       AArch64CPUTestParams("exynos-m5", "armv8.2-a"),

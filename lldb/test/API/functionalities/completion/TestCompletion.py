@@ -708,7 +708,7 @@ class CommandLineCompletionTestCase(TestBase):
         )
         self.check_completion_with_desc(
             "frame recognizer delete ",
-            [["0", "py_class, module module_name, symbol recognizer_name"]],
+            [["0", "py_class, module module_name, demangled symbol recognizer_name"]],
         )
 
     def test_platform_install_local_file(self):

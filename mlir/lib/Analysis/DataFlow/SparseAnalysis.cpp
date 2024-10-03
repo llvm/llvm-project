@@ -34,7 +34,7 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
   AnalysisState::onUpdate(solver);
 
   // Push all users of the value to the queue.
-  for (Operation *user : point.get<Value>().getUsers())
+  for (Operation *user : anchor.get<Value>().getUsers())
     for (DataFlowAnalysis *analysis : useDefSubscribers)
       solver->enqueue({user, analysis});
 }
@@ -46,7 +46,7 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
 AbstractSparseForwardDataFlowAnalysis::AbstractSparseForwardDataFlowAnalysis(
     DataFlowSolver &solver)
     : DataFlowAnalysis(solver) {
-  registerPointKind<CFGEdge>();
+  registerAnchorKind<CFGEdge>();
 }
 
 LogicalResult
@@ -86,10 +86,7 @@ AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
 LogicalResult AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
     return visitOperation(op);
-  else if (Block *block = llvm::dyn_cast_if_present<Block *>(point))
-    visitBlock(block);
-  else
-    return failure();
+  visitBlock(point.get<Block *>());
   return success();
 }
 
@@ -217,7 +214,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     // If the edge from the predecessor block to the current block is not live,
     // bail out.
     auto *edgeExecutable =
-        getOrCreate<Executable>(getProgramPoint<CFGEdge>(predecessor, block));
+        getOrCreate<Executable>(getLatticeAnchor<CFGEdge>(predecessor, block));
     edgeExecutable->blockContentSubscribe(this);
     if (!edgeExecutable->isLive())
       continue;
@@ -324,7 +321,7 @@ void AbstractSparseForwardDataFlowAnalysis::join(
 AbstractSparseBackwardDataFlowAnalysis::AbstractSparseBackwardDataFlowAnalysis(
     DataFlowSolver &solver, SymbolTableCollection &symbolTable)
     : DataFlowAnalysis(solver), symbolTable(symbolTable) {
-  registerPointKind<CFGEdge>();
+  registerAnchorKind<CFGEdge>();
 }
 
 LogicalResult
@@ -355,14 +352,10 @@ LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
     return visitOperation(op);
-  else if (llvm::dyn_cast_if_present<Block *>(point))
-    // For backward dataflow, we don't have to do any work for the blocks
-    // themselves. CFG edges between blocks are processed by the BranchOp
-    // logic in `visitOperation`, and entry blocks for functions are tied
-    // to the CallOp arguments by visitOperation.
-    return success();
-  else
-    return failure();
+  // For backward dataflow, we don't have to do any work for the blocks
+  // themselves. CFG edges between blocks are processed by the BranchOp
+  // logic in `visitOperation`, and entry blocks for functions are tied
+  // to the CallOp arguments by visitOperation.
   return success();
 }
 
@@ -449,7 +442,7 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // For function calls, connect the arguments of the entry blocks to the
   // operands of the call op that are forwarded to these arguments.
   if (auto call = dyn_cast<CallOpInterface>(op)) {
-    Operation *callableOp = call.resolveCallable(&symbolTable);
+    Operation *callableOp = call.resolveCallableInTable(&symbolTable);
     if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
       // Not all operands of a call op forward to arguments. Such operands are
       // stored in `unaccounted`.

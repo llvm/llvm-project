@@ -2,7 +2,7 @@
 if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0.0)
   message(STATUS "Can only test with Clang compiler in version 6.0.0 or later.")
-  libomptarget_warning_say("The check-libomptarget target will not be available!")
+  message(WARNING "The check-offload target will not be available!")
   return()
 endif()
 

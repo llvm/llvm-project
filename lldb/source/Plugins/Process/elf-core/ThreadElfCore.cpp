@@ -280,7 +280,7 @@ Status ELFLinuxPrStatus::Parse(const DataExtractor &data,
                                const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_PRSTATUS size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
@@ -376,7 +376,7 @@ Status ELFLinuxPrPsInfo::Parse(const DataExtractor &data,
   Status error;
   ByteOrder byteorder = data.GetByteOrder();
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_PRPSINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
@@ -544,7 +544,7 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
 Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
   Status error;
   if (GetSize(arch) > data.GetByteSize()) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;

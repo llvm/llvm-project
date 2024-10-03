@@ -1,6 +1,6 @@
 /// The static TLS block is reused among by threads. The shadow is cleared.
 // RUN: %clang_nsan %s -o %t
-// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
+// RUN: env NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
 
 #include <pthread.h>
 #include <stdio.h>

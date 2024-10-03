@@ -73,6 +73,8 @@ static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
 static const bool EnableAATrace = false;
 #endif
 
+AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
+
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 

@@ -81,13 +81,13 @@ uint32_t ARM::calcEFlags() const {
   // with BE-8 code.
   uint32_t armBE8 = 0;
 
-  if (config->armVFPArgs == ARMVFPArgKind::Base ||
-      config->armVFPArgs == ARMVFPArgKind::Default)
+  if (ctx.arg.armVFPArgs == ARMVFPArgKind::Base ||
+      ctx.arg.armVFPArgs == ARMVFPArgKind::Default)
     abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
-  else if (config->armVFPArgs == ARMVFPArgKind::VFP)
+  else if (ctx.arg.armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
 
-  if (!config->isLE && config->armBe8)
+  if (!ctx.arg.isLE && ctx.arg.armBe8)
     armBE8 = EF_ARM_BE8;
 
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
@@ -134,11 +134,11 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_SBREL32:
     return R_ARM_SBREL;
   case R_ARM_TARGET1:
-    return config->target1Rel ? R_PC : R_ABS;
+    return ctx.arg.target1Rel ? R_PC : R_ABS;
   case R_ARM_TARGET2:
-    if (config->target2 == Target2Policy::Rel)
+    if (ctx.arg.target2 == Target2Policy::Rel)
       return R_PC;
-    if (config->target2 == Target2Policy::Abs)
+    if (ctx.arg.target2 == Target2Policy::Abs)
       return R_ABS;
     return R_GOT_PC;
   case R_ARM_TLS_GD32:
@@ -198,13 +198,13 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
 }
 
 RelType ARM::getDynRel(RelType type) const {
-  if ((type == R_ARM_ABS32) || (type == R_ARM_TARGET1 && !config->target1Rel))
+  if ((type == R_ARM_ABS32) || (type == R_ARM_TARGET1 && !ctx.arg.target1Rel))
     return R_ARM_ABS32;
   return R_ARM_NONE;
 }
 
 void ARM::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write32(buf, in.plt->getVA());
+  write32(buf, ctx.in.plt->getVA());
 }
 
 void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -223,15 +223,15 @@ static void writePltHeaderLong(uint8_t *buf) {
   write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
   write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
   write32(buf + 28, 0xd4d4d4d4);
-  uint64_t gotPlt = in.gotPlt->getVA();
-  uint64_t l1 = in.plt->getVA() + 8;
+  uint64_t gotPlt = ctx.in.gotPlt->getVA();
+  uint64_t l1 = ctx.in.plt->getVA() + 8;
   write32(buf + 16, gotPlt - l1 - 8);
 }
 
 // True if we should use Thumb PLTs, which currently require Thumb2, and are
 // only used if the target does not have the ARM ISA.
 static bool useThumbPLTs() {
-  return config->armHasThumb2ISA && !config->armHasArmISA;
+  return ctx.arg.armHasThumb2ISA && !ctx.arg.armHasArmISA;
 }
 
 // The default PLT header requires the .got.plt to be within 128 Mb of the
@@ -249,7 +249,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
     // At 0x8, we want to jump to .got.plt, the -16 accounts for 8 bytes from
     // `pc` in the add instruction and 8 bytes for the `lr` adjustment.
     //
-    uint64_t offset = in.gotPlt->getVA() - in.plt->getVA() - 16;
+    uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 16;
     assert(llvm::isUInt<32>(offset) && "This should always fit into a 32-bit offset");
     write16(buf + 0, 0xb500);
     // Split into two halves to support endianness correctly.
@@ -277,7 +277,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
         0xe5bef000, //     ldr pc, [lr, #0x00000NNN] &(.got.plt -L1 - 4)
     };
 
-    uint64_t offset = in.gotPlt->getVA() - in.plt->getVA() - 4;
+    uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 4;
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
       writePltHeaderLong(buf);
@@ -407,7 +407,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1));
+        (!ctx.arg.armHasBlx && (s.getVA() & 1));
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
@@ -420,7 +420,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
-        (!config->armHasBlx && (s.getVA() & 1) == 0);;
+        (!ctx.arg.armHasBlx && (s.getVA() & 1) == 0);;
   }
   }
   return false;
@@ -456,7 +456,7 @@ uint32_t ARM::getThunkSectionSpacing() const {
   // range. On earlier Architectures such as ARMv4, ARMv5 and ARMv6 (except
   // ARMv6T2) the range is +/- 4MiB.
 
-  return (config->armJ1J2BranchEncoding) ? 0x1000000 - 0x30000
+  return (ctx.arg.armJ1J2BranchEncoding) ? 0x1000000 - 0x30000
                                          : 0x400000 - 0x7500;
 }
 
@@ -481,7 +481,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     return llvm::isInt<21>(offset);
   case R_ARM_THM_JUMP24:
   case R_ARM_THM_CALL:
-    return config->armJ1J2BranchEncoding ? llvm::isInt<25>(offset)
+    return ctx.arg.armJ1J2BranchEncoding ? llvm::isInt<25>(offset)
                                          : llvm::isInt<23>(offset);
   default:
     return true;
@@ -697,7 +697,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     } else {
       write16(loc + 2, (read16(loc + 2) & ~0x1000) | 1 << 12);
     }
-    if (!config->armJ1J2BranchEncoding) {
+    if (!ctx.arg.armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
       checkInt(loc, val, 23, rel);
@@ -909,7 +909,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x07ff) << 1));  // imm11:0
   }
   case R_ARM_THM_CALL:
-    if (!config->armJ1J2BranchEncoding) {
+    if (!ctx.arg.armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
       uint16_t hi = read16(buf);
@@ -1215,7 +1215,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
       continue;
     }
 
-    if (symtab.cmseImportLib.count(sym->getName())) {
+    if (ctx.symtab->cmseImportLib.count(sym->getName())) {
       error("CMSE symbol '" + sym->getName() +
             "' is multiply defined in import library '" + toString(this) + "'");
       continue;
@@ -1227,7 +1227,7 @@ template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
            Twine(ACLESESYM_SIZE) + " bytes");
     }
 
-    symtab.cmseImportLib[sym->getName()] = sym;
+    ctx.symtab->cmseImportLib[sym->getName()] = sym;
   }
 }
 
@@ -1261,25 +1261,25 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
 void elf::processArmCmseSymbols() {
-  if (!config->cmseImplib)
+  if (!ctx.arg.cmseImplib)
     return;
-  // Only symbols with external linkage end up in symtab, so no need to do
+  // Only symbols with external linkage end up in ctx.symtab, so no need to do
   // linkage checks. Only check symbol type.
-  for (Symbol *acleSeSym : symtab.getSymbols()) {
+  for (Symbol *acleSeSym : ctx.symtab->getSymbols()) {
     if (!acleSeSym->getName().starts_with(ACLESESYM_PREFIX))
       continue;
     // If input object build attributes do not support CMSE, error and disable
     // further scanning for <sym>, __acle_se_<sym> pairs.
-    if (!config->armCMSESupport) {
+    if (!ctx.arg.armCMSESupport) {
       error("CMSE is only supported by ARMv8-M architecture or later");
-      config->cmseImplib = false;
+      ctx.arg.cmseImplib = false;
       break;
     }
 
     // Try to find the associated symbol definition.
     // Symbol must have external linkage.
     StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
-    Symbol *sym = symtab.find(name);
+    Symbol *sym = ctx.symtab->find(name);
     if (!sym) {
       error(toString(acleSeSym->file) + ": cmse special symbol '" +
             acleSeSym->getName() +
@@ -1295,7 +1295,7 @@ void elf::processArmCmseSymbols() {
     }
 
     // <sym> may be redefined later in the link in .gnu.sgstubs
-    symtab.cmseSymMap[name] = {acleSeSym, sym};
+    ctx.symtab->cmseSymMap[name] = {acleSeSym, sym};
   }
 
   // If this is an Arm CMSE secure app, replace references to entry symbol <sym>
@@ -1304,8 +1304,8 @@ void elf::processArmCmseSymbols() {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
     for (size_t i = 0, e = syms.size(); i != e; ++i) {
       StringRef symName = syms[i]->getName();
-      if (symtab.cmseSymMap.count(symName))
-        syms[i] = symtab.cmseSymMap[symName].acleSeSym;
+      if (ctx.symtab->cmseSymMap.count(symName))
+        syms[i] = ctx.symtab->cmseSymMap[symName].acleSeSym;
     }
   });
 }
@@ -1332,26 +1332,26 @@ ArmCmseSGSection::ArmCmseSGSection()
                        /*alignment=*/32, ".gnu.sgstubs") {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
-  for (auto &[_, sym] : symtab.cmseImportLib) {
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
     if (impLibMaxAddr <= sym->value)
       impLibMaxAddr = sym->value + sym->size;
   }
-  if (symtab.cmseSymMap.empty())
+  if (ctx.symtab->cmseSymMap.empty())
     return;
   addMappingSymbol();
-  for (auto &[_, entryFunc] : symtab.cmseSymMap)
+  for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap)
     addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
                 cast<Defined>(entryFunc.sym));
-  for (auto &[_, sym] : symtab.cmseImportLib) {
-    if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+  for (auto &[_, sym] : ctx.symtab->cmseImportLib) {
+    if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
       warn("entry function '" + sym->getName() +
            "' from CMSE import library is not present in secure application");
   }
 
-  if (!symtab.cmseImportLib.empty() && config->cmseOutputLib.empty()) {
-    for (auto &[_, entryFunc] : symtab.cmseSymMap) {
+  if (!ctx.symtab->cmseImportLib.empty() && ctx.arg.cmseOutputLib.empty()) {
+    for (auto &[_, entryFunc] : ctx.symtab->cmseSymMap) {
       Symbol *sym = entryFunc.sym;
-      if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+      if (!ctx.symtab->inCMSEOutImpLib.count(sym->getName()))
         warn("new entry function '" + sym->getName() +
              "' introduced but no output import library specified");
     }
@@ -1360,8 +1360,8 @@ ArmCmseSGSection::ArmCmseSGSection()
 
 void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   entries.emplace_back(acleSeSym, sym);
-  if (symtab.cmseImportLib.count(sym->getName()))
-    symtab.inCMSEOutImpLib[sym->getName()] = true;
+  if (ctx.symtab->cmseImportLib.count(sym->getName()))
+    ctx.symtab->inCMSEOutImpLib[sym->getName()] = true;
   // Symbol addresses different, nothing to do.
   if (acleSeSym->file != sym->file ||
       cast<Defined>(*acleSeSym).value != cast<Defined>(*sym).value)
@@ -1369,8 +1369,8 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   // Only secure symbols with values equal to that of it's non-secure
   // counterpart needs to be in the .gnu.sgstubs section.
   ArmCmseSGVeneer *ss = nullptr;
-  if (symtab.cmseImportLib.count(sym->getName())) {
-    Defined *impSym = symtab.cmseImportLib[sym->getName()];
+  if (ctx.symtab->cmseImportLib.count(sym->getName())) {
+    Defined *impSym = ctx.symtab->cmseImportLib[sym->getName()];
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
   } else {
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
@@ -1451,12 +1451,12 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
   osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
 
-  std::sort(symtab.cmseSymMap.begin(), symtab.cmseSymMap.end(),
+  std::sort(ctx.symtab->cmseSymMap.begin(), ctx.symtab->cmseSymMap.end(),
             [](const auto &a, const auto &b) -> bool {
               return a.second.sym->getVA() < b.second.sym->getVA();
             });
   // Copy the secure gateway entry symbols to the import library symbol table.
-  for (auto &p : symtab.cmseSymMap) {
+  for (auto &p : ctx.symtab->cmseSymMap) {
     Defined *d = cast<Defined>(p.second.sym);
     impSymTab->addSymbol(makeDefined(
         ctx.internalFile, d->getName(), d->computeBinding(),
@@ -1476,17 +1476,17 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
     off = osec->offset + osec->size;
   }
 
-  const uint64_t sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
+  const uint64_t sectionHeaderOff = alignToPowerOf2(off, ctx.arg.wordsize);
   const auto shnum = osIsPairs.size() + 1;
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      config->mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
-  unlinkAsync(config->cmseOutputLib);
+      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+  unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
-      FileOutputBuffer::create(config->cmseOutputLib, fileSize, flags);
+      FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);
   if (!bufferOrErr) {
-    error("failed to open " + config->cmseOutputLib + ": " +
+    error("failed to open " + ctx.arg.cmseOutputLib + ": " +
           llvm::toString(bufferOrErr.takeError()));
     return;
   }
@@ -1500,13 +1500,13 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   eHdr->e_entry = 0;
   eHdr->e_shoff = sectionHeaderOff;
   eHdr->e_ident[EI_CLASS] = ELFCLASS32;
-  eHdr->e_ident[EI_DATA] = config->isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_DATA] = ctx.arg.isLE ? ELFDATA2LSB : ELFDATA2MSB;
   eHdr->e_ident[EI_VERSION] = EV_CURRENT;
-  eHdr->e_ident[EI_OSABI] = config->osabi;
+  eHdr->e_ident[EI_OSABI] = ctx.arg.osabi;
   eHdr->e_ident[EI_ABIVERSION] = 0;
   eHdr->e_machine = EM_ARM;
   eHdr->e_version = EV_CURRENT;
-  eHdr->e_flags = config->eflags;
+  eHdr->e_flags = ctx.arg.eflags;
   eHdr->e_ehsize = sizeof(typename ELFT::Ehdr);
   eHdr->e_phnum = 0;
   eHdr->e_shentsize = sizeof(typename ELFT::Shdr);

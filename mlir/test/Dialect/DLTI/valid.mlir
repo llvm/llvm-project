@@ -206,3 +206,18 @@ module attributes {
     "GPU": #dlti.target_device_spec<
       #dlti.dl_entry<"L1_cache_size_in_bytes", "128">>
   >} {}
+
+
+// -----
+
+// CHECK: "test.op_with_dlti_map"() ({
+// CHECK: }) {dlti.map = #dlti.map<#dlti.dl_entry<"dlti.unknown_id", 42 : i64>>}
+"test.op_with_dlti_map"() ({
+}) { dlti.map = #dlti.map<#dlti.dl_entry<"dlti.unknown_id", 42>> } : () -> ()
+
+// -----
+
+// CHECK: "test.op_with_dlti_map"() ({
+// CHECK: }) {dlti.map = #dlti.map<#dlti.dl_entry<i32, 42 : i64>>}
+"test.op_with_dlti_map"() ({
+}) { dlti.map = #dlti.map<#dlti.dl_entry<i32, 42>> } : () -> ()

@@ -36,8 +36,8 @@ public:
   /// Lattices can only be created for values.
   AbstractSparseLattice(Value value) : AnalysisState(value) {}
 
-  /// Return the program point this lattice is located at.
-  Value getPoint() const { return AnalysisState::getPoint().get<Value>(); }
+  /// Return the value this lattice is located at.
+  Value getAnchor() const { return AnalysisState::getAnchor().get<Value>(); }
 
   /// Join the information contained in 'rhs' into this lattice. Returns
   /// if the value of the lattice changed.
@@ -86,8 +86,8 @@ class Lattice : public AbstractSparseLattice {
 public:
   using AbstractSparseLattice::AbstractSparseLattice;
 
-  /// Return the program point this lattice is located at.
-  Value getPoint() const { return point.get<Value>(); }
+  /// Return the value this lattice is located at.
+  Value getAnchor() const { return anchor.get<Value>(); }
 
   /// Return the value held by this lattice. This requires that the value is
   /// initialized.

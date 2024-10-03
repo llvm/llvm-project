@@ -220,15 +220,9 @@ public:
 
   bool isIllegalInteger(uint64_t Width) const { return !isLegalInteger(Width); }
 
-  /// Returns true if the given alignment exceeds the natural stack alignment.
-  bool exceedsNaturalStackAlignment(Align Alignment) const {
-    return StackNaturalAlign && (Alignment > *StackNaturalAlign);
-  }
-
-  Align getStackAlignment() const {
-    assert(StackNaturalAlign && "StackNaturalAlign must be defined");
-    return *StackNaturalAlign;
-  }
+  /// Returns the natural stack alignment, or MaybeAlign() if one wasn't
+  /// specified.
+  MaybeAlign getStackAlignment() const { return StackNaturalAlign; }
 
   unsigned getAllocaAddrSpace() const { return AllocaAddrSpace; }
 
@@ -427,8 +421,9 @@ public:
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
-    TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
+    TypeSize StoreSizeInBits = getTypeStoreSizeInBits(Ty);
+    return {StoreSizeInBits.getKnownMinValue() / 8,
+            StoreSizeInBits.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by
@@ -439,7 +434,10 @@ public:
   ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
   TypeSize getTypeStoreSizeInBits(Type *Ty) const {
-    return 8 * getTypeStoreSize(Ty);
+    TypeSize BaseSize = getTypeSizeInBits(Ty);
+    uint64_t AlignedSizeInBits =
+        alignToPowerOf2(BaseSize.getKnownMinValue(), 8);
+    return {AlignedSizeInBits, BaseSize.isScalable()};
   }
 
   /// Returns true if no extra padding bits are needed when storing the

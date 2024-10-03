@@ -1035,8 +1035,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
       if (Name.starts_with("ds.fadd") || Name.starts_with("ds.fmin") ||
           Name.starts_with("ds.fmax") ||
-          Name.starts_with("global.atomic.fadd.v2bf16") ||
-          Name.starts_with("flat.atomic.fadd.v2bf16")) {
+          Name.starts_with("global.atomic.fadd") ||
+          Name.starts_with("flat.atomic.fadd")) {
         // Replaced with atomicrmw fadd/fmin/fmax, so there's no new
         // declaration.
         NewFn = nullptr;
@@ -1168,6 +1168,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
       break; // No other 'experimental.vector.*'.
     }
+    if (Name.consume_front("experimental.stepvector.")) {
+      Intrinsic::ID ID = Intrinsic::stepvector;
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                        F->getFunctionType()->getReturnType());
+      return true;
+    }
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -1261,6 +1268,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("atomic.load.add."))
         // nvvm.atomic.load.add.{f32.p,f64.p}
         Expand = Name.starts_with("f32.p") || Name.starts_with("f64.p");
+      else if (Name.consume_front("bitcast."))
+        // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
+        Expand =
+            Name == "f2i" || Name == "i2f" || Name == "ll2d" || Name == "d2ll";
       else
         Expand = false;
 
@@ -4251,6 +4262,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
                                    F->getParent(), Intrinsic::convert_from_fp16,
                                    {Builder.getFloatTy()}),
                                CI->getArgOperand(0), "h2f");
+      } else if (Name.consume_front("bitcast.") &&
+                 (Name == "f2i" || Name == "i2f" || Name == "ll2d" ||
+                  Name == "d2ll")) {
+        Rep = Builder.CreateBitCast(CI->getArgOperand(0), CI->getType());
       } else {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
         if (IID != Intrinsic::not_intrinsic &&
@@ -4323,7 +4338,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
              "Must have same number of elements");
 
       SmallVector<Value *> Args(CI->args());
-      Value *NewCI = Builder.CreateCall(NewFn, Args);
+      CallInst *NewCI = Builder.CreateCall(NewFn, Args);
+      NewCI->setAttributes(CI->getAttributes());
       Value *Res = PoisonValue::get(OldST);
       for (unsigned Idx = 0; Idx < OldST->getNumElements(); ++Idx) {
         Value *Elem = Builder.CreateExtractValue(NewCI, Idx);

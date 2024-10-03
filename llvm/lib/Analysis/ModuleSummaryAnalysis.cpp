@@ -99,10 +99,11 @@ extern cl::opt<bool> MemProfReportHintedSizes;
 // can only take an address of basic block located in the same function.
 // Set `RefLocalLinkageIFunc` to true if the analyzed value references a
 // local-linkage ifunc.
-static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
-                         SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
-                         SmallPtrSet<const User *, 8> &Visited,
-                         bool &RefLocalLinkageIFunc) {
+static bool
+findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
+             SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &RefEdges,
+             SmallPtrSet<const User *, 8> &Visited,
+             bool &RefLocalLinkageIFunc) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
   if (Visited.insert(CurUser).second)
@@ -308,9 +309,9 @@ static void computeFunctionSummary(
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
-            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+            SmallVector<FunctionSummary::EdgeTy, 0>>
       CallGraphEdges;
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges, LoadRefEdges,
+  SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges, LoadRefEdges,
       StoreRefEdges;
   SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> TypeTests;
   SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
@@ -568,16 +569,17 @@ static void computeFunctionSummary(
   if (PSI->hasPartialSampleProfile() && ScalePartialSampleProfileWorkingSetSize)
     Index.addBlockCount(F.size());
 
-  std::vector<ValueInfo> Refs;
+  SmallVector<ValueInfo, 0> Refs;
   if (IsThinLTO) {
-    auto AddRefEdges = [&](const std::vector<const Instruction *> &Instrs,
-                           SetVector<ValueInfo, std::vector<ValueInfo>> &Edges,
-                           SmallPtrSet<const User *, 8> &Cache) {
-      for (const auto *I : Instrs) {
-        Cache.erase(I);
-        findRefEdges(Index, I, Edges, Cache, HasLocalIFuncCallOrRef);
-      }
-    };
+    auto AddRefEdges =
+        [&](const std::vector<const Instruction *> &Instrs,
+            SetVector<ValueInfo, SmallVector<ValueInfo, 0>> &Edges,
+            SmallPtrSet<const User *, 8> &Cache) {
+          for (const auto *I : Instrs) {
+            Cache.erase(I);
+            findRefEdges(Index, I, Edges, Cache, HasLocalIFuncCallOrRef);
+          }
+        };
 
     // By now we processed all instructions in a function, except
     // non-volatile loads and non-volatile value stores. Let's find
@@ -671,9 +673,9 @@ static void computeFunctionSummary(
   if (auto *SSI = GetSSICallback(F))
     ParamAccesses = SSI->getParamAccesses(Index);
   auto FuncSummary = std::make_unique<FunctionSummary>(
-      Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
-      CallGraphEdges.takeVector(), TypeTests.takeVector(),
-      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
+      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
+      TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector(), std::move(ParamAccesses),
       std::move(Callsites), std::move(Allocs));
@@ -805,7 +807,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    DenseSet<GlobalValue::GUID> &CantBePromoted,
                                    const Module &M,
                                    SmallVectorImpl<MDNode *> &Types) {
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
+  SetVector<ValueInfo, SmallVector<ValueInfo, 0>> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   bool RefLocalIFunc = false;
   bool HasBlockAddress =
@@ -961,8 +963,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         /* MayThrow */ true,
                         /* HasUnknownCall */ true,
                         /* MustBeUnreachable */ false},
-                    /*EntryCount=*/0, ArrayRef<ValueInfo>{},
-                    ArrayRef<FunctionSummary::EdgeTy>{},
+                    SmallVector<ValueInfo, 0>{},
+                    SmallVector<FunctionSummary::EdgeTy, 0>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
@@ -978,7 +980,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     GlobalVarSummary::GVarFlags(
                         false, false, cast<GlobalVariable>(GV)->isConstant(),
                         GlobalObject::VCallVisibilityPublic),
-                    ArrayRef<ValueInfo>{});
+                    SmallVector<ValueInfo, 0>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
         });

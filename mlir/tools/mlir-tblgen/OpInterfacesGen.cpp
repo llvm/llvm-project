@@ -61,10 +61,10 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
 
 /// Get an array of all OpInterface definitions but exclude those subclassing
 /// "DeclareOpInterfaceMethods".
-static std::vector<llvm::Record *>
+static std::vector<const llvm::Record *>
 getAllInterfaceDefinitions(const llvm::RecordKeeper &recordKeeper,
                            StringRef name) {
-  std::vector<llvm::Record *> defs =
+  std::vector<const llvm::Record *> defs =
       recordKeeper.getAllDerivedDefinitions((name + "Interface").str());
 
   std::string declareName = ("Declare" + name + "InterfaceMethods").str();
@@ -88,7 +88,7 @@ public:
   bool emitInterfaceDocs();
 
 protected:
-  InterfaceGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os)
+  InterfaceGenerator(std::vector<const llvm::Record *> &&defs, raw_ostream &os)
       : defs(std::move(defs)), os(os) {}
 
   void emitConceptDecl(const Interface &interface);
@@ -99,7 +99,7 @@ protected:
   void emitInterfaceDecl(const Interface &interface);
 
   /// The set of interface records to emit.
-  std::vector<llvm::Record *> defs;
+  std::vector<const llvm::Record *> defs;
   // The stream to emit to.
   raw_ostream &os;
   /// The C++ value type of the interface, e.g. Operation*.
@@ -607,8 +607,8 @@ bool InterfaceGenerator::emitInterfaceDecls() {
   llvm::emitSourceFileHeader("Interface Declarations", os);
   // Sort according to ID, so defs are emitted in the order in which they appear
   // in the Tablegen file.
-  std::vector<llvm::Record *> sortedDefs(defs);
-  llvm::sort(sortedDefs, [](llvm::Record *lhs, llvm::Record *rhs) {
+  std::vector<const llvm::Record *> sortedDefs(defs);
+  llvm::sort(sortedDefs, [](const llvm::Record *lhs, const llvm::Record *rhs) {
     return lhs->getID() < rhs->getID();
   });
   for (const llvm::Record *def : sortedDefs)

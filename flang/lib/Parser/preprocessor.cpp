@@ -769,7 +769,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
       if (included->bytes() > 0) {
         ProvenanceRange fileRange{
             allSources_.AddIncludedFile(*included, dir.GetProvenanceRange())};
-        Prescanner{prescanner, /*isNestedInIncludeDirective=*/true}
+        Prescanner{prescanner, *this, /*isNestedInIncludeDirective=*/true}
             .set_encoding(included->encoding())
             .Prescan(fileRange);
       }

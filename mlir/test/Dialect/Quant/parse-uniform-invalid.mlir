@@ -120,3 +120,28 @@
 // provided.
 // expected-error@+1 {{expected floating point literal}}
 !qalias = !quant.uniform<i8<-4:3>:f32, {2.000000e+02,-19.987200e-01:1}>
+
+// -----
+// Illegal negative axis in per-axis quantization
+// expected-error@+1 {{illegal quantized dimension: -1}}
+!qalias = !quant.uniform<i8:f32:-1, {2.0,3.0:1}>
+
+// -----
+// Scale f16 underflow
+// expected-error@+1 {{scale out of expressed type range}}
+!qalias = !quant.uniform<i8:f16, 5.8e-8>
+
+// -----
+// Scale f16 overflow
+// expected-error@+1 {{scale out of expressed type range}}
+!qalias = !quant.uniform<i8:f16, 6.6e4>
+
+// -----
+// Scale f16 underflow in per-axis quantization
+// expected-error@+1 {{scale out of expressed type range}}
+!qalias = !quant.uniform<i8:f16:1, {2.0,5.8e-8}>
+
+// -----
+// Scale f16 overflow in per-axis quantization
+// expected-error@+1 {{scale out of expressed type range}}
+!qalias = !quant.uniform<i8:f16:1, {2.0,6.6e4}>

@@ -187,7 +187,6 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s4
 ; CHECK-NEXT:    ; kill: killed $vgpr4
 ; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4

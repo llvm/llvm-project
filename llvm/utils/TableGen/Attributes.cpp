@@ -17,7 +17,7 @@ namespace {
 
 class Attributes {
 public:
-  Attributes(RecordKeeper &R) : Records(R) {}
+  Attributes(const RecordKeeper &R) : Records(R) {}
   void run(raw_ostream &OS);
 
 private:
@@ -25,7 +25,7 @@ private:
   void emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr);
   void emitAttributeProperties(raw_ostream &OF);
 
-  RecordKeeper &Records;
+  const RecordKeeper &Records;
 };
 
 } // End anonymous namespace.
@@ -85,10 +85,7 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
      << "                                        const Function &Callee) {\n";
   OS << "  bool Ret = true;\n\n";
 
-  std::vector<Record *> CompatRules =
-      Records.getAllDerivedDefinitions("CompatRule");
-
-  for (auto *Rule : CompatRules) {
+  for (const Record *Rule : Records.getAllDerivedDefinitions("CompatRule")) {
     StringRef FuncName = Rule->getValueAsString("CompatFunc");
     OS << "  Ret &= " << FuncName << "(Caller, Callee";
     StringRef AttrName = Rule->getValueAsString("AttrName");
@@ -101,12 +98,10 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
   OS << "  return Ret;\n";
   OS << "}\n\n";
 
-  std::vector<Record *> MergeRules =
-      Records.getAllDerivedDefinitions("MergeRule");
   OS << "static inline void mergeFnAttrs(Function &Caller,\n"
      << "                                const Function &Callee) {\n";
 
-  for (auto *Rule : MergeRules) {
+  for (const Record *Rule : Records.getAllDerivedDefinitions("MergeRule")) {
     StringRef FuncName = Rule->getValueAsString("MergeFunc");
     OS << "  " << FuncName << "(Caller, Callee);\n";
   }

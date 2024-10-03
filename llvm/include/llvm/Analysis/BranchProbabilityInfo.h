@@ -169,7 +169,7 @@ public:
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
-  /// as having a relative probability >= 80%.
+  /// as having a relative probability > 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
   /// Print an edge's probability.

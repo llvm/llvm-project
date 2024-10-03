@@ -1363,7 +1363,7 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
     I->eraseFromParent();
 
 That's all you have to do. Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' Options.To specify when to execute the codepath.
+the '``--debug-counter``' Options. To specify when to execute the codepath.
 
 .. code-block:: none
 

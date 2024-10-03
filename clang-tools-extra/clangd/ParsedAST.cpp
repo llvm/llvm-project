@@ -280,6 +280,8 @@ public:
     llvm::StringRef Check;
     while (!Checks.empty()) {
       std::tie(Check, Checks) = Checks.split(',');
+      Check = Check.trim();
+
       if (Check.empty())
         continue;
 
@@ -688,7 +690,9 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Marks = Patch->marks();
   }
   auto &PP = Clang->getPreprocessor();
-  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, Macros));
+  auto MacroCollector = std::make_unique<CollectMainFileMacros>(PP, Macros);
+  auto *MacroCollectorPtr = MacroCollector.get(); // so we can call doneParse()
+  PP.addPPCallbacks(std::move(MacroCollector));
 
   PP.addPPCallbacks(
       collectPragmaMarksCallback(Clang->getSourceManager(), Marks));
@@ -708,6 +712,10 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   if (llvm::Error Err = Action->Execute())
     log("Execute() failed when building AST for {0}: {1}", MainInput.getFile(),
         toString(std::move(Err)));
+
+  // Disable the macro collector for the remainder of this function, e.g.
+  // clang-tidy checkers.
+  MacroCollectorPtr->doneParse();
 
   // We have to consume the tokens before running clang-tidy to avoid collecting
   // tokens from running the preprocessor inside the checks (only

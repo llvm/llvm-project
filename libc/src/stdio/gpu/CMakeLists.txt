@@ -295,6 +295,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rename
+  SRCS
+    rename.cpp
+  HDRS
+    ../rename.h
+  DEPENDS
+    libc.hdr.types.FILE
+    .gpu_file
+)
+
+add_entrypoint_object(
   stdin
   SRCS
     stdin.cpp

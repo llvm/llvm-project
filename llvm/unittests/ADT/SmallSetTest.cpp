@@ -41,6 +41,40 @@ TEST(SmallSetTest, Insert) {
   EXPECT_EQ(0u, s1.count(4));
 }
 
+TEST(SmallSetTest, InsertPerfectFwd) {
+  struct Value {
+    int Key;
+    bool Moved;
+
+    Value(int Key) : Key(Key), Moved(false) {}
+    Value(const Value &) = default;
+    Value(Value &&Other) : Key(Other.Key), Moved(false) { Other.Moved = true; }
+    bool operator==(const Value &Other) const { return Key == Other.Key; }
+    bool operator<(const Value &Other) const { return Key < Other.Key; }
+  };
+
+  {
+    SmallSet<Value, 4> S;
+    Value V1(1), V2(2);
+
+    S.insert(V1);
+    EXPECT_EQ(V1.Moved, false);
+
+    S.insert(std::move(V2));
+    EXPECT_EQ(V2.Moved, true);
+  }
+  {
+    SmallSet<Value, 1> S;
+    Value V1(1), V2(2);
+
+    S.insert(V1);
+    EXPECT_EQ(V1.Moved, false);
+
+    S.insert(std::move(V2));
+    EXPECT_EQ(V2.Moved, true);
+  }
+}
+
 TEST(SmallSetTest, Grow) {
   SmallSet<int, 4> s1;
 

@@ -2182,7 +2182,7 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
   if (AI.getKind() == ABIArgInfo::Indirect ||
       AI.getKind() == ABIArgInfo::IndirectAliased)
     return true;
-  if (AI.getKind() == ABIArgInfo::Extend)
+  if (AI.getKind() == ABIArgInfo::Extend && !AI.isNoExt())
     return true;
   if (!DL.typeSizeEqualsStoreSize(Ty))
     // TODO: This will result in a modest amount of values not marked noundef
@@ -2567,8 +2567,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   case ABIArgInfo::Extend:
     if (RetAI.isSignExt())
       RetAttrs.addAttribute(llvm::Attribute::SExt);
-    else
+    else if (RetAI.isZeroExt())
       RetAttrs.addAttribute(llvm::Attribute::ZExt);
+    else
+      RetAttrs.addAttribute(llvm::Attribute::NoExt);
     [[fallthrough]];
   case ABIArgInfo::Direct:
     if (RetAI.getInReg())
@@ -2708,8 +2710,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     case ABIArgInfo::Extend:
       if (AI.isSignExt())
         Attrs.addAttribute(llvm::Attribute::SExt);
-      else
+      else if (AI.isZeroExt())
         Attrs.addAttribute(llvm::Attribute::ZExt);
+      else
+        Attrs.addAttribute(llvm::Attribute::NoExt);
       [[fallthrough]];
     case ABIArgInfo::Direct:
       if (ArgNo == 0 && FI.isChainCall())
@@ -2809,6 +2813,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     switch (FI.getExtParameterInfo(ArgNo).getABI()) {
+    case ParameterABI::HLSLOut:
+    case ParameterABI::HLSLInOut:
+      Attrs.addAttribute(llvm::Attribute::NoAlias);
+      break;
     case ParameterABI::Ordinary:
       break;
 
@@ -4132,6 +4140,15 @@ static void emitWriteback(CodeGenFunction &CGF,
   assert(!isProvablyNull(srcAddr.getBasePointer()) &&
          "shouldn't have writeback for provably null argument");
 
+  if (writeback.WritebackExpr) {
+    CGF.EmitIgnoredExpr(writeback.WritebackExpr);
+
+    if (writeback.LifetimeSz)
+      CGF.EmitLifetimeEnd(writeback.LifetimeSz,
+                          writeback.Temporary.getBasePointer());
+    return;
+  }
+
   llvm::BasicBlock *contBB = nullptr;
 
   // If the argument wasn't provably non-null, we need to null check
@@ -4594,6 +4611,9 @@ void CodeGenFunction::EmitCallArgs(
     // Un-reverse the arguments we just evaluated so they match up with the LLVM
     // IR function.
     std::reverse(Args.begin() + CallArgsStart, Args.end());
+
+    // Reverse the writebacks to match the MSVC ABI.
+    Args.reverseWritebacks();
   }
 }
 
@@ -4672,6 +4692,12 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
+
+  // Add writeback for HLSLOutParamExpr.
+  if (const HLSLOutArgExpr *OE = dyn_cast<HLSLOutArgExpr>(E)) {
+    EmitHLSLOutArgExpr(OE, args, type);
+    return;
+  }
 
   if (E->isGLValue()) {
     assert(E->getObjectKind() == OK_Ordinary);

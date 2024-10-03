@@ -20,7 +20,7 @@ define i32 @abs(i32 %a) {
 define i1 @slet(i32 %a, i32 %b) {
 ; CHECK-LABEL: slet:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cv.slet a0, a0, a1
+; CHECK-NEXT:    cv.sle a0, a0, a1
 ; CHECK-NEXT:    ret
   %1 = icmp sle i32 %a, %b
   ret i1 %1
@@ -29,7 +29,7 @@ define i1 @slet(i32 %a, i32 %b) {
 define i1 @sletu(i32 %a, i32 %b) {
 ; CHECK-LABEL: sletu:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cv.sletu a0, a0, a1
+; CHECK-NEXT:    cv.sleu a0, a0, a1
 ; CHECK-NEXT:    ret
   %1 = icmp ule i32 %a, %b
   ret i1 %1

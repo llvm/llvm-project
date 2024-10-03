@@ -120,6 +120,7 @@ declare i32 @Base2_foo(ptr)
 declare i32 @Base1_foo(ptr)
 declare void @Base3_foo(ptr)
 
+!llvm.module.flags = !{!11}
 !0 = !{i64 16, !"Base1"}
 !1 = !{i64 40, !"Base1"}
 !2 = !{i64 16, !"Base2"}
@@ -131,6 +132,23 @@ declare void @Base3_foo(ptr)
 !8 = !{i64 16, !"Derived3"}
 !9 = !{!"VP", i32 2, i64 1600, i64 -4123858694673519054, i64 600, i64 -7211198353767973908, i64 500, i64 -3574436251470806727, i64 200, i64 6288809125658696740, i64 200, i64 12345678, i64 100}
 !10 = !{!"VP", i32 0, i64 1600, i64 3827408714133779784, i64 600, i64 5837445539218476403, i64 500, i64 -9064955852395570538, i64 400,  i64 56781234, i64 100}
+
+!11 = !{i32 1, !"ProfileSummary", !12}
+!12 = !{!13, !14, !15, !16, !17, !18, !19, !20}
+!13 = !{!"ProfileFormat", !"InstrProf"}
+!14 = !{!"TotalCount", i64 10000}
+!15 = !{!"MaxCount", i64 10}
+!16 = !{!"MaxInternalCount", i64 1}
+!17 = !{!"MaxFunctionCount", i64 1000}
+!18 = !{!"NumCounts", i64 3}
+!19 = !{!"NumFunctions", i64 3}
+!20 = !{!"DetailedSummary", !21}
+!21 = !{!22, !23, !24}
+!22 = !{i32 10000, i64 101, i32 1}
+!23 = !{i32 990000, i64 101, i32 1}
+!24 = !{i32 999999, i64 1, i32 2}
+
+
 ;.
 ; VTABLE-COMMON: [[PROF9]] = !{!"VP", i32 2, i64 100, i64 12345678, i64 100}
 ; VTABLE-COMMON: [[PROF10]] = !{!"branch_weights", i32 600, i32 1000}
