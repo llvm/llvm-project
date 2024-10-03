@@ -17,7 +17,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_tan
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_tanh
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_trunc
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_radians
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_hlsl_elementwise_radians
 
 double test_double_builtin(double p0) {
     return TEST_FUNC(p0);
