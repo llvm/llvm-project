@@ -4367,16 +4367,17 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
         NaN = DAG.getNode(ISD::OR, DL, I32, Narrow, ImmV(0x400000));
     } else if (SrcVT == MVT::nxv2f64 &&
                (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+      // Round to float without introducing rounding errors and try again.
       SDValue Pg = getPredicateForVector(DAG, DL, MVT::nxv2f32);
       Narrow = DAG.getNode(AArch64ISD::FCVTX_MERGE_PASSTHRU, DL, MVT::nxv2f32,
                            Pg, SrcVal, DAG.getUNDEF(MVT::nxv2f32));
 
-      if (Subtarget->hasBF16())
-        return DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, VT, Pg,
-                           Narrow, DAG.getTargetConstant(0, DL, MVT::i64),
-                           DAG.getUNDEF(VT));
-
-      Narrow = getSVESafeBitCast(I32, Narrow, DAG);
+      SmallVector<SDValue, 3> NewOps;
+      if (IsStrict)
+        NewOps.push_back(Op.getOperand(0));
+      NewOps.push_back(Narrow);
+      NewOps.push_back(Op.getOperand(IsStrict ? 2 : 1));
+      return DAG.getNode(Op.getOpcode(), DL, VT, NewOps, Op->getFlags());
     } else
       return SDValue();
 
