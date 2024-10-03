@@ -371,13 +371,23 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
     if (Level < BlockInfoStack.size()) {
       const auto &DestBlockInfo =
           BlockInfoStack[BlockInfoStack.size() - Level - 1];
-      if (compareTypes(SentTypes, DestBlockInfo.Sig.Returns)) {
-        std::string ErrorMsg =
-            ErrorMsgBase + "type mismatch, catch tag type is " +
-            getTypesString(SentTypes) + ", but destination's type is " +
-            getTypesString(DestBlockInfo.Sig.Returns);
-        Error |= typeError(ErrorLoc, ErrorMsg);
-      }
+     if (DestBlockInfo.IsLoop) {
+        if (compareTypes(SentTypes, DestBlockInfo.Sig.Params)) {
+          std::string ErrorMsg =
+              ErrorMsgBase + "type mismatch, catch tag type is " +
+              getTypesString(SentTypes) + ", but destination's type is " +
+              getTypesString(DestBlockInfo.Sig.Params);
+          Error |= typeError(ErrorLoc, ErrorMsg);
+        }
+     } else {
+       if (compareTypes(SentTypes, DestBlockInfo.Sig.Returns)) {
+         std::string ErrorMsg =
+             ErrorMsgBase + "type mismatch, catch tag type is " +
+             getTypesString(SentTypes) + ", but destination's type is " +
+             getTypesString(DestBlockInfo.Sig.Returns);
+         Error |= typeError(ErrorLoc, ErrorMsg);
+       }
+     }
     } else {
       Error = typeError(ErrorLoc, ErrorMsgBase + "invalid depth " +
                                       std::to_string(Level));
