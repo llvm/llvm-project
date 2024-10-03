@@ -68,6 +68,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MmapWriteExecChecker.cpp
   MIGChecker.cpp
   MoveChecker.cpp
+  MutexModeling.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
   MPI-Checker/MPIFunctionClassifier.cpp
