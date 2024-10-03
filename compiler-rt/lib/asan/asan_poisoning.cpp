@@ -600,17 +600,15 @@ static void SlowCopyContainerAnnotations(uptr src_beg, uptr src_end,
     uptr granule_end = granule_beg + granularity;
     uptr unpoisoned_bytes = 0;
 
-    for (; dst_ptr != granule_end && dst_ptr != dst_end; ++dst_ptr, ++src_ptr) {
+    for (; dst_ptr != granule_end && dst_ptr != dst_end; ++dst_ptr, ++src_ptr)
       if (!AddressIsPoisoned(src_ptr))
         unpoisoned_bytes = dst_ptr - granule_beg + 1;
-    }
     if (dst_ptr < dst_end || dst_ptr == dst_end_down ||
         AddressIsPoisoned(dst_end)) {
-      if (unpoisoned_bytes != 0 || granule_beg >= dst_beg) {
+      if (unpoisoned_bytes != 0 || granule_beg >= dst_beg)
         SetContainerGranule(granule_beg, unpoisoned_bytes);
-      } else if (!AddressIsPoisoned(dst_beg)) {
+      else if (!AddressIsPoisoned(dst_beg))
         SetContainerGranule(granule_beg, dst_beg - granule_beg);
-      }
     }
   }
 }
@@ -630,21 +628,17 @@ static void SlowReversedCopyContainerAnnotations(uptr src_beg, uptr src_end,
     uptr granule_beg = RoundDownTo(dst_ptr - 1, granularity);
     uptr unpoisoned_bytes = 0;
 
-    for (; dst_ptr != granule_beg && dst_ptr != dst_beg; --dst_ptr, --src_ptr) {
-      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(src_ptr - 1)) {
+    for (; dst_ptr != granule_beg && dst_ptr != dst_beg; --dst_ptr, --src_ptr)
+      if (unpoisoned_bytes == 0 && !AddressIsPoisoned(src_ptr - 1))
         unpoisoned_bytes = dst_ptr - granule_beg;
-      }
-    }
 
-    if (dst_ptr >= dst_end_down && !AddressIsPoisoned(dst_end)) {
+    if (dst_ptr >= dst_end_down && !AddressIsPoisoned(dst_end))
       continue;
-    }
 
-    if (granule_beg == dst_ptr || unpoisoned_bytes != 0) {
+    if (granule_beg == dst_ptr || unpoisoned_bytes != 0)
       SetContainerGranule(granule_beg, unpoisoned_bytes);
-    } else if (!AddressIsPoisoned(dst_beg)) {
+    else if (!AddressIsPoisoned(dst_beg))
       SetContainerGranule(granule_beg, dst_beg - granule_beg);
-    }
   }
 }
 
@@ -656,11 +650,10 @@ static void CopyContainerFirstGranuleAnnotation(uptr src_beg, uptr dst_beg) {
   // First granule
   uptr dst_beg_down = RoundDownTo(dst_beg, granularity);
   uptr src_beg_down = RoundDownTo(src_beg, granularity);
-  if (!AddressIsPoisoned(src_beg)) {
+  if (!AddressIsPoisoned(src_beg))
     *(u8 *)MemToShadow(dst_beg_down) = *(u8 *)MemToShadow(src_beg_down);
-  } else if (!AddressIsPoisoned(dst_beg)) {
+  else if (!AddressIsPoisoned(dst_beg))
     SetContainerGranule(dst_beg_down, dst_beg - dst_beg_down);
-  }
 }
 
 // A helper function for __sanitizer_copy_contiguous_container_annotations,
@@ -671,11 +664,10 @@ static void CopyContainerLastGranuleAnnotation(uptr src_end,
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   // Last granule
   uptr src_end_down = RoundDownTo(src_end, granularity);
-  if (AddressIsPoisoned(src_end)) {
+  if (AddressIsPoisoned(src_end))
     *(u8 *)MemToShadow(dst_end_down) = *(u8 *)MemToShadow(src_end_down);
-  } else {
+  else
     SetContainerGranule(dst_end_down, src_end - src_end_down);
-  }
 }
 
 // This function copies ASan memory annotations (poisoned/unpoisoned states)
@@ -727,11 +719,10 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   bool copy_in_reversed_order = src_beg < dst_beg && dst_beg <= src_end_up;
   if (src_beg % granularity != dst_beg % granularity ||
       RoundDownTo(dst_end - 1, granularity) <= dst_beg) {
-    if (copy_in_reversed_order) {
+    if (copy_in_reversed_order) 
       SlowReversedCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
-    } else {
+     else 
       SlowCopyContainerAnnotations(src_beg, src_end, dst_beg, dst_end);
-    }
     return;
   }
 
@@ -740,13 +731,11 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   uptr dst_beg_up = RoundUpTo(dst_beg, granularity);
   uptr dst_end_down = RoundDownTo(dst_end, granularity);
   if (copy_in_reversed_order) {
-    if (dst_end_down != dst_end && AddressIsPoisoned(dst_end)) {
+    if (dst_end_down != dst_end && AddressIsPoisoned(dst_end))
       CopyContainerLastGranuleAnnotation(src_end, dst_end_down);
-    }
   } else {
-    if (dst_beg_up != dst_beg) {
+    if (dst_beg_up != dst_beg)
       CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
-    }
   }
 
   if (dst_end_down > dst_beg_up) {
@@ -757,13 +746,10 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   }
 
   if (copy_in_reversed_order) {
-    if (dst_beg_up != dst_beg) {
+    if (dst_beg_up != dst_beg)
       CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
-    }
-  } else {
-    if (dst_end_down != dst_end && AddressIsPoisoned(dst_end)) {
-      CopyContainerLastGranuleAnnotation(src_end, dst_end_down);
-    }
+  } else if (dst_end_down != dst_end && AddressIsPoisoned(dst_end)) {
+    CopyContainerLastGranuleAnnotation(src_end, dst_end_down);
   }
 }
 
