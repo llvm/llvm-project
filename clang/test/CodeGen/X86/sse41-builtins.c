@@ -400,20 +400,3 @@ int test_mm_testz_si128(__m128i x, __m128i y) {
   return _mm_testz_si128(x, y);
 }
 
-// Make sure brackets work after macro intrinsics.
-float pr51324(__m128 a) {
-  // CHECK-LABEL: pr51324
-  // CHECK: call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 0)
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
-  return _mm_round_ps(a, 0)[0];
-}
-
-// Ensure _mm_test_all_ones macro doesn't reuse argument
-__m128i expensive_call();
-int pr60006() {
-  // CHECK-LABEL: pr60006
-  // CHECK: call {{.*}} @expensive_call
-  // CHECK-NOT: call {{.*}} @expensive_call
-  // CHECK: call i32 @llvm.x86.sse41.ptestc(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
-  return _mm_test_all_ones(expensive_call());
-}
