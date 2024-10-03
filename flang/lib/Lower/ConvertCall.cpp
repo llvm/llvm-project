@@ -2570,9 +2570,26 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
           hlfir::Entity{*var}, /*isPresent=*/std::nullopt});
       continue;
     }
+    // arguments of bitwise comparison functions may not have nsw flag
+    // even if -fno-wrapv is enabled
+    mlir::arith::IntegerOverflowFlags iofBackup{};
+    auto isBitwiseComparison = [](const std::string intrinsicName) -> bool {
+      if (intrinsicName == "bge" || intrinsicName == "bgt" ||
+          intrinsicName == "ble" || intrinsicName == "blt")
+        return true;
+      return false;
+    };
+    if (isBitwiseComparison(callContext.getProcedureName())) {
+      iofBackup = callContext.getBuilder().getIntegerOverflowFlags();
+      callContext.getBuilder().setIntegerOverflowFlags(
+          mlir::arith::IntegerOverflowFlags::none);
+    }
     auto loweredActual = Fortran::lower::convertExprToHLFIR(
         loc, callContext.converter, *expr, callContext.symMap,
         callContext.stmtCtx);
+    if (isBitwiseComparison(callContext.getProcedureName()))
+      callContext.getBuilder().setIntegerOverflowFlags(iofBackup);
+
     std::optional<mlir::Value> isPresent;
     if (argLowering) {
       fir::ArgLoweringRule argRules =
