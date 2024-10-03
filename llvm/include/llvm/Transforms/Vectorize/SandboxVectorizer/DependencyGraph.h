@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Utils.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
@@ -63,10 +64,10 @@ public:
   /// \Returns true if \p I is a memory dependency candidate instruction.
   static bool isMemDepCandidate(Instruction *I) {
     AllocaInst *Alloca;
-    return I->isMemDepCandidate() ||
+    return Utils::isMemDepCandidate(I) ||
            ((Alloca = dyn_cast<AllocaInst>(I)) &&
             Alloca->isUsedWithInAlloca()) ||
-           I->isStackSaveOrRestoreIntrinsic();
+           Utils::isStackSaveOrRestoreIntrinsic(I);
   }
 
   Instruction *getInstruction() const { return I; }
