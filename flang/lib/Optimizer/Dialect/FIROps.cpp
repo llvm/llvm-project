@@ -2088,7 +2088,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
   matchAndRewrite(mlir::Operation *op,
                   mlir::PatternRewriter &rewriter) const override {
     auto insval = mlir::dyn_cast_or_null<fir::InsertValueOp>(op);
-    if (!insval || !mlir::isa<fir::ComplexType>(insval.getType()))
+    if (!insval || !mlir::isa<mlir::ComplexType>(insval.getType()))
       return mlir::failure();
     auto insval2 = mlir::dyn_cast_or_null<fir::InsertValueOp>(
         insval.getAdt().getDefiningOp());

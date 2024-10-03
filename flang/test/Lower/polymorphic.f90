@@ -343,7 +343,7 @@ module polymorphic_test
 ! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_LOG]]) {{.*}} : (!fir.class<none>) -> ()
 
-! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.complex<4>>) -> !fir.class<none>
+! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}} : (!fir.ref<complex<f32>>) -> !fir.class<none>
 ! CHECK: fir.call @_QMpolymorphic_testPup_input(%[[BOX_COMPLEX]]) {{.*}} : (!fir.class<none>) -> ()
 
   subroutine up_arr_input(a)
@@ -377,7 +377,7 @@ module polymorphic_test
 ! CHECK: %[[BOX_LOG:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.logical<4>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
 ! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_LOG]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
 
-! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.complex<4>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
+! CHECK: %[[BOX_COMPLEX:.*]] = fir.embox %{{.*}}(%{{.*}}) : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.class<!fir.array<2xnone>>
 ! CHECK: fir.call @_QMpolymorphic_testPup_arr_input(%[[BOX_COMPLEX]]) {{.*}} : (!fir.class<!fir.array<2xnone>>) -> ()
 
   subroutine assign_polymorphic_allocatable()

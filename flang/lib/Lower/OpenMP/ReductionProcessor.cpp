@@ -178,9 +178,8 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
   case ReductionIdentifier::OR:
   case ReductionIdentifier::EQV:
   case ReductionIdentifier::NEQV:
-    if (auto cplxTy = mlir::dyn_cast<fir::ComplexType>(type)) {
-      mlir::Type realTy =
-          lower::convertReal(builder.getContext(), cplxTy.getFKind());
+    if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
+      mlir::Type realTy = cplxTy.getElementType();
       mlir::Value initRe = builder.createRealConstant(
           loc, realTy, getOperationIdentity(redId, loc));
       mlir::Value initIm = builder.createRealConstant(loc, realTy, 0);
