@@ -652,8 +652,10 @@ static void SlowReversedCopyContainerAnnotations(uptr src_beg, uptr src_end,
 static void CopyContainerFirstGranuleAnnotation(uptr src_beg, uptr dst_beg) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   // First granule
-  uptr dst_beg_down = RoundDownTo(dst_beg, granularity);
   uptr src_beg_down = RoundDownTo(src_beg, granularity);
+  uptr dst_beg_down = RoundDownTo(dst_beg, granularity);
+  if (dst_beg_down == dst_beg)
+    return;
   if (!AddressIsPoisoned(src_beg))
     *(u8 *)MemToShadow(dst_beg_down) = *(u8 *)MemToShadow(src_beg_down);
   else if (!AddressIsPoisoned(dst_beg))
@@ -663,11 +665,13 @@ static void CopyContainerFirstGranuleAnnotation(uptr src_beg, uptr dst_beg) {
 // A helper function for __sanitizer_copy_contiguous_container_annotations,
 // has assumption about begin and end of the container.
 // Should not be used stand alone.
-static void CopyContainerLastGranuleAnnotation(uptr src_end,
-                                               uptr dst_end_down) {
+static void CopyContainerLastGranuleAnnotation(uptr src_end, uptr dst_end) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   // Last granule
   uptr src_end_down = RoundDownTo(src_end, granularity);
+  uptr dst_end_down = RoundDownTo(dst_end, granularity);
+  if (dst_end_down == dst_end || !AddressIsPoisoned(dst_end))
+    return;
   if (AddressIsPoisoned(src_end))
     *(u8 *)MemToShadow(dst_end_down) = *(u8 *)MemToShadow(src_end_down);
   else
@@ -735,26 +739,21 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   // from the middle.
   uptr dst_beg_up = RoundUpTo(dst_beg, granularity);
   uptr dst_end_down = RoundDownTo(dst_end, granularity);
-  if (copy_in_reversed_order) {
-    if (dst_end_down != dst_end && AddressIsPoisoned(dst_end))
-      CopyContainerLastGranuleAnnotation(src_end, dst_end_down);
-  } else {
-    if (dst_beg_up != dst_beg)
-      CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
-  }
+  if (copy_in_reversed_order)
+    CopyContainerLastGranuleAnnotation(src_end, dst_end);
+  else
+    CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
 
   if (dst_beg_up < dst_end_down) {
     internal_memmove((u8 *)MemToShadow(dst_beg_up),
-                    (u8 *)MemToShadow(src_beg_up),
-                    (dst_end_down - dst_beg_up) / granularity);
+                     (u8 *)MemToShadow(src_beg_up),
+                     (dst_end_down - dst_beg_up) / granularity);
   }
 
-  if (copy_in_reversed_order) {
-    if (dst_beg_up != dst_beg)
-      CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
-  } else if (dst_end_down != dst_end && AddressIsPoisoned(dst_end)) {
-    CopyContainerLastGranuleAnnotation(src_end, dst_end_down);
-  }
+  if (copy_in_reversed_order)
+    CopyContainerFirstGranuleAnnotation(src_beg, dst_beg);
+  else
+    CopyContainerLastGranuleAnnotation(src_end, dst_end);
 }
 
 static const void *FindBadAddress(uptr begin, uptr end, bool poisoned) {
