@@ -318,6 +318,7 @@ def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
+  Dependencies<[MutexModeling]>,
   Documentation<NotDocumented>,
   Hidden;
 
@@ -516,6 +517,7 @@ def UnixAPIMisuseChecker : Checker<"API">,
 
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
+  Dependencies<[MutexModeling]>,
   Documentation<HasDocumentation>;
 
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
@@ -621,7 +623,7 @@ def ChrootChecker : Checker<"Chroot">,
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
-  Dependencies<[PthreadLockBase]>,
+  Dependencies<[PthreadLockBase, MutexModeling]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
