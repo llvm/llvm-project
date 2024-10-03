@@ -741,6 +741,10 @@ enum ASTRecordTypes {
   /// canonical declaration for the lambda class from the same module as
   /// enclosing function.
   FUNCTION_DECL_TO_LAMBDAS_MAP = 71,
+
+  /// Record code for Sema's vector of functions/blocks with effects to
+  /// be verified.
+  DECLS_WITH_EFFECTS_TO_VERIFY = 72,
 };
 
 /// Record types used within a source manager block.
