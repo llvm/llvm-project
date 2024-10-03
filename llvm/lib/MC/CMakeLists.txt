@@ -82,6 +82,7 @@ add_llvm_component_library(LLVMMC
   BinaryFormat
   CAS
   CASUtil
+  DebugInfoCodeView
 
   DEPENDS
   intrinsics_gen
