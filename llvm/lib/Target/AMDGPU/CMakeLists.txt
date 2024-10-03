@@ -173,7 +173,6 @@ add_llvm_target(AMDGPUCodeGen
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
-  AMDGPUFixWaveGroupEntry.cpp
   AMDGPUMarkPromotableLaneShared.cpp
   AMDGPUMarkPromotablePrivate.cpp
   AMDGPUIdxRegAlloc.cpp

@@ -260,7 +260,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
     "SIShrinkInstructions.cpp",
-    "AMDGPUFixWaveGroupEntry.cpp",
     "SIWholeQuadMode.cpp",
   ]
 }

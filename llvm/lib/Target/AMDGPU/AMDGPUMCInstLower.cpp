@@ -110,7 +110,8 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     // Regmasks are like implicit defs.
     return false;
   case MachineOperand::MO_MCSymbol:
-    if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET) {
+    if (MO.getTargetFlags() == SIInstrInfo::MO_FAR_BRANCH_OFFSET ||
+        MO.getTargetFlags() == SIInstrInfo::MO_NUM_VGPRS) {
       MCSymbol *Sym = MO.getMCSymbol();
       MCOp = MCOperand::createExpr(Sym->getVariableValue());
       return true;

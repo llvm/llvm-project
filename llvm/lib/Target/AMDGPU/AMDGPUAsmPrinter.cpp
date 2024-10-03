@@ -687,6 +687,27 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
   }
 
+  // Replace the "num vgprs" placeholder that was inserted by frame lowering.
+  // We rely on this placeholder only appearing once.
+  if (MFI->isEntryFunction() && AMDGPU::getWavegroupEnable(MF.getFunction())) {
+    MachineBasicBlock &Entry = MF.front();
+    for (MachineInstr &MI : Entry) {
+      bool Found = false;
+      for (auto &Op : MI.uses()) {
+        if (Op.isTargetIndex() && Op.getIndex() == AMDGPU::TI_NUM_VGPRS) {
+          Op.ChangeToMCSymbol(RI.getSymbol(MF.getName(),
+                                           MCResourceInfo::RIK_NumVGPR,
+                                           OutContext),
+                              SIInstrInfo::MO_NUM_VGPRS);
+          Found = true;
+          break;
+        }
+      }
+      if (Found)
+        break;
+    }
+  }
+
   DumpCodeInstEmitter = nullptr;
   if (STM.dumpCode()) {
     // For -dumpcode, get the assembler out of the streamer. This only works
