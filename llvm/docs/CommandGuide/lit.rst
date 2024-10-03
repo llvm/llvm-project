@@ -535,6 +535,7 @@ TestRunner.py:
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
  %t                      temporary file name unique to the test
+ %basename_s             The last path component of %s
  %basename_t             The last path component of %t but without the ``.tmp`` extension
  %T                      parent directory of %t (not unique, deprecated, do not use)
  %%                      %
