@@ -26,7 +26,7 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   };
 
 protected:
@@ -97,6 +97,9 @@ public:
 
   const char *getOpcodeName() const { return getOpcodeName(Opc); }
 
+  const DataLayout &getDataLayout() const {
+    return cast<llvm::Instruction>(Val)->getModule()->getDataLayout();
+  }
   // Note that these functions below are calling into llvm::Instruction.
   // A sandbox IR instruction could introduce a new opcode that could change the
   // behavior of one of these functions. It is better that these functions are
@@ -332,26 +335,6 @@ public:
 
   // TODO: Missing functions.
 
-  bool isStackSaveOrRestoreIntrinsic() const {
-    auto *I = cast<llvm::Instruction>(Val);
-    return match(I,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
-           match(I, PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
-  }
-
-  /// We consider \p I as a Memory Dependency Candidate instruction if it
-  /// reads/write memory or if it has side-effects. This is used by the
-  /// dependency graph.
-  bool isMemDepCandidate() const {
-    auto *I = cast<llvm::Instruction>(Val);
-    return I->mayReadOrWriteMemory() &&
-           (!isa<llvm::IntrinsicInst>(I) ||
-            (cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
-                 Intrinsic::sideeffect &&
-             cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
-                 Intrinsic::pseudoprobe));
-  }
-
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
 #endif
@@ -365,7 +348,7 @@ template <typename LLVMT> class SingleLLVMInstructionImpl : public Instruction {
 
   // All instructions are friends with this so they can call the constructor.
 #define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   friend class UnaryInstruction;
   friend class CallBase;
   friend class FuncletPadInst;

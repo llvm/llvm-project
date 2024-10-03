@@ -969,7 +969,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForTriple(Triple &T) {
+object::Archive::Kind Archive::getDefaultKindForTriple(const Triple &T) {
   if (T.isOSDarwin())
     return object::Archive::K_DARWIN;
   if (T.isOSAIX())
