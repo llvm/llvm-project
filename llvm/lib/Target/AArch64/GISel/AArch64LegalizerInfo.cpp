@@ -295,7 +295,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_FPOWI)
       .scalarize(0)
       .minScalar(0, s32)
-      .libcallFor({{s32, s32}, {s64, s32}});
+      .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
 
   getActionDefinitionsBuilder(G_INSERT)
       .legalIf(all(typeInSet(0, {s32, s64, p0}),
