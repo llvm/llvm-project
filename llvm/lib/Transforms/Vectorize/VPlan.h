@@ -172,6 +172,7 @@ private:
   Kind LaneKind;
 
 public:
+  VPLane(unsigned Lane) : Lane(Lane), LaneKind(VPLane::Kind::First) {}
   VPLane(unsigned Lane, Kind LaneKind) : Lane(Lane), LaneKind(LaneKind) {}
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
@@ -230,23 +231,6 @@ public:
   }
 };
 
-/// VPIteration represents a single point in the iteration space of the output
-/// (vectorized and/or unrolled) IR loop.
-struct VPIteration {
-  /// in [0..UF)
-  unsigned Part;
-
-  VPLane Lane;
-
-  VPIteration(unsigned Part, unsigned Lane,
-              VPLane::Kind Kind = VPLane::Kind::First)
-      : Part(Part), Lane(Lane, Kind) {}
-
-  VPIteration(unsigned Part, const VPLane &Lane) : Part(Part), Lane(Lane) {}
-
-  bool isFirstIteration() const { return Part == 0 && Lane.isFirstLane(); }
-};
-
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
@@ -254,13 +238,13 @@ struct VPTransformState {
                    DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan);
 
-  /// The chosen Vectorization and Unroll Factors of the loop being vectorized.
+  /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
-  /// Hold the indices to generate specific scalar instructions. Null indicates
+  /// Hold the index to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
-  std::optional<VPIteration> Instance;
+  std::optional<VPLane> Lane;
 
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
@@ -275,15 +259,15 @@ struct VPTransformState {
   Value *get(VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(VPValue *Def, const VPIteration &Instance);
+  Value *get(VPValue *Def, const VPLane &Lane);
 
   bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
 
-  bool hasScalarValue(VPValue *Def, VPIteration Instance) {
+  bool hasScalarValue(VPValue *Def, VPLane Lane) {
     auto I = Data.VPV2Scalars.find(Def);
     if (I == Data.VPV2Scalars.end())
       return false;
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     return CacheIdx < I->second.size() && I->second[CacheIdx];
   }
 
@@ -291,7 +275,7 @@ struct VPTransformState {
   /// IsScalar is false. If \p IsScalar is true, set the scalar in lane 0.
   void set(VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
-      set(Def, V, VPIteration(0, 0));
+      set(Def, V, VPLane(0));
       return;
     }
     assert((VF.isScalar() || V->getType()->isVectorTy()) &&
@@ -305,23 +289,23 @@ struct VPTransformState {
     Data.VPV2Vector[Def] = V;
   }
 
-  /// Set the generated scalar \p V for \p Def and the given \p Instance.
-  void set(VPValue *Def, Value *V, const VPIteration &Instance) {
+  /// Set the generated scalar \p V for \p Def and the given \p Lane.
+  void set(VPValue *Def, Value *V, const VPLane &Lane) {
     auto Iter = Data.VPV2Scalars.insert({Def, {}});
     auto &Scalars = Iter.first->second;
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
       Scalars.resize(CacheIdx + 1);
     assert(!Scalars[CacheIdx] && "should overwrite existing value");
     Scalars[CacheIdx] = V;
   }
 
-  /// Reset an existing scalar value for \p Def and a given \p Instance.
-  void reset(VPValue *Def, Value *V, const VPIteration &Instance) {
+  /// Reset an existing scalar value for \p Def and a given \p Lane.
+  void reset(VPValue *Def, Value *V, const VPLane &Lane) {
     auto Iter = Data.VPV2Scalars.find(Def);
     assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
-    unsigned CacheIdx = Instance.Lane.mapToCacheIndex(VF);
+    unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     assert(CacheIdx < Iter->second.size() &&
            "need to overwrite existing value");
     Iter->second[CacheIdx] = V;
@@ -345,7 +329,7 @@ struct VPTransformState {
   void setDebugLocFrom(DebugLoc DL);
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
-  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance);
+  void packScalarIntoVectorValue(VPValue *Def, const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -923,6 +907,7 @@ public:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
     case VPRecipeBase::VPWidenStoreSC:
+    case VPRecipeBase::VPHistogramSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -1253,9 +1238,7 @@ public:
     ComputeReductionResult,
     // Takes the VPValue to extract from as first operand and the lane or part
     // to extract as second operand, counting from the end starting with 1 for
-    // last. The second operand must be a positive constant and <= VF when
-    // extracting from a vector or <= UF when extracting from an unrolled
-    // scalar.
+    // last. The second operand must be a positive constant and <= VF.
     ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
@@ -1291,7 +1274,7 @@ private:
   /// Utility methods serving execute(): generates a scalar single instance of
   /// the modeled instruction for a given lane. \returns the scalar generated
   /// value for lane \p Lane.
-  Value *generatePerLane(VPTransformState &State, const VPIteration &Lane);
+  Value *generatePerLane(VPTransformState &State, const VPLane &Lane);
 
 #if !defined(NDEBUG)
   /// Return true if the VPInstruction is a floating point math operation, i.e.
@@ -1626,7 +1609,7 @@ public:
 };
 
 /// A recipe for widening Call instructions.
-class VPWidenCallRecipe : public VPSingleDefRecipe {
+class VPWidenCallRecipe : public VPRecipeWithIRFlags {
   /// ID of the vector intrinsic to call when widening the call. If set the
   /// Intrinsic::not_intrinsic, a library call will be used instead.
   Intrinsic::ID VectorIntrinsicID;
@@ -1641,7 +1624,8 @@ public:
   VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
                     Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
+      : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
+                            *cast<Instruction>(UV)),
         VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
@@ -1677,6 +1661,51 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe representing a sequence of load -> update -> store as part of
+/// a histogram operation. This means there may be aliasing between vector
+/// lanes, which is handled by the llvm.experimental.vector.histogram family
+/// of intrinsics. The only update operations currently supported are
+/// 'add' and 'sub' where the other term is loop-invariant.
+class VPHistogramRecipe : public VPRecipeBase {
+  /// Opcode of the update operation, currently either add or sub.
+  unsigned Opcode;
+
+public:
+  template <typename IterT>
+  VPHistogramRecipe(unsigned Opcode, iterator_range<IterT> Operands,
+                    DebugLoc DL = {})
+      : VPRecipeBase(VPDef::VPHistogramSC, Operands, DL), Opcode(Opcode) {}
+
+  ~VPHistogramRecipe() override = default;
+
+  VPHistogramRecipe *clone() override {
+    return new VPHistogramRecipe(Opcode, operands(), getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPHistogramSC);
+
+  /// Produce a vectorized histogram operation.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPHistogramRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Return the mask operand if one was provided, or a null pointer if all
+  /// lanes should be executed unconditionally.
+  VPValue *getMask() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
@@ -2727,6 +2756,10 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   /// Generate the wide load or gather.
   void execute(VPTransformState &State) override;
 
+  /// Return the cost of this VPWidenLoadEVLRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2804,6 +2837,10 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
 
   /// Generate the wide store or scatter.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenStoreEVLRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3281,6 +3318,10 @@ public:
   static inline bool classof(const VPBlockBase *V) {
     return V->getVPBlockID() == VPBlockBase::VPIRBasicBlockSC;
   }
+
+  /// Create a VPIRBasicBlock from \p IRBB containing VPIRInstructions for all
+  /// instructions in \p IRBB, except its terminator which is managed in VPlan.
+  static VPIRBasicBlock *fromBasicBlock(BasicBlock *IRBB);
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPBasicBlock, thereby "executing" the VPlan.

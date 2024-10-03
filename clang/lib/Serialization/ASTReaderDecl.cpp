@@ -4351,6 +4351,16 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
           reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
     DC->setHasExternalVisibleStorage(true);
   }
+
+  // Load any pending lambdas for the function.
+  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->isCanonicalDecl()) {
+    if (auto IT = FunctionToLambdasMap.find(ID);
+        IT != FunctionToLambdasMap.end()) {
+      for (auto LID : IT->second)
+        GetDecl(LID);
+      FunctionToLambdasMap.erase(IT);
+    }
+  }
 }
 
 void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {

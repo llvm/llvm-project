@@ -257,7 +257,7 @@ define i32 @nc1_addrspace(ptr %q, ptr addrspace(1) %p, i1 %b) {
 ; TUNIT-NEXT:    [[TMP:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
 ; TUNIT-NEXT:    [[TMP2:%.*]] = select i1 [[B]], ptr [[TMP]], ptr [[Q]]
 ; TUNIT-NEXT:    [[VAL:%.*]] = load i32, ptr [[TMP2]], align 4
-; TUNIT-NEXT:    store i32 0, ptr addrspace(1) [[P]], align 4
+; TUNIT-NEXT:    store i32 0, ptr [[TMP]], align 4
 ; TUNIT-NEXT:    store ptr [[Q]], ptr @g, align 8
 ; TUNIT-NEXT:    ret i32 [[VAL]]
 ;
@@ -272,7 +272,7 @@ define i32 @nc1_addrspace(ptr %q, ptr addrspace(1) %p, i1 %b) {
 ; CGSCC-NEXT:    [[TMP:%.*]] = addrspacecast ptr addrspace(1) [[P]] to ptr
 ; CGSCC-NEXT:    [[TMP2:%.*]] = select i1 [[B]], ptr [[TMP]], ptr [[Q]]
 ; CGSCC-NEXT:    [[VAL:%.*]] = load i32, ptr [[TMP2]], align 4
-; CGSCC-NEXT:    store i32 0, ptr addrspace(1) [[P]], align 4
+; CGSCC-NEXT:    store i32 0, ptr [[TMP]], align 4
 ; CGSCC-NEXT:    store ptr [[Q]], ptr @g, align 8
 ; CGSCC-NEXT:    ret i32 [[VAL]]
 ;

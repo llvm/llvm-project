@@ -1057,9 +1057,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   getThinLTOOldAndNewSuffix(OldSuffix, NewSuffix);
 
   for (claimed_file &F : Modules) {
-    if (options::thinlto && !HandleToInputFile.count(F.leader_handle))
-      HandleToInputFile.insert(std::make_pair(
-          F.leader_handle, std::make_unique<PluginInputFile>(F.handle)));
+    if (options::thinlto) {
+      auto [It, Inserted] = HandleToInputFile.try_emplace(F.leader_handle);
+      if (Inserted)
+        It->second = std::make_unique<PluginInputFile>(F.handle);
+    }
     // In case we are thin linking with a minimized bitcode file, ensure
     // the module paths encoded in the index reflect where the backends
     // will locate the full bitcode files for compiling/importing.

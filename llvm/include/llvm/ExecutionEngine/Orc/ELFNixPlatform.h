@@ -21,6 +21,7 @@
 
 #include <future>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -31,25 +32,37 @@ struct ELFPerObjectSectionsToRegister {
   ExecutorAddrRange ThreadDataSection;
 };
 
-struct ELFNixJITDylibInitializers {
-  using SectionList = std::vector<ExecutorAddrRange>;
+using ELFNixJITDylibDepInfo = std::vector<ExecutorAddr>;
+using ELFNixJITDylibDepInfoMap =
+    std::vector<std::pair<ExecutorAddr, ELFNixJITDylibDepInfo>>;
 
-  ELFNixJITDylibInitializers(std::string Name, ExecutorAddr DSOHandleAddress)
-      : Name(std::move(Name)), DSOHandleAddress(std::move(DSOHandleAddress)) {}
-
-  std::string Name;
-  ExecutorAddr DSOHandleAddress;
-
-  StringMap<SectionList> InitSections;
+struct RuntimeFunction {
+  RuntimeFunction(SymbolStringPtr Name) : Name(std::move(Name)) {}
+  SymbolStringPtr Name;
+  ExecutorAddr Addr;
 };
 
-class ELFNixJITDylibDeinitializers {};
+struct FunctionPairKeyHash {
+  std::size_t
+  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &key) const {
+    return std::hash<void *>()(key.first->Addr.toPtr<void *>()) ^
+           std::hash<void *>()(key.second->Addr.toPtr<void *>());
+  }
+};
 
-using ELFNixJITDylibInitializerSequence =
-    std::vector<ELFNixJITDylibInitializers>;
+struct FunctionPairKeyEqual {
+  std::size_t
+  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &lhs,
+             const std::pair<RuntimeFunction *, RuntimeFunction *> &rhs) const {
+    return lhs.first == rhs.first && lhs.second == rhs.second;
+  }
+};
 
-using ELFNixJITDylibDeinitializerSequence =
-    std::vector<ELFNixJITDylibDeinitializers>;
+using DeferredRuntimeFnMap = std::unordered_map<
+    std::pair<RuntimeFunction *, RuntimeFunction *>,
+    SmallVector<std::pair<shared::WrapperFunctionCall::ArgDataBufferType,
+                          shared::WrapperFunctionCall::ArgDataBufferType>>,
+    FunctionPairKeyHash, FunctionPairKeyEqual>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
 class ELFNixPlatform : public Platform {
@@ -126,6 +139,23 @@ public:
   standardRuntimeUtilityAliases();
 
 private:
+  // Data needed for bootstrap only.
+  struct BootstrapInfo {
+    std::mutex Mutex;
+    std::condition_variable CV;
+    size_t ActiveGraphs = 0;
+    ExecutorAddr ELFNixHeaderAddr;
+    DeferredRuntimeFnMap DeferredRTFnMap;
+
+    void addArgumentsToRTFnMap(
+        RuntimeFunction *func1, RuntimeFunction *func2,
+        const shared::WrapperFunctionCall::ArgDataBufferType &arg1,
+        const shared::WrapperFunctionCall::ArgDataBufferType &arg2) {
+      auto &argList = DeferredRTFnMap[std::make_pair(func1, func2)];
+      argList.emplace_back(arg1, arg2);
+    }
+  };
+
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
@@ -151,19 +181,22 @@ private:
                                      ResourceKey SrcKey) override {}
 
   private:
-    void addInitializerSupportPasses(MaterializationResponsibility &MR,
-                                     jitlink::PassConfiguration &Config);
+    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
+    Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
+    Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
 
     void addDSOHandleSupportPasses(MaterializationResponsibility &MR,
                                    jitlink::PassConfiguration &Config);
 
     void addEHAndTLVSupportPasses(MaterializationResponsibility &MR,
-                                  jitlink::PassConfiguration &Config);
+                                  jitlink::PassConfiguration &Config,
+                                  bool IsBootstrapping);
 
     Error preserveInitSections(jitlink::LinkGraph &G,
                                MaterializationResponsibility &MR);
 
-    Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD);
+    Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD,
+                               bool IsBootstrapping);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
@@ -171,11 +204,8 @@ private:
     ELFNixPlatform &MP;
   };
 
-  using SendInitializerSequenceFn =
-      unique_function<void(Expected<ELFNixJITDylibInitializerSequence>)>;
-
-  using SendDeinitializerSequenceFn =
-      unique_function<void(Expected<ELFNixJITDylibDeinitializerSequence>)>;
+  using PushInitializersSendResultFn =
+      unique_function<void(Expected<ELFNixJITDylibDepInfoMap>)>;
 
   using SendSymbolAddressFn = unique_function<void(Expected<ExecutorAddr>)>;
 
@@ -189,53 +219,58 @@ private:
   // Associate ELFNixPlatform JIT-side runtime support functions with handlers.
   Error associateRuntimeSupportFunctions(JITDylib &PlatformJD);
 
-  void getInitializersBuildSequencePhase(SendInitializerSequenceFn SendResult,
-                                         JITDylib &JD,
-                                         std::vector<JITDylibSP> DFSLinkOrder);
+  void pushInitializersLoop(PushInitializersSendResultFn SendResult,
+                            JITDylibSP JD);
 
-  void getInitializersLookupPhase(SendInitializerSequenceFn SendResult,
-                                  JITDylib &JD);
-
-  void rt_getInitializers(SendInitializerSequenceFn SendResult,
-                          StringRef JDName);
-
-  void rt_getDeinitializers(SendDeinitializerSequenceFn SendResult,
-                            ExecutorAddr Handle);
+  void rt_recordInitializers(PushInitializersSendResultFn SendResult,
+                             ExecutorAddr JDHeader);
 
   void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
                        StringRef SymbolName);
 
-  // Records the addresses of runtime symbols used by the platform.
-  Error bootstrapELFNixRuntime(JITDylib &PlatformJD);
-
-  Error registerInitInfo(JITDylib &JD,
-                         ArrayRef<jitlink::Section *> InitSections);
-
-  Error registerPerObjectSections(const ELFPerObjectSectionsToRegister &POSR);
+  Error registerPerObjectSections(jitlink::LinkGraph &G,
+                                  const ELFPerObjectSectionsToRegister &POSR,
+                                  bool IsBootstrapping);
 
   Expected<uint64_t> createPThreadKey();
 
   ExecutionSession &ES;
+  JITDylib &PlatformJD;
   ObjectLinkingLayer &ObjLinkingLayer;
 
   SymbolStringPtr DSOHandleSymbol;
-  std::atomic<bool> RuntimeBootstrapped{false};
 
-  ExecutorAddr orc_rt_elfnix_platform_bootstrap;
-  ExecutorAddr orc_rt_elfnix_platform_shutdown;
-  ExecutorAddr orc_rt_elfnix_register_object_sections;
-  ExecutorAddr orc_rt_elfnix_create_pthread_key;
+  RuntimeFunction PlatformBootstrap{
+      ES.intern("__orc_rt_elfnix_platform_bootstrap")};
+  RuntimeFunction PlatformShutdown{
+      ES.intern("__orc_rt_elfnix_platform_shutdown")};
+  RuntimeFunction RegisterJITDylib{
+      ES.intern("__orc_rt_elfnix_register_jitdylib")};
+  RuntimeFunction DeregisterJITDylib{
+      ES.intern("__orc_rt_elfnix_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectSections{
+      ES.intern("__orc_rt_elfnix_register_object_sections")};
+  RuntimeFunction DeregisterObjectSections{
+      ES.intern("__orc_rt_elfnix_deregister_object_sections")};
+  RuntimeFunction RegisterInitSections{
+      ES.intern("__orc_rt_elfnix_register_init_sections")};
+  RuntimeFunction DeregisterInitSections{
+      ES.intern("__orc_rt_elfnix_deregister_init_sections")};
+  RuntimeFunction CreatePThreadKey{
+      ES.intern("__orc_rt_elfnix_create_pthread_key")};
 
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
   // InitSeqs gets its own mutex to avoid locking the whole session when
   // aggregating data from the jitlink.
   std::mutex PlatformMutex;
-  DenseMap<JITDylib *, ELFNixJITDylibInitializers> InitSeqs;
   std::vector<ELFPerObjectSectionsToRegister> BootstrapPOSRs;
 
   DenseMap<ExecutorAddr, JITDylib *> HandleAddrToJITDylib;
+  DenseMap<JITDylib *, ExecutorAddr> JITDylibToHandleAddr;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
+
+  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 namespace shared {
@@ -266,60 +301,8 @@ public:
   }
 };
 
-using SPSNamedExecutorAddrRangeSequenceMap =
-    SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRangeSequence>>;
-
-using SPSELFNixJITDylibInitializers =
-    SPSTuple<SPSString, SPSExecutorAddr, SPSNamedExecutorAddrRangeSequenceMap>;
-
-using SPSELFNixJITDylibInitializerSequence =
-    SPSSequence<SPSELFNixJITDylibInitializers>;
-
-/// Serialization traits for ELFNixJITDylibInitializers.
-template <>
-class SPSSerializationTraits<SPSELFNixJITDylibInitializers,
-                             ELFNixJITDylibInitializers> {
-public:
-  static size_t size(const ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::size(
-        MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::serialize(
-        OB, MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          ELFNixJITDylibInitializers &MOJDIs) {
-    return SPSELFNixJITDylibInitializers::AsArgList::deserialize(
-        IB, MOJDIs.Name, MOJDIs.DSOHandleAddress, MOJDIs.InitSections);
-  }
-};
-
-using SPSELFJITDylibDeinitializers = SPSEmpty;
-
-using SPSELFJITDylibDeinitializerSequence =
-    SPSSequence<SPSELFJITDylibDeinitializers>;
-
-template <>
-class SPSSerializationTraits<SPSELFJITDylibDeinitializers,
-                             ELFNixJITDylibDeinitializers> {
-public:
-  static size_t size(const ELFNixJITDylibDeinitializers &MOJDDs) { return 0; }
-
-  static bool serialize(SPSOutputBuffer &OB,
-                        const ELFNixJITDylibDeinitializers &MOJDDs) {
-    return true;
-  }
-
-  static bool deserialize(SPSInputBuffer &IB,
-                          ELFNixJITDylibDeinitializers &MOJDDs) {
-    MOJDDs = ELFNixJITDylibDeinitializers();
-    return true;
-  }
-};
+using SPSELFNixJITDylibDepInfoMap =
+    SPSSequence<SPSTuple<SPSExecutorAddr, SPSSequence<SPSExecutorAddr>>>;
 
 } // end namespace shared
 } // end namespace orc

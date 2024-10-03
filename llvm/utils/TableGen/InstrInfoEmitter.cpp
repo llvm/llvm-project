@@ -711,7 +711,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "bool " << Rec->getValueAsString("FunctionName");
     OS << "(const MCInst &MI) {\n";
 
-    OS.indent(PE.getIndentLevel() * 2);
+    OS << PE.getIndent();
     PE.expandStatement(OS, Rec->getValueAsDef("Body"));
     OS << "\n}\n\n";
   }
@@ -914,7 +914,7 @@ void InstrInfoEmitter::emitTIIHelperMethods(raw_ostream &OS,
     }
 
     OS << " {\n";
-    OS.indent(PE.getIndentLevel() * 2);
+    OS << PE.getIndent();
     PE.expandStatement(OS, Rec->getValueAsDef("Body"));
     OS << "\n}\n\n";
   }
@@ -1357,7 +1357,7 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
 
-static void EmitInstrInfo(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitInstrInfo(const RecordKeeper &RK, raw_ostream &OS) {
   RK.startTimer("Analyze DAG patterns");
   InstrInfoEmitter(RK).run(OS);
   RK.startTimer("Emit map table");

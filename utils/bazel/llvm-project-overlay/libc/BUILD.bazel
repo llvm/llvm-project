@@ -155,6 +155,11 @@ libc_support_library(
     hdrs = ["hdr/limits_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_stdio_overlay",
+    hdrs = ["hdr/stdio_overlay.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -725,6 +730,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_fputil_cast",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -748,6 +754,7 @@ libc_support_library(
         ":__support_threads_mutex",
         ":errno",
         ":hdr_stdio_macros",
+        ":hdr_stdio_overlay",
         ":types_off_t",
     ],
 )
@@ -760,6 +767,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_stdio_overlay",
         ":types_off_t",
     ],
 )
@@ -929,6 +937,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
+        ":__support_fputil_cast",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fp_bits",
         ":__support_fputil_nearest_integer_operations",
@@ -986,6 +995,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_fputil_cast",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
@@ -1091,6 +1101,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
     ],
 )
@@ -1821,26 +1832,11 @@ libc_math_function(
     ],
 )
 
-libc_math_function(
-    name = "ceil",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceil")
 
-libc_math_function(
-    name = "ceilf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceilf")
 
-libc_math_function(
-    name = "ceill",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "ceill")
 
 libc_math_function(name = "ceilf128")
 
@@ -2122,19 +2118,9 @@ libc_math_function(
     ],
 )
 
-libc_math_function(
-    name = "floor",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "floor")
 
-libc_math_function(
-    name = "floorf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "floorf")
 
 libc_math_function(name = "floorl")
 
@@ -2635,19 +2621,9 @@ libc_math_function(name = "rintl")
 
 libc_math_function(name = "rintf128")
 
-libc_math_function(
-    name = "round",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "round")
 
-libc_math_function(
-    name = "roundf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "roundf")
 
 libc_math_function(name = "roundl")
 
@@ -2846,19 +2822,9 @@ libc_math_function(name = "totalordermagl")
 
 libc_math_function(name = "totalordermagf128")
 
-libc_math_function(
-    name = "trunc",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "trunc")
 
-libc_math_function(
-    name = "truncf",
-    specializations = [
-        "generic",
-    ],
-)
+libc_math_function(name = "truncf")
 
 libc_math_function(name = "truncl")
 
@@ -3934,9 +3900,9 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_fputil_fp_bits",
         ":__support_str_to_integer",
+        ":errno",
         ":printf_config",
         ":printf_core_structs",
-        ":errno"
     ],
 )
 
@@ -4145,6 +4111,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":hdr_stdio_overlay",
         ":types_FILE",
     ],
 )

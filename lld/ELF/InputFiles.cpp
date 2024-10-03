@@ -296,7 +296,7 @@ static bool isCompatible(InputFile *file) {
   return false;
 }
 
-template <class ELFT> static void doParseFile(InputFile *file) {
+template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
   if (!isCompatible(file))
     return;
 
@@ -329,7 +329,9 @@ template <class ELFT> static void doParseFile(InputFile *file) {
 }
 
 // Add symbols in File to the symbol table.
-void elf::parseFile(InputFile *file) { invokeELFT(doParseFile, file); }
+void elf::parseFile(Ctx &ctx, InputFile *file) {
+  invokeELFT(doParseFile, ctx, file);
+}
 
 // This function is explicitly instantiated in ARM.cpp. Mark it extern here,
 // to avoid warnings when building with MSVC.
@@ -339,23 +341,21 @@ extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
 template <class ELFT>
-static void doParseFiles(const std::vector<InputFile *> &files,
-                         InputFile *armCmseImpLib) {
+static void doParseFiles(Ctx &ctx, const std::vector<InputFile *> &files) {
   // Add all files to the symbol table. This will add almost all symbols that we
   // need to the symbol table. This process might add files to the link due to
   // addDependentLibrary.
   for (size_t i = 0; i < files.size(); ++i) {
     llvm::TimeTraceScope timeScope("Parse input files", files[i]->getName());
-    doParseFile<ELFT>(files[i]);
+    doParseFile<ELFT>(ctx, files[i]);
   }
-  if (armCmseImpLib)
-    cast<ObjFile<ELFT>>(*armCmseImpLib).importCmseSymbols();
+  if (ctx.driver.armCmseImpLib)
+    cast<ObjFile<ELFT>>(*ctx.driver.armCmseImpLib).importCmseSymbols();
 }
 
-void elf::parseFiles(const std::vector<InputFile *> &files,
-                     InputFile *armCmseImpLib) {
+void elf::parseFiles(Ctx &ctx, const std::vector<InputFile *> &files) {
   llvm::TimeTraceScope timeScope("Parse input files");
-  invokeELFT(doParseFiles, files, armCmseImpLib);
+  invokeELFT(doParseFiles, ctx, files);
 }
 
 // Concatenates arguments to construct a string representing an error location.

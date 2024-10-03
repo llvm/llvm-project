@@ -1305,40 +1305,6 @@ mlir::ParseResult fir::CmpcOp::parse(mlir::OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ConstcOp
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult fir::ConstcOp::parse(mlir::OpAsmParser &parser,
-                                       mlir::OperationState &result) {
-  fir::RealAttr realp;
-  fir::RealAttr imagp;
-  mlir::Type type;
-  if (parser.parseLParen() ||
-      parser.parseAttribute(realp, fir::ConstcOp::getRealAttrName(),
-                            result.attributes) ||
-      parser.parseComma() ||
-      parser.parseAttribute(imagp, fir::ConstcOp::getImagAttrName(),
-                            result.attributes) ||
-      parser.parseRParen() || parser.parseColonType(type) ||
-      parser.addTypesToList(type, result.types))
-    return mlir::failure();
-  return mlir::success();
-}
-
-void fir::ConstcOp::print(mlir::OpAsmPrinter &p) {
-  p << '(';
-  p << getOperation()->getAttr(fir::ConstcOp::getRealAttrName()) << ", ";
-  p << getOperation()->getAttr(fir::ConstcOp::getImagAttrName()) << ") : ";
-  p.printType(getType());
-}
-
-llvm::LogicalResult fir::ConstcOp::verify() {
-  if (!mlir::isa<fir::ComplexType>(getType()))
-    return emitOpError("must be a !fir.complex type");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // ConvertOp
 //===----------------------------------------------------------------------===//
 
@@ -2122,7 +2088,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
   matchAndRewrite(mlir::Operation *op,
                   mlir::PatternRewriter &rewriter) const override {
     auto insval = mlir::dyn_cast_or_null<fir::InsertValueOp>(op);
-    if (!insval || !mlir::isa<fir::ComplexType>(insval.getType()))
+    if (!insval || !mlir::isa<mlir::ComplexType>(insval.getType()))
       return mlir::failure();
     auto insval2 = mlir::dyn_cast_or_null<fir::InsertValueOp>(
         insval.getAdt().getDefiningOp());

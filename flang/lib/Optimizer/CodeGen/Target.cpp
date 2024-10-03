@@ -368,7 +368,7 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
             current = ArgClass::SSE;
           }
         })
-        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+        .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::x87DoubleExtended()) {
             current = ArgClass::ComplexX87;

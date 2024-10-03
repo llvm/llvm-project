@@ -114,6 +114,7 @@ __device__ int read_ids() {
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid()
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid()
 // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
   int a = __nvvm_read_ptx_sreg_laneid();
   int b = __nvvm_read_ptx_sreg_warpid();
@@ -121,8 +122,9 @@ __device__ int read_ids() {
   int d = __nvvm_read_ptx_sreg_smid();
   int e = __nvvm_read_ptx_sreg_nsmid();
   int f = __nvvm_read_ptx_sreg_gridid();
+  int g = __nvvm_read_ptx_sreg_warpsize();
 
-  return a + b + c + d + e + f;
+  return a + b + c + d + e + f + g;
 
 }
 

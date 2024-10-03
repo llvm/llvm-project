@@ -384,6 +384,11 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       DEPENDS
         ${SCUDO_DEPS}
     )
+    add_entrypoint_external(
+      mallopt
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
   else()
     # Only use freelist malloc for baremetal targets.
     add_entrypoint_object(
@@ -620,4 +625,11 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.abort
+)
+
+add_entrypoint_object(
+  system
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.system
 )
