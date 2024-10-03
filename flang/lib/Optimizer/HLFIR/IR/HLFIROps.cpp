@@ -360,14 +360,11 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
       return emitOpError("substring must contain 2 indices when provided");
   }
   if (getComplexPart()) {
-    if (!fir::isa_complex(outputElementType))
+    if (auto cplx = mlir::dyn_cast<mlir::ComplexType>(outputElementType))
+      outputElementType = cplx.getElementType();
+    else
       return emitOpError("memref or component must have complex type if "
                          "complex_part is provided");
-    if (auto firCplx = mlir::dyn_cast<fir::ComplexType>(outputElementType))
-      outputElementType = firCplx.getElementType();
-    else
-      outputElementType =
-          mlir::cast<mlir::ComplexType>(outputElementType).getElementType();
   }
   mlir::Type resultBaseType =
       getFortranElementOrSequenceType(getResult().getType());

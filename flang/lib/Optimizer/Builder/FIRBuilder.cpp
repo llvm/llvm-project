@@ -417,10 +417,7 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
     // imaginary part is zero
     auto eleTy = helper.getComplexPartType(toTy);
     auto cast = createConvert(loc, eleTy, val);
-    llvm::APFloat zero{kindMap.getFloatSemantics(
-                           mlir::cast<fir::ComplexType>(toTy).getFKind()),
-                       0};
-    auto imag = createRealConstant(loc, eleTy, zero);
+    auto imag = createRealZeroConstant(loc, eleTy);
     return helper.createComplex(toTy, cast, imag);
   }
   if (fir::isa_complex(fromTy) &&
