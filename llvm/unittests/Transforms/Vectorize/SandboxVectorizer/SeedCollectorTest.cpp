@@ -29,13 +29,16 @@ struct SeedBundleTest : public testing::Test {
 
 TEST_F(SeedBundleTest, SeedBundle) {
   parseIR(C, R"IR(
-define void @foo(float %v0, float %v1) {
+define void @foo(float %v0, i32 %i0, i16 %i1, i8 %i2) {
 bb:
-  %add0 = fadd float %v0, %v1
-  %add1 = fadd float %v0, %v1
-  %add2 = fadd float %v0, %v1
-  %add3 = fadd float %v0, %v1
-  %add4 = fadd float %v0, %v1
+  %add0 = fadd float %v0, %v0
+  %add1 = fadd float %v0, %v0
+  %add2 = add i8 %i2, %i2
+  %add3 = add i16 %i1, %i1
+  %add4 = add i32 %i0, %i0
+  %add5 = add i16 %i1, %i1
+  %add6 = add i8 %i2, %i2
+  %add7 = add i8 %i2, %i2
   ret void
 }
 )IR");
@@ -47,13 +50,13 @@ bb:
   auto It = BB->begin();
   auto *I0 = &*It++;
   auto *I1 = &*It++;
-  // Assume test instructions are identical in the number of bits.
-  const unsigned kFloatBits = sandboxir::Utils::getNumBits(I0, DL);
+  // Assume first two instructions are identical in the number of bits.
+  const unsigned IOBits = sandboxir::Utils::getNumBits(I0, DL);
   // Constructor
   sandboxir::SeedBundle SBO(I0);
   EXPECT_EQ(*SBO.begin(), I0);
   // getNumUnusedBits after constructor
-  EXPECT_EQ(SBO.getNumUnusedBits(), kFloatBits);
+  EXPECT_EQ(SBO.getNumUnusedBits(), IOBits);
   // setUsed
   SBO.setUsed(I0);
   // allUsed
@@ -66,36 +69,47 @@ bb:
   SBO.insertAt(SBO.end(), I1);
   EXPECT_NE(*SBO.begin(), I1);
   // getNumUnusedBits after insertAt
-  EXPECT_EQ(SBO.getNumUnusedBits(), kFloatBits);
+  EXPECT_EQ(SBO.getNumUnusedBits(), IOBits);
   // allUsed
   EXPECT_FALSE(SBO.allUsed());
   // getFirstUnusedElement
   EXPECT_EQ(SBO.getFirstUnusedElementIdx(), 1u);
 
   sandboxir::SeedBundle::SeedList Seeds;
-  It = BB->begin();
+  // add2 through add7
   Seeds.push_back(&*It++);
   Seeds.push_back(&*It++);
   Seeds.push_back(&*It++);
   Seeds.push_back(&*It++);
   Seeds.push_back(&*It++);
+  Seeds.push_back(&*It++);
+  unsigned BundleBits = 0;
+  for (auto &S : Seeds)
+    BundleBits += sandboxir::Utils::getNumBits(S);
+  // Ensure the instructions are as expected.
+  EXPECT_EQ(BundleBits, 88u);
   // Constructor
   sandboxir::SeedBundle SB1(std::move(Seeds));
   // getNumUnusedBits after constructor
-  EXPECT_EQ(SB1.getNumUnusedBits(), 5 * kFloatBits);
+  EXPECT_EQ(SB1.getNumUnusedBits(), BundleBits);
   // setUsed with index
   SB1.setUsed(1);
   // getFirstUnusedElementIdx
   EXPECT_EQ(SB1.getFirstUnusedElementIdx(), 0u);
-  EXPECT_EQ(SB1.getNumUnusedBits(), 4 * kFloatBits);
   SB1.setUsed(unsigned(0));
   // getFirstUnusedElementIdx not at end
   EXPECT_EQ(SB1.getFirstUnusedElementIdx(), 2u);
   // getSlice
-  auto Slice0 = SB1.getSlice(2, /* MaxVecRegBits */ kFloatBits * 2,
+  auto Slice0 = SB1.getSlice(2, /* MaxVecRegBits */ 64,
                              /* ForcePowerOf2 */ true);
-  EXPECT_EQ(Slice0.size(), 2u);
-  auto Slice1 = SB1.getSlice(2, /* MaxVecRegBits */ kFloatBits * 3,
+  EXPECT_EQ(Slice0.size(), 4u);
+  SB1.setUsed(2);
+  auto Slice1 = SB1.getSlice(3, /* MaxVecRegBits */ 64,
                              /* ForcePowerOf2 */ false);
   EXPECT_EQ(Slice1.size(), 3u);
+  // getSlice empty case
+  SB1.setUsed(3);
+  auto Slice2 = SB1.getSlice(4, /* MaxVecRegBits */ 8,
+                             /* ForcePowerOf2 */ true);
+  EXPECT_EQ(Slice2.size(), 0u);
 }
