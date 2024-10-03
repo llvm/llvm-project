@@ -79,11 +79,6 @@ function (add_fortranruntime_library name)
   # For configured config.h for be found
   target_include_directories(${name} PRIVATE "${FORTRANRUNTIME_BINARY_DIR}")
 
-  # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
-  # to avoid an unwanted dependency on libstdc++/libc++.so.
-  target_compile_definitions(${name} PRIVATE -U_GLIBCXX_ASSERTIONS)
-  target_compile_definitions(${name} PRIVATE -U_LIBCPP_ENABLE_ASSERTIONS)
-
   # Clang/Flang, targeting the MSVC ABI, including clang-cl, should only depends on msv(u)crt. LLVM still emits libgcc/compiler-rt functions for 128-bit integer math (__udivti3, __modti3, __fixsfti, __floattidf, ...) that msvc does not support.
   # We are injecting a dependency to Compiler-RT where these are implemented.
   if (MSVC AND (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang") AND FORTRANRUNTIME_LIBCALL)

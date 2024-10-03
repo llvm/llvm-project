@@ -89,11 +89,13 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
+
 # Search for clang_rt.builtins
 execute_process(
     COMMAND "${CMAKE_CXX_COMPILER}" "-print-libgcc-file-name" "-rtlib=compiler-rt"
     RESULT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE
     OUTPUT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT
+    ERROR_QUIET
   )
 if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
   string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FORTRANRUNTIME_LIBCALL)
@@ -110,6 +112,11 @@ endif ()
 # GTest included later also requires C++17.
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
+
+# Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build,
+# to avoid an unwanted dependency on libstdc++/libc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
+add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
 configure_file(cmake/config.h.cmake.in config.h)
 

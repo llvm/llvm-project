@@ -1,4 +1,4 @@
-#===-- lib/Runtime/Float128Math/CMakeLists.txt -----------------------------===#
+#===-- runtime/Float128Math/CMakeLists.txt ---------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,7 @@
 # used for building this FortranFloat128Math library.
 
 include(CheckLibraryExists)
+include(CheckIncludeFile)
 
 set(sources
   acos.cpp
@@ -87,23 +88,15 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       "${FLANG_RUNTIME_F128_MATH_LIB}"
       )
   endif()
-
-  add_flang_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
-    ${sources})
-
-  if (DEFINED MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-    add_flang_library(FortranFloat128Math.static STATIC INSTALL_WITH_TOOLCHAIN
-      ${sources}
-      )
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
-    add_flang_library(FortranFloat128Math.static_dbg STATIC INSTALL_WITH_TOOLCHAIN
-      ${sources}
-      )
-    add_dependencies(FortranFloat128Math FortranFloat128Math.static
-      FortranFloat128Math.static_dbg
-      )
-  endif()
+   
+  if (WIN32)
+     # Do not create a FortranFloat128Math library under Windows, the Flang driver never links it. Instead, add the sources to the main FortranRuntime.lib.
+    target_sources(FortranFloat128MathILib INTERFACE ${sources})
+    target_compile_definitions(FortranFloat128MathILib INTERFACE HAS_QUADMATHLIB)
+  else ()
+    add_fortranruntime_library(FortranFloat128Math STATIC INSTALL_WITH_TOOLCHAIN
+      ${sources})
+   endif ()
 elseif (HAVE_LDBL_MANT_DIG_113)
   # We can use 'long double' versions from libc.
   check_library_exists(m sinl "" FOUND_LIBM)
