@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMCore
   GVMaterializer.cpp
   GlobalPtrAuthInfo.cpp
   Globals.cpp
+  Intrinsics.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
