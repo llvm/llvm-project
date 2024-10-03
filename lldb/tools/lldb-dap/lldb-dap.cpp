@@ -1403,7 +1403,7 @@ void request_completions(const llvm::json::Object &request) {
   // Handle the offset change introduced by stripping out the
   // `command_escape_prefix`.
   if (had_escape_prefix) {
-    if (offset < g_dap.command_escape_prefix.size()) {
+    if (offset < static_cast<int64_t>(g_dap.command_escape_prefix.size())) {
       body.try_emplace("targets", std::move(targets));
       response.try_emplace("body", std::move(body));
       g_dap.SendJSON(llvm::json::Value(std::move(response)));
