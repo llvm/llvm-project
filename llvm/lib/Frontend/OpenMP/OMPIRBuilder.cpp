@@ -7977,6 +7977,54 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
       Res.second = Res.first;
     else
       Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
+  } else if (RMWOp == llvm::AtomicRMWInst::BinOp::BAD_BINOP &&
+             XElemTy->isStructTy()) {
+    LoadInst *OldVal =
+        Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
+    OldVal->setAtomic(AO);
+    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize =
+        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+
+    OpenMPIRBuilder::AtomicInfo atomicInfo(
+        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
+        OldVal->getAlign(), true /* UseLibcall */, X);
+    auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
+    BasicBlock *CurBB = Builder.GetInsertBlock();
+    Instruction *CurBBTI = CurBB->getTerminator();
+    CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
+    BasicBlock *ExitBB =
+        CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
+    BasicBlock *ContBB = CurBB->splitBasicBlock(CurBB->getTerminator(),
+                                                X->getName() + ".atomic.cont");
+    ContBB->getTerminator()->eraseFromParent();
+    Builder.restoreIP(AllocaIP);
+    AllocaInst *NewAtomicAddr = Builder.CreateAlloca(XElemTy);
+    NewAtomicAddr->setName(X->getName() + "x.new.val");
+    Builder.SetInsertPoint(ContBB);
+    llvm::PHINode *PHI = Builder.CreatePHI(OldVal->getType(), 2);
+    PHI->addIncoming(AtomicLoadRes.first, CurBB);
+    Value *OldExprVal = PHI;
+    Value *Upd = UpdateOp(OldExprVal, Builder);
+    Builder.CreateStore(Upd, NewAtomicAddr);
+    AtomicOrdering Failure =
+        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
+    auto Result = atomicInfo.EmitAtomicCompareExchangeLibcall(
+        AtomicLoadRes.second, NewAtomicAddr, AO, Failure);
+    LoadInst *PHILoad = Builder.CreateLoad(XElemTy, Result.first);
+    PHI->addIncoming(PHILoad, Builder.GetInsertBlock());
+    Builder.CreateCondBr(Result.second, ExitBB, ContBB);
+    OldVal->eraseFromParent();
+    Res.first = OldExprVal;
+    Res.second = Upd;
+
+    if (UnreachableInst *ExitTI =
+            dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
+      CurBBTI->eraseFromParent();
+      Builder.SetInsertPoint(ExitBB);
+    } else {
+      Builder.SetInsertPoint(ExitTI);
+    }
   } else {
     IntegerType *IntCastTy =
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
