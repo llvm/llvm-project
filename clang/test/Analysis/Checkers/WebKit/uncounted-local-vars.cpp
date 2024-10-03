@@ -289,3 +289,32 @@ void foo() {
 }
 
 } // namespace local_assignment_to_global
+
+namespace local_var_in_recursive_function {
+
+struct TreeNode {
+  Ref<TreeNode> create() { return Ref(*new TreeNode); }
+
+  void ref() const { ++refCount; }
+  void deref() const {
+    if (!--refCount)
+      delete this;
+  }
+
+  int recursiveCost();
+
+  int cost { 0 };
+  mutable unsigned refCount { 0 };
+  TreeNode* nextSibling { nullptr };
+  TreeNode* firstChild { nullptr };
+};
+
+int TreeNode::recursiveCost() {
+  // no warnings
+  unsigned totalCost = cost;
+  for (TreeNode* node = firstChild; node; node = node->nextSibling)
+    totalCost += recursiveCost();
+  return totalCost;
+}
+
+} // namespace local_var_in_recursive_function
