@@ -839,23 +839,35 @@ define i64 @bset_trailing_ones_i64_no_mask(i64 %a) nounwind {
 }
 
 define i1 @icmp_eq_pow2(i32 %x) nounwind {
-; CHECK-LABEL: icmp_eq_pow2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: icmp_eq_pow2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 8
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: icmp_eq_pow2:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    binvi a0, a0, 15
+; RV32ZBS-NEXT:    seqz a0, a0
+; RV32ZBS-NEXT:    ret
   %cmp = icmp eq i32 %x, 32768
   ret i1 %cmp
 }
 
 define i1 @icmp_ne_pow2(i32 %x) nounwind {
-; CHECK-LABEL: icmp_ne_pow2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: icmp_ne_pow2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 8
+; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: icmp_ne_pow2:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    binvi a0, a0, 15
+; RV32ZBS-NEXT:    seqz a0, a0
+; RV32ZBS-NEXT:    ret
   %cmp = icmp eq i32 %x, 32768
   ret i1 %cmp
 }

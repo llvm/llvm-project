@@ -1148,12 +1148,18 @@ define signext i64 @bset_trailing_ones_i64_no_mask(i64 signext %a) nounwind {
 }
 
 define i1 @icmp_eq_pow2(i32 signext %x) nounwind {
-; CHECK-LABEL: icmp_eq_pow2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    ret
+; RV64I-LABEL: icmp_eq_pow2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: icmp_eq_pow2:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 15
+; RV64ZBS-NEXT:    seqz a0, a0
+; RV64ZBS-NEXT:    ret
   %cmp = icmp eq i32 %x, 32768
   ret i1 %cmp
 }
@@ -1169,8 +1175,7 @@ define i1 @icmp_eq_pow2_64(i64 %x) nounwind {
 ;
 ; RV64ZBS-LABEL: icmp_eq_pow2_64:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    bseti a1, zero, 40
-; RV64ZBS-NEXT:    xor a0, a0, a1
+; RV64ZBS-NEXT:    binvi a0, a0, 40
 ; RV64ZBS-NEXT:    seqz a0, a0
 ; RV64ZBS-NEXT:    ret
   %cmp = icmp eq i64 %x, 1099511627776
@@ -1178,12 +1183,18 @@ define i1 @icmp_eq_pow2_64(i64 %x) nounwind {
 }
 
 define i1 @icmp_ne_pow2(i32 signext %x) nounwind {
-; CHECK-LABEL: icmp_ne_pow2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    ret
+; RV64I-LABEL: icmp_ne_pow2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 8
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: icmp_ne_pow2:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 15
+; RV64ZBS-NEXT:    seqz a0, a0
+; RV64ZBS-NEXT:    ret
   %cmp = icmp eq i32 %x, 32768
   ret i1 %cmp
 }
