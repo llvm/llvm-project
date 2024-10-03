@@ -1,7 +1,7 @@
 # Contributing to LLDB-DAP
 
 This guide describes how to extend and contribute to lldb-dap.
-For documentation on how to use lldb-dap, see [lldb-dap's README](https://github.com/llvm/llvm-project/blob/release/19.x/lldb/tools/lldb-dap/README.md).
+For documentation on how to use lldb-dap, see [lldb-dap's README](https://github.com/llvm/llvm-project/blob/main/lldb/tools/lldb-dap/README.md).
 
 lldb-dap and LLDB are developed under the umbrella of the
 [LLVM project](https://llvm.org/). As such, the
@@ -61,16 +61,16 @@ The most relevant resources for the Debug Adapter Protocol are:
 * the [human-readable specification](https://microsoft.github.io/debug-adapter-protocol/specification), and
 * the [JSON-schema specification](https://github.com/microsoft/debug-adapter-protocol/blob/main/debugAdapterProtocol.json).
 
-Sometimes, lldb-dap also adds proprietary extensions to the protocol. To take
-advantage of those proprietary protocol extensions, IDE-specific support code
-is needed, usually inside the VS Code extension. When adding a new extension,
-please first look through the [issue tracker of the Debug Adapter
+lldb-dap adds some additional non-standard extensions to the protocol. To take
+advantage of those extensions, IDE-specific support code is needed, usually
+inside the VS Code extension. When adding a new extension, please first look
+through the [issue tracker of the Debug Adapter
 Protocol](https://github.com/microsoft/debug-adapter-protocol/issues) to check
 if there already is a proposal serving your use case. If so, try to take
 inspiration from it. If not, consider opening an upstream issue.
 
 To avoid naming collisions with potential future extensions of the Debug
-Adapter protocol, all proprietary extensions should use the prefix
+Adapter protocol, all non-standard extensions should use the prefix
 `$__lldb_extension` in their JSON property names.
 
 ### Debugging the Debug Adapter Protocol
