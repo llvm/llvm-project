@@ -9087,9 +9087,14 @@ static NamedDecl *DiagnoseInvalidRedeclaration(
   SemaRef.Diag(NewFD->getLocation(), DiagMsg)
       << Name << NewDC << IsDefinition << NewFD->getLocation();
 
-  bool NewFDisConst = false;
-  if (CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD))
-    NewFDisConst = NewMD->isConst();
+  CXXMethodDecl *NewMD = dyn_cast<CXXMethodDecl>(NewFD);
+  if (NewMD && DiagMsg == diag::err_member_decl_does_not_match) {
+    CXXRecordDecl *RD = NewMD->getParent();
+    SemaRef.Diag(RD->getLocation(), diag::note_defined_here)
+        << RD->getName() << RD->getLocation();
+  }
+
+  bool NewFDisConst = NewMD && NewMD->isConst();
 
   for (SmallVectorImpl<std::pair<FunctionDecl *, unsigned> >::iterator
        NearMatch = NearMatches.begin(), NearMatchEnd = NearMatches.end();
