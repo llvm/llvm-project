@@ -36,12 +36,13 @@ static std::vector<int> GetPoisonedState(char *begin, char *end) {
 static void RandomPoison(char *beg, char *end) {
   assert(beg == RoundDown(beg));
   assert(end == RoundDown(end));
-  for (beg = RoundUp(beg); beg + kGranularity <= end; beg += kGranularity) {
-    __asan_poison_memory_region(beg, kGranularity);
+  __asan_poison_memory_region(beg, end - beg);
+  for (beg = RoundUp(beg); beg < end; beg += kGranularity) {
     __asan_unpoison_memory_region(beg, rand() % (kGranularity + 1));
   }
 }
 
+template <bool benchmark>
 static void Test(size_t capacity, size_t off_src, size_t off_dst,
                  char *src_buffer_beg, char *src_buffer_end,
                  char *dst_buffer_beg, char *dst_buffer_end) {
@@ -51,6 +52,11 @@ static void Test(size_t capacity, size_t off_src, size_t off_dst,
 
   char *dst_beg = dst_buffer_beg + off_dst;
   char *dst_end = dst_beg + capacity;
+  if (benchmark) {
+    __sanitizer_copy_contiguous_container_annotations(src_beg, src_end, dst_beg,
+                                                      dst_end);
+    return;
+  }
 
   std::vector<int> src_poison_states =
       GetPoisonedState(src_buffer_beg, src_buffer_end);
@@ -84,6 +90,7 @@ static void Test(size_t capacity, size_t off_src, size_t off_dst,
   }
 }
 
+template <bool benchmark>
 static void TestNonOverlappingContainers(size_t capacity, size_t off_src,
                                          size_t off_dst) {
   // Test will copy [off_src, off_src + capacity) to [off_dst, off_dst + capacity).
@@ -107,17 +114,20 @@ static void TestNonOverlappingContainers(size_t capacity, size_t off_src,
   assert(RoundDown(dst_buffer_beg) == dst_buffer_beg);
 
   for (int i = 0; i < 35; i++) {
-    RandomPoison(src_buffer_beg, src_buffer_end);
-    RandomPoison(dst_buffer_beg, dst_buffer_end);
+    if (!benchmark || !i) {
+      RandomPoison(src_buffer_beg, src_buffer_end);
+      RandomPoison(dst_buffer_beg, dst_buffer_end);
+    }
 
-    Test(capacity, off_src, off_dst, src_buffer_beg, src_buffer_end,
-         dst_buffer_beg, dst_buffer_end);
+    Test<benchmark>(capacity, off_src, off_dst, src_buffer_beg, src_buffer_end,
+                    dst_buffer_beg, dst_buffer_end);
   }
 
   __asan_unpoison_memory_region(src_buffer_beg, src_buffer_size);
   __asan_unpoison_memory_region(dst_buffer_beg, dst_buffer_size);
 }
 
+template <bool benchmark>
 static void TestOverlappingContainers(size_t capacity, size_t off_src,
                                       size_t off_dst) {
   // Test will copy [off_src, off_src + capacity) to [off_dst, off_dst + capacity).
@@ -135,10 +145,10 @@ static void TestOverlappingContainers(size_t capacity, size_t off_src,
   assert(RoundDown(buffer_beg) == buffer_beg);
 
   for (int i = 0; i < 35; i++) {
-    RandomPoison(buffer_beg, buffer_end);
-
-    Test(capacity, off_src, off_dst, buffer_beg, buffer_end, buffer_beg,
-         buffer_end);
+    if (!benchmark || !i)
+      RandomPoison(buffer_beg, buffer_end);
+    Test<benchmark>(capacity, off_src, off_dst, buffer_beg, buffer_end,
+                    buffer_beg, buffer_end);
   }
 
   __asan_unpoison_memory_region(buffer_beg, buffer_size);
@@ -149,8 +159,13 @@ int main(int argc, char **argv) {
   for (size_t off_src = 0; off_src < kGranularity; off_src++) {
     for (size_t off_dst = 0; off_dst < kGranularity; off_dst++) {
       for (int capacity = 0; capacity <= n; capacity++) {
-        TestNonOverlappingContainers(capacity, off_src, off_dst);
-        TestOverlappingContainers(capacity, off_src, off_dst);
+        if (n < 1024) {
+          TestNonOverlappingContainers<false>(capacity, off_src, off_dst);
+          TestOverlappingContainers<false>(capacity, off_src, off_dst);
+        } else {
+          TestNonOverlappingContainers<true>(capacity, off_src, off_dst);
+          TestOverlappingContainers<true>(capacity, off_src, off_dst);
+        }
       }
     }
   }
