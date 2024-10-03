@@ -7683,7 +7683,7 @@ SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   // Specially handle the case of v4i16 with static indexing.
   unsigned NumElts = VecVT.getVectorNumElements();
-  auto KIdx = dyn_cast<ConstantSDNode>(Idx);
+  auto *KIdx = dyn_cast<ConstantSDNode>(Idx);
   if (NumElts == 4 && EltSize == 16 && KIdx) {
     SDValue BCVec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Vec);
 
@@ -8288,7 +8288,7 @@ static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
 
 static bool parseTexFail(SDValue TexFailCtrl, SelectionDAG &DAG, SDValue *TFE,
                          SDValue *LWE, bool &IsTexFail) {
-  auto TexFailCtrlConst = cast<ConstantSDNode>(TexFailCtrl.getNode());
+  auto *TexFailCtrlConst = cast<ConstantSDNode>(TexFailCtrl.getNode());
 
   uint64_t Value = TexFailCtrlConst->getZExtValue();
   if (Value) {
@@ -8693,7 +8693,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     return Op;
 
   MachineSDNode *NewNode = DAG.getMachineNode(Opcode, DL, ResultTypes, Ops);
-  if (auto MemOp = dyn_cast<MemSDNode>(Op)) {
+  if (auto *MemOp = dyn_cast<MemSDNode>(Op)) {
     MachineMemOperand *MemRef = MemOp->getMemOperand();
     DAG.setNodeMemRefs(NewNode, {MemRef});
   }
@@ -8844,7 +8844,7 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  auto MFI = MF.getInfo<SIMachineFunctionInfo>();
+  auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
@@ -9221,7 +9221,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     Module *M = const_cast<Module *>(MF.getFunction().getParent());
     const MDNode *Metadata = cast<MDNodeSDNode>(Op.getOperand(1))->getMD();
     auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
-    auto RelocSymbol = cast<GlobalVariable>(
+    auto *RelocSymbol = cast<GlobalVariable>(
         M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
     SDValue GA = DAG.getTargetGlobalAddress(RelocSymbol, DL, MVT::i32, 0,
                                             SIInstrInfo::MO_ABS32_LO);
@@ -9918,7 +9918,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Ops.push_back(M0Val.getValue(0));
     }
 
-    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
   default:
@@ -10381,7 +10381,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t),
         LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
-    auto Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
+    auto *Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
 
     return SDValue(Load, 0);
@@ -10469,7 +10469,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t), Align(4),
         LoadMMO->getAAInfo());
 
-    auto Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    auto *Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
 
     return SDValue(Load, 0);
@@ -10546,7 +10546,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
     }
 
-    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
   case Intrinsic::amdgcn_s_prefetch_data: {
@@ -12382,7 +12382,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
   case ISD::SRA:
   case ISD::SRL: {
-    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
       return std::nullopt;
 
@@ -12452,7 +12452,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    auto BitMaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    auto *BitMaskOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!BitMaskOp)
       return std::nullopt;
 
@@ -12476,7 +12476,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return std::nullopt;
 
     // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
-    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
     if (!ShiftOp || Op.getValueType().isVector())
       return std::nullopt;
 
@@ -12503,7 +12503,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
       return std::nullopt;
 
@@ -12531,7 +12531,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
       return std::nullopt;
 
@@ -12600,7 +12600,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::LOAD: {
-    auto L = cast<LoadSDNode>(Op.getNode());
+    auto *L = cast<LoadSDNode>(Op.getNode());
 
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
     if (NarrowBitWidth % 8 != 0)
@@ -12633,7 +12633,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::EXTRACT_VECTOR_ELT: {
-    auto IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    auto *IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!IdxOp)
       return std::nullopt;
     auto VecIdx = IdxOp->getZExtValue();
@@ -12648,7 +12648,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    auto PermMask = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    auto *PermMask = dyn_cast<ConstantSDNode>(Op->getOperand(2));
     if (!PermMask)
       return std::nullopt;
 
@@ -12947,7 +12947,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         return true;
 
       // If we have any non-vectorized use, then it is a candidate for v_perm
-      for (auto VUse : OrUse->uses()) {
+      for (auto *VUse : OrUse->uses()) {
         if (!VUse->getValueType(0).isVector())
           return true;
 
@@ -14476,7 +14476,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
                (IterElt.DWordOffset == (BPP.first.SrcOffset / 4));
       };
 
-      auto Match = llvm::find_if(Srcs, MatchesFirst);
+      auto *Match = llvm::find_if(Srcs, MatchesFirst);
       if (Match != Srcs.end()) {
         Match->PermMask = addPermMasks(FirstMask, Match->PermMask);
         FirstGroup = I;
@@ -14489,7 +14489,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
         return IterElt.SrcOp == *BPP.second.Src &&
                (IterElt.DWordOffset == (BPP.second.SrcOffset / 4));
       };
-      auto Match = llvm::find_if(Srcs, MatchesSecond);
+      auto *Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->PermMask = addPermMasks(SecondMask, Match->PermMask);
       } else
@@ -14522,7 +14522,7 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
 
   // If we just have one source, just permute it accordingly.
   if (Srcs.size() == 1) {
-    auto Elt = Srcs.begin();
+    auto *Elt = Srcs.begin();
     auto EltOp = getDWordFromOffset(DAG, SL, Elt->SrcOp, Elt->DWordOffset);
 
     // v_perm will produce the original value
@@ -14533,8 +14533,8 @@ static SDValue resolveSources(SelectionDAG &DAG, SDLoc SL,
                        DAG.getConstant(Elt->PermMask, SL, MVT::i32));
   }
 
-  auto FirstElt = Srcs.begin();
-  auto SecondElt = std::next(FirstElt);
+  auto *FirstElt = Srcs.begin();
+  auto *SecondElt = std::next(FirstElt);
 
   SmallVector<SDValue, 2> Perms;
 
@@ -14788,11 +14788,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (UniqueEntries) {
         UseOriginalSrc = true;
 
-        auto FirstElt = Src0s.begin();
+        auto *FirstElt = Src0s.begin();
         auto FirstEltOp =
             getDWordFromOffset(DAG, SL, FirstElt->SrcOp, FirstElt->DWordOffset);
 
-        auto SecondElt = Src1s.begin();
+        auto *SecondElt = Src1s.begin();
         auto SecondEltOp = getDWordFromOffset(DAG, SL, SecondElt->SrcOp,
                                               SecondElt->DWordOffset);
 
@@ -15135,7 +15135,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
   EVT VT = LHS.getValueType();
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
 
-  auto CRHS = dyn_cast<ConstantSDNode>(RHS);
+  auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
   if (!CRHS) {
     CRHS = dyn_cast<ConstantSDNode>(LHS);
     if (CRHS) {

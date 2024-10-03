@@ -2119,7 +2119,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
                                                Register NewBase,
                                                int32_t NewOffset) const {
-  auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  auto *Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   Base->setReg(NewBase);
   Base->setIsKill(false);
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);

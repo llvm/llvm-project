@@ -2292,11 +2292,12 @@ static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
     ID.AddPointer(I);
 }
 
-VarDefInit::VarDefInit(Record *Class, unsigned N)
-    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Class(Class),
+VarDefInit::VarDefInit(SMLoc Loc, Record *Class, unsigned N)
+    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(N) {}
 
-VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
+VarDefInit *VarDefInit::get(SMLoc Loc, Record *Class,
+                            ArrayRef<ArgumentInit *> Args) {
   FoldingSetNodeID ID;
   ProfileVarDefInit(ID, Class, Args);
 
@@ -2307,7 +2308,7 @@ VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<ArgumentInit *>(Args.size()), alignof(VarDefInit));
-  VarDefInit *I = new (Mem) VarDefInit(Class, Args.size());
+  VarDefInit *I = new (Mem) VarDefInit(Loc, Class, Args.size());
   std::uninitialized_copy(Args.begin(), Args.end(),
                           I->getTrailingObjects<ArgumentInit *>());
   RK.TheVarDefInitPool.InsertNode(I, IP);
@@ -2323,9 +2324,8 @@ DefInit *VarDefInit::instantiate() {
     return Def;
 
   RecordKeeper &Records = Class->getRecords();
-  auto NewRecOwner =
-      std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
-                               Records, Record::RK_AnonymousDef);
+  auto NewRecOwner = std::make_unique<Record>(
+      Records.getNewAnonymousName(), Loc, Records, Record::RK_AnonymousDef);
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
@@ -2389,7 +2389,7 @@ Init *VarDefInit::resolveReferences(Resolver &R) const {
   }
 
   if (Changed) {
-    auto New = VarDefInit::get(Class, NewArgs);
+    auto *New = VarDefInit::get(Loc, Class, NewArgs);
     if (!UR.foundUnresolved())
       return New->instantiate();
     return New;
