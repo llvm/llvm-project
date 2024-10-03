@@ -507,7 +507,8 @@ public:
       fir::DispatchOp dispatchOp = rewriter->create<A>(
           loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
           callOp.getOperands()[0], newOpers,
-          rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift));
+          rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
+          callOp.getProcedureAttrsAttr());
       if (wrap)
         newCallResults.push_back((*wrap)(dispatchOp.getOperation()));
       else

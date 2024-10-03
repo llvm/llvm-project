@@ -12674,6 +12674,10 @@ def err_acc_loop_spec_conflict
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
+def err_acc_size_expr_value
+    : Error<
+          "OpenACC 'tile' clause size expression must be %select{an asterisk "
+          "or a constant expression|positive integer value, evaluated to %1}0">;
 def err_acc_invalid_in_collapse_loop
     : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
             "in intervening code of a 'loop' with a 'collapse' clause">;
