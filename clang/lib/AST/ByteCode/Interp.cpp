@@ -1435,7 +1435,7 @@ bool Interpret(InterpState &S, APValue &Result) {
   }
 }
 // https://github.com/llvm/llvm-project/issues/102513
-#if defined (_MSC_VER)
+#if defined(_MSC_VER)
 #pragma optimize("", on)
 #endif
 
