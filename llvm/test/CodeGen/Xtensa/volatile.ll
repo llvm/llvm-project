@@ -40,12 +40,12 @@ define void @test() {
 ; CHECK-NEXT:    ret
 
 entry:
-  %0 = load volatile i8, ptr @x_i8, align 4
-  store volatile i8 %0, ptr @y_i8, align 4
-  %1 = load volatile i16, ptr @x_i16, align 4
-  store volatile i16 %1, ptr @y_i16, align 4
-  %2 = load volatile i32, ptr @x_i32, align 4
-  store volatile i32 %2, ptr @y_i32, align 4
+  %a = load volatile i8, ptr @x_i8, align 4
+  store volatile i8 %a, ptr @y_i8, align 4
+  %b = load volatile i16, ptr @x_i16, align 4
+  store volatile i16 %b, ptr @y_i16, align 4
+  %c = load volatile i32, ptr @x_i32, align 4
+  store volatile i32 %c, ptr @y_i32, align 4
   ret void
 }
 
