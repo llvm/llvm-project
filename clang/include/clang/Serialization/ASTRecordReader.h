@@ -86,6 +86,11 @@ public:
   /// Skips the specified number of values.
   void skipInts(unsigned N) { Idx += N; }
 
+  /// Skips the specified number of DeclIDs.
+  void skipDeclRefs(unsigned N) {
+    Idx += N * serialization::DeclIDSerialiazedSize;
+  }
+
   /// Retrieve the global submodule ID its local ID number.
   serialization::SubmoduleID
   getGlobalSubmoduleID(unsigned LocalID) {
@@ -187,10 +192,24 @@ public:
   /// Reads a declaration from the given position in a record in the
   /// given module, advancing Idx.
   Decl *readDecl() {
+#ifndef NDEBUG
+    unsigned OldIdx = Idx;
+    Decl *D = Reader->ReadDecl(*F, Record, Idx);
+    assert(Idx - OldIdx == serialization::DeclIDSerialiazedSize);
+    return D;
+#endif
     return Reader->ReadDecl(*F, Record, Idx);
   }
   Decl *readDeclRef() {
     return readDecl();
+  }
+
+  template <class DeclKind, class Func> void readDeclArray(Func &&ConsumeFunc) {
+    unsigned LengthOfArray = readInt();
+    unsigned End = Idx + LengthOfArray;
+
+    while (Idx < End)
+      ConsumeFunc(readDeclAs<DeclKind>());
   }
 
   /// Reads a declaration from the given position in the record,

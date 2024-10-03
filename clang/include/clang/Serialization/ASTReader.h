@@ -617,7 +617,7 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<serialization::unaligned_decl_id_t>;
+  using LexicalContents = ArrayRef<uint32_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -976,8 +976,7 @@ private:
   SmallVector<uint64_t, 8> DelayedDeleteExprs;
 
   // A list of late parsed template function data with their module files.
-  SmallVector<std::pair<ModuleFile *, SmallVector<uint64_t, 1>>, 4>
-      LateParsedTemplates;
+  SmallVector<std::pair<ModuleFile *, RecordData>, 4> LateParsedTemplates;
 
   /// The IDs of all decls to be checked for deferred diags.
   ///

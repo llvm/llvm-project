@@ -285,6 +285,9 @@ using unaligned_decl_id_t =
         serialization::DeclID, llvm::endianness::native,
         llvm::support::unaligned>;
 
+/// The number of slots needed to record a DeclID in bitstreams.
+const unsigned int DeclIDSerialiazedSize = 2;
+
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
 

@@ -1020,9 +1020,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   case FunctionDecl::TK_DependentFunctionTemplateSpecialization: {
     // Templates.
     UnresolvedSet<8> Candidates;
-    unsigned NumCandidates = Record.readInt();
-    while (NumCandidates--)
-      Candidates.addDecl(readDeclAs<NamedDecl>());
+    Record.readDeclArray<NamedDecl>(
+        [&Candidates](NamedDecl *ND) { Candidates.addDecl(ND); });
 
     // Templates args.
     TemplateArgumentListInfo TemplArgsWritten;
@@ -1149,11 +1148,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setIsPureVirtual(Pure);
 
   // Read in the parameters.
-  unsigned NumParams = Record.readInt();
   SmallVector<ParmVarDecl *, 16> Params;
-  Params.reserve(NumParams);
-  for (unsigned I = 0; I != NumParams; ++I)
-    Params.push_back(readDeclAs<ParmVarDecl>());
+  Record.readDeclArray<ParmVarDecl>(
+      [&Params](ParmVarDecl *ParmD) { Params.push_back(ParmD); });
   FD->setParams(Reader.getContext(), Params);
 }
 
@@ -2300,7 +2297,7 @@ void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
   } else {
     // We don't care about which declarations this used to override; we get
     // the relevant information from the canonical declaration.
-    Record.skipInts(NumOverridenMethods);
+    Record.skipDeclRefs(NumOverridenMethods);
   }
 }
 
@@ -4407,8 +4404,9 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   // FIXME: We have several different dispatches on decl kind here; maybe
   // we should instead generate one loop per kind and dispatch up-front?
   Decl *MostRecent = FirstLocal;
-  for (unsigned I = 0, N = Record.size(); I != N; ++I) {
-    unsigned Idx = N - I - 1;
+  for (unsigned I = 0, N = Record.size(); I != N;
+       I += serialization::DeclIDSerialiazedSize) {
+    unsigned Idx = N - I - serialization::DeclIDSerialiazedSize;
     auto *D = ReadDecl(*M, Record, Idx);
     ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
     MostRecent = D;
