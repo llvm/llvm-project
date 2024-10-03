@@ -481,6 +481,35 @@ public:
   }
 };
 
+class OpenACCTileClause final
+    : public OpenACCClauseWithExprs,
+      public llvm::TrailingObjects<OpenACCTileClause, Expr *> {
+  OpenACCTileClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> SizeExprs, SourceLocation EndLoc)
+      : OpenACCClauseWithExprs(OpenACCClauseKind::Tile, BeginLoc, LParenLoc,
+                               EndLoc) {
+    std::uninitialized_copy(SizeExprs.begin(), SizeExprs.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), SizeExprs.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Tile;
+  }
+  static OpenACCTileClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> SizeExprs,
+                                   SourceLocation EndLoc);
+  llvm::ArrayRef<Expr *> getSizeExprs() {
+    return OpenACCClauseWithExprs::getExprs();
+  }
+
+  llvm::ArrayRef<Expr *> getSizeExprs() const {
+    return OpenACCClauseWithExprs::getExprs();
+  }
+};
+
 /// Represents one of a handful of clauses that have a single integer
 /// expression.
 class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithExprs {

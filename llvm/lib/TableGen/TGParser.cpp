@@ -541,7 +541,7 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
 /// Resolve the record fully and add it to the record keeper.
 bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   Init *NewName = nullptr;
-  if (Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
+  if (const Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
     if (!Rec->isAnonymous()) {
       PrintError(Rec->getLoc(),
                  "def already exists: " + Rec->getNameInitAsString());
@@ -1108,7 +1108,7 @@ const RecTy *TGParser::ParseType() {
       Lex.Lex();
       return I->second;
     }
-    if (Record *R = ParseClassID())
+    if (const Record *R = ParseClassID())
       return RecordRecTy::get(R);
     TokError("unknown class name");
     return nullptr;
