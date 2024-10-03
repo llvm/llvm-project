@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -fzos-extensions -fvisibility=hidden -verify -o - | FileCheck %s
+// REQUIRES: systemz-registered-target
+// RUN: %clang_cc1 %s -emit-llvm -triple s390x-none-zos -fzos-extensions -fvisibility=hidden -verify -o - | FileCheck %s
 
 // Testing missing declarations.
 #pragma export(d0)                         // expected-warning{{failed to resolve '#pragma export' to a declaration}}

@@ -1,3 +1,4 @@
+// REQUIRES: systemz-registered-target
 // RUN: %clang_cc1 -x c++ -emit-llvm -triple s390x-none-zos -fvisibility=hidden %s -o - | FileCheck %s
 // expected-no-diagnostics
 
