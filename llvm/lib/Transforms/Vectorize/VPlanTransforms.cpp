@@ -1441,7 +1441,8 @@ void VPlanTransforms::addActiveLaneMask(
 }
 
 /// Replace recipes with their EVL variants.
-static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL,
+                                         LLVMContext &Ctx) {
   using namespace llvm::VPlanPatternMatch;
   SmallVector<VPValue *> HeaderMasks = collectAllHeaderMasks(Plan);
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
@@ -1481,15 +1482,14 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                                   TypeInfo.inferScalarType(Sel),
                                                   Sel->getDebugLoc());
               })
-              .Case<VPInstruction>([&](VPInstruction *VPI) {
+              .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
                 VPValue *LHS, *RHS;
                 if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
                                          m_VPValue(RHS))))
                   return nullptr;
-                VPValue *Cond = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                    CanonicalIVPHI->getScalarType()->getContext()));
+                VPValue *Cond = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
                 return new VPInstruction(VPInstruction::MergeUntilPivot,
-                                         {Cond, LHS, RHS, EVL},
+                                         {Cond, LHS, RHS, &EVL},
                                          VPI->getDebugLoc());
               })
               .Default([&](VPRecipeBase *R) { return nullptr; });
@@ -1605,7 +1605,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
-  transformRecipestoEVLRecipes(Plan, *VPEVL);
+  LLVMContext &Ctx = CanonicalIVPHI->getScalarType()->getContext();
+  transformRecipestoEVLRecipes(Plan, *VPEVL, Ctx);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.

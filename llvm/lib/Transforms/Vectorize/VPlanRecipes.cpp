@@ -638,11 +638,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return NewPhi;
   }
   case VPInstruction::MergeUntilPivot: {
-    assert(Part == 0 && "No unrolling expected for predicated vectorization.");
-    Value *Cond = State.get(getOperand(0), Part);
-    Value *OnTrue = State.get(getOperand(1), Part);
-    Value *OnFalse = State.get(getOperand(2), Part);
-    Value *Pivot = State.get(getOperand(3), VPIteration(0, 0));
+    Value *Cond = State.get(getOperand(0), 0);
+    Value *OnTrue = State.get(getOperand(1), 0);
+    Value *OnFalse = State.get(getOperand(2), 0);
+    Value *Pivot = State.get(getOperand(3), /* IsScalar */ true);
     assert(Pivot->getType()->isIntegerTy() && "Pivot should be an integer.");
     return Builder.CreateIntrinsic(Intrinsic::vp_merge, {OnTrue->getType()},
                                    {Cond, OnTrue, OnFalse, Pivot}, nullptr,

@@ -61,7 +61,7 @@ struct specificval_ty {
 
   specificval_ty(const VPValue *V) : Val(V) {}
 
-  bool match(VPValue *VPV) { return VPV == Val; }
+  bool match(VPValue *VPV) const { return VPV == Val; }
 };
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
@@ -177,6 +177,11 @@ struct Recipe_match {
   Recipe_match(A_t A, B_t B) : Ops({A, B}) {
     static_assert(std::tuple_size<Ops_t>::value == 2 &&
                   "constructor can only be used for binary matcher");
+  }
+  template <typename A_t, typename B_t, typename C_t>
+  Recipe_match(A_t A, B_t B, C_t C) : Ops({A, B, C}) {
+    static_assert(std::tuple_size<Ops_t>::value == 3 &&
+                  "constructor can only be used for ternary matcher");
   }
 
   bool match(const VPValue *V) const {
