@@ -18,7 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 ssize_t recvfrom(int sockfd, const void *buf, size_t len, int flags,
-                 const struct sockaddr *address, socklen_t addrlen);
+                 const struct sockaddr *address, socklen_t *addrlen);
 
 } // namespace LIBC_NAMESPACE_DECL
 
