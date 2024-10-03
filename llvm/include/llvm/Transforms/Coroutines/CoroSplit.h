@@ -23,7 +23,7 @@ namespace llvm {
 
 namespace coro {
 class BaseABI;
-class Shape;
+struct Shape;
 } // namespace coro
 
 struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {

@@ -2222,7 +2222,7 @@ CoroSplitPass::CoroSplitPass(bool OptimizeFrame)
         std::unique_ptr<coro::BaseABI> ABI =
             CreateNewABI(F, S, coro::isTriviallyMaterializable);
         ABI->init();
-        return std::move(ABI);
+        return ABI;
       }),
       OptimizeFrame(OptimizeFrame) {}
 
@@ -2233,7 +2233,7 @@ CoroSplitPass::CoroSplitPass(std::function<bool(Instruction &)> IsMatCallback,
     : CreateAndInitABI([=](Function &F, coro::Shape &S) {
         std::unique_ptr<coro::BaseABI> ABI = CreateNewABI(F, S, IsMatCallback);
         ABI->init();
-        return std::move(ABI);
+        return ABI;
       }),
       OptimizeFrame(OptimizeFrame) {}
 
