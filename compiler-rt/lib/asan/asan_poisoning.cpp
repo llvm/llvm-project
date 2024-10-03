@@ -576,18 +576,12 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   }
 }
 
-
 // Marks the specified number of bytes in a granule as accessible or
 // poisones the whole granule with kAsanContiguousContainerOOBMagic value.
-static void AnnotateContainerGranuleAccessibleBytes(uptr ptr, u8 n) {
+static void SetContainerGranule(uptr ptr, u8 n) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
-  if (n == granularity) {
-    *(u8 *)MemToShadow(ptr) = 0;
-  } else if (n == 0) {
-    *(u8 *)MemToShadow(ptr) = static_cast<u8>(kAsanContiguousContainerOOBMagic);
-  } else {
-    *(u8 *)MemToShadow(ptr) = n;
-  }
+  u8 s = (n == granularity) ? 0 : (n ? n : kAsanContiguousContainerOOBMagic);
+  *(u8 *)MemToShadow(ptr) = s;
 }
 
 // Performs a byte-by-byte copy of ASan annotations (shadow memory values).
@@ -616,11 +610,9 @@ static void SlowCopyContainerAnnotations(uptr src_storage_beg,
     if (dst_ptr < dst_storage_end || dst_ptr == dst_internal_end ||
         AddressIsPoisoned(dst_storage_end)) {
       if (unpoisoned_bytes != 0 || granule_begin >= dst_storage_beg) {
-        AnnotateContainerGranuleAccessibleBytes(granule_begin,
-                                                unpoisoned_bytes);
+        SetContainerGranule(granule_begin, unpoisoned_bytes);
       } else if (!AddressIsPoisoned(dst_storage_beg)) {
-        AnnotateContainerGranuleAccessibleBytes(
-            granule_begin, dst_storage_beg - granule_begin);
+        SetContainerGranule(granule_begin, dst_storage_beg - granule_begin);
       }
     }
   }
@@ -656,10 +648,9 @@ static void SlowReversedCopyContainerAnnotations(uptr src_storage_beg,
     }
 
     if (granule_begin == dst_ptr || unpoisoned_bytes != 0) {
-      AnnotateContainerGranuleAccessibleBytes(granule_begin, unpoisoned_bytes);
+      SetContainerGranule(granule_begin, unpoisoned_bytes);
     } else if (!AddressIsPoisoned(dst_storage_beg)) {
-      AnnotateContainerGranuleAccessibleBytes(granule_begin,
-                                              dst_storage_beg - granule_begin);
+      SetContainerGranule(granule_begin, dst_storage_beg - granule_begin);
     }
   }
 }
@@ -677,8 +668,8 @@ static void CopyContainerFirstGranuleAnnotation(uptr src_storage_begin,
     *(u8 *)MemToShadow(dst_external_begin) =
         *(u8 *)MemToShadow(src_external_begin);
   } else if (!AddressIsPoisoned(dst_storage_begin)) {
-    AnnotateContainerGranuleAccessibleBytes(
-        dst_external_begin, dst_storage_begin - dst_external_begin);
+    SetContainerGranule(dst_external_begin,
+                        dst_storage_begin - dst_external_begin);
   }
 }
 
@@ -693,8 +684,7 @@ static void CopyContainerLastGranuleAnnotation(uptr src_storage_end,
   if (AddressIsPoisoned(src_storage_end)) {
     *(u8 *)MemToShadow(dst_internal_end) = *(u8 *)MemToShadow(src_internal_end);
   } else {
-    AnnotateContainerGranuleAccessibleBytes(dst_internal_end,
-                                            src_storage_end - src_internal_end);
+    SetContainerGranule(dst_internal_end, src_storage_end - src_internal_end);
   }
 }
 
