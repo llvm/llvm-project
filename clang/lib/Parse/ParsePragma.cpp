@@ -4322,7 +4322,7 @@ static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
   std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
   auto Value = new (PP.getPreprocessorAllocator())
       std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
-                                                 TokenVector.size());
+                                                  TokenVector.size());
   AnnotTok.setAnnotationValue(Value);
   PP.EnterToken(AnnotTok, /*IsReinject*/ false);
 }
