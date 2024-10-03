@@ -191,11 +191,12 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
     // TODO: Add lastprivate support for simd construct
-    if (mlir::isa<mlir::omp::WsloopOp>(op)) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op) ||
+        mlir::isa<mlir::omp::SimdOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
-      // omp.wsloop {             omp.wsloop {
+      // omp.wsloop / omp.simd {             omp.wsloop / omp.simd {
       //   omp.loop_nest {          omp.loop_nest {
       //     ...                      ...
       //     store          ===>      store
