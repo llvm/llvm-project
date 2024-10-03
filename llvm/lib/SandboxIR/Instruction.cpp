@@ -315,14 +315,9 @@ FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
   return Ctx.createFreezeInst(LLVMI);
 }
 
-FenceInst *FenceInst::create(AtomicOrdering Ordering, BBIterator WhereIt,
-                             BasicBlock *WhereBB, Context &Ctx,
-                             SyncScope::ID SSID) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+FenceInst *FenceInst::create(AtomicOrdering Ordering, InsertPosition Pos,
+                             Context &Ctx, SyncScope::ID SSID) {
+  auto &Builder = Instruction::setInsertPos(Pos);
   llvm::FenceInst *LLVMI = Builder.CreateFence(Ordering, SSID);
   return Ctx.createFenceInst(LLVMI);
 }
@@ -342,33 +337,15 @@ void FenceInst::setSyncScopeID(SyncScope::ID SSID) {
   cast<llvm::FenceInst>(Val)->setSyncScopeID(SSID);
 }
 
-Value *SelectInst::createCommon(Value *Cond, Value *True, Value *False,
-                                const Twine &Name, IRBuilder<> &Builder,
-                                Context &Ctx) {
+Value *SelectInst::create(Value *Cond, Value *True, Value *False,
+                          InsertPosition Pos, Context &Ctx, const Twine &Name) {
+  auto &Builder = Instruction::setInsertPos(Pos);
   llvm::Value *NewV =
       Builder.CreateSelect(Cond->Val, True->Val, False->Val, Name);
   if (auto *NewSI = dyn_cast<llvm::SelectInst>(NewV))
     return Ctx.createSelectInst(NewSI);
   assert(isa<llvm::Constant>(NewV) && "Expected constant");
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *SelectInst::create(Value *Cond, Value *True, Value *False,
-                          Instruction *InsertBefore, Context &Ctx,
-                          const Twine &Name) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  return createCommon(Cond, True, False, Name, Builder, Ctx);
-}
-
-Value *SelectInst::create(Value *Cond, Value *True, Value *False,
-                          BasicBlock *InsertAtEnd, Context &Ctx,
-                          const Twine &Name) {
-  auto *IRInsertAtEnd = cast<llvm::BasicBlock>(InsertAtEnd->Val);
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(IRInsertAtEnd);
-  return createCommon(Cond, True, False, Name, Builder, Ctx);
 }
 
 void SelectInst::swapValues() {
@@ -1791,23 +1768,9 @@ void PossiblyNonNegInst::setNonNeg(bool B) {
 }
 
 Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
-                                 Instruction *InsertBefore, Context &Ctx,
+                                 InsertPosition Pos, Context &Ctx,
                                  const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  llvm::Value *NewV =
-      Builder.CreateInsertElement(Vec->Val, NewElt->Val, Idx->Val, Name);
-  if (auto *NewInsert = dyn_cast<llvm::InsertElementInst>(NewV))
-    return Ctx.createInsertElementInst(NewInsert);
-  assert(isa<llvm::Constant>(NewV) && "Expected constant");
-  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
-                                 BasicBlock *InsertAtEnd, Context &Ctx,
-                                 const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = Instruction::setInsertPos(Pos);
   llvm::Value *NewV =
       Builder.CreateInsertElement(Vec->Val, NewElt->Val, Idx->Val, Name);
   if (auto *NewInsert = dyn_cast<llvm::InsertElementInst>(NewV))
