@@ -432,8 +432,7 @@ define void @callee() nounwind {
 ; RV32IZCMP-NEXT:    sw a0, %lo(var+4)(t0)
 ; RV32IZCMP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(t0)
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 96
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 96
 ;
 ; RV32IZCMP-WITH-FP-LABEL: callee:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -942,8 +941,7 @@ define void @callee() nounwind {
 ; RV64IZCMP-NEXT:    sw a0, %lo(var+4)(t0)
 ; RV64IZCMP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(t0)
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
 ;
 ; RV64IZCMP-WITH-FP-LABEL: callee:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
@@ -1613,8 +1611,7 @@ define void @caller() nounwind {
 ; RV32IZCMP-NEXT:    lw a0, 92(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 112
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
 ;
 ; RV32IZCMP-WITH-FP-LABEL: caller:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -2309,8 +2306,7 @@ define void @caller() nounwind {
 ; RV64IZCMP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV64IZCMP-NEXT:    addi sp, sp, 128
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
 ;
 ; RV64IZCMP-WITH-FP-LABEL: caller:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
@@ -2521,10 +2517,7 @@ define void @foo() {
 ; RV32IZCMP-NEXT:    #APP
 ; RV32IZCMP-NEXT:    li s4, 0
 ; RV32IZCMP-NEXT:    #NO_APP
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s4}, 32
-; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
-; RV32IZCMP-NEXT:    .cfi_restore s4
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s4}, 32
 ;
 ; RV32IZCMP-WITH-FP-LABEL: foo:
 ; RV32IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2606,10 +2599,7 @@ define void @foo() {
 ; RV64IZCMP-NEXT:    #APP
 ; RV64IZCMP-NEXT:    li s4, 0
 ; RV64IZCMP-NEXT:    #NO_APP
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s4}, 48
-; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
-; RV64IZCMP-NEXT:    .cfi_restore s4
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s4}, 48
 ;
 ; RV64IZCMP-WITH-FP-LABEL: foo:
 ; RV64IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2697,10 +2687,7 @@ define void @bar() {
 ; RV32IZCMP-NEXT:    #APP
 ; RV32IZCMP-NEXT:    li s11, 0
 ; RV32IZCMP-NEXT:    #NO_APP
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 64
-; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 0
-; RV32IZCMP-NEXT:    .cfi_restore s11
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 64
 ;
 ; RV32IZCMP-WITH-FP-LABEL: bar:
 ; RV32IZCMP-WITH-FP:       # %bb.0: # %entry
@@ -2782,10 +2769,7 @@ define void @bar() {
 ; RV64IZCMP-NEXT:    #APP
 ; RV64IZCMP-NEXT:    li s11, 0
 ; RV64IZCMP-NEXT:    #NO_APP
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 112
-; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 0
-; RV64IZCMP-NEXT:    .cfi_restore s11
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
 ;
 ; RV64IZCMP-WITH-FP-LABEL: bar:
 ; RV64IZCMP-WITH-FP:       # %bb.0: # %entry

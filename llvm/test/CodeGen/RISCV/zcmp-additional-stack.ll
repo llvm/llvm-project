@@ -34,12 +34,7 @@ define ptr @func(ptr %s, i32 %_c, ptr %incdec.ptr, i1 %0, i8 %conv14) #0 {
 ; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    addi sp, sp, 8
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    cm.pop {ra, s0-s1}, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    .cfi_restore s1
-; RV32-NEXT:    ret
+; RV32-NEXT:    cm.popret {ra, s0-s1}, 16
 entry:
   br label %while.body
 

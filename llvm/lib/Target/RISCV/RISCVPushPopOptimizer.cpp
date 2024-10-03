@@ -45,10 +45,25 @@ char RISCVPushPopOpt::ID = 0;
 INITIALIZE_PASS(RISCVPushPopOpt, "riscv-push-pop-opt", RISCV_PUSH_POP_OPT_NAME,
                 false, false)
 
+template <typename IterT>
+static IterT nextNoDebugNoCFIInst(const IterT It, const IterT End) {
+  return std::find_if_not(std::next(It), End, [](const auto &Inst) {
+    return Inst.isDebugInstr() || Inst.isCFIInstruction() ||
+           Inst.isPseudoProbe();
+  });
+}
+
+static void eraseCFIInst(const MachineBasicBlock::iterator Begin,
+                         const MachineBasicBlock::iterator End) {
+  for (auto &Inst : llvm::make_early_inc_range(llvm::make_range(Begin, End)))
+    if (Inst.isCFIInstruction())
+      Inst.eraseFromParent();
+}
+
 // Check if POP instruction was inserted into the MBB and return iterator to it.
 static MachineBasicBlock::iterator containsPop(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBB.end();
-       MBBI = next_nodbg(MBBI, MBB.end()))
+       MBBI = nextNoDebugNoCFIInst(MBBI, MBB.end()))
     if (MBBI->getOpcode() == RISCV::CM_POP)
       return MBBI;
 
@@ -76,6 +91,9 @@ bool RISCVPushPopOpt::usePopRet(MachineBasicBlock::iterator &MBBI,
   for (unsigned i = FirstNonDeclaredOp; i < MBBI->getNumOperands(); ++i)
     PopRetBuilder.add(MBBI->getOperand(i));
 
+  // Remove CFI instructions, they are not needed for cm.popret and cm.popretz
+  eraseCFIInst(MBBI, NextI);
+
   MBBI->eraseFromParent();
   NextI->eraseFromParent();
   return true;
@@ -92,8 +110,8 @@ bool RISCVPushPopOpt::adjustRetVal(MachineBasicBlock::iterator &MBBI) {
   // Since POP instruction is in Epilogue no normal instructions will follow
   // after it. Therefore search only previous ones to find the return value.
   for (MachineBasicBlock::reverse_iterator I =
-           next_nodbg(MBBI.getReverse(), RE);
-       I != RE; I = next_nodbg(I, RE)) {
+           nextNoDebugNoCFIInst(MBBI.getReverse(), RE);
+       I != RE; I = nextNoDebugNoCFIInst(I, RE)) {
     MachineInstr &MI = *I;
     if (auto OperandPair = TII->isCopyInstrImpl(MI)) {
       Register DestReg = OperandPair->Destination->getReg();
@@ -138,7 +156,7 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
   bool Modified = false;
   for (auto &MBB : Fn) {
     MachineBasicBlock::iterator MBBI = containsPop(MBB);
-    MachineBasicBlock::iterator NextI = next_nodbg(MBBI, MBB.end());
+    MachineBasicBlock::iterator NextI = nextNoDebugNoCFIInst(MBBI, MBB.end());
     if (MBBI != MBB.end() && NextI != MBB.end() &&
         NextI->getOpcode() == RISCV::PseudoRET)
       Modified |= usePopRet(MBBI, NextI, adjustRetVal(MBBI));
