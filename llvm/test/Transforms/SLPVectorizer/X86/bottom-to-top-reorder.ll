@@ -4,22 +4,17 @@
 define void @test(ptr %0, ptr %1, ptr %2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[TMP1:%.*]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i32> <i32 0, i32 0, i32 undef, i32 0>, [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub <4 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP12]], [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i32> [[TMP13]], <i32 0, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP15:%.*]] = sub <4 x i32> [[TMP13]], <i32 0, i32 0, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> [[TMP15]], <4 x i32> <i32 2, i32 0, i32 1, i32 7>
-; CHECK-NEXT:    [[TMP17:%.*]] = add <4 x i32> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[TMP16]], zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[TMP17]], <4 x i32> [[TMP18]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP20:%.*]] = add <4 x i32> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = sub <4 x i32> [[TMP19]], zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> [[TMP20]], <4 x i32> [[TMP21]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    store <4 x i32> [[TMP22]], ptr [[TMP2:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr [[TMP1:%.*]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = sub <4 x i32> <i32 0, i32 0, i32 undef, i32 0>, [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub <4 x i32> [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[TMP9]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> <i32 0, i32 0, i32 1, i32 0>, [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i32> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i32> [[TMP14]], ptr [[TMP2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %4 = load i32, ptr %1, align 4

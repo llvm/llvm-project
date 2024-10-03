@@ -832,7 +832,106 @@ struct InstructionsState {
       : OpValue(OpValue), MainOp(MainOp), AltOp(AltOp) {}
 };
 
+struct InterchangeableInstruction {
+  unsigned Opcode;
+  SmallVector<Value *> Ops;
+  template <class... ArgTypes>
+  InterchangeableInstruction(unsigned Opcode, ArgTypes &&...Args)
+      : Opcode(Opcode), Ops{std::forward<decltype(Args)>(Args)...} {}
+};
+
+bool operator<(const InterchangeableInstruction &LHS,
+               const InterchangeableInstruction &RHS) {
+  return LHS.Opcode < RHS.Opcode;
+}
+
 } // end anonymous namespace
+
+/// \returns a sorted list of interchangeable instructions by instruction opcode
+/// that \p I can be converted to.
+/// e.g.,
+/// x << y -> x * (2^y)
+/// x << 1 -> x *   2
+/// x << 0 -> x *   1   -> x - 0 -> x + 0 -> x & 11...1 -> x | 0
+///           x *   0                     -> x & 0
+///           x *  -1   -> 0 - x
+/// TODO: support more patterns
+static SmallVector<InterchangeableInstruction>
+getInterchangeableInstruction(Instruction *I) {
+  // PII = Possible Interchangeable Instruction
+  SmallVector<InterchangeableInstruction> PII;
+  unsigned Opcode = I->getOpcode();
+  PII.emplace_back(Opcode, I->operands());
+  if (!is_contained({Instruction::Shl, Instruction::Mul, Instruction::Sub,
+                     Instruction::Add},
+                    Opcode))
+    return PII;
+  Constant *C;
+  if (match(I, m_BinOp(m_Value(), m_Constant(C)))) {
+    ConstantInt *V = nullptr;
+    if (auto *CI = dyn_cast<ConstantInt>(C)) {
+      V = CI;
+    } else if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
+      if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
+        V = CI;
+    }
+    if (!V)
+      return PII;
+    Value *Op0 = I->getOperand(0);
+    Type *Op1Ty = I->getOperand(1)->getType();
+    const APInt &Op1Int = V->getValue();
+    Constant *Zero =
+        ConstantInt::get(Op1Ty, APInt::getZero(Op1Int.getBitWidth()));
+    Constant *UnsignedMax =
+        ConstantInt::get(Op1Ty, APInt::getMaxValue(Op1Int.getBitWidth()));
+    switch (Opcode) {
+    case Instruction::Shl: {
+      PII.emplace_back(Instruction::Mul, Op0,
+                       ConstantInt::get(Op1Ty, 1 << Op1Int.getZExtValue()));
+      if (Op1Int.isZero()) {
+        PII.emplace_back(Instruction::Sub, Op0, Zero);
+        PII.emplace_back(Instruction::Add, Op0, Zero);
+        PII.emplace_back(Instruction::And, Op0, UnsignedMax);
+        PII.emplace_back(Instruction::Or, Op0, Zero);
+      }
+      break;
+    }
+    case Instruction::Mul: {
+      switch (Op1Int.getSExtValue()) {
+      case 1:
+        PII.emplace_back(Instruction::Sub, Op0, Zero);
+        PII.emplace_back(Instruction::Add, Op0, Zero);
+        PII.emplace_back(Instruction::And, Op0, UnsignedMax);
+        PII.emplace_back(Instruction::Or, Op0, Zero);
+        break;
+      case 0:
+        PII.emplace_back(Instruction::And, Op0, Zero);
+        break;
+      case -1:
+        PII.emplace_back(Instruction::Sub, Zero, Op0);
+        break;
+      }
+      break;
+    }
+    case Instruction::Sub:
+      if (Op1Int.isZero()) {
+        PII.emplace_back(Instruction::Add, Op0, Zero);
+        PII.emplace_back(Instruction::And, Op0, UnsignedMax);
+        PII.emplace_back(Instruction::Or, Op0, Zero);
+      }
+      break;
+    case Instruction::Add:
+      if (Op1Int.isZero()) {
+        PII.emplace_back(Instruction::And, Op0, UnsignedMax);
+        PII.emplace_back(Instruction::Or, Op0, Zero);
+      }
+      break;
+    }
+  }
+  // std::set_intersection requires a sorted range.
+  sort(PII);
+  return PII;
+}
 
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
@@ -938,18 +1037,54 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
       return InstructionsState(VL[BaseIndex], nullptr, nullptr);
   }
+  // Currently, this is only used for binary ops.
+  // TODO: support all instructions
+  SmallVector<InterchangeableInstruction> InterchangeableOpcode =
+      getInterchangeableInstruction(cast<Instruction>(VL[BaseIndex]));
+  SmallVector<InterchangeableInstruction> AlternateInterchangeableOpcode;
+  auto UpdateInterchangeableOpcode =
+      [](SmallVector<InterchangeableInstruction> &LHS,
+         ArrayRef<InterchangeableInstruction> RHS) {
+        SmallVector<InterchangeableInstruction> NewInterchangeableOpcode;
+        std::set_intersection(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+                              std::back_inserter(NewInterchangeableOpcode));
+        if (NewInterchangeableOpcode.empty())
+          return false;
+        LHS = std::move(NewInterchangeableOpcode);
+        return true;
+      };
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     auto *I = cast<Instruction>(VL[Cnt]);
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+      SmallVector<InterchangeableInstruction> ThisInterchangeableOpcode(
+          getInterchangeableInstruction(I));
+      if (UpdateInterchangeableOpcode(InterchangeableOpcode,
+                                      ThisInterchangeableOpcode))
         continue;
-      if (Opcode == AltOpcode && isValidForAlternation(InstOpcode) &&
-          isValidForAlternation(Opcode)) {
-        AltOpcode = InstOpcode;
-        AltIndex = Cnt;
+      if (AlternateInterchangeableOpcode.empty()) {
+        InterchangeableOpcode.erase(
+            std::remove_if(InterchangeableOpcode.begin(),
+                           InterchangeableOpcode.end(),
+                           [](const InterchangeableInstruction &I) {
+                             return !isValidForAlternation(I.Opcode);
+                           }),
+            InterchangeableOpcode.end());
+        ThisInterchangeableOpcode.erase(
+            std::remove_if(ThisInterchangeableOpcode.begin(),
+                           ThisInterchangeableOpcode.end(),
+                           [](const InterchangeableInstruction &I) {
+                             return !isValidForAlternation(I.Opcode);
+                           }),
+            ThisInterchangeableOpcode.end());
+        if (InterchangeableOpcode.empty() || ThisInterchangeableOpcode.empty())
+          return InstructionsState(VL[BaseIndex], nullptr, nullptr);
+        AlternateInterchangeableOpcode = std::move(ThisInterchangeableOpcode);
         continue;
       }
+      if (UpdateInterchangeableOpcode(AlternateInterchangeableOpcode,
+                                      ThisInterchangeableOpcode))
+        continue;
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = IBase->getOperand(0);
       Type *Ty0 = Op0->getType();
@@ -1043,6 +1178,21 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState(VL[BaseIndex], nullptr, nullptr);
   }
 
+  if (IsBinOp) {
+    auto FindOp = [&](ArrayRef<InterchangeableInstruction> CandidateOp) {
+      for (Value *V : VL)
+        for (const InterchangeableInstruction &I : CandidateOp)
+          if (cast<Instruction>(V)->getOpcode() == I.Opcode)
+            return cast<Instruction>(V);
+      llvm_unreachable(
+          "Cannot find the candidate instruction for InstructionsState.");
+    };
+    Instruction *MainOp = FindOp(InterchangeableOpcode);
+    Instruction *AltOp = AlternateInterchangeableOpcode.empty()
+                             ? MainOp
+                             : FindOp(AlternateInterchangeableOpcode);
+    return InstructionsState(VL[BaseIndex], MainOp, AltOp);
+  }
   return InstructionsState(VL[BaseIndex], cast<Instruction>(VL[BaseIndex]),
                            cast<Instruction>(VL[AltIndex]));
 }
@@ -2335,24 +2485,41 @@ public:
                                  : cast<Instruction>(VL[0])->getNumOperands();
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
+      InstructionsState S = getSameOpcode(VL, TLI);
+      for (unsigned OpIdx : seq<unsigned>(NumOperands))
         OpsVec[OpIdx].resize(NumLanes);
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          assert(isa<Instruction>(VL[Lane]) && "Expected instruction");
-          // Our tree has just 3 nodes: the root and two operands.
-          // It is therefore trivial to get the APO. We only need to check the
-          // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
-          // RHS operand. The LHS operand of both add and sub is never attached
-          // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is true only if VL[Lane] is an inverse operation.
+      for (auto [I, V] : enumerate(VL)) {
+        assert(isa<Instruction>(V) && "Expected instruction");
+        SmallVector<InterchangeableInstruction> IIList =
+            getInterchangeableInstruction(cast<Instruction>(V));
+        Value *SelectedOp;
+        auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+          return II.Opcode == S.MainOp->getOpcode();
+        });
+        if (Iter == IIList.end()) {
+          Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+            return II.Opcode == S.AltOp->getOpcode();
+          });
+          SelectedOp = S.AltOp;
+        } else {
+          SelectedOp = S.MainOp;
+        }
+        assert(Iter != IIList.end() &&
+               "Cannot find an interchangeable instruction.");
+        // Our tree has just 3 nodes: the root and two operands.
+        // It is therefore trivial to get the APO. We only need to check the
+        // opcode of V and whether the operand at OpIdx is the LHS or RHS
+        // operand. The LHS operand of both add and sub is never attached to an
+        // inversese operation in the linearized form, therefore its APO is
+        // false. The RHS is true only if V is an inverse operation.
 
-          // Since operand reordering is performed on groups of commutative
-          // operations or alternating sequences (e.g., +, -), we can safely
-          // tell the inverse operations by checking commutativity.
-          bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
+        // Since operand reordering is performed on groups of commutative
+        // operations or alternating sequences (e.g., +, -), we can safely
+        // tell the inverse operations by checking commutativity.
+        bool IsInverseOperation = !isCommutative(cast<Instruction>(SelectedOp));
+        for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(VL[Lane])->getOperand(OpIdx),
-                                 APO, false};
+          OpsVec[OpIdx][I] = {Iter->Ops[OpIdx], APO, false};
         }
       }
     }
@@ -3252,15 +3419,25 @@ private:
       auto *I0 = cast<Instruction>(Scalars[0]);
       Operands.resize(I0->getNumOperands());
       unsigned NumLanes = Scalars.size();
-      for (unsigned OpIdx = 0, NumOperands = I0->getNumOperands();
-           OpIdx != NumOperands; ++OpIdx) {
+      unsigned NumOperands = I0->getNumOperands();
+      for (unsigned OpIdx : seq<unsigned>(NumOperands))
         Operands[OpIdx].resize(NumLanes);
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          auto *I = cast<Instruction>(Scalars[Lane]);
-          assert(I->getNumOperands() == NumOperands &&
-                 "Expected same number of operands");
-          Operands[OpIdx][Lane] = I->getOperand(OpIdx);
-        }
+      for (auto [I, V] : enumerate(Scalars)) {
+        SmallVector<InterchangeableInstruction> IIList =
+            getInterchangeableInstruction(cast<Instruction>(V));
+        auto Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+          return II.Opcode == MainOp->getOpcode();
+        });
+        if (Iter == IIList.end())
+          Iter = find_if(IIList, [&](const InterchangeableInstruction &II) {
+            return II.Opcode == AltOp->getOpcode();
+          });
+        assert(Iter != IIList.end() &&
+               "Cannot find an interchangeable instruction.");
+        assert(Iter->Ops.size() == NumOperands &&
+               "Expected same number of operands");
+        for (auto [J, Op] : enumerate(Iter->Ops))
+          Operands[J][I] = Op;
       }
     }
 
@@ -14935,7 +15112,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
+      propagateIRFlags(V, E->Scalars, nullptr, It == MinBWs.end());
       if (auto *I = dyn_cast<Instruction>(V)) {
         V = propagateMetadata(I, E->Scalars);
         // Drop nuw flags for abs(sub(commutative), true).
