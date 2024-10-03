@@ -298,6 +298,7 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
              "Rendezvous breakpoint breakpoint id {0} for pid {1}"
              "is already set.",
              m_dyld_bid,
+             m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
     return true;
   }
 

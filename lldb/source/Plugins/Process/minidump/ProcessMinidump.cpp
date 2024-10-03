@@ -27,6 +27,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -335,14 +336,6 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-DynamicLoader *ProcessMinidump::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr 
-    && GetArchitecture().GetTriple().isOSLinux())
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
-  return m_dyld_up.get();
-}
-
 DataExtractor ProcessMinidump::GetAuxvData() {
   std::optional<llvm::ArrayRef<uint8_t>> auxv =
       m_minidump_parser->GetStream(StreamType::LinuxAuxv);
@@ -482,7 +475,6 @@ ModuleSP ProcessMinidump::GetOrCreateModule(UUID minidump_uuid,
 void ProcessMinidump::ReadModuleList() {
   std::vector<const minidump::Module *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
-
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   for (auto module : filtered_modules) {
@@ -551,9 +543,13 @@ void ProcessMinidump::ReadModuleList() {
                "Unable to locate the matching object file, creating a "
                "placeholder module for: {0}",
                name);
-
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
+    // If we haven't loaded a main executable yet, set the first module to be 
+    // main executable
+    if (!GetTarget().GetExecutableModule())
+      GetTarget().SetExecutableModule(module_sp);
+    else
       GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 

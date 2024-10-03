@@ -56,8 +56,6 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
-  DynamicLoader *GetDynamicLoader() override;
-
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status DoDestroy() override;
