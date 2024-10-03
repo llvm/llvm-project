@@ -179,7 +179,6 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   // `InsertPt` always points to the point in a preceding block where we have to
   // insert a `.cfi_remember_state`, in the case that the current block needs a
   // `.cfi_restore_state`.
-  MachineBasicBlock *InsertMBB = PrologueBlock;
   MachineBasicBlock::iterator InsertPt = PrologueEnd;
 
   assert(InsertPt != PrologueBlock->begin() &&
@@ -214,7 +213,7 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
       // stack frame.
       unsigned CFIIndex =
           MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
-      BuildMI(*InsertMBB, InsertPt, DebugLoc(),
+      BuildMI(*InsertPt->getParent(), InsertPt, DebugLoc(),
               TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
       // Insert a `.cfi_restore_state` at the beginning of the current block.
@@ -223,7 +222,6 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
                          TII.get(TargetOpcode::CFI_INSTRUCTION))
                      .addCFIIndex(CFIIndex);
       ++InsertPt;
-      InsertMBB = &*CurrBB;
       Change = true;
     } else if ((Info.StrongNoFrameOnEntry || !Info.HasFrameOnEntry) &&
                HasFrame) {
