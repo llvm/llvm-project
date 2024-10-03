@@ -21,7 +21,7 @@
 #define PACKED_ANON_STRUCT
 #endif
 #if REVISION <= 4
-// Pre-TODO layout.
+// Pre-2a1ef74 layout.
 #define NON_STANDARD_PADDING
 #endif
 // REVISION == 5: current layout
