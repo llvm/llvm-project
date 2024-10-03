@@ -443,6 +443,9 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 #endif
 
 TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+  // TODO: reenable once test is fixed to run more quickly.
+  GTEST_SKIP();
+
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
