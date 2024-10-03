@@ -191,19 +191,19 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   auto MI = MBB.getLastNonDebugInstr();
   if (!MI.isValid())
     return false;
-  if (MI->getOpcode() == SPIRV::OpBranch) {
-    TBB = MI->getOperand(0).getMBB();
-    return false;
-  } else if (MI->getOpcode() == SPIRV::OpBranchConditional) {
-    Cond.push_back(MI->getOperand(0));
-    TBB = MI->getOperand(1).getMBB();
-    FBB = MI->getOperand(2).getMBB();
-    for (unsigned I = 3, E = MI->getNumOperands(); I < E; ++I)
-      Cond.push_back(MI->getOperand(I));
-    return false;
-  } else {
+
+  // We do not allow to restructure blocks ending with OpBranchConditional,
+  // because there is no way to encode `if (Cond) then Stmt` logic, only
+  // full if-then-else is supported by OpBranchConditional.
+  // If we supported splitting of blocks ending with OpBranchConditional
+  // MachineBasicBlock.cpp would expect successfull implementation of calls
+  // to insertBranch() setting FBB to null that is not feasible.
+  if (MI->getOpcode() != SPIRV::OpBranch)
     return true;
-  }
+
+  // Allow only 'unconditional branch' modifications of the basic block.
+  TBB = MI->getOperand(0).getMBB();
+  return false;
 }
 
 // Remove the branching code at the end of the specific MBB.
@@ -217,8 +217,7 @@ unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (I == MBB.end())
     return 0;
 
-  unsigned Opcode = I->getOpcode();
-  if (Opcode == SPIRV::OpBranch || Opcode == SPIRV::OpBranchConditional) {
+  if (I->getOpcode() == SPIRV::OpBranch) {
     I->eraseFromParent();
     return 1;
   }
@@ -246,16 +245,7 @@ unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       int * /*BytesAdded*/) const {
   if (!TBB)
     return 0;
-  if (Cond.empty()) {
-    BuildMI(&MBB, DL, get(SPIRV::OpBranch)).addMBB(TBB);
-  } else {
-    auto MIB = BuildMI(&MBB, DL, get(SPIRV::OpBranchConditional))
-                   .add(Cond[0])
-                   .addMBB(TBB)
-                   .addMBB(FBB);
-    for (unsigned i = 1; i < Cond.size(); ++i)
-      MIB.add(Cond[i]);
-  }
+  BuildMI(&MBB, DL, get(SPIRV::OpBranch)).addMBB(TBB);
   return 1;
 }
 
