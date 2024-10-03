@@ -56,6 +56,12 @@ public:
     return DL.getTypeSizeInBits(Ty->LLVMTy);
   }
 
+  /// \Returns the number of bits required to represent the operands or
+  /// return value of \p I.
+  static unsigned getNumBits(Instruction *I) {
+    return I->getDataLayout().getTypeSizeInBits(getExpectedType(I)->LLVMTy);
+  }
+
   /// Equivalent to MemoryLocation::getOrNone(I).
   static std::optional<llvm::MemoryLocation>
   memoryLocationGetOrNone(const Instruction *I) {
@@ -92,6 +98,27 @@ public:
     if (!Diff)
       return false;
     return *Diff > 0;
+  }
+
+  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
+    auto *LLVMI = cast<llvm::Instruction>(I->Val);
+    return match(LLVMI,
+                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
+           match(LLVMI,
+                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
+  }
+
+  /// We consider \p I as a Memory Dependency Candidate instruction if it
+  /// reads/write memory or if it has side-effects. This is used by the
+  /// dependency graph.
+  static bool isMemDepCandidate(Instruction *I) {
+    auto *LLVMI = cast<llvm::Instruction>(I->Val);
+    return LLVMI->mayReadOrWriteMemory() &&
+           (!isa<llvm::IntrinsicInst>(LLVMI) ||
+            (cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
+                 Intrinsic::sideeffect &&
+             cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
+                 Intrinsic::pseudoprobe));
   }
 };
 } // namespace llvm::sandboxir

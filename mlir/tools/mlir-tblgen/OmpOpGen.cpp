@@ -210,7 +210,7 @@ static void verifyClause(const Record *op, const Record *clause) {
 ///         type.
 static StringRef translateArgumentType(ArrayRef<SMLoc> loc, StringInit *name,
                                        Init *init, int &nest, int &rank) {
-  Record *def = cast<DefInit>(init)->getDef();
+  const Record *def = cast<DefInit>(init)->getDef();
 
   llvm::StringSet<> superClasses;
   for (auto [sc, _] : def->getSuperClasses())
@@ -318,7 +318,7 @@ static void genOperandsDef(const Record *op, raw_ostream &os) {
     return;
 
   SmallVector<std::string> clauseNames;
-  for (Record *clause : op->getValueAsListOfDefs("clauseList"))
+  for (const Record *clause : op->getValueAsListOfDefs("clauseList"))
     clauseNames.push_back((extractOmpClauseName(clause) + "ClauseOps").str());
 
   StringRef opName = stripPrefixAndSuffix(
