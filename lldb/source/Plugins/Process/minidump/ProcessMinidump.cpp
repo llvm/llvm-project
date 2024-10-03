@@ -545,12 +545,12 @@ void ProcessMinidump::ReadModuleList() {
                name);
       module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
           module_spec, load_addr, load_size);
-    // If we haven't loaded a main executable yet, set the first module to be 
-    // main executable
-    if (!GetTarget().GetExecutableModule())
-      GetTarget().SetExecutableModule(module_sp);
-    else
-      GetTarget().GetImages().Append(module_sp, true /* notify */);
+      // If we haven't loaded a main executable yet, set the first module to be
+      // main executable
+      if (!GetTarget().GetExecutableModule())
+        GetTarget().SetExecutableModule(module_sp);
+      else
+        GetTarget().GetImages().Append(module_sp, true /* notify */);
     }
 
     bool load_addr_changed = false;

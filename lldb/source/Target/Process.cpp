@@ -6540,8 +6540,8 @@ static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
 }
 
 static void AddSegmentRegisterSections(Process &process, ThreadSP &thread_sp,
-                                CoreFileMemoryRanges &ranges,
-                                lldb::addr_t range_end) {
+                                       CoreFileMemoryRanges &ranges,
+                                       lldb::addr_t range_end) {
   lldb::RegisterContextSP reg_ctx = thread_sp->GetRegisterContext();
   if (!reg_ctx)
     return;
