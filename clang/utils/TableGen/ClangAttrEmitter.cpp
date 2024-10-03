@@ -1529,9 +1529,8 @@ createArgument(const Record &Arg, StringRef Attr,
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
-    ArrayRef<std::pair<Record*, SMRange>> Bases = Search->getSuperClasses();
-    for (const auto &Base : reverse(Bases)) {
-      if ((Ptr = createArgument(Arg, Attr, Base.first)))
+    for (const auto &[Base, _] : reverse(Search->getSuperClasses())) {
+      if ((Ptr = createArgument(Arg, Attr, Base)))
         break;
     }
   }
@@ -2744,12 +2743,11 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     if (!R.getValueAsBit("ASTNode"))
       continue;
 
-    ArrayRef<std::pair<Record *, SMRange>> Supers = R.getSuperClasses();
+    ArrayRef<std::pair<const Record *, SMRange>> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
-    for (const auto &Super : reverse(Supers)) {
-      const Record *R = Super.first;
+    for (const auto &[R, _] : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = std::string(R->getName());
@@ -3434,7 +3432,7 @@ namespace {
     }
 
   private:
-    AttrClass *findClassByRecord(Record *R) const {
+    AttrClass *findClassByRecord(const Record *R) const {
       for (auto &Class : Classes) {
         if (Class->TheRecord == R)
           return Class.get();
@@ -4739,8 +4737,8 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       if (Arg->getValueAsBitOrUnset("Fake", UnusedUnset))
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
-      for (const auto &Class : Arg->getSuperClasses()) {
-        if (Class.first->getName().starts_with("Variadic")) {
+      for (const auto &[Class, _] : Arg->getSuperClasses()) {
+        if (Class->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
         }
