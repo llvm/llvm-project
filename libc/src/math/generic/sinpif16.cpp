@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#define M_PI 3.1415925f
-
 #include "src/math/sinpif16.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -21,114 +21,70 @@
 // HELPER_START
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr float PI_OVER_32 = M_PI / 32;
+constexpr float PI_OVER_32 = 0x1.921fb6p-4f;
 
 // In Sollya generate 10 coeffecients for a degree-9 chebyshev polynomial
 // approximating the sine function in [-pi / 32, pi / 32] with the following
 // commands:
-// > prec=23;
+// > prec=24;
 // > TL = chebyshevform(sin(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float SIN_COEFF[10] = {
-    0x1.801p-27, 0x1.000078p0, -0x1.7e98p-14, -0x1.6bf4p-3, 0x1.95ccp-5,
-    0x1.1baep2,  -0x1.030ap3,  -0x1.3dap9,    0x1.98e4p8,   0x1.d3d8p14};
-
+  0x1.d333p-26, 0x1.000048p0, -0x1.a5d2p-14, -0x1.628588p-3, 0x1.c1eep-5,
+  0x1.4455p1, -0x1.317a8p3, -0x1.6bb9p8, 0x1.00ef8p9, 0x1.0edcp14
+};
 // In Sollya generate 10 coefficients for a degree-9 chebyshev polynomial
 // approximating the sine function in [-pi/32, pi/32] with the following
 // commands:
-// > prec = 23;
+// > prec = 24;
 // > TL = chebyshevform(cos(x), 9, [-pi / 32, pi / 32]);
 // > TL[0];
 const float COS_COEFF[10] = {
-    0x1.00001p0, -0x1.48p-17, -0x1.01259cp-1, -0x1.17fp-6, 0x1.283p0,
-    0x1.5d1p3,   -0x1.6278p7, -0x1.c23p10,    0x1.1444p13, 0x1.5fcp16};
-
+  0x1.000006p0, 0x1.e1eap-15, -0x1.0071p-1, -0x1.3b56p-4, 0x1.f3dfp-2,
+  0x1.ccbap4, -0x1.3034p6, -0x1.f817p11, 0x1.fc59p11, 0x1.7079p17
+};
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follows:
 // > display = hexadecimmal;
-// > prec = 23;
+// > prec = 24;
 // > for k from 0 to 63 do {sin(k * pi/32);};
 
-const float SIN_K_PI_OVER_32[64] = {0,
-                                    0x1.917a6cp-4,
-                                    0x1.8f8b84p-3,
-                                    0x1.294064p-2,
-                                    0x1.87de2cp-2,
-                                    0x1.e2b5d4p-2,
-                                    0x1.1c73b4p-1,
-                                    0x1.44cf34p-1,
-                                    0x1.6a09e8p-1,
-                                    0x1.8bc808p-1,
-                                    0x1.a9b664p-1,
-                                    0x1.c38b3p-1,
-                                    0x1.d906bcp-1,
-                                    0x1.e9f414p-1,
-                                    0x1.f6297cp-1,
-                                    0x1.fd88dcp-1,
-                                    0x1p0,
-                                    0x1.fd88dcp-1,
-                                    0x1.f6297cp-1,
-                                    0x1.e9f414p-1,
-                                    0x1.d906bcp-1,
-                                    0x1.c38b3p-1,
-                                    0x1.a9b664p-1,
-                                    0x1.8bc808p-1,
-                                    0x1.6a09e8p-1,
-                                    0x1.44cf34p-1,
-                                    0x1.1c73b4p-1,
-                                    0x1.e2b5d4p-2,
-                                    0x1.87de2cp-2,
-                                    0x1.294064p-2,
-                                    0x1.8f8b84p-3,
-                                    0x1.917a6cp-4,
-                                    0,
-                                    -0x1.917a6cp-4,
-                                    -0x1.8f8b84p-3,
-                                    -0x1.294064p-2,
-                                    -0x1.87de2cp-2,
-                                    -0x1.e2b5d4p-2,
-                                    -0x1.1c73b4p-1,
-                                    -0x1.44cf34p-1,
-                                    -0x1.6a09e8p-1,
-                                    -0x1.8bc808p-1,
-                                    -0x1.a9b664p-1,
-                                    -0x1.c38b3p-1,
-                                    -0x1.d906bcp-1,
-                                    -0x1.e9f414p-1,
-                                    -0x1.f6297cp-1,
-                                    -0x1.fd88dcp-1,
-                                    -0x1p0,
-                                    -0x1.fd88dcp-1,
-                                    -0x1.f6297cp-1,
-                                    -0x1.e9f414p-1,
-                                    -0x1.d906bcp-1,
-                                    -0x1.c38b3p-1,
-                                    -0x1.a9b664p-1,
-                                    -0x1.8bc808p-1,
-                                    -0x1.6a09e8p-1,
-                                    -0x1.44cf34p-1,
-                                    -0x1.1c73b4p-1,
-                                    -0x1.e2b5d4p-2,
-                                    -0x1.87de2cp-2,
-                                    -0x1.294064p-2,
-                                    -0x1.8f8b84p-3,
-                                    -0x1.917a6cp-4};
+const float SIN_K_PI_OVER_32[64] = {
+  0, 0x1.917a6cp-4,
+  0x1.8f8b84p-3, 0x1.294062p-2,
+  0x1.87de2ap-2, 0x1.e2b5d4p-2,
+  0x1.1c73b4p-1, 0x1.44cf32p-1,
+  0x1.6a09e6p-1, 0x1.8bc806p-1,
+  0x1.a9b662p-1, 0x1.c38b3p-1,
+  0x1.d906bcp-1, 0x1.e9f416p-1,
+  0x1.f6297cp-1, 0x1.fd88dap-1,
+  0x1p0, 0x1.fd88dap-1,
+  0x1.f6297cp-1, 0x1.e9f416p-1,
+  0x1.d906bcp-1, 0x1.c38b3p-1,
+  0x1.a9b662p-1, 0x1.8bc806p-1,
+  0x1.6a09e6p-1, 0x1.44cf32p-1,
+  0x1.1c73b4p-1, 0x1.e2b5d4p-2,
+  0x1.87de2ap-2, 0x1.294062p-2,
+  0x1.8f8b84p-3, 0x1.917a6cp-4,
+  0, -0x1.917a6cp-4,
+  -0x1.8f8b84p-3, -0x1.294062p-2,
+  -0x1.87de2ap-2, -0x1.e2b5d4p-2,
+  -0x1.1c73b4p-1, -0x1.44cf32p-1,
+  -0x1.6a09e6p-1, -0x1.8bc806p-1,
+  -0x1.a9b662p-1, -0x1.c38b3p-1,
+  -0x1.d906bcp-1, -0x1.e9f416p-1,
+  -0x1.f6297ep-1, -0x1.fd88dap-1,
+  -0x1p0, -0x1.fd88dap-1,
+  -0x1.f6297cp-1, -0x1.e9f416p-1,
+  -0x1.d906bcp-1, -0x1.c38b3p-1,
+  -0x1.a9b662p-1, -0x1.8bc806p-1,
+  -0x1.6a09e6p-1, -0x1.44cf32p-1,
+  -0x1.1c73b4p-1, -0x1.e2b5d4p-2,
+  -0x1.87de2ap-2, -0x1.294062p-2,
+  -0x1.8f8b84p-3, -0x1.917a6cp-4
+};
 
-// horner's algorithm to accurately and efficiently evaluate a degree-9
-// polynomial iteratively
-float horners(float x, const float COEFF[10]) {
-  float b8 = fputil::multiply_add<float>(COEFF[9], x, COEFF[8]);
-  float b7 = fputil::multiply_add<float>(b8, x, COEFF[7]);
-  float b6 = fputil::multiply_add<float>(b7, x, COEFF[6]);
-  float b5 = fputil::multiply_add<float>(b6, x, COEFF[5]);
-  float b4 = fputil::multiply_add<float>(b5, x, COEFF[4]);
-  float b3 = fputil::multiply_add<float>(b4, x, COEFF[3]);
-  float b2 = fputil::multiply_add<float>(b3, x, COEFF[2]);
-  float b1 = fputil::multiply_add<float>(b2, x, COEFF[1]);
-  return fputil::multiply_add<float>(b1, x, COEFF[0]);
-}
-
-float range_reduction(float x, float &y) {
+int32_t range_reduction(float x, float &y) {
   float kf = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add<float>(x, 32.0, -kf);
 
@@ -164,7 +120,28 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
   // * pi/32) and cos(y * pi/32) are computed using degree-9 chebyshev
   // polynomials generated by Sollya.
 
-  float f32 = x;
+  if (LIBC_UNLIKELY(x_abs == 0U)) {
+    // For signed zeros
+    return x;
+  }
+
+  // Numbers greater or equal to 2^10 are integers or NaN
+  if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
+    // Check for NaN or infinity values
+    if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
+      // If value is equal to infinity
+      if (x_abs == 0x7c00) {
+        fputil::set_errno_if_required(EDOM);
+	fputil::raise_except_if_required(FE_INVALID);
+      }
+      
+      // If value is NaN
+      return x + FPBits::quiet_nan().get_val();
+    }
+    return FPBits::zero(xbits.sign()).get_val();
+  }
+
+  float f32 = static_cast<float>(x);
   float y;
   int32_t k = range_reduction(f32, y);
 
@@ -176,11 +153,21 @@ LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
     cos_y = 1;
     sin_y = 0;
   } else {
-    cos_y = horners(y * PI_OVER_32, COS_COEFF);
-    sin_y = horners(y * PI_OVER_32, SIN_COEFF);
+    cos_y = fputil::polyeval(y * PI_OVER_32,
+	COS_COEFF[0], COS_COEFF[1],
+	COS_COEFF[2], COS_COEFF[3],
+	COS_COEFF[4], COS_COEFF[5],
+	COS_COEFF[6], COS_COEFF[7],
+	COS_COEFF[8], COS_COEFF[9]);
+    sin_y = fputil::polyeval(y * PI_OVER_32,
+        SIN_COEFF[0], SIN_COEFF[1],
+	SIN_COEFF[2], SIN_COEFF[3],
+	SIN_COEFF[4], SIN_COEFF[5],
+	SIN_COEFF[6], SIN_COEFF[7],
+	SIN_COEFF[8], SIN_COEFF[9]);
   }
 
   return static_cast<float16>(fputil::multiply_add(
-      sin_k, cos_y, fputil::multiply_add(sin_y, cos_k, 0)));
+      sin_k, cos_y, fputil::multiply_add(sin_y, cos_k, 0.0f)));
 }
 } // namespace LIBC_NAMESPACE_DECL
