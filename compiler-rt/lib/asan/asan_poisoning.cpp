@@ -655,12 +655,12 @@ static void SlowReversedCopyContainerAnnotations(uptr src_beg, uptr src_end,
 static void CopyContainerFirstGranuleAnnotation(uptr src_beg, uptr dst_beg) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   // First granule
-  uptr dst_external_beg = RoundDownTo(dst_beg, granularity);
-  uptr src_external_beg = RoundDownTo(src_beg, granularity);
+  uptr dst_beg_down = RoundDownTo(dst_beg, granularity);
+  uptr src_beg_down = RoundDownTo(src_beg, granularity);
   if (!AddressIsPoisoned(src_beg)) {
-    *(u8 *)MemToShadow(dst_external_beg) = *(u8 *)MemToShadow(src_external_beg);
+    *(u8 *)MemToShadow(dst_beg_down) = *(u8 *)MemToShadow(src_beg_down);
   } else if (!AddressIsPoisoned(dst_beg)) {
-    SetContainerGranule(dst_external_beg, dst_beg - dst_external_beg);
+    SetContainerGranule(dst_beg_down, dst_beg - dst_beg_down);
   }
 }
 
@@ -671,11 +671,11 @@ static void CopyContainerLastGranuleAnnotation(uptr src_end,
                                                uptr dst_end_down) {
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
   // Last granule
-  uptr src_internal_end = RoundDownTo(src_end, granularity);
+  uptr src_end_down = RoundDownTo(src_end, granularity);
   if (AddressIsPoisoned(src_end)) {
-    *(u8 *)MemToShadow(dst_end_down) = *(u8 *)MemToShadow(src_internal_end);
+    *(u8 *)MemToShadow(dst_end_down) = *(u8 *)MemToShadow(src_end_down);
   } else {
-    SetContainerGranule(dst_end_down, src_end - src_internal_end);
+    SetContainerGranule(dst_end_down, src_end - src_end_down);
   }
 }
 
