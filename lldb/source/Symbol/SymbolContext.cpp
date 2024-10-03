@@ -706,7 +706,7 @@ LineEntry SymbolContext::GetFunctionStartLineEntry() const {
   return LineEntry();
 }
 
-llvm::Expected<bool>
+llvm::Error
 SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                 AddressRange &range) {
   if (!line_entry.IsValid()) {
@@ -763,7 +763,7 @@ SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
   lldb::addr_t range_size = end_entry.range.GetBaseAddress().GetFileAddress() -
                             range.GetBaseAddress().GetFileAddress();
   range.SetByteSize(range_size);
-  return true;
+  return llvm::Error::success();
 }
 
 const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
