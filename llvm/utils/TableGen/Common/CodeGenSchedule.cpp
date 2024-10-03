@@ -532,8 +532,8 @@ void CodeGenSchedModels::collectProcModels() {
   ProcModels.reserve(ProcRecords.size() + 1);
 
   // Use idx=0 for NoModel/NoItineraries.
-  Record *NoModelDef = Records.getDef("NoSchedModel");
-  Record *NoItinsDef = Records.getDef("NoItineraries");
+  const Record *NoModelDef = Records.getDef("NoSchedModel");
+  const Record *NoItinsDef = Records.getDef("NoItineraries");
   ProcModels.emplace_back(0, "NoSchedModel", NoModelDef, NoItinsDef);
   ProcModelMap[NoModelDef] = 0;
 
