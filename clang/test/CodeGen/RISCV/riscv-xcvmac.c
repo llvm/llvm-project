@@ -2,10 +2,7 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +xcvmac -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
-
 #include <stdint.h>
-
-
 
 // CHECK-LABEL: @test_mac_mac(
 // CHECK-NEXT:  entry:
@@ -51,11 +48,11 @@ int32_t test_mac_msu(int32_t x, int32_t y, int32_t z) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.muluN(i32 [[TMP0]], i32 [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.muluN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t test_mac_muluN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_muluN(x, y, 0);
+    return __builtin_riscv_cv_mac_muluN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulhhuN(
@@ -66,11 +63,11 @@ uint32_t test_mac_muluN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhuN(i32 [[TMP0]], i32 [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhuN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t test_mac_mulhhuN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulhhuN(x, y, 0);
+    return __builtin_riscv_cv_mac_mulhhuN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulsN(
@@ -81,11 +78,11 @@ uint32_t test_mac_mulhhuN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulsN(i32 [[TMP0]], i32 [[TMP1]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulsN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mac_mulsN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulsN(x, y, 1);
+    return __builtin_riscv_cv_mac_mulsN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulhhsN(
@@ -96,11 +93,11 @@ int32_t test_mac_mulsN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhsN(i32 [[TMP0]], i32 [[TMP1]], i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhsN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mac_mulhhsN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulhhsN(x, y, 1);
+    return __builtin_riscv_cv_mac_mulhhsN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_muluRN(
@@ -111,11 +108,11 @@ int32_t test_mac_mulhhsN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.muluRN(i32 [[TMP0]], i32 [[TMP1]], i32 2)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.muluRN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t test_mac_muluRN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_muluRN(x, y, 2);
+    return __builtin_riscv_cv_mac_muluRN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulhhuRN(
@@ -126,11 +123,11 @@ uint32_t test_mac_muluRN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhuRN(i32 [[TMP0]], i32 [[TMP1]], i32 2)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhuRN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t test_mac_mulhhuRN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulhhuRN(x, y, 2);
+    return __builtin_riscv_cv_mac_mulhhuRN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulsRN(
@@ -141,11 +138,11 @@ uint32_t test_mac_mulhhuRN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulsRN(i32 [[TMP0]], i32 [[TMP1]], i32 3)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulsRN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mac_mulsRN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulsRN(x, y, 3);
+    return __builtin_riscv_cv_mac_mulsRN(x, y, 31);
 }
 
 // CHECK-LABEL: @test_mac_mulhhsRN(
@@ -156,11 +153,11 @@ int32_t test_mac_mulsRN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    store i32 [[Y:%.*]], ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhsRN(i32 [[TMP0]], i32 [[TMP1]], i32 3)
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.cv.mac.mulhhsRN(i32 [[TMP0]], i32 [[TMP1]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int32_t test_mac_mulhhsRN(uint32_t x, uint32_t y) {
-    return __builtin_riscv_cv_mac_mulhhsRN(x, y, 3);
+    return __builtin_riscv_cv_mac_mulhhsRN(x, y, 31);
 }
 
 // 16-bit x 16-bit multiply-accumulate
@@ -175,11 +172,11 @@ int32_t test_mac_mulhhsRN(uint32_t x, uint32_t y) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macuN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 4)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macuN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 uint32_t test_mac_macuN(uint32_t x, uint32_t y, uint32_t z) {
-    return __builtin_riscv_cv_mac_macuN(x, y, z, 4);
+    return __builtin_riscv_cv_mac_macuN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_machhuN(
@@ -193,11 +190,11 @@ uint32_t test_mac_macuN(uint32_t x, uint32_t y, uint32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhuN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 4)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhuN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 uint32_t test_mac_machhuN(uint32_t x, uint32_t y, uint32_t z) {
-    return __builtin_riscv_cv_mac_machhuN(x, y, z, 4);
+    return __builtin_riscv_cv_mac_machhuN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_macsN(
@@ -211,11 +208,11 @@ uint32_t test_mac_machhuN(uint32_t x, uint32_t y, uint32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macsN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 5)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macsN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int32_t test_mac_macsN(uint32_t x, uint32_t y, int32_t z) {
-    return __builtin_riscv_cv_mac_macsN(x, y, z, 5);
+    return __builtin_riscv_cv_mac_macsN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_machhsN(
@@ -229,11 +226,11 @@ int32_t test_mac_macsN(uint32_t x, uint32_t y, int32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhsN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 5)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhsN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int32_t test_mac_machhsN(uint32_t x, uint32_t y, int32_t z) {
-    return __builtin_riscv_cv_mac_machhsN(x, y, z, 5);
+    return __builtin_riscv_cv_mac_machhsN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_macuRN(
@@ -247,11 +244,11 @@ int32_t test_mac_machhsN(uint32_t x, uint32_t y, int32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macuRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 6)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macuRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 uint32_t test_mac_macuRN(uint32_t x, uint32_t y, uint32_t z) {
-    return __builtin_riscv_cv_mac_macuRN(x, y, z, 6);
+    return __builtin_riscv_cv_mac_macuRN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_machhuRN(
@@ -265,11 +262,11 @@ uint32_t test_mac_macuRN(uint32_t x, uint32_t y, uint32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhuRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 6)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhuRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 uint32_t test_mac_machhuRN(uint32_t x, uint32_t y, uint32_t z) {
-    return __builtin_riscv_cv_mac_machhuRN(x, y, z, 6);
+    return __builtin_riscv_cv_mac_machhuRN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_macsRN(
@@ -283,11 +280,11 @@ uint32_t test_mac_machhuRN(uint32_t x, uint32_t y, uint32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macsRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 7)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.macsRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int32_t test_mac_macsRN(uint32_t x, uint32_t y, int32_t z) {
-    return __builtin_riscv_cv_mac_macsRN(x, y, z, 7);
+    return __builtin_riscv_cv_mac_macsRN(x, y, z, 31);
 }
 
 // CHECK-LABEL: @test_mac_machhsRN(
@@ -301,9 +298,9 @@ int32_t test_mac_macsRN(uint32_t x, uint32_t y, int32_t z) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[Y_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhsRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 7)
+// CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.riscv.cv.mac.machhsRN(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]], i32 31)
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int32_t test_mac_machhsRN(uint32_t x, uint32_t y, int32_t z) {
-    return __builtin_riscv_cv_mac_machhsRN(x, y, z, 7);
+    return __builtin_riscv_cv_mac_machhsRN(x, y, z, 31);
 }
