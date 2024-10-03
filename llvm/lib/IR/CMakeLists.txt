@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMCore
   GVMaterializer.cpp
   Globals.cpp
   HeterogeneousDebugVerify.cpp
+  Intrinsics.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
