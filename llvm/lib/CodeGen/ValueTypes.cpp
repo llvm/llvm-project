@@ -278,6 +278,15 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
       getVT(VTy->getElementType(), /*HandleUnknown=*/ false),
             VTy->getElementCount());
   }
+  case Type::PointerTyID: {
+    if (Ty->getPointerAddressSpace() == Type::WasmExternrefAddressSpace)
+      return MVT(MVT::externref);
+    if (Ty->getPointerAddressSpace() == Type::WasmFuncrefAddressSpace)
+      return MVT(MVT::funcref);
+    if (HandleUnknown)
+      return MVT(MVT::Other);
+    llvm_unreachable("Unknown pointer type!");
+  }
   }
 }
 

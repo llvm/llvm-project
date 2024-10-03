@@ -258,13 +258,13 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(10)
-  static PointerType *Ty = PointerType::get(C, 10);
+  static PointerType *Ty = PointerType::get(C, WasmExternrefAddressSpace);
   return Ty;
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
   // opaque pointer in addrspace(20)
-  static PointerType *Ty = PointerType::get(C, 20);
+  static PointerType *Ty = PointerType::get(C, WasmFuncrefAddressSpace);
   return Ty;
 }
 
