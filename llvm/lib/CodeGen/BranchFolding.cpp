@@ -1757,18 +1757,24 @@ ReoptimizeBlock:
       // advantage in "falling through" to an EH block, so we don't want to
       // perform this transformation for that case.
       //
-      // Also, Windows EH introduced the possibility of an arbitrary number of
-      // successors to a given block.  The analyzeBranch call does not consider
-      // exception handling and so we can get in a state where a block
-      // containing a call is followed by multiple EH blocks that would be
+      // Also, some constructs introduced the possibility of an arbitrary number
+      // of successors to a given block.
+      //
+      // - Windows EH: with EH blocks
+      // - CALLBR instruction: with Indirect Target blocks
+      //
+      // The analyzeBranch call does not consider exception handling or inline
+      // asm with control flow instructions. So we can get in a state where a
+      // block containing a call is followed by multiple blocks that would be
       // rotated infinitely at the end of the function if the transformation
-      // below were performed for EH "FallThrough" blocks.  Therefore, even if
-      // that appears not to be happening anymore, we should assume that it is
-      // possible and not remove the "!FallThrough()->isEHPad" condition below.
+      // below were performed for such blocks. Therefore, we should assume
+      // that it is possible and not remove the "!FallThrough()->isEHPad &&
+      // !FallThrough->isInlineAsmIndirectTarget()" condition below (even if
+      // in the case of EHPad that appears not to be happening anymore).
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());
