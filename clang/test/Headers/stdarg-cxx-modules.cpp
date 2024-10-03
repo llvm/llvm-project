@@ -1,9 +1,11 @@
 // RUN: rm -fR %t
 // RUN: split-file %s %t
-// RUN: cd %t
-// RUN: %clang_cc1 -std=c++20 -emit-header-unit -xc++-user-header h1.h
-// RUN: %clang_cc1 -std=c++20 -emit-header-unit -xc++-user-header h2.h -fmodule-file=h1.pcm
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only main.cpp -fmodule-file=h1.pcm -fmodule-file=h2.pcm
+
+/// FIXME: Using absolute path and explicitly specifying output files since
+/// downstream branch has module file bypass for inode reuse problem on linux file systems.
+// RUN: %clang_cc1 -std=c++20 -emit-header-unit -xc++-user-header %t/h1.h -o %t/h1.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-header-unit -xc++-user-header %t/h2.h -fmodule-file=%t/h1.pcm -o %t/h2.pcm
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/main.cpp -fmodule-file=%t/h1.pcm -fmodule-file=%t/h2.pcm
 
 //--- h1.h
 #include <stdarg.h>
