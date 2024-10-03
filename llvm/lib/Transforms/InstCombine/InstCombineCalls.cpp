@@ -1770,6 +1770,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // smax(smin(abs(x), y), 0) -> smin(abs(x), y) where y >= 0
+    if (IID == Intrinsic::smax &&
+        match(I0, m_SMin(m_c_Intrinsic<Intrinsic::abs>(m_Value(), m_Value()),
+                         m_NonNegative())) &&
+        match(I1, m_Zero())) {
+      return replaceInstUsesWith(*II, I0);
+    }
+
     // umin(i1 X, i1 Y) -> and i1 X, Y
     // smax(i1 X, i1 Y) -> and i1 X, Y
     if ((IID == Intrinsic::umin || IID == Intrinsic::smax) &&

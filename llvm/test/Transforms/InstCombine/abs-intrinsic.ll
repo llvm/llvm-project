@@ -847,3 +847,25 @@ cond.end:
   %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
   ret i32 %r
 }
+
+define i32 @test_abs_min_max_nonneg(i32 %0) {
+; CHECK-LABEL: @test_abs_min_max_nonneg(
+; CHECK-NEXT: call i32 @llvm.abs.i32
+; CHECK-NEXT: call i32 @llvm.smin.i32
+; CHECK-NOT: call i32 @llvm.smax.i32
+  %2 = call i32 @llvm.abs.i32(i32 %0, i1 false)
+  %3 = call i32 @llvm.smin.i32(i32 %2, i32 5)
+  %4 = call i32 @llvm.smax.i32(i32 %3, i32 0)
+  ret i32 %4
+}
+
+define i32 @test_abs_min_max_unknown(i32 %0, i32 %1) {
+; CHECK-LABEL: @test_abs_min_max_unknown(
+; CHECK-NEXT: call i32 @llvm.abs.i32
+; CHECK-NEXT: call i32 @llvm.smin.i32
+; CHECK-NEXT: call i32 @llvm.smax.i32
+  %3 = call i32 @llvm.abs.i32(i32 %0, i1 false)
+  %4 = call i32 @llvm.smin.i32(i32 %3, i32 %1)
+  %5 = call i32 @llvm.smax.i32(i32 %4, i32 0)
+  ret i32 %5
+}
