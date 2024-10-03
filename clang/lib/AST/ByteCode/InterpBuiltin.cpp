@@ -1205,6 +1205,10 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
   pushInteger(S, Val.countLeadingZeros(), Call->getType());
   return true;
@@ -1214,8 +1218,54 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
                                        const Function *Func,
                                        const CallExpr *Call) {
+  QualType CallType = Call->getType();
+  if (!CallType->isIntegerType())
+    return false;
+
   APSInt Val = peekToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(0)));
   pushInteger(S, Val.countTrailingZeros(), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType ValT = *S.Ctx.classify(Call->getArg(0));
+  PrimType MaskT = *S.Ctx.classify(Call->getArg(1));
+
+  APSInt Val =
+      peekToAPSInt(S.Stk, ValT, align(primSize(ValT)) + align(primSize(MaskT)));
+  APSInt Mask = peekToAPSInt(S.Stk, MaskT);
+
+  unsigned BitWidth = Val.getBitWidth();
+  APInt Result = APInt::getZero(BitWidth);
+  for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  }
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -1829,6 +1879,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
     if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pdep_si:
+  case clang::X86::BI__builtin_ia32_pdep_di:
+    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case clang::X86::BI__builtin_ia32_pext_si:
+  case clang::X86::BI__builtin_ia32_pext_di:
+    if (!interp__builtin_ia32_pext(S, OpPC, Frame, F, Call))
       return false;
     break;
 

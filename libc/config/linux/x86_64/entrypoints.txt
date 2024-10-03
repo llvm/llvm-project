@@ -482,6 +482,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.isnan
     libc.src.math.isnanf
     libc.src.math.isnanl
+    libc.src.math.issignaling
+    libc.src.math.issignalingf
+    libc.src.math.issignalingl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -637,6 +640,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
+    libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
@@ -717,6 +721,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fsubf128
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
+    libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
     libc.src.math.llrintf128

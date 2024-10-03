@@ -155,7 +155,7 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
         llvm::raw_string_ostream os(effectStr);
         os << effectName << "{";
         auto list = trait.getDef().getValueAsListOfDefs("effects");
-        llvm::interleaveComma(list, os, [&](Record *rec) {
+        llvm::interleaveComma(list, os, [&](const Record *rec) {
           StringRef effect = rec->getValueAsString("effect");
           effect.consume_front("::");
           effect.consume_front("mlir::");

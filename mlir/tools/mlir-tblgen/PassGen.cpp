@@ -97,7 +97,7 @@ static void emitPassOptionsStruct(const Pass &pass, raw_ostream &os) {
     std::string type = opt.getType().str();
 
     if (opt.isListOption())
-      type = "::llvm::ArrayRef<" + type + ">";
+      type = "::llvm::SmallVector<" + type + ">";
 
     os.indent(2) << llvm::formatv("{0} {1}", type, opt.getCppVariableName());
 
@@ -128,8 +128,8 @@ static void emitPassDecls(const Pass &pass, raw_ostream &os) {
 
     // Declaration of the constructor with options.
     if (ArrayRef<PassOption> options = pass.getOptions(); !options.empty())
-      os << llvm::formatv("std::unique_ptr<::mlir::Pass> create{0}(const "
-                          "{0}Options &options);\n",
+      os << llvm::formatv("std::unique_ptr<::mlir::Pass> create{0}("
+                          "{0}Options options);\n",
                           passName);
   }
 
@@ -236,7 +236,7 @@ namespace impl {{
 
 const char *const friendDefaultConstructorWithOptionsDeclTemplate = R"(
 namespace impl {{
-  std::unique_ptr<::mlir::Pass> create{0}(const {0}Options &options);
+  std::unique_ptr<::mlir::Pass> create{0}({0}Options options);
 } // namespace impl
 )";
 
@@ -247,8 +247,8 @@ const char *const friendDefaultConstructorDefTemplate = R"(
 )";
 
 const char *const friendDefaultConstructorWithOptionsDefTemplate = R"(
-  friend std::unique_ptr<::mlir::Pass> create{0}(const {0}Options &options) {{
-    return std::make_unique<DerivedT>(options);
+  friend std::unique_ptr<::mlir::Pass> create{0}({0}Options options) {{
+    return std::make_unique<DerivedT>(std::move(options));
   }
 )";
 
@@ -259,8 +259,8 @@ std::unique_ptr<::mlir::Pass> create{0}() {{
 )";
 
 const char *const defaultConstructorWithOptionsDefTemplate = R"(
-std::unique_ptr<::mlir::Pass> create{0}(const {0}Options &options) {{
-  return impl::create{0}(options);
+std::unique_ptr<::mlir::Pass> create{0}({0}Options options) {{
+  return impl::create{0}(std::move(options));
 }
 )";
 
@@ -326,10 +326,10 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
 
   if (ArrayRef<PassOption> options = pass.getOptions(); !options.empty()) {
     os.indent(2) << llvm::formatv(
-        "{0}Base(const {0}Options &options) : {0}Base() {{\n", passName);
+        "{0}Base({0}Options options) : {0}Base() {{\n", passName);
 
     for (const PassOption &opt : pass.getOptions())
-      os.indent(4) << llvm::formatv("{0} = options.{0};\n",
+      os.indent(4) << llvm::formatv("{0} = std::move(options.{0});\n",
                                     opt.getCppVariableName());
 
     os.indent(2) << "}\n";

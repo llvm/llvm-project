@@ -1499,11 +1499,12 @@ Currently, only the following parameter attributes are defined:
 ``nofpclass(<test mask>)``
     This attribute applies to parameters and return values with
     floating-point and vector of floating-point types, as well as
-    arrays of such types. The test mask has the same format as the
-    second argument to the :ref:`llvm.is.fpclass <llvm.is.fpclass>`,
-    and indicates which classes of floating-point values are not
-    permitted for the value. For example a bitmask of 3 indicates
-    the parameter may not be a NaN.
+    :ref:`supported aggregates <fastmath_return_types>` of such types
+    (matching the supported types for :ref:`fast-math flags <fastmath>`).
+    The test mask has the same format as the second argument to the
+    :ref:`llvm.is.fpclass <llvm.is.fpclass>`, and indicates which classes
+    of floating-point values are not permitted for the value. For example
+    a bitmask of 3 indicates the parameter may not be a NaN.
 
     If the value is a floating-point class indicated by the
     ``nofpclass`` test mask, a :ref:`poison value <poisonvalues>` is
@@ -3685,9 +3686,9 @@ Fast-Math Flags
 
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), :ref:`phi <i_phi>`,
-:ref:`select <i_select>` and :ref:`call <i_call>`
-may use the following flags to enable otherwise unsafe
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), and :ref:`phi <i_phi>`,
+:ref:`select <i_select>`, or :ref:`call <i_call>` instructions that return
+floating-point types may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
 ``fast``
@@ -3708,6 +3709,16 @@ floating-point transformations.
    No Signed Zeros - Allow optimizations to treat the sign of a zero
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
+
+Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
+instructions, the following return types are considered to be floating-point
+types:
+
+.. _fastmath_return_types:
+
+- Floating-point scalar or vector types
+- Array types (nested to any depth) of floating-point scalar or vector types
+- Homogeneous literal struct types of floating-point scalar or vector types
 
 Rewrite-based flags
 ^^^^^^^^^^^^^^^^^^^
@@ -4361,7 +4372,7 @@ recursive, can be opaqued, and are never uniqued.
 :Examples:
 
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``{ i32, i32, i32 }``        | A triple of three ``i32`` values                                                                                                                                                      |
+| ``{ i32, i32, i32 }``        | A triple of three ``i32`` values (this is a "homogeneous" struct as all element types are the same)                                                                                   |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``{ float, ptr }``           | A pair, where the first element is a ``float`` and the second element is a :ref:`pointer <t_pointer>`.                                                                                |
 +------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -12491,9 +12502,8 @@ instruction's return value on the same edge).
 The optional ``fast-math-flags`` marker indicates that the phi has one
 or more :ref:`fast-math-flags <fastmath>`. These are optimization hints
 to enable otherwise unsafe floating-point optimizations. Fast-math-flags
-are only valid for phis that return a floating-point scalar or vector
-type, or an array (nested to any depth) of floating-point scalar or vector
-types.
+are only valid for phis that return :ref:`supported floating-point types
+<fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -12542,8 +12552,8 @@ class <t_firstclass>` type.
 #. The optional ``fast-math flags`` marker indicates that the select has one or more
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for selects that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for selects that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -12781,8 +12791,7 @@ This instruction requires several arguments:
 #. The optional ``fast-math flags`` marker indicates that the call has one or more
    :ref:`fast-math flags <fastmath>`, which are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
-   for calls that return a floating-point scalar or vector type, or an array
-   (nested to any depth) of floating-point scalar or vector types.
+   for calls that return :ref:`supported floating-point types <fastmath_return_types>`.
 
 #. The optional "cconv" marker indicates which :ref:`calling
    convention <callingconv>` the call should use. If none is
@@ -20546,8 +20555,8 @@ the explicit vector length.
 #. The optional ``fast-math flags`` marker indicates that the select has one or
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
-   only valid for selects that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   only valid for selects that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""
@@ -20604,8 +20613,8 @@ is the pivot.
 #. The optional ``fast-math flags`` marker indicates that the merge has one or
    more :ref:`fast-math flags <fastmath>`. These are optimization hints to
    enable otherwise unsafe floating-point optimizations. Fast-math flags are
-   only valid for merges that return a floating-point scalar or vector type,
-   or an array (nested to any depth) of floating-point scalar or vector types.
+   only valid for merges that return :ref:`supported floating-point types
+   <fastmath_return_types>`.
 
 Semantics:
 """"""""""

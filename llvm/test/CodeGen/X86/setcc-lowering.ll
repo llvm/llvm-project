@@ -54,7 +54,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ; AVX1-LABEL: pr26232:
 ; AVX1:       # %bb.0: # %allocas
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    .p2align 4, 0x90
+; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB1_1: # %for_loop599
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    cmpq $65536, %rdi # imm = 0x10000
@@ -71,7 +71,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ;
 ; AVX2-LABEL: pr26232:
 ; AVX2:       # %bb.0: # %allocas
-; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB1_1: # %for_loop599
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    cmpq $65536, %rdi # imm = 0x10000
@@ -93,7 +93,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) nounwind {
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; KNL-32-NEXT:    .p2align 4, 0x90
+; KNL-32-NEXT:    .p2align 4
 ; KNL-32-NEXT:  .LBB1_1: # %for_loop599
 ; KNL-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; KNL-32-NEXT:    cmpl $65536, %ecx # imm = 0x10000

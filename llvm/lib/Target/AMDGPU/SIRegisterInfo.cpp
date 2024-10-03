@@ -959,11 +959,11 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addFrameIndex(FrameIdx);
 
   if (ST.enableFlatScratch() ) {
-    // FIXME: Mark scc as dead
     // FIXME: Make sure scc isn't live in.
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
-        .addReg(FIReg);
+        .addReg(FIReg)
+        .setOperandDead(3); // scc
     return BaseReg;
   }
 

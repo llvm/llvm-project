@@ -2298,7 +2298,7 @@ Value *OpenMPIRBuilder::castValueToType(InsertPointTy AllocaIP, Value *From,
   Builder.restoreIP(SaveIP);
 
   Value *ValCastItem = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      CastItem, FromType->getPointerTo());
+      CastItem, Builder.getPtrTy(0));
   Builder.CreateStore(From, ValCastItem);
   return Builder.CreateLoad(ToType, CastItem);
 }
@@ -2348,11 +2348,11 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       continue;
     Type *IntType = Builder.getIntNTy(IntSize * 8);
     Ptr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        Ptr, IntType->getPointerTo(), Ptr->getName() + ".ascast");
+        Ptr, Builder.getPtrTy(0), Ptr->getName() + ".ascast");
     Value *SrcAddrGEP =
         Builder.CreateGEP(ElemType, SrcAddr, {ConstantInt::get(IndexTy, 1)});
     ElemPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        ElemPtr, IntType->getPointerTo(), ElemPtr->getName() + ".ascast");
+        ElemPtr, Builder.getPtrTy(0), ElemPtr->getName() + ".ascast");
 
     Function *CurFunc = Builder.GetInsertBlock()->getParent();
     if ((Size / IntSize) > 1) {
@@ -2587,7 +2587,7 @@ Function *OpenMPIRBuilder::emitInterWarpCopyFunction(
   Value *ReduceListAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
       ReduceListAlloca, Arg0Type, ReduceListAlloca->getName() + ".ascast");
   Value *NumWarpsAddrCast = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      NumWarpsAlloca, Arg1Type->getPointerTo(),
+      NumWarpsAlloca, Builder.getPtrTy(0),
       NumWarpsAlloca->getName() + ".ascast");
   Builder.CreateStore(ReduceListArg, ReduceListAddrCast);
   Builder.CreateStore(NumWarpsArg, NumWarpsAddrCast);
@@ -2785,7 +2785,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
 
   Type *ReduceListArgType = ReduceListArg->getType();
   Type *LaneIDArgType = LaneIDArg->getType();
-  Type *LaneIDArgPtrType = LaneIDArg->getType()->getPointerTo();
+  Type *LaneIDArgPtrType = Builder.getPtrTy(0);
   Value *ReduceListAlloca = Builder.CreateAlloca(
       ReduceListArgType, nullptr, ReduceListArg->getName() + ".addr");
   Value *LaneIdAlloca = Builder.CreateAlloca(LaneIDArgType, nullptr,
