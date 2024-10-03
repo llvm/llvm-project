@@ -91,7 +91,7 @@ struct CommonTestInputs {
                   .bind("call"),
               AST.context()));
     assert(CallRef != nullptr);
-}
+  }
 
   TestAST AST;
   QualType SType;

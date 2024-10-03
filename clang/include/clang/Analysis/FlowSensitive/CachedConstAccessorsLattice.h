@@ -45,10 +45,9 @@ namespace dataflow {
 ///     use(s.getFoo().value()); // unsafe (invalidate cache for s)
 ///   }
 /// }
-template <typename Base>
-class CachedConstAccessorsLattice : public Base {
+template <typename Base> class CachedConstAccessorsLattice : public Base {
 public:
-  using Base::Base;  // inherit all constructors
+  using Base::Base; // inherit all constructors
 
   /// Creates or returns a previously created `Value` associated with a const
   ///  method call `obj.getFoo()` where `RecordLoc` is the
@@ -74,8 +73,7 @@ public:
   ///  - `CE` should return a location (GLValue or a record type).
   StorageLocation *getOrCreateConstMethodReturnStorageLocation(
       const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-      Environment &Env,
-      llvm::function_ref<void(StorageLocation &)> Initialize);
+      Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize);
 
   void clearConstMethodReturnValues(const RecordStorageLocation &RecordLoc) {
     ConstMethodReturnValues.erase(&RecordLoc);
@@ -95,9 +93,9 @@ public:
 private:
   // Maps a record storage location and const method to the value to return
   // from that const method.
-  using ConstMethodReturnValuesType = llvm::SmallDenseMap<
-      const RecordStorageLocation *,
-      llvm::SmallDenseMap<const FunctionDecl *, Value *>>;
+  using ConstMethodReturnValuesType =
+      llvm::SmallDenseMap<const RecordStorageLocation *,
+                          llvm::SmallDenseMap<const FunctionDecl *, Value *>>;
   ConstMethodReturnValuesType ConstMethodReturnValues;
 
   // Maps a record storage location and const method to the record storage
@@ -194,8 +192,7 @@ template <typename Base>
 StorageLocation *
 CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
     const RecordStorageLocation &RecordLoc, const CallExpr *CE,
-    Environment &Env,
-    llvm::function_ref<void(StorageLocation &)> Initialize) {
+    Environment &Env, llvm::function_ref<void(StorageLocation &)> Initialize) {
   QualType Type = CE->getType();
   assert(!Type.isNull());
   assert(CE->isGLValue() || Type->isRecordType());
@@ -218,4 +215,4 @@ CachedConstAccessorsLattice<Base>::getOrCreateConstMethodReturnStorageLocation(
 } // namespace dataflow
 } // namespace clang
 
-#endif  // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
+#endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_CACHED_CONST_ACCESSORS_LATTICE_H
