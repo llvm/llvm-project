@@ -37,12 +37,13 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-OUTLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%[0-9]+]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, vp<[[RDX_SELECT:%.+]]>
-; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[EVL_PHI]]>, ir<%n>
+; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[AVL:%.+]]> = sub ir<%n>, vp<[[EVL_PHI]]>
+; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
+; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = vp.add ir<[[LD1]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[RDX_SELECT]]> = merge-until-pivot ir<true>, ir<[[ADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
@@ -54,17 +55,16 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: middle.block:
 ; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result ir<[[RDX_PHI]]>, vp<[[RDX_SELECT]]>
-; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX_EXTRACT:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
+; IF-EVL-OUTLOOP-NEXT:   EMIT vp<[[RDX_EX:%.+]]> = extract-from-end vp<[[RDX]]>, ir<1>
 ; IF-EVL-OUTLOOP-NEXT:   EMIT branch-on-cond ir<true>
 ; IF-EVL-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: ir-bb<for.end>:
+; IF-EVL-OUTLOOP-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX_EX]]>)
 ; IF-EVL-OUTLOOP-NEXT: No successors
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT: scalar.ph:
 ; IF-EVL-OUTLOOP-NEXT: No successors
-; IF-EVL-OUTLOOP-EMPTY:
-; IF-EVL-OUTLOOP-NEXT: Live-out i32 %add.lcssa = vp<[[RDX_EXTRACT]]>
 ; IF-EVL-OUTLOOP-NEXT: }
 ;
 
