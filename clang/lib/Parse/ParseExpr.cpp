@@ -3536,8 +3536,6 @@ ExprResult Parser::ParseGenericSelectionExpression() {
 
     // FIXME: These expressions should be parsed in a potentially potentially
     // evaluated context.
-    EnterExpressionEvaluationContext PotentiallyEvaluatedIfUsed(
-        Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed);
     ExprResult ER(
         Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
     if (ER.isInvalid()) {
