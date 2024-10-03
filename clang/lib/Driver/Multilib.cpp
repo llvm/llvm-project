@@ -221,7 +221,7 @@ template <> struct llvm::yaml::MappingTraits<MultilibSerialization> {
   }
   static std::string validate(IO &io, MultilibSerialization &V) {
     if (V.Dir.empty() && V.Error.empty())
-      return "one of the 'Dir' and 'atalError' keys must be specified";
+      return "one of the 'Dir' and 'Error' keys must be specified";
     if (!V.Dir.empty() && !V.Error.empty())
       return "the 'Dir' and 'Error' keys may not both be specified";
     if (StringRef(V.Dir).starts_with("/"))
