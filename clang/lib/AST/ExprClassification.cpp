@@ -704,7 +704,8 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
     return Cl::CM_ConstAddrSpace;
 
   // Arrays are not modifiable, only their elements are.
-  if (CT->isArrayType())
+  if (CT->isArrayType() &&
+      !(Ctx.getLangOpts().HLSL && CT->isConstantArrayType()))
     return Cl::CM_ArrayType;
   // Incomplete types are not modifiable.
   if (CT->isIncompleteType())

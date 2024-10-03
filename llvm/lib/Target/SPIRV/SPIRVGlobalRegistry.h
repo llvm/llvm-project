@@ -55,6 +55,8 @@ class SPIRVGlobalRegistry {
   // created during substitution of aggregate arguments
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`)
   DenseMap<Value *, Type *> MutatedAggRet;
+  // map an instruction to its value's attributes (type, name)
+  DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
   // Look for an equivalent of the newType in the map. Return the equivalent
   // if it's found, otherwise insert newType to the map and return the type.
@@ -186,6 +188,21 @@ public:
   Type *findMutated(const Value *Val) {
     auto It = MutatedAggRet.find(Val);
     return It == MutatedAggRet.end() ? nullptr : It->second;
+  }
+
+  // A registry of value's attributes (type, name)
+  // - Add a record.
+  void addValueAttrs(MachineInstr *Key, std::pair<Type *, std::string> Val) {
+    ValueAttrs[Key] = Val;
+  }
+  // - Find a record.
+  bool findValueAttrs(const MachineInstr *Key, Type *&Ty, StringRef &Name) {
+    auto It = ValueAttrs.find(Key);
+    if (It == ValueAttrs.end())
+      return false;
+    Ty = It->second.first;
+    Name = It->second.second;
+    return true;
   }
 
   // Deduced element types of untyped pointers and composites:
@@ -388,6 +405,8 @@ public:
 
   // Gets the storage class of the pointer type assigned to this vreg.
   SPIRV::StorageClass::StorageClass getPointerStorageClass(Register VReg) const;
+  SPIRV::StorageClass::StorageClass
+  getPointerStorageClass(const SPIRVType *Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }

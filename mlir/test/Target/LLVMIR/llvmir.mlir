@@ -2626,3 +2626,72 @@ llvm.func @reqd_work_group_size() attributes {reqd_work_group_size = array<i32: 
 llvm.func @intel_reqd_sub_group_size() attributes {intel_reqd_sub_group_size = 32 : i32}
 
 // CHECK: ![[#INTEL_REQD_SUB_GROUP_SIZE]] = !{i32 32}
+
+// -----
+
+llvm.func @foo()
+
+llvm.func @call_with_empty_opbundle() {
+  llvm.call @foo() [] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle() {
+// CHECK-NEXT:   call void @foo()
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @call_with_empty_opbundle_operands() {
+  llvm.call @foo() ["tag"()] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_empty_opbundle_operands() {
+// CHECK-NEXT:   call void @foo() [ "tag"() ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @call_with_opbundle() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  llvm.call @foo() ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_with_opbundle() {
+// CHECK-NEXT:   call void @foo() [ "tag1"(i32 1, i32 2), "tag2"(i32 3) ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+llvm.func @__gxx_personality_v0(...) -> i32
+llvm.func @invoke_with_opbundle() attributes { personality = @__gxx_personality_v0 } {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+  llvm.invoke @foo() to ^bb2 unwind ^bb1 ["tag1"(%0, %1 : i32, i32), "tag2"(%2 : i32)] : () -> ()
+
+^bb1:
+  %3 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+
+^bb2:
+  llvm.return
+}
+
+//      CHECK: define void @invoke_with_opbundle() personality ptr @__gxx_personality_v0 {
+// CHECK-NEXT:   invoke void @foo() [ "tag1"(i32 1, i32 2), "tag2"(i32 3) ]
+// CHECK-NEXT:           to label %{{.+}} unwind label %{{.+}}
+//      CHECK: }
+
+llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(1 : i1) : i1
+  %1 = llvm.mlir.constant(16 : i32) : i32
+  llvm.call_intrinsic "llvm.assume"(%0) ["align"(%arg0, %1 : !llvm.ptr, i32)] : (i1) -> ()
+  llvm.return
+}
+
+//      CHECK: define void @call_intrin_with_opbundle(ptr %0) {
+// CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %0, i32 16) ]
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }

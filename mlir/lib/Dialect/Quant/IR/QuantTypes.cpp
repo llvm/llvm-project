@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Quant/QuantTypes.h"
 #include "TypeDetail.h"
-#include "mlir/Dialect/Quant/QuantOps.h"
+#include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/Dialect/Quant/IR/QuantTypes.h"
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -20,12 +20,28 @@ using namespace mlir;
 using namespace mlir::quant;
 using namespace mlir::quant::detail;
 
+namespace {
+
+// Return the minimum scale representable in a given float type
+double getMinScale(Type expressedType) {
+  auto floatType = cast<FloatType>(expressedType);
+  return APFloat::getSmallest(floatType.getFloatSemantics()).convertToDouble();
+}
+
+// Return the maximum scale representable in a given float type
+double getMaxScale(Type expressedType) {
+  auto floatType = cast<FloatType>(expressedType);
+  return APFloat::getLargest(floatType.getFloatSemantics()).convertToDouble();
+}
+
+}  // namespace
+
 unsigned QuantizedType::getFlags() const {
   return static_cast<ImplType *>(impl)->flags;
 }
 
 bool QuantizedType::classof(Type type) {
-  return llvm::isa<QuantizationDialect>(type.getDialect());
+  return llvm::isa<QuantDialect>(type.getDialect());
 }
 
 LogicalResult
@@ -71,6 +87,17 @@ int64_t QuantizedType::getStorageTypeMin() const {
 
 int64_t QuantizedType::getStorageTypeMax() const {
   return static_cast<ImplType *>(impl)->storageTypeMax;
+}
+
+bool QuantizedType::hasStorageTypeBounds() const {
+  unsigned int integralWidth = getStorageTypeIntegralWidth();
+  bool isSignedInteger = isSigned();
+  int64_t defaultIntegerMin =
+      getDefaultMinimumForInteger(isSignedInteger, integralWidth);
+  int64_t defaultIntegerMax =
+      getDefaultMaximumForInteger(isSignedInteger, integralWidth);
+  return defaultIntegerMin != getStorageTypeMin() ||
+         defaultIntegerMax != getStorageTypeMax();
 }
 
 unsigned QuantizedType::getStorageTypeIntegralWidth() const {
@@ -293,8 +320,13 @@ LogicalResult UniformQuantizedType::verifyInvariants(
     return emitError() << "expressed type must be floating point";
 
   // Verify scale.
+  double minScale = getMinScale(expressedType);
+  double maxScale = getMaxScale(expressedType);
   if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
     return emitError() << "illegal scale: " << scale;
+  if (scale < minScale || scale > maxScale)
+    return emitError() << "scale out of expressed type range [" << minScale
+                       << ", " << maxScale << "]";
 
   return success();
 }
@@ -353,10 +385,19 @@ LogicalResult UniformQuantizedPerAxisType::verifyInvariants(
                        << scales.size() << ", " << zeroPoints.size();
 
   // Verify scale.
+  double minScale = getMinScale(expressedType);
+  double maxScale = getMaxScale(expressedType);
   for (double scale : scales) {
     if (scale <= 0.0 || std::isinf(scale) || std::isnan(scale))
       return emitError() << "illegal scale: " << scale;
+    if (scale < minScale || scale > maxScale)
+      return emitError() << "scale out of expressed type range [" << minScale
+                         << ", " << maxScale << "]";
   }
+
+  // Verify quantized dimension.
+  if (quantizedDimension < 0)
+    return emitError() << "illegal quantized dimension: " << quantizedDimension;
 
   return success();
 }

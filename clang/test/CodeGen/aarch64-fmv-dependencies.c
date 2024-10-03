@@ -111,9 +111,6 @@ __attribute__((target_version("rpres"))) int fmv(void) { return 0; }
 // CHECK: define dso_local i32 @fmv._Msb() #[[sb:[0-9]+]] {
 __attribute__((target_version("sb"))) int fmv(void) { return 0; }
 
-// CHECK: define dso_local i32 @fmv._Msha1() #[[ATTR0:[0-9]+]] {
-__attribute__((target_version("sha1"))) int fmv(void) { return 0; }
-
 // CHECK: define dso_local i32 @fmv._Msha2() #[[sha2:[0-9]+]] {
 __attribute__((target_version("sha2"))) int fmv(void) { return 0; }
 

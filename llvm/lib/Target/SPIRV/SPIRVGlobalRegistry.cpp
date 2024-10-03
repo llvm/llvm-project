@@ -1128,6 +1128,11 @@ SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
   SPIRVType *Type = getSPIRVTypeForVReg(VReg);
   assert(Type && Type->getOpcode() == SPIRV::OpTypePointer &&
          Type->getOperand(1).isImm() && "Pointer type is expected");
+  return getPointerStorageClass(Type);
+}
+
+SPIRV::StorageClass::StorageClass
+SPIRVGlobalRegistry::getPointerStorageClass(const SPIRVType *Type) const {
   return static_cast<SPIRV::StorageClass::StorageClass>(
       Type->getOperand(1).getImm());
 }

@@ -753,7 +753,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
 
-    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE},
+    setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINIMUMNUM,
+                        ISD::FMAXIMUMNUM},
                        {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
                        Custom);
 
@@ -5842,6 +5843,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:
@@ -8209,9 +8212,17 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     append_range(Ops, VAddrs);
   else
     Ops.push_back(VAddr);
-  Ops.push_back(Op.getOperand(ArgOffset + Intr->RsrcIndex));
-  if (BaseOpcode->Sampler)
-    Ops.push_back(Op.getOperand(ArgOffset + Intr->SampIndex));
+  SDValue Rsrc = Op.getOperand(ArgOffset + Intr->RsrcIndex);
+  EVT RsrcVT = Rsrc.getValueType();
+  if (RsrcVT != MVT::v4i32 && RsrcVT != MVT::v8i32)
+    return Op;
+  Ops.push_back(Rsrc);
+  if (BaseOpcode->Sampler) {
+    SDValue Samp = Op.getOperand(ArgOffset + Intr->SampIndex);
+    if (Samp.getValueType() != MVT::v4i32)
+      return Op;
+    Ops.push_back(Samp);
+  }
   Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
   if (IsGFX10Plus)
     Ops.push_back(DAG.getTargetConstant(DimInfo->Encoding, DL, MVT::i32));
@@ -15499,6 +15510,10 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         Failed |= !RegName.consume_back("]");
         if (!Failed) {
           uint32_t Width = (End - Idx + 1) * 32;
+          // Prohibit constraints for register ranges with a width that does not
+          // match the required type.
+          if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
+            return std::pair(0U, nullptr);
           MCRegister Reg = RC->getRegister(Idx);
           if (SIRegisterInfo::isVGPRClass(RC))
             RC = TRI->getVGPRClassForBitWidth(Width);
@@ -15512,6 +15527,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
           }
         }
       } else {
+        // Check for lossy scalar/vector conversions.
+        if (VT.isVector() && VT.getSizeInBits() != 32)
+          return std::pair(0U, nullptr);
         bool Failed = RegName.getAsInteger(10, Idx);
         if (!Failed && Idx < RC->getNumRegs())
           return std::pair(RC->getRegister(Idx), RC);

@@ -135,7 +135,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
   return args;
 }
 
-void elf::printHelp() {
+void elf::printHelp(Ctx &ctx) {
   ELFOptTable().printHelp(
       lld::outs(), (ctx.arg.progName + " [options] file...").str().c_str(),
       "lld", false /*ShowHidden*/, true /*ShowAllAliases*/);

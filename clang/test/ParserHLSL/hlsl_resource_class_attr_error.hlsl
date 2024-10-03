@@ -17,3 +17,6 @@ __hlsl_resource_t [[hlsl::resource_class(SRV)]] [[hlsl::resource_class(SRV)]] e4
 
 // expected-error@+1{{'resource_class' attribute takes one argument}}
 __hlsl_resource_t [[hlsl::resource_class(SRV, "aa")]] e5;
+
+// expected-error@+1{{attribute 'resource_class' can be used only on HLSL intangible type '__hlsl_resource_t'}}
+float [[hlsl::resource_class(UAV)]] e6;
