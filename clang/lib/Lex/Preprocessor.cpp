@@ -171,28 +171,22 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
 
 Preprocessor::~Preprocessor() {
   assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
-  fprintf(stderr, "SDP: ----- in Preprocessor::~Preprocessor\n");
 
   IncludeMacroStack.clear();
-  fprintf(stderr, "SDP:   - call fill\n");
 
   // Free any cached macro expanders.
   // This populates MacroArgCache, so all TokenLexers need to be destroyed
   // before the code below that frees up the MacroArgCache list.
   std::fill(TokenLexerCache, TokenLexerCache + NumCachedTokenLexers, nullptr);
-  fprintf(stderr, "SDP:   - call reset\n");
   CurTokenLexer.reset();
 
-  fprintf(stderr, "SDP:   - free cached macros\n");
   // Free any cached MacroArgs.
   for (MacroArgs *ArgList = MacroArgCache; ArgList;)
     ArgList = ArgList->deallocate();
 
-  fprintf(stderr, "SDP:   - del hdr search\n");
   // Delete the header search info, if we own it.
   if (OwnsHeaderSearch)
     delete &HeaderInfo;
-  fprintf(stderr, "SDP:   - done\n");
 }
 
 void Preprocessor::Initialize(const TargetInfo &Target,
