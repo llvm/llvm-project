@@ -604,13 +604,15 @@ static void SlowCopyContainerAnnotations(uptr src_beg, uptr src_end,
     for (; dst_ptr != end; ++dst_ptr, ++src_ptr)
       if (!AddressIsPoisoned(src_ptr))
         unpoisoned_bytes = dst_ptr - granule_beg + 1;
-    if (dst_ptr < dst_end || dst_ptr == dst_end_down ||
-        AddressIsPoisoned(dst_end)) {
-      if (unpoisoned_bytes != 0 || granule_beg >= dst_beg)
-        SetContainerGranule(granule_beg, unpoisoned_bytes);
-      else if (!AddressIsPoisoned(dst_beg))
-        SetContainerGranule(granule_beg, dst_beg - granule_beg);
-    }
+
+    if (dst_ptr == dst_end && dst_end != dst_end_down &&
+        !AddressIsPoisoned(dst_end))
+      continue;
+
+    if (unpoisoned_bytes != 0 || granule_beg >= dst_beg)
+      SetContainerGranule(granule_beg, unpoisoned_bytes);
+    else if (!AddressIsPoisoned(dst_beg))
+      SetContainerGranule(granule_beg, dst_beg - granule_beg);
   }
 }
 
