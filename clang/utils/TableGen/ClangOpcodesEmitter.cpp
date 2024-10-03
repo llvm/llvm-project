@@ -69,7 +69,7 @@ void Enumerate(const Record *R, StringRef N,
 
     if (const auto *TypeClass = dyn_cast<DefInit>(Types->getElement(I))) {
       for (const auto *Type :
-           TypeClass->getDef()->getValueAsListOfConstDefs("Types")) {
+           TypeClass->getDef()->getValueAsListOfDefs("Types")) {
         TypePath.push_back(Type);
         Rec(I + 1, ID + Type->getName());
         TypePath.pop_back();
@@ -117,7 +117,7 @@ void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N,
             [this, R, &OS, &N](ArrayRef<const Record *> TS, const Twine &ID) {
               bool CanReturn = R->getValueAsBit("CanReturn");
               bool ChangesPC = R->getValueAsBit("ChangesPC");
-              const auto &Args = R->getValueAsListOfConstDefs("Args");
+              const auto &Args = R->getValueAsListOfDefs("Args");
 
               OS << "case OP_" << ID << ": {\n";
 
@@ -176,7 +176,7 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N,
     OS << "  PrintName(\"" << ID << "\");\n";
     OS << "  OS << \"\\t\"";
 
-    for (const auto *Arg : R->getValueAsListOfConstDefs("Args")) {
+    for (const auto *Arg : R->getValueAsListOfDefs("Args")) {
       OS << " << ReadArg<" << Arg->getValueAsString("Name") << ">(P, PC)";
       OS << " << \" \"";
     }
@@ -194,7 +194,7 @@ void ClangOpcodesEmitter::EmitEmitter(raw_ostream &OS, StringRef N,
 
   OS << "#ifdef GET_LINK_IMPL\n";
   Enumerate(R, N, [R, &OS](ArrayRef<const Record *>, const Twine &ID) {
-    const auto &Args = R->getValueAsListOfConstDefs("Args");
+    const auto &Args = R->getValueAsListOfDefs("Args");
 
     // Emit the list of arguments.
     OS << "bool ByteCodeEmitter::emit" << ID << "(";
@@ -227,7 +227,7 @@ void ClangOpcodesEmitter::EmitEmitter(raw_ostream &OS, StringRef N,
 void ClangOpcodesEmitter::EmitProto(raw_ostream &OS, StringRef N,
                                     const Record *R) {
   OS << "#if defined(GET_EVAL_PROTO) || defined(GET_LINK_PROTO)\n";
-  auto Args = R->getValueAsListOfConstDefs("Args");
+  auto Args = R->getValueAsListOfDefs("Args");
   Enumerate(R, N, [&OS, &Args](ArrayRef<const Record *> TS, const Twine &ID) {
     OS << "bool emit" << ID << "(";
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
@@ -268,7 +268,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
     return;
 
   const auto *Types = R->getValueAsListInit("Types");
-  const auto &Args = R->getValueAsListOfConstDefs("Args");
+  const auto &Args = R->getValueAsListOfDefs("Args");
 
   Twine EmitFuncName = "emit" + N;
 
@@ -333,7 +333,7 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
     // Print a switch statement selecting T.
     if (auto *TypeClass = dyn_cast<DefInit>(Types->getElement(I))) {
       OS << "  switch (T" << I << ") {\n";
-      auto Cases = TypeClass->getDef()->getValueAsListOfConstDefs("Types");
+      auto Cases = TypeClass->getDef()->getValueAsListOfDefs("Types");
       for (auto *Case : Cases) {
         OS << "  case PT_" << Case->getName() << ":\n";
         TS.push_back(Case);
@@ -364,7 +364,7 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
   OS << "#ifdef GET_EVAL_IMPL\n";
   Enumerate(R, N,
             [this, R, &N, &OS](ArrayRef<const Record *> TS, const Twine &ID) {
-              auto Args = R->getValueAsListOfConstDefs("Args");
+              auto Args = R->getValueAsListOfDefs("Args");
 
               OS << "bool EvalEmitter::emit" << ID << "(";
               for (size_t I = 0, N = Args.size(); I < N; ++I) {
