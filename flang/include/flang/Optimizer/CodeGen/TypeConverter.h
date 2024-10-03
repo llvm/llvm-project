@@ -89,17 +89,6 @@ public:
   // fir.char<k,n>  -->  llvm.array<n x "ix">
   mlir::Type convertCharType(fir::CharacterType charTy) const;
 
-  // Use the target specifics to figure out how to map complex to LLVM IR. The
-  // use of complex values in function signatures is handled before conversion
-  // to LLVM IR dialect here.
-  //
-  // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C>
-  mlir::Type convertComplexType(C cmplx) const {
-    auto eleTy = cmplx.getElementType();
-    return convertType(specifics->complexMemoryType(eleTy));
-  }
-
   template <typename A> mlir::Type convertPointerLike(A &ty) const {
     return mlir::LLVM::LLVMPointerType::get(ty.getContext());
   }

@@ -1533,8 +1533,6 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
       } else if (auto t = mlir::dyn_cast<fir::RecordType>(eleTy)) {
         // FIXME: This is the same as the tuple case.
         return mlir::success();
-      } else if (auto t = mlir::dyn_cast<fir::ComplexType>(eleTy)) {
-        eleTy = t.getElementType();
       } else if (auto t = mlir::dyn_cast<mlir::ComplexType>(eleTy)) {
         eleTy = t.getElementType();
       } else if (auto t = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
@@ -4387,14 +4385,6 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   if (auto *op = (*i++).getDefiningOp())
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
-                  return mlir::Type{};
-                })
-                .Case<fir::ComplexType>([&](fir::ComplexType ty) {
-                  auto x = *i;
-                  if (auto *op = (*i++).getDefiningOp())
-                    if (fir::isa_integer(x.getType()))
-                      return ty.getEleType(fir::getKindMapping(
-                          op->getParentOfType<mlir::ModuleOp>()));
                   return mlir::Type{};
                 })
                 .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {

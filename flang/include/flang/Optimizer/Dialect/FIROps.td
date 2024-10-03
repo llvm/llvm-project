@@ -2735,9 +2735,9 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
 }
 
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
-    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
-              "fir::IntegerType, fir::LogicalType, fir::RealType, "
-              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType,"
+              "fir::LogicalType, fir::RealType, fir::RecordType>"
+              "(mlir::cast<mlir::TypeAttr>($_self).getValue())"
     >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";

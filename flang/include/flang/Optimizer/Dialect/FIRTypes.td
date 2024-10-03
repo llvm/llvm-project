@@ -158,26 +158,6 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
   let assemblyFormat = "`<` $eleTy `>`";
 }
 
-def fir_ComplexType : FIR_Type<"Complex", "complex"> {
-  let summary = "Complex type";
-
-  let description = [{
-    Model of a Fortran COMPLEX intrinsic type, including the KIND type
-    parameter. COMPLEX is a floating point type with a real and imaginary
-    member.
-  }];
-
-  let parameters = (ins "KindTy":$fKind);
-  let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-
-    mlir::Type getElementType() const;
-    mlir::Type getEleType(const fir::KindMapping &kindMap) const;
-  }];
-}
-
 def fir_FieldType : FIR_Type<"Field", "field"> {
   let summary = "A field (in a RecordType) argument's type";
 
