@@ -125,9 +125,7 @@ bool RegToMemWrapperPass::runOnFunction(Function &F) {
 
   unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
   bool Changed = runPass(F);
-  if (N == 0 && !Changed)
-    return false;
-  return true;
+  return N != 0 || Changed;
 }
 
 FunctionPass *llvm::createRegToMemWrapperPass() {
