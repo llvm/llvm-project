@@ -6,18 +6,18 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define void @sve-fptoi() {
 ; CHECK-LABEL: 'sve-fptoi'
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_si8 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i8>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_ui8 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i8>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_si32 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i32>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_ui32 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i32>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_si64 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i64>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f16_to_ui64 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i64>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_si8 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i8>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_ui8 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i8>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_si16 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i16>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_ui16 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i16>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_si64 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i64>
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %nv1f32_to_ui64 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_si8 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_ui8 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_si32 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_ui32 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_si64 = fptosi <vscale x 1 x half> undef to <vscale x 1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f16_to_ui64 = fptoui <vscale x 1 x half> undef to <vscale x 1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_si8 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_ui8 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i8>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_si16 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_ui16 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_si64 = fptosi <vscale x 1 x float> undef to <vscale x 1 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f32_to_ui64 = fptoui <vscale x 1 x float> undef to <vscale x 1 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f64_to_si8 = fptosi <vscale x 1 x double> undef to <vscale x 1 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f64_to_ui8 = fptoui <vscale x 1 x double> undef to <vscale x 1 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %nv1f64_to_si16 = fptosi <vscale x 1 x double> undef to <vscale x 1 x i16>
