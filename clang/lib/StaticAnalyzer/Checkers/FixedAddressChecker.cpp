@@ -18,6 +18,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
@@ -26,16 +27,16 @@ using namespace ento;
 namespace {
 class FixedAddressChecker
     : public Checker<check::PreStmt<BinaryOperator>, check::PreStmt<DeclStmt>,
-                     check::PreStmt<CallExpr>> {
+                     check::PreCall> {
   const BugType BT{this, "Use fixed address"};
 
   void checkUseOfFixedAddress(QualType DstType, const Expr *SrcExpr,
                               CheckerContext &C) const;
 
 public:
-  void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
-  void checkPreStmt(const DeclStmt *D, CheckerContext &C) const;
-  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+  void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
+  void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 };
 }
 
@@ -67,32 +68,27 @@ void FixedAddressChecker::checkUseOfFixedAddress(QualType DstType,
   }
 }
 
-void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
+void FixedAddressChecker::checkPreStmt(const BinaryOperator *BO,
                                        CheckerContext &C) const {
-  if (B->getOpcode() != BO_Assign)
+  if (BO->getOpcode() != BO_Assign)
     return;
 
-  checkUseOfFixedAddress(B->getType(), B->getRHS(), C);
+  checkUseOfFixedAddress(BO->getType(), BO->getRHS(), C);
 }
 
-void FixedAddressChecker::checkPreStmt(const DeclStmt *D,
+void FixedAddressChecker::checkPreStmt(const DeclStmt *DS,
                                        CheckerContext &C) const {
-  for (const auto *D1 : D->decls()) {
-    if (const auto *VD1 = dyn_cast<VarDecl>(D1); VD1 && VD1->hasInit())
-      checkUseOfFixedAddress(VD1->getType(), VD1->getInit(), C);
+  for (const auto *D : DS->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->hasInit())
+      checkUseOfFixedAddress(VD->getType(), VD->getInit(), C);
   }
 }
 
-void FixedAddressChecker::checkPreStmt(const CallExpr *CE,
+void FixedAddressChecker::checkPreCall(const CallEvent &Call,
                                        CheckerContext &C) const {
-  const FunctionDecl *Callee = CE->getDirectCallee();
-  if (!Callee)
-    return;
-  if (CE->getNumArgs() != Callee->getNumParams())
-    return;
-
-  for (auto [Arg, Param] : zip_equal(CE->arguments(), Callee->parameters()))
-    checkUseOfFixedAddress(Param->getType(), Arg, C);
+  for (auto Parm : enumerate(Call.parameters()))
+    checkUseOfFixedAddress(Parm.value()->getType(),
+                           Call.getArgExpr(Parm.index()), C);
 }
 
 void ento::registerFixedAddressChecker(CheckerManager &mgr) {
