@@ -4134,24 +4134,23 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
   newInBounds.reserve(op.getTransferRank());
+  // Idxs of non-bcast dims - used when analysing bcast dims.
   SmallVector<unsigned> nonBcastDims;
+
+  // 1. Process non-broadcast dims
   for (unsigned i = 0; i < op.getTransferRank(); ++i) {
-    // 1. Already marked as in-bounds, nothing to see here.
+    // 1.1. Already marked as in-bounds, nothing to see here.
     if (op.isDimInBounds(i)) {
       newInBounds.push_back(true);
       continue;
     }
-    // 2. Currently out-of-bounds, check whether we can statically determine it
-    // is inBounds.
+    // 1.2. Currently out-of-bounds, check whether we can statically determine
+    // it is inBounds.
     bool inBounds = false;
     auto dimExpr = dyn_cast<AffineDimExpr>(permutationMap.getResult(i));
     if (dimExpr) {
-      // 2.a Non-broadcast dim
       inBounds = isInBounds(op, /*resultIdx=*/i,
                             /*indicesIdx=*/dimExpr.getPosition());
-      // 2.b Broadcast dims are handled after processing non-bcast dims
-      // FIXME: constant expr != 0 are not broadcasts - should such
-      // constants be allowed at all?
       nonBcastDims.push_back(i);
     }
 
@@ -4160,15 +4159,17 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     changed |= inBounds;
   }
 
-  // Handle broadcast dims: if all non-broadcast dims are "in
-  // bounds", then all bcast dims should be "in bounds" as well.
+  // 2. Handle broadcast dims
+  // If all non-broadcast dims are "in bounds", then all bcast dims should be
+  // "in bounds" as well.
   bool allNonBcastDimsInBounds = llvm::all_of(
       nonBcastDims, [&newInBounds](unsigned idx) { return newInBounds[idx]; });
-  if (allNonBcastDimsInBounds)
-    llvm::for_each(permutationMap.getBroadcastDims(), [&](unsigned idx) {
+  if (allNonBcastDimsInBounds) {
+    for (size_t idx : permutationMap.getBroadcastDims()) {
       changed |= !newInBounds[idx];
       newInBounds[idx] = true;
-    });
+    }
+  }
 
   if (!changed)
     return failure();
