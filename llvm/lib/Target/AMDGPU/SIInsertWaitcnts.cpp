@@ -1054,18 +1054,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
   } else if (T == X_CNT) {
-    for (const MachineOperand &Op : Inst.all_uses()) {
-      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
-      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        setRegScore(RegNo, T, CurrScore);
-      }
-    }
+    for (const MachineOperand &Op : Inst.all_uses())
+      setScoreByOperand(&Inst, TRI, MRI, Op, X_CNT, CurrScore);
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Handle the register-interval written by v_store_idx.
     if (T == VA_VDST && Inst.getOpcode() == AMDGPU::V_STORE_IDX) {
       RegInterval Interval = getRegIndexingInterval(&Inst, MRI, TRI);
-      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
-        setRegScore(RegNo, T, CurrScore);
+      setScoreByInterval(Interval, T, CurrScore);
     }
     // v_load_idx not bundled with some vmem instr should not have VM_VSRC
     // event.
@@ -1076,12 +1071,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       if (!Op.isReg() || (T == VA_VDST && Op.isUse()) ||
           (T == VM_VSRC && Op.isDef()))
         continue;
-      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
-      if (Interval.first >= NUM_ALL_VGPRS)
-        continue;
-      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        setRegScore(RegNo, T, CurrScore);
-      }
+      if (TRI->isVectorRegister(*MRI, Op.getReg()))
+        setScoreByOperand(&Inst, TRI, MRI, Op, T, CurrScore);
     }
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
