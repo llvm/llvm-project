@@ -203,19 +203,19 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         }
         if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
           switch (II->getIntrinsicID()) {
-            case Intrinsic::vastart:
-              // Look for calls to the @llvm.va_start intrinsic. We can omit
-              // some prologue boilerplate for variadic functions that don't
-              // examine their arguments.
-              MF->getFrameInfo().setHasVAStart(true);
-              break;
-            case Intrinsic::fake_use:
-              // Look for llvm.fake.uses, so that we can remove loads into fake
-              // uses later if necessary.
-              MF->setHasFakeUses(true);
-              break;
-            default:
-              break;
+          case Intrinsic::vastart:
+            // Look for calls to the @llvm.va_start intrinsic. We can omit
+            // some prologue boilerplate for variadic functions that don't
+            // examine their arguments.
+            MF->getFrameInfo().setHasVAStart(true);
+            break;
+          case Intrinsic::fake_use:
+            // Look for llvm.fake.uses, so that we can remove loads into fake
+            // uses later if necessary.
+            MF->setHasFakeUses(true);
+            break;
+          default:
+            break;
           }
         }
 
