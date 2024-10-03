@@ -601,12 +601,14 @@ def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
     fir_RealType.predicate]>, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
+def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
+  "any floating point complex type">;
+def AnyFirComplex : Type<AnyFirComplexLike.predicate,
+  "any floating point complex type">;
+
 // Composable types
-// Note that we include both fir_ComplexType and AnyComplex, so we can use both
-// the FIR ComplexType and the MLIR ComplexType (the former is used to represent
-// Fortran complex and the latter for C++ std::complex).
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
-    fir_SequenceType.predicate, fir_ComplexType.predicate, AnyComplex.predicate,
+    fir_SequenceType.predicate, AnyFirComplexLike.predicate,
     fir_VectorType.predicate, IsTupleTypePred, fir_CharacterType.predicate]>,
     "any composite">;
 
