@@ -25,16 +25,16 @@ define i32 @t0() {
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lui a0, %hi(src)
 ; RV32-NEXT:    lw a1, %lo(src)(a0)
-; RV32-NEXT:    lui a2, %hi(dst)
-; RV32-NEXT:    sw a1, %lo(dst)(a2)
 ; RV32-NEXT:    addi a0, a0, %lo(src)
-; RV32-NEXT:    lbu a1, 10(a0)
+; RV32-NEXT:    lw a2, 4(a0)
 ; RV32-NEXT:    lh a3, 8(a0)
-; RV32-NEXT:    lw a0, 4(a0)
-; RV32-NEXT:    addi a2, a2, %lo(dst)
-; RV32-NEXT:    sb a1, 10(a2)
-; RV32-NEXT:    sh a3, 8(a2)
-; RV32-NEXT:    sw a0, 4(a2)
+; RV32-NEXT:    lbu a0, 10(a0)
+; RV32-NEXT:    lui a4, %hi(dst)
+; RV32-NEXT:    sw a1, %lo(dst)(a4)
+; RV32-NEXT:    addi a1, a4, %lo(dst)
+; RV32-NEXT:    sb a0, 10(a1)
+; RV32-NEXT:    sh a3, 8(a1)
+; RV32-NEXT:    sw a2, 4(a1)
 ; RV32-NEXT:    li a0, 0
 ; RV32-NEXT:    ret
 ;
@@ -42,14 +42,14 @@ define i32 @t0() {
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    lui a0, %hi(src)
 ; RV64-NEXT:    ld a1, %lo(src)(a0)
-; RV64-NEXT:    lui a2, %hi(dst)
 ; RV64-NEXT:    addi a0, a0, %lo(src)
-; RV64-NEXT:    lbu a3, 10(a0)
-; RV64-NEXT:    lh a0, 8(a0)
-; RV64-NEXT:    sd a1, %lo(dst)(a2)
-; RV64-NEXT:    addi a1, a2, %lo(dst)
-; RV64-NEXT:    sb a3, 10(a1)
-; RV64-NEXT:    sh a0, 8(a1)
+; RV64-NEXT:    lh a2, 8(a0)
+; RV64-NEXT:    lbu a0, 10(a0)
+; RV64-NEXT:    lui a3, %hi(dst)
+; RV64-NEXT:    sd a1, %lo(dst)(a3)
+; RV64-NEXT:    addi a1, a3, %lo(dst)
+; RV64-NEXT:    sb a0, 10(a1)
+; RV64-NEXT:    sh a2, 8(a1)
 ; RV64-NEXT:    li a0, 0
 ; RV64-NEXT:    ret
 ;
@@ -57,14 +57,14 @@ define i32 @t0() {
 ; RV32-FAST:       # %bb.0: # %entry
 ; RV32-FAST-NEXT:    lui a0, %hi(src)
 ; RV32-FAST-NEXT:    lw a1, %lo(src)(a0)
-; RV32-FAST-NEXT:    lui a2, %hi(dst)
 ; RV32-FAST-NEXT:    addi a0, a0, %lo(src)
-; RV32-FAST-NEXT:    lw a3, 7(a0)
-; RV32-FAST-NEXT:    lw a0, 4(a0)
-; RV32-FAST-NEXT:    sw a1, %lo(dst)(a2)
-; RV32-FAST-NEXT:    addi a1, a2, %lo(dst)
-; RV32-FAST-NEXT:    sw a3, 7(a1)
-; RV32-FAST-NEXT:    sw a0, 4(a1)
+; RV32-FAST-NEXT:    lw a2, 4(a0)
+; RV32-FAST-NEXT:    lw a0, 7(a0)
+; RV32-FAST-NEXT:    lui a3, %hi(dst)
+; RV32-FAST-NEXT:    sw a1, %lo(dst)(a3)
+; RV32-FAST-NEXT:    addi a1, a3, %lo(dst)
+; RV32-FAST-NEXT:    sw a0, 7(a1)
+; RV32-FAST-NEXT:    sw a2, 4(a1)
 ; RV32-FAST-NEXT:    li a0, 0
 ; RV32-FAST-NEXT:    ret
 ;
@@ -166,16 +166,16 @@ define void @t2(ptr nocapture %C) nounwind {
 ; RV64-FAST-NEXT:    lui a1, %hi(.L.str2)
 ; RV64-FAST-NEXT:    ld a2, %lo(.L.str2)(a1)
 ; RV64-FAST-NEXT:    sd a2, 0(a0)
-; RV64-FAST-NEXT:    lui a2, 1156
-; RV64-FAST-NEXT:    addi a2, a2, 332
 ; RV64-FAST-NEXT:    addi a1, a1, %lo(.L.str2)
-; RV64-FAST-NEXT:    ld a3, 24(a1)
-; RV64-FAST-NEXT:    ld a4, 16(a1)
-; RV64-FAST-NEXT:    ld a1, 8(a1)
-; RV64-FAST-NEXT:    sw a2, 32(a0)
-; RV64-FAST-NEXT:    sd a3, 24(a0)
-; RV64-FAST-NEXT:    sd a4, 16(a0)
-; RV64-FAST-NEXT:    sd a1, 8(a0)
+; RV64-FAST-NEXT:    ld a2, 8(a1)
+; RV64-FAST-NEXT:    ld a3, 16(a1)
+; RV64-FAST-NEXT:    ld a1, 24(a1)
+; RV64-FAST-NEXT:    lui a4, 1156
+; RV64-FAST-NEXT:    addi a4, a4, 332
+; RV64-FAST-NEXT:    sw a4, 32(a0)
+; RV64-FAST-NEXT:    sd a1, 24(a0)
+; RV64-FAST-NEXT:    sd a3, 16(a0)
+; RV64-FAST-NEXT:    sd a2, 8(a0)
 ; RV64-FAST-NEXT:    ret
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str2, i64 36, i1 false)
