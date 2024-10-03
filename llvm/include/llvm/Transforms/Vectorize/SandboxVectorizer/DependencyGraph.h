@@ -61,6 +61,7 @@ public:
   virtual ~DGNode() = default;
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
+
   /// \Returns true if \p I is a memory dependency candidate instruction.
   static bool isMemDepNodeCandidate(Instruction *I) {
     AllocaInst *Alloca;
