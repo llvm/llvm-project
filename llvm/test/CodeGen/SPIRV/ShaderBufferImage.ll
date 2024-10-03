@@ -7,12 +7,12 @@
 ; CHECK-NOT: OpCapability ImageBasic
 ; CHECK-NOT: OpCapability ImageReadWrite
 
-; CHECK: [[Float:%[0-9]+]] = OpTypeFloat 32
-; CHECK: [[Void:%[0-9]+]] = OpTypeVoid
-; CHECK: [[ImageType:%[0-9]+]] = OpTypeImage [[Float]] Buffer 2 0 0 2 R32i {{$}}
-; CHECK: [[ImageFuncType:%[0-9]+]] = OpTypeFunction [[Void]] [[ImageType]]
+; CHECK-DAG: [[Float:%[0-9]+]] = OpTypeFloat 32
+; CHECK-DAG: [[Void:%[0-9]+]] = OpTypeVoid
+; CHECK-DAG: [[ImageType:%[0-9]+]] = OpTypeImage [[Float]] Buffer 2 0 0 2 R32i {{$}}
+; CHECK-DAG: [[ImageFuncType:%[0-9]+]] = OpTypeFunction [[Void]] [[ImageType]]
 
-; CHECK: {{%[0-9]+}} = OpFunction [[Void]] DontInline [[ImageFuncType]]    ; -- Begin function ImageWithNoAccessQualifier
+; CHECK: {{%[0-9]+}} = OpFunction [[Void]] DontInline [[ImageFuncType]]
 define void @ImageWithNoAccessQualifier(target("spirv.Image", float, 5, 2, 0, 0, 2, 24) %img) #0 {
   ret void
 }
