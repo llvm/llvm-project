@@ -286,14 +286,9 @@ void Instruction::dumpOS(raw_ostream &OS) const {
 }
 #endif // NDEBUG
 
-VAArgInst *VAArgInst::create(Value *List, Type *Ty, BBIterator WhereIt,
-                             BasicBlock *WhereBB, Context &Ctx,
-                             const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+VAArgInst *VAArgInst::create(Value *List, Type *Ty, InsertPosition Pos,
+                             Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMI =
       cast<llvm::VAArgInst>(Builder.CreateVAArg(List->Val, Ty->LLVMTy, Name));
   return Ctx.createVAArgInst(LLVMI);
@@ -303,14 +298,9 @@ Value *VAArgInst::getPointerOperand() {
   return Ctx.getValue(cast<llvm::VAArgInst>(Val)->getPointerOperand());
 }
 
-FreezeInst *FreezeInst::create(Value *V, BBIterator WhereIt,
-                               BasicBlock *WhereBB, Context &Ctx,
+FreezeInst *FreezeInst::create(Value *V, InsertPosition Pos, Context &Ctx,
                                const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+  auto &Builder = setInsertPos(Pos);
   auto *LLVMI = cast<llvm::FreezeInst>(Builder.CreateFreeze(V->Val, Name));
   return Ctx.createFreezeInst(LLVMI);
 }
@@ -358,42 +348,17 @@ bool SelectInst::classof(const Value *From) {
   return From->getSubclassID() == ClassID::Select;
 }
 
-BranchInst *BranchInst::create(BasicBlock *IfTrue, Instruction *InsertBefore,
+BranchInst *BranchInst::create(BasicBlock *IfTrue, InsertPosition Pos,
                                Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
-  Builder.SetInsertPoint(cast<llvm::Instruction>(LLVMBefore));
-  llvm::BranchInst *NewBr =
-      Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
-  return Ctx.createBranchInst(NewBr);
-}
-
-BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *InsertAtEnd,
-                               Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = setInsertPos(Pos);
   llvm::BranchInst *NewBr =
       Builder.CreateBr(cast<llvm::BasicBlock>(IfTrue->Val));
   return Ctx.createBranchInst(NewBr);
 }
 
 BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                               Value *Cond, Instruction *InsertBefore,
-                               Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  llvm::Instruction *LLVMBefore = InsertBefore->getTopmostLLVMInstruction();
-  Builder.SetInsertPoint(LLVMBefore);
-  llvm::BranchInst *NewBr =
-      Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
-                           cast<llvm::BasicBlock>(IfFalse->Val));
-  return Ctx.createBranchInst(NewBr);
-}
-
-BranchInst *BranchInst::create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                               Value *Cond, BasicBlock *InsertAtEnd,
-                               Context &Ctx) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+                               Value *Cond, InsertPosition Pos, Context &Ctx) {
+  auto &Builder = setInsertPos(Pos);
   llvm::BranchInst *NewBr =
       Builder.CreateCondBr(Cond->Val, cast<llvm::BasicBlock>(IfTrue->Val),
                            cast<llvm::BasicBlock>(IfFalse->Val));
@@ -437,34 +402,9 @@ void LoadInst::setVolatile(bool V) {
 }
 
 LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                           Instruction *InsertBefore, Context &Ctx,
+                           InsertPosition Pos, bool IsVolatile, Context &Ctx,
                            const Twine &Name) {
-  return create(Ty, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx, Name);
-}
-
-LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                           Instruction *InsertBefore, bool IsVolatile,
-                           Context &Ctx, const Twine &Name) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  auto *NewLI =
-      Builder.CreateAlignedLoad(Ty->LLVMTy, Ptr->Val, Align, IsVolatile, Name);
-  auto *NewSBI = Ctx.createLoadInst(NewLI);
-  return NewSBI;
-}
-
-LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                           BasicBlock *InsertAtEnd, Context &Ctx,
-                           const Twine &Name) {
-  return create(Ty, Ptr, Align, InsertAtEnd, /*IsVolatile=*/false, Ctx, Name);
-}
-
-LoadInst *LoadInst::create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                           BasicBlock *InsertAtEnd, bool IsVolatile,
-                           Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = setInsertPos(Pos);
   auto *NewLI =
       Builder.CreateAlignedLoad(Ty->LLVMTy, Ptr->Val, Align, IsVolatile, Name);
   auto *NewSBI = Ctx.createLoadInst(NewLI);
@@ -487,32 +427,9 @@ void StoreInst::setVolatile(bool V) {
 }
 
 StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
-                             Instruction *InsertBefore, Context &Ctx) {
-  return create(V, Ptr, Align, InsertBefore, /*IsVolatile=*/false, Ctx);
-}
-
-StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
-                             Instruction *InsertBefore, bool IsVolatile,
+                             InsertPosition Pos, bool IsVolatile,
                              Context &Ctx) {
-  llvm::Instruction *BeforeIR = InsertBefore->getTopmostLLVMInstruction();
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(BeforeIR);
-  auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
-  auto *NewSBI = Ctx.createStoreInst(NewSI);
-  return NewSBI;
-}
-
-StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
-                             BasicBlock *InsertAtEnd, Context &Ctx) {
-  return create(V, Ptr, Align, InsertAtEnd, /*IsVolatile=*/false, Ctx);
-}
-
-StoreInst *StoreInst::create(Value *V, Value *Ptr, MaybeAlign Align,
-                             BasicBlock *InsertAtEnd, bool IsVolatile,
-                             Context &Ctx) {
-  auto *InsertAtEndIR = cast<llvm::BasicBlock>(InsertAtEnd->Val);
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertAtEndIR);
+  auto &Builder = setInsertPos(Pos);
   auto *NewSI = Builder.CreateAlignedStore(V->Val, Ptr->Val, Align, IsVolatile);
   auto *NewSBI = Ctx.createStoreInst(NewSI);
   return NewSBI;
@@ -1779,23 +1696,9 @@ Value *InsertElementInst::create(Value *Vec, Value *NewElt, Value *Idx,
   return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
 }
 
-Value *ExtractElementInst::create(Value *Vec, Value *Idx,
-                                  Instruction *InsertBefore, Context &Ctx,
-                                  const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  llvm::Value *NewV = Builder.CreateExtractElement(Vec->Val, Idx->Val, Name);
-  if (auto *NewExtract = dyn_cast<llvm::ExtractElementInst>(NewV))
-    return Ctx.createExtractElementInst(NewExtract);
-  assert(isa<llvm::Constant>(NewV) && "Expected constant");
-  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *ExtractElementInst::create(Value *Vec, Value *Idx,
-                                  BasicBlock *InsertAtEnd, Context &Ctx,
-                                  const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+Value *ExtractElementInst::create(Value *Vec, Value *Idx, InsertPosition Pos,
+                                  Context &Ctx, const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateExtractElement(Vec->Val, Idx->Val, Name);
   if (auto *NewExtract = dyn_cast<llvm::ExtractElementInst>(NewV))
     return Ctx.createExtractElementInst(NewExtract);
@@ -1804,23 +1707,9 @@ Value *ExtractElementInst::create(Value *Vec, Value *Idx,
 }
 
 Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
-                                 Instruction *InsertBefore, Context &Ctx,
+                                 InsertPosition Pos, Context &Ctx,
                                  const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  llvm::Value *NewV =
-      Builder.CreateShuffleVector(V1->Val, V2->Val, Mask->Val, Name);
-  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
-    return Ctx.createShuffleVectorInst(NewShuffle);
-  assert(isa<llvm::Constant>(NewV) && "Expected constant");
-  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
-                                 BasicBlock *InsertAtEnd, Context &Ctx,
-                                 const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV =
       Builder.CreateShuffleVector(V1->Val, V2->Val, Mask->Val, Name);
   if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
@@ -1830,22 +1719,9 @@ Value *ShuffleVectorInst::create(Value *V1, Value *V2, Value *Mask,
 }
 
 Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
-                                 Instruction *InsertBefore, Context &Ctx,
+                                 InsertPosition Pos, Context &Ctx,
                                  const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(InsertBefore->getTopmostLLVMInstruction());
-  llvm::Value *NewV = Builder.CreateShuffleVector(V1->Val, V2->Val, Mask, Name);
-  if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
-    return Ctx.createShuffleVectorInst(NewShuffle);
-  assert(isa<llvm::Constant>(NewV) && "Expected constant");
-  return Ctx.getOrCreateConstant(cast<llvm::Constant>(NewV));
-}
-
-Value *ShuffleVectorInst::create(Value *V1, Value *V2, ArrayRef<int> Mask,
-                                 BasicBlock *InsertAtEnd, Context &Ctx,
-                                 const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  Builder.SetInsertPoint(cast<llvm::BasicBlock>(InsertAtEnd->Val));
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateShuffleVector(V1->Val, V2->Val, Mask, Name);
   if (auto *NewShuffle = dyn_cast<llvm::ShuffleVectorInst>(NewV))
     return Ctx.createShuffleVectorInst(NewShuffle);
@@ -1887,13 +1763,9 @@ VectorType *ExtractElementInst::getVectorOperandType() const {
 }
 
 Value *ExtractValueInst::create(Value *Agg, ArrayRef<unsigned> Idxs,
-                                BBIterator WhereIt, BasicBlock *WhereBB,
-                                Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateExtractValue(Agg->Val, Idxs, Name);
   if (auto *NewExtractValueInst = dyn_cast<llvm::ExtractValueInst>(NewV))
     return Ctx.createExtractValueInst(NewExtractValueInst);
@@ -1907,13 +1779,9 @@ Type *ExtractValueInst::getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs) {
 }
 
 Value *InsertValueInst::create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                               BBIterator WhereIt, BasicBlock *WhereBB,
-                               Context &Ctx, const Twine &Name) {
-  auto &Builder = Ctx.getLLVMIRBuilder();
-  if (WhereIt != WhereBB->end())
-    Builder.SetInsertPoint((*WhereIt).getTopmostLLVMInstruction());
-  else
-    Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
+                               InsertPosition Pos, Context &Ctx,
+                               const Twine &Name) {
+  auto &Builder = setInsertPos(Pos);
   llvm::Value *NewV = Builder.CreateInsertValue(Agg->Val, Val->Val, Idxs, Name);
   if (auto *NewInsertValueInst = dyn_cast<llvm::InsertValueInst>(NewV))
     return Ctx.createInsertValueInst(NewInsertValueInst);
