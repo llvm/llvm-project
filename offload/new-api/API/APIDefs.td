@@ -106,11 +106,11 @@ class AddHandleChecksToReturns<list<Param> Params, list<Return> Returns> {
   // Does the list of returns already contain ERROR_INVALID_NULL_HANDLE?
   bit returns_has_inv_handle = !foldl(
       0, Returns, HasErr, Ret,
-      !or(HasErr, !eq(Ret.value, PREFIX#"_RESULT_ERROR_INVALID_NULL_HANDLE")));
+      !or(HasErr, !eq(Ret.value, PREFIX#"_ERRC_INVALID_NULL_HANDLE")));
 
   list<Return> returns_out = !if(returns_has_inv_handle,
-        AppendConditionsToReturn<Returns, PREFIX # "_RESULT_ERROR_INVALID_NULL_HANDLE", handle_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_RESULT_ERROR_INVALID_NULL_HANDLE", handle_param_conds>])
+        AppendConditionsToReturn<Returns, PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>.ret,
+        !listconcat(Returns, [Return<PREFIX # "_ERRC_INVALID_NULL_HANDLE", handle_param_conds>])
     );
 }
 
@@ -125,10 +125,10 @@ class AddPointerChecksToReturns<list<Param> Params, list<Return> Returns> {
   // Does the list of returns already contain ERROR_INVALID_NULL_POINTER?
   bit returns_has_inv_ptr = !foldl(
       0, Returns, HasErr, Ret,
-      !or(HasErr, !eq(Ret.value, PREFIX#"_RESULT_ERROR_INVALID_NULL_POINTER")));
+      !or(HasErr, !eq(Ret.value, PREFIX#"_ERROR_CODE_INVALID_NULL_POINTER")));
   list<Return> returns_out = !if(returns_has_inv_ptr,
-        AppendConditionsToReturn<Returns, PREFIX # "_RESULT_ERROR_INVALID_NULL_POINTER", ptr_param_conds>.ret,
-        !listconcat(Returns, [Return<PREFIX # "_RESULT_ERROR_INVALID_NULL_POINTER", ptr_param_conds>])
+        AppendConditionsToReturn<Returns, PREFIX # "_ERROR_CODE_INVALID_NULL_POINTER", ptr_param_conds>.ret,
+        !listconcat(Returns, [Return<PREFIX # "_ERROR_CODE_INVALID_NULL_POINTER", ptr_param_conds>])
     );
 }
 

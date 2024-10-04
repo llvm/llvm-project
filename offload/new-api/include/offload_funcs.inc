@@ -10,7 +10,6 @@
 #error Please define the macro OFFLOAD_FUNC(Function)
 #endif
 
-OFFLOAD_FUNC(offloadGetErrorDetails)
 OFFLOAD_FUNC(offloadPlatformGet)
 OFFLOAD_FUNC(offloadPlatformGetInfo)
 OFFLOAD_FUNC(offloadDeviceGet)
