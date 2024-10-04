@@ -28,6 +28,7 @@ TEST(LaneBitmaskTest, Basic) {
   EXPECT_LT(LaneBitmask::getLane(64), LaneBitmask::getLane(65));
   EXPECT_LT(LaneBitmask::getLane(63), LaneBitmask::getLane(64));
   EXPECT_LT(LaneBitmask::getLane(62), LaneBitmask::getLane(63));
+  EXPECT_LT(LaneBitmask::getLane(64), LaneBitmask::getLane(64) | LaneBitmask::getLane(0));
 
   LaneBitmask X(1);
   X |= LaneBitmask(2);

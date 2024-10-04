@@ -62,7 +62,7 @@ struct LaneBitmask {
     return Mask[0] != M.Mask[0] || Mask[1] != M.Mask[1];
   }
   constexpr bool operator<(LaneBitmask M) const {
-    return Mask[1] < M.Mask[1] || Mask[0] < M.Mask[0];
+    return Mask[1] < M.Mask[1] || (Mask[1] == M.Mask[1] && Mask[0] < M.Mask[0]);
   }
   constexpr bool none() const { return Mask[0] == 0 && Mask[1] == 0; }
   constexpr bool any() const { return Mask[0] != 0 || Mask[1] != 0; }
