@@ -136,6 +136,45 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+/// Canonicalize
+/// ` x = v + c1; y = x + c2` to `x = v + (c1 + c2)`
+/// ` x = v + c1; y = c2 + x` to `x = v + (c1 + c2)`
+/// ` x = c1 + v; y = x + c2` to `x = v + (c1 + c2)`
+/// ` x = c1 + v; y = c2 + x` to `x = v + (c1 + c2)`
+LogicalResult AddOp::canonicalize(AddOp op, PatternRewriter &rewriter) {
+
+  auto matchConstant = [](mlir::index::AddOp op, Value &v, IntegerAttr &c) {
+    v = op.getLhs();
+    if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant(&c))) {
+      v = op.getRhs();
+      if (!mlir::matchPattern(op.getLhs(), mlir::m_Constant(&c)))
+        return false;
+    }
+    return true;
+  };
+
+  IntegerAttr c1, c2;
+  Value v1, v2;
+
+  if (!matchConstant(op, v1, c1))
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "neither LHS nor RHS is constant");
+
+  auto add = v1.getDefiningOp<mlir::index::AddOp>();
+  if (!add)
+    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not a add");
+
+  if (!matchConstant(add, v2, c2))
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "neither LHS nor RHS is constant");
+
+  auto c = rewriter.create<mlir::index::ConstantOp>(op->getLoc(),
+                                                    c1.getInt() + c2.getInt());
+  auto newAdd = rewriter.create<mlir::index::AddOp>(op->getLoc(), v2, c);
+
+  rewriter.replaceOp(op, newAdd);
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // SubOp
