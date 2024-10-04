@@ -2628,7 +2628,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     createECExportThunks();
 
   // Resolve remaining undefined symbols and warn about imported locals.
-  ctx.symtab.resolveRemainingUndefines();
+  while (ctx.symtab.resolveRemainingUndefines())
+    run();
+
   if (errorCount())
     return;
 

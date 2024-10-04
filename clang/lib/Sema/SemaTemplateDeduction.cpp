@@ -3377,35 +3377,40 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
     return Result;
 
   // Check that we produced the correct argument list.
-  TemplateParameterList *TemplateParams = Template->getTemplateParameters();
-  auto isSame = [&](unsigned I, const TemplateArgument &P,
-                    const TemplateArgument &A) {
-    if (isSameTemplateArg(S.Context, P, A, PartialOrdering,
-                          /*PackExpansionMatchesPack=*/true))
-      return true;
-    Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
+  for (ArrayRef<TemplateArgument> Ps = TemplateArgs, As = CanonicalBuilder;
+       !Ps.empty() && !As.empty();
+       /**/) {
+    TemplateArgument P = Ps.front(), A = As.front();
+    if (P.getKind() == TemplateArgument::Pack) {
+      assert(Ps.size() == 1 && "Pack not last element?");
+      Ps = P.getPackAsArray();
+      continue;
+    }
+    if (A.getKind() == TemplateArgument::Pack) {
+      assert(As.size() == 1 && "Pack not last element?");
+      As = A.getPackAsArray();
+      continue;
+    }
+
+    if (P.isPackExpansion())
+      P = P.getPackExpansionPattern();
+    else
+      Ps = Ps.drop_front();
+    if (A.isPackExpansion())
+      A = A.getPackExpansionPattern();
+    else
+      As = As.drop_front();
+
+    if (isSameTemplateArg(S.Context, P, A, PartialOrdering))
+      continue;
+    unsigned I = As.end() == CanonicalBuilder.end()
+                     ? As.begin() - CanonicalBuilder.begin()
+                     : CanonicalBuilder.size() - 1;
+    Info.Param =
+        makeTemplateParameter(Template->getTemplateParameters()->getParam(I));
     Info.FirstArg = P;
     Info.SecondArg = A;
-    return false;
-  };
-  for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
-    const TemplateArgument &P = TemplateArgs[I];
-    if (P.isPackExpansion()) {
-      assert(I == TemplateArgs.size() - 1);
-      for (/**/; I != E; ++I) {
-        const TemplateArgument &A = CanonicalBuilder[I];
-        if (A.getKind() == TemplateArgument::Pack) {
-          for (const TemplateArgument &Ai : A.getPackAsArray())
-            if (!isSame(I, P, Ai))
-              return TemplateDeductionResult::NonDeducedMismatch;
-        } else if (!isSame(I, P, A)) {
-          return TemplateDeductionResult::NonDeducedMismatch;
-        }
-      }
-      break;
-    }
-    if (!isSame(I, P, CanonicalBuilder[I]))
-      return TemplateDeductionResult::NonDeducedMismatch;
+    return TemplateDeductionResult::NonDeducedMismatch;
   }
 
   if (!PartialOrdering) {
