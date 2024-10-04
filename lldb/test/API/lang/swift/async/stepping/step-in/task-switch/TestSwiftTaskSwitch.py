@@ -27,7 +27,7 @@ class TestCase(lldbtest.TestBase):
         # Using the line table, build a set of the non-zero line numbers for
         # this this function - and verify that there is exactly one line.
         lines = {inst.addr.line_entry.line for inst in instructions}
-        lines.remove(0)
+        lines.discard(0)
         self.assertEqual(lines, {3})
 
         # Required for builds that have debug info.
