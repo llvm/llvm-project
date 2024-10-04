@@ -288,18 +288,6 @@ void replaceBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
   assert(false && "Unhandled terminator type.");
 }
 
-// Replaces basic bloc operands |OldSrc| or OpPhi instructions in |BB| by
-// |NewSrc|. This function does not simplify the OpPhi instruction once
-// transformed.
-void replacePhiTargets(BasicBlock *BB, BasicBlock *OldSrc, BasicBlock *NewSrc) {
-  for (PHINode &Phi : BB->phis()) {
-    int index = Phi.getBasicBlockIndex(OldSrc);
-    if (index == -1)
-      continue;
-    Phi.setIncomingBlock(index, NewSrc);
-  }
-}
-
 } // anonymous namespace
 
 // Given a reducible CFG, produces a structurized CFG in the SPIR-V sense,
@@ -463,7 +451,6 @@ class SPIRVStructurizer : public FunctionPass {
           BasicBlock *NewSrc =
               BasicBlock::Create(F.getContext(), "new.src", &F);
           replaceBranchTargets(Src, Dst, NewSrc);
-          // replacePhiTargets(Dst, Src, NewSrc);
           IRBuilder<> Builder(NewSrc);
           Builder.CreateBr(Dst);
           Src = NewSrc;
@@ -507,7 +494,6 @@ class SPIRVStructurizer : public FunctionPass {
       if (Dsts.size() == 1) {
         for (auto &[Src, Dst] : FixedEdges) {
           replaceBranchTargets(Src, Dst, NewExit);
-          // replacePhiTargets(Dst, Src, NewExit);
         }
         ExitBuilder.CreateBr(Dsts[0]);
         return NewExit;
