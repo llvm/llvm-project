@@ -2019,14 +2019,15 @@ static void forEachInputSectionDescription(
 // This may invalidate any output section offsets stored outside of InputSection
 void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
   forEachInputSectionDescription(
-      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+      outputSections,
+      [&, &ctx = ctx](OutputSection *os, InputSectionDescription *isd) {
         if (isd->thunkSections.empty())
           return;
 
         // Remove any zero sized precreated Thunks.
         llvm::erase_if(isd->thunkSections,
-                       [](const std::pair<ThunkSection *, uint32_t> &ts) {
-                         return ts.first->getSize() == 0;
+                       [&ctx](const std::pair<ThunkSection *, uint32_t> &ts) {
+                         return ts.first->getSize(ctx) == 0;
                        });
 
         // ISD->ThunkSections contains all created ThunkSections, including
@@ -2079,7 +2080,7 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
     uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
-    uint64_t tsLimit = tsBase + ts->getSize();
+    uint64_t tsLimit = tsBase + ts->getSize(ctx);
     if (ctx.target->inBranchRange(rel.type, src,
                                   (src > tsLimit) ? tsBase : tsLimit))
       return ts;

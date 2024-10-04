@@ -382,7 +382,7 @@ InputFile *createInternalFile(StringRef name);
 ELFFileBase *createObjFile(MemoryBufferRef mb, StringRef archiveName = "",
                            bool lazy = false);
 
-std::string replaceThinLTOSuffix(StringRef path);
+std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
 } // namespace elf
 } // namespace lld
