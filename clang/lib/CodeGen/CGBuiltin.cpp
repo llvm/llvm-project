@@ -34,8 +34,10 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
@@ -19020,9 +19022,31 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     
     auto *Op0VecTy = E->getArg(0)->getType()->getAs<VectorType>();
 
-    for(int idx = 0 ; idx < Op0VecTy -> getNumElements(); idx += 2){
+    int numElements = Op0VecTy -> getNumElements() * 2;
+
+    FixedVectorType *destTy = FixedVectorType::get(Int32Ty, numElements);
       
+    Value *bitcast = Builder.CreateBitCast(Op0, destTy);
+
+    SmallVector<int> lowbitsIndex;
+    SmallVector<int> highbitsIndex;
+
+    for(int idx = 0; idx < numElements; idx += 2){
+      lowbitsIndex.push_back(idx);
     }
+
+    for(int idx = 1; idx < numElements; idx += 2){
+      highbitsIndex.push_back(idx);
+    }
+
+    Value *arg0 = Builder.CreateShuffleVector(bitcast, lowbitsIndex);
+    Value *arg1 = Builder.CreateShuffleVector(bitcast, highbitsIndex);
+
+    Builder.CreateStore(arg0, Op1TmpLValue.getAddress());
+    auto *s = Builder.CreateStore(arg1, Op2TmpLValue.getAddress());
+
+    EmitWritebacks(*this, Args);
+    return s;
 
   }
   }
