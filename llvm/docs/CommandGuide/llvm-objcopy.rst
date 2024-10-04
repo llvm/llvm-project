@@ -121,7 +121,7 @@ multiple file formats.
 
  Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
  not start with ``<prefix>``. Can be specified multiple times to remove multiple
- ``<prefix>``es.
+ prefixes.
 
 .. option:: --remove-section <section>, -R
 
