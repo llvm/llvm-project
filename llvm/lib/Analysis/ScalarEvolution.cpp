@@ -253,6 +253,59 @@ static cl::opt<bool> UseContextForNoWrapFlagInference(
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
 
+class SCEVDropFlags : public SCEVRewriteVisitor<SCEVDropFlags> {
+  using Base = SCEVRewriteVisitor<SCEVDropFlags>;
+
+public:
+  SCEVDropFlags(ScalarEvolution &SE) : SCEVRewriteVisitor(SE) {}
+
+  static SCEVUse rewrite(SCEVUse Scev, ScalarEvolution &SE) {
+    SCEVDropFlags Rewriter(SE);
+    return Rewriter.visit(Scev);
+  }
+
+  SCEVUse visitAddExpr(const SCEVAddExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto Op : Expr->operands()) {
+      Operands.push_back(visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
+  }
+
+  SCEVUse visitMulExpr(const SCEVMulExpr *Expr) {
+    SmallVector<SCEVUse, 2> Operands;
+    bool Changed = false;
+    for (const auto Op : Expr->operands()) {
+      Operands.push_back(visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
+  }
+};
+
+const SCEV *SCEVUse::computeCanonical(ScalarEvolution &SE) const {
+  return SCEVDropFlags::rewrite(*this, SE);
+}
+
+bool SCEVUse::computeIsCanonical() const {
+  if (!getRawPointer() ||
+      DenseMapInfo<SCEVUse>::getEmptyKey().getRawPointer() == getRawPointer() ||
+      DenseMapInfo<SCEVUse>::getTombstoneKey().getRawPointer() ==
+          getRawPointer() ||
+      isa<SCEVCouldNotCompute>(this))
+    return true;
+  return !SCEVExprContains(*this, [](SCEVUse U) { return U.getFlags() != 0; });
+}
+
+bool SCEVUse::operator==(const SCEVUse &RHS) const {
+  assert(isCanonical() && RHS.isCanonical());
+  return getPointer() == RHS.getPointer();
+}
+
+bool SCEVUse::operator==(const SCEV *RHS) const { return getPointer() == RHS; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SCEVUse::dump() const {
   print(dbgs());
@@ -677,9 +730,10 @@ static int CompareValueComplexity(const LoopInfo *const LI, Value *LV,
 static std::optional<int>
 CompareSCEVComplexity(EquivalenceClasses<SCEVUse> &EqCacheSCEV,
                       const LoopInfo *const LI, SCEVUse LHS, SCEVUse RHS,
-                      DominatorTree &DT, unsigned Depth = 0) {
+                      DominatorTree &DT, ScalarEvolution &SE,
+                      unsigned Depth = 0) {
   // Fast-path: SCEVs are uniqued so we can do a quick equality check.
-  if (LHS == RHS)
+  if (LHS.getCanonical(SE) == RHS.getCanonical(SE))
     return 0;
 
   // Primarily, sort the SCEVs by their getSCEVType().
@@ -769,7 +823,7 @@ CompareSCEVComplexity(EquivalenceClasses<SCEVUse> &EqCacheSCEV,
       return (int)LNumOps - (int)RNumOps;
 
     for (unsigned i = 0; i != LNumOps; ++i) {
-      auto X = CompareSCEVComplexity(EqCacheSCEV, LI, LOps[i], ROps[i], DT,
+      auto X = CompareSCEVComplexity(EqCacheSCEV, LI, LOps[i], ROps[i], DT, SE,
                                      Depth + 1);
       if (X != 0)
         return X;
@@ -794,14 +848,14 @@ CompareSCEVComplexity(EquivalenceClasses<SCEVUse> &EqCacheSCEV,
 /// this to depend on where the addresses of various SCEV objects happened to
 /// land in memory.
 static void GroupByComplexity(SmallVectorImpl<SCEVUse> &Ops, LoopInfo *LI,
-                              DominatorTree &DT) {
+                              DominatorTree &DT, ScalarEvolution &SE) {
   if (Ops.size() < 2) return;  // Noop
 
   EquivalenceClasses<SCEVUse> EqCacheSCEV;
 
   // Whether LHS has provably less complexity than RHS.
   auto IsLessComplex = [&](SCEVUse LHS, SCEVUse RHS) {
-    auto Complexity = CompareSCEVComplexity(EqCacheSCEV, LI, LHS, RHS, DT);
+    auto Complexity = CompareSCEVComplexity(EqCacheSCEV, LI, LHS, RHS, DT, SE);
     return Complexity && *Complexity < 0;
   };
   if (Ops.size() == 2) {
@@ -882,7 +936,7 @@ constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
   if (Folded && IsAbsorber(Folded->getAPInt()))
     return Folded;
 
-  GroupByComplexity(Ops, &LI, DT);
+  GroupByComplexity(Ops, &LI, DT, SE);
   if (Folded && !IsIdentity(Folded->getAPInt()))
     Ops.insert(Ops.begin(), Folded);
 
@@ -2585,7 +2639,9 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
     SCEVAddExpr *Add = static_cast<SCEVAddExpr *>(S);
     if (Add->getNoWrapFlags(OrigFlags) != OrigFlags)
       Add->setNoWrapFlags(ComputeFlags(Ops));
-    return S;
+    bool IsCanonical = all_of(Ops, [](SCEVUse U) { return U.getFlags() == 0; });
+    int UseFlags = IsCanonical ? 0 : 1;
+    return {S, UseFlags};
   }
 
   // Okay, check to see if the same value occurs in the operand list more than
@@ -2594,7 +2650,8 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   Type *Ty = Ops[0]->getType();
   bool FoundMatch = false;
   for (unsigned i = 0, e = Ops.size(); i != e-1; ++i)
-    if (Ops[i] == Ops[i+1]) {      //  X + Y + Y  -->  X + Y*2
+    if (Ops[i].getCanonical(*this) ==
+        Ops[i + 1].getCanonical(*this)) { //  X + Y + Y  -->  X + Y*2
       // Scan ahead to count how many equal operands there are.
       unsigned Count = 2;
       while (i+Count != e && Ops[i+Count] == Ops[i])
@@ -2816,7 +2873,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       if (isa<SCEVConstant>(MulOpSCEV))
         continue;
       for (unsigned AddOp = 0, e = Ops.size(); AddOp != e; ++AddOp)
-        if (MulOpSCEV == Ops[AddOp]) {
+        if (MulOpSCEV.getCanonical(*this) == Ops[AddOp].getCanonical(*this)) {
           // Fold W + X + (X * Y * Z)  -->  W + (X * ((Y*Z)+1))
           SCEVUse InnerMul = Mul->getOperand(MulOp == 0);
           if (Mul->getNumOperands() != 2) {
@@ -3017,7 +3074,9 @@ SCEVUse ScalarEvolution::getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
-  return S;
+  bool IsCanonical = all_of(Ops, [](SCEVUse U) { return U.getFlags() == 0; });
+  int UseFlags = IsCanonical ? 0 : 1;
+  return {S, UseFlags};
 }
 
 SCEVUse ScalarEvolution::getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops,
@@ -3062,7 +3121,9 @@ SCEVUse ScalarEvolution::getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
     registerUser(S, Ops);
   }
   S->setNoWrapFlags(Flags);
-  return S;
+  bool IsCanonical = all_of(Ops, [](SCEVUse U) { return U.getFlags() == 0; });
+  int UseFlags = IsCanonical ? 0 : 1;
+  return {S, UseFlags};
 }
 
 static uint64_t umul_ov(uint64_t i, uint64_t j, bool &Overflow) {
@@ -3164,7 +3225,9 @@ SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
     SCEVMulExpr *Mul = static_cast<SCEVMulExpr *>(S);
     if (Mul->getNoWrapFlags(OrigFlags) != OrigFlags)
       Mul->setNoWrapFlags(ComputeFlags(Ops));
-    return S;
+    bool IsCanonical = all_of(Ops, [](SCEVUse U) { return U.getFlags() == 0; });
+    int UseFlags = IsCanonical ? 0 : 1;
+    return {S, UseFlags};
   }
 
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
@@ -13646,6 +13709,19 @@ ScalarEvolution::~ScalarEvolution() {
   HasRecMap.clear();
   BackedgeTakenCounts.clear();
   PredicatedBackedgeTakenCounts.clear();
+  UnsignedRanges.clear();
+  SignedRanges.clear();
+
+  BECountUsers.clear();
+  SCEVUsers.clear();
+  FoldCache.clear();
+  FoldCacheUser.clear();
+  ValuesAtScopes.clear();
+  ValuesAtScopesUsers.clear();
+  LoopDispositions.clear();
+
+  BlockDispositions.clear();
+  ConstantMultipleCache.clear();
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
   assert(PendingPhiRanges.empty() && "getRangeRef garbage");

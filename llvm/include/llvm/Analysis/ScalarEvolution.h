@@ -67,18 +67,40 @@ extern bool VerifySCEV;
 
 class SCEV;
 
-class SCEVUse : public PointerIntPair<const SCEV *, 2> {
+class SCEVUse : public PointerIntPair<const SCEV *, 3> {
+  bool computeIsCanonical() const;
+  const SCEV *computeCanonical(ScalarEvolution &SE) const;
+
 public:
   SCEVUse() : PointerIntPair(nullptr, 0) {}
   SCEVUse(const SCEV *S) : PointerIntPair(S, 0) {}
-  SCEVUse(const SCEV *S, int Flags) : PointerIntPair(S, Flags) {}
+  SCEVUse(const SCEV *S, int Flags) : PointerIntPair(S, Flags) {
+    if (Flags > 0)
+      setInt(Flags | 1);
+  }
 
   operator const SCEV *() const { return getPointer(); }
   const SCEV *operator->() const { return getPointer(); }
   const SCEV *operator->() { return getPointer(); }
 
-  void *getRawPointer() { return getOpaqueValue(); }
+  void *getRawPointer() const { return getOpaqueValue(); }
 
+  bool isCanonical() const {
+    assert(((getFlags() & 1) != 0 || computeIsCanonical()) &&
+           "Canonical bit set incorrectly");
+    return (getFlags() & 1) == 0;
+  }
+
+  const SCEV *getCanonical(ScalarEvolution &SE) {
+    if (isCanonical())
+      return getPointer();
+    return computeCanonical(SE);
+  }
+
+  unsigned getFlags() const { return getInt(); }
+
+  bool operator==(const SCEVUse &RHS) const;
+  bool operator==(const SCEV *RHS) const;
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
   void print(raw_ostream &OS) const;
@@ -127,7 +149,7 @@ template <> struct DenseMapInfo<SCEVUse> {
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    return LHS == RHS;
+    return LHS.getRawPointer() == RHS.getRawPointer();
   }
 };
 
