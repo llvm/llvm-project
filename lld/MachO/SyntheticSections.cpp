@@ -1229,6 +1229,17 @@ void SymtabSection::emitStabs() {
       if (defined->isAbsolute())
         continue;
 
+      // Never generate a STABS entry for a symbol that has been ICF'ed using a
+      // thunk - just like we do for fully ICF'ed functions. Otherwise we end up
+      // generating invalid DWARF as dsymutil will think the entire function
+      // body is at that location, when in actuality only the thunk will be
+      // present. This will end up causing overlapping DWARF entries.
+      // TODO: Find an implementation that works in combination with
+      // `--keep-icf-stabs`.
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+        continue;
+      }
+
       // Constant-folded symbols go in the executable's symbol table, but don't
       // get a stabs entry unless --keep-icf-stabs flag is specified
       if (!config->keepICFStabs &&
