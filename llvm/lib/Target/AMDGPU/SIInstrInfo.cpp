@@ -8925,8 +8925,6 @@ bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
   }
 
   uint16_t Opcode = MI.getOpcode();
-  // FIXME: Copies inserted in the block prolog for live-range split should also
-  // be included.
   return IsNullOrVectorRegister &&
          (isSGPRSpill(Opcode) ||
           (!MI.isTerminator() && Opcode != AMDGPU::COPY &&
