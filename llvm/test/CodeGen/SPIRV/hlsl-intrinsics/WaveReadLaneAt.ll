@@ -6,18 +6,28 @@
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
 ; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32
-; CHECK-DAG:   %[[#expr:]] = OpFunctionParameter %[[#f32]]
+; CHECK-DAG:   %[[#bool:]] = OpTypeBool
+; CHECK-DAG:   %[[#v4_bool:]] = OpTypeVector %[[#bool]] 4
+; CHECK-DAG:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
+; CHECK-DAG:   %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
 ; CHECK-DAG:   %[[#idx:]] = OpFunctionParameter %[[#uint]]
+; CHECK-DAG:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_bool]]
 
-define spir_func void @test_1(float %expr, i32 %idx) #0 {
+define spir_func void @test_1(float %fexpr, i32 %iexpr, <4 x i1> %vbexpr, i32 %idx) #0 {
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
-; CHECK:   %[[#ret:]] = OpGroupNonUniformShuffle %[[#f32]] %[[#expr]] %[[#idx]] %[[#scope]]
-  %1 = call float @llvm.spv.wave.read.lane.at(float %expr, i32 %idx) [ "convergencectrl"(token %0) ]
+; CHECK:   %[[#fret:]] = OpGroupNonUniformShuffle %[[#f32]] %[[#fexpr]] %[[#idx]] %[[#scope]]
+  %1 = call float @llvm.spv.wave.read.lane.at.f32(float %fexpr, i32 %idx) [ "convergencectrl"(token %0) ]
+; CHECK:   %[[#iret:]] = OpGroupNonUniformShuffle %[[#uint]] %[[#iexpr]] %[[#idx]] %[[#scope]]
+  %2 = call i32 @llvm.spv.wave.read.lane.at.i32(i32 %iexpr, i32 %idx) [ "convergencectrl"(token %0) ]
+; CHECK:   %[[#vbret:]] = OpGroupNonUniformShuffle %[[#v4_bool]] %[[#vbexpr]] %[[#idx]] %[[#scope]]
+  %3 = call <4 x i1> @llvm.spv.wave.read.lane.at.v4i1(<4 x i1> %vbexpr, i32 %idx) [ "convergencectrl"(token %0) ]
   ret void
 }
 
-declare i32 @__hlsl_wave_get_lane_index() #1
+declare float @__hlsl_wave_read_lane_at.f32(float, i32) #1
+declare i32 @__hlsl_wave_read_lane_at.i32(i32, i32) #1
+declare <4 x i1> @__hlsl_wave_read_lane_at.v4i1(<4 x i1>, i32) #1
 
 attributes #0 = { convergent norecurse "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { convergent }
