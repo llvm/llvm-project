@@ -1427,7 +1427,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 static void finalizeSynthetic(SyntheticSection *sec) {
   if (sec && sec->isNeeded() && sec->getParent()) {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections", sec->name);
-    sec->finalizeContents();
+    sec->finalizeContents(ctx);
   }
 }
 
