@@ -2820,18 +2820,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   if (!BO || !BO->isAssociative())
     return false;
 
-  // TODO: Only hoist ADDs, MULs, FADDs, and FMULs for now.
   Instruction::BinaryOps Opcode = BO->getOpcode();
-  switch (Opcode) {
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::FAdd:
-  case Instruction::FMul:
-    break;
-  default:
-    return false;
-  }
-
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
