@@ -3666,12 +3666,9 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
                           m_OneUse(m_Instruction(FAdd)), m_Constant(C))) ||
       match(&SI, m_Select(m_OneUse(m_FCmp(Pred, m_Value(X), m_Value(Z))),
                           m_Constant(C), m_OneUse(m_Instruction(FAdd))))) {
-    if (!match(Z, m_AnyZeroFP()))
-      return nullptr;
-
     // Only these relational predicates can be transformed into maxnum/minnum
     // intrinsic.
-    if (!CmpInst::isRelational(Pred))
+    if (!CmpInst::isRelational(Pred) || !match(Z, m_AnyZeroFP()))
       return nullptr;
 
     if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
