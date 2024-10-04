@@ -10510,8 +10510,8 @@ def err_first_argument_to_cwsc_pdtor_call : Error<
 def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
-def err_vector_incorrect_num_initializers : Error<
-  "%select{too many|too few}0 elements in vector initialization (expected %1 elements, have %2)">;
+def err_vector_incorrect_num_elements : Error<
+  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<
@@ -12666,6 +12666,10 @@ def err_acc_loop_spec_conflict
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;
+def err_acc_size_expr_value
+    : Error<
+          "OpenACC 'tile' clause size expression must be %select{an asterisk "
+          "or a constant expression|positive integer value, evaluated to %1}0">;
 def err_acc_invalid_in_collapse_loop
     : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
             "in intervening code of a 'loop' with a 'collapse' clause">;

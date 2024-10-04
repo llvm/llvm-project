@@ -3592,6 +3592,8 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CalleeCC, IsVarArg, MF, ArgLocs, Ctx);
 
+  // FIXME: We are not allocating special input registers, so we will be
+  // deciding based on incorrect register assignments.
   CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, IsVarArg));
 
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
@@ -3600,6 +3602,21 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   // TODO: Is this really necessary?
   if (CCInfo.getStackSize() > FuncInfo->getBytesInStackArgArea())
     return false;
+
+  for (const auto &[CCVA, ArgVal] : zip_equal(ArgLocs, OutVals)) {
+    // FIXME: What about inreg arguments that end up passed in memory?
+    if (!CCVA.isRegLoc())
+      continue;
+
+    // If we are passing an argument in an SGPR, and the value is divergent,
+    // this call requires a waterfall loop.
+    if (ArgVal->isDivergent() && TRI->isSGPRPhysReg(CCVA.getLocReg())) {
+      LLVM_DEBUG(
+          dbgs() << "Cannot tail call due to divergent outgoing argument in "
+                 << printReg(CCVA.getLocReg(), TRI) << '\n');
+      return false;
+    }
+  }
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   return parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals);
@@ -3733,6 +3750,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int32_t FPDiff = 0;
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
@@ -3754,6 +3772,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
   }
+
+  const unsigned NumSpecialInputs = RegsToPass.size();
 
   MVT PtrVT = MVT::i32;
 
@@ -3856,15 +3876,39 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
+  SDValue ReadFirstLaneID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+
+  SDValue TokenGlue;
+  if (CLI.ConvergenceControlToken) {
+    TokenGlue = DAG.getNode(ISD::CONVERGENCECTRL_GLUE, DL, MVT::Glue,
+                            CLI.ConvergenceControlToken);
+  }
+
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   SDValue InGlue;
-  for (auto &RegToPass : RegsToPass) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegToPass.first,
-                             RegToPass.second, InGlue);
+
+  unsigned ArgIdx = 0;
+  for (auto [Reg, Val] : RegsToPass) {
+    if (ArgIdx++ >= NumSpecialInputs && !Val->isDivergent() &&
+        TRI->isSGPRPhysReg(Reg)) {
+      // Speculatively insert a readfirstlane in case this is a uniform value in
+      // a VGPR.
+      //
+      // FIXME: We need to execute this in a waterfall loop if it is a divergent
+      // value, so let that continue to produce invalid code.
+
+      SmallVector<SDValue, 3> ReadfirstlaneArgs({ReadFirstLaneID, Val});
+      if (TokenGlue)
+        ReadfirstlaneArgs.push_back(TokenGlue);
+      Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
+                        ReadfirstlaneArgs);
+    }
+
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, Val, InGlue);
     InGlue = Chain.getValue(1);
   }
-
 
   // We don't usually want to end the call-sequence here because we would tidy
   // the frame up *after* the call, however in the ABI-changing tail-call case
@@ -3875,15 +3919,33 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     InGlue = Chain.getValue(1);
   }
 
-  std::vector<SDValue> Ops;
-  Ops.push_back(Chain);
-  Ops.push_back(Callee);
+  std::vector<SDValue> Ops({Chain});
+
   // Add a redundant copy of the callee global which will not be legalized, as
   // we need direct access to the callee later.
   if (GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = GSD->getGlobal();
+    Ops.push_back(Callee);
     Ops.push_back(DAG.getTargetGlobalAddress(GV, DL, MVT::i64));
   } else {
+    if (IsTailCall) {
+      assert(!Callee->isDivergent() &&
+             "cannot tail call a divergent call target");
+
+      // isEligibleForTailCallOptimization considered whether the call target is
+      // divergent, but we may still end up with a uniform value in a VGPR.
+      // Insert a readfirstlane just in case.
+      SDValue ReadFirstLaneID =
+          DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+
+      SmallVector<SDValue, 3> ReadfirstlaneArgs({ReadFirstLaneID, Callee});
+      if (TokenGlue)
+        ReadfirstlaneArgs.push_back(TokenGlue); // Wire up convergence token.
+      Callee = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Callee.getValueType(),
+                           ReadfirstlaneArgs);
+    }
+
+    Ops.push_back(Callee);
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
   }
 
@@ -3905,7 +3967,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));

@@ -4578,6 +4578,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
               continue;
             if (!TE.ReuseShuffleIndices.empty())
               K = TE.ReuseShuffleIndices[K];
+            if (K == PoisonMaskElem)
+              continue;
             if (!TE.ReorderIndices.empty())
               K = std::distance(TE.ReorderIndices.begin(),
                                 find(TE.ReorderIndices, K));

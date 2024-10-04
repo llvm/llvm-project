@@ -179,6 +179,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -224,6 +225,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
 
@@ -335,6 +337,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -343,6 +346,7 @@ public:
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
               ClauseKind == OpenACCClauseKind::Async ||
+              ClauseKind == OpenACCClauseKind::Tile ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
@@ -522,6 +526,12 @@ public:
                                    SourceLocation RBLoc);
   /// Checks the loop depth value for a collapse clause.
   ExprResult CheckCollapseLoopCount(Expr *LoopCount);
+  /// Checks a single size expr for a tile clause. 'gang' could possibly call
+  /// this, but has slightly stricter rules as to valid values.
+  ExprResult CheckTileSizeExpr(Expr *SizeExpr);
+
+  ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
+  ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
 
   /// Helper type to restore the state of various 'loop' constructs when we run
   /// into a loop (for, etc) inside the construct.

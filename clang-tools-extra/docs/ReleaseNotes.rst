@@ -74,6 +74,8 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Added `Swap operands` tweak for certain binary operators.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -96,6 +98,10 @@ The improvements are...
 
 Improvements to clang-tidy
 --------------------------
+
+- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
+  the configuration options of the `Clang Static Analyzer Checks
+  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
 
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
