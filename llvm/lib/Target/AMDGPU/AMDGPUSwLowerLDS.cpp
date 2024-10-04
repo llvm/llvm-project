@@ -952,8 +952,7 @@ Constant *AMDGPUSwLowerLDS::getAddressesOfVariablesInKernel(
       ArrayType::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS), Variables.size());
 
   SmallVector<Constant *> Elements;
-  for (size_t i = 0; i < Variables.size(); i++) {
-    GlobalVariable *GV = Variables[i];
+  for (auto *GV : Variables) {
     if (!LDSParams.LDSToReplacementIndicesMap.contains(GV)) {
       Elements.push_back(
           PoisonValue::get(IRB.getPtrTy(AMDGPUAS::GLOBAL_ADDRESS)));
