@@ -25,7 +25,7 @@ define i1 @foo() {
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> zeroinitializer, <4 x float> [[TMP5]], <4 x float> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fsub <4 x float> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[TMP11]]
 ; CHECK:       11:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x float> [ [[TMP10]], [[TMP2]] ], [ zeroinitializer, [[TMP0:%.*]] ]

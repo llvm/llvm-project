@@ -16,11 +16,11 @@ define i64 @foo() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[BB]] ], [ [[TMP7:%.*]], [[BB3]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-; CHECK-NEXT:    [[ADD]] = add i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[ADD]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i64, ptr addrspace(1) null, i64 0
 ; CHECK-NEXT:    [[TMP9]] = or i64 [[PHI5]], 0
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[ADD]], i32 0
+; CHECK-NEXT:    [[TMP7]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[ADD]], i32 1
 ; CHECK-NEXT:    br i1 false, label [[BB3]], label [[BB1:%.*]]
 ;
 ; FORCED-LABEL: define i64 @foo() {

@@ -31,7 +31,7 @@ define void @test() {
 ; CHECK-NEXT:    br i1 undef, label [[BB32_I]], label [[BB21_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double undef, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double 0.000000e+00, double undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> undef, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], undef
 ; CHECK-NEXT:    [[TMP11]] = fptrunc <2 x double> [[TMP10]] to <2 x float>

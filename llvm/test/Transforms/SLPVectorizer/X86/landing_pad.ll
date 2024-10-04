@@ -21,7 +21,7 @@ define void @foo() personality ptr @bar {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ <i32 0, i32 poison>, [[BB8:%.*]] ]
+; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ <i32 poison, i32 0>, [[BB8:%.*]] ]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[LOCAL_5_84111:%.*]] = phi i32 [ poison, [[BB8]] ], [ poison, [[BB5]] ]
@@ -32,7 +32,7 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    br i1 poison, label [[BB7]], label [[BB6]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[INDVARS_IV528799:%.*]] = phi i64 [ poison, [[BB10]] ], [ poison, [[BB12]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], [[BB10]] ], [ [[TMP9:%.*]], [[BB12]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], [[BB10]] ], [ [[TMP10:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    [[TMP7]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 0>
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
@@ -43,9 +43,10 @@ define void @foo() personality ptr @bar {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP9]] = phi <2 x i32> [ [[TMP4]], [[BB7]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP4]], [[BB7]] ]
 ; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP10]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    br label [[BB9]]
 ;
 bb1:

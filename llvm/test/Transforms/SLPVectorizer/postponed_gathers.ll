@@ -6,8 +6,8 @@ define void @foo() {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  bci_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) null, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    br label [[BCI_252:%.*]]
 ; CHECK:       bci_252:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, [[BCI_0:%.*]] ], [ [[TMP16:%.*]], [[BCI_252_1:%.*]] ]

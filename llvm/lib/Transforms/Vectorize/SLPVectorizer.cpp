@@ -5441,40 +5441,140 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
 
-    auto PHICompare = [&](unsigned I1, unsigned I2) {
-      Value *V1 = TE.Scalars[I1];
-      Value *V2 = TE.Scalars[I2];
-      if (V1 == V2 || (V1->getNumUses() == 0 && V2->getNumUses() == 0))
-        return false;
-      if (V1->getNumUses() < V2->getNumUses())
-        return true;
-      if (V1->getNumUses() > V2->getNumUses())
-        return false;
-      auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());
-      auto *FirstUserOfPhi2 = cast<Instruction>(*V2->user_begin());
-      if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1))
-        if (auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2)) {
-          if (!areTwoInsertFromSameBuildVector(
-                  IE1, IE2,
-                  [](InsertElementInst *II) { return II->getOperand(0); }))
-            return I1 < I2;
-          return getElementIndex(IE1) < getElementIndex(IE2);
-        }
-      if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1))
-        if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
-          if (EE1->getOperand(0) != EE2->getOperand(0))
-            return I1 < I2;
-          return getElementIndex(EE1) < getElementIndex(EE2);
-        }
-      return I1 < I2;
-    };
     DenseMap<unsigned, unsigned> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
     std::iota(Phis.begin(), Phis.end(), 0);
+
+    BitVector Seen(Phis.size());
+    SmallVector<SmallVector<unsigned>> Groups;
+    Groups.resize(Phis.size(), {});
+
+    for (auto const Phidx : Phis) {
+      // We've already found a group for this Phidx
+      if (Seen.test(Phidx))
+        continue;
+
+      Groups[Phidx].push_back(Phidx);
+
+      auto UserIterPhi1 = TE.Scalars[Phidx]->user_begin();
+      if (UserIterPhi1.atEnd())
+        continue;
+
+      auto *FirstUserOfPhi1 = cast<Instruction>(*UserIterPhi1);
+
+      unsigned Count = 0;
+      if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1)) {
+        auto Width = IE1->getType()->getElementCount();
+        assert(!Width.isScalable());
+        Count = Width.getFixedValue() - 1;
+      } else if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1)) {
+        // Count is unused in the case of extract element instructions.
+        Count = -1;
+      }
+
+      for (auto const PhidxB : ArrayRef(Phis).drop_front(Phidx + 1)) {
+
+        // At this point we know that we have found all the elements that fit in
+        // this group so we'll stop.
+        if (Count == 0)
+          break;
+
+        // B is already in a group so we don't want to look at it again.
+        if (Seen.test(PhidxB))
+          continue;
+
+        auto UserIterPhi2 = TE.Scalars[PhidxB]->user_begin();
+        if (UserIterPhi2.atEnd()) {
+          Seen.set(PhidxB);
+          continue;
+        }
+
+        auto *FirstUserOfPhi2 = cast<Instruction>(*UserIterPhi2);
+
+        if (auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2)) {
+          if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1)) {
+            if (areTwoInsertFromSameBuildVector(
+                    IE1, IE2,
+                    [](InsertElementInst *II) { return II->getOperand(0); })) {
+              Groups[Phidx].push_back(PhidxB);
+              Seen.set(PhidxB);
+              --Count;
+              continue;
+            }
+          }
+        } else if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1)) {
+          if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
+            if (EE1->getVectorOperand() == EE2->getVectorOperand()) {
+              Groups[Phidx].push_back(PhidxB);
+              Seen.set(PhidxB);
+              continue;
+            }
+          }
+        }
+      }
+
+      std::sort(
+          Groups[Phidx].begin(), Groups[Phidx].end(),
+          [TE](unsigned I1, unsigned I2) {
+            auto U1 = TE.Scalars[I1]->user_begin();
+            if (U1.atEnd())
+              return false;
+            auto U2 = TE.Scalars[I2]->user_begin();
+            if (U2.atEnd())
+              return true;
+            
+            if (auto *FirstUserOfPhi1 =
+                    dyn_cast<InsertElementInst>(*(U1))) {
+              if (auto *FirstUserOfPhi2 = dyn_cast<InsertElementInst>(
+                      *(U2))) {
+                return getElementIndex(FirstUserOfPhi1) <
+                       getElementIndex(FirstUserOfPhi2);
+              }
+            }
+
+            if (auto *FirstUserOfPhi1 =
+                    dyn_cast<ExtractElementInst>(*(U1))) {
+              if (auto *FirstUserOfPhi2 = dyn_cast<ExtractElementInst>(
+                      *(U2))) {
+                return FirstUserOfPhi1->getIndexOperand() <
+                       FirstUserOfPhi2->getIndexOperand();
+              }
+            }
+
+            llvm_unreachable(
+                "Found something other than InsertElement or ExtractElement");
+          });
+    }
+
+    // Sort the groups on the basis of their ordering in the block.
+    std::sort(Groups.begin(), Groups.end(),
+              [TE](SmallVector<unsigned> I1, SmallVector<unsigned> I2) {
+                if (I1.empty())
+                  return false;
+                if (I2.empty())
+                  return true;
+
+                auto PhidxA = I1.front();
+                auto *InstA = TE.Scalars[PhidxA];
+                auto *Phi1 = cast<Instruction>(InstA);
+
+                auto PhidxB = I2.front();
+                auto *InstB = TE.Scalars[PhidxB];
+                auto *Phi2 = cast<Instruction>(InstB);
+
+                return Phi1->comesBefore(Phi2);
+              });
+
     OrdersType ResOrder(TE.Scalars.size());
     for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id)
       PhiToId[Id] = Id;
-    stable_sort(Phis, PHICompare);
+
+    Phis.clear();
+    for (auto const &group : Groups) {
+      for (auto const element : group)
+        Phis.push_back(element);
+    }
+
     for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
       ResOrder[Id] = PhiToId[Phis[Id]];
     if (isIdentityOrder(ResOrder))

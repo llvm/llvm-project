@@ -13,7 +13,7 @@ define void @test() personality ptr null {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ poison, %[[BB2]] ]
 ; CHECK-NEXT:    [[LANDINGPAD:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    call void null(i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BB65]]:
