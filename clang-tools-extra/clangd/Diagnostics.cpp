@@ -312,7 +312,7 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
   if (Opts.DisplayFixesCount && !D.Fixes.empty())
-    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)";
+    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)"; // TODO
   // If notes aren't emitted as structured info, add them to the message.
   if (!Opts.EmitRelatedLocations)
     for (auto &Note : D.Notes) {
