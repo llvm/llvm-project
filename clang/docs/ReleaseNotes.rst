@@ -298,12 +298,15 @@ Non-comprehensive list of changes in this release
 
      /* A simplified version of Linux allocation macros */
      #define alloc(PTR, FAM, COUNT) ({ \
-         typeof(P) __p;                                        \
-         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT; \
-         __p = malloc(__size);                                 \
-         if (__builtin_counted_by_ref(__p->FAM))               \
-           *__builtin_counted_by_ref(__p->FAM) = COUNT;        \
-         __p;                                                  \
+         sizeof_t __ignored_assignment;                             \
+         typeof(P) __p;                                             \
+         size_t __size = sizeof(*P) + sizeof(*P->FAM) * COUNT;      \
+         __p = malloc(__size);                                      \
+         *_Generic(                                                 \
+           __builtin_counted_by_ref(__p->FAM),                      \
+             void *: &__ignored_assignment,                         \
+             default: __builtin_counted_by_ref(__p->FAM)) = COUNT;  \
+         __p;                                                       \
      })
 
   The flexible array member (FAM) can now be accessed immediately without causing

@@ -3804,6 +3804,7 @@ builtin returns ``(void *)0``.
        __builtin_counted_by_ref(__p->FAM),                        \
          void *: &__ignored_assignment,                           \
          default: __builtin_counted_by_ref(__p->FAM)) = COUNT;    \
+                                                                  \
      __p;                                                         \
   })
 

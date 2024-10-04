@@ -6664,7 +6664,7 @@ def err_builtin_counted_by_ref_invalid_lhs_use : Error<
 
 def warn_builtin_counted_by_ref_has_side_effects : Warning<
   "'__builtin_counted_by_ref' argument has side-effects that will be discarded">,
-  InGroup<CountedByAttribute>;
+  InGroup<CountedByRefSideEffects>;
 
 let CategoryName = "ARC Semantic Issue" in {
 

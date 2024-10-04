@@ -5666,22 +5666,6 @@ bool Sema::BuiltinCountedByRef(CallExpr *TheCall) {
             isArrow = false;
           }
 
-          // Mark the DeclRefExpr as used.
-          auto DoMarkDeclRefUsed = [&](Expr *E) {
-            struct FindDeclRefVisitor
-                : public RecursiveASTVisitor<FindDeclRefVisitor> {
-              DeclRefExpr *DRE = nullptr;
-              bool VisitDeclRefExpr(DeclRefExpr *E) {
-                DRE = E;
-                return true;
-              }
-            } V;
-            V.TraverseStmt(E);
-            return V.DRE;
-          };
-          if (DeclRefExpr *DRE = DoMarkDeclRefUsed(New))
-            DRE->getDecl()->setIsUsed();
-
           return ExprResult(UnaryOperator::Create(
               Context, New, UO_AddrOf,
               Context.getPointerType(CountFD->getType()), VK_LValue,
