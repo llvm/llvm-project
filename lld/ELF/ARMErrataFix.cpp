@@ -74,7 +74,7 @@ public:
 
   void writeTo(Ctx &, uint8_t *buf) override;
 
-  size_t getSize() const override { return 4; }
+  size_t getSize(Ctx &) const override { return 4; }
 
   // Get the virtual address of the branch instruction at patcheeOffset.
   uint64_t getBranchAddr() const;
@@ -141,7 +141,7 @@ Patch657417Section::Patch657417Section(InputSection *p, uint64_t off,
   parent = p->getParent();
   patchSym = addSyntheticLocal(
       saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())), STT_FUNC,
-      isARM ? 0 : 1, getSize(), *this);
+      isARM ? 0 : 1, getSize(ctx), *this);
   addSyntheticLocal(saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0, *this);
 }
 
