@@ -99,28 +99,8 @@ public:
       return false;
     return *Diff > 0;
   }
-
-  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
-           match(LLVMI,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
-  }
-
-  /// We consider \p I as a Memory Dependency Candidate instruction if it
-  /// reads/write memory or if it has side-effects. This is used by the
-  /// dependency graph.
-  static bool isMemDepCandidate(Instruction *I) {
-    auto *LLVMI = cast<llvm::Instruction>(I->Val);
-    return LLVMI->mayReadOrWriteMemory() &&
-           (!isa<llvm::IntrinsicInst>(LLVMI) ||
-            (cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::sideeffect &&
-             cast<llvm::IntrinsicInst>(LLVMI)->getIntrinsicID() !=
-                 Intrinsic::pseudoprobe));
-  }
 };
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_UTILS_H

@@ -74,6 +74,8 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Added `Swap operands` tweak for certain binary operators.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -96,6 +98,10 @@ The improvements are...
 
 Improvements to clang-tidy
 --------------------------
+
+- Improved :program:`clang-tidy`'s `--verify-config` flag by adding support for
+  the configuration options of the `Clang Static Analyzer Checks
+  <https://clang.llvm.org/docs/analyzer/checkers.html>`_.
 
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
@@ -170,6 +176,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using ``std::span``
   as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
+
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` check to fix false positive when
+  using loop variable in initializer of lambda capture.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
   <clang-tidy/checks/modernize/min-max-use-initializer-list>` check by fixing

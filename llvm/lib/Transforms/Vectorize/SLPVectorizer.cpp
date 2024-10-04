@@ -831,8 +831,7 @@ static bool isValidForAlternation(unsigned Opcode) {
 }
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI,
-                                       unsigned BaseIndex = 0);
+                                       const TargetLibraryInfo &TLI);
 
 /// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
 /// compatible instructions or constants, or just some other regular values.
@@ -873,8 +872,8 @@ static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
 /// InstructionsState, the Opcode that we suppose the whole list
 /// could be vectorized even if its structure is diverse.
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI,
-                                       unsigned BaseIndex) {
+                                       const TargetLibraryInfo &TLI) {
+  constexpr unsigned BaseIndex = 0;
   // Make sure these are all Instructions.
   if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
     return InstructionsState(VL[BaseIndex], nullptr, nullptr);
@@ -2313,10 +2312,10 @@ public:
       assert((empty() || VL.size() == getNumLanes()) &&
              "Expected same number of lanes");
       assert(isa<Instruction>(VL[0]) && "Expected instruction");
-      unsigned NumOperands = cast<Instruction>(VL[0])->getNumOperands();
       constexpr unsigned IntrinsicNumOperands = 2;
-      if (isa<IntrinsicInst>(VL[0]))
-        NumOperands = IntrinsicNumOperands;
+      unsigned NumOperands = isa<IntrinsicInst>(VL[0])
+                                 ? IntrinsicNumOperands
+                                 : cast<Instruction>(VL[0])->getNumOperands();
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
       for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
@@ -4579,6 +4578,8 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE) {
               continue;
             if (!TE.ReuseShuffleIndices.empty())
               K = TE.ReuseShuffleIndices[K];
+            if (K == PoisonMaskElem)
+              continue;
             if (!TE.ReorderIndices.empty())
               K = std::distance(TE.ReorderIndices.begin(),
                                 find(TE.ReorderIndices, K));
@@ -5447,6 +5448,33 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     if (!TE.ReorderIndices.empty())
       return TE.ReorderIndices;
 
+    SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
+    for (auto [I, V] : zip(UserBVHead, TE.Scalars)) {
+      if (!V->hasNUsesOrMore(1))
+        continue;
+      auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
+      if (!II)
+        continue;
+      Instruction *BVHead = nullptr;
+      BasicBlock *BB = II->getParent();
+      while (II && II->hasOneUse() && II->getParent() == BB) {
+        BVHead = II;
+        II = dyn_cast<InsertElementInst>(II->getOperand(0));
+      }
+      I = BVHead;
+    }
+
+    auto CompareByBasicBlocks = [&](BasicBlock *BB1, BasicBlock *BB2) {
+      assert(BB1 != BB2 && "Expected different basic blocks.");
+      auto *NodeA = DT->getNode(BB1);
+      auto *NodeB = DT->getNode(BB2);
+      assert(NodeA && "Should only process reachable instructions");
+      assert(NodeB && "Should only process reachable instructions");
+      assert((NodeA == NodeB) ==
+                 (NodeA->getDFSNumIn() == NodeB->getDFSNumIn()) &&
+             "Different nodes should have different DFS numbers");
+      return NodeA->getDFSNumIn() < NodeB->getDFSNumIn();
+    };
     auto PHICompare = [&](unsigned I1, unsigned I2) {
       Value *V1 = TE.Scalars[I1];
       Value *V2 = TE.Scalars[I2];
@@ -5458,21 +5486,56 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
         return false;
       auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());
       auto *FirstUserOfPhi2 = cast<Instruction>(*V2->user_begin());
-      if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1))
-        if (auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2)) {
-          if (!areTwoInsertFromSameBuildVector(
-                  IE1, IE2,
-                  [](InsertElementInst *II) { return II->getOperand(0); }))
-            return I1 < I2;
+      if (FirstUserOfPhi1->getParent() != FirstUserOfPhi2->getParent())
+        return CompareByBasicBlocks(FirstUserOfPhi1->getParent(),
+                                    FirstUserOfPhi2->getParent());
+      auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1);
+      auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2);
+      auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1);
+      auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2);
+      if (IE1 && !IE2)
+        return true;
+      if (!IE1 && IE2)
+        return false;
+      if (IE1 && IE2) {
+        if (UserBVHead[I1] && !UserBVHead[I2])
+          return true;
+        if (!UserBVHead[I1])
+          return false;
+        if (UserBVHead[I1] == UserBVHead[I2])
           return getElementIndex(IE1) < getElementIndex(IE2);
-        }
-      if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1))
-        if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
-          if (EE1->getOperand(0) != EE2->getOperand(0))
-            return I1 < I2;
+        if (UserBVHead[I1]->getParent() != UserBVHead[I2]->getParent())
+          return CompareByBasicBlocks(UserBVHead[I1]->getParent(),
+                                      UserBVHead[I2]->getParent());
+        return UserBVHead[I1]->comesBefore(UserBVHead[I2]);
+      }
+      if (EE1 && !EE2)
+        return true;
+      if (!EE1 && EE2)
+        return false;
+      if (EE1 && EE2) {
+        auto *Inst1 = dyn_cast<Instruction>(EE1->getOperand(0));
+        auto *Inst2 = dyn_cast<Instruction>(EE2->getOperand(0));
+        auto *P1 = dyn_cast<Argument>(EE1->getOperand(0));
+        auto *P2 = dyn_cast<Argument>(EE2->getOperand(0));
+        if (!Inst2 && !P2)
+          return Inst1 || P1;
+        if (EE1->getOperand(0) == EE2->getOperand(0))
           return getElementIndex(EE1) < getElementIndex(EE2);
+        if (!Inst1 && Inst2)
+          return false;
+        if (Inst1 && Inst2) {
+          if (Inst1->getParent() != Inst2->getParent())
+            return CompareByBasicBlocks(Inst1->getParent(), Inst2->getParent());
+          return Inst1->comesBefore(Inst2);
         }
-      return I1 < I2;
+        if (!P1 && P2)
+          return false;
+        assert(P1 && P2 &&
+               "Expected either instructions or arguments vector operands.");
+        return P1->getArgNo() < P2->getArgNo();
+      }
+      return false;
     };
     SmallDenseMap<unsigned, unsigned, 16> PhiToId;
     SmallVector<unsigned> Phis(TE.Scalars.size());
@@ -6520,7 +6583,8 @@ static void gatherPossiblyVectorizableLoads(
           if (Idx < Start)
             continue;
           ToAdd.clear();
-          if (LI->getParent() != Data.front().first->getParent())
+          if (LI->getParent() != Data.front().first->getParent() ||
+              LI->getType() != Data.front().first->getType())
             continue;
           std::optional<int> Dist =
               getPointersDiff(LI->getType(), LI->getPointerOperand(),

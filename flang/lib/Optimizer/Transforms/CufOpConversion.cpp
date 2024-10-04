@@ -36,6 +36,18 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
+static inline unsigned getMemType(cuf::DataAttribute attr) {
+  if (attr == cuf::DataAttribute::Device)
+    return kMemTypeDevice;
+  if (attr == cuf::DataAttribute::Managed)
+    return kMemTypeManaged;
+  if (attr == cuf::DataAttribute::Unified)
+    return kMemTypeUnified;
+  if (attr == cuf::DataAttribute::Pinned)
+    return kMemTypePinned;
+  llvm::report_fatal_error("unsupported memory type");
+}
+
 template <typename OpTy>
 static bool isPinned(OpTy op) {
   if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)
@@ -196,9 +208,9 @@ static int computeWidth(mlir::Location loc, mlir::Type type,
   } else if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)}) {
     int kind = t.getFKind();
     width = kindMap.getLogicalBitsize(kind) / 8;
-  } else if (auto t{mlir::dyn_cast<fir::ComplexType>(eleTy)}) {
-    int kind = t.getFKind();
-    int elemSize = kindMap.getRealBitsize(kind) / 8;
+  } else if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
+    int elemSize =
+        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
     width = 2 * elemSize;
   } else {
     llvm::report_fatal_error("unsupported type");

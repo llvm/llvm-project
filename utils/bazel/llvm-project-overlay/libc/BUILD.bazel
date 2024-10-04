@@ -148,6 +148,9 @@ libc_support_library(
 libc_support_library(
     name = "hdr_stdio_macros",
     hdrs = ["hdr/stdio_macros.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
@@ -215,11 +218,17 @@ libc_support_library(
 libc_support_library(
     name = "types_off_t",
     hdrs = ["hdr/types/off_t.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
     name = "types_FILE",
     hdrs = ["hdr/types/FILE.h"],
+    deps = [
+        ":hdr_stdio_overlay",
+    ],
 )
 
 libc_support_library(
