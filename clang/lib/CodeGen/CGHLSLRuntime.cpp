@@ -18,8 +18,13 @@
 #include "TargetInfo.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Alignment.h"
+
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
@@ -488,4 +493,110 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
     if (auto *GV = M.getNamedGlobal("llvm.global_dtors"))
       GV->eraseFromParent();
   }
+}
+
+// Returns handle type of a resource, if the VarDecl is a resource
+// or an array of resources
+static const HLSLAttributedResourceType *
+findHandleTypeOnResource(const VarDecl *VD) {
+  // If VarDecl is a resource class, the first field must
+  // be the resource handle of type HLSLAttributedResourceType
+  assert(VD != nullptr && "expected VarDecl");
+  const clang::Type *Ty = VD->getType()->getPointeeOrArrayElementType();
+  if (RecordDecl *RD = Ty->getAsCXXRecordDecl()) {
+    if (!RD->fields().empty()) {
+      const auto &FirstFD = RD->fields().begin();
+      return dyn_cast<HLSLAttributedResourceType>(
+          FirstFD->getType().getTypePtr());
+    }
+  }
+  return nullptr;
+}
+
+void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
+                                              llvm::GlobalVariable *Var) {
+  // If the global variable has resource binding, add it to the list of globals
+  // that need resource binding initialization.
+  const HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA)
+    return;
+
+  // FIXME: support for resource arrays or resource fields on user defined
+  // classes is not yet implemented
+  if (RBA->ResourceField != nullptr || VD->getType()->isArrayType())
+    return;
+
+  ResourcesToBind.emplace_back(std::make_pair(VD, Var));
+}
+
+llvm::Function *CGHLSLRuntime::createResourceBindingInitFn() {
+  // No resources to bind
+  if (ResourcesToBind.empty())
+    return nullptr;
+
+  LLVMContext &Ctx = CGM.getLLVMContext();
+
+  llvm::Function *InitResBindingsFunc =
+      llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
+                             llvm::GlobalValue::InternalLinkage,
+                             "_init_resource_bindings", CGM.getModule());
+
+  llvm::BasicBlock *EntryBB =
+      llvm::BasicBlock::Create(Ctx, "entry", InitResBindingsFunc);
+  CGBuilderTy Builder(CGM, Ctx);
+  const DataLayout &DL = CGM.getModule().getDataLayout();
+  Builder.SetInsertPoint(EntryBB);
+
+  for (auto I : ResourcesToBind) {
+    const VarDecl *VD = I.first;
+    llvm::GlobalVariable *Var = I.second;
+
+    for (Attr *A : VD->getAttrs()) {
+      HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
+      if (!RBA)
+        continue;
+
+      if (RBA->getResourceField() != nullptr) {
+        // FIXME: Register bindings inside user defined struct are not yet
+        // supported
+        llvm_unreachable("Register bindings inside user defined struct are not "
+                         "implemented yet");
+        continue;
+      }
+
+      const HLSLAttributedResourceType *AttrResType =
+          findHandleTypeOnResource(VD);
+      assert(AttrResType != nullptr &&
+             "Resource class must have a handle of HLSLAttributedResourceType");
+
+      llvm::Type *TargetTy =
+          CGM.getTargetCodeGenInfo().getHLSLType(CGM, AttrResType);
+      assert(TargetTy != nullptr &&
+             "Failed to convert resource handle to target type");
+
+      llvm::Value *Args[] = {
+          llvm::ConstantInt::get(CGM.IntTy,
+                                 RBA->getSpaceNumber()), /*RegisterSpace*/
+          llvm::ConstantInt::get(CGM.IntTy,
+                                 RBA->getSlotNumber()), /*RegisterSlot*/
+          // FIXME: resource arrays are not yet implemented
+          llvm::ConstantInt::get(CGM.IntTy, 1), /*Range*/
+          llvm::ConstantInt::get(CGM.IntTy, 0), /*Index*/
+          // FIXME: NonUniformResourceIndex bit is not yet implemented
+          llvm::ConstantInt::get(llvm::Type::getInt1Ty(Ctx),
+                                 false) /*Non-uniform*/
+      };
+      llvm::Value *CreateHandle = Builder.CreateIntrinsic(
+          /*ReturnType=*/TargetTy, getCreateHandleFromBindingIntrinsic(), Args,
+          nullptr, Twine(VD->getName()).concat("_h"));
+
+      llvm::Value *HandleRef =
+          Builder.CreateStructGEP(Var->getValueType(), Var, 0);
+      Builder.CreateAlignedStore(CreateHandle, HandleRef,
+                                 HandleRef->getPointerAlignment(DL));
+    }
+  }
+
+  Builder.CreateRetVoid();
+  return InitResBindingsFunc;
 }
