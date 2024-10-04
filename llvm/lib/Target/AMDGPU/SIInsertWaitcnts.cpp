@@ -3159,6 +3159,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
   }
   ReleaseVGPRInsts.clear();
+  PreheadersToFlush.clear();
   SLoadAddresses.clear();
 
   return Modified;

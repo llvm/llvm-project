@@ -940,7 +940,7 @@ defm FAMIN_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"famin", 0b0010101>;
 
 let Predicates = [HasSME2, HasSME_LUTv2] in {
 defm MOVT : sme2_movt_zt_to_zt<"movt",  0b0011111>;
-def LUTI4_4ZZT2Z    : sme2_luti4_vector_vg4<0b00, 0b00,"luti4">;
+def LUTI4_4ZZT2Z : sme2_luti4_vector_vg4<0b00, 0b00,"luti4">;
 } //[HasSME2, HasSME_LUTv2]
 
 let Predicates = [HasSME2p1, HasSME_LUTv2] in {
