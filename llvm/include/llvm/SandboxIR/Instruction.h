@@ -1259,8 +1259,7 @@ class UnreachableInst final : public Instruction {
   }
 
 public:
-  static UnreachableInst *create(Instruction *InsertBefore, Context &Ctx);
-  static UnreachableInst *create(BasicBlock *InsertAtEnd, Context &Ctx);
+  static UnreachableInst *create(InsertPosition Pos, Context &Ctx);
   static bool classof(const Value *From);
   unsigned getNumSuccessors() const { return 0; }
   unsigned getUseOperandNo(const Use &Use) const final {
@@ -1280,10 +1279,7 @@ class ReturnInst final : public SingleLLVMInstructionImpl<llvm::ReturnInst> {
                                   Context &Ctx);
 
 public:
-  static ReturnInst *create(Value *RetVal, Instruction *InsertBefore,
-                            Context &Ctx);
-  static ReturnInst *create(Value *RetVal, BasicBlock *InsertAtEnd,
-                            Context &Ctx);
+  static ReturnInst *create(Value *RetVal, InsertPosition Pos, Context &Ctx);
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Ret;
   }
@@ -1432,14 +1428,7 @@ class CallInst : public CallBase {
 
 public:
   static CallInst *create(FunctionType *FTy, Value *Func,
-                          ArrayRef<Value *> Args, BBIterator WhereIt,
-                          BasicBlock *WhereBB, Context &Ctx,
-                          const Twine &NameStr = "");
-  static CallInst *create(FunctionType *FTy, Value *Func,
-                          ArrayRef<Value *> Args, Instruction *InsertBefore,
-                          Context &Ctx, const Twine &NameStr = "");
-  static CallInst *create(FunctionType *FTy, Value *Func,
-                          ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                          ArrayRef<Value *> Args, InsertPosition Pos,
                           Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
@@ -1458,16 +1447,7 @@ class InvokeInst final : public CallBase {
 public:
   static InvokeInst *create(FunctionType *FTy, Value *Func,
                             BasicBlock *IfNormal, BasicBlock *IfException,
-                            ArrayRef<Value *> Args, BBIterator WhereIt,
-                            BasicBlock *WhereBB, Context &Ctx,
-                            const Twine &NameStr = "");
-  static InvokeInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *IfNormal, BasicBlock *IfException,
-                            ArrayRef<Value *> Args, Instruction *InsertBefore,
-                            Context &Ctx, const Twine &NameStr = "");
-  static InvokeInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *IfNormal, BasicBlock *IfException,
-                            ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                            ArrayRef<Value *> Args, InsertPosition Pos,
                             Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
@@ -1503,18 +1483,7 @@ public:
   static CallBrInst *create(FunctionType *FTy, Value *Func,
                             BasicBlock *DefaultDest,
                             ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args, BBIterator WhereIt,
-                            BasicBlock *WhereBB, Context &Ctx,
-                            const Twine &NameStr = "");
-  static CallBrInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *DefaultDest,
-                            ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args, Instruction *InsertBefore,
-                            Context &Ctx, const Twine &NameStr = "");
-  static CallBrInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *DefaultDest,
-                            ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args, BasicBlock *InsertAtEnd,
+                            ArrayRef<Value *> Args, InsertPosition Pos,
                             Context &Ctx, const Twine &NameStr = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CallBr;
@@ -1543,8 +1512,8 @@ class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
 
 public:
   static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
-                                BBIterator WhereIt, BasicBlock *WhereBB,
-                                Context &Ctx, const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   /// Return 'true' if this landingpad instruction is a
   /// cleanup. I.e., it should be run when unwinding even if its landing pad
   /// doesn't catch the exception.
@@ -1620,8 +1589,8 @@ public:
   // for now, as there is no CatchPadInst member function that can undo it.
 
   static CatchPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                              BBIterator WhereIt, BasicBlock *WhereBB,
-                              Context &Ctx, const Twine &Name = "");
+                              InsertPosition Pos, Context &Ctx,
+                              const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchPad;
   }
@@ -1634,8 +1603,8 @@ class CleanupPadInst : public FuncletPadInst {
 
 public:
   static CleanupPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                                BBIterator WhereIt, BasicBlock *WhereBB,
-                                Context &Ctx, const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CleanupPad;
   }
