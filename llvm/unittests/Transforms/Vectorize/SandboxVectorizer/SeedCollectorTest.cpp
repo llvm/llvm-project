@@ -101,18 +101,25 @@ bb:
   SB1.setUsed(unsigned(0));
   // getFirstUnusedElementIdx not at end
   EXPECT_EQ(SB1.getFirstUnusedElementIdx(), 2u);
-  // getSlice
-  auto Slice0 = SB1.getSlice(2, /* MaxVecRegBits */ 64,
-                             /* ForcePowerOf2 */ true);
+
+  // getSlice is (StartIdx, MaxVecRegBits, ForcePowerOf2). It's easier to
+  // compare test cases without the parameter-name comments inline.
+  auto Slice0 = SB1.getSlice(2, 64, true);
   EXPECT_THAT(Slice0,
               testing::ElementsAre(Insts[2], Insts[3], Insts[4], Insts[5]));
+  auto Slice1 = SB1.getSlice(2, 72, true);
+  EXPECT_THAT(Slice1,
+              testing::ElementsAre(Insts[2], Insts[3], Insts[4], Insts[5]));
+  auto Slice2 = SB1.getSlice(2, 80, true);
+  EXPECT_THAT(Slice2,
+              testing::ElementsAre(Insts[2], Insts[3], Insts[4], Insts[5]));
+
   SB1.setUsed(2);
-  auto Slice1 = SB1.getSlice(3, /* MaxVecRegBits */ 64,
-                             /* ForcePowerOf2 */ false);
-  EXPECT_THAT(Slice1, testing::ElementsAre(Insts[3], Insts[4], Insts[5]));
+  auto Slice3 = SB1.getSlice(3, 64, false);
+  EXPECT_THAT(Slice3, testing::ElementsAre(Insts[3], Insts[4], Insts[5]));
   // getSlice empty case
   SB1.setUsed(3);
-  auto Slice2 = SB1.getSlice(4, /* MaxVecRegBits */ 8,
+  auto Slice4 = SB1.getSlice(4, /* MaxVecRegBits */ 8,
                              /* ForcePowerOf2 */ true);
-  EXPECT_EQ(Slice2.size(), 0u);
+  EXPECT_EQ(Slice4.size(), 0u);
 }
