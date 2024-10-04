@@ -1214,11 +1214,11 @@ public:
     return false;
   }
 
-  virtual std::pair<bool, uint8_t> getVRegFlagValue(StringRef Name) const {
-    return {false, 0};
+  virtual std::optional<uint8_t> getVRegFlagValue(StringRef Name) const {
+    return {};
   }
 
-  virtual SmallVector<std::string>
+  virtual SmallVector<SmallString<8>>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }

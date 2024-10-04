@@ -321,9 +321,9 @@ static void printRegFlags(Register Reg,
                           std::vector<yaml::FlowStringValue> &RegisterFlags,
                           const MachineFunction &MF,
                           const TargetRegisterInfo *TRI) {
-  SmallVector<std::string> FlagValues = TRI->getVRegFlagsOfReg(Reg, MF);
+  auto FlagValues = TRI->getVRegFlagsOfReg(Reg, MF);
   for (auto &Flag : FlagValues) {
-    RegisterFlags.push_back(yaml::FlowStringValue(Flag));
+    RegisterFlags.push_back(yaml::FlowStringValue(Flag.str().str()));
   }
 }
 

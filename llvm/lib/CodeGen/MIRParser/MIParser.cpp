@@ -130,11 +130,10 @@ bool PerTargetMIParsingState::getRegisterByName(StringRef RegName,
 bool PerTargetMIParsingState::getVRegFlagValue(StringRef FlagName,
                                                uint8_t &FlagValue) const {
   const auto *TRI = Subtarget.getRegisterInfo();
-  assert(TRI && "Expected target register info");
-  auto [HasVReg, FV] = TRI->getVRegFlagValue(FlagName);
-  if (!HasVReg)
+  auto FV = TRI->getVRegFlagValue(FlagName);
+  if (!FV.has_value())
     return true;
-  FlagValue = FV;
+  FlagValue = FV.value();
   return false;
 }
 

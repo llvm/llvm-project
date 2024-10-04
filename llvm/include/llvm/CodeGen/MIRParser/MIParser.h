@@ -37,7 +37,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 
 struct VRegInfo {
-  enum uint8_t {
+  enum : uint8_t {
     UNKNOWN, NORMAL, GENERIC, REGBANK
   } Kind = UNKNOWN;
   bool Explicit = false; ///< VReg was explicitly specified in the .mir file.
@@ -47,7 +47,7 @@ struct VRegInfo {
   } D;
   Register VReg;
   Register PreferredReg;
-  std::vector<::uint8_t> Flags;
+  std::vector<uint8_t> Flags;
 };
 
 using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
