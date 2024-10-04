@@ -18,7 +18,7 @@ class TestSwiftBackwardInteropFormatSwiftStdlibTypes(TestBase):
     @swiftTest
     def test_array(self):
         self.setup('break here for array')
-        self.expect('v array', substrs=['Swift.Array<a.SwiftClass>',
+        self.expect('frame var array', substrs=['Swift.Array<a.SwiftClass>',
             '[0]', 'str = "Hello from the Swift class!"', 
             '[1]', 'str = "Hello from the Swift class!"',])
 
@@ -26,25 +26,25 @@ class TestSwiftBackwardInteropFormatSwiftStdlibTypes(TestBase):
     def test_array_of_ints(self):
         self.setup('break here for array of ints')
 
-        self.expect('v array', substrs=['Swift.Array<Swift.Int32>', '1', '2', '3', '4'])
+        self.expect('frame var array', substrs=['Swift.Array<Swift.Int32>', '1', '2', '3', '4'])
 
     @swiftTest
     def test_optional(self):
         self.setup('break here for optional')
 
-        self.expect('v optional', substrs=['Swift.Optional<a.SwiftClass>', 
+        self.expect('frame var optional', substrs=['Swift.Optional<a.SwiftClass>',
             'str = "Hello from the Swift class!"'])
 
     @swiftTest
     def test_optional_primitive(self):
         self.setup('break here for optional primitive')
 
-        self.expect('v optional', substrs=['Swift.Optional<Swift.Double>', 
+        self.expect('frame var optional', substrs=['Swift.Optional<Swift.Double>',
             '4.2'])
 
     @swiftTest
     def test_string(self):
         self.setup('break here for string')
 
-        self.expect('v string', substrs=['"Hello from Swift!"'])
+        self.expect('frame var string', substrs=['"Hello from Swift!"'])
 

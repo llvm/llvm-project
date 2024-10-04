@@ -14,4 +14,4 @@ class TestCase(TestBase):
             self, "// break here", lldb.SBFileSpec("main.swift")
         )
         self.runCmd("settings set symbols.swift-enable-ast-context false")
-        self.expect("v", substrs=["num = 15"])
+        self.expect("frame var c", substrs=["num = 15"])

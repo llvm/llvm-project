@@ -31,9 +31,9 @@ class TestSwiftRegex(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', self.main_source_spec)
-        self.expect('v regex',
+        self.expect('frame var regex',
                     substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>) regex = {'])
-        self.expect('v dslRegex',
+        self.expect('frame var dslRegex',
                     substrs=['(_StringProcessing.Regex<Substring>) dslRegex = {'])
 
     @swiftTest
