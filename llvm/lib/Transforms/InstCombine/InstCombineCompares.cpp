@@ -5932,13 +5932,12 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
     return nullptr;
 
   // This matches patterns corresponding to tests of the signbit as well as:
-  // (trunc X) u< C --> (X & -C) == 0 (are all masked-high-bits clear?)
-  // (trunc X) u> C --> (X & ~C) != 0 (are any masked-high-bits set?)
+  // (trunc X) pred C2 --> (X & Mask) == C
   if (auto Res = decomposeBitTestICmp(Op0, Op1, Pred, /*WithTrunc=*/true,
                                       /*AllowNonZeroC=*/true)) {
     Value *And = Builder.CreateAnd(Res->X, Res->Mask);
-    Constant *Zero = ConstantInt::get(Res->X->getType(), Res->C);
-    return new ICmpInst(Res->Pred, And, Zero);
+    Constant *C = ConstantInt::get(Res->X->getType(), Res->C);
+    return new ICmpInst(Res->Pred, And, C);
   }
 
   unsigned SrcBits = X->getType()->getScalarSizeInBits();
