@@ -63,7 +63,7 @@
 ; 64BIT-DAG:     STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
 ; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
 ; 64BIT-DAG:     renamable $x9 = ADDI8 renamable $x6, 4
-; 64BIT-DAG:     renamable $x7 = ADDI8 %fixed-stack.0, 4
+; 64BIT-DAG:     renamable $x7 = disjoint ADDI8 %fixed-stack.0, 4
 ; 64BIT-DAG:     renamable $r8 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 8)
 ; 64BIT-DAG:     STD killed renamable $x11, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
 ; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)

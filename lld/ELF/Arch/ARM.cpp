@@ -1380,7 +1380,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(uint8_t *buf) {
+void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1397,14 +1397,14 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize() const {
+size_t ArmCmseSGSection::getSize(Ctx &) const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents() {
+void ArmCmseSGSection::finalizeContents(Ctx &) {
   if (sgVeneers.empty())
     return;
 
@@ -1469,10 +1469,10 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections();
+    osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize();
-    isec->finalizeContents();
+    osec->size = isec->getSize(ctx);
+    isec->finalizeContents(ctx);
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }
@@ -1525,7 +1525,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   {
     parallel::TaskGroup tg;
     for (auto &[osec, _] : osIsPairs)
-      osec->template writeTo<ELFT>(buf + osec->offset, tg);
+      osec->template writeTo<ELFT>(ctx, buf + osec->offset, tg);
   }
 
   if (auto e = buffer->commit())
