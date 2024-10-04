@@ -1909,14 +1909,10 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 // SimplifyDemandedBits.
 def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
           (COPY GPR:$rs1)>;
-def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
-          (ANDI GPR:$rs1, u32simm12:$imm)>;
+def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
+def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
+def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
-def : Pat<(binop_allwusers<or> GPR:$rs1, u32simm12:$imm),
-          (ORI GPR:$rs1, u32simm12:$imm)>;
-
-def : Pat<(binop_allwusers<xor> GPR:$rs1, u32simm12:$imm),
-          (XORI GPR:$rs1, u32simm12:$imm)>;
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
