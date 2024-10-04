@@ -203,9 +203,6 @@ namespace cwg1762 { // cwg1762: 14
   float operator ""E(const char *);
   // since-cxx11-error@-1 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
   // since-cxx11-warning@-2 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
-  // since-cxx11-warning@-3 {{identifier 'E' preceded by whitespace in a literal operator declaration is deprecated}}
-  // FIXME: We could probably do a better job reacting to the fixit here, the
-  // fact that we complain about the space we added is a little strange.
 #endif
 }
 

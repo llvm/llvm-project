@@ -508,7 +508,14 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
         Name.getSourceRange(),
         (StringRef("operator\"\"") + II->getName()).str());
 
-    Diag(Loc, diag::warn_deprecated_literal_operator_id) << II << Hint;
+    // Only emit this diagnostic if we start with an underscore, else the
+    // diagnostic for C++11 requiring a space between the quotes and the
+    // identifier conflicts with this and gets confusing. The diagnostic stating
+    // this is a reserved name should force the underscore, which gets this
+    // back.
+    if (II->isReservedLiteralSuffixId() !=
+        ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore)
+      Diag(Loc, diag::warn_deprecated_literal_operator_id) << II << Hint;
 
     if (isReservedInAllContexts(Status))
       Diag(Loc, diag::warn_reserved_extern_symbol)

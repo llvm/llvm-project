@@ -3,4 +3,3 @@
 #include <no-warn-user-defined-literals-in-system-headers.h>
 
 void operator "" bar(long double); // expected-warning{{user-defined literal suffixes not starting with '_' are reserved}}
-// expected-warning@-1{{identifier 'bar' preceded by whitespace in a literal operator declaration is deprecated}}
