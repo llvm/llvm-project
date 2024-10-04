@@ -74,6 +74,8 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Added `Swap operands` tweak for certain binary operators.
+
 Signature help
 ^^^^^^^^^^^^^^
 
