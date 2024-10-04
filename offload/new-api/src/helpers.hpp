@@ -17,16 +17,16 @@
 #include <cstring>
 
 template <typename T, typename Assign>
-offload_result_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
-                             size_t *ParamValueSizeRet, T Value,
-                             size_t ValueSize, Assign &&AssignFunc) {
+offload_errc_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
+                           size_t *ParamValueSizeRet, T Value, size_t ValueSize,
+                           Assign &&AssignFunc) {
   if (!ParamValue && !ParamValueSizeRet) {
-    return OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER;
+    return OFFLOAD_ERRC_INVALID_NULL_POINTER;
   }
 
   if (ParamValue != nullptr) {
     if (ParamValueSize < ValueSize) {
-      return OFFLOAD_RESULT_ERROR_INVALID_SIZE;
+      return OFFLOAD_ERRC_INVALID_SIZE;
     }
     AssignFunc(ParamValue, Value, ValueSize);
   }
@@ -35,12 +35,12 @@ offload_result_t getInfoImpl(size_t ParamValueSize, void *ParamValue,
     *ParamValueSizeRet = ValueSize;
   }
 
-  return OFFLOAD_RESULT_SUCCESS;
+  return OFFLOAD_ERRC_SUCCESS;
 }
 
 template <typename T>
-offload_result_t getInfo(size_t ParamValueSize, void *ParamValue,
-                         size_t *ParamValueSizeRet, T Value) {
+offload_errc_t getInfo(size_t ParamValueSize, void *ParamValue,
+                       size_t *ParamValueSizeRet, T Value) {
   auto Assignment = [](void *ParamValue, T Value, size_t) {
     *static_cast<T *>(ParamValue) = Value;
   };
@@ -50,15 +50,15 @@ offload_result_t getInfo(size_t ParamValueSize, void *ParamValue,
 }
 
 template <typename T>
-offload_result_t getInfoArray(size_t array_length, size_t ParamValueSize,
-                              void *ParamValue, size_t *ParamValueSizeRet,
-                              const T *Value) {
+offload_errc_t getInfoArray(size_t array_length, size_t ParamValueSize,
+                            void *ParamValue, size_t *ParamValueSizeRet,
+                            const T *Value) {
   return getInfoImpl(ParamValueSize, ParamValue, ParamValueSizeRet, Value,
                      array_length * sizeof(T), memcpy);
 }
 
 template <>
-inline offload_result_t
+inline offload_errc_t
 getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
                       size_t *ParamValueSizeRet, const char *Value) {
   return getInfoArray(strlen(Value) + 1, ParamValueSize, ParamValue,
@@ -79,12 +79,12 @@ public:
         ParamValueSizeRet(ParamValueSize) {}
 
   // Scalar return Value
-  template <class T> offload_result_t operator()(const T &t) {
+  template <class T> offload_errc_t operator()(const T &t) {
     return getInfo(ParamValueSize, ParamValue, ParamValueSizeRet, t);
   }
 
   // Array return Value
-  template <class T> offload_result_t operator()(const T *t, size_t s) {
+  template <class T> offload_errc_t operator()(const T *t, size_t s) {
     return getInfoArray(s, ParamValueSize, ParamValue, ParamValueSizeRet, t);
   }
 

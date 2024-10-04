@@ -23,6 +23,7 @@ TEST_F(offloadPlatformGetTest, InvalidNumEntries) {
   uint32_t PlatformCount;
   ASSERT_SUCCESS(offloadPlatformGet(0, nullptr, &PlatformCount));
   std::vector<offload_platform_handle_t> Platforms(PlatformCount);
-  ASSERT_EQ(offloadPlatformGet(0, Platforms.data(), nullptr),
-            OFFLOAD_RESULT_ERROR_INVALID_SIZE);
+  ASSERT_ERROR(
+      OFFLOAD_ERRC_INVALID_SIZE,
+      offloadPlatformGet(PlatformCount + 1, Platforms.data(), nullptr));
 }
