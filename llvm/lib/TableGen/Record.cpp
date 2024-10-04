@@ -28,6 +28,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/TGTimer.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -3182,11 +3183,19 @@ void Record::checkRecordAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
+  bool AnyFailed = false;
   for (const auto &Assertion : getAssertions()) {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
-    CheckAssert(Assertion.Loc, Condition, Message);
+    AnyFailed |= CheckAssert(Assertion.Loc, Condition, Message);
   }
+
+  if (!AnyFailed)
+    return;
+
+  // If any of the record assertions failed, print some context that will
+  // help see where the record that caused these assert failures is defined.
+  PrintError(this, "assertion failed in this record");
 }
 
 void Record::emitRecordDumps() {
@@ -3210,7 +3219,9 @@ void Record::checkUnusedTemplateArgs() {
 }
 
 RecordKeeper::RecordKeeper()
-    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)) {}
+    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)),
+      Timer(std::make_unique<TGTimer>()) {}
+
 RecordKeeper::~RecordKeeper() = default;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3232,47 +3243,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
 /// an identifier.
 Init *RecordKeeper::getNewAnonymousName() {
   return AnonymousNameInit::get(*this, getImpl().AnonCounter++);
-}
-
-// These functions implement the phase timing facility. Starting a timer
-// when one is already running stops the running one.
-
-void RecordKeeper::startTimer(StringRef Name) const {
-  if (TimingGroup) {
-    if (LastTimer && LastTimer->isRunning()) {
-      LastTimer->stopTimer();
-      if (BackendTimer) {
-        LastTimer->clear();
-        BackendTimer = false;
-      }
-    }
-
-    LastTimer = new Timer("", Name, *TimingGroup);
-    LastTimer->startTimer();
-  }
-}
-
-void RecordKeeper::stopTimer() {
-  if (TimingGroup) {
-    assert(LastTimer && "No phase timer was started");
-    LastTimer->stopTimer();
-  }
-}
-
-void RecordKeeper::startBackendTimer(StringRef Name) {
-  if (TimingGroup) {
-    startTimer(Name);
-    BackendTimer = true;
-  }
-}
-
-void RecordKeeper::stopBackendTimer() {
-  if (TimingGroup) {
-    if (BackendTimer) {
-      stopTimer();
-      BackendTimer = false;
-    }
-  }
 }
 
 ArrayRef<const Record *>

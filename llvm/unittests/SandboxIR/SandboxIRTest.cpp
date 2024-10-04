@@ -3126,11 +3126,11 @@ define i8 @foo(i8 %val) {
 
   // Check create(InsertBefore) a void ReturnInst.
   auto *NewRet1 = cast<sandboxir::ReturnInst>(
-      sandboxir::ReturnInst::create(nullptr, /*InsertBefore=*/Ret, Ctx));
+      sandboxir::ReturnInst::create(nullptr, Ret->getIterator(), Ctx));
   EXPECT_EQ(NewRet1->getReturnValue(), nullptr);
   // Check create(InsertBefore) a non-void ReturnInst.
   auto *NewRet2 = cast<sandboxir::ReturnInst>(
-      sandboxir::ReturnInst::create(Val, /*InsertBefore=*/Ret, Ctx));
+      sandboxir::ReturnInst::create(Val, Ret->getIterator(), Ctx));
   EXPECT_EQ(NewRet2->getReturnValue(), Val);
 
   // Check create(InsertAtEnd) a void ReturnInst.
@@ -3318,7 +3318,7 @@ define i8 @foo(i8 %arg) {
   {
     // Check create() WhereIt.
     auto *Call = cast<sandboxir::CallInst>(sandboxir::CallInst::create(
-        FTy, &F, Args, /*WhereIt=*/Ret->getIterator(), BB, Ctx));
+        FTy, &F, Args, /*WhereIt=*/Ret->getIterator(), Ctx));
     EXPECT_EQ(Call->getNextNode(), Ret);
     EXPECT_EQ(Call->getCalledFunction(), &F);
     EXPECT_EQ(range_size(Call->args()), 1u);
@@ -3327,7 +3327,7 @@ define i8 @foo(i8 %arg) {
   {
     // Check create() InsertBefore.
     auto *Call = cast<sandboxir::CallInst>(
-        sandboxir::CallInst::create(FTy, &F, Args, /*InsertBefore=*/Ret, Ctx));
+        sandboxir::CallInst::create(FTy, &F, Args, Ret->getIterator(), Ctx));
     EXPECT_EQ(Call->getNextNode(), Ret);
     EXPECT_EQ(Call->getCalledFunction(), &F);
     EXPECT_EQ(range_size(Call->args()), 1u);
@@ -3406,7 +3406,7 @@ define void @foo(i8 %arg) {
     auto *InsertBefore = &*BB0->begin();
     auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
         F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
-        /*WhereIt=*/InsertBefore->getIterator(), /*WhereBB=*/BB0, Ctx));
+        InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getNextNode(), InsertBefore);
@@ -3415,9 +3415,9 @@ define void @foo(i8 %arg) {
     // Check create() InsertBefore.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *InsertBefore = &*BB0->begin();
-    auto *NewInvoke = cast<sandboxir::InvokeInst>(
-        sandboxir::InvokeInst::create(F.getFunctionType(), &F, NormalBB,
-                                      ExceptionBB, Args, InsertBefore, Ctx));
+    auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
+        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
+        InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getNextNode(), InsertBefore);
@@ -3426,8 +3426,7 @@ define void @foo(i8 %arg) {
     // Check create() InsertAtEnd.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *NewInvoke = cast<sandboxir::InvokeInst>(sandboxir::InvokeInst::create(
-        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args,
-        /*InsertAtEnd=*/BB0, Ctx));
+        F.getFunctionType(), &F, NormalBB, ExceptionBB, Args, BB0, Ctx));
     EXPECT_EQ(NewInvoke->getNormalDest(), NormalBB);
     EXPECT_EQ(NewInvoke->getUnwindDest(), ExceptionBB);
     EXPECT_EQ(NewInvoke->getParent(), BB0);
@@ -3516,8 +3515,7 @@ define void @foo(i8 %arg) {
     // Check create() WhereIt, WhereBB.
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
-        F.getFunctionType(), &F, BB1, {BB2}, Args, /*WhereIt=*/BB0->end(),
-        /*WhereBB=*/BB0, Ctx));
+        F.getFunctionType(), &F, BB1, {BB2}, Args, BB0->end(), Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3528,8 +3526,9 @@ define void @foo(i8 %arg) {
     // Check create() InsertBefore
     SmallVector<sandboxir::Value *> Args({Arg});
     auto *InsertBefore = &*BB0->rbegin();
-    auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
-        F.getFunctionType(), &F, BB1, {BB2}, Args, InsertBefore, Ctx));
+    auto *NewCallBr = cast<sandboxir::CallBrInst>(
+        sandboxir::CallBrInst::create(F.getFunctionType(), &F, BB1, {BB2}, Args,
+                                      InsertBefore->getIterator(), Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3538,9 +3537,8 @@ define void @foo(i8 %arg) {
   {
     // Check create() InsertAtEnd.
     SmallVector<sandboxir::Value *> Args({Arg});
-    auto *NewCallBr = cast<sandboxir::CallBrInst>(
-        sandboxir::CallBrInst::create(F.getFunctionType(), &F, BB1, {BB2}, Args,
-                                      /*InsertAtEnd=*/BB0, Ctx));
+    auto *NewCallBr = cast<sandboxir::CallBrInst>(sandboxir::CallBrInst::create(
+        F.getFunctionType(), &F, BB1, {BB2}, Args, BB0, Ctx));
     EXPECT_EQ(NewCallBr->getDefaultDest(), BB1);
     EXPECT_EQ(NewCallBr->getIndirectDests().size(), 1u);
     EXPECT_EQ(NewCallBr->getIndirectDests()[0], BB2);
@@ -3599,10 +3597,9 @@ bb:
     EXPECT_EQ(LPad->isFilter(Idx), LLVMLPad->isFilter(Idx));
   // Check create().
   auto *BBRet = &*BB->begin();
-  auto *NewLPad =
-      cast<sandboxir::LandingPadInst>(sandboxir::LandingPadInst::create(
-          sandboxir::Type::getInt8Ty(Ctx), 0, BBRet->getIterator(),
-          BBRet->getParent(), Ctx, "NewLPad"));
+  auto *NewLPad = cast<sandboxir::LandingPadInst>(
+      sandboxir::LandingPadInst::create(sandboxir::Type::getInt8Ty(Ctx), 0,
+                                        BBRet->getIterator(), Ctx, "NewLPad"));
   EXPECT_EQ(NewLPad->getNextNode(), BBRet);
   EXPECT_FALSE(NewLPad->isCleanup());
 #ifndef NDEBUG
@@ -3681,7 +3678,7 @@ bb:
   }
   // Check CatchPadInst::create().
   auto *NewCPI = cast<sandboxir::CatchPadInst>(sandboxir::CatchPadInst::create(
-      CS, {}, BBRet->getIterator(), BB, Ctx, "NewCPI"));
+      CS, {}, BBRet->getIterator(), Ctx, "NewCPI"));
   EXPECT_EQ(NewCPI->getCatchSwitch(), CS);
   EXPECT_EQ(NewCPI->arg_size(), 0u);
   EXPECT_EQ(NewCPI->getNextNode(), BBRet);
@@ -3691,7 +3688,7 @@ bb:
   // Check CleanupPadInst::create().
   auto *NewCLPI =
       cast<sandboxir::CleanupPadInst>(sandboxir::CleanupPadInst::create(
-          CS, {}, BBRet->getIterator(), BB, Ctx, "NewCLPI"));
+          CS, {}, BBRet->getIterator(), Ctx, "NewCLPI"));
   EXPECT_EQ(NewCLPI->getParentPad(), CS);
   EXPECT_EQ(NewCLPI->arg_size(), 0u);
   EXPECT_EQ(NewCLPI->getNextNode(), BBRet);
@@ -5965,7 +5962,7 @@ define void @foo() {
   EXPECT_EQ(UI->getNumOfIRInstrs(), 1u);
   // Check create(InsertBefore)
   sandboxir::UnreachableInst *NewUI =
-      sandboxir::UnreachableInst::create(/*InsertBefore=*/UI, Ctx);
+      sandboxir::UnreachableInst::create(UI->getIterator(), Ctx);
   EXPECT_EQ(NewUI->getNextNode(), UI);
   // Check create(InsertAtEnd)
   sandboxir::UnreachableInst *NewUIEnd =
