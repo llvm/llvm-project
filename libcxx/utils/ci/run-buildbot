@@ -372,7 +372,7 @@ bootstrapping-build)
 
     echo "+++ Running the LLDB libc++ data formatter tests"
     ${NINJA} -vC "${BUILD_DIR}" lldb-api-test-deps
-    ${BUILD_DIR}/bin/llvm-lit -sv "--category libc++" "${MONOREPO_ROOT}/lldb/test/API"
+    ${BUILD_DIR}/bin/llvm-lit -sv --param dotest-args='--category libc++' "${MONOREPO_ROOT}/lldb/test/API"
 
     echo "--- Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
