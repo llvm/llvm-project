@@ -104,7 +104,7 @@ C++ Specific Potentially Breaking Changes
   result is that anyone who is compiling with ``-Werror`` should see this
   diagnostic.  To fix this diagnostic, simply removing the space character from
   between the ``operator""`` and the user defined literal name will make the
-  source no longer deprecated. This is consistent with CWG2521.
+  source no longer deprecated. This is consistent with `CWG2521 <https://cplusplus.github.io/CWG/issues/2521.html>_`.
 
   .. code-block:: c++
 
