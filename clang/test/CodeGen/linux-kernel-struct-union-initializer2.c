@@ -79,6 +79,7 @@ void test2(long long y) {
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S2:%.*]], align 4
 // CHECK-NEXT:    store i8 [[B]], ptr [[B_ADDR]], align 1
+// CHECK-NEXT:    store i16 0, ptr [[S]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i16
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[S]], align 4
@@ -86,10 +87,6 @@ void test2(long long y) {
 // CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i16 [[BF_LOAD]], -8
 // CHECK-NEXT:    [[BF_SET:%.*]] = or i16 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK-NEXT:    store i16 [[BF_SET]], ptr [[S]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = and i8 [[TMP3]], 7
-// CHECK-NEXT:    store i8 [[TMP4]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i16, ptr [[S]], align 4
 // CHECK-NEXT:    [[BF_CLEAR2:%.*]] = and i16 [[BF_LOAD1]], -16129
 // CHECK-NEXT:    [[BF_SET3:%.*]] = or i16 [[BF_CLEAR2]], 0
@@ -98,8 +95,8 @@ void test2(long long y) {
 // CHECK-NEXT:    [[BF_CLEAR5:%.*]] = and i16 [[BF_LOAD4]], 16383
 // CHECK-NEXT:    [[BF_SET6:%.*]] = or i16 [[BF_CLEAR5]], 0
 // CHECK-NEXT:    store i16 [[BF_SET6]], ptr [[S]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i64 2
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 2 [[TMP5]], i8 0, i64 2, i1 false)
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i64 2
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 2 [[TMP2]], i8 0, i64 2, i1 false)
 // CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_S2]], ptr [[S]], i32 0, i32 1
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4
 // CHECK-NEXT:    ret void
@@ -158,6 +155,8 @@ void test5(int a, int b) {
 // CHECK-NEXT:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_S5]], ptr [[S]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X_ADDR]], align 1
 // CHECK-NEXT:    store i8 [[TMP0]], ptr [[X1]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 1
+// CHECK-NEXT:    store i16 0, ptr [[TMP1]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_S5]], ptr [[S]], i32 0, i32 1
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i16, ptr [[Y]], align 1
 // CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i16 [[BF_LOAD]], -16
@@ -168,10 +167,6 @@ void test5(int a, int b) {
 // CHECK-NEXT:    [[BF_CLEAR3:%.*]] = and i16 [[BF_LOAD2]], -2033
 // CHECK-NEXT:    [[BF_SET4:%.*]] = or i16 [[BF_CLEAR3]], 0
 // CHECK-NEXT:    store i16 [[BF_SET4]], ptr [[Z]], align 1
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 2
-// CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 7
-// CHECK-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // CHECK-NEXT:    ret void
 //
 void test6(char x) {
