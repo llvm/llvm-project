@@ -367,6 +367,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
                     "}");
   ASSERT_EQ(Tokens.size(), 20u) << Tokens;
   EXPECT_TOKEN(Tokens[14], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("Thingy kConfig = {\n"
+                    "    1,\n"
+                    "    (uint16_t)(kScale * height_pixels),\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
