@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/libc_errno.h"
+#include "src/fcntl/open.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/remap_file_pages.h"
+#include "src/unistd/close.h"
 #include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fcntl.h>
 
 #include <sys/mman.h>
+#include <sys/stat.h> // For S_IRWXU
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -25,7 +27,9 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
-  int fd = open("/dev/zero", O_RDWR);
+  constexpr const char *file_name = "noerror.remap_file_pages";
+  auto test_file = libc_make_test_file_path(file_name);
+  int fd = LIBC_NAMESPACE::open(test_file, O_RDWR | O_CREAT, S_IRWXU);
   ASSERT_GT(fd, 0);
 
   // First, allocate some memory using mmap
@@ -36,9 +40,6 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   ASSERT_ERRNO_SUCCESS();
   EXPECT_NE(addr, MAP_FAILED);
 
-  // Reset error number for the new function
-  LIBC_NAMESPACE::libc_errno = 0;
-
   // Now try to remap the pages
   EXPECT_THAT(LIBC_NAMESPACE::remap_file_pages(addr, page_size, 0, 1, 0),
               Succeeds());
@@ -48,6 +49,7 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
 
   // Clean up
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
 }
 
 TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
@@ -55,7 +57,9 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
-  int fd = open("/dev/zero", O_RDWR);
+  constexpr const char *file_name = "error.remap";
+  auto test_file = libc_make_test_file_path(file_name);
+  int fd = LIBC_NAMESPACE::open(test_file, O_RDWR | O_CREAT, S_IRWXU);
   ASSERT_GT(fd, 0);
 
   // First, allocate some memory using mmap
@@ -73,6 +77,7 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
 
   // Clean up
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
 }
 
 TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidAddress) {
