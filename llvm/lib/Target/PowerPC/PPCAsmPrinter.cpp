@@ -2976,10 +2976,15 @@ void PPCAIXAsmPrinter::emitGCOVRefs() {
       /*MultiSymbolsAllowed*/ true);
 
   OutStreamer->switchSection(CtrSection);
+  const XCOFF::StorageMappingClass MappingClass =
+      TM.Options.XCOFFReadOnlyPointers ? XCOFF::XMC_RO : XCOFF::XMC_RW;
   if (OutContext.hasXCOFFSection(
           "__llvm_covinit",
-          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
-    MCSymbol *S = OutContext.getOrCreateSymbol("__llvm_covinit[RW]");
+          XCOFF::CsectProperties(MappingClass, XCOFF::XTY_SD))) {
+    const char *SymbolStr = TM.Options.XCOFFReadOnlyPointers
+                                ? "__llvm_covinit[RO]"
+                                : "__llvm_covinit[RW]";
+    MCSymbol *S = OutContext.getOrCreateSymbol(SymbolStr);
     OutStreamer->emitXCOFFRefDirective(S);
   }
 }

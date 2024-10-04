@@ -1,11 +1,13 @@
 ; Tests if the __llvm_gcov_ctr section contains a .ref pseudo-op
 ; referring to the __llvm_covinit section.
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s | FileCheck --check-prefixes=CHECK,CHECK-RW %s
+; RUN: llc -mxcoff-roptr < %s | FileCheck --check-prefixes=CHECK,CHECK-RO %s
 
 target datalayout = "E-m:a-p:32:32-Fi32-i64:64-n32"
 target triple = "powerpc-ibm-aix"
 
-; CHECK: .csect __llvm_covinit[RW],3
+; CHECK-RW: .csect __llvm_covinit[RW],3
+; CHECK-RO: .csect __llvm_covinit[RO],3
 ; CHECK:         .vbyte  4, __llvm_gcov_writeout[DS]
 ; CHECK-NEXT:    .vbyte  4, __llvm_gcov_reset[DS]
 ; CHECK: __llvm_gcov_ctr.1:
@@ -14,7 +16,8 @@ target triple = "powerpc-ibm-aix"
 ; CHECK-NEXT:    .extern .llvm_gcda_emit_arcs[PR]
 ; CHECK-NEXT:    .extern .llvm_gcda_summary_info[PR]
 ; CHECK-NEXT:    .extern .llvm_gcda_end_file[PR]
-; CHECK-NEXT:    .ref __llvm_covinit[RW]
+; CHECK-RW-NEXT:    .ref __llvm_covinit[RW]
+; CHECK-RO-NEXT:    .ref __llvm_covinit[RO]
 
 %emit_function_args_ty = type { i32, i32, i32 }
 %emit_arcs_args_ty = type { i32, ptr }
