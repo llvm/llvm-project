@@ -15,6 +15,7 @@
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
+#include "TypeSystemSwift.h"
 #include "lldb/Utility/Log.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -2633,11 +2634,19 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
   return ModuleSP();
 }
 
-lldb::TypeSystemSP SwiftASTContext::CreateInstance(
-    const SymbolContext &sc,
-    TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
-    const char *extra_options) {
+lldb::TypeSystemSP
+SwiftASTContext::CreateInstance(const SymbolContext &sc,
+                                TypeSystemSwiftTypeRef &typeref_typesystem,
+                                const char *extra_options) {
   LLDB_SCOPED_TIMER();
+
+  bool is_repl = extra_options;
+  bool for_expressions =
+      llvm::isa<TypeSystemSwiftTypeRefForExpressions>(&typeref_typesystem);
+  // REPL requires an expression type system.
+  assert(!is_repl || for_expressions);
+  if (is_repl && !for_expressions)
+    return {};
 
   if (!ModuleList::GetGlobalModuleListProperties()
            .GetSwiftEnableASTContext())
@@ -2648,8 +2657,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   std::string m_description;
   {
     StreamString ss;
-    ss << "SwiftASTContextForExpressions"
-       << "(module: " << '"' << swift_module_name << "\", "
+    ss << "SwiftASTContext";
+    if (for_expressions)
+      ss << "ForExpressions";
+    ss << "(module: " << '"' << swift_module_name << "\", "
        << "cu: " << '"';
     if (cu)
       ss << cu->GetPrimaryFile().GetFilename();
@@ -2659,18 +2670,51 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     m_description = ss.GetString();
   }
 
-  bool is_repl = extra_options;
   if (is_repl)
     LOG_PRINTF(GetLog(LLDBLog::Types), "REPL detected");
+
+  // This function can either create an expression/scratch/repl context,
+  // or a SwiftAST fallback context for a TypeSystemSwiftTyperef.
+  // - SwiftASTContexForExpressions: target=non-null, module=null.
+  // -              SwiftASTContext: target=null,     module=non-null.
+  ModuleSP module_sp = sc.module_sp;
   TargetSP target_sp = typeref_typesystem.GetTargetWP().lock();
-  if (!target_sp)
-    return {};
-  Target &target = *target_sp;
 
   // Make an AST but don't set the triple yet. We need to
   // try and detect if we have a iOS simulator.
-  std::shared_ptr<SwiftASTContextForExpressions> swift_ast_sp(
-      new SwiftASTContextForExpressions(m_description, typeref_typesystem));
+  std::shared_ptr<SwiftASTContext> swift_ast_sp;
+  if (for_expressions) {
+    // Expression context.
+    if (!target_sp) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "No target for expression typesystem");
+      return {};
+    }
+    swift_ast_sp.reset(new SwiftASTContextForExpressions(
+        m_description,
+        *llvm::cast<TypeSystemSwiftTypeRef>(&typeref_typesystem)));
+    // This is a scratch AST context, mark it as such.
+    swift_ast_sp->m_is_scratch_context = true;
+    auto &lang_opts = swift_ast_sp->GetLanguageOptions();
+    lang_opts.EnableCXXInterop = ShouldEnableCXXInterop(cu);
+    if (target_sp->IsEmbeddedSwift())
+      lang_opts.enableFeature(swift::Feature::Embedded);
+  } else {
+    // Typesystem fallback context.
+    if (!module_sp) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "No module for fallback typesystem");
+      return {};
+    }
+    swift_ast_sp.reset(static_cast<SwiftASTContext *>(
+        new SwiftASTContextForModule(m_description, typeref_typesystem)));
+    // This is a module AST context, mark it as such.
+    swift_ast_sp->m_is_scratch_context = false;
+    swift_ast_sp->m_module = module_sp.get();
+    auto &lang_opts = swift_ast_sp->GetLanguageOptions();
+    lang_opts.EnableAccessControl = false;
+    lang_opts.EnableCXXInterop = module_sp->IsSwiftCxxInteropEnabled();
+    if (module_sp->IsEmbeddedSwift())
+      lang_opts.enableFeature(swift::Feature::Embedded);
+  }
   auto defer_log = llvm::make_scope_exit(
       [swift_ast_sp] { swift_ast_sp->LogConfiguration(); });
 
@@ -2678,31 +2722,32 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   auto logError = [&](const char *message) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to create scratch context - %s",
                message);
-    if (StreamSP errs_sp = target.GetDebugger().GetAsyncErrorStream())
-      errs_sp->Printf("Cannot create Swift scratch context (%s)", message);
+    if (target_sp)
+      if (StreamSP errs_sp = target_sp->GetDebugger().GetAsyncErrorStream())
+        errs_sp->Printf("Cannot create Swift scratch context (%s)", message);
   };
 
-  ArchSpec arch = target.GetArchitecture();
+  ArchSpec arch;
+  if (target_sp)
+    arch = target_sp->GetArchitecture();
+  else if (module_sp)
+    arch = module_sp->GetArchitecture();
+
   if (!arch.IsValid()) {
     logError("invalid target architecture");
     return {};
   }
 
-  // This is a scratch AST context, mark it as such.
-  swift_ast_sp->m_is_scratch_context = true;
-
-  swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
-      ShouldEnableCXXInterop(cu);
-
-  if (target.IsEmbeddedSwift())
-    swift_ast_sp->GetLanguageOptions().enableFeature(swift::Feature::Embedded);
-
   bool handled_sdk_path = false;
-  const size_t num_images = target.GetImages().GetSize();
+  ModuleList module_module;
+  if (!target_sp)
+    module_module.Append(module_sp);
+  ModuleList &modules = target_sp ? target_sp->GetImages() : module_module;
+  const size_t num_images = modules.GetSize();
 
   // Set the SDK path prior to doing search paths.  Otherwise when we
   // create search path options we put in the wrong SDK path.
-  FileSpec &target_sdk_spec = target.GetSDKPath();
+  FileSpec target_sdk_spec = target_sp ? target_sp->GetSDKPath() : FileSpec();
   if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
     swift_ast_sp->SetPlatformSDKPath(target_sdk_spec.GetPath());
     handled_sdk_path = true;
@@ -2710,7 +2755,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   if (!handled_sdk_path) {
     for (size_t mi = 0; mi != num_images; ++mi) {
-      ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
+      ModuleSP module_sp = modules.GetModuleAtIndex(mi);
       if (!HasSwiftModules(*module_sp))
         continue;
 
@@ -2727,12 +2772,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   // First, prime the compiler with the options from the main executable:
   bool got_serialized_options = false;
-  ModuleSP exe_module_sp(target.GetExecutableModule());
+  ModuleSP exe_module_sp =
+      target_sp ? target_sp->GetExecutableModule() : ModuleSP();
 
   // If we're debugging a testsuite, then treat the main test bundle
   // as the executable.
   if (exe_module_sp && IsUnitTestExecutable(*exe_module_sp)) {
-    ModuleSP unit_test_module = GetUnitTestModule(target.GetImages());
+    ModuleSP unit_test_module = GetUnitTestModule(modules);
 
     if (unit_test_module) {
       exe_module_sp = unit_test_module;
@@ -2751,17 +2797,26 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     if (sc.module_sp) {
       module_arch = sc.module_sp->GetArchitecture();
       module_triple = module_arch.GetTriple();
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Module triple: \"%s\"",
+                 module_triple.str().c_str());
     }
 
-    ArchSpec target_arch = target.GetArchitecture();
-    llvm::Triple target_triple = target_arch.GetTriple();
+    ArchSpec target_arch;
+    llvm::Triple target_triple;
+    if (target_sp) {
+      target_arch = target_sp->GetArchitecture();
+      target_triple = target_arch.GetTriple();
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Target triple: \"%s\"",
+                 target_triple.str().c_str());
+    }
 
     ArchSpec preferred_arch;
     llvm::Triple preferred_triple;
-    if (!is_repl && module_arch && module_arch.IsFullySpecifiedTriple()) {
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "Preferring module triple %s over target triple %s.",
-                 module_triple.str().c_str(), target_triple.str().c_str());
+    if (is_repl) {
+      preferred_arch = target_arch;
+      preferred_triple = target_triple;
+    } else if (module_arch &&
+               (!target_arch || module_arch.IsFullySpecifiedTriple())) {
       preferred_arch = module_arch;
       preferred_triple = module_triple;
     } else {
@@ -2774,47 +2829,53 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     if (preferred_arch.IsFullySpecifiedTriple()) {
       // If a fully specified triple was passed in, for example
       // through CreateTargetWithFileAndTargetTriple(), prefer that.
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Fully specified target triple %s.",
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Fully specified triple %s.",
                  preferred_triple.str().c_str());
       computed_triple = preferred_triple;
     } else {
       // Underspecified means that one or more of vendor, os, or os
       // version (Darwin only) is missing.
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified triple %s.",
                  preferred_triple.str().c_str());
-      llvm::VersionTuple platform_version;
-      PlatformSP platform_sp(target.GetPlatform());
-      if (platform_sp)
-        platform_version =
-            platform_sp->GetOSVersion(target.GetProcessSP().get());
-      LOG_PRINTF(GetLog(LLDBLog::Types), "Platform version is %s",
-                 platform_version.empty()
-                     ? "<empty>"
-                     : platform_version.getAsString().c_str());
-      // Try to fill in the platform OS version. The idea behind using
-      // the platform version is to let the expression evaluator mark
-      // the expressions with the highest supported availability
-      // attribute. Don't use the platform when an environment is
-      // present, since there might be some ambiguity about the
-      // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
-      // version numbers).
-      if (!platform_version.empty() && preferred_triple.getEnvironment() ==
-                                           llvm::Triple::UnknownEnvironment) {
-        LOG_PRINTF(GetLog(LLDBLog::Types), "Completing triple based on platform.");
-
-        llvm::SmallString<32> buffer;
-        {
-          llvm::raw_svector_ostream os(buffer);
-          os << preferred_triple.getArchName() << '-';
-          os << preferred_triple.getVendorName() << '-';
-          os << llvm::Triple::getOSTypeName(preferred_triple.getOS());
-          os << platform_version.getAsString();
-        }
-        computed_triple = llvm::Triple(buffer);
+      if (!target_sp) {
+        // For a per-module fallback context we can't go any further.
+        computed_triple = preferred_triple;
       } else {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "Completing triple based on main binary load commands.");
-        computed_triple = get_executable_triple();
+        llvm::VersionTuple platform_version;
+        PlatformSP platform_sp = target_sp->GetPlatform();
+        if (platform_sp)
+          platform_version =
+              platform_sp->GetOSVersion(target_sp->GetProcessSP().get());
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Platform version is %s",
+                   platform_version.empty()
+                       ? "<empty>"
+                       : platform_version.getAsString().c_str());
+        // Try to fill in the platform OS version. The idea behind using
+        // the platform version is to let the expression evaluator mark
+        // the expressions with the highest supported availability
+        // attribute. Don't use the platform when an environment is
+        // present, since there might be some ambiguity about the
+        // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
+        // version numbers).
+        if (!platform_version.empty() && preferred_triple.getEnvironment() ==
+                                             llvm::Triple::UnknownEnvironment) {
+          LOG_PRINTF(GetLog(LLDBLog::Types),
+                     "Completing triple based on platform.");
+
+          llvm::SmallString<32> buffer;
+          {
+            llvm::raw_svector_ostream os(buffer);
+            os << preferred_triple.getArchName() << '-';
+            os << preferred_triple.getVendorName() << '-';
+            os << llvm::Triple::getOSTypeName(preferred_triple.getOS());
+            os << platform_version.getAsString();
+          }
+          computed_triple = llvm::Triple(buffer);
+        } else if (preferred_triple.getObjectFormat() == llvm::Triple::MachO) {
+          LOG_PRINTF(GetLog(LLDBLog::Types),
+                     "Completing triple based on main binary load commands.");
+          computed_triple = get_executable_triple();
+        }
       }
     }
 
@@ -2847,40 +2908,47 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   std::vector<std::string> module_search_paths;
   std::vector<std::pair<std::string, bool>> framework_search_paths;
   std::vector<std::string> extra_clang_args;
-  
-  const bool discover_implicit_search_paths =
-      target.GetSwiftDiscoverImplicitSearchPaths();
 
-  const bool use_all_compiler_flags =
-      !got_serialized_options || target.GetUseAllCompilerFlags();
+  bool discover_implicit_search_paths = false;
+  bool use_all_compiler_flags = false;
+  if (target_sp) {
+    discover_implicit_search_paths =
+        target_sp->GetSwiftDiscoverImplicitSearchPaths();
+    use_all_compiler_flags =
+        !got_serialized_options || target_sp->GetUseAllCompilerFlags();
 
-  for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
-    module_search_paths.push_back(path.GetPath());
+    for (const FileSpec &path : target_sp->GetSwiftModuleSearchPaths())
+      module_search_paths.push_back(path.GetPath());
 
-  for (const FileSpec &path : target.GetSwiftFrameworkSearchPaths())
-    framework_search_paths.push_back({path.GetPath(),
-                                      /*is_system*/ false});
-  ModuleSP module_sp = sc.module_sp;
+    const bool is_system = false;
+    for (const FileSpec &path : target_sp->GetSwiftFrameworkSearchPaths())
+      framework_search_paths.push_back({path.GetPath(), is_system});
+  }
   if (module_sp) {
     std::string error;
     StringRef module_filter = swift_module_name;
     std::vector<std::string> extra_clang_args;
+    // In a per-module fallback context, the module the "main" module of tha
+    // context.
+    bool is_main_executable =
+        target_sp ? (target_sp->GetExecutableModulePointer() == module_sp.get())
+                  : true;
     ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
-                  use_all_compiler_flags,
-                  target.GetExecutableModulePointer() == module_sp.get(),
-                  module_filter, triple, plugin_search_options,
-                  module_search_paths, framework_search_paths, extra_clang_args,
-                  error);
+                  use_all_compiler_flags, is_main_executable, module_filter,
+                  triple, plugin_search_options, module_search_paths,
+                  framework_search_paths, extra_clang_args, error);
     if (!error.empty())
       swift_ast_sp->AddDiagnostic(eSeverityError, error);
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args,
-                                    target.GetSwiftClangOverrideOptions());
+    StringRef override_opts =
+        target_sp ? target_sp->GetSwiftClangOverrideOptions() : "";
+    swift_ast_sp->AddExtraClangArgs(extra_clang_args, override_opts);
   }
 
   // Now fold any extra options we were passed. This has to be done
   // BEFORE the ClangImporter is made by calling GetClangImporter or
   // these options will be ignored.
-  swift_ast_sp->AddUserClangArgs(target);
+  if (target_sp)
+    swift_ast_sp->AddUserClangArgs(*target_sp);
 
   if (extra_options) {
     swift::CompilerInvocation &compiler_invocation =
@@ -2895,12 +2963,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   swift_ast_sp->ApplyDiagnosticOptions();
 
   // Apply source path remappings found in each module's dSYM.
-  for (ModuleSP module : target.GetImages().Modules())
+  for (ModuleSP module : modules.Modules())
     if (module)
       swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
 
   // Apply source path remappings found in the target settings.
-  swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
+  if (target_sp)
+    swift_ast_sp->RemapClangImporterOptions(target_sp->GetSourcePathMap());
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
@@ -2928,7 +2997,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   llvm::DenseSet<Module *> visited_modules;
   llvm::StringMap<ModuleSP> all_modules;
   for (size_t mi = 0; mi != num_images; ++mi) {
-    auto image_sp = target.GetImages().GetModuleAtIndex(mi);
+    auto image_sp = modules.GetModuleAtIndex(mi);
     std::string path = image_sp->GetSpecificationDescription();
     all_modules.insert({path, image_sp});
     all_modules.insert({llvm::sys::path::filename(path), image_sp});
@@ -2968,14 +3037,19 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       };
   scan_module(module_sp, 0);
   for (size_t mi = 0; mi != num_images; ++mi) {
-    auto image_sp = target.GetImages().GetModuleAtIndex(mi);
+    auto image_sp = modules.GetModuleAtIndex(mi);
     if (!visited_modules.count(image_sp.get()))
       swift_ast_sp->RegisterSectionModules(*image_sp, module_names);
   }
 
-  LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
-             static_cast<void *>(&target),
-             static_cast<void *>(swift_ast_sp.get()));
+  // FIXME: It should be sufficient to just import the sc.comp_unit's module .
+  if (!for_expressions && module_sp)
+    swift_ast_sp->ImportSectionModules(*module_sp, module_names);
+
+  if (target_sp)
+    LOG_PRINTF(GetLog(LLDBLog::Types), "((Target*)%p) = %p",
+               static_cast<void *>(target_sp.get()),
+               static_cast<void *>(swift_ast_sp.get()));
 
   if (swift_ast_sp->HasFatalErrors()) {
     logError(swift_ast_sp->GetFatalErrors().AsCString());
@@ -2984,6 +3058,24 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   {
     LLDB_SCOPED_TIMERF("%s (getStdlibModule)", m_description.c_str());
+
+    // Report progress on module importing by using a callback function in
+    // swift::ASTContext
+    Progress progress("Importing Swift standard library");
+    swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+        [&progress](llvm::StringRef module_name,
+                    swift::ASTContext::ModuleImportKind kind) {
+          progress.Increment(1, module_name.str());
+        });
+
+    // Clear the callback function on scope exit to prevent an out-of-scope
+    // access of the progress local variable
+    auto on_exit = llvm::make_scope_exit([&]() {
+      swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+          [](llvm::StringRef module_name,
+             swift::ASTContext::ModuleImportKind kind) {});
+    });
+
     const bool can_create = true;
     swift::ModuleDecl *stdlib =
         swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);

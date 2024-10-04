@@ -26,5 +26,6 @@ class TestSwiftTripleDetection(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.expect("expression 1")
         self.filecheck('platform shell cat "%s"' % types_log, __file__)
-        # CHECK: {{SwiftASTContextForExpressions.*Preferring module triple .*-apple-macos.[0-9.]+ over target triple .*-apple-macos-unknown.}}
+        # CHECK: {{SwiftASTContextForExpressions.*Module triple: ".*-apple-macos.[0-9.]+"}}
+        # CHECK: {{SwiftASTContextForExpressions.*Target triple: ".*-apple-macos-unknown"}}
         # CHECK: {{SwiftASTContextForExpressions.*setting to ".*-apple-macos.[0-9.]+"}}

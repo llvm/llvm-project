@@ -203,8 +203,11 @@ SwiftUnsafeRawBufferPointer::SwiftUnsafeRawBufferPointer(ValueObject &valobj)
 }
 
 lldb::ChildCacheState SwiftUnsafeRawBufferPointer::Update() {
-  if (!m_valobj.GetNumChildren())
+  auto num_or_error = m_valobj.GetNumChildren();
+  if (!num_or_error) {
+    llvm::consumeError(num_or_error.takeError());
     return ChildCacheState::eRefetch;
+  }
 
   // Here is the layout of Swift's UnsafeRaw[Mutable]BufferPointer.
   // It's a view of the raw bytes of the pointee object. Each byte is viewed as
