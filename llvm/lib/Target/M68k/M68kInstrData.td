@@ -385,12 +385,14 @@ class MxMoveToCCRPseudo<MxOperand MEMOp>
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
+  def MOV32c # AM : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp32AddrMode_"#AM).Op>;
   def MOV16c # AM : MxMoveToCCR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
   def MOV8c # AM  : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
 } // foreach AM
 
 // Only data register is allowed.
+def MOV32cd : MxMoveToCCRPseudo<MxOp32AddrMode_d.Op>;
 def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
 def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 
@@ -423,6 +425,9 @@ class MxMoveFromCCRPseudo<MxOperand MEMOp>
 
 let mayStore = 1 in
 foreach AM = MxMoveSupportedAMs in {
+  def MOV32 # AM # c
+    : MxMoveFromCCR_M<!cast<MxOpBundle>("MxOp32AddrMode_"#AM).Op,
+                      !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
   def MOV16 # AM # c
     : MxMoveFromCCR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
@@ -431,6 +436,7 @@ foreach AM = MxMoveSupportedAMs in {
 } // foreach AM
 
 // Only data register is allowed.
+def MOV32dc : MxMoveFromCCRPseudo<MxOp32AddrMode_d.Op>;
 def MOV16dc : MxMoveFromCCR_R;
 def MOV8dc  : MxMoveFromCCRPseudo<MxOp8AddrMode_d.Op>;
 
