@@ -2604,6 +2604,9 @@ static void genOMP(
       std::get<parser::OmpClauseList>(simpleStandaloneConstruct.t), semaCtx);
   mlir::Location currentLocation = converter.genLocation(directive.source);
 
+  if (directive.v == llvm::omp::Directive::OMPD_taskwait && !clauses.empty())
+    TODO(converter.getCurrentLocation(), "taskwait with depend unsupported");
+
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, directive.source, directive.v, clauses)};
