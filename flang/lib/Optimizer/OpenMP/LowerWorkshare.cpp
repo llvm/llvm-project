@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/Todo.h"
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
@@ -39,7 +38,6 @@
 #include <mlir/IR/Visitors.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
-#include <mlir/Transforms/GreedyPatternRewriteDriver.h>
 
 #include <variant>
 
@@ -95,6 +93,12 @@ bool shouldUseWorkshareLowering(Operation *op) {
   // structured block associated with the single construct.
   if (isNestedIn<omp::SingleOp>(parentWorkshare, op))
     return false;
+
+  if (parentWorkshare.getRegion().getBlocks().size() != 1) {
+    parentWorkshare->emitWarning(
+        "omp workshare with unstructured control flow currently unsupported.");
+    return false;
+  }
 
   return true;
 }
@@ -408,15 +412,6 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
 
   OpBuilder rootBuilder(wsOp);
 
-  // This operation is just a placeholder which will be erased later. We need it
-  // because our `parallelizeRegion` function works on regions and not blocks.
-  omp::WorkshareOp newOp =
-      rootBuilder.create<omp::WorkshareOp>(loc, omp::WorkshareOperands());
-  if (!wsOp.getNowait())
-    rootBuilder.create<omp::BarrierOp>(loc);
-
-  parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc, di);
-
   // FIXME Currently, we only support workshare constructs with structured
   // control flow. The transformation itself supports CFG, however, once we
   // transform the MLIR region in the omp.workshare, we need to inline that
@@ -427,19 +422,53 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
   // time when fir ops get lowered to CFG. However, SCF is not registered in
   // flang so we cannot use it. Remove this requirement once we have
   // scf.execute_region or an alternative operation available.
-  if (wsOp.getRegion().getBlocks().size() != 1)
-    TODO(wsOp->getLoc(), "omp workshare with unstructured control flow");
+  if (wsOp.getRegion().getBlocks().size() == 1) {
+    // This operation is just a placeholder which will be erased later. We need
+    // it because our `parallelizeRegion` function works on regions and not
+    // blocks.
+    omp::WorkshareOp newOp =
+        rootBuilder.create<omp::WorkshareOp>(loc, omp::WorkshareOperands());
+    if (!wsOp.getNowait())
+      rootBuilder.create<omp::BarrierOp>(loc);
 
-  // Inline the contents of the placeholder workshare op into its parent block.
-  Block *theBlock = &newOp.getRegion().front();
-  Operation *term = theBlock->getTerminator();
-  Block *parentBlock = wsOp->getBlock();
-  parentBlock->getOperations().splice(newOp->getIterator(),
-                                      theBlock->getOperations());
-  assert(term->getNumOperands() == 0);
-  term->erase();
-  newOp->erase();
-  wsOp->erase();
+    parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc,
+                      di);
+
+    // Inline the contents of the placeholder workshare op into its parent
+    // block.
+    Block *theBlock = &newOp.getRegion().front();
+    Operation *term = theBlock->getTerminator();
+    Block *parentBlock = wsOp->getBlock();
+    parentBlock->getOperations().splice(newOp->getIterator(),
+                                        theBlock->getOperations());
+    assert(term->getNumOperands() == 0);
+    term->erase();
+    newOp->erase();
+    wsOp->erase();
+  } else {
+    // Otherwise just change the operation to an omp.single.
+
+    // `shouldUseWorkshareLowering` should have guaranteed that there are no
+    // omp.workshare_loop_wrapper's that bind to this omp.workshare.
+    assert(!wsOp->walk([&](Operation *op) {
+                  // Nested omp.workshare can have their own
+                  // omp.workshare_loop_wrapper's.
+                  if (isa<omp::WorkshareOp>(op))
+                    return WalkResult::skip();
+                  if (isa<omp::WorkshareLoopWrapperOp>(op))
+                    return WalkResult::interrupt();
+                  return WalkResult::advance();
+                })
+                .wasInterrupted());
+
+    omp::SingleOperands operands;
+    operands.nowait = wsOp.getNowaitAttr();
+    omp::SingleOp newOp = rootBuilder.create<omp::SingleOp>(loc, operands);
+
+    newOp.getRegion().getBlocks().splice(newOp.getRegion().getBlocks().begin(),
+                                         wsOp.getRegion().getBlocks());
+    wsOp->erase();
+  }
   return success();
 }
 
