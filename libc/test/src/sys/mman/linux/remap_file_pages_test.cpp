@@ -27,7 +27,7 @@ TEST(LlvmLibcRemapFilePagesTest, NoError) {
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
-  constexpr const char *file_name = "noerror.remap_file_pages";
+  constexpr const char *file_name = "remap_file_pages.test.noerror";
   auto test_file = libc_make_test_file_path(file_name);
   int fd = LIBC_NAMESPACE::open(test_file, O_RDWR | O_CREAT, S_IRWXU);
   ASSERT_GT(fd, 0);
@@ -57,7 +57,7 @@ TEST(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
-  constexpr const char *file_name = "error.remap";
+  constexpr const char *file_name = "remap_file_pages.test.error";
   auto test_file = libc_make_test_file_path(file_name);
   int fd = LIBC_NAMESPACE::open(test_file, O_RDWR | O_CREAT, S_IRWXU);
   ASSERT_GT(fd, 0);
