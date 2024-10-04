@@ -576,7 +576,7 @@ std::string
 ELFLinuxSigInfo::GetDescription(const lldb::UnixSignalsSP unix_signals_sp) {
   if (unix_signals_sp->GetShouldStop(si_signo))
     return unix_signals_sp->GetSignalDescription(
-        si_signo, si_code, reinterpret_cast<uintptr_t>(addr));
+        si_signo, si_code, addr);
 
   return unix_signals_sp->GetSignalDescription(si_signo, si_code);
 }
