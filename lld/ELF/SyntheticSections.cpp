@@ -167,7 +167,7 @@ template <class ELFT>
 void MipsOptionsSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   auto *options = reinterpret_cast<Elf_Mips_Options *>(buf);
   options->kind = ODK_REGINFO;
-  options->size = getSize();
+  options->size = getSize(ctx);
 
   if (!ctx.arg.relocatable)
     reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
@@ -322,7 +322,7 @@ GnuPropertySection::GnuPropertySection()
 
 void GnuPropertySection::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf, 4);                          // Name size
-  write32(buf + 4, getSize() - 16);         // Content size
+  write32(buf + 4, getSize(ctx) - 16);      // Content size
   write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
   memcpy(buf + 12, "GNU", 4);               // Name string
 
@@ -348,7 +348,7 @@ void GnuPropertySection::writeTo(Ctx &ctx, uint8_t *buf) {
   }
 }
 
-size_t GnuPropertySection::getSize() const {
+size_t GnuPropertySection::getSize(Ctx &ctx) const {
   uint32_t contentSize = 0;
   if (ctx.arg.andFeatures != 0)
     contentSize += ctx.arg.is64 ? 16 : 12;
@@ -1183,7 +1183,7 @@ void GotPltSection::addEntry(Symbol &sym) {
   entries.push_back(&sym);
 }
 
-size_t GotPltSection::getSize() const {
+size_t GotPltSection::getSize(Ctx &ctx) const {
   return (ctx.target->gotPltHeaderEntriesNum + entries.size()) *
          ctx.target->gotEntrySize;
 }
@@ -1228,7 +1228,7 @@ void IgotPltSection::addEntry(Symbol &sym) {
   entries.push_back(&sym);
 }
 
-size_t IgotPltSection::getSize() const {
+size_t IgotPltSection::getSize(Ctx &ctx) const {
   return entries.size() * ctx.target->gotEntrySize;
 }
 
@@ -1303,9 +1303,9 @@ DynamicSection<ELFT>::DynamicSection()
 //
 // DT_RELASZ is the total size of the included sections.
 static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
-  size_t size = relaDyn.getSize();
+  size_t size = relaDyn.getSize(ctx);
   if (ctx.in.relaPlt->getParent() == relaDyn.getParent())
-    size += ctx.in.relaPlt->getSize();
+    size += ctx.in.relaPlt->getSize(ctx);
   return size;
 }
 
@@ -1313,7 +1313,7 @@ static uint64_t addRelaSz(const RelocationBaseSection &relaDyn) {
 // output section. When this occurs we cannot just use the OutputSection
 // Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
 // overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
-static uint64_t addPltRelSz() { return ctx.in.relaPlt->getSize(); }
+static uint64_t addPltRelSz() { return ctx.in.relaPlt->getSize(ctx); }
 
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT>
@@ -1482,7 +1482,7 @@ DynamicSection<ELFT>::computeContents() {
         addInSec(DT_AARCH64_MEMTAG_GLOBALS,
                  *ctx.mainPart->memtagGlobalDescriptors);
         addInt(DT_AARCH64_MEMTAG_GLOBALSSZ,
-               ctx.mainPart->memtagGlobalDescriptors->getSize());
+               ctx.mainPart->memtagGlobalDescriptors->getSize(ctx));
       }
     }
   }
@@ -1490,7 +1490,7 @@ DynamicSection<ELFT>::computeContents() {
   addInSec(DT_SYMTAB, *part.dynSymTab);
   addInt(DT_SYMENT, sizeof(Elf_Sym));
   addInSec(DT_STRTAB, *part.dynStrTab);
-  addInt(DT_STRSZ, part.dynStrTab->getSize());
+  addInt(DT_STRSZ, part.dynStrTab->getSize(ctx));
   if (!ctx.arg.zText)
     addInt(DT_TEXTREL, 0);
   if (part.gnuHashTab && part.gnuHashTab->getParent())
@@ -2361,7 +2361,7 @@ void SymtabShndxSection::finalizeContents(Ctx &) {
   getParent()->link = ctx.in.symTab->getParent()->sectionIndex;
 }
 
-size_t SymtabShndxSection::getSize() const {
+size_t SymtabShndxSection::getSize(Ctx &ctx) const {
   return ctx.in.symTab->getNumSymbols() * 4;
 }
 
@@ -2583,7 +2583,7 @@ void PltSection::addEntry(Symbol &sym) {
   entries.push_back(&sym);
 }
 
-size_t PltSection::getSize() const {
+size_t PltSection::getSize(Ctx &ctx) const {
   return headerSize + entries.size() * ctx.target->pltEntrySize;
 }
 
@@ -2620,7 +2620,7 @@ void IpltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   }
 }
 
-size_t IpltSection::getSize() const {
+size_t IpltSection::getSize(Ctx &ctx) const {
   return entries.size() * ctx.target->ipltEntrySize;
 }
 
@@ -2648,7 +2648,7 @@ void PPC32GlinkSection::writeTo(Ctx &ctx, uint8_t *buf) {
   writePPC32GlinkSection(buf, entries.size());
 }
 
-size_t PPC32GlinkSection::getSize() const {
+size_t PPC32GlinkSection::getSize(Ctx &ctx) const {
   return headerSize + entries.size() * ctx.target->pltEntrySize + footerSize;
 }
 
@@ -2717,7 +2717,7 @@ void IBTPltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
 }
 
-size_t IBTPltSection::getSize() const {
+size_t IBTPltSection::getSize(Ctx &ctx) const {
   // 16 is the header size of .plt.
   return 16 + ctx.in.plt->getNumEntries() * ctx.target->pltEntrySize;
 }
@@ -3662,7 +3662,7 @@ void EhFrameHeader::write() {
   }
 }
 
-size_t EhFrameHeader::getSize() const {
+size_t EhFrameHeader::getSize(Ctx &ctx) const {
   // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
   return 12 + getPartition().ehFrame->numFdes * 8;
 }
@@ -3728,7 +3728,7 @@ void VersionDefinitionSection::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf + 16, 0); // vd_next
 }
 
-size_t VersionDefinitionSection::getSize() const {
+size_t VersionDefinitionSection::getSize(Ctx &ctx) const {
   return EntrySize * getVerDefNum();
 }
 
@@ -3745,7 +3745,7 @@ void VersionTableSection::finalizeContents(Ctx &) {
   getParent()->link = getPartition().dynSymTab->getParent()->sectionIndex;
 }
 
-size_t VersionTableSection::getSize() const {
+size_t VersionTableSection::getSize(Ctx &ctx) const {
   return (getPartition().dynSymTab->getSymbols().size() + 1) * 2;
 }
 
@@ -3852,7 +3852,7 @@ void VersionNeedSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   verneed[-1].vn_next = 0;
 }
 
-template <class ELFT> size_t VersionNeedSection<ELFT>::getSize() const {
+template <class ELFT> size_t VersionNeedSection<ELFT>::getSize(Ctx &ctx) const {
   return verneeds.size() * sizeof(Elf_Verneed) +
          SharedFile::vernauxNum * sizeof(Elf_Vernaux);
 }
@@ -3873,9 +3873,9 @@ MergeTailSection::MergeTailSection(StringRef name, uint32_t type,
     : MergeSyntheticSection(name, type, flags, alignment),
       builder(StringTableBuilder::RAW, llvm::Align(alignment)) {}
 
-size_t MergeTailSection::getSize() const { return builder.getSize(); }
+size_t MergeTailSection::getSize(Ctx &) const { return builder.getSize(); }
 
-void MergeTailSection::writeTo(Ctx &ctx, uint8_t *buf) { builder.write(buf); }
+void MergeTailSection::writeTo(Ctx &, uint8_t *buf) { builder.write(buf); }
 
 void MergeTailSection::finalizeContents(Ctx &) {
   // Add all string pieces to the string table builder to create section
@@ -4228,7 +4228,7 @@ ThunkSection::ThunkSection(OutputSection *os, uint64_t off)
   this->outSecOff = off;
 }
 
-size_t ThunkSection::getSize() const {
+size_t ThunkSection::getSize(Ctx &) const {
   if (roundUpSizeForErrata)
     return alignTo(size, 4096);
   return size;
@@ -4318,7 +4318,7 @@ PPC64LongBranchTargetSection::addEntry(const Symbol *sym, int64_t addend) {
   return res.first->second;
 }
 
-size_t PPC64LongBranchTargetSection::getSize() const {
+size_t PPC64LongBranchTargetSection::getSize(Ctx &ctx) const {
   return entries.size() * 8;
 }
 
@@ -4415,7 +4415,7 @@ PartitionElfHeaderSection<ELFT>::PartitionElfHeaderSection()
     : SyntheticSection(SHF_ALLOC, SHT_LLVM_PART_EHDR, 1, "") {}
 
 template <typename ELFT>
-size_t PartitionElfHeaderSection<ELFT>::getSize() const {
+size_t PartitionElfHeaderSection<ELFT>::getSize(Ctx &ctx) const {
   return sizeof(typename ELFT::Ehdr);
 }
 
@@ -4433,7 +4433,7 @@ PartitionProgramHeadersSection<ELFT>::PartitionProgramHeadersSection()
     : SyntheticSection(SHF_ALLOC, SHT_LLVM_PART_PHDR, 1, ".phdrs") {}
 
 template <typename ELFT>
-size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
+size_t PartitionProgramHeadersSection<ELFT>::getSize(Ctx &ctx) const {
   return sizeof(typename ELFT::Phdr) * getPartition().phdrs.size();
 }
 
@@ -4445,7 +4445,7 @@ void PartitionProgramHeadersSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
 PartitionIndexSection::PartitionIndexSection()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".rodata") {}
 
-size_t PartitionIndexSection::getSize() const {
+size_t PartitionIndexSection::getSize(Ctx &ctx) const {
   return 12 * (ctx.partitions.size() - 1);
 }
 
@@ -4548,7 +4548,7 @@ void MemtagAndroidNote::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf, value); // note value
 }
 
-size_t MemtagAndroidNote::getSize() const {
+size_t MemtagAndroidNote::getSize(Ctx &ctx) const {
   return sizeof(llvm::ELF::Elf64_Nhdr) +
          /*namesz=*/alignTo(sizeof(kMemtagAndroidNoteName), 4) +
          /*descsz=*/sizeof(uint32_t);
@@ -4563,7 +4563,7 @@ void PackageMetadataNote::writeTo(Ctx &ctx, uint8_t *buf) {
          ctx.arg.packageMetadata.size());
 }
 
-size_t PackageMetadataNote::getSize() const {
+size_t PackageMetadataNote::getSize(Ctx &ctx) const {
   return sizeof(llvm::ELF::Elf64_Nhdr) + 4 +
          alignTo(ctx.arg.packageMetadata.size() + 1, 4);
 }
@@ -4623,19 +4623,19 @@ createMemtagGlobalDescriptors(const SmallVector<const Symbol *, 0> &symbols,
 }
 
 bool MemtagGlobalDescriptors::updateAllocSize() {
-  size_t oldSize = getSize();
+  size_t oldSize = getSize(ctx);
   std::stable_sort(symbols.begin(), symbols.end(),
                    [](const Symbol *s1, const Symbol *s2) {
                      return s1->getVA() < s2->getVA();
                    });
-  return oldSize != getSize();
+  return oldSize != getSize(ctx);
 }
 
 void MemtagGlobalDescriptors::writeTo(Ctx &ctx, uint8_t *buf) {
   createMemtagGlobalDescriptors(symbols, buf);
 }
 
-size_t MemtagGlobalDescriptors::getSize() const {
+size_t MemtagGlobalDescriptors::getSize(Ctx &ctx) const {
   return createMemtagGlobalDescriptors(symbols);
 }
 
@@ -4831,7 +4831,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     ctx.in.partIndex = std::make_unique<PartitionIndexSection>();
     addOptionalRegular("__part_index_begin", ctx.in.partIndex.get(), 0);
     addOptionalRegular("__part_index_end", ctx.in.partIndex.get(),
-                       ctx.in.partIndex->getSize());
+                       ctx.in.partIndex->getSize(ctx));
     add(*ctx.in.partIndex);
   }
 
