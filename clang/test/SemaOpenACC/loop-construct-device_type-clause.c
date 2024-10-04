@@ -190,7 +190,9 @@ void uses() {
   for(;;);
 
 #pragma acc loop device_type(*) tile(*, 1)
-  for(;;);
+  for(;;)
+    for(;;);
+
   // expected-warning@+1{{OpenACC clause 'gang' not yet implemented, clause ignored}}
 #pragma acc loop dtype(*) gang
   for(;;);
