@@ -12,6 +12,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
+#include <__ranges/zip_view.h> // tuple_transform
 #include <__type_traits/maybe_const.h>
 #include <tuple>       // apply
 #include <type_traits> // common_type_t
@@ -87,6 +88,10 @@ public:
     requires Const && (convertible_to<iterator_t<First>, iterator_t<const First>> && ... &&
                        convertible_to<iterator_t<Vs>, iterator_t<const Vs>>)
       : parent_(std::addressof(i.parent_)), current_(std::move(i.current_)) {}
+
+  constexpr auto operator*() const {
+    return __tuple_transform([](auto& i) -> decltype(auto) { return *i; }, current_);
+  }
 
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
