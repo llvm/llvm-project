@@ -2037,7 +2037,7 @@ define void @foo() {
   // Check create().
   auto *NewFence =
       sandboxir::FenceInst::create(AtomicOrdering::Release, Ret->getIterator(),
-                                   BB, Ctx, SyncScope::SingleThread);
+                                   Ctx, SyncScope::SingleThread);
   EXPECT_EQ(NewFence->getNextNode(), Ret);
   EXPECT_EQ(NewFence->getOrdering(), AtomicOrdering::Release);
   EXPECT_EQ(NewFence->getSyncScopeID(), SyncScope::SingleThread);
@@ -2092,7 +2092,7 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   {
     // Check SelectInst::create() InsertBefore.
     auto *NewSel = cast<sandboxir::SelectInst>(sandboxir::SelectInst::create(
-        Cond0, V0, V1, /*InsertBefore=*/Ret, Ctx));
+        Cond0, V0, V1, /*InsertBefore=*/Ret->getIterator(), Ctx));
     EXPECT_EQ(NewSel->getCondition(), Cond0);
     EXPECT_EQ(NewSel->getTrueValue(), V0);
     EXPECT_EQ(NewSel->getFalseValue(), V1);
@@ -2114,8 +2114,8 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
     auto *FortyTwo =
         sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx), 42,
                                     /*IsSigned=*/false);
-    auto *NewSel =
-        sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
+    auto *NewSel = sandboxir::SelectInst::create(False, FortyTwo, FortyTwo,
+                                                 Ret->getIterator(), Ctx);
     EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
     EXPECT_EQ(NewSel, FortyTwo);
   }
@@ -2193,7 +2193,7 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
   auto *Idx = Ins0->getOperand(2);
   auto *NewI1 =
       cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
-          Poison, Arg0, Idx, Ret, Ctx, "NewIns1"));
+          Poison, Arg0, Idx, Ret->getIterator(), Ctx, "NewIns1"));
   EXPECT_EQ(NewI1->getOperand(0), Poison);
   EXPECT_EQ(NewI1->getNextNode(), Ret);
 
