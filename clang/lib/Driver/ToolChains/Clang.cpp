@@ -6423,8 +6423,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
-  Args.addOptInFlag(CmdArgs, options::OPT_fconvergent_functions,
-                    options::OPT_fno_convergent_functions);
 
   if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                options::OPT_fno_split_machine_functions)) {
@@ -6441,6 +6439,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
                   options::OPT_finstrument_functions_after_inlining,
                   options::OPT_finstrument_function_entry_bare);
+  Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
+                  options::OPT_fno_convergent_functions);
 
   // NVPTX/AMDGCN doesn't support PGO or coverage. There's no runtime support
   // for sampling, overhead of call arc collection is way too high and there's
