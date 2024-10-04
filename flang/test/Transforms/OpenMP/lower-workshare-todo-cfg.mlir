@@ -1,8 +1,9 @@
-// RUN: %not_todo_cmd fir-opt --lower-workshare --allow-unregistered-dialect %s 2>&1 | FileCheck %s
+// RUN: fir-opt --lower-workshare --allow-unregistered-dialect %s 2>&1 | FileCheck %s
 
-// CHECK: not yet implemented: omp workshare with unstructured control flow
+// CHECK: omp.parallel
+// CHECK-NEXT: omp.single
 
-// Check transforming a simple CFG
+// TODO Check transforming a simple CFG
 func.func @wsfunc() {
   %a = fir.alloca i32
   omp.parallel {

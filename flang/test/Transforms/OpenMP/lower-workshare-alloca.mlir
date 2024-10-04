@@ -24,8 +24,8 @@ func.func @wsfunc() {
 // CHECK-LABEL:   func.func private @_workshare_copy_i32(
 // CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<i32>,
 // CHECK-SAME:                                           %[[VAL_1:.*]]: !fir.ref<i32>) {
-// CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-// CHECK:           fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<i32>
+// CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
 
