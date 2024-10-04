@@ -1399,7 +1399,9 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", tmpBaseName))
-    substitutions.append(("%basename_s", sourceBaseName))
+
+    substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{t:stem}", tmpBaseName))
 
     substitutions.extend(
         [
