@@ -80,7 +80,7 @@ test_sort_()
 }
 
 template <int N, int M>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> init_saw_tooth_pattern() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> init_saw_tooth_pattern() {
   std::array<int, N> array;
   for (int i = 0, x = 0; i < N; ++i) {
     array[i] = x;
@@ -91,14 +91,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> init_saw_tooth_pattern() {
 }
 
 template <int N, int M>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> sort_saw_tooth_pattern() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> sort_saw_tooth_pattern() {
   std::array<int, N> array = init_saw_tooth_pattern<N, M>();
   std::stable_sort(array.begin(), array.end());
   return array;
 }
 
 template <int N, int M>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> sort_already_sorted() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> sort_already_sorted() {
   std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
   std::stable_sort(array.begin(), array.end());
   return array;
@@ -113,7 +113,7 @@ std::array<int, N> sort_reversely_sorted() {
 }
 
 template <int N, int M>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> sort_swapped_sorted_ranges() {
+TEST_CONSTEXPR_CXX26 std::array<int, N> sort_swapped_sorted_ranges() {
   std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
   std::swap_ranges(array.begin(), array.begin() + N / 2, array.begin() + N / 2);
   std::stable_sort(array.begin(), array.end());
@@ -141,12 +141,12 @@ std::array<int, N> sort_reversely_swapped_sorted_ranges() {
 #endif
 
 template <int N, int M>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void test_larger_sorts() {
+TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   static_assert(N > 0, "");
   static_assert(M > 0, "");
 
   { // test saw tooth pattern
-    _LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
+    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_saw_tooth_pattern<N, M>();
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
@@ -163,7 +163,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void test_larger_sorts() {
   }
 
   { // test sorted pattern
-    _LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> array = sort_already_sorted<N, M>();
+    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_already_sorted<N, M>();
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
@@ -177,7 +177,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void test_larger_sorts() {
   }
 
   { // test swap ranges 2 pattern
-    _LIBCPP_CONSTEXPR_SINCE_CXX26 std::array<int, N> array = sort_swapped_sorted_ranges<N, M>();
+    TEST_CONSTEXPR_CXX26 std::array<int, N> array = sort_swapped_sorted_ranges<N, M>();
     COMPILE_OR_RUNTIME_ASSERT(std::is_sorted(array.begin(), array.end()))
   }
 
@@ -192,7 +192,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void test_larger_sorts() {
 }
 
 template <int N>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 void test_larger_sorts() {
+TEST_CONSTEXPR_CXX26 void test_larger_sorts() {
   test_larger_sorts<N, 1>();
   test_larger_sorts<N, 2>();
   test_larger_sorts<N, 3>();
