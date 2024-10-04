@@ -595,7 +595,7 @@ Value *IRLinker::materialize(Value *V, bool ForIndirectSymbol) {
   if (!SGV)
     return nullptr;
 
-  // If SGV is from dest, it is already materialized when dest was loaded.
+  // If SGV is from dest, it was already materialized when dest was loaded.
   if (SGV->getParent() == &DstM)
     return nullptr;
 
