@@ -14,13 +14,15 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void BitwisePointerCastCheck::registerMatchers(MatchFinder *Finder) {
-  auto IsPointerType = refersToType(qualType(isAnyPointer()));
-  Finder->addMatcher(callExpr(hasDeclaration(functionDecl(allOf(
-                                  hasName("::std::bit_cast"),
-                                  hasTemplateArgument(0, IsPointerType),
-                                  hasTemplateArgument(1, IsPointerType)))))
-                         .bind("bit_cast"),
-                     this);
+  if (getLangOpts().CPlusPlus20) {
+    auto IsPointerType = refersToType(qualType(isAnyPointer()));
+    Finder->addMatcher(callExpr(hasDeclaration(functionDecl(allOf(
+                                    hasName("::std::bit_cast"),
+                                    hasTemplateArgument(0, IsPointerType),
+                                    hasTemplateArgument(1, IsPointerType)))))
+                           .bind("bit_cast"),
+                       this);
+  }
 
   auto IsDoublePointerType =
       hasType(qualType(pointsTo(qualType(isAnyPointer()))));

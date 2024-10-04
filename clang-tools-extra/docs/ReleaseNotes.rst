@@ -174,7 +174,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-avoid-c-arrays
   <clang-tidy/checks/modernize/avoid-c-arrays>` check to suggest using ``std::span``
-  as a replacement for parameters of incomplete C array type in C++20 and
+  as a replacement for parameters of incomplete C array type in C++20 and 
   ``std::array`` or ``std::vector`` before C++20.
 
 - Improved :doc:`modernize-min-max-use-initializer-list
