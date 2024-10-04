@@ -87,10 +87,12 @@ extern "C" {
                                                    int32_t num_threads,
                                                    void *fn, void **args,
                                                    const int64_t nargs) {
-  //printf("SPMD mode\n");
   uint32_t TId = mapping::getThreadIdInBlock();
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
-  NumThreads = NumThreads / mapping::getSimdLen();
+
+  // Any threads leftover from the team max vs. what's used in the
+  // parallel region are reserved for simd loops
+  uint32_t SimdLen = mapping::getMaxTeamThreads() / NumThreads;
   uint32_t PTeamSize =
       NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
   // Avoid the race between the read of the `icv::Level` above and the write
@@ -103,9 +105,9 @@ extern "C" {
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, TId == 0, ident,
                                           /*ForceTeamState=*/true);
-    //state::ValueRAII SimdLengthRAII(state::SimdLength, StaticSimdLen,
-    //                                 1u, TId == 0, ident,
-    //                                 /*ForceTeamState=*/true);
+    state::ValueRAII SimdLengthRAII(state::SimdLength, SimdLen,
+                                     1u, TId == 0, ident,
+                                     /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
                                      /*ForceTeamState=*/true);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
@@ -173,14 +175,11 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // From this point forward we know that there is no thread state used.
   ASSERT(state::HasThreadState == false, nullptr);
 
-  //printf("num_threads=%i\n", num_threads);
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
-  //printf("NumThreads=%i\n", NumThreads);
   NumThreads = NumThreads / mapping::getSimdLen();
-  //printf("New NumThreads=%i\n", NumThreads);
+  uint32_t SimdLen = mapping::getMaxTeamThreads() / NumThreads;
   uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
   uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
-  //printf("PTeamSize=%i\n", PTeamSize);
   if (mapping::isSPMDMode()) {
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
@@ -200,6 +199,8 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // set, but they do not have individual ThreadStates yet. If they ever
   // modify the ICVs beyond this point a ThreadStates will be allocated.
 
+
+  // 
   bool IsActiveParallelRegion = NumThreads*mapping::getSimdLen() > 1;
   if (!IsActiveParallelRegion) {
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
@@ -276,9 +277,9 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, true, ident,
                                           /*ForceTeamState=*/true);
-    //state::ValueRAII SimdLengthRAII(state::SimdLength, StaticSimdLen,
-    //                                 1u, TId == 0, ident,
-    //                                 /*ForceTeamState=*/true);
+    state::ValueRAII SimdLengthRAII(state::SimdLength, SimdLen,
+                                     1u, TId == 0, ident,
+                                     /*ForceTeamState=*/true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
                                           (void *)nullptr, true, ident,
                                           /*ForceTeamState=*/true);

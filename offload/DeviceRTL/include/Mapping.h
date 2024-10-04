@@ -105,11 +105,26 @@ uint32_t getMaxTeamThreads(bool IsSPMD);
 /// Return the number of processing elements on the device.
 uint32_t getNumberOfProcessorElements();
 
+/// Return the number of threads reserved for simd loops per parallel thread.
+/// This is between [1, getWarpSize()].
 uint32_t getSimdLen();
+
+/// Return what simd group the thread belongs to.
 uint32_t getSimdGroup();
+
+/// Return the thread ID within its simd group, in [0, getSimdLen())
 uint32_t getSimdLane();
+
+/// Return true if the thread is simd lane 0. I.e if this is the
+/// thread that executes parallel regions.
 bool isSimdLeader();
+
+/// Return the number of simd groups in the team. This is
+/// getMaxTeamThreads() / getSimdLen().
 uint32_t getNumSimdGroups();
+
+/// Return the lane mask that correlates to all threads within
+/// the simd group.
 LaneMaskTy simdmask();
 
 } // namespace mapping

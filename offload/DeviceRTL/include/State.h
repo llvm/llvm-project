@@ -84,6 +84,7 @@ struct TeamStateTy {
   ///}
 
   uint32_t ParallelTeamSize;
+  uint32_t SimdLength;
   uint32_t HasThreadState;
   ParallelRegionFnTy ParallelRegionFnVar;
 };
@@ -140,6 +141,7 @@ enum ValueKind {
   VK_RunSchedChunk,
   VK_ParallelRegionFn,
   VK_ParallelTeamSize,
+  VK_SimdLength,
   VK_HasThreadState,
 };
 
@@ -217,6 +219,8 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
                                  ForceTeamState);
   case state::VK_ParallelTeamSize:
     return TeamState.ParallelTeamSize;
+  case state::VK_SimdLength:
+    return TeamState.SimdLength;
   case state::VK_HasThreadState:
     return TeamState.HasThreadState;
   default:
@@ -339,6 +343,9 @@ inline state::Value<uint32_t, state::VK_RunSchedChunk> RunSchedChunk;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_ParallelTeamSize> ParallelTeamSize;
+
+/// TODO
+inline state::Value<uint32_t, state::VK_SimdLength> SimdLength;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_HasThreadState> HasThreadState;
