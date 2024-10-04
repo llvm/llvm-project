@@ -329,7 +329,7 @@ void ctime_test(void) {
   // expected-note@-2{{dereferencing an invalid pointer}}
 }
 
-void time_test(void) {
+void localtime_test(void) {
   const time_t *t;
   const time_t *tt;
 

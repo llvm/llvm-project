@@ -105,7 +105,6 @@ void f3(char *S, FILE *F) {
 
 typedef int time_t;
 char *ctime(const time_t *Timer);
-struct tm *localtime(const time_t *Timer);
 
 void f4(const time_t *Timer) {
   ctime(Timer);
