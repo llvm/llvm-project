@@ -1647,7 +1647,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return cmd->size; };
   }
   if (tok == "SIZEOF_HEADERS")
-    return [=] { return elf::getHeaderSize(); };
+    return [=, &ctx = ctx] { return elf::getHeaderSize(ctx); };
 
   // Tok is the dot.
   if (tok == ".")

@@ -229,7 +229,14 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
   }
 
 #if defined(CLANG_CONFIG_FILE_SYSTEM_DIR)
-  SystemConfigDir = CLANG_CONFIG_FILE_SYSTEM_DIR;
+  if (llvm::sys::path::is_absolute(CLANG_CONFIG_FILE_SYSTEM_DIR)) {
+    SystemConfigDir = CLANG_CONFIG_FILE_SYSTEM_DIR;
+  } else {
+    SmallString<128> configFileDir(Dir);
+    llvm::sys::path::append(configFileDir, CLANG_CONFIG_FILE_SYSTEM_DIR);
+    llvm::sys::path::remove_dots(configFileDir, true);
+    SystemConfigDir = static_cast<std::string>(configFileDir);
+  }
 #endif
 #if defined(CLANG_CONFIG_FILE_USER_DIR)
   {
@@ -4022,7 +4029,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     // Emitting LLVM while linking disabled except in HIPAMD Toolchain
     if (Args.hasArg(options::OPT_emit_llvm) && !Args.hasArg(options::OPT_hip_link))
       Diag(clang::diag::err_drv_emit_llvm_link);
-    if (IsCLMode() && LTOMode != LTOK_None &&
+    if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
+        LTOMode != LTOK_None &&
         !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
              .equals_insensitive("lld"))
       Diag(clang::diag::err_drv_lto_without_lld);

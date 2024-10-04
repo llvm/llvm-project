@@ -10,8 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_ASPRINTF_H
 
 #include "src/__support/macros/config.h"
-#include <stdarg.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 

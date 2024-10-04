@@ -2349,12 +2349,7 @@ Instruction *InstCombinerImpl::narrowMathIfNoOverflow(BinaryOperator &BO) {
 /// transform.
 static GEPNoWrapFlags getMergedGEPNoWrapFlags(GEPOperator &GEP1,
                                               GEPOperator &GEP2) {
-  GEPNoWrapFlags NW = GEP1.getNoWrapFlags() & GEP2.getNoWrapFlags();
-  // Without inbounds, we could only preserve nusw if we know that x + y does
-  // not wrap.
-  if (!NW.isInBounds())
-    NW = NW.withoutNoUnsignedSignedWrap();
-  return NW;
+  return GEP1.getNoWrapFlags().intersectForOffsetAdd(GEP2.getNoWrapFlags());
 }
 
 /// Thread a GEP operation with constant indices through the constant true/false
@@ -5175,8 +5170,13 @@ bool InstCombinerImpl::run() {
         LLVM_DEBUG(dbgs() << "IC: Old = " << *I << '\n'
                           << "    New = " << *Result << '\n');
 
-        Result->copyMetadata(*I,
-                             {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+        // We copy the old instruction's DebugLoc to the new instruction, unless
+        // InstCombine already assigned a DebugLoc to it, in which case we
+        // should trust the more specifically selected DebugLoc.
+        if (!Result->getDebugLoc())
+          Result->setDebugLoc(I->getDebugLoc());
+        // We also copy annotation metadata to the new instruction.
+        Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
         I->replaceAllUsesWith(Result);
 
