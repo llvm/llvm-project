@@ -184,13 +184,13 @@ declare i32 @toupper()
 define signext i32 @overlap_live_ranges(ptr %arg, i32 signext %arg1) {
 ; CHECK-LABEL: overlap_live_ranges:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    li a2, 13
-; CHECK-NEXT:    bne a1, a3, .LBB1_2
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    bne a1, a2, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    lw a2, 4(a0)
-; CHECK-NEXT:  .LBB1_2: # %bb5
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    lw a0, 4(a0)
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    li a0, 13
 ; CHECK-NEXT:    ret
 bb:
   %i = icmp eq i32 %arg1, 1
