@@ -17511,3 +17511,75 @@ void test_vst1q_s64(int64_t *a, int64x2_t b) {
 // uint64_t test_vaddlv_u32(uint32x2_t a) {
 //   return vaddlv_u32(a);
 // }
+
+uint8x8_t test_vmovn_u16(uint16x8_t a) {
+  return vmovn_u16(a);
+  // CIR-LABEL: vmovn_u16
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u16i x 8>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!u16i x 8>), !cir.vector<!u8i x 8> 
+  
+  // LLVM: {{.*}}@test_vmovn_u16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <8 x i16> [[A]] to <8 x i8>
+  // LLVM: ret <8 x i8> [[VMOVN_I]]
+}
+
+uint16x4_t test_vmovn_u32(uint32x4_t a) {
+  return vmovn_u32(a);
+  // CIR-LABEL: vmovn_u32
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u32i x 4>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!u32i x 4>), !cir.vector<!u16i x 4> 
+  
+  // LLVM: {{.*}}@test_vmovn_u32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <4 x i32> [[A]] to <4 x i16>
+  // LLVM: ret <4 x i16> [[VMOVN_I]]
+}
+
+uint32x2_t test_vmovn_u64(uint64x2_t a) {
+  return vmovn_u64(a);
+  // CIR-LABEL: vmovn_u64
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!u64i x 2>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!u64i x 2>), !cir.vector<!u32i x 2> 
+  
+  // LLVM: {{.*}}@test_vmovn_u64(<2 x i64>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <2 x i64> [[A]] to <2 x i32>
+  // LLVM: ret <2 x i32> [[VMOVN_I]]
+}
+
+int8x8_t test_vmovn_s16(int16x8_t a) {
+  return vmovn_s16(a);
+  // CIR-LABEL: vmovn_s16
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s16i x 8>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!s16i x 8>), !cir.vector<!s8i x 8> 
+  
+  // LLVM: {{.*}}@test_vmovn_s16(<8 x i16>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <8 x i16> [[A]] to <8 x i8>
+  // LLVM: ret <8 x i8> [[VMOVN_I]]
+}
+
+int16x4_t test_vmovn_s32(int32x4_t a) {
+  return vmovn_s32(a);
+  // CIR-LABEL: vmovn_s32
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s32i x 4>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!s32i x 4>), !cir.vector<!s16i x 4> 
+  
+  // LLVM: {{.*}}@test_vmovn_s32(<4 x i32>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <4 x i32> [[A]] to <4 x i16>
+  // LLVM: ret <4 x i16> [[VMOVN_I]]
+}
+
+int32x2_t test_vmovn_s64(int64x2_t a) {
+  return vmovn_s64(a);
+  // CIR-LABEL: vmovn_s64
+  // CIR: [[ARG:%.*]] = cir.cast(bitcast, {{%.*}} : !cir.vector<!s8i x 16>), !cir.vector<!s64i x 2>
+  // CIR: {{%.*}} = cir.cast(integral, [[ARG]] : !cir.vector<!s64i x 2>), !cir.vector<!s32i x 2> 
+  
+  // LLVM: {{.*}}@test_vmovn_s64(<2 x i64>{{.*}}[[A:%.*]])
+  // LLVM: [[VMOVN_1:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+  // LLVM: [[VMOVN_I:%.*]] = trunc <2 x i64> [[A]] to <2 x i32>
+  // LLVM: ret <2 x i32> [[VMOVN_I]]
+}

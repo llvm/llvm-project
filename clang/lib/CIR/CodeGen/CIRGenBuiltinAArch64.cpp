@@ -2216,13 +2216,31 @@ mlir::Value CIRGenFunction::buildCommonNeonBuiltinExpr(
 
   mlir::cir::VectorType vTy = GetNeonType(this, neonType, hasLegalHalfType,
                                           false, allowBFloatArgsAndRet);
-  if (!vTy)
+  mlir::Type ty = vTy;
+  if (!ty)
     return nullptr;
 
   unsigned intrinicId = llvmIntrinsic;
   if ((modifier & UnsignedAlts) && !isUnsigned)
     intrinicId = altLLVMIntrinsic;
 
+  // This first switch is for the intrinsics that cannot have a more generic
+  // codegen solution.
+  switch (builtinID) {
+  default:
+    break;
+  case NEON::BI__builtin_neon_vmovn_v: {
+    mlir::cir::VectorType qTy = builder.getExtendedElementVectorType(
+        vTy, mlir::cast<mlir::cir::IntType>(vTy.getEltType()).isSigned());
+    ops[0] = builder.createBitcast(ops[0], qTy);
+    // It really is truncation in this context.
+    // In CIR, integral cast op supports vector of int type truncating.
+    return builder.createIntCast(ops[0], ty);
+  }
+  }
+
+  // This second switch is for the intrinsics that might have a more generic
+  // codegen solution so we can use the common codegen in future.
   switch (builtinID) {
   default:
     llvm::errs() << getAArch64SIMDIntrinsicString(builtinID) << " ";
