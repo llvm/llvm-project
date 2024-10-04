@@ -1922,11 +1922,8 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
   if (Mask == fcNone)
     return PoisonValue::get(Ty);
 
-  if (Mask == fcPosZero) {
-    if (Ty->isAggregateType())
-      return ConstantAggregateZero::get(Ty);
-    return ConstantFP::getZero(Ty);
-  }
+  if (Mask == fcPosZero)
+    return Constant::getNullValue(Ty);
 
   // TODO: Support aggregate types that are allowed by FPMathOperator.
   if (Ty->isAggregateType())
