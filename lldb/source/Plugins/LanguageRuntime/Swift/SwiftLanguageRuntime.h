@@ -496,7 +496,7 @@ private:
   /// address of the first non-prologue instruction.
   std::optional<lldb::addr_t>
   TrySkipVirtualParentProlog(lldb::addr_t async_reg_val, Process &process,
-                             unsigned num_indirections);
+                             unsigned num_indirections = 0);
 };
 
 } // namespace lldb_private
