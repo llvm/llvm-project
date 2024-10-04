@@ -21,7 +21,7 @@ body:             |
     ; MUBUF: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -29,7 +29,7 @@ body:             |
     ; MUBUFW32: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -69,32 +69,36 @@ body:             |
     ; MUBUF: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 28, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 16, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__inline_imm___fi_offset_inline_imm
     ; MUBUFW32: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 28, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 16, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__inline_imm___fi_offset_inline_imm
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 28, killed $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 16, implicit-def $scc
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__inline_imm___fi_offset_inline_imm
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 28, killed $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 16, implicit-def $scc
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 12, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -116,7 +120,7 @@ body:             |
     ; MUBUF: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -124,7 +128,7 @@ body:             |
     ; MUBUFW32: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -164,32 +168,36 @@ body:             |
     ; MUBUF: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 100, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 32, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__literal__fi_offset0__offset_inlineimm
     ; MUBUFW32: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 100, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 32, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__literal__fi_offset0__offset_inlineimm
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 100, killed $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 32, implicit-def $scc
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__literal__fi_offset0__offset_inlineimm
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 100, killed $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 32, implicit-def $scc
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 68, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 68, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -214,7 +222,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -224,7 +232,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -234,7 +242,8 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr32, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__vgpr__fi_offset0
@@ -243,7 +252,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr2 = V_MOV_B32_e32 $sgpr32, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, %stack.0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -268,8 +278,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr2, $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__fi_offset0__vgpr
@@ -278,8 +288,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr2, $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__fi_offset0__vgpr
@@ -323,9 +333,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_ADD_U32_e32 128, killed $vgpr2, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__vgpr__fi_literal_offset
@@ -334,9 +344,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_ADD_U32_e32 128, killed $vgpr2, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__vgpr__fi_literal_offset
@@ -345,8 +355,9 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: $vgpr2 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__vgpr__fi_literal_offset
@@ -355,8 +366,9 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: $vgpr2 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -382,9 +394,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_ADD_U32_e32 128, killed $vgpr2, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr2, $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__fi_literal_offset__vgpr
@@ -393,9 +405,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_ADD_U32_e32 128, killed $vgpr2, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr2, $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__fi_literal_offset__vgpr
@@ -404,8 +416,8 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $sgpr4, $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__fi_literal_offset__vgpr
@@ -414,8 +426,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr32, $vgpr1, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $sgpr4, $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 %stack.1, $vgpr1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -441,9 +453,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__sgpr__fi_literal_offset
@@ -452,9 +464,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__sgpr__fi_literal_offset
@@ -463,9 +475,9 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
     ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__sgpr__fi_literal_offset
@@ -474,9 +486,9 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
     ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -498,7 +510,7 @@ body:             |
     ; MUBUF: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, killed $vgpr1, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -506,7 +518,7 @@ body:             |
     ; MUBUFW32: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, killed $vgpr1, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
@@ -514,14 +526,14 @@ body:             |
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, 12, 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, $sgpr32, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__inline_imm__fi_offset0
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, 12, 0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, $sgpr32, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 12, %stack.0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -547,10 +559,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 0, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $sgpr8, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__fi_literal_offset__sgpr
@@ -559,9 +570,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 128, killed $vgpr0, 0, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $sgpr8, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__fi_literal_offset__sgpr
@@ -570,10 +581,9 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr8, killed $vgpr1, 0, implicit $exec
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 0, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $sgpr8, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__fi_literal_offset__sgpr
@@ -582,8 +592,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $sgpr8, 0, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 128, killed $vgpr0, 0, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $sgpr4, $sgpr8, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 %stack.1, $sgpr8, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -609,10 +619,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset
@@ -621,9 +630,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr0, 128, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset
@@ -632,9 +641,8 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 0, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $sgpr4, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset
@@ -643,8 +651,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr0, 128, 0, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $sgpr4, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, %stack.1, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -670,10 +678,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset__clamp
@@ -682,9 +689,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr0, 128, 1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset__clamp
@@ -693,9 +700,8 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 1, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $sgpr4, 1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__vgpr__fi_literal_offset__clamp
@@ -704,8 +710,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr0, 128, 1, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $sgpr4, 1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, %stack.1, 1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -731,10 +737,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; MUBUF-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $vgpr8, 1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__fi_literal_offset__vgpr__clamp
@@ -743,9 +748,9 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr8, killed $vgpr1, 0, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 128, killed $vgpr0, 1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_ADD_U32_e32 128, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $vgpr8, 1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__fi_literal_offset__vgpr__clamp
@@ -754,9 +759,8 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0_lo16
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr0, 1, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $sgpr4, $vgpr8, 1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__fi_literal_offset__vgpr__clamp
@@ -765,8 +769,8 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30_lo16, 32, $sgpr31_lo16, 32
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined <badreg>
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr32, $vgpr8, 0, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 128, killed $vgpr0, 1, implicit $exec
+    ; FLATSCRW32-NEXT: $sgpr4 = S_ADD_I32 $sgpr32, 128, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $sgpr4, $vgpr8, 1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 %stack.1, $vgpr8, 1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -813,8 +817,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 128, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, $vgpr8, 1, implicit $exec
+    ; FLATSCRW64-NEXT: $sgpr4 = S_MOV_B32 128
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $sgpr4, $vgpr8, 1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__fi_literal_offset__vgpr__clamp__kernel
@@ -848,7 +852,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__inline_imm__fi_offset0__kernel
@@ -858,19 +863,22 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__inline_imm__fi_offset0__kernel
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__inline_imm__fi_offset0__kernel
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 12, %stack.0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -896,7 +904,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 0, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__inline_imm__fi_offset0__kernel
@@ -906,19 +914,19 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 0, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__inline_imm__fi_offset0__kernel
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 0, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__inline_imm__fi_offset0__kernel
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 12, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 0, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 12, %stack.0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -947,7 +955,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__inline_imm__fi_literal__kernel
@@ -957,19 +966,22 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__inline_imm__fi_literal__kernel
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__inline_imm__fi_literal__kernel
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 12, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 12, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -996,7 +1008,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel
@@ -1006,19 +1018,19 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 12, %stack.1, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1045,7 +1057,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 32, 12, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__fi_literal__inline_imm__kernel
@@ -1055,19 +1067,19 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 32, 12, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__fi_literal__inline_imm__kernel
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 32, 12, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__fi_literal__inline_imm__kernel
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 44, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 32, 12, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 %stack.1, 12, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1094,7 +1106,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 44, 0, 1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel__clamp
@@ -1104,19 +1116,19 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 44, 0, 1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel__clamp
     ; FLATSCRW64: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 44, 0, 1, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__inline_imm__fi_literal__kernel__clamp
     ; FLATSCRW32: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 44, 0, 1, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 12, 32, 1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 12, %stack.1, 1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1146,7 +1158,7 @@ body:             |
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr1 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; MUBUF-NEXT: renamable $vgpr2 = V_MOV_B32_e32 15, implicit $exec
     ; MUBUF-NEXT: SCRATCH_STORE_DWORD killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32), addrspace 5)
     ; MUBUF-NEXT: renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
@@ -1161,7 +1173,7 @@ body:             |
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr1 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; MUBUFW32-NEXT: renamable $vgpr2 = V_MOV_B32_e32 15, implicit $exec
     ; MUBUFW32-NEXT: SCRATCH_STORE_DWORD killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32), addrspace 5)
     ; MUBUFW32-NEXT: renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
@@ -1174,7 +1186,7 @@ body:             |
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW64-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr1 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; FLATSCRW64-NEXT: renamable $vgpr2 = V_MOV_B32_e32 15, implicit $exec
     ; FLATSCRW64-NEXT: SCRATCH_STORE_DWORD killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32), addrspace 5)
     ; FLATSCRW64-NEXT: renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
@@ -1187,7 +1199,7 @@ body:             |
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; FLATSCRW32-NEXT: renamable $vgpr0 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr1 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; FLATSCRW32-NEXT: renamable $vgpr2 = V_MOV_B32_e32 15, implicit $exec
     ; FLATSCRW32-NEXT: SCRATCH_STORE_DWORD killed renamable $vgpr2, killed renamable $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store (s32), addrspace 5)
     ; FLATSCRW32-NEXT: renamable $vgpr0 = V_SUB_U32_e32 0, killed $vgpr0, implicit $exec
@@ -1223,7 +1235,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__kernel_fi_offset0__other_vgpr_live_after
@@ -1233,7 +1246,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__kernel_fi_offset0__other_vgpr_live_after
@@ -1241,7 +1255,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__kernel_fi_offset0__other_vgpr_live_after
@@ -1249,7 +1264,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr1, killed $vgpr2, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     renamable $vgpr0 = V_ADD_U32_e32 renamable $vgpr1, %stack.0, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -1276,7 +1292,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__kernel_other_vgpr_live_after__fi_offset0
@@ -1286,7 +1302,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__kernel_other_vgpr_live_after__fi_offset0
@@ -1294,7 +1310,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__kernel_other_vgpr_live_after__fi_offset0
@@ -1302,7 +1318,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     renamable $vgpr0 = V_ADD_U32_e32 %stack.0, renamable $vgpr1, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -1329,7 +1345,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__kernel_fi_offset0__sgpr_live_after
@@ -1339,7 +1356,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__kernel_fi_offset0__sgpr_live_after
@@ -1347,7 +1365,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__kernel_fi_offset0__sgpr_live_after
@@ -1355,7 +1374,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $sgpr8, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     renamable $vgpr0 = V_ADD_U32_e32 renamable $sgpr8, %stack.0, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $sgpr8
@@ -1382,7 +1402,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__kernel_fi_offset0__other_vgpr_live_after
@@ -1392,7 +1412,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__kernel_fi_offset0__other_vgpr_live_after
@@ -1400,7 +1420,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__kernel_fi_offset0__other_vgpr_live_after
@@ -1408,7 +1428,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr1, 0, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1
     renamable $vgpr0 = V_ADD_U32_e64 renamable $vgpr1, %stack.0, 0, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -1436,8 +1456,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
@@ -1447,8 +1467,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
@@ -1456,8 +1476,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__kernel_fi_offset72__sgpr_live_after
@@ -1465,8 +1485,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, killed $vgpr1, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $sgpr8, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     renamable $vgpr0 = V_ADD_U32_e32 renamable $sgpr8, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0, implicit $sgpr8
@@ -1494,9 +1514,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
     ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr1, 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr8, killed $vgpr1, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__kernel_fi_offset72__sgpr_live_after
@@ -1514,9 +1533,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 $sgpr8, implicit $exec
     ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr1, killed $vgpr1, 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $sgpr8, killed $vgpr1, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0, implicit $sgpr8
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__kernel_fi_offset72__sgpr_live_after
@@ -1552,6 +1570,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset0__kernel
@@ -1561,6 +1581,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset0__kernel
@@ -1568,6 +1590,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset0__kernel
@@ -1575,6 +1599,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, %stack.0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1601,6 +1627,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel
@@ -1610,6 +1637,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel
@@ -1617,6 +1645,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel
@@ -1624,6 +1653,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, $vgpr0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 %stack.0, $vgpr0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1651,6 +1681,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr0, 0, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__identity_vgpr__fi_offset0__kernel
@@ -1660,6 +1691,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr0, 0, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__identity_vgpr__fi_offset0__kernel
@@ -1667,6 +1699,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr0, 0, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__identity_vgpr__fi_offset0__kernel
@@ -1674,6 +1707,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 $vgpr0, 0, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 $vgpr0, %stack.0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1701,6 +1735,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e64 0, $vgpr0, 0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e64__fi_offset0__identity_vgpr__kernel
@@ -1710,6 +1745,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 0, $vgpr0, 0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e64__fi_offset0__identity_vgpr__kernel
@@ -1717,6 +1753,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e64 0, $vgpr0, 0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e64__fi_offset0__identity_vgpr__kernel
@@ -1724,6 +1761,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e64 0, $vgpr0, 0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e64 %stack.0, $vgpr0, 0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1750,6 +1788,7 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel_kill
@@ -1759,6 +1798,7 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, killed $vgpr0, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel_kill
@@ -1766,6 +1806,7 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, killed $vgpr0, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__fi_offset0__identity_vgpr__kernel_kill
@@ -1773,6 +1814,7 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 0, killed $vgpr0, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 %stack.0, killed $vgpr0, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1801,7 +1843,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 32, $vgpr0, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset32__kernel
@@ -1811,7 +1854,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 32, $vgpr0, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset32__kernel
@@ -1819,7 +1863,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 32, $vgpr0, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset32__kernel
@@ -1827,7 +1872,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 32, $vgpr0, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 32, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
@@ -1857,7 +1903,8 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUF-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUF-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, $vgpr0, implicit $exec
+    ; MUBUF-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUF-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUF-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; MUBUFW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset72__kernel
@@ -1867,7 +1914,8 @@ body:             |
     ; MUBUFW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; MUBUFW32-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
     ; MUBUFW32-NEXT: $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
-    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, $vgpr0, implicit $exec
+    ; MUBUFW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; MUBUFW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; MUBUFW32-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW64-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset72__kernel
@@ -1875,7 +1923,8 @@ body:             |
     ; FLATSCRW64-NEXT: {{  $}}
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, $vgpr0, implicit $exec
+    ; FLATSCRW64-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW64-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW64-NEXT: SI_RETURN implicit $vgpr0
     ;
     ; FLATSCRW32-LABEL: name: v_add_u32_e32__identity_vgpr__fi_offset72__kernel
@@ -1883,7 +1932,8 @@ body:             |
     ; FLATSCRW32-NEXT: {{  $}}
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
     ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
-    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 72, $vgpr0, implicit $exec
+    ; FLATSCRW32-NEXT: $vgpr1 = V_MOV_B32_e32 72, implicit $exec
+    ; FLATSCRW32-NEXT: renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, killed $vgpr1, implicit $exec
     ; FLATSCRW32-NEXT: SI_RETURN implicit $vgpr0
     renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, %stack.1, implicit $exec
     SI_RETURN implicit $vgpr0
