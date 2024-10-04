@@ -1960,7 +1960,7 @@ define void @foo(ptr %va) {
   // Check create().
   auto *NewVATy = sandboxir::Type::getInt8Ty(Ctx);
   auto *NewVA = sandboxir::VAArgInst::create(Arg, NewVATy, Ret->getIterator(),
-                                             Ret->getParent(), Ctx, "NewVA");
+                                             Ctx, "NewVA");
   EXPECT_EQ(NewVA->getNextNode(), Ret);
   EXPECT_EQ(NewVA->getType(), NewVATy);
 #ifndef NDEBUG
@@ -1989,8 +1989,8 @@ define void @foo(i8 %arg) {
   EXPECT_EQ(Freeze->getOperand(0), Arg);
 
   // Check create().
-  auto *NewFreeze = sandboxir::FreezeInst::create(
-      Arg, Ret->getIterator(), Ret->getParent(), Ctx, "NewFreeze");
+  auto *NewFreeze =
+      sandboxir::FreezeInst::create(Arg, Ret->getIterator(), Ctx, "NewFreeze");
   EXPECT_EQ(NewFreeze->getNextNode(), Ret);
 #ifndef NDEBUG
   EXPECT_EQ(NewFreeze->getName(), "NewFreeze");
@@ -2037,7 +2037,7 @@ define void @foo() {
   // Check create().
   auto *NewFence =
       sandboxir::FenceInst::create(AtomicOrdering::Release, Ret->getIterator(),
-                                   BB, Ctx, SyncScope::SingleThread);
+                                   Ctx, SyncScope::SingleThread);
   EXPECT_EQ(NewFence->getNextNode(), Ret);
   EXPECT_EQ(NewFence->getOrdering(), AtomicOrdering::Release);
   EXPECT_EQ(NewFence->getSyncScopeID(), SyncScope::SingleThread);
@@ -2092,7 +2092,7 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
   {
     // Check SelectInst::create() InsertBefore.
     auto *NewSel = cast<sandboxir::SelectInst>(sandboxir::SelectInst::create(
-        Cond0, V0, V1, /*InsertBefore=*/Ret, Ctx));
+        Cond0, V0, V1, /*InsertBefore=*/Ret->getIterator(), Ctx));
     EXPECT_EQ(NewSel->getCondition(), Cond0);
     EXPECT_EQ(NewSel->getTrueValue(), V0);
     EXPECT_EQ(NewSel->getFalseValue(), V1);
@@ -2114,8 +2114,8 @@ define void @foo(i1 %c0, i8 %v0, i8 %v1, i1 %c1) {
     auto *FortyTwo =
         sandboxir::ConstantInt::get(sandboxir::Type::getInt1Ty(Ctx), 42,
                                     /*IsSigned=*/false);
-    auto *NewSel =
-        sandboxir::SelectInst::create(False, FortyTwo, FortyTwo, Ret, Ctx);
+    auto *NewSel = sandboxir::SelectInst::create(False, FortyTwo, FortyTwo,
+                                                 Ret->getIterator(), Ctx);
     EXPECT_TRUE(isa<sandboxir::Constant>(NewSel));
     EXPECT_EQ(NewSel, FortyTwo);
   }
@@ -2147,7 +2147,7 @@ define void @foo(<2 x i8> %vec, i32 %idx) {
 
   auto *NewI1 =
       cast<sandboxir::ExtractElementInst>(sandboxir::ExtractElementInst::create(
-          ArgVec, ArgIdx, Ret, Ctx, "NewExtrBeforeRet"));
+          ArgVec, ArgIdx, Ret->getIterator(), Ctx, "NewExtrBeforeRet"));
   EXPECT_EQ(NewI1->getOperand(0), ArgVec);
   EXPECT_EQ(NewI1->getOperand(1), ArgIdx);
   EXPECT_EQ(NewI1->getNextNode(), Ret);
@@ -2193,7 +2193,7 @@ define void @foo(i8 %v0, i8 %v1, <2 x i8> %vec) {
   auto *Idx = Ins0->getOperand(2);
   auto *NewI1 =
       cast<sandboxir::InsertElementInst>(sandboxir::InsertElementInst::create(
-          Poison, Arg0, Idx, Ret, Ctx, "NewIns1"));
+          Poison, Arg0, Idx, Ret->getIterator(), Ctx, "NewIns1"));
   EXPECT_EQ(NewI1->getOperand(0), Poison);
   EXPECT_EQ(NewI1->getNextNode(), Ret);
 
@@ -2243,13 +2243,14 @@ define void @foo(<2 x i8> %v1, <2 x i8> %v2) {
   auto CreateShuffleWithMask = [&](auto &&...Indices) {
     SmallVector<int, 4> Mask = {Indices...};
     return cast<sandboxir::ShuffleVectorInst>(
-        sandboxir::ShuffleVectorInst::create(ArgV1, ArgV2, Mask, Ret, Ctx));
+        sandboxir::ShuffleVectorInst::create(ArgV1, ArgV2, Mask,
+                                             Ret->getIterator(), Ctx));
   };
 
   // create (InsertBefore)
   auto *NewI1 =
       cast<sandboxir::ShuffleVectorInst>(sandboxir::ShuffleVectorInst::create(
-          ArgV1, ArgV2, ArrayRef<int>({0, 2, 1, 3}), Ret, Ctx,
+          ArgV1, ArgV2, ArrayRef<int>({0, 2, 1, 3}), Ret->getIterator(), Ctx,
           "NewShuffleBeforeRet"));
   EXPECT_EQ(NewI1->getOperand(0), ArgV1);
   EXPECT_EQ(NewI1->getOperand(1), ArgV2);
@@ -2658,8 +2659,8 @@ define void @foo({i32, float} %agg) {
   // create before instruction
   auto *NewExtBeforeRet =
       cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
-          ArgAgg, ArrayRef<unsigned>({0}), Ret->getIterator(), Ret->getParent(),
-          Ctx, "NewExtBeforeRet"));
+          ArgAgg, ArrayRef<unsigned>({0}), Ret->getIterator(), Ctx,
+          "NewExtBeforeRet"));
   EXPECT_EQ(NewExtBeforeRet->getNextNode(), Ret);
 #ifndef NDEBUG
   EXPECT_EQ(NewExtBeforeRet->getName(), "NewExtBeforeRet");
@@ -2668,7 +2669,7 @@ define void @foo({i32, float} %agg) {
   // create at end of BB
   auto *NewExtAtEnd =
       cast<sandboxir::ExtractValueInst>(sandboxir::ExtractValueInst::create(
-          ArgAgg, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx, "NewExtAtEnd"));
+          ArgAgg, ArrayRef<unsigned>({0}), BB->end(), Ctx, "NewExtAtEnd"));
   EXPECT_EQ(NewExtAtEnd->getPrevNode(), Ret);
 #ifndef NDEBUG
   EXPECT_EQ(NewExtAtEnd->getName(), "NewExtAtEnd");
@@ -2676,7 +2677,7 @@ define void @foo({i32, float} %agg) {
 
   // Test the path that creates a folded constant.
   auto *ShouldBeConstant = sandboxir::ExtractValueInst::create(
-      Const1->getOperand(0), ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+      Const1->getOperand(0), ArrayRef<unsigned>({0}), BB->end(), Ctx);
   EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
 
   auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
@@ -2765,8 +2766,8 @@ define void @foo({i32, float} %agg, i32 %i) {
   // create before instruction
   auto *NewInsBeforeRet =
       cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
-          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), Ret->getIterator(),
-          Ret->getParent(), Ctx, "NewInsBeforeRet"));
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), Ret->getIterator(), Ctx,
+          "NewInsBeforeRet"));
   EXPECT_EQ(NewInsBeforeRet->getNextNode(), Ret);
 #ifndef NDEBUG
   EXPECT_EQ(NewInsBeforeRet->getName(), "NewInsBeforeRet");
@@ -2775,8 +2776,7 @@ define void @foo({i32, float} %agg, i32 %i) {
   // create at end of BB
   auto *NewInsAtEnd =
       cast<sandboxir::InsertValueInst>(sandboxir::InsertValueInst::create(
-          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx,
-          "NewInsAtEnd"));
+          ArgAgg, ArgInt, ArrayRef<unsigned>({0}), BB, Ctx, "NewInsAtEnd"));
   EXPECT_EQ(NewInsAtEnd->getPrevNode(), Ret);
 #ifndef NDEBUG
   EXPECT_EQ(NewInsAtEnd->getName(), "NewInsAtEnd");
@@ -2785,7 +2785,7 @@ define void @foo({i32, float} %agg, i32 %i) {
   // Test the path that creates a folded constant.
   auto *Zero = sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 0);
   auto *ShouldBeConstant = sandboxir::InsertValueInst::create(
-      Const1->getOperand(0), Zero, ArrayRef<unsigned>({0}), BB->end(), BB, Ctx);
+      Const1->getOperand(0), Zero, ArrayRef<unsigned>({0}), BB, Ctx);
   auto *ExpectedConstant = Const2->getOperand(0);
   EXPECT_TRUE(isa<sandboxir::Constant>(ShouldBeConstant));
   EXPECT_EQ(ShouldBeConstant, ExpectedConstant);
@@ -2891,7 +2891,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
 
   {
     // Check unconditional BranchInst::create() InsertBefore.
-    auto *Br = sandboxir::BranchInst::create(BB1, /*InsertBefore=*/Ret1, Ctx);
+    auto *Br = sandboxir::BranchInst::create(BB1, Ret1->getIterator(), Ctx);
     EXPECT_FALSE(Br->isConditional());
     EXPECT_TRUE(Br->isUnconditional());
 #ifndef NDEBUG
@@ -2920,7 +2920,7 @@ define void @foo(i1 %cond0, i1 %cond2) {
   {
     // Check conditional BranchInst::create() InsertBefore.
     auto *Br = sandboxir::BranchInst::create(BB1, BB2, Cond0,
-                                             /*InsertBefore=*/Ret1, Ctx);
+                                             Ret1->getIterator(), Ctx);
     EXPECT_TRUE(Br->isConditional());
     EXPECT_EQ(Br->getCondition(), Cond0);
     unsigned SuccIdx = 0;
@@ -2973,9 +2973,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   // Check getAlign()
   EXPECT_EQ(Ld->getAlign(), 64);
   // Check create(InsertBefore)
-  sandboxir::LoadInst *NewLd =
-      sandboxir::LoadInst::create(Ld->getType(), Arg1, Align(8),
-                                  /*InsertBefore=*/Ret, Ctx, "NewLd");
+  sandboxir::LoadInst *NewLd = sandboxir::LoadInst::create(
+      Ld->getType(), Arg1, Align(8), Ret->getIterator(), Ctx, "NewLd");
   EXPECT_FALSE(NewLd->isVolatile());
   OrigVolatileValue = NewLd->isVolatile();
   NewLd->setVolatile(true);
@@ -2987,10 +2986,9 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
   // Check create(InsertBefore, IsVolatile=true)
-  sandboxir::LoadInst *NewVLd =
-      sandboxir::LoadInst::create(VLd->getType(), Arg1, Align(8),
-                                  /*InsertBefore=*/Ret,
-                                  /*IsVolatile=*/true, Ctx, "NewVLd");
+  sandboxir::LoadInst *NewVLd = sandboxir::LoadInst::create(
+      VLd->getType(), Arg1, Align(8), Ret->getIterator(),
+      /*IsVolatile=*/true, Ctx, "NewVLd");
 
   EXPECT_TRUE(NewVLd->isVolatile());
   OrigVolatileValue = NewVLd->isVolatile();
@@ -3054,8 +3052,7 @@ define void @foo(i8 %val, ptr %ptr) {
   EXPECT_EQ(St->getAlign(), 64);
   // Check create(InsertBefore)
   sandboxir::StoreInst *NewSt =
-      sandboxir::StoreInst::create(Val, Ptr, Align(8),
-                                   /*InsertBefore=*/Ret, Ctx);
+      sandboxir::StoreInst::create(Val, Ptr, Align(8), Ret->getIterator(), Ctx);
   EXPECT_FALSE(NewSt->isVolatile());
   OrigVolatileValue = NewSt->isVolatile();
   NewSt->setVolatile(true);
@@ -3069,8 +3066,7 @@ define void @foo(i8 %val, ptr %ptr) {
   EXPECT_EQ(NewSt->getNextNode(), Ret);
   // Check create(InsertBefore, IsVolatile=true)
   sandboxir::StoreInst *NewVSt =
-      sandboxir::StoreInst::create(Val, Ptr, Align(8),
-                                   /*InsertBefore=*/Ret,
+      sandboxir::StoreInst::create(Val, Ptr, Align(8), Ret->getIterator(),
                                    /*IsVolatile=*/true, Ctx);
   EXPECT_TRUE(NewVSt->isVolatile());
   OrigVolatileValue = NewVSt->isVolatile();
