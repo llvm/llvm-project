@@ -26,10 +26,9 @@ namespace llvm::sandboxir {
 /// A set of candidate Instructions for vectorizing together.
 class SeedBundle {
 public:
-  using SeedList = SmallVector<Instruction *>;
   /// Initialize a bundle with \p I.
   explicit SeedBundle(Instruction *I) { insertAt(begin(), I); }
-  explicit SeedBundle(SeedList &&L) : Seeds(std::move(L)) {
+  explicit SeedBundle(SmallVector<Instruction *> &&L) : Seeds(std::move(L)) {
     for (auto &S : Seeds)
       NumUnusedBits += Utils::getNumBits(S);
   }
@@ -38,8 +37,8 @@ public:
   SeedBundle &operator=(const SeedBundle &) = delete;
   virtual ~SeedBundle() {}
 
-  using iterator = SeedList::iterator;
-  using const_iterator = SeedList::const_iterator;
+  using iterator = SmallVector<Instruction *>::iterator;
+  using const_iterator = SmallVector<Instruction *>::const_iterator;
   iterator begin() { return Seeds.begin(); }
   iterator end() { return Seeds.end(); }
   const_iterator begin() const { return Seeds.begin(); }
@@ -99,11 +98,11 @@ public:
   /// with a total size <= \p MaxVecRegBits, or an empty slice if the
   /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
   /// slice will have a total number of bits that is a power of 2.
-  MutableArrayRef<SeedList> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                                     bool ForcePowOf2);
+  MutableArrayRef<Instruction *>
+  getSlice(unsigned StartIdx, unsigned MaxVecRegBits, bool ForcePowOf2);
 
 protected:
-  SeedList Seeds;
+  SmallVector<Instruction *> Seeds;
   /// The lanes that we have already vectorized.
   BitVector UsedLanes;
   /// Tracks used lanes for constant-time accessor.

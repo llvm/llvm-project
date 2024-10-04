@@ -20,9 +20,9 @@
 using namespace llvm;
 namespace llvm::sandboxir {
 
-MutableArrayRef<SeedBundle::SeedList>
-SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
-                     bool ForcePowerOf2) {
+MutableArrayRef<Instruction *> SeedBundle::getSlice(unsigned StartIdx,
+                                                    unsigned MaxVecRegBits,
+                                                    bool ForcePowerOf2) {
   // Use uint32_t here for compatibility with IsPowerOf2_32
 
   // BitCount tracks the size of the working slice. From that we can tell
@@ -30,6 +30,9 @@ SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
   // the legal size in MaxVecBits.
   uint32_t BitCount = 0;
   uint32_t NumElements = 0;
+  // Tracks the most recent slice where NumElements gave a power-of-2 BitCount
+  uint32_t NumElementsPowerOfTwo = 0;
+  uint32_t BitCountPowerOfTwo = 0;
   // Can't start a slice with a used instruction.
   assert(!isUsed(StartIdx) && "Expected unused at StartIdx");
   for (auto S : make_range(Seeds.begin() + StartIdx, Seeds.end())) {
@@ -39,22 +42,22 @@ SeedBundle::getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
     if (isUsed(StartIdx + NumElements) || BitCount + InstBits > MaxVecRegBits)
       break;
     NumElements++;
-    BitCount += Utils::getNumBits(S);
-  }
-  // Most slices will already be power-of-two-sized. But this one isn't, remove
-  // instructions until it is. This could be tracked in the loop above but the
-  // logic is harder to follow. TODO: Move if performance is unacceptable.
-  if (ForcePowerOf2) {
-    while (!isPowerOf2_32(BitCount) && NumElements > 1) {
-      BitCount -= Utils::getNumBits(Seeds[StartIdx + NumElements - 1]);
-      NumElements--;
+    BitCount += InstBits;
+    if (ForcePowerOf2 && isPowerOf2_32(BitCount)) {
+      NumElementsPowerOfTwo = NumElements;
+      BitCountPowerOfTwo = BitCount;
     }
   }
+  if (ForcePowerOf2) {
+    NumElements = NumElementsPowerOfTwo;
+    BitCount = BitCountPowerOfTwo;
+  }
 
+  assert((!ForcePowerOf2 || isPowerOf2_32(BitCount)) &&
+         "Must be a power of two");
   // Return any non-empty slice
   if (NumElements > 1)
-    return MutableArrayRef<SeedBundle::SeedList>(&Seeds + StartIdx,
-                                                 NumElements);
+    return MutableArrayRef<Instruction *>(&Seeds[StartIdx], NumElements);
   else
     return {};
 }

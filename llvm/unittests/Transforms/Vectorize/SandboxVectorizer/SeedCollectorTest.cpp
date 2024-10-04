@@ -11,8 +11,9 @@
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-
+#include <span>
 using namespace llvm;
 
 struct SeedBundleTest : public testing::Test {
@@ -75,19 +76,20 @@ bb:
   // getFirstUnusedElement
   EXPECT_EQ(SBO.getFirstUnusedElementIdx(), 1u);
 
-  sandboxir::SeedBundle::SeedList Seeds;
+  SmallVector<sandboxir::Instruction *> Insts;
   // add2 through add7
-  Seeds.push_back(&*It++);
-  Seeds.push_back(&*It++);
-  Seeds.push_back(&*It++);
-  Seeds.push_back(&*It++);
-  Seeds.push_back(&*It++);
-  Seeds.push_back(&*It++);
+  Insts.push_back(&*It++);
+  Insts.push_back(&*It++);
+  Insts.push_back(&*It++);
+  Insts.push_back(&*It++);
+  Insts.push_back(&*It++);
+  Insts.push_back(&*It++);
   unsigned BundleBits = 0;
-  for (auto &S : Seeds)
+  for (auto &S : Insts)
     BundleBits += sandboxir::Utils::getNumBits(S);
   // Ensure the instructions are as expected.
   EXPECT_EQ(BundleBits, 88u);
+  auto Seeds = Insts;
   // Constructor
   sandboxir::SeedBundle SB1(std::move(Seeds));
   // getNumUnusedBits after constructor
@@ -102,11 +104,12 @@ bb:
   // getSlice
   auto Slice0 = SB1.getSlice(2, /* MaxVecRegBits */ 64,
                              /* ForcePowerOf2 */ true);
-  EXPECT_EQ(Slice0.size(), 4u);
+  EXPECT_THAT(Slice0,
+              testing::ElementsAre(Insts[2], Insts[3], Insts[4], Insts[5]));
   SB1.setUsed(2);
   auto Slice1 = SB1.getSlice(3, /* MaxVecRegBits */ 64,
                              /* ForcePowerOf2 */ false);
-  EXPECT_EQ(Slice1.size(), 3u);
+  EXPECT_THAT(Slice1, testing::ElementsAre(Insts[3], Insts[4], Insts[5]));
   // getSlice empty case
   SB1.setUsed(3);
   auto Slice2 = SB1.getSlice(4, /* MaxVecRegBits */ 8,
