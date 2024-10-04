@@ -78,7 +78,7 @@ OutputSection::OutputSection(StringRef name, uint32_t type, uint64_t flags)
 //
 // NOTE: clang since rL252300 emits SHT_X86_64_UNWIND .eh_frame sections. Allow
 // them to be merged into SHT_PROGBITS .eh_frame (GNU as .cfi_*).
-static bool canMergeToProgbits(unsigned type) {
+static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
@@ -105,7 +105,7 @@ void OutputSection::recordSection(InputSectionBase *isec) {
 // Update fields (type, flags, alignment, etc) according to the InputSection
 // isec. Also check whether the InputSection flags and type are consistent with
 // other InputSections.
-void OutputSection::commitSection(InputSection *isec) {
+void OutputSection::commitSection(Ctx &ctx, InputSection *isec) {
   if (LLVM_UNLIKELY(type != isec->type)) {
     if (!hasInputSections && !typeIsSet) {
       type = isec->type;
@@ -120,8 +120,8 @@ void OutputSection::commitSection(InputSection *isec) {
         name = saver().save(".crel" + name);
       }
     } else {
-      if (typeIsSet || !canMergeToProgbits(type) ||
-          !canMergeToProgbits(isec->type)) {
+      if (typeIsSet || !canMergeToProgbits(ctx, type) ||
+          !canMergeToProgbits(ctx, isec->type)) {
         // The (NOLOAD) changes the section type to SHT_NOBITS, the intention is
         // that the contents at that address is provided by some other means.
         // Some projects (e.g.
@@ -172,7 +172,7 @@ void OutputSection::commitSection(InputSection *isec) {
     entsize = 0;
 }
 
-static MergeSyntheticSection *createMergeSynthetic(StringRef name,
+static MergeSyntheticSection *createMergeSynthetic(Ctx &ctx, StringRef name,
                                                    uint32_t type,
                                                    uint64_t flags,
                                                    uint32_t addralign) {
@@ -188,7 +188,8 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef name,
 // new synthetic sections at the location of the first input section
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
-void OutputSection::finalizeInputSections(LinkerScript *script) {
+void OutputSection::finalizeInputSections(Ctx &ctx) {
+  auto *script = ctx.script;
   std::vector<MergeSyntheticSection *> mergeSections;
   for (SectionCommand *cmd : commands) {
     auto *isd = dyn_cast<InputSectionDescription>(cmd);
@@ -222,8 +223,8 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
                (sec->addralign == ms->addralign || !(sec->flags & SHF_STRINGS));
       });
       if (i == mergeSections.end()) {
-        MergeSyntheticSection *syn =
-            createMergeSynthetic(s->name, ms->type, ms->flags, ms->addralign);
+        MergeSyntheticSection *syn = createMergeSynthetic(
+            ctx, s->name, ms->type, ms->flags, ms->addralign);
         mergeSections.push_back(syn);
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
@@ -243,7 +244,7 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
 
     // Some input sections may be removed from the list after ICF.
     for (InputSection *s : isd->sections)
-      commitSection(s);
+      commitSection(ctx, s);
   }
   for (auto *ms : mergeSections)
     ms->finalizeContents();
@@ -260,7 +261,7 @@ static void sortByOrder(MutableArrayRef<InputSection *> in,
     in[i] = v[i].second;
 }
 
-uint64_t elf::getHeaderSize() {
+uint64_t elf::getHeaderSize(Ctx &ctx) {
   if (ctx.arg.oFormatBinary)
     return 0;
   return ctx.out.elfHeader->size + ctx.out.programHeaders->size;
@@ -273,7 +274,7 @@ void OutputSection::sort(llvm::function_ref<int(InputSectionBase *s)> order) {
       sortByOrder(isd->sections, order);
 }
 
-static void nopInstrFill(uint8_t *buf, size_t size) {
+static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
@@ -341,7 +342,7 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
 //
 // * (if --compress-debug-sections is specified) non-empty .debug_* sections
 // * (if --compress-sections is specified) matched sections
-template <class ELFT> void OutputSection::maybeCompress() {
+template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   using Elf_Chdr = typename ELFT::Chdr;
   (void)sizeof(Elf_Chdr);
 
@@ -507,7 +508,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
 
   // Write leading padding.
   ArrayRef<InputSection *> sections = getInputSections(*this, storage);
-  std::array<uint8_t, 4> filler = getFiller();
+  std::array<uint8_t, 4> filler = getFiller(ctx);
   bool nonZeroFiller = read32(filler.data()) != 0;
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
@@ -543,7 +544,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
           end = buf + sections[i + 1]->outSecOff;
         if (isec->nopFiller) {
           assert(ctx.target->nopInstrs);
-          nopInstrFill(start, end - start);
+          nopInstrFill(ctx, start, end - start);
         } else
           fill(start, end - start, filler);
       }
@@ -582,7 +583,8 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
   }
 }
 
-static void finalizeShtGroup(OutputSection *os, InputSection *section) {
+static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
+                             InputSection *section) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
   os->link = ctx.in.symTab->getParent()->sectionIndex;
@@ -668,7 +670,7 @@ static size_t relToCrel(raw_svector_ostream &os, Elf_Crel<ELFT::Is64Bits> &out,
 
 // Compute the content of a non-alloc CREL section due to -r or --emit-relocs.
 // Input CREL sections are decoded while REL[A] need to be converted.
-template <bool is64> void OutputSection::finalizeNonAllocCrel() {
+template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
   using uint = typename Elf_Crel_Impl<is64>::uint;
   raw_svector_ostream os(crelBody);
   uint64_t totalCount = 0;
@@ -702,7 +704,7 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel() {
   size = getULEB128Size(crelHeader) + crelBody.size();
 }
 
-void OutputSection::finalize() {
+void OutputSection::finalize(Ctx &ctx) {
   InputSection *first = getFirstInputSection(this);
 
   if (flags & SHF_LINK_ORDER) {
@@ -718,7 +720,7 @@ void OutputSection::finalize() {
   }
 
   if (type == SHT_GROUP) {
-    finalizeShtGroup(this, first);
+    finalizeShtGroup(ctx, this, first);
     return;
   }
 
@@ -741,9 +743,9 @@ void OutputSection::finalize() {
   // Finalize the content of non-alloc CREL.
   if (type == SHT_CREL) {
     if (ctx.arg.is64)
-      finalizeNonAllocCrel<true>();
+      finalizeNonAllocCrel<true>(ctx);
     else
-      finalizeNonAllocCrel<false>();
+      finalizeNonAllocCrel<false>(ctx);
   }
 }
 
@@ -854,7 +856,7 @@ void OutputSection::sortInitFini() {
   sort([](InputSectionBase *s) { return getPriority(s->name); });
 }
 
-std::array<uint8_t, 4> OutputSection::getFiller() {
+std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
   if (flags & SHF_EXECINSTR)
@@ -862,7 +864,7 @@ std::array<uint8_t, 4> OutputSection::getFiller() {
   return {0, 0, 0, 0};
 }
 
-void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
+void OutputSection::checkDynRelAddends(Ctx &ctx) {
   assert(ctx.arg.writeAddends && ctx.arg.checkDynamicRelocs);
   assert(isStaticRelSecType(type));
   SmallVector<InputSection *, 0> storage;
@@ -885,8 +887,8 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
           (rel.inputSec == ctx.in.ppc64LongBranchTarget.get() ||
            rel.inputSec == ctx.in.igotPlt.get()))
         continue;
-      const uint8_t *relocTarget =
-          bufStart + relOsec->offset + rel.inputSec->getOffset(rel.offsetInSec);
+      const uint8_t *relocTarget = ctx.bufferStart + relOsec->offset +
+                                   rel.inputSec->getOffset(rel.offsetInSec);
       // For SHT_NOBITS the written addend is always zero.
       int64_t writtenAddend =
           relOsec->type == SHT_NOBITS
@@ -918,7 +920,7 @@ template void OutputSection::writeTo<ELF64LE>(uint8_t *,
 template void OutputSection::writeTo<ELF64BE>(uint8_t *,
                                               llvm::parallel::TaskGroup &);
 
-template void OutputSection::maybeCompress<ELF32LE>();
-template void OutputSection::maybeCompress<ELF32BE>();
-template void OutputSection::maybeCompress<ELF64LE>();
-template void OutputSection::maybeCompress<ELF64BE>();
+template void OutputSection::maybeCompress<ELF32LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF32BE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64LE>(Ctx &);
+template void OutputSection::maybeCompress<ELF64BE>(Ctx &);
