@@ -1047,7 +1047,7 @@ public:
   RISCVAttributesSection()
       : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
 
-  size_t getSize() const override { return size; }
+  size_t getSize(Ctx &) const override { return size; }
   void writeTo(Ctx &, uint8_t *buf) override;
 
   static constexpr StringRef vendor = "riscv";
@@ -1277,7 +1277,7 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
 }
 
 void RISCVAttributesSection::writeTo(Ctx &ctx, uint8_t *buf) {
-  const size_t size = getSize();
+  const size_t size = getSize(ctx);
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
   write32(buf + 1, size - 1);
