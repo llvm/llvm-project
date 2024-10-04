@@ -39,6 +39,19 @@ using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
 using llvm::mod;
 
+static LogicalResult
+checkTensorRankMatchIndices(Value tensor, ValueRange dynamicIndices,
+                            ArrayRef<int64_t> staticIndices) {
+  auto tensorType = llvm::cast<RankedTensorType>(tensor.getType());
+  int64_t dynamicDimCount = llvm::count_if(staticIndices, [](int64_t element) {
+    return element == ShapedType::kDynamic;
+  });
+  if (tensorType.getRank() != staticIndices.size() ||
+      dynamicDimCount != static_cast<int64_t>(dynamicIndices.size()))
+    return LogicalResult::failure();
+  return LogicalResult::success();
+}
+
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
 Operation *TensorDialect::materializeConstant(OpBuilder &builder,
@@ -1118,10 +1131,49 @@ void ExtractOp::getAsmResultNames(
   setNameFn(getResult(), "extracted");
 }
 
+// Build an ExtractOp with mixed static and dynamic indexes.
+void ExtractOp::build(OpBuilder &b, OperationState &result, Value tensor,
+                      ArrayRef<OpFoldResult> indices,
+                      ArrayRef<NamedAttribute> attrs) {
+  Type resultType = llvm::cast<TensorType>(tensor.getType()).getElementType();
+  build(b, result, resultType, tensor, indices, attrs);
+}
+
+// Build an ExtractOp with mixed static, dynamic indexes and inferred result
+// Type.
+void ExtractOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                      Value tensor, ArrayRef<OpFoldResult> indices,
+                      ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticIndices;
+  SmallVector<Value> dynamicIndices;
+  dispatchIndexOpFoldResults(indices, dynamicIndices, staticIndices);
+  result.addAttributes(attrs);
+  build(b, result, resultType, tensor, dynamicIndices,
+        b.getDenseI64ArrayAttr(staticIndices));
+}
+
+// Build an ExtractOp with dynamic indexes and inferred result type.
+void ExtractOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                      Value tensor, ValueRange indices,
+                      ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> indicesValues = llvm::to_vector<4>(
+      llvm::map_range(indices, [](Value v) -> OpFoldResult { return v; }));
+  build(b, result, resultType, tensor, indicesValues, attrs);
+}
+
+// Build an ExtractOp with dynamic indexes.
+void ExtractOp::build(OpBuilder &b, OperationState &result, Value tensor,
+                      ValueRange indices, ArrayRef<NamedAttribute> attrs) {
+  Type resultType = llvm::cast<TensorType>(tensor.getType()).getElementType();
+  SmallVector<OpFoldResult> indicesValues = llvm::to_vector<4>(
+      llvm::map_range(indices, [](Value v) -> OpFoldResult { return v; }));
+  build(b, result, resultType, tensor, indicesValues, attrs);
+}
+
 LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
-  if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
+  if (failed(checkTensorRankMatchIndices(getTensor(), getIndices(),
+                                         getStaticIndices())))
     return emitOpError("incorrect number of indices for extract_element");
   return success();
 }
@@ -1135,12 +1187,18 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
 
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
-  for (Attribute indice : adaptor.getIndices()) {
-    if (!indice || !llvm::isa<IntegerAttr>(indice))
-      return {};
-    indices.push_back(llvm::cast<IntegerAttr>(indice).getInt());
+  auto dynamicIndicesIt = adaptor.getIndices().begin();
+  for (int64_t i : getStaticIndices()) {
+    if (i != ShapedType::kDynamic) {
+      indices.push_back(i);
+    } else {
+      Attribute indice = *dynamicIndicesIt;
+      if (!indice || !llvm::isa<IntegerAttr>(indice))
+        return {};
+      indices.push_back(llvm::cast<IntegerAttr>(indice).getInt());
+      dynamicIndicesIt++;
+    }
   }
-
   // Fold extract(from_elements(...)).
   if (auto fromElementsOp = getTensor().getDefiningOp<FromElementsOp>()) {
     auto tensorType = llvm::cast<RankedTensorType>(fromElementsOp.getType());
@@ -1357,10 +1415,48 @@ void InsertOp::getAsmResultNames(
   setNameFn(getResult(), "inserted");
 }
 
+// Build an ExtractOp with mixed static and dynamic indexes.
+void InsertOp::build(OpBuilder &b, OperationState &result, Value scalar,
+                     Value dest, ArrayRef<OpFoldResult> indices,
+                     ArrayRef<NamedAttribute> attrs) {
+  build(b, result, dest.getType(), scalar, dest, indices, attrs);
+}
+
+// Build an InsertOp with mixed static, dynamic indexes and inferred result
+// Type.
+void InsertOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                     Value scalar, Value dest, ArrayRef<OpFoldResult> indices,
+                     ArrayRef<NamedAttribute> attrs) {
+  SmallVector<int64_t> staticIndices;
+  SmallVector<Value> dynamicIndices;
+  dispatchIndexOpFoldResults(indices, dynamicIndices, staticIndices);
+  result.addAttributes(attrs);
+  build(b, result, resultType, scalar, dest, dynamicIndices,
+        b.getDenseI64ArrayAttr(staticIndices));
+}
+
+// Build an ExtractOp with dynamic indexes and inferred result type.
+void InsertOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                     Value scalar, Value dest, ValueRange indices,
+                     ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> indicesValues = llvm::to_vector<4>(
+      llvm::map_range(indices, [](Value v) -> OpFoldResult { return v; }));
+  build(b, result, resultType, scalar, dest, indicesValues, attrs);
+}
+
+// Build an InsertOp with dynamic indexes.
+void InsertOp::build(OpBuilder &b, OperationState &result, Value scalar,
+                     Value dest, ValueRange indices,
+                     ArrayRef<NamedAttribute> attrs) {
+  SmallVector<OpFoldResult> indicesValues = llvm::to_vector<4>(
+      llvm::map_range(indices, [](Value v) -> OpFoldResult { return v; }));
+  build(b, result, dest.getType(), scalar, dest, indicesValues, attrs);
+}
+
 LogicalResult InsertOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  auto destType = llvm::cast<RankedTensorType>(getDest().getType());
-  if (destType.getRank() != static_cast<int64_t>(getIndices().size()))
+  if (failed(checkTensorRankMatchIndices(getDest(), getIndices(),
+                                         getStaticIndices())))
     return emitOpError("incorrect number of indices");
   return success();
 }

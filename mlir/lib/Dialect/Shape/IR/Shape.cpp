@@ -1736,6 +1736,32 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
   }
 };
 
+struct ExtractFromShapeOfExtentTensor
+    : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    auto tensorShapeOfOp = op.getTensor().getDefiningOp<shape::ShapeOfOp>();
+    if (!tensorShapeOfOp)
+      return rewriter.notifyMatchFailure(op, "producer is not shape.shape_of");
+
+    int64_t staticIndice = op.getStaticIndices()[0];
+    Type indexType = rewriter.getIndexType();
+    Value indice =
+        staticIndice != ShapedType::kDynamic
+            ? tensorShapeOfOp->getDialect()
+                  ->materializeConstant(
+                      rewriter, IntegerAttr::get(indexType, staticIndice),
+                      indexType, op.getLoc())
+                  ->getResult(0)
+            : op.getIndices()[0];
+    rewriter.replaceOpWithNewOp<tensor::DimOp>(op, tensorShapeOfOp.getArg(),
+                                               indice);
+    return success();
+  }
+};
+
 // Canonicalize
 // ```
 // %0 = shape.shape_of %arg : tensor<?x?x?xf32> -> tensor<3xindex>
