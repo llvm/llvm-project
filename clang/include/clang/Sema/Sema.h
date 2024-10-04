@@ -11995,7 +11995,7 @@ public:
 
   ConceptDecl *ActOnStartConceptDefinition(
       Scope *S, MultiTemplateParamsArg TemplateParameterLists,
-      const IdentifierInfo *Name, SourceLocation NameLoc);
+      const IdentifierInfo *Name, SourceLocation NameLoc, bool &AddedToScope);
 
   ConceptDecl *ActOnFinishConceptDefinition(Scope *S, ConceptDecl *C,
                                             Expr *ConstraintExpr,
