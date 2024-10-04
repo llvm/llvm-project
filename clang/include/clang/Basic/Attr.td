@@ -4588,6 +4588,35 @@ def HLSLResourceBinding: InheritableAttr {
   let LangOpts = [HLSL];
   let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
   let Documentation = [HLSLResourceBindingDocs];
+  let AdditionalMembers = [{
+      enum class RegisterType : unsigned { SRV, UAV, CBuffer, Sampler, C, I, Invalid };
+
+      const FieldDecl *ResourceField = nullptr;
+      RegisterType RegType;
+      unsigned SlotNumber;
+      unsigned SpaceNumber;
+
+      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+        RegType = RT;
+        SlotNumber = SlotNum;
+        SpaceNumber = SpaceNum;
+      }
+      void setResourceField(const FieldDecl *FD) {
+        ResourceField = FD;
+      }
+      const FieldDecl *getResourceField() {
+        return ResourceField;
+      }
+      RegisterType getRegisterType() {
+        return RegType;
+      }
+      unsigned getSlotNumber() {
+        return SlotNumber;
+      }
+      unsigned getSpaceNumber() {
+        return SpaceNumber;
+      }
+  }];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {

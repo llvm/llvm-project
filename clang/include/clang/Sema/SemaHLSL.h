@@ -28,6 +28,7 @@ class AttributeCommonInfo;
 class IdentifierInfo;
 class ParsedAttr;
 class Scope;
+class VarDecl;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
@@ -62,6 +63,7 @@ public:
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
   void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+  void ProcessResourceBindingOnDecl(VarDecl *D);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
