@@ -150,7 +150,9 @@ void SPIRVAsmPrinter::outputOpFunctionEnd() {
 // Emit OpFunctionEnd at the end of MF and clear BBNumToRegMap.
 void SPIRVAsmPrinter::emitFunctionBodyEnd() {
   // Do not emit anything if it's an internal service function.
-  if (MF->getFunction().getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+  if (MF->getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
     return;
 
   outputOpFunctionEnd();
