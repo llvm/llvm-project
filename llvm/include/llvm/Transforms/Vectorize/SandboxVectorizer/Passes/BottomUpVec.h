@@ -19,14 +19,19 @@
 
 namespace llvm::sandboxir {
 
+class RegionPassManager;
+
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
   LegalityAnalysis Legality;
   void vectorizeRec(ArrayRef<Value *> Bndl);
   void tryVectorize(ArrayRef<Value *> Seeds);
 
+  [[maybe_unused]] RegionPassManager *RPM;
+
 public:
-  BottomUpVec() : FunctionPass("bottom-up-vec") {}
+  BottomUpVec(RegionPassManager *RPM)
+      : FunctionPass("bottom-up-vec"), RPM(RPM) {}
   bool runOnFunction(Function &F) final;
 };
 

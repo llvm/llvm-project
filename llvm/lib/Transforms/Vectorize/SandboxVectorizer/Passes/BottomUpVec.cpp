@@ -59,6 +59,8 @@ bool BottomUpVec::runOnFunction(Function &F) {
     // TODO: Replace with proper SeedCollector function.
     auto Seeds = collectSeeds(BB);
     // TODO: Slice Seeds into smaller chunks.
+    // TODO: If vectorization succeeds, run the RegionPassManager on the
+    // resulting region.
     if (Seeds.size() >= 2)
       tryVectorize(Seeds);
   }
