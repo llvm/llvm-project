@@ -162,8 +162,8 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
 
-  Value loaded = builder.create<fir::LoadOp>(loc, funcOp.getArgument(0));
-  builder.create<fir::StoreOp>(loc, loaded, funcOp.getArgument(1));
+  Value loaded = builder.create<fir::LoadOp>(loc, funcOp.getArgument(1));
+  builder.create<fir::StoreOp>(loc, loaded, funcOp.getArgument(0));
 
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
