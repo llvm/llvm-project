@@ -690,6 +690,10 @@ protected:
       ValueList &Values,
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
+  /// Returns the decl refered to by the "dynamic type" of the current object.
+  /// This may be null.
+  const CXXRecordDecl *getDeclForDynamicType() const;
+
 public:
   /// Returns the expression representing the implicit 'this' object.
   virtual const Expr *getCXXThisExpr() const { return nullptr; }

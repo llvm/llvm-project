@@ -711,18 +711,17 @@ void CXXInstanceCall::getExtraInvalidatedValues(
   if (const auto *D = cast_or_null<CXXMethodDecl>(getDecl())) {
     if (!D->isConst())
       return;
-    // Get the record decl for the class of 'This'. D->getParent() may return a
-    // base class decl, rather than the class of the instance which needs to be
-    // checked for mutable fields.
-    // TODO: We might as well look at the dynamic type of the object.
-    const Expr *Ex = getCXXThisExpr()->IgnoreParenBaseCasts();
-    QualType T = Ex->getType();
-    if (T->isPointerType()) // Arrow or implicit-this syntax?
-      T = T->getPointeeType();
-    const CXXRecordDecl *ParentRecord = T->getAsCXXRecordDecl();
-    assert(ParentRecord);
+
+    // Get the record decl for the class of 'This'. D->getParent() may return
+    // a base class decl, rather than the class of the instance which needs to
+    // be checked for mutable fields.
+    const CXXRecordDecl *ParentRecord = getDeclForDynamicType();
+    if (!ParentRecord || !ParentRecord->hasDefinition())
+      return;
+
     if (ParentRecord->hasMutableFields())
       return;
+
     // Preserve CXXThis.
     const MemRegion *ThisRegion = ThisVal.getAsRegion();
     if (!ThisRegion)
@@ -748,6 +747,22 @@ SVal CXXInstanceCall::getCXXThisVal() const {
   return ThisVal;
 }
 
+const CXXRecordDecl *CXXInstanceCall::getDeclForDynamicType() const {
+  const MemRegion *R = getCXXThisVal().getAsRegion();
+  if (!R)
+    return nullptr;
+
+  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
+  if (!DynType.isValid())
+    return nullptr;
+
+  QualType Ty = DynType.getType()->getPointeeType();
+  if (Ty.isNull())
+    return nullptr;
+
+  return Ty->getAsCXXRecordDecl();
+}
+
 RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   // Do we have a decl at all?
   const Decl *D = getDecl();
@@ -759,21 +774,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!MD->isVirtual())
     return AnyFunctionCall::getRuntimeDefinition();
 
-  // Do we know the implicit 'this' object being called?
-  const MemRegion *R = getCXXThisVal().getAsRegion();
-  if (!R)
-    return {};
-
-  // Do we know anything about the type of 'this'?
-  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
-  if (!DynType.isValid())
-    return {};
-
-  // Is the type a C++ class? (This is mostly a defensive check.)
-  QualType RegionType = DynType.getType()->getPointeeType();
-  assert(!RegionType.isNull() && "DynamicTypeInfo should always be a pointer.");
-
-  const CXXRecordDecl *RD = RegionType->getAsCXXRecordDecl();
+  const CXXRecordDecl *RD = getDeclForDynamicType();
   if (!RD || !RD->hasDefinition())
     return {};
 
@@ -796,6 +797,10 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
 
     return {};
   }
+
+  const MemRegion *R = getCXXThisVal().getAsRegion();
+  DynamicTypeInfo DynType = getDynamicTypeInfo(getState(), R);
+  assert(DynType.isValid() && "ensured by getDeclForDynamicType()");
 
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;
