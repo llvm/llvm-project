@@ -2337,13 +2337,12 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SDValue PRMT32__ = DAG.getNode(
           NVPTXISD::PRMT, DL, MVT::v4i8,
           {DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
-          DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
+           DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
            DAG.getConstant(0x4033, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
       SDValue PRMT3210 = DAG.getNode(
           NVPTXISD::PRMT, DL, MVT::v4i8,
-          {PRMT__10, PRMT32__,
-           DAG.getConstant(0x5410, DL, MVT::i32),
+          {PRMT__10, PRMT32__, DAG.getConstant(0x5410, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
       return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
     }
