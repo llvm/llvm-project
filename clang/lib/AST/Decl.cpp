@@ -4159,7 +4159,7 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
   if (FunctionTemplateSpecializationInfo *Info
         = TemplateOrSpecialization
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
-    return Info->getTemplate();
+    return Info->getTemplate()->getMostRecentDecl();
   }
   return nullptr;
 }
