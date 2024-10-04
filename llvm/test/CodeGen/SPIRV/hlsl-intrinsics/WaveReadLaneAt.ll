@@ -16,14 +16,14 @@
 define spir_func void @test_1(float %fexpr, i32 %iexpr, <4 x i1> %vbexpr, i32 %idx) {
 entry:
 ; CHECK:   %[[#fret:]] = OpGroupNonUniformShuffle %[[#f32]] %[[#fexpr]] %[[#idx]] %[[#scope]]
-  %0 = call float @llvm.spv.wave.read.lane.at.f32(float %fexpr, i32 %idx)
+  %0 = call float @llvm.spv.waveReadLaneAt.f32(float %fexpr, i32 %idx)
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformShuffle %[[#uint]] %[[#iexpr]] %[[#idx]] %[[#scope]]
-  %1 = call i32 @llvm.spv.wave.read.lane.at.i32(i32 %iexpr, i32 %idx)
+  %1 = call i32 @llvm.spv.waveReadLaneAt.i32(i32 %iexpr, i32 %idx)
 ; CHECK:   %[[#vbret:]] = OpGroupNonUniformShuffle %[[#v4_bool]] %[[#vbexpr]] %[[#idx]] %[[#scope]]
-  %2 = call <4 x i1> @llvm.spv.wave.read.lane.at.v4i1(<4 x i1> %vbexpr, i32 %idx)
+  %2 = call <4 x i1> @llvm.spv.waveReadLaneAt.v4i1(<4 x i1> %vbexpr, i32 %idx)
   ret void
 }
 
-declare float @__hlsl_wave_read_lane_at.f32(float, i32)
-declare i32 @__hlsl_wave_read_lane_at.i32(i32, i32)
-declare <4 x i1> @__hlsl_wave_read_lane_at.v4i1(<4 x i1>, i32)
+declare float @__hlsl_waveReadLaneAt.f32(float, i32)
+declare i32 @__hlsl_waveReadLaneAt.i32(i32, i32)
+declare <4 x i1> @__hlsl_waveReadLaneAt.v4i1(<4 x i1>, i32)
