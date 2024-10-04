@@ -508,6 +508,10 @@ public:
     return IsFunctionTrivial(CE->getConstructor());
   }
 
+  bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
+    return IsFunctionTrivial(E->getConstructor());
+  }
+
   bool VisitCXXNewExpr(const CXXNewExpr *NE) { return VisitChildren(NE); }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
