@@ -87,6 +87,8 @@ public:
   void dump() const;
 };
 
+/// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
+/// SmallPtrSet, among others.
 template <> struct PointerLikeTypeTraits<SCEVUse> {
   static inline void *getAsVoidPointer(SCEVUse U) { return U.getOpaqueValue(); }
   static inline SCEVUse getFromVoidPointer(void *P) {
@@ -95,13 +97,7 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
     return U;
   }
 
-  /// Note, we assume here that void* is related to raw malloc'ed memory and
-  /// that malloc returns objects at least 4-byte aligned. However, this may be
-  /// wrong, or pointers may be from something other than malloc. In this case,
-  /// you should specify a real typed pointer or avoid this template.
-  ///
-  /// All clients should use assertions to do a run-time check to ensure that
-  /// this is actually true.
+  /// The Low bits are used by the PointerIntPair.
   static constexpr int NumLowBitsAvailable = 0;
 };
 
@@ -978,7 +974,7 @@ public:
 
   /// Same as above except this uses the predicated backedge taken info and
   /// may require predicates.
-  const SCEV *
+  SCEVUse
   getPredicatedExitCount(const Loop *L, const BasicBlock *ExitingBlock,
                          SmallVectorImpl<const SCEVPredicate *> *Predicates,
                          ExitCountKind Kind = Exact);
@@ -1014,7 +1010,7 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
-  const SCEV *getPredicatedConstantMaxBackedgeTakenCount(
+  SCEVUse getPredicatedConstantMaxBackedgeTakenCount(
       const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// When successful, this returns a SCEV that is greater than or equal
@@ -1029,7 +1025,7 @@ public:
   /// SCEV predicates to Predicates that are required to be true in order for
   /// the answer to be correct. Predicates can be checked with run-time
   /// checks and can be used to perform loop versioning.
-  const SCEV *getPredicatedSymbolicMaxBackedgeTakenCount(
+  SCEVUse getPredicatedSymbolicMaxBackedgeTakenCount(
       const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// Return true if the backedge taken count is either the value returned by
@@ -1466,9 +1462,9 @@ public:
 
     unsigned computeHash() const {
       return detail::combineHashValue(
-          C,
-          detail::combineHashValue(reinterpret_cast<uintptr_t>(Op.getPointer()),
-                                   reinterpret_cast<uintptr_t>(Ty)));
+          C, detail::combineHashValue(
+                 reinterpret_cast<uintptr_t>(Op.getRawPointer()),
+                 reinterpret_cast<uintptr_t>(Ty)));
     }
 
     bool operator==(const FoldID &RHS) const {

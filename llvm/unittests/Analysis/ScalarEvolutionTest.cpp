@@ -1707,4 +1707,59 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUseWithFlags) {
+  Type *Ty = IntegerType::get(Context, 32);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), {Ty, Ty, Ty}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  ReturnInst::Create(Context, nullptr, BB);
+
+  Value *V0 = F->getArg(0);
+  Value *V1 = F->getArg(1);
+  Value *V2 = F->getArg(2);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  const SCEV *S0 = SE.getSCEV(V0);
+  const SCEV *S1 = SE.getSCEV(V1);
+  const SCEV *S2 = SE.getSCEV(V2);
+
+  SCEVUse AddNoFlags = SE.getAddExpr(S0, SE.getConstant(S0->getType(), 2));
+  SCEVUse AddWithFlag2 = {AddNoFlags, 2};
+  SCEVUse MulNoFlags = SE.getMulExpr(AddNoFlags, S1);
+  SCEVUse MulFlags2 = SE.getMulExpr(AddWithFlag2, S1);
+  EXPECT_EQ(AddNoFlags.getCanonical(SE), AddWithFlag2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags2.getCanonical(SE));
+
+  SCEVUse AddWithFlag1 = {AddNoFlags, 1};
+  SCEVUse MulFlags1 = SE.getMulExpr(AddWithFlag1, S1);
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags1.getCanonical(SE));
+  EXPECT_EQ(MulFlags1.getCanonical(SE), MulFlags2.getCanonical(SE));
+
+  SCEVUse AddNoFlags2 = SE.getAddExpr(S0, SE.getConstant(S0->getType(), 2));
+  EXPECT_EQ(AddNoFlags.getCanonical(SE), AddNoFlags2.getCanonical(SE));
+  EXPECT_EQ(AddNoFlags2.getCanonical(SE), AddWithFlag2.getCanonical(SE));
+
+  SCEVUse MulFlags22 = SE.getMulExpr(AddWithFlag2, S1);
+  EXPECT_EQ(MulFlags22.getCanonical(SE), MulFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulFlags22.getCanonical(SE));
+
+  SCEVUse MulNoFlags2 = SE.getMulExpr(AddNoFlags, S1);
+  EXPECT_EQ(MulNoFlags.getCanonical(SE), MulNoFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags2.getCanonical(SE), MulFlags2.getCanonical(SE));
+  EXPECT_EQ(MulNoFlags2.getCanonical(SE), MulFlags22.getCanonical(SE));
+
+  SE.getAddExpr(MulNoFlags, S2);
+  SE.getAddExpr(MulFlags1, S2);
+  SE.getAddExpr(MulFlags2, S2);
+  SCEVUse AddMulNoFlags = SE.getAddExpr(MulNoFlags, S2);
+  SCEVUse AddMulFlags1 = SE.getAddExpr(MulFlags1, S2);
+  SCEVUse AddMulFlags2 = SE.getAddExpr(MulFlags2, S2);
+
+  EXPECT_EQ(AddMulNoFlags.getCanonical(SE), AddMulFlags1.getCanonical(SE));
+  EXPECT_EQ(AddMulNoFlags.getCanonical(SE), AddMulFlags2.getCanonical(SE));
+  EXPECT_EQ(AddMulFlags1.getCanonical(SE), AddMulFlags2.getCanonical(SE));
+}
+
 }  // end namespace llvm

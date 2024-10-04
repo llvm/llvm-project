@@ -857,7 +857,7 @@ static bool hasHugeExpression(ArrayRef<SCEVUse> Ops) {
 template <typename FoldT, typename IsIdentityT, typename IsAbsorberT>
 static const SCEV *
 constantFoldAndGroupOps(ScalarEvolution &SE, LoopInfo &LI, DominatorTree &DT,
-                        SmallVectorImpl<const SCEV *> &Ops, FoldT Fold,
+                        SmallVectorImpl<SCEVUse> &Ops, FoldT Fold,
                         IsIdentityT IsIdentity, IsAbsorberT IsAbsorber) {
   const SCEVConstant *Folded = nullptr;
   for (unsigned Idx = 0; Idx < Ops.size();) {
@@ -2262,12 +2262,12 @@ SCEVUse ScalarEvolution::getAnyExtendExpr(SCEVUse Op, Type *Ty) {
 /// may be exposed. This helps getAddRecExpr short-circuit extra work in
 /// the common case where no interesting opportunities are present, and
 /// is also used as a check to avoid infinite recursion.
-static bool
-CollectAddOperandsWithScales(SmallDenseMap<const SCEV *, APInt, 16> &M,
-                             SmallVectorImpl<SCEVUse> &NewOps,
-                             APInt &AccumulatedConstant,
-                             ArrayRef<SCEVUse> Ops, const APInt &Scale,
-                             ScalarEvolution &SE) {
+static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
+                                         SmallVectorImpl<SCEVUse> &NewOps,
+                                         APInt &AccumulatedConstant,
+                                         ArrayRef<SCEVUse> Ops,
+                                         const APInt &Scale,
+                                         ScalarEvolution &SE) {
   bool Interesting = false;
 
   // Iterate over the add operands. They are sorted, with constants first.
@@ -8207,7 +8207,7 @@ ScalarEvolution::getSmallConstantTripCount(const Loop *L,
 unsigned ScalarEvolution::getSmallConstantMaxTripCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
 
-  const auto *MaxExitCount =
+  SCEVUse MaxExitCount =
       Predicates ? getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
                  : getConstantMaxBackedgeTakenCount(L);
   return getConstantTripCount(dyn_cast<SCEVConstant>(MaxExitCount));
@@ -8314,12 +8314,12 @@ SCEVUse ScalarEvolution::getBackedgeTakenCount(const Loop *L,
   llvm_unreachable("Invalid ExitCountKind!");
 }
 
-const SCEV *ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
+SCEVUse ScalarEvolution::getPredicatedSymbolicMaxBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getSymbolicMax(L, this, &Preds);
 }
 
-const SCEV *ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
+SCEVUse ScalarEvolution::getPredicatedConstantMaxBackedgeTakenCount(
     const Loop *L, SmallVectorImpl<const SCEVPredicate *> &Preds) {
   return getPredicatedBackedgeTakenInfo(L).getConstantMax(this, &Preds);
 }
@@ -9220,7 +9220,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
           isKnownPositive(AR->getStepRecurrence(*this))) {
         auto Flags = AR->getNoWrapFlags();
         Flags = setFlags(Flags, WrapType);
-        SmallVector<const SCEV*> Operands{AR->operands()};
+        SmallVector<SCEVUse> Operands{AR->operands()};
         Flags = StrengthenNoWrapFlags(this, scAddRecExpr, Operands, Flags);
         setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), Flags);
       }
@@ -13782,7 +13782,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   }
   Preds.clear();
 
-  auto *PredConstantMax =
+  auto PredConstantMax =
       SE->getPredicatedConstantMaxBackedgeTakenCount(L, Preds);
   if (PredConstantMax != ConstantBTC) {
     assert(!Preds.empty() &&
@@ -13802,7 +13802,7 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
   }
   Preds.clear();
 
-  auto *PredSymbolicMax =
+  auto PredSymbolicMax =
       SE->getPredicatedSymbolicMaxBackedgeTakenCount(L, Preds);
   if (SymbolicBTC != PredSymbolicMax) {
     assert(!Preds.empty() &&
