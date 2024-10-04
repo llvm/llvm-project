@@ -1346,7 +1346,7 @@ define <2 x float> @frem_splat_constant1(<2 x float> %x) {
 
 define <2 x i1> @PR40734(<1 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @PR40734(
-; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> zeroinitializer, <1 x i1> [[X:%.*]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <1 x i1> [[X:%.*]], <1 x i1> zeroinitializer, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[NARROW:%.*]] = shufflevector <4 x i1> [[Y:%.*]], <4 x i1> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[WIDEN]], [[NARROW]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]

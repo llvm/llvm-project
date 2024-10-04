@@ -2248,13 +2248,15 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (!Shuf.isSelect())
     return nullptr;
 
+  Value *Op0 = Shuf.getOperand(0);
+  Value *Op1 = Shuf.getOperand(1);
+
   // Canonicalize to choose from operand 0 first unless operand 1 is undefined.
-  // Commuting undef to operand 0 conflicts with another canonicalization.
+  // Only do so when the operand have the same complexity to avoid conflict with
+  // complexity normalization.
   unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
-  if (!match(Shuf.getOperand(1), m_Undef()) &&
-      Shuf.getMaskValue(0) >= (int)NumElts) {
-    // TODO: Can we assert that both operands of a shuffle-select are not undef
-    // (otherwise, it would have been folded by instsimplify?
+  if (Shuf.getMaskValue(0) >= (int)NumElts &&
+      getComplexity(Op0) == getComplexity(Op1)) {
     Shuf.commute();
     return &Shuf;
   }
@@ -2267,8 +2269,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
     return I;
 
   BinaryOperator *B0, *B1;
-  if (!match(Shuf.getOperand(0), m_BinOp(B0)) ||
-      !match(Shuf.getOperand(1), m_BinOp(B1)))
+  if (!match(Op0, m_BinOp(B0)) || !match(Op1, m_BinOp(B1)))
     return nullptr;
 
   // If one operand is "0 - X", allow that to be viewed as "X * -1"
@@ -2791,6 +2792,16 @@ Instruction *InstCombinerImpl::simplifyBinOpSplats(ShuffleVectorInst &SVI) {
 Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
+
+  unsigned LHSComplexity = getComplexity(LHS);
+  unsigned RHSComplexity = getComplexity(RHS);
+  // Order operands from most complex to least complex so for example
+  // constants or poison end up on RHS.
+  if (LHSComplexity < RHSComplexity) {
+    SVI.commute();
+    return &SVI;
+  }
+
   SimplifyQuery ShufQuery = SQ.getWithInstruction(&SVI);
   if (auto *V = simplifyShuffleVectorInst(LHS, RHS, SVI.getShuffleMask(),
                                           SVI.getType(), ShufQuery))
@@ -2856,12 +2867,6 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     assert(!match(RHS, m_Undef()) &&
            "Shuffle with 2 undef ops not simplified?");
     return new ShuffleVectorInst(LHS, createUnaryMask(Mask, LHSWidth));
-  }
-
-  // shuffle undef, x, mask --> shuffle x, undef, mask'
-  if (match(LHS, m_Undef())) {
-    SVI.commute();
-    return &SVI;
   }
 
   if (Instruction *I = canonicalizeInsertSplat(SVI, Builder))
