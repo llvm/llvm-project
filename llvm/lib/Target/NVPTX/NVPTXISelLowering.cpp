@@ -2334,15 +2334,16 @@ SDValue NVPTXTargetLowering::LowerBUILD_VECTOR(SDValue Op,
            DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32),
            DAG.getConstant(0x3340, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
-      SDValue PRMT_210 = DAG.getNode(
+      SDValue PRMT32__ = DAG.getNode(
           NVPTXISD::PRMT, DL, MVT::v4i8,
-          {PRMT__10, DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
-           DAG.getConstant(0x3410, DL, MVT::i32),
+          {DAG.getAnyExtOrTrunc(Op->getOperand(2), DL, MVT::i32),
+          DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
+           DAG.getConstant(0x4033, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
       SDValue PRMT3210 = DAG.getNode(
           NVPTXISD::PRMT, DL, MVT::v4i8,
-          {PRMT_210, DAG.getAnyExtOrTrunc(Op->getOperand(3), DL, MVT::i32),
-           DAG.getConstant(0x4210, DL, MVT::i32),
+          {PRMT__10, PRMT32__,
+           DAG.getConstant(0x5410, DL, MVT::i32),
            DAG.getConstant(NVPTX::PTXPrmtMode::NONE, DL, MVT::i32)});
       return DAG.getNode(ISD::BITCAST, DL, VT, PRMT3210);
     }
