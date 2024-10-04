@@ -843,7 +843,7 @@ def : InstRW<[V1Write_4c_2V13], (instregex "^(ADD|[SU]ADDL)Vv16i8v$",
 
 // ASIMD dot product
 // ASIMD dot product using signed and unsigned integers
-def : InstRW<[V1Write_2c_1V], (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
+def : InstRW<[V1Write_3c_1V], (instregex "^([SU]|SU|US)DOT(lane)?v(8|16)i8$")>;
 
 // ASIMD matrix multiply- accumulate
 def : InstRW<[V1Write_3c_1V], (instrs SMMLA, UMMLA, USMMLA)>;
@@ -896,10 +896,12 @@ def : InstRW<[V1Write_2c_1V13], (instregex "^SHLL?v", "^SHRNv", "^[SU]SHLLv",
 // ASIMD FP negate
 // Covered by "SchedAlias (WriteV[dq]...)" above
 
-// ASIMD FP complex multiply add
 // ASIMD FP multiply accumulate
 def : InstRW<[V1Write_4c_1V], (instregex "^FCADD(v[48]f16|v[24]f32|v2f64)$",
                                          "^FML[AS]v")>;
+
+// ASIMD FP complex multiply add
+def : InstRW<[V1Write_4c_1V], (instregex "^FCMLAv")>;
 
 // ASIMD FP convert, long (F16 to F32)
 def : InstRW<[V1Write_4c_2V02], (instregex "^FCVTLv[48]i16$")>;
