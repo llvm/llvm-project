@@ -11,6 +11,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1210 < %s | FileCheck --check-prefixes=GFX1210 %s
 
 define amdgpu_kernel void @flat_agent_unordered_load(
 ; GFX7-LABEL: flat_agent_unordered_load:
@@ -192,6 +193,20 @@ define amdgpu_kernel void @flat_agent_unordered_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_unordered_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3]
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent") unordered, align 4
@@ -379,6 +394,20 @@ define amdgpu_kernel void @flat_agent_monotonic_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent") monotonic, align 4
@@ -581,6 +610,21 @@ define amdgpu_kernel void @flat_agent_acquire_load(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent") acquire, align 4
@@ -809,6 +853,27 @@ define amdgpu_kernel void @flat_agent_seq_cst_load(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent") seq_cst, align 4
@@ -950,6 +1015,19 @@ define amdgpu_kernel void @flat_agent_unordered_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_unordered_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent") unordered, align 4
@@ -1090,6 +1168,19 @@ define amdgpu_kernel void @flat_agent_monotonic_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent") monotonic, align 4
@@ -1254,6 +1345,24 @@ define amdgpu_kernel void @flat_agent_release_store(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent") release, align 4
@@ -1418,6 +1527,24 @@ define amdgpu_kernel void @flat_agent_seq_cst_store(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent") seq_cst, align 4
@@ -1572,6 +1699,17 @@ define amdgpu_kernel void @flat_agent_monotonic_atomicrmw(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") monotonic
@@ -1757,6 +1895,19 @@ define amdgpu_kernel void @flat_agent_acquire_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") acquire
@@ -1935,6 +2086,22 @@ define amdgpu_kernel void @flat_agent_release_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") release
@@ -2144,6 +2311,24 @@ define amdgpu_kernel void @flat_agent_acq_rel_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") acq_rel
@@ -2353,6 +2538,24 @@ define amdgpu_kernel void @flat_agent_seq_cst_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") seq_cst
@@ -2552,6 +2755,20 @@ define amdgpu_kernel void @flat_agent_acquire_ret_atomicrmw(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") acquire
@@ -2780,6 +2997,27 @@ define amdgpu_kernel void @flat_agent_acq_rel_ret_atomicrmw(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") acq_rel
@@ -3008,6 +3246,27 @@ define amdgpu_kernel void @flat_agent_seq_cst_ret_atomicrmw(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent") seq_cst
@@ -3241,6 +3500,22 @@ define amdgpu_kernel void @flat_agent_monotonic_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] offset:16 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -3505,6 +3780,24 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -3762,6 +4055,27 @@ define amdgpu_kernel void @flat_agent_release_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] offset:16 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -4050,6 +4364,29 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -4338,6 +4675,29 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -4602,6 +4962,24 @@ define amdgpu_kernel void @flat_agent_monotonic_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -4866,6 +5244,24 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -5154,6 +5550,29 @@ define amdgpu_kernel void @flat_agent_release_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -5442,6 +5861,29 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -5730,6 +6172,29 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -6018,6 +6483,29 @@ define amdgpu_kernel void @flat_agent_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -6306,6 +6794,29 @@ define amdgpu_kernel void @flat_agent_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -6594,6 +7105,29 @@ define amdgpu_kernel void @flat_agent_release_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -6882,6 +7416,29 @@ define amdgpu_kernel void @flat_agent_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -7170,6 +7727,29 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -7443,6 +8023,24 @@ define amdgpu_kernel void @flat_agent_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -7733,6 +8331,25 @@ define amdgpu_kernel void @flat_agent_acquire_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -8032,6 +8649,29 @@ define amdgpu_kernel void @flat_agent_release_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -8350,6 +8990,32 @@ define amdgpu_kernel void @flat_agent_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -8668,6 +9334,32 @@ define amdgpu_kernel void @flat_agent_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -8962,6 +9654,27 @@ define amdgpu_kernel void @flat_agent_monotonic_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -9252,6 +9965,25 @@ define amdgpu_kernel void @flat_agent_acquire_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -9570,6 +10302,32 @@ define amdgpu_kernel void @flat_agent_release_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -9888,6 +10646,32 @@ define amdgpu_kernel void @flat_agent_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -10206,6 +10990,32 @@ define amdgpu_kernel void @flat_agent_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -10524,6 +11334,32 @@ define amdgpu_kernel void @flat_agent_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_monotonic_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -10838,6 +11674,30 @@ define amdgpu_kernel void @flat_agent_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acquire_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -11156,6 +12016,32 @@ define amdgpu_kernel void @flat_agent_release_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_release_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -11474,6 +12360,32 @@ define amdgpu_kernel void @flat_agent_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_acq_rel_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -11792,6 +12704,32 @@ define amdgpu_kernel void @flat_agent_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_seq_cst_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -11981,6 +12919,20 @@ define amdgpu_kernel void @flat_agent_one_as_unordered_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_unordered_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3]
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent-one-as") unordered, align 4
@@ -12168,6 +13120,20 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent-one-as") monotonic, align 4
@@ -12380,6 +13346,22 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_load(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent-one-as") acquire, align 4
@@ -12618,6 +13600,28 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_load(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_load:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic i32, ptr %in syncscope("agent-one-as") seq_cst, align 4
@@ -12759,6 +13763,19 @@ define amdgpu_kernel void @flat_agent_one_as_unordered_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_unordered_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent-one-as") unordered, align 4
@@ -12899,6 +13916,19 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent-one-as") monotonic, align 4
@@ -13063,6 +14093,24 @@ define amdgpu_kernel void @flat_agent_one_as_release_store(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent-one-as") release, align 4
@@ -13227,6 +14275,24 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_store(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_store:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[0:1], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
   store atomic i32 %in, ptr %out syncscope("agent-one-as") seq_cst, align 4
@@ -13381,6 +14447,17 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_atomicrmw(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-CU-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") monotonic
@@ -13562,6 +14639,19 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") acquire
@@ -13740,6 +14830,22 @@ define amdgpu_kernel void @flat_agent_one_as_release_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") release
@@ -13945,6 +15051,24 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") acq_rel
@@ -14150,6 +15274,24 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1] scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") seq_cst
@@ -14359,6 +15501,21 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_ret_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") acquire
@@ -14597,6 +15754,28 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_ret_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") acq_rel
@@ -14835,6 +16014,28 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_ret_atomicrmw(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_ret_atomicrmw:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_load_b32 s2, s[2:3], 0x8
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
   %val = atomicrmw volatile xchg ptr %out, i32 %in syncscope("agent-one-as") seq_cst
@@ -15068,6 +16269,22 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX12-CU-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] offset:16 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -15328,6 +16545,24 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -15585,6 +16820,27 @@ define amdgpu_kernel void @flat_agent_one_as_release_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    flat_atomic_cmpswap_b32 v[0:1], v[2:3] offset:16 scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -15869,6 +17125,29 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -16153,6 +17432,29 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_monotonic_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -16413,6 +17715,24 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -16673,6 +17993,24 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -16957,6 +18295,29 @@ define amdgpu_kernel void @flat_agent_one_as_release_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -17241,6 +18602,29 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -17525,6 +18909,29 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_acquire_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_acquire_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -17809,6 +19216,29 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -18093,6 +19523,29 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -18377,6 +19830,29 @@ define amdgpu_kernel void @flat_agent_one_as_release_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -18661,6 +20137,29 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -18945,6 +20444,29 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_seq_cst_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16 scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -19218,6 +20740,24 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -19518,6 +21058,26 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -19817,6 +21377,29 @@ define amdgpu_kernel void @flat_agent_one_as_release_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -20145,6 +21728,33 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -20473,6 +22083,33 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_monotonic_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -20777,6 +22414,28 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -21077,6 +22736,26 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -21405,6 +23084,33 @@ define amdgpu_kernel void @flat_agent_one_as_release_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -21733,6 +23439,33 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -22061,6 +23794,33 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_acquire_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -22389,6 +24149,33 @@ define amdgpu_kernel void @flat_agent_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_monotonic_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -22713,6 +24500,31 @@ define amdgpu_kernel void @flat_agent_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acquire_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -23041,6 +24853,33 @@ define amdgpu_kernel void @flat_agent_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_release_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -23369,6 +25208,33 @@ define amdgpu_kernel void @flat_agent_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_acq_rel_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
@@ -23697,6 +25563,33 @@ define amdgpu_kernel void @flat_agent_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1210-LABEL: flat_agent_one_as_seq_cst_seq_cst_ret_cmpxchg:
+; GFX1210:       ; %bb.0: ; %entry
+; GFX1210-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1210-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1210-NEXT:    s_load_b32 s3, s[4:5], 0x8
+; GFX1210-NEXT:    s_load_b32 s2, s[4:5], 0xc
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    v_mov_b32_e32 v2, s3
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1210-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1210-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1210-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_wait_storecnt 0x0
+; GFX1210-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1210-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
   %gep = getelementptr i32, ptr %out, i32 4
