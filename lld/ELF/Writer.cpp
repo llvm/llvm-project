@@ -840,7 +840,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   if (ctx.sym.relaIpltStart && ctx.mainPart->relaDyn->isNeeded()) {
     ctx.sym.relaIpltStart->section = ctx.mainPart->relaDyn.get();
     ctx.sym.relaIpltEnd->section = ctx.mainPart->relaDyn.get();
-    ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize();
+    ctx.sym.relaIpltEnd->value = ctx.mainPart->relaDyn->getSize(ctx);
   }
 
   PhdrEntry *last = nullptr;
@@ -2574,8 +2574,8 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
     // output section. We always want to describe just the
     // SyntheticSection.
     if (part.armExidx && p->p_type == PT_ARM_EXIDX) {
-      p->p_filesz = part.armExidx->getSize();
-      p->p_memsz = part.armExidx->getSize();
+      p->p_filesz = part.armExidx->getSize(ctx);
+      p->p_memsz = p->p_filesz;
       p->p_offset = first->offset + part.armExidx->outSecOff;
       p->p_vaddr = first->addr + part.armExidx->outSecOff;
       p->p_align = part.armExidx->addralign;
