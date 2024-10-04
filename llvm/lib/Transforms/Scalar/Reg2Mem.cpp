@@ -136,9 +136,6 @@ public:
     return N != 0 || Changed;
   }
 };
-
-FunctionPass *createRegToMemWrapperPass();
-
 } // namespace llvm
 
 INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
