@@ -1544,7 +1544,7 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
   // as immediates corresponding to the register number.
   case AsmToken::Percent: {
     int64_t IntVal;
-    if (! matchRegisterName(IntVal))
+    if (!matchRegisterName(IntVal))
       return Error(S, "invalid register name");
 
     Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
@@ -1628,7 +1628,7 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     int64_t IntVal;
     switch (getLexer().getKind()) {
     case AsmToken::Percent: {
-      if (! matchRegisterName(IntVal))
+      if (!matchRegisterName(IntVal))
         return Error(S, "invalid register name");
       break;
     }
