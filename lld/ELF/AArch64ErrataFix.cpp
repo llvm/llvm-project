@@ -374,7 +374,7 @@ class elf::Patch843419Section final : public SyntheticSection {
 public:
   Patch843419Section(InputSection *p, uint64_t off);
 
-  void writeTo(uint8_t *buf) override;
+  void writeTo(Ctx &, uint8_t *buf) override;
 
   size_t getSize() const override { return 8; }
 
@@ -407,7 +407,7 @@ uint64_t Patch843419Section::getLDSTAddr() const {
   return patchee->getVA(patcheeOffset);
 }
 
-void Patch843419Section::writeTo(uint8_t *buf) {
+void Patch843419Section::writeTo(Ctx &ctx, uint8_t *buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // patchee Section.
   write32le(buf, read32le(patchee->content().begin() + patcheeOffset));

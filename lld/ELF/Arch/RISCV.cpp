@@ -1048,7 +1048,7 @@ public:
       : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
 
   size_t getSize() const override { return size; }
-  void writeTo(uint8_t *buf) override;
+  void writeTo(Ctx &, uint8_t *buf) override;
 
   static constexpr StringRef vendor = "riscv";
   DenseMap<unsigned, unsigned> intAttr;
@@ -1276,7 +1276,7 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   return &merged;
 }
 
-void RISCVAttributesSection::writeTo(uint8_t *buf) {
+void RISCVAttributesSection::writeTo(Ctx &ctx, uint8_t *buf) {
   const size_t size = getSize();
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;

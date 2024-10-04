@@ -114,7 +114,7 @@ public:
   template <bool is64> void finalizeNonAllocCrel(Ctx &);
   void finalize(Ctx &);
   template <class ELFT>
-  void writeTo(uint8_t *buf, llvm::parallel::TaskGroup &tg);
+  void writeTo(Ctx &, uint8_t *buf, llvm::parallel::TaskGroup &tg);
   // Check that the addends for dynamic relocations were written correctly.
   void checkDynRelAddends(Ctx &);
   template <class ELFT> void maybeCompress(Ctx &);
