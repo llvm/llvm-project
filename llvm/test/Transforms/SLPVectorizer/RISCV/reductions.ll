@@ -1201,7 +1201,7 @@ define bfloat @fadd_4xbf16(ptr %p) {
   ret bfloat %r2
 }
 
-; Shouldn't vectorize to a reduction because we can't promote it
+; Shouldn't vectorize to a reduction because there's no vfred{u,o}mul.vs
 define bfloat @fmul_4xbf16(ptr %p) {
 ; CHECK-LABEL: @fmul_4xbf16(
 ; CHECK-NEXT:    [[X0:%.*]] = load bfloat, ptr [[P:%.*]], align 2
@@ -1266,7 +1266,7 @@ define half @fadd_4xf16(ptr %p) {
   ret half %r2
 }
 
-; Shouldn't vectorize to a reduction on zvfhmin because we can't promote it
+; Shouldn't vectorize to a reduction because there's no vfred{u,o}mul.vs
 define half @fmul_4xf16(ptr %p) {
 ; CHECK-LABEL: @fmul_4xf16(
 ; CHECK-NEXT:    [[X0:%.*]] = load half, ptr [[P:%.*]], align 2
