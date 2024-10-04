@@ -1947,7 +1947,9 @@ static mlir::cir::VectorType GetNeonType(CIRGenFunction *CGF,
                                       CGF->getCIRGenModule().FloatTy,
                                       V1Ty ? 1 : (2 << IsQuad));
   case NeonTypeFlags::Float64:
-    llvm_unreachable("NYI");
+    return mlir::cir::VectorType::get(CGF->getBuilder().getContext(),
+                                      CGF->getCIRGenModule().DoubleTy,
+                                      V1Ty ? 1 : (1 << IsQuad));
   }
   llvm_unreachable("Unknown vector element type!");
 }
@@ -3437,8 +3439,14 @@ CIRGenFunction::buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
     llvm_unreachable("NYI");
   }
   case NEON::BI__builtin_neon_vst1_lane_v:
-  case NEON::BI__builtin_neon_vst1q_lane_v:
-    llvm_unreachable("NYI");
+  case NEON::BI__builtin_neon_vst1q_lane_v: {
+    Ops[1] = builder.createBitcast(Ops[1], Ty);
+    Ops[1] = builder.create<mlir::cir::VecExtractOp>(Ops[1].getLoc(), Ops[1],
+                                                     Ops[2]);
+    (void)builder.createAlignedStore(getLoc(E->getExprLoc()), Ops[1], Ops[0],
+                                     PtrOp0.getAlignment());
+    return Ops[1];
+  }
   case NEON::BI__builtin_neon_vstl1_lane_s64:
   case NEON::BI__builtin_neon_vstl1q_lane_s64: {
     llvm_unreachable("NYI");
