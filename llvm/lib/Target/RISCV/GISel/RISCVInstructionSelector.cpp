@@ -530,9 +530,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineFunction &MF = *MBB.getParent();
   MachineIRBuilder MIB(MI);
 
-  const unsigned Opc = MI.getOpcode();
-  bool OpcWasGSplatVector = Opc == TargetOpcode::G_SPLAT_VECTOR;
+  bool OpcWasGSplatVector = MI.getOpcode() == TargetOpcode::G_SPLAT_VECTOR;
   preISelLower(MI, MIB);
+  const unsigned Opc = MI.getOpcode();
 
   if (!MI.isPreISelOpcode() || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
