@@ -25,7 +25,9 @@ constexpr const static unsigned kDefaultPointerSizeBits = 64;
 constexpr const static unsigned kBitsInByte = 8;
 constexpr const static unsigned kDefaultPointerAlignment = 8;
 
-static Attribute getDefaultMemorySpace(PtrType ptr) { return nullptr; }
+static MemorySpaceAttrInterface getDefaultMemorySpace(PtrType ptr) {
+  return ptr.getMemorySpace().getDefaultMemorySpace();
+}
 
 /// Searches the data layout for the pointer spec, returns nullptr if it is not
 /// found.
