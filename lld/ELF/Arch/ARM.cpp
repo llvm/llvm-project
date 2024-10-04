@@ -1469,7 +1469,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections();
+    osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
     osec->size = isec->getSize();
     isec->finalizeContents();

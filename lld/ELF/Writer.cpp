@@ -315,7 +315,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
   for (OutputSection *sec : ctx.outputSections)
-    sec->maybeCompress<ELFT>();
+    sec->maybeCompress<ELFT>(ctx);
 
   if (ctx.script->hasSectionsCommand)
     ctx.script->allocateHeaders(ctx.mainPart->phdrs);
@@ -2077,7 +2077,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *sec : ctx.outputSections)
-    sec->finalize();
+    sec->finalize(ctx);
 
   ctx.script->checkFinalScriptConditions();
 
@@ -2870,7 +2870,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   if (ctx.arg.checkDynamicRelocs && ctx.arg.writeAddends) {
     for (OutputSection *sec : ctx.outputSections)
       if (isStaticRelSecType(sec->type))
-        sec->checkDynRelAddends(ctx.bufferStart);
+        sec->checkDynRelAddends(ctx);
   }
 }
 
