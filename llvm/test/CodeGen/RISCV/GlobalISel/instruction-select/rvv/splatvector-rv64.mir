@@ -10,6 +10,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv1i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF8_:%[0-9]+]]:vr = PseudoVMV_V_X_MF8 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -29,6 +30,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv2i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF4_:%[0-9]+]]:vr = PseudoVMV_V_X_MF4 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -48,6 +50,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv4i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF2_:%[0-9]+]]:vr = PseudoVMV_V_X_MF2 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -67,6 +70,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv8i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -86,6 +90,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv16i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -105,6 +110,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv32i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -124,6 +130,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv64i8
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY]], -1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
@@ -143,6 +150,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv1i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF4_:%[0-9]+]]:vr = PseudoVMV_V_X_MF4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -162,6 +170,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv2i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF2_:%[0-9]+]]:vr = PseudoVMV_V_X_MF2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -181,6 +190,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv4i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -200,6 +210,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv8i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -219,6 +230,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv16i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -238,6 +250,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv32i16
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY]], -1, 4 /* e16 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
@@ -257,6 +270,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv1i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF2_:%[0-9]+]]:vr = PseudoVMV_V_X_MF2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -276,6 +290,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv2i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -295,6 +310,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv4i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -314,6 +330,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv8i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -333,6 +350,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv16i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
@@ -352,6 +370,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv1i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -370,6 +389,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv2i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -388,6 +408,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv4i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -406,6 +427,7 @@ body:             |
     ; CHECK-LABEL: name: splat_zero_nxv8i64
     ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
@@ -426,6 +448,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_W_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_MF2_:%[0-9]+]]:vr = PseudoVMV_V_X_MF2 [[DEF]], [[COPY1]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_MF2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -448,6 +471,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_W_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY1]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -470,6 +494,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_W_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY1]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -492,6 +517,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_W_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY1]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -514,6 +540,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_W_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY1]], -1, 5 /* e32 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
@@ -536,6 +563,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_D_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M1_:%[0-9]+]]:vr = PseudoVMV_V_X_M1 [[DEF]], [[COPY1]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8 = COPY [[PseudoVMV_V_X_M1_]]
     ; CHECK-NEXT: PseudoRET implicit $v8
@@ -557,6 +585,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_D_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M2_:%[0-9]+]]:vrm2 = PseudoVMV_V_X_M2 [[DEF]], [[COPY1]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m2 = COPY [[PseudoVMV_V_X_M2_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m2
@@ -578,6 +607,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_D_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M4_:%[0-9]+]]:vrm4 = PseudoVMV_V_X_M4 [[DEF]], [[COPY1]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m4 = COPY [[PseudoVMV_V_X_M4_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m4
@@ -599,6 +629,7 @@ body:             |
     ; CHECK-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[COPY]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[FMV_D_X]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -1
     ; CHECK-NEXT: [[PseudoVMV_V_X_M8_:%[0-9]+]]:vrm8 = PseudoVMV_V_X_M8 [[DEF]], [[COPY1]], -1, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: $v8m8 = COPY [[PseudoVMV_V_X_M8_]]
     ; CHECK-NEXT: PseudoRET implicit $v8m8
