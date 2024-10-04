@@ -4106,10 +4106,12 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);
 
-  Opts.ConvergentFunctions = Args.hasFlag(
-      OPT_fconvergent_functions, OPT_fno_convergent_functions,
-      Opts.OpenMPIsTargetDevice || T.isAMDGPU() || T.isNVPTX() || Opts.OpenCL ||
-          Opts.CUDAIsDevice || Opts.SYCLIsDevice || Opts.HLSL);
+  bool HasConvergentOperations = Opts.OpenMPIsTargetDevice || Opts.OpenCL ||
+                                 Opts.CUDAIsDevice || Opts.SYCLIsDevice ||
+                                 Opts.HLSL || T.isAMDGPU() || T.isNVPTX();
+  Opts.ConvergentFunctions =
+      Args.hasFlag(OPT_fconvergent_functions, OPT_fno_convergent_functions,
+                   HasConvergentOperations);
 
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
