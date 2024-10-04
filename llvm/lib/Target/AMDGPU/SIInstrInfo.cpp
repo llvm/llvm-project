@@ -9005,7 +9005,7 @@ SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
           I->getOperand(0).getReg() == RegNo)
         return &*I;
     }
-  } else if (Op.isUse()) {
+  } else if (Op.isUse() && Op.isInternalRead()) {
     auto I = MI.getReverseIterator();
     auto E = MI.getParent()->instr_rend();
     while (++I != E && I->isInsideBundle()) {
