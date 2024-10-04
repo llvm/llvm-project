@@ -1919,6 +1919,19 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 /// For floating-point classes that resolve to a single bit pattern, return that
 /// value.
 static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+  // TODO: Support aggregate types that are allowed by FPMathOperator.
+  switch (Mask) {
+    case fcPosZero:
+    case fcNegZero:
+    case fcPosInf:
+    case fcNegInf:
+      if (Ty->isAggregateType())
+        return nullptr;
+      break;
+    default:
+      break;
+  }
+
   switch (Mask) {
   case fcPosZero:
     return ConstantFP::getZero(Ty);

@@ -91,6 +91,35 @@ define nofpclass(inf) float @ret_nofpclass_inf__ninf() {
   ret float 0xFFF0000000000000
 }
 
+; Basic aggregate tests to ensure this does not crash.
+define nofpclass(nan) { float } @ret_nofpclass_struct_ty() {
+; CHECK-LABEL: define nofpclass(nan) { float } @ret_nofpclass_struct_ty() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret { float } zeroinitializer
+;
+entry:
+  ret { float } zeroinitializer
+}
+
+
+define nofpclass(nan) [ 5 x float ] @ret_nofpclass_array_ty() {
+; CHECK-LABEL: define nofpclass(nan) [5 x float] @ret_nofpclass_array_ty() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret [5 x float] zeroinitializer
+;
+entry:
+  ret [ 5 x float ] zeroinitializer
+}
+
+define nofpclass(nan) [ 2 x [ 5 x float ]] @ret_nofpclass_nested_array_ty() {
+; CHECK-LABEL: define nofpclass(nan) [2 x [5 x float]] @ret_nofpclass_nested_array_ty() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret [2 x [5 x float]] zeroinitializer
+;
+entry:
+  ret [ 2 x [ 5 x float ]] zeroinitializer
+}
+
 ; Negative test, do nothing
 define nofpclass(inf) float @ret_nofpclass_inf__select_nofpclass_inf_lhs(i1 %cond, float nofpclass(inf) %x, float %y) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_nofpclass_inf__select_nofpclass_inf_lhs
