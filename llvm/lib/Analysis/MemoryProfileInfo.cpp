@@ -184,10 +184,9 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
   addCallStack(getMIBAllocType(MIB), CallStack, getMIBTotalSize(MIB));
 }
 
-static MDNode *createMIBNode(LLVMContext &Ctx,
-                             std::vector<uint64_t> &MIBCallStack,
+static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType, uint64_t TotalSize) {
-  std::vector<Metadata *> MIBPayload(
+  SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
