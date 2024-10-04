@@ -237,26 +237,29 @@ public:
       block = next;
     }
   }
-  static MonotonicStatePool *instance() {
-    alignas(MonotonicStatePool) static char pool[sizeof(MonotonicStatePool)];
-    static bool is_valid = false;
-    static CallOnceFlag once_flag = callonce_impl::NOT_CALLED;
-    callonce(&once_flag, []() {
-      cpp::optional<GlobalConfig> config = GlobalConfig::get();
-      if (!config)
-        return;
-      new (pool) MonotonicStatePool(*config);
-      is_valid = !__cxa_atexit(
-          [](void *) {
-            reinterpret_cast<MonotonicStatePool *>(pool)->~MonotonicStatePool();
-          },
-          nullptr, __dso_handle);
-    });
-    if (!is_valid)
-      return nullptr;
-    return reinterpret_cast<MonotonicStatePool *>(pool);
-  }
+
+  static MonotonicStatePool *instance();
 };
+
+alignas(MonotonicStatePool) static char pool[sizeof(MonotonicStatePool)];
+static bool is_valid = false;
+static CallOnceFlag once_flag = callonce_impl::NOT_CALLED;
+MonotonicStatePool *MonotonicStatePool::instance() {
+  callonce(&once_flag, []() {
+    cpp::optional<GlobalConfig> config = GlobalConfig::get();
+    if (!config)
+      return;
+    new (pool) MonotonicStatePool(*config);
+    is_valid = !__cxa_atexit(
+        [](void *) {
+          reinterpret_cast<MonotonicStatePool *>(pool)->~MonotonicStatePool();
+        },
+        nullptr, __dso_handle);
+  });
+  if (!is_valid)
+    return nullptr;
+  return reinterpret_cast<MonotonicStatePool *>(pool);
+}
 
 // We do not guarantee the correctness of calling the cprng functions in signal
 // frames. However, we do want to make sure that an mistaken (maliciously
