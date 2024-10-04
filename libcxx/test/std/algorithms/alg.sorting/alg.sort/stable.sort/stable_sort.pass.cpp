@@ -14,7 +14,6 @@
 //   void
 //   stable_sort(Iter first, Iter last);
 
-#include <__config>
 #include <algorithm>
 #include <array>
 #include <cassert>
