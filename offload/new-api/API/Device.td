@@ -47,7 +47,7 @@ def : Function {
     Param<"offload_platform_handle_t", "hPlatform", "handle of the platform instance", PARAM_IN>,
     Param<"offload_device_type_t", "DeviceType", "the type of the devices.", PARAM_IN>,
     Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices. "
-        "If phDevices is not NULL, then NumEntries should be greater than zero. Otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE "
+        "If phDevices is not NULL, then NumEntries should be greater than zero. Otherwise OFFLOAD_ERRC_INVALID_SIZE "
         "will be returned.", PARAM_IN>,
     RangedParam<"offload_device_handle_t*", "phDevices", "Array of device handles. "
         "If NumEntries is less than the number of devices available, then platform shall only retrieve that number of devices.", PARAM_OUT_OPTIONAL,
@@ -56,13 +56,13 @@ def : Function {
         "pNumDevices will be updated with the total number of devices available.", PARAM_OUT_OPTIONAL>
   ];
   let returns = [
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_SIZE", [
+    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
       "`NumEntries == 0 && phDevices != NULL`"
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER", [
+    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
       "`NumEntries > 0 && phDevices == NULL`"
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_VALUE">
+    Return<"OFFLOAD_ERRC_INVALID_VALUE">
   ];
 }
 
@@ -78,24 +78,24 @@ def : Function {
     Param<"offload_device_info_t", "propName", "type of the info to retrieve", PARAM_IN>,
     Param<"size_t", "propSize", "the number of bytes pointed to by pPropValue.", PARAM_IN>,
     TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. If propSize is not equal to or greater than the real "
-                    "number of bytes needed to return the info then the OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned and "
+                    "number of bytes needed to return the info then the OFFLOAD_ERRC_INVALID_SIZE error is returned and "
                     "pPropValue is not used.", PARAM_OUT_OPTIONAL, TypeInfo<"propName" , "propSize">>,
     Param<"size_t*", "pPropSizeRet", "pointer to the actual size in bytes of the queried propName.", PARAM_OUT_OPTIONAL>
   ];
   let returns = [
-    Return<"OFFLOAD_RESULT_ERROR_UNSUPPORTED_ENUMERATION", [
+    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `propName` is not supported by the adapter."
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_SIZE", [
+    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
       "`propSize == 0 && pPropValue != NULL`",
       "If `propSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER", [
+    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
       "`propSize != 0 && pPropValue == NULL`",
       "`pPropValue == NULL && pPropSizeRet == NULL`"
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_DEVICE">,
-    Return<"OFFLOAD_RESULT_ERROR_OUT_OF_RESOURCES">,
-    Return<"OFFLOAD_RESULT_ERROR_OUT_OF_HOST_MEMORY">
+    Return<"OFFLOAD_ERRC_INVALID_DEVICE">,
+    Return<"OFFLOAD_ERRC_OUT_OF_RESOURCES">,
+    Return<"OFFLOAD_ERRC_OUT_OF_HOST_MEMORY">
   ];
 }

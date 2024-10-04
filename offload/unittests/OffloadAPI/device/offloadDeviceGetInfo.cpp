@@ -60,43 +60,44 @@ TEST_P(offloadDeviceGetInfoTest, Success) {
 
 TEST_F(offloadDeviceGetInfoTest, InvalidNullHandleDevice) {
   offload_device_type_t DeviceType;
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_NULL_HANDLE,
-            offloadDeviceGetInfo(nullptr, OFFLOAD_DEVICE_INFO_TYPE,
-                                 sizeof(offload_device_type_t), &DeviceType,
-                                 nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_NULL_HANDLE,
+               offloadDeviceGetInfo(nullptr, OFFLOAD_DEVICE_INFO_TYPE,
+                                    sizeof(offload_device_type_t), &DeviceType,
+                                    nullptr));
 }
 
 TEST_F(offloadDeviceGetInfoTest, InvalidEnumerationInfoType) {
   offload_device_type_t DeviceType;
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_ENUMERATION,
-            offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_FORCE_UINT32,
-                                 sizeof(offload_device_type_t), &DeviceType,
-                                 nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_ENUMERATION,
+               offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_FORCE_UINT32,
+                                    sizeof(offload_device_type_t), &DeviceType,
+                                    nullptr));
 }
 
 TEST_F(offloadDeviceGetInfoTest, InvalidSizePropSize) {
   offload_device_type_t DeviceType;
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_SIZE,
-            offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE, 0,
-                                 &DeviceType, nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_SIZE,
+               offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE, 0,
+                                    &DeviceType, nullptr));
 }
 
 TEST_F(offloadDeviceGetInfoTest, InvalidSizePropSizeSmall) {
   offload_device_type_t DeviceType;
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_SIZE,
-            offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE,
-                                 sizeof(DeviceType) - 1, &DeviceType, nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_SIZE,
+               offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE,
+                                    sizeof(DeviceType) - 1, &DeviceType,
+                                    nullptr));
 }
 
 TEST_F(offloadDeviceGetInfoTest, InvalidNullPointerPropValue) {
   offload_device_type_t DeviceType;
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER,
-            offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE,
-                                 sizeof(DeviceType), nullptr, nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_NULL_POINTER,
+               offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE,
+                                    sizeof(DeviceType), nullptr, nullptr));
 }
 
 TEST_F(offloadDeviceGetInfoTest, InvalidNullPointerPropSizeRet) {
-  ASSERT_EQ(OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER,
-            offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE, 0, nullptr,
-                                 nullptr));
+  ASSERT_ERROR(OFFLOAD_ERRC_INVALID_NULL_POINTER,
+               offloadDeviceGetInfo(Device, OFFLOAD_DEVICE_INFO_TYPE, 0,
+                                    nullptr, nullptr));
 }

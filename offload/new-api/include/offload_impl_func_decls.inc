@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-offload_result_t offloadGetErrorDetails_impl(size_t *SizeRet,
-                                             const char **DetailStringRet);
-
 offload_impl_result_t
 offloadPlatformGet_impl(uint32_t NumEntries,
                         offload_platform_handle_t *phPlatforms,

@@ -1,6 +1,5 @@
 VERS1.0 {
 global:
-  offloadGetErrorDetails;
   offloadPlatformGet;
   offloadPlatformGetInfo;
   offloadDeviceGet;
