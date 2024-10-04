@@ -5529,20 +5529,16 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
             auto U2 = TE.Scalars[I2]->user_begin();
             if (U2.atEnd())
               return true;
-            
-            if (auto *FirstUserOfPhi1 =
-                    dyn_cast<InsertElementInst>(*(U1))) {
-              if (auto *FirstUserOfPhi2 = dyn_cast<InsertElementInst>(
-                      *(U2))) {
+
+            if (auto *FirstUserOfPhi1 = dyn_cast<InsertElementInst>(*(U1))) {
+              if (auto *FirstUserOfPhi2 = dyn_cast<InsertElementInst>(*(U2))) {
                 return getElementIndex(FirstUserOfPhi1) <
                        getElementIndex(FirstUserOfPhi2);
               }
             }
 
-            if (auto *FirstUserOfPhi1 =
-                    dyn_cast<ExtractElementInst>(*(U1))) {
-              if (auto *FirstUserOfPhi2 = dyn_cast<ExtractElementInst>(
-                      *(U2))) {
+            if (auto *FirstUserOfPhi1 = dyn_cast<ExtractElementInst>(*(U1))) {
+              if (auto *FirstUserOfPhi2 = dyn_cast<ExtractElementInst>(*(U2))) {
                 return FirstUserOfPhi1->getIndexOperand() <
                        FirstUserOfPhi2->getIndexOperand();
               }
