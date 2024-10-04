@@ -1236,9 +1236,8 @@ void SymtabSection::emitStabs() {
       // present. This will end up causing overlapping DWARF entries.
       // TODO: Find an implementation that works in combination with
       // `--keep-icf-stabs`.
-      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+      if (defined->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk)
         continue;
-      }
 
       // Constant-folded symbols go in the executable's symbol table, but don't
       // get a stabs entry unless --keep-icf-stabs flag is specified
