@@ -458,14 +458,14 @@ public:
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
 
-  std::pair<bool, uint8_t> getVRegFlagValue(StringRef Name) const override {
+  std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     if (Name == "WWM_REG") {
-      return {true, AMDGPU::VirtRegFlag::WWM_REG};
+      return AMDGPU::VirtRegFlag::WWM_REG;
     }
-    return {false, 0};
+    return {};
   }
 
-  SmallVector<std::string>
+  SmallVector<SmallString<8>>
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
 };
 
