@@ -900,14 +900,21 @@ static void parseAndSetFilename(const char *FilenamePat,
   ProfileNameSpecifier OldPNS = lprofCurFilename.PNS;
 
   /* The old profile name specifier takes precedence over the old one. */
-  if (PNS < OldPNS)
+  if (PNS < OldPNS) {
+    if (OldFilenamePat) {
+      free(OldFilenamePat);
+      OldFilenamePat = NULL;
+    }
     return;
+  }
 
   if (!FilenamePat)
     FilenamePat = DefaultProfileName;
 
   if (OldFilenamePat && !strcmp(OldFilenamePat, FilenamePat)) {
     lprofCurFilename.PNS = PNS;
+    free(OldFilenamePat);
+    OldFilenamePat = NULL;
     return;
   }
 
