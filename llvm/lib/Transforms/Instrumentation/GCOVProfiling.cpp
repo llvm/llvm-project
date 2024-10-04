@@ -918,7 +918,9 @@ bool GCOVProfiler::emitProfileNotes(
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
             Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
-        Counters->setSection("__llvm_gcov_ctr_section");
+        const llvm::Triple &Triple = llvm::Triple(M->getTargetTriple());
+        if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
+          Counters->setSection("__llvm_gcov_ctr_section");
         CountersBySP.emplace_back(Counters, SP);
 
         for (size_t I : llvm::seq<size_t>(0, Measured)) {

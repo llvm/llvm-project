@@ -798,7 +798,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVNAME_COFF ".lcovn"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
-// TODO: Placeholder for Windows. We need to revise when we upstream this.
+// FIXME: Placeholder for Windows. Windows currently does not initialize
+// the GCOV functions in the runtime.
 #define INSTR_PROF_COVINIT_COFF ".lcovd$M"
 
 #ifdef _WIN32

@@ -3,13 +3,14 @@
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling \
 ; RUN:  -mtriple=x86_64-unknown-linux-gnu | FileCheck \
-; RUN:  --check-prefixes=CHECK,CHECK-ELF %s
+; RUN:  --check-prefixes=CHECK,CHECK-CTOR-INIT %s
 ; RUN: opt < %s -S -passes=insert-gcov-profiling \
 ; RUN:  -mtriple=powerpc64-ibm-aix | FileCheck \
-; RUN:  --check-prefixes=CHECK,CHECK-XCOFF %s
+; RUN:  --check-prefixes=CHECK,CHECK-RT-INIT %s
 
-; Check for gcov initialization function pointers for XCOFF.
-; CHECK-XCOFF: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
+; Check for gcov initialization function pointers when we initialize
+; the writeout and reset functions in the runtime.
+; CHECK-RT-INIT: @__llvm_covinit_functions = private constant { ptr, ptr } { ptr @__llvm_gcov_writeout, ptr @__llvm_gcov_reset }, section "__llvm_covinit"
 
 define dso_local void @empty() !dbg !5 {
 entry:
@@ -35,7 +36,7 @@ entry:
 ; CHECK-SAME: !kcfi_type ![[#TYPE:]]
 ; CHECK: define internal void @__llvm_gcov_reset()
 ; CHECK-SAME: !kcfi_type ![[#TYPE]]
-; CHECK-ELF: define internal void @__llvm_gcov_init()
-; CHECK-ELF-SAME: !kcfi_type ![[#TYPE]]
+; CHECK-CTOR-INIT: define internal void @__llvm_gcov_init()
+; CHECK-CTOR-INIT-SAME: !kcfi_type ![[#TYPE]]
 
 ; CHECK: ![[#TYPE]] = !{i32 -440107680}
