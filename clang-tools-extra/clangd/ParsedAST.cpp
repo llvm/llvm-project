@@ -406,7 +406,12 @@ std::vector<Fix>
 clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
                      const clang::Diagnostic &Info, const Diag &Diag) {
   auto RuleName = CTContext.getCheckName(Diag.ID);
-  if (RuleName.empty() || Diag.Severity >= DiagnosticsEngine::Error ||
+  if (
+      // If this isn't a clang-tidy diag
+      RuleName.empty() ||
+      // NOLINT does not work on Serverity Error or above
+      Diag.Severity >= DiagnosticsEngine::Error ||
+      // No point adding extra fixes if the Diag is for a different file
       !Diag.InsideMainFile) {
     return {};
   }
