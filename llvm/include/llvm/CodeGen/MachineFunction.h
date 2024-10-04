@@ -187,7 +187,6 @@ public:
     TiedOpsRewritten,
     FailsVerification,
     TracksDebugUserValues,
-    HasFakeUses,
     LastProperty = TracksDebugUserValues,
   };
 
