@@ -992,8 +992,6 @@ def MemRef_ExtractStridedMetadataOp : MemRef_Op<"extract_strided_metadata", [
 
     ::mlir::Value getViewSource() { return getSource(); }
   }];
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
