@@ -1634,7 +1634,7 @@ public:
     StringRef ModulePath = BM.getModuleIdentifier();
 
     // The contents of this file may be used as input to a native link, and must
-    // therefore contain the processed modules in a determinstic order than
+    // therefore contain the processed modules in a determinstic order that
     // match the order they are provided on the command line. For that reason,
     // we cannot include this in the asynchronously executed lambda below.
     if (LinkedObjectsFile) {
