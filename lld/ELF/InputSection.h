@@ -483,8 +483,8 @@ public:
   // If the section has the SHF_ALLOC flag and the size may be changed if
   // thunks are added, update the section size.
   virtual bool isNeeded() const { return true; }
-  virtual void finalizeContents() {}
-  virtual void writeTo(uint8_t *buf) = 0;
+  virtual void finalizeContents(Ctx &) {}
+  virtual void writeTo(Ctx &, uint8_t *buf) = 0;
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Synthetic;

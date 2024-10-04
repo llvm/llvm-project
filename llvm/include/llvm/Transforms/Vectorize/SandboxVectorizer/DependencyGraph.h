@@ -25,7 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include "llvm/SandboxIR/Utils.h"
+#include "llvm/SandboxIR/IntrinsicInst.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
@@ -62,13 +62,37 @@ public:
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
 
+  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      auto IID = II->getIntrinsicID();
+      return IID == Intrinsic::stackrestore || IID == Intrinsic::stacksave;
+    }
+    return false;
+  }
+
+  /// \Returns true if intrinsic \p I touches memory. This is used by the
+  /// dependency graph.
+  static bool isMemIntrinsic(IntrinsicInst *I) {
+    auto IID = I->getIntrinsicID();
+    return IID != Intrinsic::sideeffect && IID != Intrinsic::pseudoprobe;
+  }
+
+  /// We consider \p I as a Memory Dependency Candidate instruction if it
+  /// reads/write memory or if it has side-effects. This is used by the
+  /// dependency graph.
+  static bool isMemDepCandidate(Instruction *I) {
+    IntrinsicInst *II;
+    return I->mayReadOrWriteMemory() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
+  }
+
   /// \Returns true if \p I is a memory dependency candidate instruction.
   static bool isMemDepNodeCandidate(Instruction *I) {
     AllocaInst *Alloca;
-    return Utils::isMemDepCandidate(I) ||
+    return isMemDepCandidate(I) ||
            ((Alloca = dyn_cast<AllocaInst>(I)) &&
             Alloca->isUsedWithInAlloca()) ||
-           Utils::isStackSaveOrRestoreIntrinsic(I);
+           isStackSaveOrRestoreIntrinsic(I);
   }
 
   Instruction *getInstruction() const { return I; }

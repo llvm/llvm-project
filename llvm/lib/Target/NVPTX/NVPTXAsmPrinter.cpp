@@ -964,8 +964,8 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
   // Close the last emitted section
   if (hasDebugInfo()) {
     TS->closeLastSection();
-    // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
+    // Emit empty .debug_macinfo section for better support of the empty files.
+    OutStreamer->emitRawText("\t.section\t.debug_macinfo\t{\t}");
   }
 
   // Output last DWARF .file directives, if any.

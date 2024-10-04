@@ -315,7 +315,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
   for (OutputSection *sec : ctx.outputSections)
-    sec->maybeCompress<ELFT>();
+    sec->maybeCompress<ELFT>(ctx);
 
   if (ctx.script->hasSectionsCommand)
     ctx.script->allocateHeaders(ctx.mainPart->phdrs);
@@ -1427,7 +1427,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
 static void finalizeSynthetic(SyntheticSection *sec) {
   if (sec && sec->isNeeded() && sec->getParent()) {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections", sec->name);
-    sec->finalizeContents();
+    sec->finalizeContents(ctx);
   }
 }
 
@@ -2077,7 +2077,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // at the end because some tags like RELSZ depend on result
   // of finalizing other sections.
   for (OutputSection *sec : ctx.outputSections)
-    sec->finalize();
+    sec->finalize(ctx);
 
   ctx.script->checkFinalScriptConditions();
 
@@ -2806,7 +2806,7 @@ template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
   parallel::TaskGroup tg;
   for (OutputSection *sec : ctx.outputSections)
     if (sec->flags & SHF_ALLOC)
-      sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
+      sec->writeTo<ELFT>(ctx, ctx.bufferStart + sec->offset, tg);
 }
 
 static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
@@ -2857,20 +2857,20 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
     parallel::TaskGroup tg;
     for (OutputSection *sec : ctx.outputSections)
       if (isStaticRelSecType(sec->type))
-        sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
+        sec->writeTo<ELFT>(ctx, ctx.bufferStart + sec->offset, tg);
   }
   {
     parallel::TaskGroup tg;
     for (OutputSection *sec : ctx.outputSections)
       if (!isStaticRelSecType(sec->type))
-        sec->writeTo<ELFT>(ctx.bufferStart + sec->offset, tg);
+        sec->writeTo<ELFT>(ctx, ctx.bufferStart + sec->offset, tg);
   }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (ctx.arg.checkDynamicRelocs && ctx.arg.writeAddends) {
     for (OutputSection *sec : ctx.outputSections)
       if (isStaticRelSecType(sec->type))
-        sec->checkDynRelAddends(ctx.bufferStart);
+        sec->checkDynRelAddends(ctx);
   }
 }
 
