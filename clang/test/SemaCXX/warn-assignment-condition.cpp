@@ -167,6 +167,11 @@ void t5(auto... args) {
   if ((((args == 0) or ...))) { }
 }
 
+void t6(auto a, auto... b) {
+    static_assert(__is_same_as(decltype((a)), int&));
+    static_assert(__is_same_as(decltype(((b), ...)), int&));
+};
+
 void test() {
   t1(0, 1);
   t2<>();
@@ -174,5 +179,6 @@ void test() {
   t3(0, 1);
   t4(0, 1);
   t5(0, 1);
+  t6(0, 0);
 }
 }

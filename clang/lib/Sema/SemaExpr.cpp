@@ -20219,6 +20219,7 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
   SourceLocation parenLoc = ParenE->getBeginLoc();
   if (parenLoc.isInvalid() || parenLoc.isMacroID())
     return;
+
   // Don't warn for dependent expressions.
   if (ParenE->isTypeDependent())
     return;

@@ -15571,7 +15571,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   // For example, transforming (((args == 0) || ...)) into (args == 0)
   // allows the omission of parentheses while ensuring precise representation
   // and avoiding warnings regarding redundant parentheses.
-  if (*NumExpansions == 1)
+  if (*NumExpansions == 1 && !E->isTypeDependent())
     Pattern = Pattern->IgnoreParens();
 
   for (unsigned I = 0; I != *NumExpansions; ++I) {

@@ -36,7 +36,7 @@ using r1i2 = r1<char>; // expected-error {{constraints not satisfied for class t
 template<typename... Ts> requires
 false_v<requires (Ts... ts) {requires ((sizeof(ts) == 2) && ...);}>
 // expected-note@-1 {{because 'false_v<requires (short ts, unsigned short ts) { requires (sizeof (ts) == 2) && (sizeof (ts) == 2); }>'}}
-// expected-note@-2 {{because 'false_v<requires (short ts) { requires sizeof (ts) == 2; }>' evaluated to false}}
+// expected-note@-2 {{because 'false_v<requires (short ts) { requires (sizeof (ts) == 2); }>' evaluated to false}}
 struct r2 {};
 
 using r2i1 = r2<short, unsigned short>; // expected-error {{constraints not satisfied for class template 'r2' [with Ts = <short, unsigned short>]}}
