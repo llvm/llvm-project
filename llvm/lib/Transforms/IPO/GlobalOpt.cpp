@@ -2031,11 +2031,10 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
-static bool tryWidenGlobalArray(CallInst *CI, GlobalVariable *SourceVar,
-                                unsigned NumBytesToPad, unsigned NumBytesToCopy,
-                                ConstantInt *BytesToCopyOp,
-                                ConstantDataArray *SourceDataArray) {
-  auto *F = CI->getCalledFunction();
+static bool tryWidenDestArray(Function *F, CallInst *CI,
+                              GlobalVariable *SourceVar, unsigned NumBytesToPad,
+                              unsigned NumBytesToCopy,
+                              ConstantDataArray *SourceDataArray) {
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
 
@@ -2055,8 +2054,7 @@ static bool tryWidenGlobalArray(CallInst *CI, GlobalVariable *SourceVar,
   // Calculate the number of elements to copy while avoiding floored
   // division of integers returning wrong values i.e. copying one byte
   // from an array of i16 would yield 0 elements to copy as supposed to 1.
-  unsigned NumElementsToCopy =
-      (NumBytesToCopy + ElementByteWidth - 1) / ElementByteWidth;
+  unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
 
   // For safety purposes lets add a constraint and only pad when
   // NumElementsToCopy == destination array size ==
@@ -2065,7 +2063,7 @@ static bool tryWidenGlobalArray(CallInst *CI, GlobalVariable *SourceVar,
     return false;
 
   unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
-  NumElementsToCopy = (TotalBytes + ElementByteWidth - 1) / ElementByteWidth;
+  NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
 
   // Update destination array to be word aligned (memcpy(X,...,...))
   IRBuilder<> BuildAlloca(Alloca);
@@ -2075,14 +2073,21 @@ static bool tryWidenGlobalArray(CallInst *CI, GlobalVariable *SourceVar,
   NewAlloca->setAlignment(Alloca->getAlign());
   Alloca->replaceAllUsesWith(NewAlloca);
   Alloca->eraseFromParent();
+  return true;
+}
 
+static bool widenGlobalArray(Function *F, CallInst *CI,
+                             GlobalVariable *SourceVar, unsigned NumBytesToPad,
+                             unsigned NumBytesToCopy,
+                             ConstantInt *BytesToCopyOp,
+                             ConstantDataArray *SourceDataArray) {
   // Update source to be word aligned (memcpy(...,X,...))
   // create replacement with padded null bytes.
   StringRef Data = SourceDataArray->getRawDataValues();
   std::vector<uint8_t> StrData(Data.begin(), Data.end());
   for (unsigned int p = 0; p < NumBytesToPad; p++)
     StrData.push_back('\0');
-  auto Arr = ArrayRef(StrData.data(), TotalBytes);
+  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
 
   // Create new padded version of global variable.
   Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
@@ -2095,11 +2100,8 @@ static bool tryWidenGlobalArray(CallInst *CI, GlobalVariable *SourceVar,
   NewGV->copyAttributesFrom(SourceVar);
   NewGV->takeName(SourceVar);
 
-  // Replace intrinsic source.
-  CI->setArgOperand(1, NewGV);
-
-  // Update number of bytes to copy (memcpy(...,...,X))
-  CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(), TotalBytes));
+  CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
+                                        NumBytesToCopy + NumBytesToPad));
   NumGlobalArraysPadded++;
   return true;
 }
@@ -2133,9 +2135,14 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     unsigned NumBytesToPad = TTI.getNumBytesToPadGlobalArray(
         NumBytesToCopy, SourceDataArray->getType());
 
-    if (NumBytesToPad)
-      return tryWidenGlobalArray(CI, GV, NumBytesToPad, NumBytesToCopy,
-                                 BytesToCopyOp, SourceDataArray);
+    if (NumBytesToPad) {
+      bool DestWidened = tryWidenDestArray(F, CI, GV, NumBytesToPad,
+                                           NumBytesToCopy, SourceDataArray);
+      if (DestWidened) {
+        return widenGlobalArray(F, CI, GV, NumBytesToPad, NumBytesToCopy,
+                                BytesToCopyOp, SourceDataArray);
+      }
+    }
   }
   return false;
 }
