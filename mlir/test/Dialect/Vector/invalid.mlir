@@ -484,6 +484,27 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
+func.func @test_vector.transfer_read(%arg0: memref<?x?xf32>) {
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant 3.0 : f32
+  // expected-error@+1 {{expects a vector of the same base elemental type as the source}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %cst : memref<?x?xf32>, vector<128xi32>
+  return
+}
+
+// -----
+
+func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2xf32>>) {
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
+  %vf0 = vector.splat %f0 : vector<2xf32>
+  // expected-error@+1 {{expects a vector of the same base elemental type as the source}}
+  %0 = vector.transfer_read %arg0[%c3, %c3], %vf0 : memref<?x?xvector<2xf32>>, vector<2xi32>
+  return
+}
+
+// -----
+
 func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<4x3xf32>>) {
   %c3 = arith.constant 3 : index
   %f0 = arith.constant 0.0 : f32
@@ -642,6 +663,26 @@ func.func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>
   vector.transfer_write %arg1, %arg0[%c3]
       {permutation_map = affine_map<(d0) -> (0)>}
       : vector<7xf32>, memref<?xf32>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<1> : vector<3x4xi32>
+  // expected-error@+1 {{expects a vector of the same base elemental type as the source}}
+  vector.transfer_write %cst, %arg0[%c3, %c3] : vector<3x4xi32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?x?xvector<2xf32>>) {
+  %c3 = arith.constant 3 : index
+  %cst = arith.constant dense<1> : vector<2xi32>
+  // expected-error@+1 {{expects a vector of the same base elemental type as the source}}
+  vector.transfer_write %cst, %arg0[%c3, %c3] : vector<2xi32>, memref<?x?xvector<2xf32>>
+  return
 }
 
 // -----
