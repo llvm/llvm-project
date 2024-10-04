@@ -1212,20 +1212,11 @@ define i1 @icmp_eq_nonpow2(i32 signext %x) nounwind {
 }
 
 define signext i32 @fold_sextinreg_shl_to_sllw(i64 %x) nounwind {
-; RV64I-LABEL: fold_sextinreg_shl_to_sllw:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a0, a0, 31
-; RV64I-NEXT:    li a1, 1
-; RV64I-NEXT:    sll a0, a1, a0
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBS-LABEL: fold_sextinreg_shl_to_sllw:
-; RV64ZBS:       # %bb.0: # %entry
-; RV64ZBS-NEXT:    andi a0, a0, 31
-; RV64ZBS-NEXT:    bset a0, zero, a0
-; RV64ZBS-NEXT:    sext.w a0, a0
-; RV64ZBS-NEXT:    ret
+; CHECK-LABEL: fold_sextinreg_shl_to_sllw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sllw a0, a1, a0
+; CHECK-NEXT:    ret
 entry:
   %mask = and i64 %x, 31
   %shl = shl i64 1, %mask
