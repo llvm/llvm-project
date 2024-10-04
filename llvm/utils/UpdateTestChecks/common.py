@@ -1540,10 +1540,26 @@ def remap_metavar_names(
         ]
 
         # Candidate matches may conflict if they require conflicting mappings of
-        # names.
+        # names. We want to determine a large set of compatible candidates,
+        # because that leads to a small diff.
         #
-        # Treat the candidate matches as vertices in a conflict graph. Greedily
-        # color the vertices.
+        # We think of the candidates as vertices in a conflict graph. The
+        # conflict graph has edges between incompatible candidates. We want to
+        # find a large independent set in this graph.
+        #
+        # Greedily selecting candidates and removing incompatible ones has the
+        # disadvantage that making few bad decisions early on can have huge
+        # consequences.
+        #
+        # Instead, we implicitly compute multiple independent sets by greedily
+        # assigning a *coloring* to the conflict graph. Then, we select the
+        # largest color class (which is the largest independent set we found),
+        # commit to all candidates in it, and recurse.
+        #
+        # Note that we don't actually materialize the conflict graph. Instead,
+        # each color class tracks the information needed to decide implicitly
+        # whether a vertex conflicts (has an edge to) any of the vertices added
+        # to the color class so far.
         class Color:
             def __init__(self):
                 # (lhs_idx, rhs_idx) of matches in this color
@@ -1554,12 +1570,19 @@ def remap_metavar_names(
 
                 # lhs_names committed for this color
                 self.committed = set()
+
         colors = []
 
-        for match_idx, (lhs_idx, rhs_idx) in enumerate(candidate_matches):
+        for lhs_idx, rhs_idx in candidate_matches:
             lhs_line = old_line_infos[lhs_idx]
             rhs_line = new_line_infos[rhs_idx]
 
+            # We scan through the uncommitted names in the candidate line and
+            # filter out the color classes to which the candidate could be
+            # assigned.
+            #
+            # Simultaneously, we prepare a new color class in case the candidate
+            # conflicts with all colors that have been established so far.
             compatible_colors = colors[:]
             new_color = Color()
             new_color.matches.append((lhs_idx, rhs_idx))
@@ -1582,7 +1605,10 @@ def remap_metavar_names(
                     else:
                         break
 
-                if lhs_value.name in committed_names or lhs_value.name in new_color.committed:
+                if (
+                    lhs_value.name in committed_names
+                    or lhs_value.name in new_color.committed
+                ):
                     # We can't map this value because the name we would map it
                     # to has already been committed for something else. Give up
                     # on this line.
@@ -1604,11 +1630,13 @@ def remap_metavar_names(
                     else:
                         del compatible_colors[color_idx]
             else:
-                # At a minimum, this line is viable standalone
+                # We never broke out of the loop, which means that at a minimum,
+                # this line is viable standalone
                 if compatible_colors:
-                    compatible_colors[0].mapping.update(new_color.mapping)
-                    compatible_colors[0].committed.update(new_color.committed)
-                    compatible_colors[0].matches.append((lhs_idx, rhs_idx))
+                    color = max(compatible_colors, key=lambda color: len(color.matches))
+                    color.mapping.update(new_color.mapping)
+                    color.committed.update(new_color.committed)
+                    color.matches.append((lhs_idx, rhs_idx))
                 else:
                     colors.append(new_color)
 
@@ -1629,7 +1657,11 @@ def remap_metavar_names(
                 ):
                     new_mapping[lhs_var] = "conflict_" + lhs_var
 
-            matches = [(old_begin - 1, new_begin - 1)] + max_color.matches + [(old_end, new_end)]
+            matches = (
+                [(old_begin - 1, new_begin - 1)]
+                + max_color.matches
+                + [(old_end, new_end)]
+            )
 
             for (lhs_prev, rhs_prev), (lhs_next, rhs_next) in zip(matches, matches[1:]):
                 recurse(lhs_prev + 1, lhs_next, rhs_prev + 1, rhs_next)
