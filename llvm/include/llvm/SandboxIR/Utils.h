@@ -100,6 +100,7 @@ public:
     return *Diff > 0;
   }
 };
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_UTILS_H

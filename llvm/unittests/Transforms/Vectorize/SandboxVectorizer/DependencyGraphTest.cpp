@@ -29,6 +29,107 @@ struct DependencyGraphTest : public testing::Test {
   }
 };
 
+TEST_F(DependencyGraphTest, isStackSaveOrRestoreIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add = add i8 %v1, %v1
+  %stacksave = call ptr @llvm.stacksave()
+  call void @llvm.stackrestore(ptr %stacksave)
+  call void @llvm.sideeffect()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *StackSave = cast<sandboxir::CallInst>(&*It++);
+  auto *StackRestore = cast<sandboxir::CallInst>(&*It++);
+  auto *Other = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  using DGNode = sandboxir::DGNode;
+  EXPECT_FALSE(DGNode::isStackSaveOrRestoreIntrinsic(Add));
+  EXPECT_TRUE(DGNode::isStackSaveOrRestoreIntrinsic(StackSave));
+  EXPECT_TRUE(DGNode::isStackSaveOrRestoreIntrinsic(StackRestore));
+  EXPECT_FALSE(DGNode::isStackSaveOrRestoreIntrinsic(Other));
+  EXPECT_FALSE(DGNode::isStackSaveOrRestoreIntrinsic(Ret));
+}
+
+TEST_F(DependencyGraphTest, Instruction_isMemDepCandidate) {
+  parseIR(C, R"IR(
+declare void @llvm.fake.use(...)
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64, i64, i32, i64)
+declare void @bar()
+define void @foo(i8 %v1, ptr %ptr) {
+  %add0 = add i8 %v1, %v1
+  %ld0 = load i8, ptr %ptr
+  store i8 %v1, ptr %ptr
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42, i64 1, i32 0, i64 -1)
+  call void @llvm.fake.use(ptr %ptr)
+  call void @bar()
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SideEffect0 = cast<sandboxir::CallInst>(&*It++);
+  auto *PseudoProbe0 = cast<sandboxir::CallInst>(&*It++);
+  auto *OtherIntrinsic0 = cast<sandboxir::CallInst>(&*It++);
+  auto *CallBar = cast<sandboxir::CallInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  using DGNode = sandboxir::DGNode;
+
+  EXPECT_FALSE(DGNode::isMemDepCandidate(Add0));
+  EXPECT_TRUE(DGNode::isMemDepCandidate(Ld0));
+  EXPECT_TRUE(DGNode::isMemDepCandidate(St0));
+  EXPECT_FALSE(DGNode::isMemDepCandidate(SideEffect0));
+  EXPECT_FALSE(DGNode::isMemDepCandidate(PseudoProbe0));
+  EXPECT_TRUE(DGNode::isMemDepCandidate(OtherIntrinsic0));
+  EXPECT_TRUE(DGNode::isMemDepCandidate(CallBar));
+  EXPECT_FALSE(DGNode::isMemDepCandidate(Ret));
+}
+
+TEST_F(DependencyGraphTest, Instruction_isMemIntrinsic) {
+  parseIR(C, R"IR(
+declare void @llvm.sideeffect()
+declare void @llvm.pseudoprobe(i64)
+declare void @llvm.assume(i1)
+
+define void @foo(ptr %ptr, i1 %cond) {
+  call void @llvm.sideeffect()
+  call void @llvm.pseudoprobe(i64 42)
+  call void @llvm.assume(i1 %cond)
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *SideEffect = cast<sandboxir::IntrinsicInst>(&*It++);
+  auto *PseudoProbe = cast<sandboxir::IntrinsicInst>(&*It++);
+  auto *OtherIntrinsic = cast<sandboxir::IntrinsicInst>(&*It++);
+
+  using DGNode = sandboxir::DGNode;
+  EXPECT_FALSE(DGNode::isMemIntrinsic(SideEffect));
+  EXPECT_FALSE(DGNode::isMemIntrinsic(PseudoProbe));
+  EXPECT_TRUE(DGNode::isMemIntrinsic(OtherIntrinsic));
+}
+
 TEST_F(DependencyGraphTest, MemDGNode) {
   parseIR(C, R"IR(
 declare void @llvm.sideeffect()

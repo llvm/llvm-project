@@ -693,7 +693,10 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     if (VD->isExternC())
       return getASTContext().getTranslationUnitDecl();
 
-  if (const auto *FD = D->getAsFunction()) {
+  if (const auto *FD = getASTContext().getLangOpts().getClangABICompat() >
+                               LangOptions::ClangABI::Ver19
+                           ? D->getAsFunction()
+                           : dyn_cast<FunctionDecl>(D)) {
     if (FD->isExternC())
       return getASTContext().getTranslationUnitDecl();
     // Member-like constrained friends are mangled as if they were members of
@@ -5742,6 +5745,15 @@ recurse:
   case Expr::HLSLOutArgExprClass:
     llvm_unreachable(
         "cannot mangle hlsl temporary value; mangling wrong thing?");
+  case Expr::OpenACCAsteriskSizeExprClass: {
+    // We shouldn't ever be able to get here, but diagnose anyway.
+    DiagnosticsEngine &Diags = Context.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "cannot yet mangle OpenACC Asterisk Size expression");
+    Diags.Report(DiagID);
+    return;
+  }
   }
 
   if (AsTemplateArg && !IsPrimaryExpr)

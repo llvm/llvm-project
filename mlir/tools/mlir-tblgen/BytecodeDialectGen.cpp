@@ -18,11 +18,10 @@
 
 using namespace llvm;
 
-static llvm::cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
-static llvm::cl::opt<std::string>
-    selectedBcDialect("bytecode-dialect",
-                      llvm::cl::desc("The dialect to gen for"),
-                      llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
+static cl::OptionCategory dialectGenCat("Options for -gen-bytecode");
+static cl::opt<std::string>
+    selectedBcDialect("bytecode-dialect", cl::desc("The dialect to gen for"),
+                      cl::cat(dialectGenCat), cl::CommaSeparated);
 
 namespace {
 
@@ -161,7 +160,7 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
 
   auto parsedArgs =
       llvm::to_vector(make_filter_range(args, [](Init *const attr) {
-        Record *def = cast<DefInit>(attr)->getDef();
+        const Record *def = cast<DefInit>(attr)->getDef();
         if (def->isSubClassOf("Array"))
           return true;
         return !def->getValueAsString("cParser").empty();
@@ -170,12 +169,12 @@ void printParseConditional(mlir::raw_indented_ostream &ios,
   interleave(
       zip(parsedArgs, argNames),
       [&](std::tuple<llvm::Init *&, const std::string &> it) {
-        Record *attr = cast<DefInit>(std::get<0>(it))->getDef();
+        const Record *attr = cast<DefInit>(std::get<0>(it))->getDef();
         std::string parser;
         if (auto optParser = attr->getValueAsOptionalString("cParser")) {
           parser = *optParser;
         } else if (attr->isSubClassOf("Array")) {
-          Record *def = attr->getValueAsDef("elemT");
+          const Record *def = attr->getValueAsDef("elemT");
           bool composite = def->isSubClassOf("CompositeBytecode");
           if (!composite && def->isSubClassOf("AttributeKind"))
             parser = "succeeded($_reader.readAttributes($_var))";
@@ -214,7 +213,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
     DefInit *first = dyn_cast<DefInit>(arg);
     if (!first)
       PrintFatalError("Unexpected type for " + name);
-    Record *def = first->getDef();
+    const Record *def = first->getDef();
 
     // Create variable decls, if there are a block of same type then create
     // comma separated list of them.
@@ -239,12 +238,12 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
 
   // Emit list helper functions.
   for (auto [arg, name] : zip(args, argNames)) {
-    Record *attr = cast<DefInit>(arg)->getDef();
+    const Record *attr = cast<DefInit>(arg)->getDef();
     if (!attr->isSubClassOf("Array"))
       continue;
 
     // TODO: Dedupe readers.
-    Record *def = attr->getValueAsDef("elemT");
+    const Record *def = attr->getValueAsDef("elemT");
     if (!def->isSubClassOf("CompositeBytecode") &&
         (def->isSubClassOf("AttributeKind") || def->isSubClassOf("TypeKind")))
       continue;
@@ -306,7 +305,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   auto funScope = os.scope("{\n", "}\n\n");
 
   // Check that predicates specified if multiple bytecode instances.
-  for (const llvm::Record *rec : make_second_range(vec)) {
+  for (const Record *rec : make_second_range(vec)) {
     StringRef pred = rec->getValueAsString("printerPredicate");
     if (vec.size() > 1 && pred.empty()) {
       for (auto [index, rec] : vec) {
@@ -335,7 +334,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
          llvm::zip(members->getArgs(), members->getArgNames())) {
       DefInit *def = dyn_cast<DefInit>(arg);
       assert(def);
-      Record *memberRec = def->getDef();
+      const Record *memberRec = def->getDef();
       emitPrintHelper(memberRec, kind, kind, name->getAsUnquotedString(), os);
     }
 
@@ -364,7 +363,7 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
   }
 
   if (memberRec->isSubClassOf("Array")) {
-    Record *def = memberRec->getValueAsDef("elemT");
+    const Record *def = memberRec->getValueAsDef("elemT");
     if (!def->isSubClassOf("CompositeBytecode")) {
       if (def->isSubClassOf("AttributeKind")) {
         ios << "writer.writeAttributes(" << getter << ");\n";

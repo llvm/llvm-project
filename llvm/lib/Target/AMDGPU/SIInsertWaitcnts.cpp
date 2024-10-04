@@ -2409,7 +2409,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-  if (auto AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
@@ -2538,7 +2538,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : MBB->successors()) {
-          auto SuccBII = BlockInfos.find(Succ);
+          auto *SuccBII = BlockInfos.find(Succ);
           BlockInfo &SuccBI = SuccBII->second;
           if (!SuccBI.Incoming) {
             SuccBI.Dirty = true;
@@ -2620,6 +2620,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     Modified = true;
   }
   ReleaseVGPRInsts.clear();
+  PreheadersToFlush.clear();
   SLoadAddresses.clear();
 
   return Modified;

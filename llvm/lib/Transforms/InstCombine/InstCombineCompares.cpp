@@ -423,7 +423,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 /// Returns true if we can rewrite Start as a GEP with pointer Base
 /// and some integer offset. The nodes that need to be re-written
 /// for this transformation will be added to Explored.
-static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
+static bool canRewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags &NW,
                                   const DataLayout &DL,
                                   SetVector<Value *> &Explored) {
   SmallVector<Value *, 16> WorkList(1, Start);
@@ -462,6 +462,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         if (!GEP->isInBounds() || count_if(GEP->indices(), IsNonConst) > 1)
           return false;
 
+        NW = NW.intersectForOffsetAdd(GEP->getNoWrapFlags());
         if (!Explored.contains(GEP->getOperand(0)))
           WorkList.push_back(GEP->getOperand(0));
       }
@@ -536,7 +537,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
 
 /// Returns a re-written value of Start as an indexed GEP using Base as a
 /// pointer.
-static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
+static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
                                  const DataLayout &DL,
                                  SetVector<Value *> &Explored,
                                  InstCombiner &IC) {
@@ -578,8 +579,10 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
       if (isa<ConstantInt>(Op) && cast<ConstantInt>(Op)->isZero())
         NewInsts[GEP] = OffsetV;
       else
-        NewInsts[GEP] = Builder.CreateNSWAdd(
-            Op, OffsetV, GEP->getOperand(0)->getName() + ".add");
+        NewInsts[GEP] = Builder.CreateAdd(
+            Op, OffsetV, GEP->getOperand(0)->getName() + ".add",
+            /*NUW=*/NW.hasNoUnsignedWrap(),
+            /*NSW=*/NW.hasNoUnsignedSignedWrap());
       continue;
     }
     if (isa<PHINode>(Val))
@@ -613,8 +616,8 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
 
     setInsertionPoint(Builder, Val, false);
     // Create GEP for external users.
-    Value *NewVal = Builder.CreateInBoundsGEP(
-        Builder.getInt8Ty(), Base, NewInsts[Val], Val->getName() + ".ptr");
+    Value *NewVal = Builder.CreateGEP(Builder.getInt8Ty(), Base, NewInsts[Val],
+                                      Val->getName() + ".ptr", NW);
     IC.replaceInstUsesWith(*cast<Instruction>(Val), NewVal);
     // Add old instruction to worklist for DCE. We don't directly remove it
     // here because the original compare is one of the users.
@@ -649,8 +652,8 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
 
   // The set of nodes that will take part in this transformation.
   SetVector<Value *> Nodes;
-
-  if (!canRewriteGEPAsOffset(RHS, PtrBase, DL, Nodes))
+  GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags();
+  if (!canRewriteGEPAsOffset(RHS, PtrBase, NW, DL, Nodes))
     return nullptr;
 
   // We know we can re-write this as
@@ -659,7 +662,7 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   // can't have overflow on either side. We can therefore re-write
   // this as:
   //   OFFSET1 cmp OFFSET2
-  Value *NewRHS = rewriteGEPAsOffset(RHS, PtrBase, DL, Nodes, IC);
+  Value *NewRHS = rewriteGEPAsOffset(RHS, PtrBase, NW, DL, Nodes, IC);
 
   // RewriteGEPAsOffset has replaced RHS and all of its uses with a re-written
   // GEP having PtrBase as the pointer base, and has returned in NewRHS the
@@ -5010,6 +5013,18 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       Constant *C2 = ConstantExpr::getNot(C);
       return new ICmpInst(Pred, Op0, Builder.CreateSub(C2, X));
     }
+  }
+
+  // (icmp eq/ne (X, -P2), INT_MIN)
+  //	-> (icmp slt/sge X, INT_MIN + P2)
+  if (ICmpInst::isEquality(Pred) && BO0 &&
+      match(I.getOperand(1), m_SignMask()) &&
+      match(BO0, m_And(m_Value(), m_NegatedPower2OrZero()))) {
+    // Will Constant fold.
+    Value *NewC = Builder.CreateSub(I.getOperand(1), BO0->getOperand(1));
+    return new ICmpInst(Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_SLT
+                                                  : ICmpInst::ICMP_SGE,
+                        BO0->getOperand(0), NewC);
   }
 
   {

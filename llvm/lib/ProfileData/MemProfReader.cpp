@@ -193,14 +193,10 @@ CallStackMap readStackInfo(const char *Ptr) {
 // addresses.
 bool mergeStackMap(const CallStackMap &From, CallStackMap &To) {
   for (const auto &[Id, Stack] : From) {
-    auto I = To.find(Id);
-    if (I == To.end()) {
-      To[Id] = Stack;
-    } else {
-      // Check that the PCs are the same (in order).
-      if (Stack != I->second)
-        return true;
-    }
+    auto [It, Inserted] = To.try_emplace(Id, Stack);
+    // Check that the PCs are the same (in order).
+    if (!Inserted && Stack != It->second)
+      return true;
   }
   return false;
 }

@@ -5170,8 +5170,13 @@ bool InstCombinerImpl::run() {
         LLVM_DEBUG(dbgs() << "IC: Old = " << *I << '\n'
                           << "    New = " << *Result << '\n');
 
-        Result->copyMetadata(*I,
-                             {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+        // We copy the old instruction's DebugLoc to the new instruction, unless
+        // InstCombine already assigned a DebugLoc to it, in which case we
+        // should trust the more specifically selected DebugLoc.
+        if (!Result->getDebugLoc())
+          Result->setDebugLoc(I->getDebugLoc());
+        // We also copy annotation metadata to the new instruction.
+        Result->copyMetadata(*I, LLVMContext::MD_annotation);
         // Everything uses the new instruction now.
         I->replaceAllUsesWith(Result);
 

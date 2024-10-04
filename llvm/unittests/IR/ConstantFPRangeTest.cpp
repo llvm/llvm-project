@@ -161,6 +161,19 @@ static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
   }
 }
 
+template <typename Fn>
+static bool AnyOfValueInConstantFPRange(const ConstantFPRange &CR, Fn TestFn) {
+  const fltSemantics &Sem = CR.getSemantics();
+  unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+  assert(Bits < 32 && "Too many bits");
+  for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
+    APFloat V(Sem, APInt(Bits, I));
+    if (CR.contains(V) && TestFn(V))
+      return true;
+  }
+  return false;
+}
+
 TEST_F(ConstantFPRangeTest, Basics) {
   EXPECT_TRUE(Full.isFullSet());
   EXPECT_FALSE(Full.isEmptySet());
@@ -263,12 +276,16 @@ TEST_F(ConstantFPRangeTest, SingleElement) {
   EXPECT_EQ(*One.getSingleElement(), APFloat(1.0));
   EXPECT_EQ(*PosZero.getSingleElement(), APFloat::getZero(Sem));
   EXPECT_EQ(*PosInf.getSingleElement(), APFloat::getInf(Sem));
+  ConstantFPRange PosZeroOrNaN = PosZero.unionWith(NaN);
+  EXPECT_EQ(*PosZeroOrNaN.getSingleElement(/*ExcludesNaN=*/true),
+            APFloat::getZero(Sem));
 
   EXPECT_FALSE(Full.isSingleElement());
   EXPECT_FALSE(Empty.isSingleElement());
   EXPECT_TRUE(One.isSingleElement());
   EXPECT_FALSE(Some.isSingleElement());
   EXPECT_FALSE(Zero.isSingleElement());
+  EXPECT_TRUE(PosZeroOrNaN.isSingleElement(/*ExcludesNaN=*/true));
 }
 
 TEST_F(ConstantFPRangeTest, ExhaustivelyEnumerate) {
@@ -424,5 +441,33 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 }
 #endif
 #endif
+
+TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateConstantFPRanges(
+        [Pred](const ConstantFPRange &CR) {
+          ConstantFPRange Res =
+              ConstantFPRange::makeAllowedFCmpRegion(Pred, CR);
+          ConstantFPRange Optimal =
+              ConstantFPRange::getEmpty(CR.getSemantics());
+          EnumerateValuesInConstantFPRange(
+              ConstantFPRange::getFull(CR.getSemantics()),
+              [&](const APFloat &V) {
+                if (AnyOfValueInConstantFPRange(CR, [&](const APFloat &U) {
+                      return FCmpInst::compare(V, U, Pred);
+                    }))
+                  Optimal = Optimal.unionWith(ConstantFPRange(V));
+              });
+
+          EXPECT_TRUE(Res.contains(Optimal))
+              << "Wrong result for makeAllowedFCmpRegion(" << Pred << ", " << CR
+              << "). Expected " << Optimal << ", but got " << Res;
+          EXPECT_EQ(Res, Optimal)
+              << "Suboptimal result for makeAllowedFCmpRegion(" << Pred << ", "
+              << CR << ")";
+        },
+        /*Exhaustive=*/false);
+  }
+}
 
 } // anonymous namespace

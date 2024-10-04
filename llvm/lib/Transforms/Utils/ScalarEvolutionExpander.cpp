@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
 #else
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X)
@@ -352,16 +352,19 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
+Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
+                                    SCEV::NoWrapFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
+  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
+                                              : GEPNoWrapFlags::none();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
     if (Constant *CRHS = dyn_cast<Constant>(Idx))
-      return Builder.CreatePtrAdd(CLHS, CRHS);
+      return Builder.CreatePtrAdd(CLHS, CRHS, "", NW);
 
   // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
@@ -380,7 +383,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
             GEP->getSourceElementType() == Builder.getInt8Ty() &&
             GEP->getOperand(1) == Idx) {
           rememberFlags(GEP);
-          GEP->setNoWrapFlags(GEPNoWrapFlags::none());
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags() & NW);
           return &*IP;
         }
       }
@@ -402,7 +405,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
   }
 
   // Emit a GEP.
-  return Builder.CreatePtrAdd(V, Idx, "scevgep");
+  return Builder.CreatePtrAdd(V, Idx, "scevgep", NW);
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -549,7 +552,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum);
+      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum, S->getNoWrapFlags());
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
@@ -1251,7 +1254,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   if (!S->getStart()->isZero()) {
     if (isa<PointerType>(S->getType())) {
       Value *StartV = expand(SE.getPointerBase(S));
-      return expandAddToGEP(SE.removePointerBase(S), StartV);
+      return expandAddToGEP(SE.removePointerBase(S), StartV,
+                            S->getNoWrapFlags(SCEV::FlagNUW));
     }
 
     SmallVector<const SCEV *, 4> NewOps(S->operands());
