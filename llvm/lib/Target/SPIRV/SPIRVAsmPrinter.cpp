@@ -600,6 +600,16 @@ void SPIRVAsmPrinter::outputModuleSections() {
 }
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
+  // Discard the internal service function
+  for (Function &F : M) {
+    if (!F.getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+      continue;
+    getAnalysis<MachineModuleInfoWrapperPass>()
+        .getMMI()
+        .deleteMachineFunctionFor(F);
+    break;
+  }
+
   ModuleSectionsEmitted = false;
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);

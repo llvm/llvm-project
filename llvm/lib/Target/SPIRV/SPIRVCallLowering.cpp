@@ -36,6 +36,10 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                     const Value *Val, ArrayRef<Register> VRegs,
                                     FunctionLoweringInfo &FLI,
                                     Register SwiftErrorVReg) const {
+  // Discard the internal service function
+  if (FLI.Fn && FLI.Fn->getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+    return true;
+
   // Maybe run postponed production of types for function pointers
   if (IndirectCalls.size() > 0) {
     produceIndirectPtrTypes(MIRBuilder);
@@ -280,6 +284,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
+  // Discard the internal service function
+  if (F.getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+    return true;
+
   assert(GR && "Must initialize the SPIRV type registry before lowering args.");
   GR->setCurrentFunc(MIRBuilder.getMF());
 

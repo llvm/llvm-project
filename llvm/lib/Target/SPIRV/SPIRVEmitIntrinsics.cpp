@@ -147,6 +147,10 @@ class SPIRVEmitIntrinsics
   void replaceWithPtrcasted(Instruction *CI, Type *NewElemTy, Type *KnownElemTy,
                             CallInst *AssignCI);
 
+  bool runOnFunction(Function &F);
+  bool postprocessTypes();
+  bool processFunctionPointers(Module &M);
+
 public:
   static char ID;
   SPIRVEmitIntrinsics() : ModulePass(ID) {
@@ -173,8 +177,6 @@ public:
   StringRef getPassName() const override { return "SPIRV emit intrinsics"; }
 
   bool runOnModule(Module &M) override;
-  bool runOnFunction(Function &F);
-  bool postprocessTypes();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     ModulePass::getAnalysisUsage(AU);
@@ -1825,8 +1827,55 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   }
 
   Changed |= postprocessTypes();
+  Changed |= processFunctionPointers(M);
 
   return Changed;
+}
+
+bool SPIRVEmitIntrinsics::processFunctionPointers(Module &M) {
+  bool IsExt = false;
+  SmallVector<Function*> Worklist;
+  for (auto &F : M) {
+    if (!IsExt) {
+      if (!TM->getSubtarget<SPIRVSubtarget>(F).canUseExtension(
+              SPIRV::Extension::SPV_INTEL_function_pointers))
+        return false;
+      IsExt = true;
+    }
+    if (!F.isDeclaration() || F.isIntrinsic())
+      continue;
+    for (User *U : F.users()) {
+      CallInst *CI = dyn_cast<CallInst>(U);
+      if (!CI || CI->getCalledFunction() != &F) {
+        Worklist.push_back(&F);
+        break;
+      }
+    }
+  }
+  if (Worklist.empty())
+    return false;
+
+  std::string ServiceFunName = SPIRV_BACKEND_SERVICE_FUN_NAME;
+  if (!getVacantFunctionName(M, ServiceFunName))
+    report_fatal_error(
+        "cannot allocate a name for the internal service function");
+  LLVMContext &Ctx = M.getContext();
+  Function *SF =
+      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), {}, false),
+                       GlobalValue::PrivateLinkage, ServiceFunName, M);
+  SF->addFnAttr(SPIRV_BACKEND_SERVICE_FUN_NAME, "");
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", SF);
+  IRBuilder<> IRB(BB);
+
+  for (Function *F : Worklist) {
+    SmallVector<Value *> Args;
+    for (const auto &Arg : F->args())
+      Args.push_back(PoisonValue::get(Arg.getType()));
+    IRB.CreateCall(F, Args);
+  }
+  IRB.CreateRetVoid();
+
+  return true;
 }
 
 ModulePass *llvm::createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM) {
