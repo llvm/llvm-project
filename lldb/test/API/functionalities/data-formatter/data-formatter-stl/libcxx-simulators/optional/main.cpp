@@ -1,4 +1,5 @@
 #include <type_traits>
+#include <utility>
 
 #if REVISION == 0
 // Pre-a3942b3 layout.
