@@ -1881,7 +1881,7 @@ func.func @insert_strided_slice_f32_2d_into_2d(%a: vector<2x2xf32>, %b: vector<4
   return %0 : vector<4x4xf32>
 }
 
-// CHECK-LABEL: @insert_strided_slice_f32_2d
+// CHECK-LABEL: @insert_strided_slice_f32_2d_into_2d
 //
 // Subvector vector<2xf32> @0 into vector<4xf32> @2
 //       CHECK:    %[[V2_0:.*]] = llvm.extractvalue {{.*}}[0] : !llvm.array<2 x vector<2xf32>>
@@ -1950,7 +1950,7 @@ func.func @insert_strided_slice_f32_2d_into_3d_scalable(%arg0: vector<2x[4]xf32>
 
 // CHECK-LABEL:   func.func @insert_strided_slice_f32_2d_into_3d_scalable(
 
-// Subvector vector4x[4]xf32> from vector<16x4x[4]xf32> @3
+// Subvector vector<4x[4]xf32> from vector<16x4x[4]xf32> @3
 // CHECK:           %[[ARG_1_0:.*]] = llvm.extractvalue {{.*}}[3] : !llvm.array<16 x array<4 x vector<[4]xf32>>>
 
 // Subvector vector<[4]xf32> @0 into vector<4x[4]xf32> @2
@@ -1961,7 +1961,7 @@ func.func @insert_strided_slice_f32_2d_into_3d_scalable(%arg0: vector<2x[4]xf32>
 // CHECK:           %[[ARG_0_1:.*]] = llvm.extractvalue {{.*}}[1] : !llvm.array<2 x vector<[4]xf32>>
 // CHECK:           %[[B_UPDATED_1:.*]] = llvm.insertvalue %[[ARG_0_1]], %[[B_UPDATED_0]][3] : !llvm.array<4 x vector<[4]xf32>>
 
-// Subvector vector4x[4]xf32> into vector<16x4x[4]xf32> @3
+// Subvector vector<4x[4]xf32> into vector<16x4x[4]xf32> @3
 // CHECK:           llvm.insertvalue %[[B_UPDATED_1]], {{.*}}[3] : !llvm.array<16 x array<4 x vector<[4]xf32>>>
 
 // -----
