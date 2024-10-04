@@ -3677,11 +3677,13 @@ static Value *foldSelectIntoAddConstant(SelectInst &SI,
     if (!match(FAdd, m_FAdd(m_Specific(X), m_Specific(C))))
       return nullptr;
 
-    Value *NewSelect =
-        Builder.CreateSelect(SI.getCondition(), X, Z, SI.getName(), &SI);
+    Value *NewSelect = Builder.CreateSelect(SI.getCondition(), X, Z, "", &SI);
     cast<Instruction>(NewSelect)->setFastMathFlags(SI.getFastMathFlags());
+    NewSelect->takeName(&SI);
 
-    return Builder.CreateFAddFMF(NewSelect, C, FAdd, FAdd->getName());
+    Value *NewFAdd = Builder.CreateFAddFMF(NewSelect, C, FAdd);
+    NewFAdd->takeName(FAdd);
+    return NewFAdd;
   }
 
   return nullptr;
