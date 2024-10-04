@@ -2171,17 +2171,7 @@ public:
   static AtomicCmpXchgInst *
   create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
          AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
-         BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
-  static AtomicCmpXchgInst *
-  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
-         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
-         Instruction *InsertBefore, Context &Ctx,
-         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
-  static AtomicCmpXchgInst *
-  create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
-         AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
-         BasicBlock *InsertAtEnd, Context &Ctx,
+         InsertPosition Pos, Context &Ctx,
          SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
 
   static bool classof(const Value *From) {
@@ -2196,15 +2186,9 @@ class AllocaInst final : public UnaryInstruction {
   friend class Context; // For constructor.
 
 public:
-  static AllocaInst *create(Type *Ty, unsigned AddrSpace, BBIterator WhereIt,
-                            BasicBlock *WhereBB, Context &Ctx,
-                            Value *ArraySize = nullptr, const Twine &Name = "");
-  static AllocaInst *create(Type *Ty, unsigned AddrSpace,
-                            Instruction *InsertBefore, Context &Ctx,
-                            Value *ArraySize = nullptr, const Twine &Name = "");
-  static AllocaInst *create(Type *Ty, unsigned AddrSpace,
-                            BasicBlock *InsertAtEnd, Context &Ctx,
-                            Value *ArraySize = nullptr, const Twine &Name = "");
+  static AllocaInst *create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
+                            Context &Ctx, Value *ArraySize = nullptr,
+                            const Twine &Name = "");
 
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
@@ -2306,13 +2290,7 @@ class CastInst : public UnaryInstruction {
 
 public:
   static Value *create(Type *DestTy, Opcode Op, Value *Operand,
-                       BBIterator WhereIt, BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
-                       Instruction *InsertBefore, Context &Ctx,
-                       const Twine &Name = "");
-  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
-                       BasicBlock *InsertAtEnd, Context &Ctx,
+                       InsertPosition Pos, Context &Ctx,
                        const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
@@ -2345,19 +2323,9 @@ public:
 // Helper class to simplify stamping out CastInst subclasses.
 template <Instruction::Opcode Op> class CastInstImpl : public CastInst {
 public:
-  static Value *create(Value *Src, Type *DestTy, BBIterator WhereIt,
-                       BasicBlock *WhereBB, Context &Ctx,
-                       const Twine &Name = "") {
-    return CastInst::create(DestTy, Op, Src, WhereIt, WhereBB, Ctx, Name);
-  }
-  static Value *create(Value *Src, Type *DestTy, Instruction *InsertBefore,
+  static Value *create(Value *Src, Type *DestTy, InsertPosition Pos,
                        Context &Ctx, const Twine &Name = "") {
-    return create(Src, DestTy, InsertBefore->getIterator(),
-                  InsertBefore->getParent(), Ctx, Name);
-  }
-  static Value *create(Value *Src, Type *DestTy, BasicBlock *InsertAtEnd,
-                       Context &Ctx, const Twine &Name = "") {
-    return create(Src, DestTy, InsertAtEnd->end(), InsertAtEnd, Ctx, Name);
+    return CastInst::create(DestTy, Op, Src, Pos, Ctx, Name);
   }
 
   static bool classof(const Value *From) {
@@ -2416,7 +2384,7 @@ class PHINode final : public SingleLLVMInstructionImpl<llvm::PHINode> {
 
 public:
   static PHINode *create(Type *Ty, unsigned NumReservedValues,
-                         Instruction *InsertBefore, Context &Ctx,
+                         InsertPosition Pos, Context &Ctx,
                          const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
