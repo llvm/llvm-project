@@ -110,10 +110,17 @@ define amdgpu_cs_chain void @indirect_callee_direct_fallback(i32 inreg %exec, pt
   ; DAGISEL-GFX12-NEXT:   [[COPY8:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; DAGISEL-GFX12-NEXT:   [[COPY9:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX12-NEXT:   [[COPY10:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
+  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
+  ; DAGISEL-GFX12-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub1
+  ; DAGISEL-GFX12-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
+  ; DAGISEL-GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec
+  ; DAGISEL-GFX12-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE]].sub0
+  ; DAGISEL-GFX12-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[COPY13]]
+  ; DAGISEL-GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY14]], implicit $exec
+  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_1]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_]], %subreg.sub1
   ; DAGISEL-GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-hi) @retry_vgpr_alloc
   ; DAGISEL-GFX12-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @retry_vgpr_alloc
-  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
+  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[S_MOV_B32_1]], %subreg.sub0, killed [[S_MOV_B32_]], %subreg.sub1
   ; DAGISEL-GFX12-NEXT:   $sgpr0 = COPY [[COPY7]]
   ; DAGISEL-GFX12-NEXT:   $sgpr1 = COPY [[COPY6]]
   ; DAGISEL-GFX12-NEXT:   $sgpr2 = COPY [[COPY5]]
@@ -121,7 +128,7 @@ define amdgpu_cs_chain void @indirect_callee_direct_fallback(i32 inreg %exec, pt
   ; DAGISEL-GFX12-NEXT:   $vgpr9 = COPY [[COPY3]]
   ; DAGISEL-GFX12-NEXT:   $vgpr10 = COPY [[COPY2]]
   ; DAGISEL-GFX12-NEXT:   $vgpr11 = COPY [[COPY1]]
-  ; DAGISEL-GFX12-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR killed [[REG_SEQUENCE]], 0, 0, [[COPY10]], [[COPY]], -1, killed [[REG_SEQUENCE1]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX12-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR killed [[REG_SEQUENCE1]], 0, 0, [[COPY10]], [[COPY]], -1, killed [[REG_SEQUENCE2]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr inreg %callee, i32 %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 1, i32 inreg %num_vgpr, i32 inreg -1, ptr @retry_vgpr_alloc)
   unreachable
 }
@@ -237,7 +244,14 @@ define amdgpu_cs_chain void @indirect_callee_indirect_fallback(i32 inreg %exec, 
   ; DAGISEL-GFX12-NEXT:   [[COPY12:%[0-9]+]]:sgpr_32 = COPY $sgpr1
   ; DAGISEL-GFX12-NEXT:   [[COPY13:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY10]], %subreg.sub1
+  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY11]], %subreg.sub0, [[COPY10]], %subreg.sub1
+  ; DAGISEL-GFX12-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; DAGISEL-GFX12-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[COPY14]]
+  ; DAGISEL-GFX12-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY15]], implicit $exec
+  ; DAGISEL-GFX12-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE1]].sub0
+  ; DAGISEL-GFX12-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[COPY16]]
+  ; DAGISEL-GFX12-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY17]], implicit $exec
+  ; DAGISEL-GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_1]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_]], %subreg.sub1
   ; DAGISEL-GFX12-NEXT:   $sgpr0 = COPY [[COPY7]]
   ; DAGISEL-GFX12-NEXT:   $sgpr1 = COPY [[COPY6]]
   ; DAGISEL-GFX12-NEXT:   $sgpr2 = COPY [[COPY5]]
@@ -245,7 +259,7 @@ define amdgpu_cs_chain void @indirect_callee_indirect_fallback(i32 inreg %exec, 
   ; DAGISEL-GFX12-NEXT:   $vgpr9 = COPY [[COPY3]]
   ; DAGISEL-GFX12-NEXT:   $vgpr10 = COPY [[COPY2]]
   ; DAGISEL-GFX12-NEXT:   $vgpr11 = COPY [[COPY1]]
-  ; DAGISEL-GFX12-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR killed [[REG_SEQUENCE1]], 0, 0, [[COPY13]], [[COPY]], [[COPY12]], killed [[REG_SEQUENCE]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
+  ; DAGISEL-GFX12-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR killed [[REG_SEQUENCE2]], 0, 0, [[COPY13]], [[COPY]], [[COPY12]], killed [[REG_SEQUENCE]], amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr inreg %callee, i32 inreg %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 1, i32 inreg %num_vgpr, i32 inreg %retry_exec, ptr inreg %retry)
   unreachable
 }
