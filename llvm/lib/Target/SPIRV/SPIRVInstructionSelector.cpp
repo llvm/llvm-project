@@ -221,7 +221,7 @@ private:
                  MachineInstr &I) const;
 
   bool selectExtInst(Register ResVReg, const SPIRVType *RestType,
-		     MachineInstr &I, GL::GLSLExtInst GLInst) const;
+                     MachineInstr &I, GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, CL::OpenCLExtInst CLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
@@ -772,11 +772,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
-					     const SPIRVType *ResType,
-					     MachineInstr &I,
-					     GL::GLSLExtInst GLInst) const {
+                                             const SPIRVType *ResType,
+                                             MachineInstr &I,
+                                             GL::GLSLExtInst GLInst) const {
   return selectExtInst(ResVReg, ResType, I,
-		       {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
+                       {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
 
 bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,

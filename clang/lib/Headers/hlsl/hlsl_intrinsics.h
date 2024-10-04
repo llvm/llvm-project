@@ -1079,7 +1079,7 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
 uint64_t3 firstbithigh(uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_firstbithigh)
 uint64_t4 firstbithigh(uint64_t4);
-  
+
 //===----------------------------------------------------------------------===//
 // floor builtins
 //===----------------------------------------------------------------------===//
