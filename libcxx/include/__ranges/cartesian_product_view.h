@@ -87,6 +87,9 @@ private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
   tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...> current_;
+
+  constexpr iterator(Parent& parent, decltype(current_) current)
+      : parent_(std::addressof(parent)), current_(std::move(current)) {}
 };
 
 } // namespace ranges
