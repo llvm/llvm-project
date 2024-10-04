@@ -1527,9 +1527,8 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
 define i32 @lowbits_of_lshr_mul(i64 %x) {
 ; CHECK-LABEL: @lowbits_of_lshr_mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X:%.*]], 64424509440
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[MUL]], 32
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHIFT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[X:%.*]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = mul i32 [[TMP0]], 15
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
@@ -1542,9 +1541,8 @@ entry:
 define i32 @lowbits_of_lshr_mul_mask(i32 %x) {
 ; CHECK-LABEL: @lowbits_of_lshr_mul_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 104857600
-; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i32 [[MUL]], 16
-; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32704
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[X:%.*]], 1600
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[TMP0]], 32704
 ; CHECK-NEXT:    ret i32 [[CONV]]
 ;
 entry:
