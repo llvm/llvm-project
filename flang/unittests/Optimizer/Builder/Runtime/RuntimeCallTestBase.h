@@ -47,10 +47,10 @@ public:
     f80Ty = firBuilder->getF80Type();
     f128Ty = firBuilder->getF128Type();
 
-    c4Ty = fir::ComplexType::get(firBuilder->getContext(), 4);
-    c8Ty = fir::ComplexType::get(firBuilder->getContext(), 8);
-    c10Ty = fir::ComplexType::get(firBuilder->getContext(), 10);
-    c16Ty = fir::ComplexType::get(firBuilder->getContext(), 16);
+    c4Ty = mlir::ComplexType::get(f32Ty);
+    c8Ty = mlir::ComplexType::get(f64Ty);
+    c10Ty = mlir::ComplexType::get(f80Ty);
+    c16Ty = mlir::ComplexType::get(f128Ty);
 
     seqTy10 = fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
     boxTy = fir::BoxType::get(mlir::NoneType::get(firBuilder->getContext()));
