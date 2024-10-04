@@ -3335,8 +3335,7 @@ define i1 @icmp_eq_or_z_or_pow2orz_fail_bad_pred2(i8 %x, i8 %y) {
 
 define i1 @and_slt_to_mask(i8 %x) {
 ; CHECK-LABEL: @and_slt_to_mask(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[AND2:%.*]] = icmp eq i8 [[TMP1]], -128
+; CHECK-NEXT:    [[AND2:%.*]] = icmp slt i8 [[X:%.*]], -126
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp = icmp slt i8 %x, -124
