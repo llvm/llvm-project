@@ -18,6 +18,7 @@
 #include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -264,6 +265,14 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   auto result = fir::NameUniquer::deconstruct(funcName);
   funcName = mlir::StringAttr::get(context, result.second.name);
+
+  // try to use a better function name than _QQmain for the program statement
+  if (funcName == fir::NameUniquer::doProgramEntry()) {
+    mlir::StringAttr bindcName =
+        funcOp->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
+    if (bindcName)
+      funcName = bindcName;
+  }
 
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
   for (auto resTy : funcOp.getResultTypes()) {

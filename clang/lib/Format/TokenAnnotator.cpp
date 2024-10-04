@@ -366,7 +366,7 @@ private:
     } else if (OpeningParen.Previous &&
                (OpeningParen.Previous->isOneOf(
                     tok::kw_static_assert, tok::kw_noexcept, tok::kw_explicit,
-                    tok::kw_while, tok::l_paren, tok::comma,
+                    tok::kw_while, tok::l_paren, tok::comma, TT_CastRParen,
                     TT_BinaryOperator) ||
                 OpeningParen.Previous->isIf())) {
       // static_assert, if and while usually contain expressions.

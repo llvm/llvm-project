@@ -1442,7 +1442,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
         return cmd.hasPhdrs || cmd.hasFilehdr;
       });
   bool paged = !ctx.arg.omagic && !ctx.arg.nmagic;
-  uint64_t headerSize = getHeaderSize();
+  uint64_t headerSize = getHeaderSize(ctx);
 
   uint64_t base = 0;
   // If SECTIONS is present and the linkerscript is not explicit about program
@@ -1491,7 +1491,7 @@ LinkerScript::assignAddresses() {
     dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
-    dot += getHeaderSize();
+    dot += getHeaderSize(ctx);
   }
 
   OutputSection *changedOsec = nullptr;

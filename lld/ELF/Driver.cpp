@@ -3207,7 +3207,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(ctx.script);
+        osd->osec.finalizeInputSections(ctx);
   }
 
   // Two input sections with different output sections should not be folded.
