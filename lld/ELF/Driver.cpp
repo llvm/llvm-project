@@ -3123,6 +3123,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
   ctx.target = getTarget(ctx);
+  // Currently, the TargetInfo structures in are function-statics. Guard against
+  // that causing problems if ctx is changed from a global variable to a local
+  // variable.
+  assert(&ctx.target->ctx == &ctx);
 
   ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
