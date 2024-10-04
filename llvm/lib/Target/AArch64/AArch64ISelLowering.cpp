@@ -1114,7 +1114,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER});
+  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -24079,11 +24079,41 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
 static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
-  assert(MGS && "Can only combine gather load or scatter store nodes");
+  MaskedHistogramSDNode *HG;
+  MaskedGatherScatterSDNode *MGS;
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
+    HG = cast<MaskedHistogramSDNode>(N);
+  } else {
+    MGS = cast<MaskedGatherScatterSDNode>(N);
+  }
+  assert((HG || MGS) &&
+         "Can only combine gather load, scatter store or histogram nodes");
 
   if (!DCI.isBeforeLegalize())
     return SDValue();
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
+    SDLoc DL(HG);
+    SDValue Index = HG->getIndex();
+    if (ISD::isExtOpcode(Index->getOpcode())) {
+      SDValue Chain = HG->getChain();
+      SDValue Inc = HG->getInc();
+      SDValue Mask = HG->getMask();
+      SDValue BasePtr = HG->getBasePtr();
+      SDValue Scale = HG->getScale();
+      SDValue IntID = HG->getIntID();
+      EVT MemVT = HG->getMemoryVT();
+      MachineMemOperand *MMO = HG->getMemOperand();
+      ISD::MemIndexType IndexType = HG->getIndexType();
+      SDValue ExtOp = Index.getOperand(0);
+      auto SrcType = ExtOp.getValueType();
+      auto TruncatedIndex = DAG.getAnyExtOrTrunc(Index, DL, SrcType);
+      SDValue Ops[] = {Chain, Inc, Mask, BasePtr, TruncatedIndex, Scale, IntID};
+      return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
+                                    MMO, IndexType);
+    }
+    return SDValue();
+  }
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();
@@ -26277,6 +26307,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MGATHER:
   case ISD::MSCATTER:
+  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
