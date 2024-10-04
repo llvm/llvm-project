@@ -541,3 +541,9 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
+
+namespace regression3 {
+  template <template <auto...> class TT> struct A {};
+  template <auto, int> struct B;
+  template struct A<B>;
+} // namespace regression3

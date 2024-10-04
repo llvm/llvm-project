@@ -36,6 +36,18 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
+static inline unsigned getMemType(cuf::DataAttribute attr) {
+  if (attr == cuf::DataAttribute::Device)
+    return kMemTypeDevice;
+  if (attr == cuf::DataAttribute::Managed)
+    return kMemTypeManaged;
+  if (attr == cuf::DataAttribute::Unified)
+    return kMemTypeUnified;
+  if (attr == cuf::DataAttribute::Pinned)
+    return kMemTypePinned;
+  llvm::report_fatal_error("unsupported memory type");
+}
+
 template <typename OpTy>
 static bool isPinned(OpTy op) {
   if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)

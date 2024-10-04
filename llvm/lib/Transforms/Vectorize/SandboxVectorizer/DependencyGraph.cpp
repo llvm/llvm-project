@@ -38,12 +38,12 @@ MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
   // walk down/up the chain and find the mem-dep ones.
   Instruction *MemTopI = Instrs.top();
   Instruction *MemBotI = Instrs.bottom();
-  while (!DGNode::isMemDepCandidate(MemTopI) && MemTopI != MemBotI)
+  while (!DGNode::isMemDepNodeCandidate(MemTopI) && MemTopI != MemBotI)
     MemTopI = MemTopI->getNextNode();
-  while (!DGNode::isMemDepCandidate(MemBotI) && MemBotI != MemTopI)
+  while (!DGNode::isMemDepNodeCandidate(MemBotI) && MemBotI != MemTopI)
     MemBotI = MemBotI->getPrevNode();
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
-  if (!DGNode::isMemDepCandidate(MemTopI))
+  if (!DGNode::isMemDepNodeCandidate(MemTopI))
     return {};
   // Now that we have the mem-dep nodes, create and return the range.
   return Interval<MemDGNode>(cast<MemDGNode>(DAG.getNode(MemTopI)),
