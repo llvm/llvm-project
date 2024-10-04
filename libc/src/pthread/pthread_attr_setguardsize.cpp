@@ -8,6 +8,7 @@
 
 #include "pthread_attr_setguardsize.h"
 
+#include "src/errno/libc_errno.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 

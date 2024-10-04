@@ -9,6 +9,7 @@
 #include "posix_spawn_file_actions_adddup2.h"
 
 #include "file_actions.h"
+#include "src/errno/libc_errno.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"

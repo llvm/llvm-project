@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/pthread/pthread_rwlock_timedrdlock.h"
-
+#include "src/errno/libc_errno.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"

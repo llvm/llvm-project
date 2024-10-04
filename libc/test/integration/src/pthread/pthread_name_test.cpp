@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getname_np.h"
