@@ -20,7 +20,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 struct ExpBase {

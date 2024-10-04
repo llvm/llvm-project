@@ -13,7 +13,6 @@
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 constexpr MsgTable<52> LINUX_ERRORS = {

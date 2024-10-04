@@ -8,9 +8,9 @@
 
 #include "pthread_condattr_setclock.h"
 
-#include "src/errno/libc_errno.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
 
 #include <pthread.h>   // pthread_condattr_t
 #include <sys/types.h> // clockid_t

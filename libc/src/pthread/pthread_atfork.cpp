@@ -8,10 +8,10 @@
 
 #include "pthread_atfork.h"
 
-#include "src/errno/libc_errno.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/fork_callbacks.h"
+#include "src/errno/libc_errno.h"
 
 #include <pthread.h> // For pthread_* type definitions.
 

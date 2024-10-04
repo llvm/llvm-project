@@ -12,7 +12,6 @@
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/macros/config.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr const MsgTable<4> STDC_ERRORS = {
