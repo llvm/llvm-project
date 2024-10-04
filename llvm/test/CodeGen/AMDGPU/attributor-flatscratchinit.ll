@@ -386,43 +386,13 @@ define amdgpu_kernel void @with_cast_call_with_private_to_flat_addrspacecast_cc_
 
 ;; tests of addrspacecast in a constant
 
-define amdgpu_kernel void @with_global_to_flat_in_const() {
-; GFX9-LABEL: define amdgpu_kernel void @with_global_to_flat_in_const()
-; GFX9-SAME:  #[[ATTR1_GFX9_NOFSI2]]
-  store i32 7, ptr addrspace(0) addrspacecast (ptr addrspace(1) null to ptr addrspace(0))
-  ret void
-}
-
-define amdgpu_kernel void @with_region_to_flat_in_const() {
-; GFX9-LABEL: define amdgpu_kernel void @with_region_to_flat_in_const()
-; GFX9-SAME:  #[[ATTR1_GFX9_NOFSI2]]
-  store i32 7, ptr addrspace(0) addrspacecast (ptr addrspace(2) null to ptr addrspace(0))
-  ret void
-}
-
-define amdgpu_kernel void @with_local_to_flat_in_const() {
-; GFX9-LABEL: define amdgpu_kernel void @with_local_to_flat_in_const()
-; GFX9-SAME:  #[[ATTR1_GFX9_NOFSI2]]
-  store i32 7, ptr addrspace(0) addrspacecast (ptr addrspace(3) null to ptr addrspace(0))
-  ret void
-}
-
-define amdgpu_kernel void @with_constant_to_flat_in_const() {
-  store i32 7, ptr addrspace(0) addrspacecast (ptr addrspace(3) null to ptr addrspace(0))
-  ret void
-}
-
-define amdgpu_kernel void @with_private_to_flat_in_const() {
-; GFX9-LABEL: define amdgpu_kernel void @with_private_to_flat_in_const()
-; GFX9-SAME:  #[[ATTR3_GFX9_NO_NOFSI2:[0-9]+]]
-  store i32 7, ptr addrspace(0) addrspacecast (ptr addrspace(5) null to ptr addrspace(0))
-  ret void
-}
-
-define amdgpu_kernel void @call_with_private_to_flat_in_const() {
-; GFX9-LABEL: define amdgpu_kernel void @call_with_private_to_flat_in_const()
-; GFX9-SAME:  #[[ATTR3_GFX9_NO_NOFSI2:[0-9]+]]
-  call void @with_private_to_flat_in_const()
+define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) nocapture %out) {
+; GFX9-LABEL: define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) nocapture %out)
+; GFX9-SAME:  #[[ATTR3_GFX9_NO_NOFSI2]]
+;
+; GFX10-LABEL: define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) nocapture %out)
+; GFX10-SAME:  #[[ATTR3_GFX10_NO_NOFSI2]]
+  store volatile ptr addrspacecast (ptr addrspace(5) inttoptr (i32 123 to ptr addrspace(5)) to ptr), ptr addrspace(1) %out, align 8
   ret void
 }
 
