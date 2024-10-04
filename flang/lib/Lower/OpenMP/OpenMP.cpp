@@ -935,7 +935,7 @@ static void genBodyOfTargetOp(
             firOpBuilder, copyVal.getLoc(), copyVal,
             /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
             /*members=*/llvm::SmallVector<mlir::Value>{},
-            /*membersIndex=*/mlir::DenseIntElementsAttr{},
+            /*membersIndex=*/mlir::ArrayAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
@@ -1792,7 +1792,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{},
           name.str(), bounds, /*members=*/{},
-          /*membersIndex=*/mlir::DenseIntElementsAttr{},
+          /*membersIndex=*/mlir::ArrayAttr{},
           static_cast<
               std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
               mapFlag),
