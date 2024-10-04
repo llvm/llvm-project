@@ -3182,11 +3182,19 @@ void Record::checkRecordAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
+  bool AnyFailed = false;
   for (const auto &Assertion : getAssertions()) {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
-    CheckAssert(Assertion.Loc, Condition, Message);
+    AnyFailed |= CheckAssert(Assertion.Loc, Condition, Message);
   }
+
+  if (!AnyFailed)
+    return;
+
+  // If any of the record assertions failed, print some context that will
+  // help see where the record that caused these assert failures is defined.
+  PrintError(this, "assertion failed in this record");
 }
 
 void Record::emitRecordDumps() {

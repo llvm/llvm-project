@@ -1406,6 +1406,10 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
   return S.noteUndefinedBehavior();
 }
 
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
@@ -1430,6 +1434,10 @@ bool Interpret(InterpState &S, APValue &Result) {
     }
   }
 }
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_WIN32) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
 
 } // namespace interp
 } // namespace clang
