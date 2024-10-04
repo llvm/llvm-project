@@ -12053,6 +12053,10 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   if (LangOpts.OpenMP)
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(NewFD);
 
+  if (LangOpts.isSYCL() && NewFD->hasAttr<SYCLKernelEntryPointAttr>() &&
+      !NewFD->isInvalidDecl() && !NewFD->isDependentContext())
+    getASTContext().registerSYCLEntryPointFunction(NewFD);
+
   // Semantic checking for this function declaration (in isolation).
 
   if (getLangOpts().CPlusPlus) {

@@ -455,6 +455,64 @@ The SYCL kernel in the previous code sample meets these expectations.
   }];
 }
 
+def SYCLKernelEntryPointDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sycl_kernel_entry_point`` attribute specifies that a function definition
+defines a pattern for an offload kernel entry point function to be emitted when
+the source code is compiled with ``-fsycl`` for a device target. Such functions
+serve as the execution entry point for a SYCL run-time library to invoke a SYCL
+kernel on a device. The function's parameters define the parameters to the
+offload kernel.
+
+The attribute requires a single type argument that specifies a class type that
+meets the requirements for a SYCL kernel name as described in section 5.2,
+"Naming of kernels", of the SYCL 2020 specification. A unique kernel name type
+is required for each function declared with the attribute. The attribute may
+not first appear on a declaration that follows a definition of the function.
+
+The attribute appertains only to non-member functions and static member
+functions that meet the following requirements:
+
+- Has a ``void`` return type.
+- Is not a variadic function.
+- Is not a coroutine.
+- Is not defined as deleted or as defaulted.
+- Is not declared with the ``constexpr`` or ``consteval`` specifiers.
+- Is not declared with the ``[[noreturn]]`` attribute.
+
+This attribute is intended for use in the implementation of SYCL run-time
+libraries that implement SYCL kernel invocation functions like the
+``single_task`` and ``parallel_for`` member functions of the ``sycl::handler``
+class specified in section 4.9.4, "Command group ``handler`` class" of the
+SYCL 2020 specification. Such use might look something like the following.
+
+.. code-block:: c++
+
+  namespace sycl {
+  class handler {
+    template<typename KernelNameType, typename KernelType>
+    [[ clang::sycl_kernel_entry_point(KernelNameType) ]]
+    static void kernel_entry_point(KernelType kernel) {
+      kernel();
+    }
+
+  public:
+    template<typename KernelNameType, typename KernelType>
+    void single_task(KernelType kernel) {
+      kernel_entry_point<KernelNameType>(kernel);
+    }
+  };
+  } // namespace sycl
+
+It is not necessary for a SYCL kernel entry point function to be called for
+the offload kernel entry point to be emitted. For inline functions and function
+templates, any ODR-use will suffice. For other functions, an ODR-use is not
+required; the offload kernel entry point will be emitted if the function is
+defined.
+  }];
+}
+
 def SYCLSpecialClassDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

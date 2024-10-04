@@ -407,7 +407,8 @@ def MicrosoftExt : LangOpt<"MicrosoftExt">;
 def Borland : LangOpt<"Borland">;
 def CUDA : LangOpt<"CUDA">;
 def HIP : LangOpt<"HIP">;
-def SYCL : LangOpt<"SYCLIsDevice">;
+def SYCLHost : LangOpt<"SYCLIsHost">;
+def SYCLDevice : LangOpt<"SYCLIsDevice">;
 def COnly : LangOpt<"", "!LangOpts.CPlusPlus">;
 def CPlusPlus : LangOpt<"CPlusPlus">;
 def OpenCL : LangOpt<"OpenCL">;
@@ -1489,14 +1490,23 @@ def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 def SYCLKernel : InheritableAttr {
   let Spellings = [Clang<"sycl_kernel">];
   let Subjects = SubjectList<[FunctionTmpl]>;
-  let LangOpts = [SYCL];
+  let LangOpts = [SYCLDevice];
   let Documentation = [SYCLKernelDocs];
+}
+
+def SYCLKernelEntryPoint : InheritableAttr {
+  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Args = [TypeArgument<"KernelName">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let TemplateDependent = 1;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLKernelEntryPointDocs];
 }
 
 def SYCLSpecialClass: InheritableAttr {
   let Spellings = [Clang<"sycl_special_class">];
   let Subjects = SubjectList<[CXXRecord]>;
-  let LangOpts = [SYCL];
+  let LangOpts = [SYCLDevice];
   let Documentation = [SYCLSpecialClassDocs];
 }
 

@@ -14296,6 +14296,31 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
   }
 }
 
+static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
+                                          CanQualType KernelNameType,
+                                          const FunctionDecl *FD) {
+  return { KernelNameType, FD };
+}
+
+void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
+  assert(!FD->isInvalidDecl());
+  assert(!FD->isDependentContext());
+
+  const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
+  assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+
+  CanQualType KernelNameType = getCanonicalType(SKEPAttr->getKernelName());
+  auto IT = SYCLKernels.find(KernelNameType);
+  if (IT != SYCLKernels.end()) {
+    if (!declaresSameEntity(FD, IT->second.GetKernelEntryPointDecl()))
+      llvm::report_fatal_error("SYCL kernel name conflict");
+  } else {
+    SYCLKernels.insert_or_assign(
+        KernelNameType,
+        BuildSYCLKernelInfo(*this, KernelNameType, FD));
+  }
+}
+
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
   OMPTraitInfoVector.emplace_back(new OMPTraitInfo());
   return *OMPTraitInfoVector.back();
