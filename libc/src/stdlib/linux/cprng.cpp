@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "src/__support/OSUtil/linux/cprng.h"
+#include "src/stdlib/linux/cprng.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/CPP/new.h"
@@ -15,11 +15,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/raw_mutex.h"
-#include "src/sched/sched_getaffinity.h"
-#include "src/sched/sched_getcpucount.h"
-#include "src/sys/mman/mmap.h"
-#include "src/sys/mman/munmap.h"
-#include "src/unistd/sysconf.h"
+#include "src/sys/auxv/getauxval.h"
 
 extern "C" int __cxa_thread_atexit_impl(void (*)(void *), void *, void *);
 extern "C" int __cxa_atexit(void (*)(void *), void *, void *);
@@ -87,11 +83,13 @@ public:
 
 private:
   static size_t guess_cpu_count() {
-    cpu_set_t cpuset{};
-    if (LIBC_NAMESPACE::sched_getaffinity(0, sizeof(cpuset), &cpuset))
+    unsigned char cpuset[128]{};
+    if (syscall_impl<long>(0, sizeof(cpuset), cpuset) <= 0)
       return 1u;
-    int count = LIBC_NAMESPACE::__sched_getcpucount(sizeof(cpu_set_t), &cpuset);
-    return static_cast<size_t>(count > 1 ? count : 1);
+    size_t count = 0;
+    for (auto byte : cpuset)
+      count += cpp::popcount(byte);
+    return count > 1u ? count : 1u;
   }
 
 private:
@@ -114,7 +112,7 @@ public:
       return cpp::nullopt;
 
     // get valid page size
-    long page_size_res = sysconf(_SC_PAGESIZE);
+    long page_size_res = getauxval(AT_PAGESZ);
     if (page_size_res <= 0)
       return cpp::nullopt;
     page_size = static_cast<size_t>(page_size_res);
@@ -132,26 +130,6 @@ public:
     pages_per_block = aligned_bytes / page_size;
     return GlobalConfig(page_size, pages_per_block, states_per_page, params);
   }
-};
-
-// Utilities to allocate memory and hold it temporarily.
-template <typename T> struct Allocation {
-  T *ptr;
-  size_t raw_size;
-  Allocation(size_t raw_size) : ptr(nullptr), raw_size(raw_size) {
-    AllocChecker ac{};
-    ptr = static_cast<T *>(
-        /* NOLINT(llvmlibc-callee-namespace) */ ::operator new(raw_size, ac));
-    if (!ac)
-      ptr = nullptr;
-  }
-  T *operator->() { return ptr; }
-  operator bool() const { return ptr != nullptr; }
-  ~Allocation() {
-    if (ptr)
-      /* NOLINT(llvmlibc-callee-namespace )*/ ::operator delete(ptr, raw_size);
-  }
-  void release() { ptr = nullptr; }
 };
 
 // A monotonic state pool.
@@ -183,21 +161,27 @@ class MonotonicStatePool {
   bool allocate_new_block() {
     LIBC_ASSERT(is_empty());
     // allocate a new block
+    AllocChecker ac{};
     size_t raw_size = state_block_raw_size();
-    Allocation<StateBlock> block(raw_size);
-    if (!block)
+    // NOLINTNEXTLINE(llvmlibc-callee-namespace)
+    auto *block = static_cast<StateBlock *>(operator new(raw_size, ac));
+    if (!ac)
       return false;
     // allocate associated pages
-    auto pages = static_cast<char *>(
-        mmap(nullptr, config.pages_per_block * config.page_size,
-             config.params.mmap_prot, config.params.mmap_flags, -1, 0));
-    if (pages == MAP_FAILED)
+    auto pages = syscall_impl<long>(
+        SYS_mmap, nullptr, config.pages_per_block * config.page_size,
+        config.params.mmap_prot, config.params.mmap_flags, -1, 0);
+
+    if (pages <= 0) {
+      // NOLINTNEXTLINE(llvmlibc-callee-namespace)
+      ::operator delete(block, raw_size);
       return false;
+    }
     // populate the block
-    block->pages() = pages;
+    block->pages() = reinterpret_cast<void *>(pages);
     size_t state_idx = 0;
     for (size_t p = 0; p < config.pages_per_block; ++p) {
-      char *page = pages + p * config.page_size;
+      char *page = reinterpret_cast<char *>(pages) + p * config.page_size;
       for (size_t s = 0; s < config.states_per_page; ++s) {
         block->freelist(state_idx++) =
             page + s * config.params.size_of_opaque_state;
@@ -206,13 +190,12 @@ class MonotonicStatePool {
     // link the block to the sentinel
     block->next = sentinel.next;
     block->prev = &sentinel;
-    block->next->prev = block.ptr;
-    block->prev->next = block.ptr;
+    block->next->prev = block;
+    block->prev->next = block;
     // update the cursor
-    free_cursor = block.ptr;
+    free_cursor = block;
     free_count = state_idx;
     // release the ownership of allocation
-    block.release();
     return true;
   }
 
@@ -244,10 +227,13 @@ public:
     StateBlock *block = sentinel.next;
     size_t raw_size = state_block_raw_size();
     while (block != &sentinel) {
-      munmap(block->pages(), config.pages_per_block * config.page_size);
+      [[maybe_unused]]
+      auto res = syscall_impl<long>(SYS_munmap, block->pages(),
+                                    config.pages_per_block * config.page_size);
+      LIBC_ASSERT(res == 0);
       StateBlock *next = block->next;
-      /* NOLINT(llvmlibc-callee-namespace) */ ::operator delete(
-          block, raw_size, std::align_val_t{alignof(StateBlock)});
+      // NOLINTNEXTLINE(llvmlibc-callee-namespace)
+      ::operator delete(block, raw_size);
       block = next;
     }
   }
@@ -260,7 +246,7 @@ public:
       if (!config)
         return;
       new (pool) MonotonicStatePool(*config);
-      is_valid = /* NOLINT(llvmlibc-callee-namespace) */ !__cxa_atexit(
+      is_valid = !__cxa_atexit(
           [](void *) {
             reinterpret_cast<MonotonicStatePool *>(pool)->~MonotonicStatePool();
           },
@@ -304,7 +290,7 @@ public:
       remaining_trials--;
       local_state = pool->get();
       if (local_state) {
-        if (/* NOLINT(llvmlibc-callee-namespace) */ __cxa_thread_atexit_impl(
+        if (__cxa_thread_atexit_impl(
                 [](void *opaque) {
                   auto *state = static_cast<ThreadLocalState *>(opaque);
                   state->destroy();

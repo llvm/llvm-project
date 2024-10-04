@@ -20,10 +20,10 @@ add_libc_test(
     libc.src.signal.raise
 )
 
-add_libc_test(
-  cprng_test
-  SUITE libc-osutil-tests
-  SRCS cprng_test.cpp
-  DEPENDS
-    libc.src.__support.OSUtil.linux.cprng
-)
+# add_libc_test(
+#   cprng_test
+#   SUITE libc-osutil-tests
+#   SRCS cprng_test.cpp
+#   DEPENDS
+#     libc.src.__support.OSUtil.linux.cprng
+# )

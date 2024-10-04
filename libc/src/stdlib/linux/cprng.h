@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_CPRNG_H
-#define LLVM_LIBC_SRC___SUPPORT_CPRNG_H
+#ifndef LLVM_LIBC_SRC_STDLIB_LINUX_CPRNG_H
+#define LLVM_LIBC_SRC_STDLIB_LINUX_CPRNG_H
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
@@ -65,4 +65,4 @@ LIBC_INLINE cpp::optional<uint32_t> generate_bounded_u32(uint32_t bound) {
 
 } // namespace cprng
 } // namespace LIBC_NAMESPACE_DECL
-#endif // LLVM_LIBC_SRC___SUPPORT_CPRNG_H
+#endif // LLVM_LIBC_SRC_STDLIB_LINUX_CPRNG_H
