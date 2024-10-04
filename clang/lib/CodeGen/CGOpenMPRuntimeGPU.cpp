@@ -262,7 +262,6 @@ class CheckVarsEscapingDeclContext final
                                bool IsCombinedParallelRegion) {
     if (!S)
       return;
-
     for (const CapturedStmt::Capture &C : S->captures()) {
       if (C.capturesVariable() && !C.capturesVariableByCopy()) {
         const ValueDecl *VD = C.getCapturedVar();
@@ -337,7 +336,6 @@ public:
       return;
     if (!D->hasAssociatedStmt())
       return;
-
     if (const auto *S =
             dyn_cast_or_null<CapturedStmt>(D->getAssociatedStmt())) {
       // Do not analyze directives that do not actually require capturing,

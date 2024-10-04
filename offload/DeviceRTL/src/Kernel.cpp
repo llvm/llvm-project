@@ -100,9 +100,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
   }
 
   if (mapping::isInitialThreadInLevel0(IsSPMD))
-  {
     return -1;
-  }
 
   // Enter the generic state machine if enabled and if this thread can possibly
   // be an active worker thread.

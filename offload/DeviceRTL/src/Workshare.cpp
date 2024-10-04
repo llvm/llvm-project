@@ -527,9 +527,6 @@ void SimdLoop(
   __kmpc_impl_lanemask_t SimdMask = mapping::simdmask();
   uint32_t Step = mapping::getSimdLen();
 
-  //printf("Thread=%i : Lane=%i : Len=%i : TripCount=%i\n",
-  //       mapping::getThreadIdInBlock(), mapping::getSimdLane(), mapping::getSimdLen(), TripCount);
-
   synchronize::warp(SimdMask);
   for(IType omp_iv = (IType) mapping::getSimdLane();
       omp_iv < TripCount;

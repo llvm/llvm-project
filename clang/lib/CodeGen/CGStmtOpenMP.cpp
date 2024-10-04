@@ -2771,8 +2771,6 @@ static void emitOMPSimdDirective(const OMPLoopDirective &S,
 
       auto *LoopVarRef = CL->getLoopVarRef();
       LValue LCVal = EmitLValue(LoopVarRef);
-      //Address LoopVarAddress = LCVal.getAddress(*this);
-      //LoopVar = dyn_cast<llvm::Instruction>(LoopVarAddress.getPointer());
       LoopVar = dyn_cast<llvm::Instruction>(LCVal.getPointer(*this));
       LoopVarName = LoopVarRef->getNameInfo().getAsString();
 
@@ -2786,7 +2784,6 @@ static void emitOMPSimdDirective(const OMPLoopDirective &S,
                            ->getType()
                            .getNonReferenceType();
 
-      //Address CountAddr = CreateMemTemp(LogicalTy, ".count.addr");
       RawAddress CountAddr = CreateMemTemp(LogicalTy, ".count.addr");
  
       emitCapturedStmtCall(*this, DistanceClosure, {CountAddr.getPointer()});
@@ -2809,8 +2806,7 @@ static void emitOMPSimdDirective(const OMPLoopDirective &S,
     };
 
     auto BodyGenCB = [&]
-                     (//InsertPointTy OuterAllocaIP,
-                      llvm::BasicBlock *OuterAllocaBB,
+                     (llvm::BasicBlock *OuterAllocaBB,
                       InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
                       InsertPointTy Prolog, InsertPointTy ReductionEpilog,
                       llvm::Value *Virtual) {
@@ -2869,7 +2865,7 @@ static void emitOMPSimdDirective(const OMPLoopDirective &S,
     ));
 
     return;
-  } 
+  }
 
   CodeGenFunction::ParentLoopDirectiveForScanRegion ScanRegion(CGF, S);
   CGF.OMPFirstScanLoop = true;

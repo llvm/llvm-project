@@ -1194,7 +1194,6 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   }
 
   StructType *StructArgTy = nullptr;
-  //AllocaInst *Struct = nullptr;
   Instruction *Struct = nullptr;
   unsigned NumAggregatedInputs = 0;
   if (AggregateArgs && !StructValues.empty()) {
@@ -1211,14 +1210,9 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
 
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
-        Struct, PointerType ::get(Context, 0), "structArg.ascast");
+          Struct, PointerType ::get(Context, 0), "structArg.ascast");
       StructSpaceCast->insertAfter(Struct);
-      // There isn't really a point in generating this cast if you
-      // just aren't going to use it...
       Struct = StructSpaceCast;
-      //params.push_back(StructSpaceCast);
-    } else {
-      //params.push_back(Struct);
     }
     params.push_back(Struct);
     // Store aggregated inputs in the struct.

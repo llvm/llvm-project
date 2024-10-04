@@ -270,7 +270,6 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   {
-    //printf("Generic execution\n");
     // Note that the order here is important. `icv::Level` has to be updated
     // last or the other updates will cause a thread specific state to be
     // created.
