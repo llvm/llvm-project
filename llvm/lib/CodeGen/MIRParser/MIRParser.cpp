@@ -697,13 +697,13 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
         return error(Error, VReg.PreferredRegister.SourceRange);
     }
 
-    for(const auto &FlagStringValue: VReg.RegisterFlags) {
+    for (const auto &FlagStringValue : VReg.RegisterFlags) {
       uint8_t FlagValue;
-      if(Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
+      if (Target->getVRegFlagValue(FlagStringValue.Value, FlagValue))
         return error(FlagStringValue.SourceRange.Start,
-                      Twine("use of undefined register flag '") +
-                          FlagStringValue.Value + "'");
-        Info.Flags.push_back(FlagValue);
+                     Twine("use of undefined register flag '") +
+                         FlagStringValue.Value + "'");
+      Info.Flags.push_back(FlagValue);
     }
   }
 

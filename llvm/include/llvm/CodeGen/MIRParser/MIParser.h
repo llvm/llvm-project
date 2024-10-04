@@ -151,7 +151,7 @@ public:
   /// Return null if the name isn't a register bank.
   const RegisterBank *getRegBank(StringRef Name);
 
-  bool getVRegFlagValue(StringRef FlagName, uint8_t& FlagValue) const;
+  bool getVRegFlagValue(StringRef FlagName, uint8_t &FlagValue) const;
 
   PerTargetMIParsingState(const TargetSubtargetInfo &STI)
     : Subtarget(STI) {
