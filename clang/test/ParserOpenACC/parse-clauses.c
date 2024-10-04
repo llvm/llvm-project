@@ -1174,7 +1174,9 @@ void Tile() {
 
   // expected-error@+1{{indirection requires pointer operand ('int' invalid)}}
 #pragma acc loop tile(* returns_int() , *)
-  for(;;){}
+  for(;;){
+    for(;;);
+  }
 
 #pragma acc loop tile(*)
   for(;;){}
@@ -1184,11 +1186,19 @@ void Tile() {
 #pragma acc loop tile(5)
   for(;;){}
 #pragma acc loop tile(*, 5)
-  for(;;){}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *)
-  for(;;){}
+  for(;;){
+    for(;;);
+  }
 #pragma acc loop tile(5, *, 3, *)
-  for(;;){}
+  for(;;){
+    for(;;)
+      for(;;)
+        for(;;);
+  }
 }
 
 void Gang() {
