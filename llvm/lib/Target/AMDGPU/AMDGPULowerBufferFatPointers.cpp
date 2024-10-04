@@ -781,9 +781,7 @@ Value *LegalizeBufferContentTypesVisitor::makeIllegalNonAggregate(
         IRB.getIntNTy(DL.getTypeSizeInBits(LegalType).getFixedValue());
     Value *AsScalar = IRB.CreateBitCast(V, ByteScalarTy, Name + ".bytes.cast");
     Value *Trunc = IRB.CreateTrunc(AsScalar, ShortScalarTy, Name + ".trunc");
-    if (OrigType != ShortScalarTy)
-      return IRB.CreateBitCast(Trunc, OrigType, Name + ".orig");
-    return Trunc;
+    return IRB.CreateBitCast(Trunc, OrigType, Name + ".orig");
   }
   return IRB.CreateBitCast(V, OrigType, Name + ".real.ty");
 }
