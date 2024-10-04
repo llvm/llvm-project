@@ -15,26 +15,22 @@
 #include <initializer_list>
 
 constexpr bool test() {
-  {
-    using T = std::initializer_list<int>;
-
+  { // testing: constexpr auto size() const
     // example taken from: https://en.cppreference.com/w/cpp/ranges/cartesian_product_view/size
-    constexpr static T w = {1};
-    constexpr static T x = {2, 3};
-    constexpr static T y = {4, 5, 6};
-    constexpr static T z = {7, 8, 9, 10, 11, 12, 13};
+    constexpr static auto w = {1};
+    constexpr static auto x = {2, 3};
+    constexpr static auto y = {4, 5, 6};
+    constexpr static auto z = {7, 8, 9, 10, 11, 12, 13};
 
-    constexpr  auto ww = std::ranges::views::all(w);
+    constexpr auto ww = std::ranges::views::all(w);
     constexpr auto xx = std::ranges::views::all(x);
     constexpr auto yy = std::ranges::views::all(y);
     constexpr auto zz = std::ranges::views::all(z);
 
     constexpr auto v = std::ranges::cartesian_product_view(ww, xx, yy, zz);
-    
+
     assert(v.size() == 42);
     assert(v.size() == w.size() * x.size() * y.size() * z.size());
-    static_assert(v.size() == 42);
-    static_assert(v.size() == w.size() * x.size() * y.size() * z.size());
   }
 
   return true;

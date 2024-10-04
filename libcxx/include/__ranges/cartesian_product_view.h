@@ -11,8 +11,8 @@
 
 #include <__config>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
-#include <tuple> // apply
-#include <type_traits> // common_type_t
+#include <tuple>               // apply
+#include <type_traits>         // common_type_t
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -65,13 +65,20 @@ public:
   //   requires cartesian-product-is-common<const First, const Vs...>;
   // constexpr default_sentinel_t end() const noexcept;
 
-  // constexpr see below size()
-  //   requires cartesian-product-is-sized<First, Vs...>;
-  // constexpr see below size() const
-  // requires cartesian-product-is-sized<const First, const Vs...>;
-  constexpr auto size() const 
+  constexpr auto size()
+    requires(sized_range<First> && ... && sized_range<Vs>)
+  {
+    return size_impl();
+  }
+
+  constexpr auto size() const
     requires(sized_range<const First> && ... && sized_range<const Vs>)
   {
+    return size_impl();
+  }
+
+private:
+  constexpr auto size_impl() const {
     return std::apply(
         [](auto&&... bases) {
           using size_type = std::common_type_t<std::ranges::range_size_t<decltype(bases)>...>;
