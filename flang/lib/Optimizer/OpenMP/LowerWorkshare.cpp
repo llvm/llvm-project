@@ -94,11 +94,9 @@ bool shouldUseWorkshareLowering(Operation *op) {
   if (isNestedIn<omp::SingleOp>(parentWorkshare, op))
     return false;
 
-  if (parentWorkshare.getRegion().getBlocks().size() != 1) {
-    parentWorkshare->emitWarning(
-        "omp workshare with unstructured control flow currently unsupported.");
+  // Do not use workshare lowering until we support CFG in omp.workshare
+  if (parentWorkshare.getRegion().getBlocks().size() != 1)
     return false;
-  }
 
   return true;
 }
@@ -447,6 +445,9 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     wsOp->erase();
   } else {
     // Otherwise just change the operation to an omp.single.
+
+    wsOp->emitWarning("omp workshare with unstructured control flow currently "
+                      "unsupported and will be serialized.");
 
     // `shouldUseWorkshareLowering` should have guaranteed that there are no
     // omp.workshare_loop_wrapper's that bind to this omp.workshare.
