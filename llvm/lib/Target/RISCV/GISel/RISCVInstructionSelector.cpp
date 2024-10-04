@@ -530,8 +530,9 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineFunction &MF = *MBB.getParent();
   MachineIRBuilder MIB(MI);
 
-  preISelLower(MI, MIB);
   const unsigned Opc = MI.getOpcode();
+  bool OpcWasGSplatVector = Opc == TargetOpcode::G_SPLAT_VECTOR;
+  preISelLower(MI, MIB);
 
   if (!MI.isPreISelOpcode() || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
@@ -573,7 +574,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   // the MI is lowered, since renderVLOp needs to see the G_CONSTANT. It would
   // be nice if the InstructionSelector selected these instructions without
   // needing to call select on them explicitly.
-  if (Opc == RISCV::G_VMV_V_X_VL || Opc == RISCV::G_VFMV_V_F_VL) {
+  if (OpcWasGSplatVector) {
     MachineInstr *Passthru = MRI->getVRegDef(MI.getOperand(1).getReg());
     MachineInstr *VL = MRI->getVRegDef(MI.getOperand(3).getReg());
     if (selectImpl(MI, *CoverageInfo))
