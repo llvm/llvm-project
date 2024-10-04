@@ -36,8 +36,11 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                     const Value *Val, ArrayRef<Register> VRegs,
                                     FunctionLoweringInfo &FLI,
                                     Register SwiftErrorVReg) const {
-  // Discard the internal service function
-  if (FLI.Fn && FLI.Fn->getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME).isValid())
+  // Ignore if called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid())
     return true;
 
   // Maybe run postponed production of types for function pointers
@@ -497,6 +500,16 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
 
 bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                   CallLoweringInfo &Info) const {
+  // Ignore if called from the internal service function
+  if (MIRBuilder.getMF()
+          .getFunction()
+          .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+          .isValid()) {
+    // insert a no-op
+    MIRBuilder.buildTrap();
+    return true;
+  }
+
   // Currently call returns should have single vregs.
   // TODO: handle the case of multiple registers.
   if (Info.OrigRet.Regs.size() > 1)
