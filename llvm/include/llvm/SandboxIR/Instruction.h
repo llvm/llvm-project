@@ -2475,11 +2475,11 @@ public:
   using Predicate = llvm::CmpInst::Predicate;
 
   static CmpInst *create(Predicate Pred, Value *S1, Value *S2,
-                         Instruction *InsertBefore, Context &Ctx,
+                         InsertPosition Pos, Context &Ctx,
                          const Twine &Name = "");
   static CmpInst *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
                                         const Instruction *FlagsSource,
-                                        Instruction *InsertBefore, Context &Ctx,
+                                        InsertPosition Pos, Context &Ctx,
                                         const Twine &Name = "");
   void setPredicate(Predicate P);
   void swapOperands();
