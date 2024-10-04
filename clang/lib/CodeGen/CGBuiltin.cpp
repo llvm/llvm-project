@@ -18848,8 +18848,10 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     std::string name =
         Intrinsic::getName(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
                            ArrayRef{OpExpr->getType()}, &CGM.getModule());
-    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, name, {}, false, true),
-                           ArrayRef{OpExpr, OpIndex}, "hlsl.wave.read.lane.at");
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr, OpIndex}, "hlsl.waveReadLaneAt");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

@@ -244,6 +244,9 @@ private:
   bool selectSpvThreadId(Register ResVReg, const SPIRVType *ResType,
                          MachineInstr &I) const;
 
+  bool selectWaveReadLaneAt(Register ResVReg, const SPIRVType *ResType,
+                            MachineInstr &I) const;
+
   bool selectStep(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
 
@@ -1853,6 +1856,26 @@ bool SPIRVInstructionSelector::selectSign(Register ResVReg,
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWaveReadLaneAt(Register ResVReg,
+                                                    const SPIRVType *ResType,
+                                                    MachineInstr &I) const {
+  assert(I.getNumOperands() == 4);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  // IntTy is used to define the execution scope, set to 3 to denote a
+  // cross-lane interaction equivalent to a SPIR-V subgroup.
+  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+  return BuildMI(BB, I, I.getDebugLoc(),
+                 TII.get(SPIRV::OpGroupNonUniformShuffle))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
+}
+
 bool SPIRVInstructionSelector::selectStep(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I) const {
@@ -2653,22 +2676,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
   }
-  case Intrinsic::spv_wave_read_lane_at: {
-    assert(I.getNumOperands() == 4);
-    assert(I.getOperand(2).isReg());
-    assert(I.getOperand(3).isReg());
-
-    // IntTy is used to define the execution scope, set to 3 to denote a
-    // cross-lane interaction equivalent to a SPIR-V subgroup.
-    SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    return BuildMI(BB, I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpGroupNonUniformShuffle))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .addUse(I.getOperand(3).getReg())
-        .addUse(GR.getOrCreateConstInt(3, I, IntTy, TII));
-  }
+  case Intrinsic::spv_wave_read_lane_at:
+    return selectWaveReadLaneAt(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectStep(ResVReg, ResType, I);
   // Discard intrinsics which we do not expect to actually represent code after
