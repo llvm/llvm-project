@@ -8,11 +8,9 @@
 
 // <algorithm>
 
-// template<RandomAccessIterator Iter>
-//   requires ShuffleIterator<Iter>
-//         && LessThanComparable<Iter::value_type>
-//   void
-//   stable_sort(Iter first, Iter last);
+// template <class RandomAccessIterator>
+//     constexpr void               // constexpr in C++26
+//     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
 
 #include <algorithm>
 #include <array>
