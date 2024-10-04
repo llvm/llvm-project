@@ -1,6 +1,8 @@
-// RUN: not llvm-tblgen %s 2>&1 | FileCheck %s
+// RUN: not llvm-tblgen %s 2>&1 | FileCheck %s -DFILE=%s
 
+// -----------------------------------------------------------------------------
 // Test the assert statement at top level.
+// -----------------------------------------------------------------------------
 
 // CHECK: assertion failed
 // CHECK-NOT: note: primary name is too short
@@ -48,14 +50,16 @@ foreach i = 1...3 in {
   def bar_ # i;
 }
 
+// -----------------------------------------------------------------------------
 // Test the assert statement in a record definition.
+// -----------------------------------------------------------------------------
 
-// CHECK: assertion failed
+// CHECK: [[FILE]]:[[@LINE+8]]:10: error: assertion failed
 // CHECK-NOT: primary first name is not "Grace"
-// CHECK: primary first name is not "Grack"
-// CHECK: assertion failed
-// CHECK: foo field should be
-
+// CHECK: note: primary first name is not "Grack"
+// CHECK: [[FILE]]:[[@LINE+7]]:10: error: assertion failed
+// CHECK: note: foo field should be
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec10 {
   assert !eq(!substr(Name, 0, 5), "Grace"), "primary first name is not \"Grace\"";
   assert !eq(!substr(Name, 0, 5), "Grack"), "primary first name is not \"Grack\"";
@@ -63,18 +67,18 @@ def Rec10 {
   assert !eq(foo, "foo"), "foo field should be \"Foo\"";
 }
 
-// CHECK: assertion failed
+// CHECK: [[FILE]]:[[@LINE+5]]:10: error: assertion failed
 // CHECK: note: magic field is incorrect: 42
-
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec11 {
   int magic = 13;
   assert !eq(magic, 13), "magic field is incorrect: " # magic;
   let magic = 42;       
 }
 
-// CHECK: assertion failed
+// CHECK: [[FILE]]:[[@LINE+6]]:10: error: assertion failed
 // CHECK: note: var field has wrong value
-
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec12 {
   defvar prefix = "foo_";
   string var = prefix # "snork";
@@ -83,11 +87,11 @@ def Rec12 {
 
 // CHECK: assertion failed
 // CHECK: note: kind field has wrong value
-
 class Kind {
   int kind = 7;
 }
 
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec13 : Kind {
   let kind = 8;
   assert !eq(kind, 7), "kind field has wrong value: " # kind;
@@ -95,13 +99,15 @@ def Rec13 : Kind {
 
 // CHECK: assertion failed
 // CHECK: note: double_result should be
-
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec14 : Cube<3> {
   int double_result = !mul(result, 2);
   assert !eq(double_result, 53), "double_result should be 54";
 }
 
+// -----------------------------------------------------------------------------
 // Test the assert statement in a class definition.
+// -----------------------------------------------------------------------------
 
 class PersonName<string name> {
   assert !le(!size(name), 32), "person name is too long: " # name;
@@ -118,32 +124,39 @@ def Rec20 : Person<"Donald Knuth", 60>;
 
 // CHECK: assertion failed
 // CHECK: note: person name is too long
-
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec21 : Person<"Donald Uh Oh This Name Is Too Long Knuth", 50>;
 
 // CHECK: assertion failed
 // CHECK: note: person age is invalid
-
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: assertion failed in this record
 def Rec22 : Person<"Donald Knuth", 150>;
 
 // Test the assert statement in an anonymous class invocation.
-
 def Rec30 {
   string Name = Person<"Margaret Heafield Hamilton", 25>.Name;
   int Age = Person<"Margaret Heafield Hamilton", 25>.Age;
 }
 
+// CHECK: assertion failed
+// CHECK: note: person name is too long
+// CHECK: [[FILE]]:[[@LINE+2]]:17: error: assertion failed in this record
 def Rec31 {
   string Name = Person<"Margaret Heafield And More Middle Names Hamilton", 25>.Name;
   int Age = Person<"Margaret Heafield Hamilton", 25>.Age;
 }
 
+// CHECK: assertion failed
+// CHECK: note: person age is invalid: 0
+// CHECK: [[FILE]]:[[@LINE+3]]:13: error: assertion failed in this record
 def Rec32 {
   string Name = Person<"Margaret Heafield Hamilton", 25>.Name;
   int Age = Person<"Margaret Heafield Hamilton", 0>.Age;
 }
 
+// -----------------------------------------------------------------------------
 // Test the assert statement in a multiclass.
+// -----------------------------------------------------------------------------
 
 // CHECK: assertion failed
 // CHECK: note: MC1 id string is too long
