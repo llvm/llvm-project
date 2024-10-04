@@ -35,6 +35,7 @@
 #include <mlir/IR/IRMapping.h>
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/IR/PatternMatch.h>
+#include <mlir/IR/Value.h>
 #include <mlir/IR/Visitors.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
@@ -188,14 +189,19 @@ static bool isTransitivelyUsedOutside(Value v, SingleRegion sr) {
     if (isUserOutsideSR(user, parentOp, sr))
       return true;
 
-    // Results of nested users cannot be used outside of the SR
+    // Now we know user is inside `sr`.
+
+    // Results of nested users cannot be used outside of `sr`.
     if (user->getBlock() != srBlock)
       continue;
 
-    // A non-safe to parallelize operation will be handled separately
+    // A non-safe to parallelize operation will be checked for uses outside
+    // separately.
     if (!isSafeToParallelize(user))
       continue;
 
+    // For safe to parallelize operations, we need to check if there is a
+    // transitive use of `v` through them.
     for (auto res : user->getResults())
       if (isTransitivelyUsedOutside(res, sr))
         return true;
@@ -242,7 +248,21 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
       if (isSafeToParallelize(&op)) {
         singleBuilder.clone(op, singleMapping);
-        parallelBuilder.clone(op, rootMapping);
+        if (llvm::all_of(op.getOperands(), [&](Value opr) {
+              return rootMapping.contains(opr);
+            })) {
+          // Safe to parallelize operations which have all operands available in
+          // the root parallel block can be executed there.
+          parallelBuilder.clone(op, rootMapping);
+        } else {
+          // If any operand was not available, it means that there was no
+          // transitive use of a non-safe-to-parallelize operation outside `sr`.
+          // This means that there should be no transitive uses outside `sr` of
+          // `op`.
+          assert(llvm::all_of(op.getResults(), [&](Value v) {
+            return !isTransitivelyUsedOutside(v, sr);
+          }));
+        }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
         auto hoisted =
             cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
@@ -252,7 +272,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       } else {
         singleBuilder.clone(op, singleMapping);
         // Prepare reloaded values for results of operations that cannot be
-        // safely parallelized and which are used after the region `sr`
+        // safely parallelized and which are used after the region `sr`.
         for (auto res : op.getResults()) {
           if (isTransitivelyUsedOutside(res, sr)) {
             auto alloc = mapReloadedValue(res, allocaBuilder, singleBuilder,
