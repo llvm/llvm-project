@@ -25,7 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include "llvm/SandboxIR/Utils.h"
+#include "llvm/SandboxIR/IntrinsicInst.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Interval.h"
 
 namespace llvm::sandboxir {
@@ -55,19 +55,44 @@ protected:
 
 public:
   DGNode(Instruction *I) : I(I), SubclassID(DGNodeID::DGNode) {
-    assert(!isMemDepCandidate(I) && "Expected Non-Mem instruction, ");
+    assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
   virtual ~DGNode() = default;
   /// \Returns true if this is before \p Other in program order.
   bool comesBefore(const DGNode *Other) { return I->comesBefore(Other->I); }
-  /// \Returns true if \p I is a memory dependency candidate instruction.
+
+  static bool isStackSaveOrRestoreIntrinsic(Instruction *I) {
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      auto IID = II->getIntrinsicID();
+      return IID == Intrinsic::stackrestore || IID == Intrinsic::stacksave;
+    }
+    return false;
+  }
+
+  /// \Returns true if intrinsic \p I touches memory. This is used by the
+  /// dependency graph.
+  static bool isMemIntrinsic(IntrinsicInst *I) {
+    auto IID = I->getIntrinsicID();
+    return IID != Intrinsic::sideeffect && IID != Intrinsic::pseudoprobe;
+  }
+
+  /// We consider \p I as a Memory Dependency Candidate instruction if it
+  /// reads/write memory or if it has side-effects. This is used by the
+  /// dependency graph.
   static bool isMemDepCandidate(Instruction *I) {
+    IntrinsicInst *II;
+    return I->mayReadOrWriteMemory() &&
+           (!(II = dyn_cast<IntrinsicInst>(I)) || isMemIntrinsic(II));
+  }
+
+  /// \Returns true if \p I is a memory dependency candidate instruction.
+  static bool isMemDepNodeCandidate(Instruction *I) {
     AllocaInst *Alloca;
-    return Utils::isMemDepCandidate(I) ||
+    return isMemDepCandidate(I) ||
            ((Alloca = dyn_cast<AllocaInst>(I)) &&
             Alloca->isUsedWithInAlloca()) ||
-           Utils::isStackSaveOrRestoreIntrinsic(I);
+           isStackSaveOrRestoreIntrinsic(I);
   }
 
   Instruction *getInstruction() const { return I; }
@@ -106,7 +131,7 @@ class MemDGNode final : public DGNode {
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
-    assert(isMemDepCandidate(I) && "Expected Mem instruction!");
+    assert(isMemDepNodeCandidate(I) && "Expected Mem instruction!");
   }
   static bool classof(const DGNode *Other) {
     return Other->SubclassID == DGNodeID::MemDGNode;
@@ -150,7 +175,7 @@ public:
   DGNode *getOrCreateNode(Instruction *I) {
     auto [It, NotInMap] = InstrToNodeMap.try_emplace(I);
     if (NotInMap) {
-      if (DGNode::isMemDepCandidate(I))
+      if (DGNode::isMemDepNodeCandidate(I))
         It->second = std::make_unique<MemDGNode>(I);
       else
         It->second = std::make_unique<DGNode>(I);
