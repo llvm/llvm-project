@@ -1875,6 +1875,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> D(getThePPC64LETarget());
 }
 
+#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "PPCGenAsmMatcher.inc"
