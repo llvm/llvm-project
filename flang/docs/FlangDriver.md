@@ -335,7 +335,7 @@ just added using your new frontend option.
 
 ## CMake Support
 As of [#7246](https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7246)
-(and soon to be released CMake 3.24.0), `cmake` can detect `flang` as a
+(CMake 3.28.0), `cmake` can detect `flang` as a
 supported Fortran compiler. You can configure your CMake projects to use
 `flang` as follows:
 ```bash
