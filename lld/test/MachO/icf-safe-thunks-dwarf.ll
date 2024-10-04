@@ -28,19 +28,19 @@ target triple = "arm64-apple-macosx11.0.0"
 ; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
 define i32 @func_A() #0 !dbg !13 {
 entry:
-  ret i32 1, !dbg !17
+  ret i32 1
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
 define i32 @func_B() #0 !dbg !18 {
 entry:
-  ret i32 1, !dbg !19
+  ret i32 1
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
 define i32 @func_C() #0 !dbg !20 {
 entry:
-  ret i32 1, !dbg !21
+  ret i32 1
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone ssp uwtable(sync)
@@ -78,18 +78,11 @@ attributes #0 = { mustprogress noinline nounwind optnone ssp uwtable(sync) "fram
 !12 = !{!"clang version 20.0.0git (https://github.com/alx32/llvm-project.git b3fef1e6661efead54f05b2772b0de2ab580d756)"}
 !13 = distinct !DISubprogram(name: "func_A", scope: !1, file: !1, line: 4, type: !14, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !14 = !DISubroutineType(types: !15)
-!15 = !{!16}
-!16 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!17 = !DILocation(line: 4, column: 21, scope: !13)
+!15 = !{}
 !18 = distinct !DISubprogram(name: "func_B", scope: !1, file: !1, line: 5, type: !14, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!19 = !DILocation(line: 5, column: 21, scope: !18)
 !20 = distinct !DISubprogram(name: "func_C", scope: !1, file: !1, line: 6, type: !14, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!21 = !DILocation(line: 6, column: 21, scope: !20)
-!22 = distinct !DISubprogram(name: "take_func_addr", scope: !1, file: !1, line: 8, type: !23, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!23 = !DISubroutineType(types: !24)
-!24 = !{!3}
-!3 = !DIDerivedType(tag: DW_TAG_typedef, name: "ULL", file: !1, line: 2, baseType: !4)
-!4 = !DIBasicType(name: "unsigned long long", size: 64, encoding: DW_ATE_unsigned)
+!22 = distinct !DISubprogram(name: "take_func_addr", scope: !1, file: !1, line: 8, type: !14, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+
 
 
 
