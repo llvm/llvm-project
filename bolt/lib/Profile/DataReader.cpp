@@ -1170,15 +1170,15 @@ std::error_code DataReader::parse() {
 
   Col = 0;
   Line = 1;
-  ErrorOr<bool> FlagOrErr = maybeParseNoLBRFlag();
-  if (!FlagOrErr)
-    return FlagOrErr.getError();
-  NoLBRMode = *FlagOrErr;
-
   ErrorOr<bool> BATFlagOrErr = maybeParseBATFlag();
   if (!BATFlagOrErr)
     return BATFlagOrErr.getError();
   BATMode = *BATFlagOrErr;
+
+  ErrorOr<bool> FlagOrErr = maybeParseNoLBRFlag();
+  if (!FlagOrErr)
+    return FlagOrErr.getError();
+  NoLBRMode = *FlagOrErr;
 
   if (!hasBranchData() && !hasMemData()) {
     Diag << "ERROR: no valid profile data found\n";
