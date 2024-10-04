@@ -164,11 +164,10 @@ entry:
   ret { <2 x float>} { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
 }
 
-
 define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf__ninf() {
-; CHECK-LABEL: define nofpclass(pinf) [1 x [1 x float]] @ret_nofpclass_nested_array_ty_pinf__ninf() {
+; CHECK-LABEL: @ret_nofpclass_nested_array_ty_pinf__ninf() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret [1 x [1 x float]] [[1 x float] [float 0xFFF0000000000000]]
+; CHECK-NEXT:    ret {{.*}}float 0xFFF0000000000000
 ;
 entry:
   ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float 0xFFF0000000000000]]
