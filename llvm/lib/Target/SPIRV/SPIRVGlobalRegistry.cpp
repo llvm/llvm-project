@@ -724,10 +724,10 @@ Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
   // TODO: The name should come from the llvm-ir, but how that name will be
   // passed from the HLSL to the backend has not been decided. Using this place
   // holder for now. We use the result register of the type in the name.
-  std::string name = ("__resource_" + Twine(VarType->getOperand(0).getReg()) +
+  std::string Name = ("__resource_" + Twine(VarType->getOperand(0).getReg()) +
                       "_" + Twine(Set) + "_" + Twine(Binding))
                          .str();
-  buildGlobalVariable(VarReg, VarPointerTypeReg, name, nullptr,
+  buildGlobalVariable(VarReg, VarPointerTypeReg, Name, nullptr,
                       SPIRV::StorageClass::UniformConstant, nullptr, false,
                       false, SPIRV::LinkageType::Import, MIRBuilder, false);
 

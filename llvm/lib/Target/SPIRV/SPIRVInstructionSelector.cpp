@@ -47,10 +47,12 @@ namespace {
 uint64_t getUnsignedConstantValueFromReg(llvm::Register Reg,
                                          const llvm::MachineRegisterInfo &MRI) {
   llvm::SPIRVType *ConstTy = MRI.getVRegDef(Reg);
-  assert(ConstTy && ConstTy->getOpcode() == llvm::SPIRV::ASSIGN_TYPE &&
-         ConstTy->getOperand(1).isReg());
-  llvm::Register ConstReg = ConstTy->getOperand(1).getReg();
-  const llvm::MachineInstr *Const = MRI.getVRegDef(ConstReg);
+  assert(ConstTy);
+  if (ConstTy->getOpcode() == llvm::SPIRV::ASSIGN_TYPE) {
+    assert(ConstTy->getOperand(1).isReg());
+    Reg = ConstTy->getOperand(1).getReg();
+  }
+  const llvm::MachineInstr *Const = MRI.getVRegDef(Reg);
   assert(Const && Const->getOpcode() == llvm::TargetOpcode::G_CONSTANT);
   const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
   return Val.getZExtValue();
@@ -2917,14 +2919,7 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
   // wrapped in a type assignment.
   assert(I.getOperand(2).isReg());
   Register ThreadIdReg = I.getOperand(2).getReg();
-  SPIRVType *ConstTy = this->MRI->getVRegDef(ThreadIdReg);
-  assert(ConstTy && ConstTy->getOpcode() == SPIRV::ASSIGN_TYPE &&
-         ConstTy->getOperand(1).isReg());
-  Register ConstReg = ConstTy->getOperand(1).getReg();
-  const MachineInstr *Const = this->MRI->getVRegDef(ConstReg);
-  assert(Const && Const->getOpcode() == TargetOpcode::G_CONSTANT);
-  const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
-  const uint32_t ThreadId = Val.getZExtValue();
+  const uint32_t ThreadId = getUnsignedConstantValueFromReg(ThreadIdReg, *MRI);
 
   // Extract the thread ID from the loaded vector value.
   MachineBasicBlock &BB = *I.getParent();
