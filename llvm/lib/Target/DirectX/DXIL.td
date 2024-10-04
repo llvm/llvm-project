@@ -802,7 +802,7 @@ def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
-def WaveReadLaneAt:  DXILOp<117, waveIsFirstLane> {
+def WaveReadLaneAt:  DXILOp<117, waveReadLaneAt> {
   let Doc = "returns the value from the specified lane";
   let LLVMIntrinsic = int_dx_wave_read_lane_at;
   let arguments = [OverloadTy, Int32Ty];
