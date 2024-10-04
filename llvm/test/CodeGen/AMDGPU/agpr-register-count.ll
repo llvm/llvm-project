@@ -178,4 +178,4 @@ bb:
 ; GCN-NEXT: .set amdgpu.max_num_agpr, 32
 ; GCN-NEXT: .set amdgpu.max_num_sgpr, 34
 
-attributes #0 = { nounwind noinline norecurse "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { nounwind noinline "amdgpu-flat-work-group-size"="1,512" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

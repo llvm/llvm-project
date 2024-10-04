@@ -41,11 +41,11 @@ define void @tail_recursive_with_stack() {
 ; For an arbitrary recursive call, report a large number for unknown stack
 ; usage for code object v4 and older
 ; CHECK-LABEL: {{^}}calls_recursive:
-; CHECK: .set calls_recursive.private_seg_size, 0+(max(16384))
+; CHECK: .set calls_recursive.private_seg_size, 0+(max(16384, recursive.private_seg_size))
 ;
 ; V5-LABEL: {{^}}calls_recursive:
-; V5: .set calls_recursive.private_seg_size, 0
-; V5: .set calls_recursive.has_dyn_sized_stack, 0
+; V5: .set calls_recursive.private_seg_size, 0+(max(recursive.private_seg_size))
+; V5: .set calls_recursive.has_dyn_sized_stack, or(0, recursive.has_dyn_sized_stack)
 define amdgpu_kernel void @calls_recursive() {
   call void @recursive()
   ret void
@@ -65,22 +65,22 @@ define amdgpu_kernel void @kernel_indirectly_calls_tail_recursive() {
 ; in the kernel.
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive:
-; CHECK: .set kernel_calls_tail_recursive.private_seg_size, 0+(max(16384))
+; CHECK: .set kernel_calls_tail_recursive.private_seg_size, 0+(max(16384, tail_recursive.private_seg_size))
 ;
 ; V5-LABEL: {{^}}kernel_calls_tail_recursive:
-; V5: .set kernel_calls_tail_recursive.private_seg_size, 0
-; V5: .set kernel_calls_tail_recursive.has_recursion, 1
+; V5: .set kernel_calls_tail_recursive.private_seg_size, 0+(max(tail_recursive.private_seg_size))
+; V5: .set kernel_calls_tail_recursive.has_recursion, or(1, tail_recursive.has_recursion)
 define amdgpu_kernel void @kernel_calls_tail_recursive() {
   call void @tail_recursive()
   ret void
 }
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
-; CHECK: .set kernel_calls_tail_recursive_with_stack.private_seg_size, 0+(max(16384))
+; CHECK: .set kernel_calls_tail_recursive_with_stack.private_seg_size, 0+(max(16384, tail_recursive_with_stack.private_seg_size))
 ;
 ; V5-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
-; V5: .set kernel_calls_tail_recursive_with_stack.private_seg_size, 0
-; V5: .set kernel_calls_tail_recursive_with_stack.has_dyn_sized_stack, 0
+; V5: .set kernel_calls_tail_recursive_with_stack.private_seg_size, 0+(max(tail_recursive_with_stack.private_seg_size))
+; V5: .set kernel_calls_tail_recursive_with_stack.has_dyn_sized_stack, or(0, tail_recursive_with_stack.has_dyn_sized_stack)
 define amdgpu_kernel void @kernel_calls_tail_recursive_with_stack() {
   call void @tail_recursive_with_stack()
   ret void
