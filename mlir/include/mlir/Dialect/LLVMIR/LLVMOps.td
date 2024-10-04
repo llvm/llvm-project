@@ -1737,7 +1737,8 @@ def LLVM_ConstantOp
 // Atomic operations.
 //
 
-def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger]>;
+def LLVM_AtomicRMWType
+    : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnySignlessInteger, LLVM_AnyFixedVector]>;
 
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",

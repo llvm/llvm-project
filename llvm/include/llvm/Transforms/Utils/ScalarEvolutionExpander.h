@@ -47,6 +47,7 @@ struct PoisonFlags {
   unsigned Exact : 1;
   unsigned Disjoint : 1;
   unsigned NNeg : 1;
+  GEPNoWrapFlags GEPNW;
 
   PoisonFlags(const Instruction *I);
   void apply(Instruction *I);
@@ -450,7 +451,7 @@ private:
 
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
-  Value *expandAddToGEP(const SCEV *Op, Value *V);
+  Value *expandAddToGEP(const SCEV *Op, Value *V, SCEV::NoWrapFlags Flags);
 
   /// Find a previous Value in ExprValueMap for expand.
   /// DropPoisonGeneratingInsts is populated with instructions for which

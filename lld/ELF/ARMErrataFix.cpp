@@ -72,9 +72,9 @@ class elf::Patch657417Section final : public SyntheticSection {
 public:
   Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
 
-  void writeTo(uint8_t *buf) override;
+  void writeTo(Ctx &, uint8_t *buf) override;
 
-  size_t getSize() const override { return 4; }
+  size_t getSize(Ctx &) const override { return 4; }
 
   // Get the virtual address of the branch instruction at patcheeOffset.
   uint64_t getBranchAddr() const;
@@ -141,7 +141,7 @@ Patch657417Section::Patch657417Section(InputSection *p, uint64_t off,
   parent = p->getParent();
   patchSym = addSyntheticLocal(
       saver().save("__CortexA8657417_" + utohexstr(getBranchAddr())), STT_FUNC,
-      isARM ? 0 : 1, getSize(), *this);
+      isARM ? 0 : 1, getSize(ctx), *this);
   addSyntheticLocal(saver().save(isARM ? "$a" : "$t"), STT_NOTYPE, 0, 0, *this);
 }
 
@@ -174,7 +174,7 @@ static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
   return sourceAddr + offset + 4;
 }
 
-void Patch657417Section::writeTo(uint8_t *buf) {
+void Patch657417Section::writeTo(Ctx &ctx, uint8_t *buf) {
   // The base instruction of the patch is always a 32-bit unconditional branch.
   if (isARM)
     write32le(buf, 0xea000000);

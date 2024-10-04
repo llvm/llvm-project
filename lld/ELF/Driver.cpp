@@ -109,7 +109,7 @@ void Ctx::reset() {
 
   in.reset();
   sym = ElfSym{};
-  symtab = std::make_unique<SymbolTable>();
+  symtab = std::make_unique<SymbolTable>(*this);
 
   memoryBuffers.clear();
   objectFiles.clear();
@@ -167,7 +167,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   LinkerScript script(ctx);
   ctx.script = &script;
   ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
   ctx.partitions.clear();
   ctx.partitions.emplace_back();
@@ -2875,7 +2875,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   for (StringRef name : ctx.arg.undefined)
     ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
-  parseFiles(files, armCmseImpLib);
+  parseFiles(ctx, files);
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.arg.hasDynSymTab = !ctx.sharedFiles.empty() || ctx.arg.isPic;
@@ -3052,7 +3052,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     excludeLibs(ctx, args);
 
   // Record [__acle_se_<sym>, <sym>] pairs for later processing.
-  processArmCmseSymbols();
+  processArmCmseSymbols(ctx);
 
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(ctx, wrapped);
@@ -3122,7 +3122,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
   // values such as a default image base address.
-  ctx.target = getTarget();
+  ctx.target = getTarget(ctx);
 
   ctx.arg.eflags = ctx.target->calcEFlags();
   // maxPageSize (sometimes called abi page size) is the maximum page size that
@@ -3144,10 +3144,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.inputSections.push_back(createCommentSection());
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
-  splitSections<ELFT>();
+  splitSections<ELFT>(ctx);
 
   // Garbage collection and removal of shared symbols from unused shared objects.
-  markLive<ELFT>();
+  markLive<ELFT>(ctx);
 
   // Make copies of any input sections that need to be copied into each
   // partition.
@@ -3160,17 +3160,17 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.
-  createSyntheticSections<ELFT>();
+  createSyntheticSections<ELFT>(ctx);
 
   // Some input sections that are used for exception handling need to be moved
   // into synthetic sections. Do that now so that they aren't assigned to
   // output sections in the usual way.
   if (!ctx.arg.relocatable)
-    combineEhSections();
+    combineEhSections(ctx);
 
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)
-    mergeRISCVAttributesSections();
+    mergeRISCVAttributesSections(ctx);
 
   {
     llvm::TimeTraceScope timeScope("Assign sections");
@@ -3194,14 +3194,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : ctx.script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections(ctx.script);
+        osd->osec.finalizeInputSections(ctx);
   }
 
   // Two input sections with different output sections should not be folded.
   // ICF runs after processSectionCommands() so that we know the output sections.
   if (ctx.arg.icf != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(ctx, args);
-    doIcf<ELFT>();
+    doIcf<ELFT>(ctx);
   }
 
   // Read the callgraph now that we know what was gced or icfed

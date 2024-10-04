@@ -103,13 +103,15 @@ make_descr_image(const Type *SampledTy, unsigned Dim, unsigned Depth,
 inline SpecialTypeDescriptor
 make_descr_sampled_image(const Type *SampledTy, const MachineInstr *ImageTy) {
   assert(ImageTy->getOpcode() == SPIRV::OpTypeImage);
+  unsigned AC = AccessQualifier::AccessQualifier::None;
+  if (ImageTy->getNumOperands() > 8)
+    AC = ImageTy->getOperand(8).getImm();
   return std::make_tuple(
       SampledTy,
       ImageAttrs(
           ImageTy->getOperand(2).getImm(), ImageTy->getOperand(3).getImm(),
           ImageTy->getOperand(4).getImm(), ImageTy->getOperand(5).getImm(),
-          ImageTy->getOperand(6).getImm(), ImageTy->getOperand(7).getImm(),
-          ImageTy->getOperand(8).getImm())
+          ImageTy->getOperand(6).getImm(), ImageTy->getOperand(7).getImm(), AC)
           .Val,
       SpecialTypeKind::STK_SampledImage);
 }

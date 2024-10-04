@@ -1250,6 +1250,12 @@ def ElementwiseATan : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseATan2 : Builtin {
+  let Spellings = ["__builtin_elementwise_atan2"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1264,6 +1270,18 @@ def ElementwiseMax : Builtin {
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMaximum : Builtin {
+  let Spellings = ["__builtin_elementwise_maximum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseMinimum : Builtin {
+  let Spellings = ["__builtin_elementwise_minimum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1324,6 +1342,12 @@ def ElementwiseLog10 : Builtin {
 
 def ElementwisePopcount : Builtin {
   let Spellings = ["__builtin_elementwise_popcount"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFmod : Builtin {
+  let Spellings = ["__builtin_elementwise_fmod"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1432,6 +1456,18 @@ def ReduceMax : Builtin {
 
 def ReduceMin : Builtin {
   let Spellings = ["__builtin_reduce_min"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceMaximum : Builtin {
+  let Spellings = ["__builtin_reduce_maximum"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceMinimum : Builtin {
+  let Spellings = ["__builtin_reduce_minimum"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4699,6 +4735,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLCross: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_cross"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

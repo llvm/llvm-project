@@ -91,6 +91,10 @@ struct DIScopeForLLVMFuncOp
     Location loc = module.getLoc();
 
     MLIRContext *context = &getContext();
+    if (!context->getLoadedDialect<LLVM::LLVMDialect>()) {
+      emitError(loc, "LLVM dialect is not loaded.");
+      return signalPassFailure();
+    }
 
     // To find a DICompileUnitAttr attached to a parent (the module for
     // example), otherwise create a default one.

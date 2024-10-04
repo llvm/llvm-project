@@ -1182,10 +1182,10 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // We do not use vsext/vzext to extend from mask vector.
       // Instead we use the following instructions to extend from mask vector:
       // vmv.v.i v8, 0
-      // vmerge.vim v8, v8, -1, v0
-      return DstLT.first *
-                 getRISCVInstructionCost({RISCV::VMV_V_I, RISCV::VMERGE_VIM},
-                                         DstLT.second, CostKind) +
+      // vmerge.vim v8, v8, -1, v0 (repeated per split)
+      return getRISCVInstructionCost(RISCV::VMV_V_I, DstLT.second, CostKind) +
+             DstLT.first * getRISCVInstructionCost(RISCV::VMERGE_VIM,
+                                                   DstLT.second, CostKind) +
              DstLT.first - 1;
     }
     break;
@@ -1531,6 +1531,11 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
     Opcodes = {RISCV::VMV_S_X, RISCV::VREDAND_VS, RISCV::VMV_X_S};
     break;
   case ISD::FADD:
+    // We can't promote f16/bf16 fadd reductions.
+    if ((LT.second.getVectorElementType() == MVT::f16 &&
+         !ST->hasVInstructionsF16()) ||
+        LT.second.getVectorElementType() == MVT::bf16)
+      return InstructionCost::getInvalid();
     SplitOp = RISCV::VFADD_VV;
     Opcodes = {RISCV::VFMV_S_F, RISCV::VFREDUSUM_VS, RISCV::VFMV_F_S};
     break;
