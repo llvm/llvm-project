@@ -115,7 +115,7 @@ class RegToMemWrapperPass : public FunctionPass {
 public:
   static char ID;
 
-  RegToMemWrapperPass();
+  RegToMemWrapperPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -127,7 +127,14 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
   }
 
-  bool runOnFunction(Function &F) override;
+  bool runOnFunction(Function &F) override {
+    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
+    bool Changed = runPass(F);
+    return N != 0 || Changed;
+  }
 };
 
 FunctionPass *createRegToMemWrapperPass();
@@ -140,17 +147,6 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
 INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
 
 char RegToMemWrapperPass::ID = 0;
-
-RegToMemWrapperPass::RegToMemWrapperPass() : FunctionPass(ID) {}
-
-bool RegToMemWrapperPass::runOnFunction(Function &F) {
-  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
-  unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
-  bool Changed = runPass(F);
-  return N != 0 || Changed;
-}
 
 FunctionPass *llvm::createRegToMemWrapperPass() {
   return new RegToMemWrapperPass();
