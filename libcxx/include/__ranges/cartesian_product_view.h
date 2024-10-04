@@ -76,6 +76,11 @@ template <input_range First, forward_range... Vs>
 template <bool Const>
 class cartesian_product_view<First, Vs...>::iterator {
 public:
+  using iterator_category = input_iterator_tag;
+  using value_type = tuple<range_value_t<__maybe_const<Const, First>>, range_value_t<__maybe_const<Const, Vs>>...>;
+  using reference =
+      tuple<range_reference_t<__maybe_const<Const, First>>, range_reference_t<__maybe_const<Const, Vs>>...>;
+
   iterator() = default;
 
   constexpr iterator(iterator<!Const> i)
