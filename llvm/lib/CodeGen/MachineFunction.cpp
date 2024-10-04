@@ -94,6 +94,7 @@ static const char *getPropertyName(MachineFunctionProperties::Property Prop) {
   // clang-format off
   switch(Prop) {
   case P::FailedISel: return "FailedISel";
+  case P::HasFakeUses: return "HasFakeUses";
   case P::IsSSA: return "IsSSA";
   case P::Legalized: return "Legalized";
   case P::NoPHIs: return "NoPHIs";
