@@ -13,7 +13,7 @@ gpu.module @test_module [#rocdl.target<O = 3, chip = "gfx90a">] {
 
 // -----
 
-// expected-error@below {{ROCDLTargetAttr is empty on GPU module}}
+// expected-error@below {{there are no target attributes to infer}}
 gpu.module @test_module {
   gpu.func @kernel_func() kernel {
     gpu.return
@@ -22,7 +22,7 @@ gpu.module @test_module {
 
 // -----
 
-// expected-error@below {{Invalid chipset name: gfx90a,gfx900}}
+// expected-error@below {{invalid chipset name: gfx90a,gfx900}}
 gpu.module @test_module [#rocdl.target<O = 3, chip = "gfx90a,gfx900">] {
   gpu.func @kernel_func() kernel {
     gpu.return

@@ -219,25 +219,24 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
 
-    ArrayAttr targets = m.getTargetsAttr();
     if (chipset == "infer") {
+      ArrayAttr targets = m.getTargetsAttr();
       if (!targets) {
-        m->emitError("ROCDLTargetAttr is empty on GPU module");
+        m->emitError("there are no target attributes to infer");
         return signalPassFailure();
       }
       if (targets.size() != 1) {
-        m->emitError("ROCDLTargetAttrs has more specified more than one "
-                     "gpu-arch on GPU module");
+        m->emitError("expected a single target attribute");
         return signalPassFailure();
       }
-      const ROCDL::ROCDLTargetAttr targetAttr =
-          mlir::dyn_cast<ROCDL::ROCDLTargetAttr>(targets.getValue().front());
+      ROCDL::ROCDLTargetAttr targetAttr =
+          dyn_cast<ROCDL::ROCDLTargetAttr>(targets[0]);
       chipset = targetAttr.getChip().str();
     }
 
     FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(chipset);
     if (failed(maybeChipset)) {
-      m->emitError("Invalid chipset name: " + chipset);
+      m->emitError("invalid chipset name: " + chipset);
       return signalPassFailure();
     }
 
