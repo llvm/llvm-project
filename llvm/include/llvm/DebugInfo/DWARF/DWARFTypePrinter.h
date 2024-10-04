@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 
 #include <string>
 
@@ -99,13 +98,16 @@ void DWARFTypePrinter<DieType>::appendArrayType(const DieType &D) {
     std::optional<uint64_t> Count;
     std::optional<uint64_t> UB;
     std::optional<unsigned> DefaultLB;
-    if (std::optional<DWARFFormValue> L = C.find(dwarf::DW_AT_lower_bound))
+    if (std::optional<typename DieType::DWARFFormValue> L =
+            C.find(dwarf::DW_AT_lower_bound))
       LB = L->getAsUnsignedConstant();
-    if (std::optional<DWARFFormValue> CountV = C.find(dwarf::DW_AT_count))
+    if (std::optional<typename DieType::DWARFFormValue> CountV =
+            C.find(dwarf::DW_AT_count))
       Count = CountV->getAsUnsignedConstant();
-    if (std::optional<DWARFFormValue> UpperV = C.find(dwarf::DW_AT_upper_bound))
+    if (std::optional<typename DieType::DWARFFormValue> UpperV =
+            C.find(dwarf::DW_AT_upper_bound))
       UB = UpperV->getAsUnsignedConstant();
-    if (std::optional<DWARFFormValue> LV =
+    if (std::optional<typename DieType::DWARFFormValue> LV =
             D.getDwarfUnit()->getUnitDIE().find(dwarf::DW_AT_language))
       if (std::optional<uint64_t> LC = LV->getAsUnsignedConstant())
         if ((DefaultLB =
@@ -142,11 +144,11 @@ namespace detail {
 template <typename DieType>
 DieType resolveReferencedType(DieType D,
                               dwarf::Attribute Attr = dwarf::DW_AT_type) {
-  return D.getAttributeValueAsReferencedDie(Attr).resolveTypeUnitReference();
+  return D.resolveReferencedType(Attr);
 }
 template <typename DieType>
-DieType resolveReferencedType(DieType D, DWARFFormValue F) {
-  return D.getAttributeValueAsReferencedDie(F).resolveTypeUnitReference();
+DieType resolveReferencedType(DieType D, typename DieType::DWARFFormValue F) {
+  return D.resolveReferencedType(F);
 }
 } // namespace detail
 
