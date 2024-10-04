@@ -18,7 +18,7 @@ def : Function {
   let params = [
     Param<"uint32_t", "NumEntries",
       "The number of platforms to be added to phPlatforms. If phPlatforms is not NULL, then "
-      "NumEntries should be greater than zero, otherwise OFFLOAD_RESULT_ERROR_INVALID_SIZE "
+      "NumEntries should be greater than zero, otherwise OFFLOAD_ERRC_INVALID_SIZE "
       "will be returned.", PARAM_IN>,
     RangedParam<"offload_platform_handle_t*", "phPlatforms", 
       "Array of handle of platforms. If NumEntries is less than the number of "
@@ -30,7 +30,7 @@ def : Function {
       PARAM_OUT_OPTIONAL>
   ];
   let returns = [
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_SIZE", [
+    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
       "`NumEntries == 0 && phPlatforms != NULL`"
     ]>
   ];
@@ -71,24 +71,24 @@ def : Function {
     Param<"size_t", "propSize", "the number of bytes pointed to by pPlatformInfo.", PARAM_IN>,
     TypeTaggedParam<"void*", "pPropValue", "array of bytes holding the info. "
       "If Size is not equal to or greater to the real number of bytes needed to return the info "
-      "then the OFFLOAD_RESULT_ERROR_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT_OPTIONAL,
+      "then the OFFLOAD_ERRC_INVALID_SIZE error is returned and pPlatformInfo is not used.", PARAM_OUT_OPTIONAL,
       TypeInfo<"propName" , "propSize">>,
     Param<"size_t*", "pPropSizeRet", "pointer to the actual number of bytes being queried by pPlatformInfo.", PARAM_OUT_OPTIONAL>
   ];
   let returns = [
-    Return<"OFFLOAD_RESULT_ERROR_UNSUPPORTED_ENUMERATION", [
+    Return<"OFFLOAD_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `propName` is not supported by the platform."
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_SIZE", [
+    Return<"OFFLOAD_ERRC_INVALID_SIZE", [
       "`propSize == 0 && pPropValue != NULL`",
       "If `propSize` is less than the real number of bytes needed to return the info."
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_NULL_POINTER", [
+    Return<"OFFLOAD_ERRC_INVALID_NULL_POINTER", [
       "`propSize != 0 && pPropValue == NULL`",
       "`pPropValue == NULL && pPropSizeRet == NULL`"
     ]>,
-    Return<"OFFLOAD_RESULT_ERROR_INVALID_PLATFORM">,
-    Return<"OFFLOAD_RESULT_ERROR_OUT_OF_RESOURCES">,
-    Return<"OFFLOAD_RESULT_ERROR_OUT_OF_HOST_MEMORY">
+    Return<"OFFLOAD_ERRC_INVALID_PLATFORM">,
+    Return<"OFFLOAD_ERRC_OUT_OF_RESOURCES">,
+    Return<"OFFLOAD_ERRC_OUT_OF_HOST_MEMORY">
   ];
 }

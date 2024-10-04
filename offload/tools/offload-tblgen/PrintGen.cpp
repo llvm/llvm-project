@@ -94,6 +94,20 @@ inline void printTagged(std::ostream &os, const void *ptr, {0} value, size_t siz
   OS << "}\n";
 }
 
+static void EmitResultPrint(raw_ostream &OS) {
+  OS << R""(
+inline std::ostream &operator<<(std::ostream &os,
+                                const offload_error_struct_t *err) {
+  if (err == nullptr) {
+    os << "OFFLOAD_SUCCESS";
+  } else {
+    os << err->code;
+  }
+  return os;
+}
+)"";
+}
+
 static void EmitFunctionParamStructPrint(const FunctionRec &Func,
                                          raw_ostream &OS) {
   OS << formatv(R"(
@@ -173,6 +187,7 @@ template <typename T> inline void printTagged(std::ostream &os, const void *ptr,
     EnumRec E{R};
     ProcessEnum(E, OS);
   }
+  EmitResultPrint(OS);
 
   // Emit print functions for the function param structs
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
@@ -201,7 +216,7 @@ template <typename T> inline offload_result_t printPtr(std::ostream &os, const T
         os << ")";
     }
 
-    return OFFLOAD_RESULT_SUCCESS;
+    return OFFLOAD_SUCCESS;
 }
   )""";
 }

@@ -78,7 +78,7 @@ offload_platform_handle_t TestEnvironment::getPlatform() {
       for (auto CandidatePlatform : Platforms) {
         uint32_t NumDevices = 0;
         if (offloadDeviceGet(CandidatePlatform, OFFLOAD_DEVICE_TYPE_ALL, 0,
-                             nullptr, &NumDevices) == OFFLOAD_RESULT_SUCCESS) {
+                             nullptr, &NumDevices) == OFFLOAD_SUCCESS) {
           if (NumDevices > 0) {
             Platform = CandidatePlatform;
             break;
