@@ -102,7 +102,8 @@ MipsAbiFlagsSection<ELFT>::MipsAbiFlagsSection(Elf_Mips_ABIFlags flags)
   this->entsize = sizeof(Elf_Mips_ABIFlags);
 }
 
-template <class ELFT> void MipsAbiFlagsSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void MipsAbiFlagsSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   memcpy(buf, &flags, sizeof(flags));
 }
 
@@ -162,7 +163,8 @@ MipsOptionsSection<ELFT>::MipsOptionsSection(Elf_Mips_RegInfo reginfo)
   this->entsize = sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
 }
 
-template <class ELFT> void MipsOptionsSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void MipsOptionsSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   auto *options = reinterpret_cast<Elf_Mips_Options *>(buf);
   options->kind = ODK_REGINFO;
   options->size = getSize();
@@ -223,7 +225,8 @@ MipsReginfoSection<ELFT>::MipsReginfoSection(Elf_Mips_RegInfo reginfo)
   this->entsize = sizeof(Elf_Mips_RegInfo);
 }
 
-template <class ELFT> void MipsReginfoSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void MipsReginfoSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   if (!ctx.arg.relocatable)
     reginfo.ri_gp_value = ctx.in.mipsGot->getGp();
   memcpy(buf, &reginfo, sizeof(reginfo));
@@ -317,7 +320,7 @@ GnuPropertySection::GnuPropertySection()
     : SyntheticSection(llvm::ELF::SHF_ALLOC, llvm::ELF::SHT_NOTE,
                        ctx.arg.wordsize, ".note.gnu.property") {}
 
-void GnuPropertySection::writeTo(uint8_t *buf) {
+void GnuPropertySection::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf, 4);                          // Name size
   write32(buf + 4, getSize() - 16);         // Content size
   write32(buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
@@ -359,7 +362,7 @@ BuildIdSection::BuildIdSection()
     : SyntheticSection(SHF_ALLOC, SHT_NOTE, 4, ".note.gnu.build-id"),
       hashSize(getHashSize()) {}
 
-void BuildIdSection::writeTo(uint8_t *buf) {
+void BuildIdSection::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf, 4);                      // Name size
   write32(buf + 4, hashSize);           // Content size
   write32(buf + 8, NT_GNU_BUILD_ID);    // Type
@@ -621,7 +624,7 @@ uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
   fatal("unknown FDE size relative encoding");
 }
 
-void EhFrameSection::writeTo(uint8_t *buf) {
+void EhFrameSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // Write CIE and FDE records.
   for (CieRecord *rec : cieRecords) {
     size_t cieOffset = rec->cie->outputOff;
@@ -715,7 +718,7 @@ bool GotSection::isNeeded() const {
   return hasGotOffRel || numEntries > ctx.target->gotHeaderEntriesNum;
 }
 
-void GotSection::writeTo(uint8_t *buf) {
+void GotSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // On PPC64 .got may be needed but empty. Skip the write.
   if (size == 0)
     return;
@@ -1096,7 +1099,7 @@ uint64_t MipsGotSection::getGp(const InputFile *f) const {
   return getVA() + gots[f->mipsGotIndex].startIndex * ctx.arg.wordsize + 0x7ff0;
 }
 
-void MipsGotSection::writeTo(uint8_t *buf) {
+void MipsGotSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
   //
@@ -1185,7 +1188,7 @@ size_t GotPltSection::getSize() const {
          ctx.target->gotEntrySize;
 }
 
-void GotPltSection::writeTo(uint8_t *buf) {
+void GotPltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   ctx.target->writeGotPltHeader(buf);
   buf += ctx.target->gotPltHeaderEntriesNum * ctx.target->gotEntrySize;
   for (const Symbol *b : entries) {
@@ -1229,7 +1232,7 @@ size_t IgotPltSection::getSize() const {
   return entries.size() * ctx.target->gotEntrySize;
 }
 
-void IgotPltSection::writeTo(uint8_t *buf) {
+void IgotPltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (const Symbol *b : entries) {
     ctx.target->writeIgotPlt(buf, *b);
     buf += ctx.target->gotEntrySize;
@@ -1263,7 +1266,7 @@ unsigned StringTableSection::addString(StringRef s, bool hashIt) {
   return ret;
 }
 
-void StringTableSection::writeTo(uint8_t *buf) {
+void StringTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (StringRef s : strings) {
     memcpy(buf, s.data(), s.size());
     buf[s.size()] = '\0';
@@ -1580,7 +1583,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents(Ctx &) {
   this->size = computeContents().size() * this->entsize;
 }
 
-template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void DynamicSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   auto *p = reinterpret_cast<Elf_Dyn *>(buf);
 
   for (std::pair<int32_t, uint64_t> kv : computeContents()) {
@@ -1732,7 +1736,8 @@ RelocationSection<ELFT>::RelocationSection(StringRef name, bool combreloc,
   this->entsize = ctx.arg.isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
-template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void RelocationSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   computeRels();
   for (const DynamicReloc &rel : relocs) {
     auto *p = reinterpret_cast<Elf_Rela *>(buf);
@@ -2243,7 +2248,8 @@ static uint32_t getSymSectionIndex(Symbol *sym) {
 }
 
 // Write the internal symbol table contents to the output symbol table.
-template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void SymbolTableSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   // The first entry is a null entry as per the ELF spec.
   buf += sizeof(Elf_Sym);
 
@@ -2325,7 +2331,7 @@ SymtabShndxSection::SymtabShndxSection()
   this->entsize = 4;
 }
 
-void SymtabShndxSection::writeTo(uint8_t *buf) {
+void SymtabShndxSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // We write an array of 32 bit values, where each value has 1:1 association
   // with an entry in ctx.in.symTab if the corresponding entry contains
   // SHN_XINDEX, we need to write actual index, otherwise, we must write
@@ -2412,7 +2418,7 @@ void GnuHashTableSection::finalizeContents(Ctx &) {
   size += symbols.size() * 4;           // Hash values
 }
 
-void GnuHashTableSection::writeTo(uint8_t *buf) {
+void GnuHashTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // Write a header.
   write32(buf, nBuckets);
   write32(buf + 4, getPartition().dynSymTab->getNumSymbols() - symbols.size());
@@ -2517,7 +2523,7 @@ void HashTableSection::finalizeContents(Ctx &) {
   this->size = numEntries * 4;
 }
 
-void HashTableSection::writeTo(uint8_t *buf) {
+void HashTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
   unsigned numSymbols = symTab->getNumSymbols();
 
@@ -2559,7 +2565,7 @@ PltSection::PltSection()
     this->flags |= SHF_WRITE;
 }
 
-void PltSection::writeTo(uint8_t *buf) {
+void PltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // At beginning of PLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
   ctx.target->writePltHeader(buf);
@@ -2606,7 +2612,7 @@ IpltSection::IpltSection()
   }
 }
 
-void IpltSection::writeTo(uint8_t *buf) {
+void IpltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   uint32_t off = 0;
   for (const Symbol *sym : entries) {
     ctx.target->writeIplt(buf + off, *sym, getVA() + off);
@@ -2638,7 +2644,7 @@ PPC32GlinkSection::PPC32GlinkSection() {
   addralign = 4;
 }
 
-void PPC32GlinkSection::writeTo(uint8_t *buf) {
+void PPC32GlinkSection::writeTo(Ctx &ctx, uint8_t *buf) {
   writePPC32GlinkSection(buf, entries.size());
 }
 
@@ -2707,7 +2713,7 @@ size_t PPC32GlinkSection::getSize() const {
 IBTPltSection::IBTPltSection()
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt") {}
 
-void IBTPltSection::writeTo(uint8_t *buf) {
+void IBTPltSection::writeTo(Ctx &ctx, uint8_t *buf) {
   ctx.target->writeIBTPlt(buf, ctx.in.plt->getNumEntries());
 }
 
@@ -3237,7 +3243,8 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents(Ctx &) {
   });
 }
 
-template <class ELFT> void DebugNamesSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void DebugNamesSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   [[maybe_unused]] const uint8_t *const beginBuf = buf;
   // Write the header.
   endian::writeNext<uint32_t, ELFT::Endianness>(buf, hdr.UnitLength);
@@ -3548,7 +3555,7 @@ std::unique_ptr<GdbIndexSection> GdbIndexSection::create() {
   return ret;
 }
 
-void GdbIndexSection::writeTo(uint8_t *buf) {
+void GdbIndexSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // Write the header.
   auto *hdr = reinterpret_cast<GdbIndexHeader *>(buf);
   uint8_t *start = buf;
@@ -3622,7 +3629,7 @@ bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
 EhFrameHeader::EhFrameHeader()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
 
-void EhFrameHeader::writeTo(uint8_t *buf) {
+void EhFrameHeader::writeTo(Ctx &ctx, uint8_t *buf) {
   // Unlike most sections, the EhFrameHeader section is written while writing
   // another section, namely EhFrameSection, which calls the write() function
   // below from its writeTo() function. This is necessary because the contents
@@ -3708,7 +3715,7 @@ void VersionDefinitionSection::writeOne(uint8_t *buf, uint32_t index,
   write32(buf + 24, 0);       // vda_next
 }
 
-void VersionDefinitionSection::writeTo(uint8_t *buf) {
+void VersionDefinitionSection::writeTo(Ctx &ctx, uint8_t *buf) {
   writeOne(buf, 1, getFileDefName(), fileDefNameOff);
 
   auto nameOffIt = verDefNameOffs.begin();
@@ -3742,7 +3749,7 @@ size_t VersionTableSection::getSize() const {
   return (getPartition().dynSymTab->getSymbols().size() + 1) * 2;
 }
 
-void VersionTableSection::writeTo(uint8_t *buf) {
+void VersionTableSection::writeTo(Ctx &ctx, uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition().dynSymTab->getSymbols()) {
     // For an unextracted lazy symbol (undefined weak), it must have been
@@ -3814,7 +3821,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents(Ctx &) {
   getParent()->info = verneeds.size();
 }
 
-template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *buf) {
+template <class ELFT>
+void VersionNeedSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   // The Elf_Verneeds need to appear first, followed by the Elf_Vernauxs.
   auto *verneed = reinterpret_cast<Elf_Verneed *>(buf);
   auto *vernaux = reinterpret_cast<Elf_Vernaux *>(verneed + verneeds.size());
@@ -3867,7 +3875,7 @@ MergeTailSection::MergeTailSection(StringRef name, uint32_t type,
 
 size_t MergeTailSection::getSize() const { return builder.getSize(); }
 
-void MergeTailSection::writeTo(uint8_t *buf) { builder.write(buf); }
+void MergeTailSection::writeTo(Ctx &ctx, uint8_t *buf) { builder.write(buf); }
 
 void MergeTailSection::finalizeContents(Ctx &) {
   // Add all string pieces to the string table builder to create section
@@ -3889,7 +3897,7 @@ void MergeTailSection::finalizeContents(Ctx &) {
         sec->pieces[i].outputOff = builder.getOffset(sec->getData(i));
 }
 
-void MergeNoTailSection::writeTo(uint8_t *buf) {
+void MergeNoTailSection::writeTo(Ctx &ctx, uint8_t *buf) {
   parallelFor(0, numShards,
               [&](size_t i) { shards[i].write(buf + shardOffsets[i]); });
 }
@@ -4171,7 +4179,7 @@ InputSection *ARMExidxSyntheticSection::getLinkOrderDep() const {
 //     section is to terminate the address range of the previous entry.
 // 3.) A trailing EXIDX_CANTUNWIND sentinel section is required at the end of
 //     the table to terminate the address range of the final entry.
-void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
+void ARMExidxSyntheticSection::writeTo(Ctx &ctx, uint8_t *buf) {
 
   // A linker generated CANTUNWIND entry is made up of two words:
   // 0x0 with R_ARM_PREL31 relocation to target.
@@ -4231,7 +4239,7 @@ void ThunkSection::addThunk(Thunk *t) {
   t->addSymbols(*this);
 }
 
-void ThunkSection::writeTo(uint8_t *buf) {
+void ThunkSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (Thunk *t : thunks)
     t->writeTo(buf + t->offset);
 }
@@ -4314,7 +4322,7 @@ size_t PPC64LongBranchTargetSection::getSize() const {
   return entries.size() * 8;
 }
 
-void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
+void PPC64LongBranchTargetSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // If linking non-pic we have the final addresses of the targets and they get
   // written to the table directly. For pic the dynamic linker will allocate
   // the section and fill it.
@@ -4412,7 +4420,7 @@ size_t PartitionElfHeaderSection<ELFT>::getSize() const {
 }
 
 template <typename ELFT>
-void PartitionElfHeaderSection<ELFT>::writeTo(uint8_t *buf) {
+void PartitionElfHeaderSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   writeEhdr<ELFT>(buf, getPartition());
 
   // Loadable partitions are always ET_DYN.
@@ -4430,7 +4438,7 @@ size_t PartitionProgramHeadersSection<ELFT>::getSize() const {
 }
 
 template <typename ELFT>
-void PartitionProgramHeadersSection<ELFT>::writeTo(uint8_t *buf) {
+void PartitionProgramHeadersSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
   writePhdrs<ELFT>(buf, getPartition());
 }
 
@@ -4447,7 +4455,7 @@ void PartitionIndexSection::finalizeContents(Ctx &) {
         ctx.mainPart->dynStrTab->addString(ctx.partitions[i].name);
 }
 
-void PartitionIndexSection::writeTo(uint8_t *buf) {
+void PartitionIndexSection::writeTo(Ctx &ctx, uint8_t *buf) {
   uint64_t va = getVA();
   for (size_t i = 1; i != ctx.partitions.size(); ++i) {
     write32(buf, ctx.mainPart->dynStrTab->getVA() +
@@ -4517,7 +4525,7 @@ bool elf::canHaveMemtagGlobals() {
 }
 
 constexpr char kMemtagAndroidNoteName[] = "Android";
-void MemtagAndroidNote::writeTo(uint8_t *buf) {
+void MemtagAndroidNote::writeTo(Ctx &ctx, uint8_t *buf) {
   static_assert(
       sizeof(kMemtagAndroidNoteName) == 8,
       "Android 11 & 12 have an ABI that the note name is 8 bytes long. Keep it "
@@ -4546,7 +4554,7 @@ size_t MemtagAndroidNote::getSize() const {
          /*descsz=*/sizeof(uint32_t);
 }
 
-void PackageMetadataNote::writeTo(uint8_t *buf) {
+void PackageMetadataNote::writeTo(Ctx &ctx, uint8_t *buf) {
   write32(buf, 4);
   write32(buf + 4, ctx.arg.packageMetadata.size() + 1);
   write32(buf + 8, FDO_PACKAGING_METADATA);
@@ -4623,7 +4631,7 @@ bool MemtagGlobalDescriptors::updateAllocSize() {
   return oldSize != getSize();
 }
 
-void MemtagGlobalDescriptors::writeTo(uint8_t *buf) {
+void MemtagGlobalDescriptors::writeTo(Ctx &ctx, uint8_t *buf) {
   createMemtagGlobalDescriptors(symbols, buf);
 }
 

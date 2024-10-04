@@ -368,7 +368,7 @@ template <class ELFT> void OutputSection::maybeCompress(Ctx &ctx) {
   // Write uncompressed data to a temporary zero-initialized buffer.
   {
     parallel::TaskGroup tg;
-    writeTo<ELFT>(buf.get(), tg);
+    writeTo<ELFT>(ctx, buf.get(), tg);
   }
   // The generic ABI specifies "The sh_size and sh_addralign fields of the
   // section header for a compressed section reflect the requirements of the
@@ -469,7 +469,7 @@ static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {
 }
 
 template <class ELFT>
-void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
+void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   llvm::TimeTraceScope timeScope("Write sections", name);
   if (type == SHT_NOBITS)
     return;
@@ -519,12 +519,12 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     return;
   }
 
-  auto fn = [=](size_t begin, size_t end) {
+  auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {
       InputSection *isec = sections[i];
       if (auto *s = dyn_cast<SyntheticSection>(isec))
-        s->writeTo(buf + isec->outSecOff);
+        s->writeTo(ctx, buf + isec->outSecOff);
       else
         isec->writeTo<ELFT>(buf + isec->outSecOff);
 
@@ -911,13 +911,13 @@ template void OutputSection::writeHeaderTo<ELF32BE>(ELF32BE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64LE>(ELF64LE::Shdr *Shdr);
 template void OutputSection::writeHeaderTo<ELF64BE>(ELF64BE::Shdr *Shdr);
 
-template void OutputSection::writeTo<ELF32LE>(uint8_t *,
+template void OutputSection::writeTo<ELF32LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF32BE>(uint8_t *,
+template void OutputSection::writeTo<ELF32BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64LE>(uint8_t *,
+template void OutputSection::writeTo<ELF64LE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
-template void OutputSection::writeTo<ELF64BE>(uint8_t *,
+template void OutputSection::writeTo<ELF64BE>(Ctx &, uint8_t *,
                                               llvm::parallel::TaskGroup &);
 
 template void OutputSection::maybeCompress<ELF32LE>(Ctx &);

@@ -72,7 +72,7 @@ class elf::Patch657417Section final : public SyntheticSection {
 public:
   Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
 
-  void writeTo(uint8_t *buf) override;
+  void writeTo(Ctx &, uint8_t *buf) override;
 
   size_t getSize() const override { return 4; }
 
@@ -174,7 +174,7 @@ static uint64_t getThumbDestAddr(uint64_t sourceAddr, uint32_t instr) {
   return sourceAddr + offset + 4;
 }
 
-void Patch657417Section::writeTo(uint8_t *buf) {
+void Patch657417Section::writeTo(Ctx &ctx, uint8_t *buf) {
   // The base instruction of the patch is always a 32-bit unconditional branch.
   if (isARM)
     write32le(buf, 0xea000000);
