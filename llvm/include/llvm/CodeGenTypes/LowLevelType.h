@@ -146,6 +146,9 @@ public:
   constexpr bool isScalar() const { return IsScalar; }
   constexpr bool isToken() const { return IsScalar && RawData == 0; };
   constexpr bool isVector() const { return isValid() && IsVector; }
+  constexpr bool isScalar(unsigned Size) const {
+    return isScalar() && getScalarSizeInBits() == Size;
+  }
   constexpr bool isPointer() const {
     return isValid() && IsPointer && !IsVector;
   }
@@ -175,6 +178,12 @@ public:
   /// Returns true if the LLT is a fixed vector. Returns false otherwise, even
   /// if the LLT is not a vector type.
   constexpr bool isFixedVector() const { return isVector() && !isScalable(); }
+
+  constexpr bool isFixedVector(unsigned NumElements,
+                               unsigned ScalarSize) const {
+    return isFixedVector() && getNumElements() == NumElements &&
+           getScalarSizeInBits() == ScalarSize;
+  }
 
   /// Returns true if the LLT is a scalable vector. Returns false otherwise,
   /// even if the LLT is not a vector type.
