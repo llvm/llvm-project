@@ -251,14 +251,14 @@ protected:
   ConstString GetDynamicTypeName_ClassRemoteAST(ValueObject &in_value,
                                                 lldb::addr_t instance_ptr);
 #endif
-  bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
+  bool GetDynamicTypeAndAddress_Existential(ValueObject &in_value,
                                          CompilerType protocol_type,
                                          lldb::DynamicValueType use_dynamic,
                                          TypeAndOrName &class_type_or_name,
                                          Address &address);
 #ifndef NDEBUG
   std::optional<std::pair<CompilerType, Address>>
-  GetDynamicTypeAndAddress_ProtocolRemoteAST(ValueObject &in_value,
+  GetDynamicTypeAndAddress_ExistentialRemoteAST(ValueObject &in_value,
                                              CompilerType protocol_type,
                                              bool use_local_buffer,
                                              lldb::addr_t existential_address);
