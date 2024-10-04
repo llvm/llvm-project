@@ -549,8 +549,8 @@ class HStore_rr<bits<7> funct7, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class ALU_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstI<funct3, OPC_OP_IMM, (outs rty:$rd), (ins rty:$rs1, simm12:$imm12),
+class ALU_ri<bits<3> funct3, string opcodestr>
+    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1, simm12:$imm12),
               opcodestr, "$rd, $rs1, $imm12">,
       Sched<[WriteIALU, ReadIALU]>;
 

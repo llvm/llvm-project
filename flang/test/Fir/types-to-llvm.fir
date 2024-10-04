@@ -329,30 +329,6 @@ func.func private @foo10(%arg0: !fir.vector<30:i64>)
 // CHECK-LABEL: foo10
 // CHECK-SAME: vector<30xi64>
 
-func.func private @foo11(%arg0: !fir.vector<2:!fir.real<2>>)
-// CHECK-LABEL: foo11
-// CHECK-SAME: vector<2xf16>
-
-func.func private @foo12(%arg0: !fir.vector<2:!fir.real<3>>)
-// CHECK-LABEL: foo12
-// CHECK-SAME: vector<2xbf16>
-
-func.func private @foo13(%arg0: !fir.vector<2:!fir.real<4>>)
-// CHECK-LABEL: foo13
-// CHECK-SAME: vector<2xf32>
-
-func.func private @foo14(%arg0: !fir.vector<2:!fir.real<8>>)
-// CHECK-LABEL: foo14
-// CHECK-SAME: vector<2xf64>
-
-func.func private @foo15(%arg0: !fir.vector<2:!fir.real<10>>)
-// CHECK-LABEL: foo15
-// CHECK-SAME: vector<2xf80>
-
-func.func private @foo16(%arg0: !fir.vector<2:!fir.real<16>>)
-// CHECK-LABEL: foo16
-// CHECK-SAME: vector<2xf128>
-
 // -----
 
 // Test `!fir.boxchar<n>` conversion

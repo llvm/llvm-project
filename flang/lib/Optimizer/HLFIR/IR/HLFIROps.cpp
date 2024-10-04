@@ -380,9 +380,7 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   // length may differ because of substrings.
   if (resultElementType != outputElementType &&
       !(mlir::isa<fir::CharacterType>(resultElementType) &&
-        mlir::isa<fir::CharacterType>(outputElementType)) &&
-      !(mlir::isa<mlir::FloatType>(resultElementType) &&
-        mlir::isa<fir::RealType>(outputElementType)))
+        mlir::isa<fir::CharacterType>(outputElementType)))
     return emitOpError(
                "result element type is not consistent with operands, expected ")
            << outputElementType;
