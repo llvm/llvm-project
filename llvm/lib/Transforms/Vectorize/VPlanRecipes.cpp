@@ -2074,7 +2074,14 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
 InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   RecurKind RdxKind = RdxDesc.getRecurrenceKind();
-  Type *ElementTy = RdxDesc.getRecurrenceType();
+  // TODO: Support any-of reduction and in-loop reduction
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) &&
+         "Not support any-of reduction in VPlan-based cost model currently.");
+
+  Type *ElementTy = Ctx.Types.inferScalarType(this->getVPSingleValue());
+  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
+         "Infered type and recurrence type mismatch.");
+
   auto *VectorTy = cast<VectorType>(ToVectorTy(ElementTy, VF));
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   unsigned Opcode = RdxDesc.getOpcode();
