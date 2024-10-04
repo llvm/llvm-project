@@ -376,7 +376,7 @@ public:
 
   void writeTo(Ctx &, uint8_t *buf) override;
 
-  size_t getSize() const override { return 8; }
+  size_t getSize(Ctx &) const override { return 8; }
 
   uint64_t getLDSTAddr() const;
 
@@ -399,7 +399,7 @@ Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
       saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
-      0, getSize(), *this);
+      0, getSize(ctx), *this);
   addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 

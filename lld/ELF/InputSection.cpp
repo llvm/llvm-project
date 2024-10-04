@@ -101,7 +101,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
-    return s->getSize();
+    return s->getSize(ctx);
   return size - bytesDropped;
 }
 

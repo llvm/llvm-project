@@ -1397,7 +1397,7 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize() const {
+size_t ArmCmseSGSection::getSize(Ctx &) const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
@@ -1471,7 +1471,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
     osec->recordSection(isec);
     osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize();
+    osec->size = isec->getSize(ctx);
     isec->finalizeContents(ctx);
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
