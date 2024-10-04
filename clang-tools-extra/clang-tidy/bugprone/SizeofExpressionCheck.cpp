@@ -70,7 +70,9 @@ SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
           Options.get("WarnOnSizeOfCompareToConstant", true)),
       WarnOnSizeOfPointerToAggregate(
           Options.get("WarnOnSizeOfPointerToAggregate", true)),
-      WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)) {}
+      WarnOnSizeOfPointer(Options.get("WarnOnSizeOfPointer", false)),
+      WarnOnSizeOfPointerArithmeticWithDivisionScaled(Options.get(
+          "WarnOnSizeOfPointerArithmeticWithDivisionScaled", true)) {}
 
 void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfConstant", WarnOnSizeOfConstant);
@@ -82,6 +84,8 @@ void SizeofExpressionCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnSizeOfPointerToAggregate",
                 WarnOnSizeOfPointerToAggregate);
   Options.store(Opts, "WarnOnSizeOfPointer", WarnOnSizeOfPointer);
+  Options.store(Opts, "WarnOnSizeOfPointerArithmeticWithDivisionScaled",
+                WarnOnSizeOfPointerArithmeticWithDivisionScaled);
 }
 
 void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
@@ -306,8 +310,13 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
                  unaryExprOrTypeTraitExpr(ofKind(UETT_AlignOf)),
                  offsetOfExpr()))
           .bind("sizeof-in-ptr-arithmetic-scale-expr");
+  const auto PtrArithmeticIntegerScaleExprInterestingOperatorNames = [this] {
+    if (WarnOnSizeOfPointerArithmeticWithDivisionScaled)
+      return binaryOperator(hasAnyOperatorName("*", "/"));
+    return binaryOperator(hasOperatorName("*"));
+  };
   const auto PtrArithmeticIntegerScaleExpr = binaryOperator(
-      hasAnyOperatorName("*", "/"),
+      PtrArithmeticIntegerScaleExprInterestingOperatorNames(),
       // sizeof(...) * sizeof(...) and sizeof(...) / sizeof(...) is handled
       // by this check on another path.
       hasOperands(expr(hasType(isInteger()), unless(SizeofLikeScaleExpr)),
