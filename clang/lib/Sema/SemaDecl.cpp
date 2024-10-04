@@ -10330,8 +10330,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
-  if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
-      !NewTVA->isDefaultVersion() &&
+  if (NewTVA && !NewTVA->isDefaultVersion() &&
       !Context.getTargetInfo().hasFeature("fmv")) {
     // Don't add to scope fmv functions declarations if fmv disabled
     AddToScope = false;
@@ -11040,15 +11039,7 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 
   if (TVA) {
     llvm::SmallVector<StringRef, 8> Feats;
-    if (S.getASTContext().getTargetInfo().getTriple().isRISCV()) {
-      ParsedTargetAttr ParseInfo =
-          S.getASTContext().getTargetInfo().parseTargetAttr(TVA->getName());
-      for (auto &Feat : ParseInfo.Features)
-        Feats.push_back(StringRef{Feat}.substr(1));
-    } else {
-      assert(S.getASTContext().getTargetInfo().getTriple().isAArch64());
-      TVA->getFeatures(Feats);
-    }
+    TVA->getFeatures(Feats);
     for (const auto &Feat : Feats) {
       if (!TargetInfo.validateCpuSupports(Feat)) {
         S.Diag(FD->getLocation(), diag::err_bad_multiversion_option)
@@ -11334,8 +11325,7 @@ static bool PreviousDeclsHaveMultiVersionAttribute(const FunctionDecl *FD) {
 }
 
 static void patchDefaultTargetVersion(FunctionDecl *From, FunctionDecl *To) {
-  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64() &&
-      !From->getASTContext().getTargetInfo().getTriple().isRISCV())
+  if (!From->getASTContext().getTargetInfo().getTriple().isAArch64())
     return;
 
   MultiVersionKind MVKindFrom = From->getMultiVersionKind();
@@ -15510,8 +15500,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
   }
   if (const auto *Attr = FD->getAttr<TargetVersionAttr>()) {
-    if (Context.getTargetInfo().getTriple().isAArch64() &&
-        !Context.getTargetInfo().hasFeature("fmv") &&
+    if (!Context.getTargetInfo().hasFeature("fmv") &&
         !Attr->isDefaultVersion()) {
       // If function multi versioning disabled skip parsing function body
       // defined with non-default target_version attribute
