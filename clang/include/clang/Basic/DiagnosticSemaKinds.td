@@ -12728,19 +12728,19 @@ def err_acc_size_expr_value
     : Error<
           "OpenACC 'tile' clause size expression must be %select{an asterisk "
           "or a constant expression|positive integer value, evaluated to %1}0">;
-def err_acc_invalid_in_collapse_loop
-    : Error<"%select{OpenACC '%1' construct|while loop|do loop}0 cannot appear "
-            "in intervening code of a 'loop' with a 'collapse' clause">;
-def note_acc_collapse_clause_here
-    : Note<"active 'collapse' clause defined here">;
-def err_acc_collapse_multiple_loops
+def err_acc_invalid_in_loop
+    : Error<"%select{OpenACC '%2' construct|while loop|do loop}0 cannot appear "
+            "in intervening code of a 'loop' with a '%1' clause">;
+def note_acc_active_clause_here
+    : Note<"active '%0' clause defined here">;
+def err_acc_clause_multiple_loops
     : Error<"more than one for-loop in a loop associated with OpenACC 'loop' "
-            "construct with a 'collapse' clause">;
-def err_acc_collapse_insufficient_loops
-    : Error<"'collapse' clause specifies a loop count greater than the number "
+            "construct with a '%select{collapse|tile}0' clause">;
+def err_acc_insufficient_loops
+    : Error<"'%0' clause specifies a loop count greater than the number "
             "of available loops">;
-def err_acc_collapse_intervening_code
-    : Error<"inner loops must be tightly nested inside a 'collapse' clause on "
+def err_acc_intervening_code
+    : Error<"inner loops must be tightly nested inside a '%0' clause on "
             "a 'loop' construct">;
 
 // AMDGCN builtins diagnostics
