@@ -1523,3 +1523,67 @@ define <2 x i8> @bool_add_lshr_vec_wrong_shift_amt(<2 x i1> %a, <2 x i1> %b) {
   %lshr = lshr <2 x i8> %add, <i8 1, i8 2>
   ret <2 x i8> %lshr
 }
+
+define i32 @lowbits_of_lshr_mul(i64 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[X:%.*]], 64424509440
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i64 [[MUL]], 32
+; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw i64 [[SHIFT]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i64 %x, 64424509440
+  %shift = lshr i64 %mul, 32
+  %conv = trunc i64 %shift to i32
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 104857600
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+; Negative tests
+
+define i32 @lowbits_of_lshr_mul_mask_multiuse(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 104857600
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr exact i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32704
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 104857600
+  call void @use(i32 %mul)
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
+
+define i32 @lowbits_of_lshr_mul_mask_indivisible(i32 %x) {
+; CHECK-LABEL: @lowbits_of_lshr_mul_mask_indivisible(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[X:%.*]], 25600
+; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i32 [[MUL]], 16
+; CHECK-NEXT:    [[CONV:%.*]] = and i32 [[SHIFT]], 32767
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %mul = mul i32 %x, 25600
+  %shift = lshr i32 %mul, 16
+  %conv = and i32 %shift, 32767
+  ret i32 %conv
+}
