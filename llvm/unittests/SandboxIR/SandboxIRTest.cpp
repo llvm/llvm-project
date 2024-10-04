@@ -4899,8 +4899,7 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
             Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*WhereIt=*/Ret->getIterator(),
-            /*WhereBB=*/Ret->getParent(), Ctx, SSID, "NewAtomicCmpXchg1"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicCmpXchg1"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -4927,7 +4926,7 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
             Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*InsertBefore=*/Ret, Ctx, SSID, "NewAtomicCmpXchg2"));
+            Ret->getIterator(), Ctx, SSID, "NewAtomicCmpXchg2"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -4953,8 +4952,8 @@ define void @foo(ptr %ptr, i8 %cmp, i8 %new) {
     // Check create() InsertAtEnd.
     auto *NewI =
         cast<sandboxir::AtomicCmpXchgInst>(sandboxir::AtomicCmpXchgInst::create(
-            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering,
-            /*InsertAtEnd=*/BB, Ctx, SSID, "NewAtomicCmpXchg3"));
+            Ptr, Cmp, New, Align, SuccOrdering, FailOrdering, BB, Ctx, SSID,
+            "NewAtomicCmpXchg3"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::AtomicCmpXchg);
     // Check getAlign().
@@ -5074,8 +5073,7 @@ define void @foo() {
   {
     // Check create() WhereIt, WhereBB.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*WhereIt=*/Ret->getIterator(),
-        /*WhereBB=*/Ret->getParent(), Ctx, ArraySize, "NewAlloca1"));
+        Ty, AddrSpace, Ret->getIterator(), Ctx, ArraySize, "NewAlloca1"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5090,7 +5088,7 @@ define void @foo() {
   {
     // Check create() InsertBefore.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*InsertBefore=*/Ret, Ctx, ArraySize, "NewAlloca2"));
+        Ty, AddrSpace, Ret->getIterator(), Ctx, ArraySize, "NewAlloca2"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5105,7 +5103,7 @@ define void @foo() {
   {
     // Check create() InsertAtEnd.
     auto *NewI = cast<sandboxir::AllocaInst>(sandboxir::AllocaInst::create(
-        Ty, AddrSpace, /*InsertAtEnd=*/BB, Ctx, ArraySize, "NewAlloca3"));
+        Ty, AddrSpace, BB, Ctx, ArraySize, "NewAlloca3"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::Alloca);
     // Check getType().
@@ -5265,9 +5263,9 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
 
   {
     // Check create() WhereIt, WhereBB
-    auto *NewI = cast<sandboxir::CastInst>(sandboxir::CastInst::create(
-        Ti64, sandboxir::Instruction::Opcode::SExt, Arg, /*WhereIt=*/BB->end(),
-        /*WhereBB=*/BB, Ctx, "SExt"));
+    auto *NewI = cast<sandboxir::CastInst>(
+        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::SExt,
+                                    Arg, BB->end(), Ctx, "SExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::SExt);
     // Check getSrcTy().
@@ -5283,7 +5281,7 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
     // Check create() InsertBefore.
     auto *NewI = cast<sandboxir::CastInst>(
         sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
-                                    Arg, /*InsertBefore=*/Ret, Ctx, "ZExt"));
+                                    Arg, Ret->getIterator(), Ctx, "ZExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
     // Check getSrcTy().
@@ -5295,9 +5293,8 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   }
   {
     // Check create() InsertAtEnd.
-    auto *NewI = cast<sandboxir::CastInst>(
-        sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::ZExt,
-                                    Arg, /*InsertAtEnd=*/BB, Ctx, "ZExt"));
+    auto *NewI = cast<sandboxir::CastInst>(sandboxir::CastInst::create(
+        Ti64, sandboxir::Instruction::Opcode::ZExt, Arg, BB, Ctx, "ZExt"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), sandboxir::Instruction::Opcode::ZExt);
     // Check getSrcTy().
@@ -5314,7 +5311,7 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
     // Check that passing a non-cast opcode crashes.
     EXPECT_DEATH(
         sandboxir::CastInst::create(Ti64, sandboxir::Instruction::Opcode::Store,
-                                    Arg, /*InsertBefore=*/Ret, Ctx, "Bad"),
+                                    Arg, Ret->getIterator(), Ctx, "Bad"),
         ".*Opcode.*");
 #endif // NDEBUG
   }
@@ -5386,8 +5383,7 @@ void testCastInst(llvm::Module &M, llvm::Type *LLVMSrcTy,
   {
     // Check create() WhereIt, WhereBB
     auto *NewI =
-        cast<SubclassT>(SubclassT::create(Arg, DstTy, /*WhereIt=*/BB->end(),
-                                          /*WhereBB=*/BB, Ctx, "NewCI"));
+        cast<SubclassT>(SubclassT::create(Arg, DstTy, BB->end(), Ctx, "NewCI"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), OpcodeT);
     // Check getSrcTy().
@@ -5402,9 +5398,8 @@ void testCastInst(llvm::Module &M, llvm::Type *LLVMSrcTy,
   }
   {
     // Check create() InsertBefore.
-    auto *NewI =
-        cast<SubclassT>(SubclassT::create(Arg, DstTy,
-                                          /*InsertBefore=*/Ret, Ctx, "NewCI"));
+    auto *NewI = cast<SubclassT>(
+        SubclassT::create(Arg, DstTy, Ret->getIterator(), Ctx, "NewCI"));
     // Check getOpcode().
     EXPECT_EQ(NewI->getOpcode(), OpcodeT);
     // Check getSrcTy().
@@ -5744,8 +5739,8 @@ bb5:
   EXPECT_EQ(PHI->getIncomingBlock(1), RemainBB1);
   EXPECT_EQ(PHI->getIncomingBlock(2), RemainBB2);
   // Check create().
-  auto *NewPHI = cast<sandboxir::PHINode>(
-      sandboxir::PHINode::create(PHI->getType(), 0, Br, Ctx, "NewPHI"));
+  auto *NewPHI = cast<sandboxir::PHINode>(sandboxir::PHINode::create(
+      PHI->getType(), 0, Br->getIterator(), Ctx, "NewPHI"));
   EXPECT_EQ(NewPHI->getType(), PHI->getType());
   EXPECT_EQ(NewPHI->getNextNode(), Br);
   EXPECT_EQ(NewPHI->getName(), "NewPHI");
