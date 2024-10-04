@@ -18,6 +18,7 @@
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -107,13 +108,36 @@ PreservedAnalyses RegToMemPass::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 namespace llvm {
+
 void initializeRegToMemWrapperPassPass(PassRegistry &);
+
+class RegToMemWrapperPass : public FunctionPass {
+public:
+  static char ID;
+
+  RegToMemWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+  }
+
+  bool runOnFunction(Function &F) override;
+};
+
+FunctionPass *createRegToMemWrapperPass();
+
 } // namespace llvm
 
-INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg-to-mem", "", true, true)
+INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_END(RegToMemWrapperPass, "reg-to-mem", "", true, true)
+INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
 
 char RegToMemWrapperPass::ID = 0;
 
