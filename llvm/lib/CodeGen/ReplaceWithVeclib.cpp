@@ -108,8 +108,22 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // all vector operands match the previously found EC.
   SmallVector<Type *, 8> ScalarArgTypes;
   Intrinsic::ID IID = II->getIntrinsicID();
+
+  // OloadTys collects types used in scalar intrinsic overload name.
+  SmallVector<Type *, 3> OloadTys;
+  if (VTy && isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+    OloadTys.push_back(VTy->getElementType());
+
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
+    // Gather type if it is used in the overload name.
+    if (isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index())) {
+      if (!isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index()) && isa<VectorType>(ArgTy))
+        OloadTys.push_back(cast<VectorType>(ArgTy)->getElementType());
+      else
+        OloadTys.push_back(ArgTy);
+    }
+
     if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
       ScalarArgTypes.push_back(ArgTy);
     } else if (auto *VectorArgTy = dyn_cast<VectorType>(ArgTy)) {
@@ -129,7 +143,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // using scalar argument types.
   std::string ScalarName =
       Intrinsic::isOverloaded(IID)
-          ? Intrinsic::getName(IID, ScalarArgTypes, II->getModule())
+          ? Intrinsic::getName(IID, OloadTys, II->getModule())
           : Intrinsic::getName(IID).str();
 
   // Try to find the mapping for the scalar version of this intrinsic and the
