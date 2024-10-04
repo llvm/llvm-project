@@ -454,7 +454,7 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
                     continue
 
                 if check_kind == "LABEL":
-                    m = IR_FUNCTION_RE.match(line)
+                    m = IR_FUNCTION_LABEL_RE.match(line)
                     if m is not None:
                         func_name = m.group(1)
                         if (
@@ -572,6 +572,9 @@ LOOP_PASS_DEBUG_RE = re.compile(
 )
 
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
+IR_FUNCTION_LABEL_RE = re.compile(
+    r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
+)
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
