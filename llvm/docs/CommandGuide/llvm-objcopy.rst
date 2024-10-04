@@ -423,6 +423,11 @@ them.
  anything following a '#'. Can be specified multiple times to read names from
  multiple files.
 
+.. option:: --max-section-offset <value>
+
+ Emit an error if input section has a file offset greater than the specified
+ ``<value>``.
+
 .. option:: --new-symbol-visibility <visibility>
 
  Specify the visibility of the symbols automatically created when using binary
