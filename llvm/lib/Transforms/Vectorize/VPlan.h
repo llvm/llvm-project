@@ -1617,13 +1617,20 @@ class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
   /// Scalar type of the result produced by the intrinsic.
   Type *ResultTy;
 
+  bool MayWriteToMemory;
+  bool MayReadFromMemory;
+  bool MayHaveSideEffects;
+
 public:
   template <typename IterT>
   VPWidenIntrinsicRecipe(CallInst &CI, Intrinsic::ID VectorIntrinsicID,
                          iterator_range<IterT> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {}
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        MayWriteToMemory(CI.mayWriteToMemory()),
+        MayReadFromMemory(CI.mayReadFromMemory()),
+        MayHaveSideEffects(CI.mayHaveSideEffects()) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
@@ -1652,6 +1659,11 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+  bool mayWriteToMemory() const { return MayWriteToMemory; }
+
+  bool mayReadFromMemory() const { return MayReadFromMemory; }
+
+  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
 };
 
 /// A recipe for widening Call instructions using library calls.

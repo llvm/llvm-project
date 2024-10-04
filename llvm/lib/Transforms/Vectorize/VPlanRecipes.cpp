@@ -80,7 +80,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
-    return false;
+    return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+    ;
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
@@ -123,7 +124,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
   case VPWidenIntrinsicSC:
-    return true;
+    return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
@@ -166,7 +167,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
   case VPWidenIntrinsicSC:
-    return false;
+    return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:

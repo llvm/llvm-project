@@ -4397,11 +4397,11 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
       OS << "):";
       if (Opcode == Instruction::Call) {
-        auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
         StringRef Name = "";
         if (auto *Int = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
           Name = Int->getIntrinsicName();
         } else {
+          auto *WidenCall = dyn_cast<VPWidenCallRecipe>(R);
           Function *CalledFn =
               WidenCall ? WidenCall->getCalledScalarFunction()
                         : cast<Function>(R->getOperand(R->getNumOperands() - 1)
