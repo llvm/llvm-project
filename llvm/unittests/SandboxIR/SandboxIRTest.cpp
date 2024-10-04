@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -14,7 +13,12 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/BasicBlock.h"
+#include "llvm/SandboxIR/Constant.h"
+#include "llvm/SandboxIR/Instruction.h"
+#include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"

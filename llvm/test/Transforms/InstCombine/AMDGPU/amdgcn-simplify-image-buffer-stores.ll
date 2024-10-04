@@ -18,7 +18,7 @@ define amdgpu_ps void @image_store_1d_store_all_zeros(<8 x i32> inreg %rsrc, i32
 ; GFXUNKNOWN-NEXT:    call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> zeroinitializer, i32 15, i32 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; GFXUNKNOWN-NEXT:    ret void
 ;
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> zeroinitializer, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> zeroinitializer, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
@@ -41,7 +41,7 @@ define amdgpu_ps void @image_store_1d_store_insert_zeros_at_end(<8 x i32> inreg 
   %newvdata2 = insertelement <4 x float> %newvdata1, float 0.0, i32 1
   %newvdata3 = insertelement <4 x float> %newvdata2, float 0.0, i32 2
   %newvdata4 = insertelement <4 x float> %newvdata3, float 0.0, i32 3
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %newvdata4, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> %newvdata4, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
@@ -68,7 +68,7 @@ define amdgpu_ps void @image_store_mip_1d_store_insert_zeros_at_end(<8 x i32> in
   %newvdata2 = insertelement <4 x float> %newvdata1, float %vdata1, i32 1
   %newvdata3 = insertelement <4 x float> %newvdata2, float %vdata2, i32 2
   %newvdata4 = insertelement <4 x float> %newvdata3, float 0.0, i32 3
-  call void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float> %newvdata4, i32 7, i32 %s, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.mip.1d.v4f32.i32.v8i32(<4 x float> %newvdata4, i32 7, i32 %s, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
@@ -162,7 +162,7 @@ define amdgpu_ps void @image_store_1d_store_shufflevector_same(<8 x i32> inreg %
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %data = shufflevector <4 x float> %vdata1, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
@@ -180,7 +180,7 @@ define amdgpu_ps void @image_store_1d_store_shufflevector(<8 x i32> inreg %rsrc,
 ; GFXUNKNOWN-NEXT:    ret void
 ;
   %data = shufflevector <4 x float> <float 2.0, float 1.0, float 2.0, float 5.0>, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 2>
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float> %data, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
@@ -280,20 +280,20 @@ declare void @llvm.amdgcn.raw.buffer.store.format.v4f32(<4 x float>, <4 x i32>, 
 declare void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #2
 declare void @llvm.amdgcn.struct.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.tbuffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32) #0
-declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.cube.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.1darray.v4f32.i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2darray.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2dmsaa.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.3d.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.cube.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.1d.v4f32.i32.v8i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.2d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.3d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.cube.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.1darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.2darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.2dmsaa.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.3d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.cube.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind writeonly }

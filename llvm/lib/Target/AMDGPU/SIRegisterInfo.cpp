@@ -507,6 +507,14 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
+  // If we need to reserve scratch space for saving the VGPRs, then we should
+  // use the frame register for accessing our own frame (which may start at a
+  // non-zero offset).
+  if (TFI->mayReserveScratchForCWSR(MF))
+    return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
+                          : FuncInfo->getStackPtrOffsetReg();
+
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use

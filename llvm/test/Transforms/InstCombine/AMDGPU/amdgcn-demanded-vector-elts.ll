@@ -4087,7 +4087,7 @@ define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32(float %vaddr, <8 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 1, float [[VADDR:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4100,7 +4100,7 @@ define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32_tfe(float %vaddr,
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA_VEC]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 1, i32 0)
+  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32.v8i32.v4i32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 1, i32 0)
   %data.vec = extractvalue {<4 x float>,i32} %data, 0
   %elt0 = extractelement <4 x float> %data.vec, i32 0
   ret float %elt0
@@ -4114,7 +4114,7 @@ define amdgpu_ps float @extract_elt0_image_sample_1d_v4f32_f32_lwe(float %vaddr,
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA_VEC]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 2, i32 0)
+  %data = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32.v8i32.v4i32(i32 15, float %vaddr, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 2, i32 0)
   %data.vec = extractvalue {<4 x float>,i32} %data, 0
   %elt0 = extractelement <4 x float> %data.vec, i32 0
   ret float %elt0
@@ -4125,7 +4125,7 @@ define amdgpu_ps float @extract_elt0_image_sample_2d_v4f32_f32(float %s, float %
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.2d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], float [[T:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %s, float %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4136,7 +4136,7 @@ define amdgpu_ps float @extract_elt0_dmask_0000_image_sample_3d_v4f32_f32(float 
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32 0, float %s, float %t, float %r, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 0, float %s, float %t, float %r, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4146,7 +4146,7 @@ define amdgpu_ps float @extract_elt0_dmask_0001_image_sample_1darray_v4f32_f32(f
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1darray.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], float [[SLICE:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32 1, float %s, float %slice, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 1, float %s, float %slice, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4156,7 +4156,7 @@ define amdgpu_ps float @extract_elt0_dmask_0010_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 2, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 2, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 2, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4166,7 +4166,7 @@ define amdgpu_ps float @extract_elt0_dmask_0100_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 4, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 4, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 4, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4176,7 +4176,7 @@ define amdgpu_ps float @extract_elt0_dmask_1000_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 8, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 8, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 8, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4186,7 +4186,7 @@ define amdgpu_ps float @extract_elt0_dmask_1001_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 9, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 9, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4196,7 +4196,7 @@ define amdgpu_ps float @extract_elt0_dmask_0011_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4206,7 +4206,7 @@ define amdgpu_ps float @extract_elt0_dmask_0111_image_sample_1d_v4f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.1d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
@@ -4217,7 +4217,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0001_image_sample_1d_v4f32
 ; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <2 x float> poison, float [[DATA]], i64 0
 ; CHECK-NEXT:    ret <2 x float> [[SHUF]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %shuf
 }
@@ -4227,7 +4227,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0011_image_sample_1d_v4f32
 ; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %shuf
 }
@@ -4237,7 +4237,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0111_image_sample_1d_v4f32
 ; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %shuf
 }
@@ -4247,7 +4247,7 @@ define amdgpu_ps <2 x float> @extract_elt0_elt1_dmask_0101_image_sample_1d_v4f32
 ; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32.v8i32.v4i32(i32 5, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %shuf
 }
@@ -4258,7 +4258,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0001_image_sample_1d_
 ; CHECK-NEXT:    [[SHUF:%.*]] = insertelement <3 x float> poison, float [[DATA]], i64 0
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 1, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %shuf
 }
@@ -4269,7 +4269,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0011_image_sample_1d_
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[DATA]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 3, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %shuf
 }
@@ -4280,7 +4280,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0101_image_sample_1d_
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x float> [[DATA]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    ret <3 x float> [[SHUF]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 5, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %shuf
 }
@@ -4290,7 +4290,7 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_0111_image_sample_1d_
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.1d.v3f32.f32.v8i32.v4i32(i32 7, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 7, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %shuf
 }
@@ -4300,16 +4300,16 @@ define amdgpu_ps <3 x float> @extract_elt0_elt1_elt2_dmask_1111_image_sample_1d_
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.1d.v3f32.f32.v8i32.v4i32(i32 7, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %shuf
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.sl_v4f32i32s.f32.v8i32.v4i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cl
@@ -4320,12 +4320,12 @@ define amdgpu_ps float @extract_elt1_image_sample_cl_2darray_v4f32_f32(float %s,
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.cl.2darray.f32.f32.v8i32.v4i32(i32 2, float [[S:%.*]], float [[T:%.*]], float [[SLICE:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.cl.2darray.v4f32.f32(i32 15, float %s, float %t, float %slice, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.cl.2darray.v4f32.f32.v8i32.v4i32(i32 15, float %s, float %t, float %slice, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 1
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.cl.2darray.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.2darray.v4f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.d
@@ -4336,12 +4336,12 @@ define amdgpu_ps float @extract_elt2_image_sample_d_cube_v4f32_f32_f32(float %ds
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.d.cube.f32.f32.f32.v8i32.v4i32(i32 4, float [[DSDH:%.*]], float [[DTDH:%.*]], float [[DSDV:%.*]], float [[DTDV:%.*]], float [[S:%.*]], float [[T:%.*]], float [[FACE:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cube.v4f32.f32.f32(i32 15, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %face, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cube.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %face, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 2
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.cube.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cube.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.d.cl
@@ -4352,12 +4352,12 @@ define amdgpu_ps float @extract_elt3_image_sample_d_cl_1d_v4f32_f32_f32(float %d
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.d.cl.1d.f32.f32.f32.v8i32.v4i32(i32 8, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 3
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.l
@@ -4368,12 +4368,12 @@ define amdgpu_ps float @extract_elt1_dmask_0110_image_sample_l_1d_v2f32_f32(floa
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.l.1d.f32.f32.v8i32.v4i32(i32 4, float [[S:%.*]], float [[LOD:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32(i32 6, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32.v8i32.v4i32(i32 6, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <2 x float> %data, i32 1
   ret float %elt0
 }
 
-declare <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <2 x float> @llvm.amdgcn.image.sample.l.1d.v2f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.b
@@ -4384,12 +4384,12 @@ define amdgpu_ps float @extract_elt1_dmask_1001_image_sample_b_1d_v4f32_f32_f32(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.b.1d.f32.f32.f32.v8i32.v4i32(i32 8, float [[BIAS:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32(i32 9, float %bias, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 9, float %bias, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 1
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.b.cl
@@ -4400,12 +4400,12 @@ define amdgpu_ps <2 x float> @extract_elt1_elt2_dmask_1101_image_sample_b_cl_1d_
 ; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.b.cl.1d.v2f32.f32.f32.v8i32.v4i32(i32 12, float [[BIAS:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32(i32 13, float %bias, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 13, float %bias, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %shuf
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.lz
@@ -4416,12 +4416,12 @@ define amdgpu_ps <2 x float> @extract_elt1_elt3_image_sample_lz_1d_v4f32_f32(flo
 ; CHECK-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 10, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 1, i32 3>
   ret <2 x float> %shuf
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32.v8i32.v4i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cd
@@ -4432,12 +4432,12 @@ define amdgpu_ps <3 x float> @extract_elt1_elt2_elt3_image_sample_cd_1d_v4f32_f3
 ; CHECK-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.image.sample.cd.1d.v3f32.f32.f32.v8i32.v4i32(i32 14, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret <3 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
   ret <3 x float> %shuf
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cd.cl
@@ -4448,7 +4448,7 @@ define amdgpu_ps half @extract_elt3_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
 ; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32.v8i32.v4i32(i32 8, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x half> %data, i32 3
   ret half %elt0
 }
@@ -4458,7 +4458,7 @@ define amdgpu_ps half @extract_elt2_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
 ; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32.v8i32.v4i32(i32 4, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x half> %data, i32 2
   ret half %elt0
 }
@@ -4468,7 +4468,7 @@ define amdgpu_ps half @extract_elt1_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
 ; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32.v8i32.v4i32(i32 2, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x half> %data, i32 1
   ret half %elt0
 }
@@ -4479,7 +4479,7 @@ define amdgpu_ps <4 x half> @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <3 x half> [[DATA]], <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x half> [[RES]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %res = shufflevector <4 x half> %data, <4 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   ret <4 x half> %res
 }
@@ -4490,7 +4490,7 @@ define amdgpu_ps <4 x half> @extract_elt_to2_image_sample_cd_cl_1d_v4f16_f32_f32
 ; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x half> [[DATA]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x half> [[RES]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %res = shufflevector <4 x half> %data, <4 x half> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x half> %res
 }
@@ -4501,7 +4501,7 @@ define amdgpu_ps <4 x half> @extract_elt_to1_image_sample_cd_cl_1d_v4f16_f32_f32
 ; CHECK-NEXT:    [[RES:%.*]] = insertelement <4 x half> poison, half [[DATA]], i64 0
 ; CHECK-NEXT:    ret <4 x half> [[RES]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %res = shufflevector <4 x half> %data, <4 x half> poison, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
   ret <4 x half> %res
 }
@@ -4511,12 +4511,12 @@ define amdgpu_ps half @extract_elt0_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
 ; CHECK-NEXT:    [[DATA:%.*]] = call half @llvm.amdgcn.image.sample.cd.cl.1d.f16.f32.f32.v8i32.v4i32(i32 1, float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret half [[DATA]]
 ;
-  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x half> %data, i32 0
   ret half %elt0
 }
 
-declare <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c
@@ -4527,12 +4527,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_1d_v4f32_f32(float %zcompare
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.1d.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 15, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cl
@@ -4543,12 +4543,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cl_1d_v4f32_f32(float %zcomp
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cl.1d.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32(i32 15, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.d
@@ -4559,12 +4559,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_d_1d_v4f32_f32_f32(float %zc
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.d.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.d.cl
@@ -4575,12 +4575,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_d_cl_1d_v4f32_f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.d.cl.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.l
@@ -4591,12 +4591,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_l_1d_v4f32_f32(float %zcompa
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.l.1d.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[LOD:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32 15, float %zcompare, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.b
@@ -4607,12 +4607,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_b_1d_v4f32_f32_f32(float %bi
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.b.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.b.cl
@@ -4623,12 +4623,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_b_cl_1d_v4f32_f32_f32(float 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.b.cl.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.lz
@@ -4639,12 +4639,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_lz_1d_v4f32_f32(float %zcomp
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.lz.1d.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32(i32 15, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cd
@@ -4655,12 +4655,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cd_1d_v4f32_f32_f32(float %z
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cd.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cd.cl
@@ -4671,12 +4671,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cd_cl_1d_v4f32_f32_f32(float
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cd.cl.1d.f32.f32.f32.v8i32.v4i32(i32 1, float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.o
@@ -4687,12 +4687,12 @@ define amdgpu_ps float @extract_elt0_image_sample_o_1d_v4f32_f32(i32 %offset, fl
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cl.o
@@ -4703,12 +4703,12 @@ define amdgpu_ps float @extract_elt0_image_sample_cl_o_1d_v4f32_f32(i32 %offset,
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.cl.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.d.o
@@ -4719,12 +4719,12 @@ define amdgpu_ps float @extract_elt0_image_sample_d_o_1d_v4f32_f32_f32(i32 %offs
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.d.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.d.cl.o
@@ -4735,12 +4735,12 @@ define amdgpu_ps float @extract_elt0_image_sample_d_cl_o_1d_v4f32_f32_f32(i32 %o
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.d.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.l.o
@@ -4751,12 +4751,12 @@ define amdgpu_ps float @extract_elt0_image_sample_l_o_1d_v4f32_f32(i32 %offset, 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.l.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[S:%.*]], float [[LOD:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.b.o
@@ -4767,12 +4767,12 @@ define amdgpu_ps float @extract_elt0_image_sample_b_o_1d_v4f32_f32_f32(i32 %offs
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.b.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[BIAS:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %bias, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.b.cl.o
@@ -4783,12 +4783,12 @@ define amdgpu_ps float @extract_elt0_image_sample_b_cl_o_1d_v4f32_f32_f32(i32 %o
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.b.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[BIAS:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %bias, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.lz.o
@@ -4799,12 +4799,12 @@ define amdgpu_ps float @extract_elt0_image_sample_lz_o_1d_v4f32_f32(i32 %offset,
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.lz.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cd.o
@@ -4815,12 +4815,12 @@ define amdgpu_ps float @extract_elt0_image_sample_cd_o_1d_v4f32_f32_f32(i32 %off
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.cd.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.cd.cl.o
@@ -4831,12 +4831,12 @@ define amdgpu_ps float @extract_elt0_image_sample_cd_cl_o_1d_v4f32_f32_f32(i32 %
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.cd.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.o
@@ -4847,12 +4847,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_o_1d_v4f32_f32(i32 %offset, 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cl.o
@@ -4863,12 +4863,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cl_o_1d_v4f32_f32(i32 %offse
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cl.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.d.o
@@ -4879,12 +4879,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_d_o_1d_v4f32_f32_f32(i32 %of
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.d.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.d.cl.o
@@ -4895,12 +4895,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_d_cl_o_1d_v4f32_f32_f32(i32 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.d.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.l.o
@@ -4911,12 +4911,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_l_o_1d_v4f32_f32(i32 %offset
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.l.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[LOD:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.b.o
@@ -4927,12 +4927,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_b_o_1d_v4f32_f32_f32(i32 %of
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.b.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.b.cl.o
@@ -4943,12 +4943,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_b_cl_o_1d_v4f32_f32_f32(i32 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.b.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[BIAS:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.lz.o
@@ -4959,12 +4959,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_lz_o_1d_v4f32_f32(i32 %offse
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.lz.o.1d.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cd.o
@@ -4975,12 +4975,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cd_o_1d_v4f32_f32_f32(i32 %o
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cd.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample.c.cd.cl.o
@@ -4991,12 +4991,12 @@ define amdgpu_ps float @extract_elt0_image_sample_c_cd_cl_o_1d_v4f32_f32_f32(i32
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.sample.c.cd.cl.o.1d.f32.f32.f32.v8i32.v4i32(i32 1, i32 [[OFFSET:%.*]], float [[ZCOMPARE:%.*]], float [[DSDH:%.*]], float [[DSDV:%.*]], float [[S:%.*]], float [[CLAMP:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4
@@ -5010,12 +5010,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_2d_v4f32_f32(float %s, float 
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32 1, float %s, float %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32.v8i32(i32 1, float %s, float %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32.v8i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.cl
@@ -5027,12 +5027,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_cl_2d_v4f32_f32(float %s, flo
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f32(i32 2, float %s, float %t, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f32.v8i32(i32 2, float %s, float %t, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.cl.2d.v4f32.f32.v8i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.l
@@ -5044,12 +5044,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_l_2d_v4f32_f32(float %s, floa
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32 4, float %s, float %t, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32.v8i32(i32 4, float %s, float %t, float %lod, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32.v8i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.b
@@ -5061,12 +5061,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_b_2darray_v4f32_f32_f32(float
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.2darray.v4f32.f32.f32(i32 8, float %bias, float %s, float %t, float %slice, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.2darray.v4f32.f32.f32.v8i32(i32 8, float %bias, float %s, float %t, float %slice, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.b.2darray.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.2darray.v4f32.f32.f32.v8i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.b.cl
@@ -5078,12 +5078,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_b_cl_cube_v4f32_f32_f32(float
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.cube.v4f32.f32.f32(i32 1, float %bias, float %s, float %t, float %face, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.cube.v4f32.f32.f32.v8i32(i32 1, float %bias, float %s, float %t, float %face, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.cube.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.cube.v4f32.f32.f32.v8i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.lz
@@ -5095,12 +5095,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_lz_2d_v4f32_f16(half %s, half
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16(i32 1, half %s, half %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16.v8i32(i32 1, half %s, half %t, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16(i32, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f16.v8i32(i32, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.o
@@ -5112,12 +5112,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_o_2d_v4f32_f32(i32 %offset, f
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.o.2d.v4f32.f32(i32 1, i32 %offset, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.o.2d.v4f32.f32.v8i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.cl.o
@@ -5129,12 +5129,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_cl_o_2d_v4f32_f32(i32 %offset
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.cl.o.2d.v4f32.f32(i32 1, i32 %offset, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.cl.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.cl.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.cl.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.l.o
@@ -5146,12 +5146,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_l_o_2d_v4f32_f32(i32 %offset,
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32 1, i32 %offset, float %s, float %t, float %lod, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %s, float %t, float %lod, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.b.o
@@ -5163,12 +5163,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_b_o_2d_v4f32_f32_f32(i32 %off
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.f32.v8i32(i32 1, i32 %offset, float %bias, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.b.cl.o
@@ -5180,12 +5180,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_b_cl_o_2d_v4f32_f32_f32(i32 %
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32.v8i32(i32 1, i32 %offset, float %bias, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.lz.o
@@ -5197,12 +5197,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_lz_o_2d_v4f32_f32(i32 %offset
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.lz.o.2d.v4f32.f32(i32 1, i32 %offset, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.lz.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.lz.o.2d.v4f32.f32.v8i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.o
@@ -5214,12 +5214,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_o_2d_v4f32_f32(i32 %offset,
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.cl.o
@@ -5231,12 +5231,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_cl_o_2d_v4f32_f32(i32 %offs
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.l.o
@@ -5248,12 +5248,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_l_o_2d_v4f32_f32(i32 %offse
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %lod, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %lod, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.b.o
@@ -5265,12 +5265,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_b_o_2d_v4f32_f32_f32(i32 %o
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32.v8i32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.b.cl.o
@@ -5282,12 +5282,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_b_cl_o_2d_v4f32_f32_f32(i32
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32.v8i32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32.v8i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.gather4.c.lz.o
@@ -5299,12 +5299,12 @@ define amdgpu_ps float @extract_elt0_image_gather4_c_lz_o_2d_v4f32_f32(i32 %offs
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[DATA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.2d.v4f32.f32.v8i32(i32 1, i32 %offset, float %zcompare, float %s, float %t, <8 x i32> %gather4r, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.lz.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.getlod
@@ -5315,12 +5315,12 @@ define amdgpu_ps float @extract_elt0_image_getlod_1d_v4f32_f32(float %s, <8 x i3
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.getlod.1d.f32.f32.v8i32.v4i32(i32 1, float [[S:%.*]], <8 x i32> [[SAMPLER:%.*]], <4 x i32> [[RSRC:%.*]], i1 false, i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32.v8i32(i32 15, float %s, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.getlod.1d.v4f32.f32.v8i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.load
@@ -5331,12 +5331,12 @@ define amdgpu_ps float @extract_elt0_image_load_2dmsaa_v4f32_i32(i32 %s, i32 %t,
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S:%.*]], i32 [[T:%.*]], i32 [[SAMPLE:%.*]], <8 x i32> [[SAMPLER:%.*]], i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %sample, <8 x i32> %sampler, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 %sample, <8 x i32> %sampler, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.2dmsaa.v4f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.load.mip
@@ -5347,12 +5347,12 @@ define amdgpu_ps float @extract_elt0_image_load_mip_1d_v4f32_i32(i32 %s, i32 %mi
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.load.mip.1d.f32.i32.v8i32(i32 1, i32 [[S:%.*]], i32 [[MIP:%.*]], <8 x i32> [[SAMPLER:%.*]], i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s, i32 %mip, <8 x i32> %sampler, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 15, i32 %s, i32 %mip, <8 x i32> %sampler, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32, i32, i32, <8 x i32>, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.getresinfo
@@ -5363,12 +5363,12 @@ define amdgpu_ps float @extract_elt0_image_getresinfo_1d_v4f32_i32(i32 %mip, <8 
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.getresinfo.1d.f32.i32.v8i32(i32 1, i32 [[MIP:%.*]], <8 x i32> [[SAMPLER:%.*]], i32 0, i32 0)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 15, i32 %mip, <8 x i32> %sampler, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32.v8i32(i32 15, i32 %mip, <8 x i32> %sampler, i32 0, i32 0)
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32.v8i32(i32, i32, <8 x i32>, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; TFE / LWE
@@ -5381,25 +5381,25 @@ define amdgpu_ps float @extract_elt0_tfe_image_load_1d_v4f32i32_i32(i32 %s, <8 x
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <4 x float> [[RGBA]], i64 0
 ; CHECK-NEXT:    ret float [[ELT0]]
 ;
-  %data = call { <4 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
+  %data = call { <4 x float>, i32 } @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32.v8i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
   %rgba = extractvalue { <4 x float>, i32 } %data, 0
   %elt0 = extractelement <4 x float> %rgba, i32 0
   ret float %elt0
 }
 
-declare {<4 x float>, i32} @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32(i32, i32, <8 x i32>, i32, i32) #1
+declare {<4 x float>, i32} @llvm.amdgcn.image.load.1d.sl_v4f32i32s.i32.v8i32(i32, i32, <8 x i32>, i32, i32) #1
 
 define amdgpu_hs float @tfe_check_assert() #0 {
 ; CHECK-LABEL: @tfe_check_assert(
 ; CHECK-NEXT:    [[DATA:%.*]] = call float @llvm.amdgcn.image.load.2d.f32.i32.v8i32(i32 1, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 1)
 ; CHECK-NEXT:    ret float [[DATA]]
 ;
-  %data = call nsz <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 1) #2
+  %data = call nsz <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 15, i32 undef, i32 undef, <8 x i32> undef, i32 0, i32 1) #2
   %elt0 = extractelement <4 x float> %data, i32 0
   ret float %elt0
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #1
+declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32.v8i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #1
 
 ; --------------------------------------------------------------------
 ; Waterfall

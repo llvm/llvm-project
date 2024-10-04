@@ -9,8 +9,9 @@
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/SandboxIR/Constant.h"
+#include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/PassManager.h"
-#include "llvm/SandboxIR/SandboxIR.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 

@@ -672,6 +672,45 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
                                ToSize, CE);
   };
 
+  case CK_IntegralToFixedPoint: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), I,
+                                            CE);
+  }
+  case CK_FloatingToFixedPoint: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastFloatingFixedPoint(I, CE);
+  }
+  case CK_FixedPointToFloating: {
+    if (!this->visit(SubExpr))
+      return false;
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(CE->getType());
+    return this->emitCastFixedPointFloating(TargetSemantics, CE);
+  }
+  case CK_FixedPointToIntegral: {
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitCastFixedPointIntegral(classifyPrim(CE->getType()), CE);
+  }
+  case CK_FixedPointCast: {
+    if (!this->visit(SubExpr))
+      return false;
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
+    uint32_t I;
+    std::memcpy(&I, &Sem, sizeof(Sem));
+    return this->emitCastFixedPoint(I, CE);
+  }
+
   case CK_ToVoid:
     return discard(SubExpr);
 
@@ -762,6 +801,8 @@ bool Compiler<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
        RHS->getType()->isAnyComplexType()) &&
       BO->isComparisonOp())
     return this->emitComplexComparison(LHS, RHS, BO);
+  if (LHS->getType()->isFixedPointType() || RHS->getType()->isFixedPointType())
+    return this->VisitFixedPointBinOp(BO);
 
   if (BO->isPtrMemOp()) {
     if (!this->visit(LHS))
@@ -1456,6 +1497,112 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   if (DiscardResult && E->isCompoundAssignmentOp() && !this->emitPopPtr(E))
     return false;
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+
+  assert(LHS->getType()->isFixedPointType() ||
+         RHS->getType()->isFixedPointType());
+
+  auto LHSSema = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
+  auto RHSSema = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
+
+  if (!this->visit(LHS))
+    return false;
+  if (!LHS->getType()->isFixedPointType()) {
+    uint32_t I;
+    std::memcpy(&I, &LHSSema, sizeof(llvm::FixedPointSemantics));
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()), I, E))
+      return false;
+  }
+
+  if (!this->visit(RHS))
+    return false;
+  if (!RHS->getType()->isFixedPointType()) {
+    uint32_t I;
+    std::memcpy(&I, &RHSSema, sizeof(llvm::FixedPointSemantics));
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()), I, E))
+      return false;
+  }
+
+  // Convert the result to the target semantics.
+  auto ConvertResult = [&](bool R) -> bool {
+    if (!R)
+      return false;
+    auto ResultSema = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    auto CommonSema = LHSSema.getCommonSemantics(RHSSema);
+    if (ResultSema != CommonSema) {
+      uint32_t I;
+      std::memcpy(&I, &ResultSema, sizeof(ResultSema));
+      return this->emitCastFixedPoint(I, E);
+    }
+    return true;
+  };
+
+  auto MaybeCastToBool = [&](bool Result) {
+    if (!Result)
+      return false;
+    PrimType T = classifyPrim(E);
+    if (DiscardResult)
+      return this->emitPop(T, E);
+    if (T != PT_Bool)
+      return this->emitCast(PT_Bool, T, E);
+    return true;
+  };
+
+  switch (E->getOpcode()) {
+  case BO_EQ:
+    return MaybeCastToBool(this->emitEQFixedPoint(E));
+  case BO_NE:
+    return MaybeCastToBool(this->emitNEFixedPoint(E));
+  case BO_LT:
+    return MaybeCastToBool(this->emitLTFixedPoint(E));
+  case BO_LE:
+    return MaybeCastToBool(this->emitLEFixedPoint(E));
+  case BO_GT:
+    return MaybeCastToBool(this->emitGTFixedPoint(E));
+  case BO_GE:
+    return MaybeCastToBool(this->emitGEFixedPoint(E));
+  case BO_Add:
+    return ConvertResult(this->emitAddFixedPoint(E));
+  case BO_Sub:
+    return ConvertResult(this->emitSubFixedPoint(E));
+  case BO_Mul:
+    return ConvertResult(this->emitMulFixedPoint(E));
+  case BO_Div:
+    return ConvertResult(this->emitDivFixedPoint(E));
+  case BO_Shl:
+    return ConvertResult(this->emitShiftFixedPoint(/*Left=*/true, E));
+  case BO_Shr:
+    return ConvertResult(this->emitShiftFixedPoint(/*Left=*/false, E));
+
+  default:
+    return this->emitInvalid(E);
+  }
+
+  llvm_unreachable("unhandled binop opcode");
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitFixedPointUnaryOperator(const UnaryOperator *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  assert(SubExpr->getType()->isFixedPointType());
+
+  switch (E->getOpcode()) {
+  case UO_Plus:
+    return this->delegate(SubExpr);
+  case UO_Minus:
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitNegFixedPoint(E);
+  default:
+    return false;
+  }
+
+  llvm_unreachable("Unhandled unary opcode");
 }
 
 template <class Emitter>
@@ -3699,7 +3846,10 @@ bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
     return this->emitNullMemberPtr(nullptr, E);
   case PT_Float:
     return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
-  case PT_FixedPoint:
+  case PT_FixedPoint: {
+    auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
+    return this->emitConstFixedPoint(FixedPoint::zero(Sem), E);
+  }
     llvm_unreachable("Implement");
   }
   llvm_unreachable("unknown primitive type");
@@ -5364,6 +5514,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return this->VisitComplexUnaryOperator(E);
   if (SubExpr->getType()->isVectorType())
     return this->VisitVectorUnaryOperator(E);
+  if (SubExpr->getType()->isFixedPointType())
+    return this->VisitFixedPointUnaryOperator(E);
   std::optional<PrimType> T = classify(SubExpr->getType());
 
   switch (E->getOpcode()) {

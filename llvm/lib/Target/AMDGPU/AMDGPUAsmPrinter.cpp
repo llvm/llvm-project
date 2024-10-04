@@ -1026,13 +1026,13 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
   unsigned LDSAlignShift;
-  if (STM.getFeatureBits().test(FeatureLocalMemorySize327680)) {
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680)) {
     // LDS is allocated in 256 dword blocks.
     LDSAlignShift = 10;
-  } else if (STM.getFeatureBits().test(FeatureLocalMemorySize163840)) {
+  } else if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
     // LDS is allocated in 320 dword blocks.
     LDSAlignShift = 11;
-  } else if (STM.getFeatureBits().test(FeatureLocalMemorySize65536)) {
+  } else if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize65536)) {
     // LDS is allocated in 128 dword blocks.
     LDSAlignShift = 9;
   } else {
@@ -1305,8 +1305,15 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   MD->setEntryPoint(CC, MF.getFunction().getName());
   MD->setNumUsedVgprs(CC, CurrentProgramInfo.NumVGPRsForWavesPerEU, Ctx);
 
-  // Only set AGPRs for supported devices
+  // For targets that support dynamic VGPRs, set the number of saved dynamic
+  // VGPRs (if any) in the PAL metadata.
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  if (STM.isDynamicVGPREnabled() &&
+      MFI->getScratchReservedForDynamicVGPRs() > 0)
+    MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
+                   MFI->getScratchReservedForDynamicVGPRs() / 4);
+
+  // Only set AGPRs for supported devices
   if (STM.hasMAIInsts()) {
     MD->setNumUsedAgprs(CC, CurrentProgramInfo.NumAccVGPR);
   }

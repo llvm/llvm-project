@@ -8964,6 +8964,10 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
   int Cnt = 0;
   while (++I != E && I->isInsideBundle()) {
     assert(!I->isBundle() && "No nested bundle!");
+    // TODO-GFX13: any other do-not-care cases?
+    if (I->isDebugInstr() || isWaitcnt(I->getOpcode()))
+      continue;
+
     if (I->getOpcode() == AMDGPU::V_STORE_IDX) {
       if (!CoreMI) {
         CoreMI = &*I;
@@ -8979,6 +8983,38 @@ MachineInstr *SIInstrInfo::bundleWithGPRIndexing(MachineInstr &MI) {
     }
   }
   return Cnt ? CoreMI : nullptr;
+}
+
+const MachineInstr *
+SIInstrInfo::getBundledIndexingInst(const MachineInstr &MI,
+                                    const MachineOperand &Op) {
+  if (!MI.isBundled())
+    return nullptr;
+  if (!Op.isReg())
+    return nullptr;
+  // TODO-GFX13 should check if the operand is a staging-register
+  // auto *RC = MRI->getRegClass(Op.getReg());
+  // if (RC == &AMDGPU::STAGING_REGRegClass)
+  //   return nullptr;
+  auto RegNo = Op.getReg();
+  if (Op.isDef()) {
+    auto I = MI.getIterator();
+    auto E = MI.getParent()->instr_end();
+    while (++I != E && I->isInsideBundle()) {
+      if (I->getOpcode() == AMDGPU::V_STORE_IDX &&
+          I->getOperand(0).getReg() == RegNo)
+        return &*I;
+    }
+  } else if (Op.isUse()) {
+    auto I = MI.getReverseIterator();
+    auto E = MI.getParent()->instr_rend();
+    while (++I != E && I->isInsideBundle()) {
+      if (I->getOpcode() == AMDGPU::V_LOAD_IDX &&
+          I->getOperand(0).getReg() == RegNo)
+        return &*I;
+    }
+  }
+  return nullptr;
 }
 
 unsigned SIInstrInfo::getInstBundleSize(const MachineInstr &MI) const {
@@ -9449,7 +9485,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
-    return SIEncodingFamily::GFX12;
+    return ST.hasGFX1210Insts() ? SIEncodingFamily::GFX1210
+                                : SIEncodingFamily::GFX12;
   case AMDGPUSubtarget::GFX13:
     return SIEncodingFamily::GFX13;
   }
@@ -9544,7 +9581,10 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
   if (MCOp == (uint16_t)-1 && ST.hasGFX1210Insts())
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX1210);
+    MCOp =
+        AMDGPU::getMCOpcode(Opcode, ST.getGeneration() == AMDGPUSubtarget::GFX13
+                                        ? SIEncodingFamily::GFX1210
+                                        : SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

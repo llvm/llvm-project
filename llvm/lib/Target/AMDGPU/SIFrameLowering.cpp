@@ -909,7 +909,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         .addReg(Tmp32Reg);
   }
 
-  if (hasFP(MF)) {
+  if (hasFP(MF) && !mayReserveScratchForCWSR(MF)) {
     FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
     if (!WavegroupEnable) {
@@ -929,17 +929,53 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     }
   }
 
+  unsigned Offset = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
   if (requiresStackPointerReference(MF)) {
     Register SPReg = MFI->getStackPtrOffsetReg();
     assert(SPReg != AMDGPU::SP_REG);
     if (!WavegroupEnable) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-          .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+          .addImm(Offset);
     } else {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), SPReg)
           .addReg(FPReg)
-          .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
+          .addImm(Offset);
     }
+  }
+
+  if (mayReserveScratchForCWSR(MF)) {
+    // We need to check if we're on a compute queue - if we are, then the CWSR
+    // trap handler may need to store some VGPRs on the stack. The first VGPR
+    // block is saved separately, so we only need to allocate space for any
+    // additional VGPR blocks used. For now, we will make sure there's enough
+    // room for the theoretical maximum number of VGPRs that can be allocated.
+    // FIXME: Figure out if the shader uses fewer VGPRs in practice.
+    assert(hasFP(MF));
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    Register SPReg = MFI->getStackPtrOffsetReg();
+    assert(SPReg != AMDGPU::SP_REG);
+    unsigned VGPRSize =
+        llvm::alignTo((ST.getAddressableNumVGPRs() -
+                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
+                          4,
+                      FrameInfo.getMaxAlign());
+    MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
+
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
+        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+            AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 1));
+    // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
+    // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
+    // SCC, so we need to check for 0 manually.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(FPReg);
+    // For the FP, we could use a s_cselect, since it's always 0 or VGPRSize.
+    // But for SP, the Offset could be anything, and we can't use 2 literal
+    // constants with s_cselect. For symmetry, we use s_cmovk for both.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), FPReg).addImm(VGPRSize);
+    if (requiresStackPointerReference(MF))
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CMOVK_I32), SPReg)
+          .addImm(Offset + VGPRSize);
   }
 
   bool NeedsFlatScratchInit =
@@ -2276,7 +2312,15 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
          frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
+         mayReserveScratchForCWSR(MF) ||
          MF.getTarget().Options.DisableFramePointerElim(MF);
+}
+
+bool SIFrameLowering::mayReserveScratchForCWSR(
+    const MachineFunction &MF) const {
+  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+         AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
+         AMDGPU::isCompute(MF.getFunction().getCallingConv());
 }
 
 // This is essentially a reduced version of hasFP for entry functions. Since the

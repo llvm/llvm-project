@@ -1139,8 +1139,8 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
       !foreach(arg, P_.DataArgs, arg.Type),    // vdata(VGPR) -- for store/atomic
       !if(P_.IsAtomic, [], [llvm_i32_ty]),     // dmask(imm)
       P_.AddrTypes,                            // vaddr(VGPR)
-      [llvm_any_ty],                           // rsrc(SGPR)
-      !if(P_.IsSample, [llvm_any_ty,         // samp(SGPR)
+      [llvm_any_ty],                           // rsrc(SGPR);
+      !if(P_.IsSample, [llvm_any_ty,           // samp(SGPR);
                         llvm_i1_ty], []),      // unorm(imm)
       [llvm_i32_ty,                            // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
        llvm_i32_ty]),                          // auxiliary/cachepolicy(imm):
@@ -3252,24 +3252,36 @@ def int_amdgcn_exclusive_scan_max_u32 :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
   ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u32">;
 
+// i32 @llvm.amdgcn.pdep.b32 <src0> <src1>
+def int_amdgcn_pdep_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_pdep_b32">;
+
+// i32 @llvm.amdgcn.pext.b32 <src0> <src1>
+def int_amdgcn_pext_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrSpeculatable]>,
+  ClangBuiltin<"__builtin_amdgcn_pext_b32">;
+
 // void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
 // The %sem argument must be uniform, otherwise behavior is undefined.
+// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %limit in codegen.
 def int_amdgcn_s_sema_set_limit :
   ClangBuiltin<"__builtin_amdgcn_s_sema_set_limit">,
   Intrinsic<
     [],
     [local_ptr_ty, llvm_i32_ty],
-    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
 // void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %count)
 // The %sem argument must be uniform, otherwise behavior is undefined.
+// TODO-GFX13: Add ImmArg<ArgIndex<1>> or handle non-immediate %count in codegen.
 def int_amdgcn_s_sema_signal :
   ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
   Intrinsic<
     [],
     [local_ptr_ty, llvm_i32_ty],
-    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
 // void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) %sem)

@@ -779,7 +779,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VMV_X_S) {
       unsigned Log2SEW =
           MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
-      if (STI.getXLen() < (1 << Log2SEW))
+      if (STI.getXLen() < (1U << Log2SEW))
         return nullptr;
       switch (Log2SEW) {
       case 3:

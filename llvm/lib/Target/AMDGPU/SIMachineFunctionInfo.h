@@ -492,6 +492,10 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+  // The size of the scratch space reserved for the CWSR trap handler to spill
+  // some of the dynamic VGPRs.
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -830,6 +834,15 @@ public:
 
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
+  }
+
+  // This is only used if we need to save any dynamic VGPRs in scratch.
+  unsigned getScratchReservedForDynamicVGPRs() const {
+    return ScratchReservedForDynamicVGPRs;
+  }
+
+  void setScratchReservedForDynamicVGPRs(unsigned Size) {
+    ScratchReservedForDynamicVGPRs = Size;
   }
 
   // Add user SGPRs.

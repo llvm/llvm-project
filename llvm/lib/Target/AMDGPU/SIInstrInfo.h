@@ -1005,7 +1005,7 @@ public:
     }
   }
 
-  bool isWaitcnt(unsigned Opcode) const {
+  static bool isWaitcnt(unsigned Opcode) {
     switch (getNonSoftWaitcntOpcode(Opcode)) {
     case AMDGPU::S_WAITCNT:
     case AMDGPU::S_WAITCNT_VSCNT:
@@ -1335,6 +1335,10 @@ public:
   /// instruction if true. In case it is just a v_load_idx bundled
   /// with v_store_idx, return the v_store_idx as the core.
   static MachineInstr *bundleWithGPRIndexing(MachineInstr &MI);
+  /// Starting for a core instruction in bundle, find the corresponding
+  /// v_load/store_idx that is the source/dest of its operand
+  static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
+                                                    const MachineOperand &Op);
 
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;

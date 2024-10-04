@@ -875,3 +875,63 @@ body:             |
     ; VBUFFER (vdata, vaddr operands)
     ; BUNDLE (and VOP2, VOP3, VOP3P)
 ...
+
+# ASM-LABEL: {{^}}waitcnt_in_bundle
+# DIS-LABEL: <waitcnt_in_bundle>:
+---
+name:            waitcnt_in_bundle
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr2
+    $idx1 = S_SET_GPR_IDX_U32 0
+    BUNDLE implicit-def dead renamable $vgpr2, implicit killed renamable $vgpr2, implicit renamable $vgpr0, implicit $exec, implicit $idx1 {
+      S_WAIT_LOADCNT 0
+      renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, $vgpr0, 0, implicit $exec
+      V_STORE_IDX internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
+    }
+...
+
+# ASM-LABEL: {{^}}waitcnt_in_bundle2
+# DIS-LABEL: <waitcnt_in_bundle2>:
+---
+name:            waitcnt_in_bundle2
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr2
+    $idx1 = S_SET_GPR_IDX_U32 0
+    BUNDLE implicit-def dead renamable $vgpr2, implicit-def dead renamable $vgpr0, implicit killed renamable $vgpr2, implicit $exec, implicit $idx1 {
+      $vgpr0 = V_LOAD_IDX $idx1, 8, implicit $exec :: (load (s32), addrspace 10)
+      S_WAIT_LOADCNT 0
+      S_WAIT_DSCNT 0
+      S_WAIT_KMCNT 0
+      renamable $vgpr2 = V_ADD_U32_e64 killed $vgpr2, internal $vgpr0, 0, implicit $exec
+      V_STORE_IDX internal $vgpr2, $idx1, 7, implicit $exec :: (store (s32), addrspace 10)
+    }
+...
+
+# We should not get the reg allocation erroneously using $vgpr1 twice. But it is still lowerable.
+# ASM-LABEL: {{^}}internal_reg_reused
+# DIS-LABEL: <internal_reg_reused>:
+---
+name:            internal_reg_reused
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr2_sgpr3, $idx1, $vgpr1
+    ; ASM: %bb.0:
+    ; GCN-NEXT: s_set_vgpr_frames 4
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: global_store_b32 v1, v0, s[2:3] offset:28 scale_offset
+    BUNDLE implicit-def dead $vgpr1, implicit $idx1, implicit $exec, implicit killed $vgpr1, implicit renamable $sgpr2_sgpr3 {
+      $vgpr1 = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 10)
+      GLOBAL_STORE_DWORD_SADDR $vgpr1, internal $vgpr1, renamable $sgpr2_sgpr3, 28, 2048, implicit $exec :: (store (s32), addrspace 1)
+    }
+...

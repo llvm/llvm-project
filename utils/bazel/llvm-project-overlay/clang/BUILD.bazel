@@ -172,7 +172,6 @@ gentbl(
     ],
 )
 
-
 gentbl(
     name = "basic_arm_sve_typeflags_gen",
     tbl_outs = [(
@@ -996,12 +995,12 @@ cc_library(
     ],
     deps = [
         ":ast_attr_gen",
+        ":ast_bytecode_opcodes_gen",
         ":ast_comment_command_info_gen",
         ":ast_comment_html_named_character_references_gen",
         ":ast_comment_html_tags_gen",
         ":ast_comment_html_tags_properties_gen",
         ":ast_comment_nodes_gen",
-        ":ast_bytecode_opcodes_gen",
         ":ast_decl_nodes_gen",
         ":ast_properties_base_gen",
         ":ast_stmt_data_collectors_gen",
@@ -1278,6 +1277,9 @@ cc_library(
     ]),
     hdrs = glob(["include/clang/Testing/*.h"]),
     includes = ["include"],
+    textual_hdrs = [
+        "include/clang/Testing/TestLanguage.def",
+    ],
     deps = [
         ":basic",
         ":frontend",

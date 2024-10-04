@@ -1328,6 +1328,12 @@ def ElementwisePopcount : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseFmod : Builtin {
+  let Spellings = ["__builtin_elementwise_fmod"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwisePow : Builtin {
   let Spellings = ["__builtin_elementwise_pow"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

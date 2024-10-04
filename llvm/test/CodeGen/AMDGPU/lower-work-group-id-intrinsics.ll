@@ -143,7 +143,7 @@ define amdgpu_cs void @caller() {
 ; GFX1210-SDAG-NEXT:    s_mov_b64 s[0:1], callee@abs64
 ; GFX1210-SDAG-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
-; GFX1210-SDAG-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX1210-SDAG-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: caller:
@@ -152,7 +152,7 @@ define amdgpu_cs void @caller() {
 ; GFX1210-GISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
 ; GFX1210-GISEL-NEXT:    s_mov_b32 s32, 0
 ; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
-; GFX1210-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
+; GFX1210-GISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %idx = call i32 @llvm.amdgcn.workgroup.id.x()
   call amdgpu_gfx void @callee(i32 %idx)

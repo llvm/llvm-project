@@ -1352,6 +1352,79 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }
+  case Intrinsic::amdgcn_pdep_b32:
+  case Intrinsic::amdgcn_pext_b32: {
+    if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+      if (Src->isZero())
+        return IC.replaceInstUsesWith(II, Src);
+
+      if (Src->isMinusOne() && IID == Intrinsic::amdgcn_pdep_b32)
+        return IC.replaceInstUsesWith(II, II.getArgOperand(1));
+    }
+    if (auto *Mask = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
+      if (Mask->isZero())
+        return IC.replaceInstUsesWith(II, Mask);
+
+      if (Mask->isMinusOne())
+        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
+
+      unsigned MaskIdx, MaskLen;
+      if (isShiftedMask_32(Mask->getZExtValue(), MaskIdx, MaskLen)) {
+        if (IID == Intrinsic::amdgcn_pdep_b32) {
+          Value *Shifted = IC.Builder.CreateShl(II.getArgOperand(0), MaskIdx);
+          Value *Masked = IC.Builder.CreateAnd(Shifted, Mask);
+          return IC.replaceInstUsesWith(II, Masked);
+        } else {
+          Value *Masked = IC.Builder.CreateAnd(II.getArgOperand(0), Mask);
+          Value *Shifted = IC.Builder.CreateLShr(Masked, MaskIdx);
+          return IC.replaceInstUsesWith(II, Shifted);
+        }
+      }
+
+      auto pdep = [&](uint32_t Src, uint32_t Mask) {
+        uint32_t Result = 0;
+        uint32_t BitToTest = 1;
+        while (Mask) {
+          uint32_t BitToSet = Mask & -Mask;
+          if (BitToTest & Src)
+            Result |= BitToSet;
+
+          BitToTest <<= 1;
+          Mask &= Mask - 1;
+        }
+        return Result;
+      };
+
+      auto pext = [&](uint32_t Src, uint32_t Mask) {
+        uint32_t Result = 0;
+        uint32_t BitToSet = 1;
+        while (Mask) {
+          uint32_t BitToTest = Mask & -Mask;
+          if (BitToTest & Src)
+            Result |= BitToSet;
+
+          BitToSet <<= 1;
+          Mask &= Mask - 1;
+        }
+        return Result;
+      };
+
+      if (auto SrcConst = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+        if (IID == Intrinsic::amdgcn_pdep_b32) {
+          uint32_t Result =
+              pdep(SrcConst->getZExtValue(), Mask->getZExtValue());
+          return IC.replaceInstUsesWith(II,
+                                        ConstantInt::get(II.getType(), Result));
+        } else {
+          uint32_t Result =
+              pext(SrcConst->getZExtValue(), Mask->getZExtValue());
+          return IC.replaceInstUsesWith(II,
+                                        ConstantInt::get(II.getType(), Result));
+        }
+      }
+    }
+    break;
+  }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {

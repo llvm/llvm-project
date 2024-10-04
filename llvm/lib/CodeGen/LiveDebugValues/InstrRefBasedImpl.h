@@ -1070,9 +1070,7 @@ public:
                        : DbgValue(Properties, DbgValue::Undef);
 
     // Attempt insertion; overwrite if it's already mapped.
-    auto Result = Vars.insert(std::make_pair(VarID, Rec));
-    if (!Result.second)
-      Result.first->second = Rec;
+    Vars.insert_or_assign(VarID, Rec);
     Scopes[VarID] = MI.getDebugLoc().get();
 
     considerOverlaps(Var, MI.getDebugLoc().get());
@@ -1100,9 +1098,7 @@ public:
       DbgValue Rec = DbgValue(EmptyProperties, DbgValue::Undef);
 
       // Attempt insertion; overwrite if it's already mapped.
-      auto Result = Vars.insert(std::make_pair(OverlappedID, Rec));
-      if (!Result.second)
-        Result.first->second = Rec;
+      Vars.insert_or_assign(OverlappedID, Rec);
       Scopes[OverlappedID] = Loc;
     }
   }

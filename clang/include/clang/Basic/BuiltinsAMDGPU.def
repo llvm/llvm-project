@@ -807,6 +807,10 @@ TARGET_BUILTIN(__builtin_amdgcn_permute_pair_bcast_b32, "UiUiIi", "nc", "gfx13-i
 TARGET_BUILTIN(__builtin_amdgcn_permute_pair_2src_interleave_b64, "UiUi*UiUiIi", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_permute_pack_tensor_2src_b64, "UiUi*UiUiIi", "nc", "gfx13-insts,wavefrontsize32")
 
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_limit, "vv*Ui", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_signal, "vv*Ui", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_s_sema_wait, "vv*", "n", "gfx13-insts")
+
 // The convolve builtins are overloaded and support multiple variants driven by filter type and iteration count,
 // both provided in aux_data. Only return types are listed.
 //
@@ -1097,6 +1101,8 @@ TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i16, "ssi", "nc", "gfx13-inst
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u16, "ssi", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_i32, "iii", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_exclusive_scan_max_u32, "iii", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pdep_b32, "UiUiUi", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pext_b32, "UiUiUi", "nc", "gfx13-insts")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

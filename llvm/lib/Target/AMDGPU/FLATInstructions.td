@@ -441,6 +441,19 @@ class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = n
   let sve = 0;
 }
 
+class FLAT_RTS<string opName, bit HasVdst, bit HasData, RegisterClass vdstClass = VGPR_32> : FLAT_Pseudo<
+  opName,
+  !if(HasVdst, (outs vdstClass:$vdst), (outs)),
+  !con(!if(HasData,(ins VReg_64:$vdata), (ins)),(ins CPol:$cpol)),
+  !if(HasVdst," $vdst","")#!if(HasData,", $vdata","")#"$cpol">{
+
+  let is_flat_global = 1;
+  let has_offset = 0;
+  let has_vaddr = 0;
+  let has_data = HasData;
+  let has_vdst = HasVdst;
+}
+
 class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
   FLAT_Pseudo<opName, (outs), !con(addr, (ins flat_offset:$offset, CPol_0:$cpol)), asm#"$offset$cpol"> {
   let has_vdst = 0;
@@ -1305,6 +1318,15 @@ defm GLOBAL_DISCARD_B1024 : FLAT_Global_Discard_Pseudo<"global_discard_b1024">;
 
 defm SCRATCH_DISCARD_B32  : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b32">;
 defm SCRATCH_DISCARD_B128 : FLAT_Scratch_Discard_Pseudo<"scratch_discard_b128">;
+
+let SubtargetPredicate = isGFX13Plus in {
+  def RTS_READ_RESULT_ALL_STOP : FLAT_RTS<"rts_read_result_all_stop", 1, 0, VReg_64>;
+  def RTS_READ_RESULT_ONGOING  : FLAT_RTS<"rts_read_result_ongoing", 1, 0, VReg_64>;
+  def RTS_RAY_RESTORE          : FLAT_RTS<"rts_ray_restore", 1, 0>;
+  def RTS_RAY_SAVE             : FLAT_RTS<"rts_ray_save", 1, 0>;
+  def RTS_UPDATE_RAY           : FLAT_RTS<"rts_update_ray", 1, 1>;
+  def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -3706,8 +3728,13 @@ defm TENSOR_SAVE                      : VFLAT_Real_Base_gfx13<0x76>;
 defm TENSOR_STOP                      : VFLAT_Real_Base_gfx13<0x77>;
 defm GLOBAL_LOAD_TR4_B64              : VGLOBAL_Real_AllAddr_gfx13<0x8a>;
 defm GLOBAL_LOAD_TR6_B96              : VGLOBAL_Real_AllAddr_gfx13<0x8b>;
+defm RTS_READ_RESULT_ALL_STOP         : VFLAT_Real_Base_gfx13<0x90>;
+defm RTS_READ_RESULT_ONGOING          : VFLAT_Real_Base_gfx13<0x91>;
+defm RTS_UPDATE_RAY                   : VFLAT_Real_Base_gfx13<0x92>;
+defm RTS_FLUSH                        : VFLAT_Real_Base_gfx13<0x94>;
+defm RTS_RAY_SAVE                     : VFLAT_Real_Base_gfx13<0x95>;
+defm RTS_RAY_RESTORE                  : VFLAT_Real_Base_gfx13<0x96>;
 // TODO-GFX13:
-// RTS_*
 // GLOBAL_WAVE_KILL
 // SWC_*
 

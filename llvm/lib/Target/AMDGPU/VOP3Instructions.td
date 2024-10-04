@@ -1720,8 +1720,8 @@ def VOP_PARALLEL_BIT : VOP3_Profile<VOP_I32_I32_I32> {
 }
 
 let SubtargetPredicate = isGFX13Plus in {
-  defm V_PDEP_B32 : VOP3Inst<"v_pdep_b32", VOP_PARALLEL_BIT>;
-  defm V_PEXT_B32 : VOP3Inst<"v_pext_b32", VOP_PARALLEL_BIT>;
+  defm V_PDEP_B32 : VOP3Inst<"v_pdep_b32", VOP_PARALLEL_BIT, int_amdgcn_pdep_b32>;
+  defm V_PEXT_B32 : VOP3Inst<"v_pext_b32", VOP_PARALLEL_BIT, int_amdgcn_pext_b32>;
 }
 
 //===----------------------------------------------------------------------===//

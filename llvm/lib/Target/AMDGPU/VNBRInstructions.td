@@ -81,8 +81,8 @@ class VNBR_Pseudo<string opName, dag outs, dag regIns, string asmRegOps> :
 }
 
 multiclass VNBR_Pseudopair {
-  def NAME : VNBR_Pseudo<NAME, (outs GVGPR:$vdst, GVGPR:$vdst_refl),
-                         (ins GVGPR:$vsrc), "$vdst, $vdst_refl, $vsrc">;
+  def NAME : VNBR_Pseudo<NAME, (outs GVGPR_32:$vdst, GVGPR_32:$vdst_refl),
+                         (ins GVGPR_32:$vsrc), "$vdst, $vdst_refl, $vsrc">;
   def _no_write : VNBR_Pseudo<NAME, (outs), (ins), " off, off, off">;
 }
 

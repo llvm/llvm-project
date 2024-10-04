@@ -17,6 +17,34 @@ s_add_pc_i64 0x12345678abcd0
 // GFX1210: s_add_pc_i64 0x12345678abcd0            ; encoding: [0xfe,0x4b,0x80,0xbe,0xd0,0xbc,0x8a,0x67,0x45,0x23,0x01,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_get_pc_i64 s[2:3]
+// GFX1210: s_get_pc_i64 s[2:3]                     ; encoding: [0x00,0x47,0x82,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_getpc_b64 s[2:3]
+// GFX1210: s_get_pc_i64 s[2:3]                     ; encoding: [0x00,0x47,0x82,0xbe]
+
+s_set_pc_i64 s[2:3]
+// GFX1210: s_set_pc_i64 s[2:3]                     ; encoding: [0x02,0x48,0x80,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_setpc_b64 s[2:3]
+// GFX1210: s_set_pc_i64 s[2:3]                     ; encoding: [0x02,0x48,0x80,0xbe]
+
+s_swap_pc_i64 s[2:3], 10
+// GFX1210: s_swap_pc_i64 s[2:3], 10                ; encoding: [0x8a,0x49,0x82,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_swappc_b64 s[2:3], 10
+// GFX1210: s_swap_pc_i64 s[2:3], 10                ; encoding: [0x8a,0x49,0x82,0xbe]
+
+s_rfe_i64 s[2:3]
+// GFX1210: s_rfe_i64 s[2:3]                        ; encoding: [0x02,0x4a,0x80,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_rfe_b64 s[2:3]
+// GFX1210: s_rfe_i64 s[2:3]                        ; encoding: [0x02,0x4a,0x80,0xbe]
+
 s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
 // GFX1210: s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE) ; encoding: [0x88,0x4c,0x82,0xbe]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU

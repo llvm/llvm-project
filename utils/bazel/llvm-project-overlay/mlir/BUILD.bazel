@@ -10663,8 +10663,8 @@ cc_library(
 td_library(
     name = "QuantizationOpsTdFiles",
     srcs = [
-        "include/mlir/Dialect/Quant/IR/QuantOps.td",
         "include/mlir/Dialect/Quant/IR/QuantBase.td",
+        "include/mlir/Dialect/Quant/IR/QuantOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -13164,6 +13164,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ArithUtils",
         ":DialectUtils",
         ":IR",
         ":MathDialect",

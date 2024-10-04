@@ -3159,60 +3159,60 @@ define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src0) 
 ; llvm.amdgcn.image.sample a16
 ; --------------------------------------------------------------------
 
-declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32(i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32.v8i32.v4i32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 define amdgpu_kernel void @image_sample_a16_1d(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
 ; CHECK-LABEL: @image_sample_a16_1d(
@@ -3221,7 +3221,7 @@ define amdgpu_kernel void @image_sample_a16_1d(ptr addrspace(1) %out, <8 x i32> 
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3234,7 +3234,7 @@ define amdgpu_kernel void @image_sample_a16_2d(ptr addrspace(1) %out, <8 x i32> 
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3248,7 +3248,7 @@ define amdgpu_kernel void @image_sample_a16_3d(ptr addrspace(1) %out, <8 x i32> 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %r32 = fpext half %r to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32 15, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3263,7 +3263,7 @@ define amdgpu_kernel void @image_sample_a16_cube(ptr addrspace(1) %out, <8 x i32
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %face32 = fpext half %face to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32 15, float %s32, float %t32, float %face32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %face32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3276,7 +3276,7 @@ define amdgpu_kernel void @image_sample_a16_1darray(ptr addrspace(1) %out, <8 x 
 ;
   %s32 = fpext half %s to float
   %slice32 = fpext half %slice to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32 15, float %s32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3290,7 +3290,7 @@ define amdgpu_kernel void @image_sample_a16_2darray(ptr addrspace(1) %out, <8 x 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %slice32 = fpext half %slice to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32(i32 15, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3302,7 +3302,7 @@ define amdgpu_kernel void @image_sample_a16_c_1d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 15, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3315,7 +3315,7 @@ define amdgpu_kernel void @image_sample_a16_c_2d(ptr addrspace(1) %out, <8 x i32
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32(i32 15, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3328,7 +3328,7 @@ define amdgpu_kernel void @image_sample_a16_cl_1d(ptr addrspace(1) %out, <8 x i3
 ;
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f32(i32 15, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3342,7 +3342,7 @@ define amdgpu_kernel void @image_sample_a16_cl_2d(ptr addrspace(1) %out, <8 x i3
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f32(i32 15, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3355,7 +3355,7 @@ define amdgpu_kernel void @image_sample_a16_c_cl_1d(ptr addrspace(1) %out, <8 x 
 ;
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32(i32 15, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3369,7 +3369,7 @@ define amdgpu_kernel void @image_sample_a16_c_cl_2d(ptr addrspace(1) %out, <8 x 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f32(i32 15, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3382,7 +3382,7 @@ define amdgpu_kernel void @image_sample_a16_b16_1d(ptr addrspace(1) %out, <8 x i
 ;
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32(i32 15, float %bias32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3395,7 +3395,7 @@ define amdgpu_kernel void @image_sample_a16_b32_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32(i32 15, float %bias, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3409,7 +3409,7 @@ define amdgpu_kernel void @image_sample_a16_b16_2d(ptr addrspace(1) %out, <8 x i
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32(i32 15, float %bias32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3424,7 +3424,7 @@ define amdgpu_kernel void @image_sample_a16_b32_2d(ptr addrspace(1) %out, <8 x i
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32(i32 15, float %bias, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3437,7 +3437,7 @@ define amdgpu_kernel void @image_sample_a16_c_b16_1d(ptr addrspace(1) %out, <8 x
 ;
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32(i32 15, float %bias32, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3450,7 +3450,7 @@ define amdgpu_kernel void @image_sample_a16_c_b32_1d(ptr addrspace(1) %out, <8 x
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3464,7 +3464,7 @@ define amdgpu_kernel void @image_sample_a16_c_b16_2d(ptr addrspace(1) %out, <8 x
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32(i32 15, float %bias32, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3479,7 +3479,7 @@ define amdgpu_kernel void @image_sample_a16_c_b32_2d(ptr addrspace(1) %out, <8 x
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3493,7 +3493,7 @@ define amdgpu_kernel void @image_sample_a16_b16_cl_1d(ptr addrspace(1) %out, <8 
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32(i32 15, float %bias32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3508,7 +3508,7 @@ define amdgpu_kernel void @image_sample_a16_b32_cl_1d(ptr addrspace(1) %out, <8 
 ;
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32(i32 15, float %bias, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3523,7 +3523,7 @@ define amdgpu_kernel void @image_sample_a16_b16_cl_2d(ptr addrspace(1) %out, <8 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32(i32 15, float %bias32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3540,7 +3540,7 @@ define amdgpu_kernel void @image_sample_a16_b32_cl_2d(ptr addrspace(1) %out, <8 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32(i32 15, float %bias, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3554,7 +3554,7 @@ define amdgpu_kernel void @image_sample_a16_c_b16_cl_1d(ptr addrspace(1) %out, <
   %bias32 = fpext half %bias to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32(i32 15, float %bias32, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3569,7 +3569,7 @@ define amdgpu_kernel void @image_sample_a16_c_b32_cl_1d(ptr addrspace(1) %out, <
 ;
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3584,7 +3584,7 @@ define amdgpu_kernel void @image_sample_a16_c_b16_cl_2d(ptr addrspace(1) %out, <
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32(i32 15, float %bias32, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias32, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3601,7 +3601,7 @@ define amdgpu_kernel void @image_sample_a16_c_b32_cl_2d(ptr addrspace(1) %out, <
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32(i32 15, float %bias, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %bias, float %zcompare, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3615,7 +3615,7 @@ define amdgpu_kernel void @image_sample_a16_d_1d(ptr addrspace(1) %out, <8 x i32
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3632,7 +3632,7 @@ define amdgpu_kernel void @image_sample_a16_d_2d(ptr addrspace(1) %out, <8 x i32
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3652,7 +3652,7 @@ define amdgpu_kernel void @image_sample_a16_d_3d(ptr addrspace(1) %out, <8 x i32
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %r32 = fpext half %r to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %drdh32, float %dsdv32, float %dtdv32, float %drdv32, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %drdh32, float %dsdv32, float %dtdv32, float %drdv32, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3666,7 +3666,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_1d(ptr addrspace(1) %out, <8 x i
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3683,7 +3683,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_2d(ptr addrspace(1) %out, <8 x i
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3698,7 +3698,7 @@ define amdgpu_kernel void @image_sample_a16_d_cl_1d(ptr addrspace(1) %out, <8 x 
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3716,7 +3716,7 @@ define amdgpu_kernel void @image_sample_a16_d_cl_2d(ptr addrspace(1) %out, <8 x 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3731,7 +3731,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_cl_1d(ptr addrspace(1) %out, <8 
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3749,7 +3749,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_cl_2d(ptr addrspace(1) %out, <8 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3763,7 +3763,7 @@ define amdgpu_kernel void @image_sample_a16_cd_1d(ptr addrspace(1) %out, <8 x i3
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3780,7 +3780,7 @@ define amdgpu_kernel void @image_sample_a16_cd_2d(ptr addrspace(1) %out, <8 x i3
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3794,7 +3794,7 @@ define amdgpu_kernel void @image_sample_a16_c_cd_1d(ptr addrspace(1) %out, <8 x 
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3811,7 +3811,7 @@ define amdgpu_kernel void @image_sample_a16_c_cd_2d(ptr addrspace(1) %out, <8 x 
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3826,7 +3826,7 @@ define amdgpu_kernel void @image_sample_a16_cd_cl_1d(ptr addrspace(1) %out, <8 x
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3844,7 +3844,7 @@ define amdgpu_kernel void @image_sample_a16_cd_cl_2d(ptr addrspace(1) %out, <8 x
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3859,7 +3859,7 @@ define amdgpu_kernel void @image_sample_a16_c_cd_cl_1d(ptr addrspace(1) %out, <8
   %dsdv32 = fpext half %dsdv to float
   %s32 = fpext half %s to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3877,7 +3877,7 @@ define amdgpu_kernel void @image_sample_a16_c_cd_cl_2d(ptr addrspace(1) %out, <8
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %clamp32 = fpext half %clamp to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %clamp32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3890,7 +3890,7 @@ define amdgpu_kernel void @image_sample_a16_l_1d(ptr addrspace(1) %out, <8 x i32
 ;
   %s32 = fpext half %s to float
   %lod32 = fpext half %lod to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32(i32 15, float %s32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3904,7 +3904,7 @@ define amdgpu_kernel void @image_sample_a16_l_2d(ptr addrspace(1) %out, <8 x i32
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %lod32 = fpext half %lod to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32 15, float %s32, float %t32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3917,7 +3917,7 @@ define amdgpu_kernel void @image_sample_a16_c_l_1d(ptr addrspace(1) %out, <8 x i
 ;
   %s32 = fpext half %s to float
   %lod32 = fpext half %lod to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32 15, float %zcompare, float %s32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3931,7 +3931,7 @@ define amdgpu_kernel void @image_sample_a16_c_l_2d(ptr addrspace(1) %out, <8 x i
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %lod32 = fpext half %lod to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32(i32 15, float %zcompare, float %s32, float %t32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %t32, float %lod32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3943,7 +3943,7 @@ define amdgpu_kernel void @image_sample_a16_lz_1d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3956,7 +3956,7 @@ define amdgpu_kernel void @image_sample_a16_lz_2d(ptr addrspace(1) %out, <8 x i3
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3968,7 +3968,7 @@ define amdgpu_kernel void @image_sample_a16_c_lz_1d(ptr addrspace(1) %out, <8 x 
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32(i32 15, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3981,7 +3981,7 @@ define amdgpu_kernel void @image_sample_a16_c_lz_2d(ptr addrspace(1) %out, <8 x 
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f32(i32 15, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -3999,7 +3999,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V1(ptr addrspace(1) %o
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %slice32 = fpext half %slice to float
-  %res = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32.v8i32.v4i32(i32 4, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store float %res, ptr addrspace(1) %out
   ret void
 }
@@ -4017,7 +4017,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_V2(ptr addrspace(1) %o
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %slice32 = fpext half %slice to float
-  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32.v8i32.v4i32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4034,7 +4034,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_const(ptr addrspace(1)
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %slice32 = fpext half %slice to float
-  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float 0.25, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32.v8i32.v4i32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float 0.25, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4053,7 +4053,7 @@ define amdgpu_kernel void @image_sample_a16_c_d_o_2darray_const_noopt(ptr addrsp
   %dtdv32 = fpext half %dtdv to float
   %s32 = fpext half %s to float
   %slice32 = fpext half %slice to float
-  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float 1.0e+10, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32.v8i32.v4i32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s32, float 1.0e+10, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4065,7 +4065,7 @@ define amdgpu_kernel void @image_load_a16_mip_1d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
   %s32 = zext i16 %s to i32
-  %res = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4078,7 +4078,7 @@ define amdgpu_kernel void @image_load_a16_mip_1d_noopt(ptr addrspace(1) %out, <8
 ; CHECK-NEXT:    ret void
 ;
   %s32 = sext i16 %s to i32
-  %res = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4091,7 +4091,7 @@ define amdgpu_kernel void @image_load_a16_mip_2d(ptr addrspace(1) %out, <8 x i32
 ;
   %s32 = zext i16 %s to i32
   %t32 = zext i16 %t to i32
-  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s32, i32 %t32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 %t32, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4103,7 +4103,7 @@ define amdgpu_kernel void @image_load_a16_mip_2d_const(ptr addrspace(1) %out, <8
 ; CHECK-NEXT:    ret void
 ;
   %s32 = zext i16 %s to i32
-  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s32, i32 65535, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 65535, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4116,7 +4116,7 @@ define amdgpu_kernel void @image_load_a16_mip_2d_const_noopt(ptr addrspace(1) %o
 ; CHECK-NEXT:    ret void
 ;
   %s32 = zext i16 %s to i32
-  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s32, i32 65536, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s32, i32 65536, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4133,7 +4133,7 @@ define amdgpu_kernel void @image_sample_g16_d_1d(ptr addrspace(1) %out, <8 x i32
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4148,7 +4148,7 @@ define amdgpu_kernel void @image_sample_g16_d_2d(ptr addrspace(1) %out, <8 x i32
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4165,7 +4165,7 @@ define amdgpu_kernel void @image_sample_g16_d_3d(ptr addrspace(1) %out, <8 x i32
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
   %drdv32 = fpext half %drdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %drdh32, float %dsdv32, float %dtdv32, float %drdv32, float %s, float %t, float %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %drdh32, float %dsdv32, float %dtdv32, float %drdv32, float %s, float %t, float %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4178,7 +4178,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_1d(ptr addrspace(1) %out, <8 x i
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4193,7 +4193,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_2d(ptr addrspace(1) %out, <8 x i
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4206,7 +4206,7 @@ define amdgpu_kernel void @image_sample_g16_d_cl_1d(ptr addrspace(1) %out, <8 x 
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4221,7 +4221,7 @@ define amdgpu_kernel void @image_sample_g16_d_cl_2d(ptr addrspace(1) %out, <8 x 
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4234,7 +4234,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_cl_1d(ptr addrspace(1) %out, <8 
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4249,7 +4249,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_cl_2d(ptr addrspace(1) %out, <8 
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4262,7 +4262,7 @@ define amdgpu_kernel void @image_sample_g16_cd_1d(ptr addrspace(1) %out, <8 x i3
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4277,7 +4277,7 @@ define amdgpu_kernel void @image_sample_g16_cd_2d(ptr addrspace(1) %out, <8 x i3
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4290,7 +4290,7 @@ define amdgpu_kernel void @image_sample_g16_c_cd_1d(ptr addrspace(1) %out, <8 x 
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4305,7 +4305,7 @@ define amdgpu_kernel void @image_sample_g16_c_cd_2d(ptr addrspace(1) %out, <8 x 
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4318,7 +4318,7 @@ define amdgpu_kernel void @image_sample_g16_cd_cl_1d(ptr addrspace(1) %out, <8 x
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32(i32 15, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4333,7 +4333,7 @@ define amdgpu_kernel void @image_sample_g16_cd_cl_2d(ptr addrspace(1) %out, <8 x
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4346,7 +4346,7 @@ define amdgpu_kernel void @image_sample_g16_c_cd_cl_1d(ptr addrspace(1) %out, <8
 ;
   %dsdh32 = fpext half %dsdh to float
   %dsdv32 = fpext half %dsdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dsdv32, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4361,7 +4361,7 @@ define amdgpu_kernel void @image_sample_g16_c_cd_cl_2d(ptr addrspace(1) %out, <8
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4376,7 +4376,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V1(ptr addrspace(1) %o
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32(i32 4, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f32.f32.v8i32.v4i32(i32 4, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store float %res, ptr addrspace(1) %out
   ret void
 }
@@ -4391,7 +4391,7 @@ define amdgpu_kernel void @image_sample_g16_c_d_o_2darray_V2(ptr addrspace(1) %o
   %dtdh32 = fpext half %dtdh to float
   %dsdv32 = fpext half %dsdv to float
   %dtdv32 = fpext half %dtdv to float
-  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f32.v8i32.v4i32(i32 6, i32 %offset, float %zcompare, float %dsdh32, float %dtdh32, float %dsdv32, float %dtdv32, float %s, float %t, float %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4407,7 +4407,7 @@ define amdgpu_kernel void @image_sample_a16_1d_nnan(ptr addrspace(1) %out, <8 x 
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4419,7 +4419,7 @@ define amdgpu_kernel void @image_sample_a16_1d_nnan_ninf_nsz(ptr addrspace(1) %o
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call nnan ninf nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan ninf nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4431,7 +4431,7 @@ define amdgpu_kernel void @image_sample_a16_1d_fast(ptr addrspace(1) %out, <8 x 
 ; CHECK-NEXT:    ret void
 ;
   %s32 = fpext half %s to float
-  %res = call fast <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call fast <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4444,7 +4444,7 @@ define amdgpu_kernel void @image_sample_a16_2d_nnan(ptr addrspace(1) %out, <8 x 
 ;
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4458,7 +4458,7 @@ define amdgpu_kernel void @image_sample_a16_3d_nnan(ptr addrspace(1) %out, <8 x 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %r32 = fpext half %r to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32(i32 15, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %r32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4473,7 +4473,7 @@ define amdgpu_kernel void @image_sample_a16_cube_nnan(ptr addrspace(1) %out, <8 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %face32 = fpext half %face to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32(i32 15, float %s32, float %t32, float %face32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %face32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4486,7 +4486,7 @@ define amdgpu_kernel void @image_sample_a16_1darray_nnan(ptr addrspace(1) %out, 
 ;
   %s32 = fpext half %s to float
   %slice32 = fpext half %slice to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32(i32 15, float %s32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4500,7 +4500,7 @@ define amdgpu_kernel void @image_sample_a16_2darray_nnan(ptr addrspace(1) %out, 
   %s32 = fpext half %s to float
   %t32 = fpext half %t to float
   %slice32 = fpext half %slice to float
-  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32(i32 15, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %res = call nnan <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f32.v8i32.v4i32(i32 15, float %s32, float %t32, float %slice32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -4509,16 +4509,16 @@ define amdgpu_kernel void @image_sample_a16_2darray_nnan(ptr addrspace(1) %out, 
 ; llvm.amdgcn.image.sample l to lz
 ; --------------------------------------------------------------------
 
-declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2darray.v4f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32.v8i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32.v8i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2darray.v4f32.f32.v8i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 define amdgpu_kernel void @sample_l_1d(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %lod) {
 ; CHECK-LABEL: @sample_l_1d(
@@ -4528,7 +4528,7 @@ define amdgpu_kernel void @sample_l_1d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32(i32 15, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4541,7 +4541,7 @@ define amdgpu_kernel void @sample_l_2d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32(i32 15, float %s, float %t, float -0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float %t, float -0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4554,7 +4554,7 @@ define amdgpu_kernel void @sample_c_l_1d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32(i32 15, float %zcompare, float %s, float -2.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, float -2.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4567,7 +4567,7 @@ define amdgpu_kernel void @sample_c_l_2d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32(i32 15, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f32.v8i32.v4i32(i32 15, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4580,7 +4580,7 @@ define amdgpu_kernel void @sample_l_o_1d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4593,7 +4593,7 @@ define amdgpu_kernel void @sample_l_o_2d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4606,7 +4606,7 @@ define amdgpu_kernel void @sample_c_l_o_1d(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4619,7 +4619,7 @@ define amdgpu_kernel void @sample_c_l_o_2d(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4632,7 +4632,7 @@ define amdgpu_kernel void @gather4_l_2d(ptr addrspace(1) %out, <8 x i32> inreg %
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32(i32 15, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.l.2d.v4f32.f32.v8i32(i32 15, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4645,7 +4645,7 @@ define amdgpu_kernel void @gather4_c_l_2d(ptr addrspace(1) %out, <8 x i32> inreg
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32(i32 15, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32.v8i32(i32 15, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4658,7 +4658,7 @@ define amdgpu_kernel void @gather4_l_o_2d(ptr addrspace(1) %out, <8 x i32> inreg
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.l.o.2d.v4f32.f32.v8i32(i32 15, i32 %offset, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4671,7 +4671,7 @@ define amdgpu_kernel void @gather4_c_l_o_2d(ptr addrspace(1) %out, <8 x i32> inr
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32.v8i32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4684,7 +4684,7 @@ define amdgpu_kernel void @gather4_c_l_o_2darray(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2darray.v4f32.f32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float %slice, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2darray.v4f32.f32.v8i32(i32 15, i32 %offset, float %zcompare, float %s, float %t, float %slice, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4701,7 +4701,7 @@ define amdgpu_kernel void @load_mip_1d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32 15, i32 %s, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32 15, i32 %s, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4714,7 +4714,7 @@ define amdgpu_kernel void @load_mip_2d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4727,7 +4727,7 @@ define amdgpu_kernel void @load_mip_3d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4740,7 +4740,7 @@ define amdgpu_kernel void @load_mip_1darray(ptr addrspace(1) %out, <8 x i32> inr
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4753,7 +4753,7 @@ define amdgpu_kernel void @load_mip_2darray(ptr addrspace(1) %out, <8 x i32> inr
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4766,7 +4766,7 @@ define amdgpu_kernel void @load_mip_cube(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32.v8i32(i32 15, i32 %s, i32 %t, i32 %u, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4838,39 +4838,39 @@ main_body:
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.1d.v4f32.i32.v8i32(i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.3d.v4f32.i32.v8i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.1darray.v4f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.2darray.v4f32.i32.v8i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.load.mip.cube.v4f32.i32.v8i32(i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #1
 
 
-declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.3d.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.cube.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
-declare void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.1d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.2d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.3d.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.cube.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
+declare void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32.v8i32(<4 x float>, i32, i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.image.sample bias zero
 ; --------------------------------------------------------------------
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f16(i32, i32, half, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.v8i32.v4i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.v8i32.v4i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f16.v8i32.v4i32(i32, i32, half, float, half, half, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f32.v8i32(i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32.v8i32(i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.v8i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 define amdgpu_kernel void @sample_b_1d(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
 ; CHECK-LABEL: @sample_b_1d(
@@ -4880,7 +4880,7 @@ define amdgpu_kernel void @sample_b_1d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32(i32 15, float 0.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.v8i32.v4i32(i32 15, float 0.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4893,7 +4893,7 @@ define amdgpu_kernel void @sample_b_2d(ptr addrspace(1) %out, <8 x i32> inreg %r
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32(i32 15, float -0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f32.v8i32.v4i32(i32 15, float -0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4906,7 +4906,7 @@ define amdgpu_kernel void @sample_c_b_1d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32(i32 15, float -0.0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f32.v8i32.v4i32(i32 15, float -0.0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4919,7 +4919,7 @@ define amdgpu_kernel void @sample_c_b_2d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32(i32 15, float 0.0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f32.v8i32.v4i32(i32 15, float 0.0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4932,7 +4932,7 @@ define amdgpu_kernel void @sample_b_o_1d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32(i32 15, i32 %offset, float 0.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float 0.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4945,7 +4945,7 @@ define amdgpu_kernel void @sample_b_o_2d(ptr addrspace(1) %out, <8 x i32> inreg 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32(i32 15, i32 %offset, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4958,7 +4958,7 @@ define amdgpu_kernel void @sample_c_b_o_1d(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32(i32 15, i32 %offset, float 0.0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float 0.0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4971,7 +4971,7 @@ define amdgpu_kernel void @sample_c_b_o_2d(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32(i32 15, i32 %offset, float 0.0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 %offset, float 0.0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4984,7 +4984,7 @@ define amdgpu_kernel void @gather4_b_2d(ptr addrspace(1) %out, <8 x i32> inreg %
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f32(i32 15, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.b.2d.v4f32.f32.v8i32(i32 15, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -4997,7 +4997,7 @@ define amdgpu_kernel void @gather4_c_b_2d(ptr addrspace(1) %out, <8 x i32> inreg
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32(i32 15,  float 0.0, float %zcompare,float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32.v8i32(i32 15,  float 0.0, float %zcompare,float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5010,7 +5010,7 @@ define amdgpu_kernel void @gather4_b_o_2d(ptr addrspace(1) %out, <8 x i32> inreg
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32(i32 15, i32 %offset, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.b.o.2d.v4f32.f32.v8i32(i32 15, i32 %offset, float 0.0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5023,7 +5023,7 @@ define amdgpu_kernel void @gather4_c_b_o_2d(ptr addrspace(1) %out, <8 x i32> inr
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32(i32 15, i32 %offset,  float 0.0, float %zcompare,float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.v8i32(i32 15, i32 %offset,  float 0.0, float %zcompare,float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5036,7 +5036,7 @@ define amdgpu_kernel void @sample_c_b_o_a16_2d(ptr addrspace(1) %out, <8 x i32> 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f16(i32 15, i32 %offset, half 0.0, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f16.v8i32.v4i32(i32 15, i32 %offset, half 0.0, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5050,7 +5050,7 @@ define amdgpu_kernel void @sample_b_1d_pos(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32(i32 15, float 1.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.v8i32.v4i32(i32 15, float 1.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5064,7 +5064,7 @@ define amdgpu_kernel void @sample_b_1d_neg(ptr addrspace(1) %out, <8 x i32> inre
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32(i32 15, float -1.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.v8i32.v4i32(i32 15, float -1.0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5079,7 +5079,7 @@ define amdgpu_kernel void @sample_b_1d_a16(ptr addrspace(1) %out, <8 x i32> inre
 ;
 main_body:
   %s32 = fpext half %s to float
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32(i32 15, float -0.0, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f32.v8i32.v4i32(i32 15, float -0.0, float %s32, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5096,7 +5096,7 @@ define amdgpu_kernel void @offset_sample_o_1d(ptr addrspace(1) %out, <8 x i32> i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32 15, i32 0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5109,7 +5109,7 @@ define amdgpu_kernel void @offset_sample_o_2d(ptr addrspace(1) %out, <8 x i32> i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32(i32 15, i32 0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5122,7 +5122,7 @@ define amdgpu_kernel void @offset_sample_c_o_1d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5135,7 +5135,7 @@ define amdgpu_kernel void @offset_sample_c_o_2d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5148,7 +5148,7 @@ define amdgpu_kernel void @offset_sample_cl_o_1d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32 15, i32 0, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5161,7 +5161,7 @@ define amdgpu_kernel void @offset_sample_cl_o_2d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32(i32 15, i32 0, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5174,7 +5174,7 @@ define amdgpu_kernel void @offset_sample_c_cl_o_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5187,7 +5187,7 @@ define amdgpu_kernel void @offset_sample_c_cl_o_2d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5200,7 +5200,7 @@ define amdgpu_kernel void @offset_sample_b_o_1d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5213,7 +5213,7 @@ define amdgpu_kernel void @offset_sample_b_o_2d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5226,7 +5226,7 @@ define amdgpu_kernel void @offset_sample_c_b_o_1d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5239,7 +5239,7 @@ define amdgpu_kernel void @offset_sample_c_b_o_2d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5252,7 +5252,7 @@ define amdgpu_kernel void @offset_sample_b_cl_o_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5265,7 +5265,7 @@ define amdgpu_kernel void @offset_sample_b_cl_o_2d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5278,7 +5278,7 @@ define amdgpu_kernel void @offset_sample_c_b_cl_o_1d(ptr addrspace(1) %out, <8 x
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5291,7 +5291,7 @@ define amdgpu_kernel void @offset_sample_c_b_cl_o_2d(ptr addrspace(1) %out, <8 x
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5304,7 +5304,7 @@ define amdgpu_kernel void @offset_sample_d_o_1d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5317,7 +5317,7 @@ define amdgpu_kernel void @offset_sample_d_o_2d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5330,7 +5330,7 @@ define amdgpu_kernel void @offset_sample_c_d_o_1d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5343,7 +5343,7 @@ define amdgpu_kernel void @offset_sample_c_d_o_2d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5356,7 +5356,7 @@ define amdgpu_kernel void @offset_sample_d_cl_o_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5369,7 +5369,7 @@ define amdgpu_kernel void @offset_sample_d_cl_o_2d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5382,7 +5382,7 @@ define amdgpu_kernel void @offset_sample_c_d_cl_o_1d(ptr addrspace(1) %out, <8 x
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5395,7 +5395,7 @@ define amdgpu_kernel void @offset_sample_c_d_cl_o_2d(ptr addrspace(1) %out, <8 x
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5408,7 +5408,7 @@ define amdgpu_kernel void @offset_sample_cd_o_1d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5421,7 +5421,7 @@ define amdgpu_kernel void @offset_sample_cd_o_2d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5434,7 +5434,7 @@ define amdgpu_kernel void @offset_sample_c_cd_o_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5447,7 +5447,7 @@ define amdgpu_kernel void @offset_sample_c_cd_o_2d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5460,7 +5460,7 @@ define amdgpu_kernel void @offset_sample_cd_cl_o_1d(ptr addrspace(1) %out, <8 x 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5473,7 +5473,7 @@ define amdgpu_kernel void @offset_sample_cd_cl_o_2d(ptr addrspace(1) %out, <8 x 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5486,7 +5486,7 @@ define amdgpu_kernel void @offset_sample_c_cd_cl_o_1d(ptr addrspace(1) %out, <8 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5499,7 +5499,7 @@ define amdgpu_kernel void @offset_sample_c_cd_cl_o_2d(ptr addrspace(1) %out, <8 
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %dsdh, float %dtdh, float %dsdv, float %dtdv, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5512,7 +5512,7 @@ define amdgpu_kernel void @offset_sample_l_o_1d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32(i32 15, i32 0, float %s, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5525,7 +5525,7 @@ define amdgpu_kernel void @offset_sample_l_o_2d(ptr addrspace(1) %out, <8 x i32>
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32(i32 15, i32 0, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.l.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5538,7 +5538,7 @@ define amdgpu_kernel void @offset_sample_c_l_o_1d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5551,7 +5551,7 @@ define amdgpu_kernel void @offset_sample_c_l_o_2d(ptr addrspace(1) %out, <8 x i3
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5564,7 +5564,7 @@ define amdgpu_kernel void @offset_sample_lz_o_1d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32 15, i32 0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5577,7 +5577,7 @@ define amdgpu_kernel void @offset_sample_lz_o_2d(ptr addrspace(1) %out, <8 x i32
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32(i32 15, i32 0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5590,7 +5590,7 @@ define amdgpu_kernel void @offset_sample_c_lz_o_1d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -5603,51 +5603,51 @@ define amdgpu_kernel void @offset_sample_c_lz_o_2d(ptr addrspace(1) %out, <8 x i
 ; CHECK-NEXT:    ret void
 ;
 main_body:
-  %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32(i32 15, i32 0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32.v8i32.v4i32(i32 15, i32 0, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cl.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cl.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.b.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.b.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.d.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.d.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.cd.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.1d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.o.2d.v4f32.f32.f32.v8i32.v4i32(i32, i32, float, float, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
-declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.lz.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.1d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
+declare <4 x float> @llvm.amdgcn.image.sample.c.lz.o.2d.v4f32.f32.v8i32.v4i32(i32, i32, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.is.shared
@@ -6566,4 +6566,222 @@ define i32 @prng_poison_i32() {
 ;
   %prng = call i32 @llvm.amdgcn.prng.b32(i32 poison)
   ret i32 %prng
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.wave.match.b32
+; --------------------------------------------------------------------
+
+; TODO: We should use UniformityAnalysis instead of just checking for
+; trivially uniform constants. In that case, this test would also be optimized.
+define amdgpu_kernel void @v_wave_match_sgpr(ptr addrspace(1) %out, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @v_wave_match_sgpr(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[SRC1:%.*]], i32 [[SRC2:%.*]])
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %src1, i32 %src2)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_vgpr(i32 addrspace(1)* %out) {
+; CHECK-LABEL: @v_wave_match_vgpr(
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TIDX]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tidx, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
+  store i32 %v, i32 addrspace(1)* %out_ptr
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_vgpr_expression(i32 addrspace(1)* %out) {
+; CHECK-LABEL: @v_wave_match_vgpr_expression(
+; CHECK-NEXT:    [[TIDX:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TIDX]], 1
+; CHECK-NEXT:    [[TIDY:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.wave.match.b32(i32 [[TID2]], i32 [[TIDY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TIDX]] to i64
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT_PTR]], align 4
+; CHECK-NEXT:    ret void
+;
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tidx, 1
+  %tidy = call i32 @llvm.amdgcn.workitem.id.y()
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 %tid2, i32 %tidy)
+  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
+  store i32 %v, i32 addrspace(1)* %out_ptr
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_constant(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_wave_match_constant(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 7, i32 7)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_wave_match_undef(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_wave_match_undef(
+; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 true)
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.wave.match.b32(i32 undef, i32 undef)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.pdep.b32
+; --------------------------------------------------------------------
+define amdgpu_kernel void @v_pdep_b32_fold_zero_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_zero_mask(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_allones_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_allones_mask(
+; CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 -1)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_shifted_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pdep_b32_fold_shifted_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[SRC:%.*]], 2
+; CHECK-NEXT:    [[V:%.*]] = and i32 [[TMP1]], 12
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 %src, i32 12)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_constant(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pdep_b32_fold_constant(
+; CHECK-NEXT:    store i32 807407616, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 1985229328, i32 4042322160)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_constant2(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pdep_b32_fold_constant2(
+; CHECK-NEXT:    store i32 838860816, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 1985229328, i32 4278190335)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_zero_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pdep_b32_fold_zero_source(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 0, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pdep_b32_fold_allones_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pdep_b32_fold_allones_source(
+; CHECK-NEXT:    store i32 [[MASK:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pdep.b32(i32 -1, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.pext.b32
+; --------------------------------------------------------------------
+
+define amdgpu_kernel void @v_pext_b32_fold_zero_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_zero_mask(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 0)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_allones_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_allones_mask(
+; CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 -1)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_shifted_mask(ptr addrspace(1) %out, i32 %src) {
+; CHECK-LABEL: @v_pext_b32_fold_shifted_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[SRC:%.*]], 2
+; CHECK-NEXT:    [[V:%.*]] = and i32 [[TMP1]], 3
+; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 %src, i32 12)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_constant(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pext_b32_fold_constant(
+; CHECK-NEXT:    store i32 30001, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 1985229328, i32 4042322160)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_constant2(ptr addrspace(1) %out) {
+; CHECK-LABEL: @v_pext_b32_fold_constant2(
+; CHECK-NEXT:    store i32 30224, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 1985229328, i32 4278190335)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_pext_b32_fold_zero_source(ptr addrspace(1) %out, i32 %mask) {
+; CHECK-LABEL: @v_pext_b32_fold_zero_source(
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %v = call i32 @llvm.amdgcn.pext.b32(i32 0, i32 %mask)
+  store i32 %v, ptr addrspace(1) %out
+  ret void
 }

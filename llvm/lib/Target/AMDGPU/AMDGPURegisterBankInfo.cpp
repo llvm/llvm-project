@@ -3505,7 +3505,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingMAD_64_32(B, OpdMapper);
     return;
   case AMDGPU::G_PREFETCH: {
-    if (!Subtarget.hasPrefetch()) {
+    if (!Subtarget.hasPrefetch() || !Subtarget.hasSafeSmemPrefetch()) {
       MI.eraseFromParent();
       return;
     }
@@ -4848,6 +4848,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_convolve_i32_iu4_3x3:
     case Intrinsic::amdgcn_convolve_i32_iu8_1x1:
     case Intrinsic::amdgcn_convolve_i32_iu8_3x3:
+    case Intrinsic::amdgcn_pdep_b32:
+    case Intrinsic::amdgcn_pext_b32:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:
