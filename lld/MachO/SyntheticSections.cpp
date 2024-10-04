@@ -1230,9 +1230,9 @@ void SymtabSection::emitStabs() {
         continue;
 
       // Never generate a STABS entry for a symbol that has been ICF'ed using a
-      // thunk - just like we do for fully ICF'ed functions. Otherwise we end up
-      // generating invalid DWARF as dsymutil will think the entire function
-      // body is at that location, when in actuality only the thunk will be
+      // thunk, just as we do for fully ICF'ed functions. Otherwise, we end up
+      // generating invalid DWARF as dsymutil will assume the entire function
+      // body is at that location, when, in reality, only the thunk is
       // present. This will end up causing overlapping DWARF entries.
       // TODO: Find an implementation that works in combination with
       // `--keep-icf-stabs`.

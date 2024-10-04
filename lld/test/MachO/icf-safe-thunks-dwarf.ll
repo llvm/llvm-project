@@ -61,21 +61,21 @@ entry:
   ret i64 %3
 }
 
-attributes #0 = { mustprogress noinline nounwind optnone ssp uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+attributes #0 = { noinline nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 20.0.0git (https://github.com/alx32/llvm-project.git b3fef1e6661efead54f05b2772b0de2ab580d756)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
-!1 = !DIFile(filename: "icf-safe-thunks-dwarf.cpp", directory: "/home/alexborcan/llvm_public")
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 20.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: Apple, sysroot: "/")
+!1 = !DIFile(filename: "icf-safe-thunks-dwarf.cpp", directory: "/tmp/test")
 !6 = !{i32 7, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !{i32 1, !"wchar_size", i32 4}
 !9 = !{i32 8, !"PIC Level", i32 2}
 !10 = !{i32 7, !"uwtable", i32 1}
 !11 = !{i32 7, !"frame-pointer", i32 1}
-!12 = !{!"clang version 20.0.0git (https://github.com/alx32/llvm-project.git b3fef1e6661efead54f05b2772b0de2ab580d756)"}
+!12 = !{!"clang version 20.0.0"}
 !13 = distinct !DISubprogram(name: "func_A", scope: !1, file: !1, line: 4, type: !14, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !14 = !DISubroutineType(types: !15)
 !15 = !{}
