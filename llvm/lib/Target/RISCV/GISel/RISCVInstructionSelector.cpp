@@ -380,10 +380,8 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
 
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
-  MachineRegisterInfo &MRI =
-      Root.getParent()->getParent()->getParent()->getRegInfo();
   assert(Root.isReg() && "Expected operand to be a Register");
-  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
 
   if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
     auto C = RootDef->getOperand(1).getCImm();
