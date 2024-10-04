@@ -10,6 +10,7 @@
 #define _LIBCPP___RANGES_CARTESIAN_PRODUCT_VIEW_H
 
 #include <__config>
+#include <__memory/addressof.h>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
 #include <__type_traits/maybe_const.h>
 #include <tuple>       // apply
@@ -75,21 +76,16 @@ template <input_range First, forward_range... Vs>
 template <bool Const>
 class cartesian_product_view<First, Vs...>::iterator {
 public:
-  iterator()
-    requires forward_range<__maybe_const<Const, First>>
-  = default;
-
-  constexpr explicit iterator(
-      tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...> current)
-      : current_(std::move(current)) {}
+  iterator() = default;
 
   constexpr iterator(iterator<!Const> i)
-    requires Const && (convertible_to<iterator_t<First>, iterator_t<__maybe_const<Const, First>>> && ... &&
-                       convertible_to<iterator_t<Vs>, iterator_t<__maybe_const<Const, Vs>>>)
-      : current_(std::move(i.current_)) {}
+    requires Const && (convertible_to<iterator_t<First>, iterator_t<const First>> && ... &&
+                       convertible_to<iterator_t<Vs>, iterator_t<const Vs>>)
+      : parent_(std::addressof(i.parent_)), current_(std::move(i.current_)) {}
 
 private:
-  //   __maybe_const<Const, cartesian_product_view>* parent_ = nullptr;
+  using Parent    = __maybe_const<Const, cartesian_product_view>;
+  Parent* parent_ = nullptr;
   tuple<iterator_t<__maybe_const<Const, First>>, iterator_t<__maybe_const<Const, Vs>>...> current_;
 };
 
