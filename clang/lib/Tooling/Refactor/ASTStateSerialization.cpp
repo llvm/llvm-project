@@ -62,7 +62,7 @@ void PersistentToASTSpecificStateConverter::runCoalescedConversions() {
 FileID
 PersistentToASTSpecificStateConverter::convert(const PersistentFileID &Ref) {
   FileManager &FM = Context.getSourceManager().getFileManager();
-  llvm::ErrorOr<const FileEntry *> Entry = FM.getFile(Ref.Filename);
+  OptionalFileEntryRef Entry = FM.getOptionalFileRef(Ref.Filename);
   if (!Entry)
     return FileID();
   return Context.getSourceManager().translateFile(*Entry);
