@@ -320,6 +320,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // bits on that side are also known to be set on the other side, turn this
     // into an AND, as we know the bits will be cleared.
     //    e.g. (X | C1) ^ C2 --> (X | C1) & ~C2 iff (C1&C2) == C2
+#if 0
     if (DemandedMask.isSubsetOf(RHSKnown.Zero|RHSKnown.One) &&
         RHSKnown.One.isSubsetOf(LHSKnown.One)) {
       Constant *AndC = Constant::getIntegerValue(VTy,
@@ -327,6 +328,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       Instruction *And = BinaryOperator::CreateAnd(I->getOperand(0), AndC);
       return InsertNewInstWith(And, I->getIterator());
     }
+#endif
 
     // If the RHS is a constant, see if we can change it. Don't alter a -1
     // constant because that's a canonical 'not' op, and that is better for
