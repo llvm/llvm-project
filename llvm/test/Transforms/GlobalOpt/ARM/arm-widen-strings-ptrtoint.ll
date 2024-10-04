@@ -11,7 +11,7 @@ define  i32 @f() {
 ; CHECK-NEXT:    [[POS:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TOKEN:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 45, ptr [[STRING1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[STRING1]], ptr align 1 @[[GLOB0:[0-9]+]], i32 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[STRING1]], ptr align 1 @f.string1, i32 48, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[POS]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TOKEN]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strchr(ptr [[STRING1]], i32 101)

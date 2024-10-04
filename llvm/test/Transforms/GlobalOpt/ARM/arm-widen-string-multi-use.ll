@@ -6,15 +6,15 @@
 define  void @memcpy_multiple()  {
 ; CHECK-LABEL: define void @memcpy_multiple() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[SOMETHING:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[SOMETHING1:%.*]] = alloca [4 x i8], align 1
 ; CHECK-NEXT:    [[SOMETHING2:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING]], ptr noundef nonnull align 1 dereferenceable(3) @[[GLOB0:[0-9]+]], i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING1]], ptr noundef nonnull align 1 dereferenceable(3) @[[GLOB0]], i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING2]], ptr noundef nonnull align 1 dereferenceable(3) @[[GLOB0]], i32 4, i1 false)
-; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING]])
+; CHECK-NEXT:    [[SOMETHING1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[SOMETHING3:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING2]], ptr noundef nonnull align 1 dereferenceable(3) @.i8, i32 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING1]], ptr noundef nonnull align 1 dereferenceable(3) @.i8, i32 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(3) [[SOMETHING3]], ptr noundef nonnull align 1 dereferenceable(3) @.i8, i32 4, i1 false)
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING2]])
 ; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING1]])
-; CHECK-NEXT:    [[CALL4:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING2]])
+; CHECK-NEXT:    [[CALL4:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

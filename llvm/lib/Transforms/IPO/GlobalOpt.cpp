@@ -2031,41 +2031,38 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
-static bool tryWidenDestArray(Function *F, CallInst *CI,
-                              GlobalVariable *SourceVar, unsigned NumBytesToPad,
-                              unsigned NumBytesToCopy,
-                              ConstantDataArray *SourceDataArray) {
+static bool callInstIsMemcpy(CallInst *CI) {
+  if (!CI)
+    return false;
+
+  Function *F = CI->getCalledFunction();
+  if (!F || !F->isIntrinsic() || F->getIntrinsicID() != Intrinsic::memcpy)
+    return false;
+
+  return true;
+}
+
+static bool destArrayCanBeWidened(CallInst *CI) {
   auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
 
   if (!Alloca || !IsVolatile || IsVolatile->isOne())
     return false;
 
-  if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
-      !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr())
-    return false;
-
   if (!Alloca->isStaticAlloca())
     return false;
 
-  uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
-  uint64_t SZSize = SourceDataArray->getType()->getNumElements();
+  return true;
+}
+
+static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
+                           const unsigned NumBytesToCopy,
+                           ConstantDataArray *SourceDataArray) {
   unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
-  // Calculate the number of elements to copy while avoiding floored
-  // division of integers returning wrong values i.e. copying one byte
-  // from an array of i16 would yield 0 elements to copy as supposed to 1.
-  unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
-
-  // For safety purposes lets add a constraint and only pad when
-  // NumElementsToCopy == destination array size ==
-  // source string which is a constant
-  if (NumElementsToCopy != DZSize || DZSize != SZSize)
-    return false;
-
   unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
-  NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
-
+  unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
   // Update destination array to be word aligned (memcpy(X,...,...))
+  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
   IRBuilder<> BuildAlloca(Alloca);
   AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
       Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
@@ -2073,14 +2070,17 @@ static bool tryWidenDestArray(Function *F, CallInst *CI,
   NewAlloca->setAlignment(Alloca->getAlign());
   Alloca->replaceAllUsesWith(NewAlloca);
   Alloca->eraseFromParent();
-  return true;
 }
 
-static bool widenGlobalArray(Function *F, CallInst *CI,
-                             GlobalVariable *SourceVar, unsigned NumBytesToPad,
-                             unsigned NumBytesToCopy,
-                             ConstantInt *BytesToCopyOp,
-                             ConstantDataArray *SourceDataArray) {
+static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
+                                        const unsigned NumBytesToPad,
+                                        const unsigned NumBytesToCopy,
+                                        ConstantInt *BytesToCopyOp,
+                                        ConstantDataArray *SourceDataArray) {
+  if (!SourceVar->hasInitializer() || !SourceVar->isConstant() ||
+      !SourceVar->hasLocalLinkage() || !SourceVar->hasGlobalUnnamedAddr())
+    return false;
+
   // Update source to be word aligned (memcpy(...,X,...))
   // create replacement with padded null bytes.
   StringRef Data = SourceDataArray->getRawDataValues();
@@ -2100,8 +2100,20 @@ static bool widenGlobalArray(Function *F, CallInst *CI,
   NewGV->copyAttributesFrom(SourceVar);
   NewGV->takeName(SourceVar);
 
-  CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
-                                        NumBytesToCopy + NumBytesToPad));
+  // Update arguments of remaining uses  that
+  // are memcpys.
+  for (auto *User : SourceVar->users()) {
+    auto *CI = dyn_cast<CallInst>(User);
+    if (!callInstIsMemcpy(CI))
+      continue;
+
+    widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
+
+    CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
+                                          NumBytesToCopy + NumBytesToPad));
+  }
+  SourceVar->replaceAllUsesWith(NewGV);
+
   NumGlobalArraysPadded++;
   return true;
 }
@@ -2109,21 +2121,19 @@ static bool widenGlobalArray(Function *F, CallInst *CI,
 static bool tryWidenGlobalArraysUsedByMemcpy(
     GlobalVariable *GV,
     function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+
+  if (!GV->hasInitializer())
+    return false;
+
   for (auto *User : GV->users()) {
     CallInst *CI = dyn_cast<CallInst>(User);
-    if (!CI)
+    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
     Function *F = CI->getCalledFunction();
-    if (!F || !F->isIntrinsic() || F->getIntrinsicID() != Intrinsic::memcpy)
-      continue;
 
-    TargetTransformInfo &TTI = GetTTI(*F);
     auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
     if (!BytesToCopyOp)
-      continue;
-
-    if (!GV->hasInitializer())
       continue;
 
     ConstantDataArray *SourceDataArray =
@@ -2132,16 +2142,27 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
       continue;
 
     unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
-    unsigned NumBytesToPad = TTI.getNumBytesToPadGlobalArray(
-        NumBytesToCopy, SourceDataArray->getType());
 
+    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+    uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
+    uint64_t SZSize = SourceDataArray->getType()->getNumElements();
+    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
+    // Calculate the number of elements to copy while avoiding floored
+    // division of integers returning wrong values i.e. copying one byte
+    // from an array of i16 would yield 0 elements to copy as supposed to 1.
+    unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
+
+    // For safety purposes lets add a constraint and only pad when
+    // NumElementsToCopy == destination array size ==
+    // source which is a constant
+    if (NumElementsToCopy != DZSize || DZSize != SZSize)
+      continue;
+
+    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
+        NumBytesToCopy, SourceDataArray->getType());
     if (NumBytesToPad) {
-      bool DestWidened = tryWidenDestArray(F, CI, GV, NumBytesToPad,
-                                           NumBytesToCopy, SourceDataArray);
-      if (DestWidened) {
-        return widenGlobalArray(F, CI, GV, NumBytesToPad, NumBytesToCopy,
-                                BytesToCopyOp, SourceDataArray);
-      }
+      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
+                                         BytesToCopyOp, SourceDataArray);
     }
   }
   return false;

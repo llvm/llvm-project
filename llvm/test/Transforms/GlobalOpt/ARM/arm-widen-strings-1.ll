@@ -7,7 +7,7 @@ define  void @foo()  {
 ; CHECK-LABEL: define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SOMETHING:%.*]] = alloca [12 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[SOMETHING]], ptr noundef nonnull align 1 dereferenceable(10) @[[GLOB0:[0-9]+]], i32 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[SOMETHING]], ptr noundef nonnull align 1 dereferenceable(10) @.str, i32 12, i1 false)
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING]])
 ; CHECK-NEXT:    ret void
 ;

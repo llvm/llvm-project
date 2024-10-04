@@ -7,7 +7,7 @@ define  void @memcpy_i16_array()  {
 ; CHECK-LABEL: define void @memcpy_i16_array() local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SOMETHING1:%.*]] = alloca [6 x i16], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[SOMETHING1]], ptr noundef nonnull align 1 dereferenceable(10) @[[GLOB0:[0-9]+]], i32 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[SOMETHING1]], ptr noundef nonnull align 1 dereferenceable(10) @.i16, i32 12, i1 false)
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @bar(ptr nonnull [[SOMETHING1]])
 ; CHECK-NEXT:    ret void
 ;
