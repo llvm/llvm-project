@@ -466,8 +466,9 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
   } else {
     // Otherwise just change the operation to an omp.single.
 
-    wsOp->emitWarning("omp workshare with unstructured control flow currently "
-                      "unsupported and will be serialized.");
+    wsOp->emitWarning(
+        "omp workshare with unstructured control flow is currently "
+        "unsupported and will be serialized.");
 
     // `shouldUseWorkshareLowering` should have guaranteed that there are no
     // omp.workshare_loop_wrapper's that bind to this omp.workshare.
