@@ -1625,8 +1625,8 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx, LiveIntervals &LIS,
   }
 
   // Don't insert anything after the first terminator, though.
-  auto It = MI->isTerminator() ? MBB->getFirstTerminator() :
-                                 std::next(MachineBasicBlock::iterator(MI));
+  auto It = MI->isTerminator() ? MBB->getFirstTerminator()
+                               : std::next(MachineBasicBlock::iterator(MI));
   return skipDebugInstructionsForward(It, MBB->end());
 }
 
