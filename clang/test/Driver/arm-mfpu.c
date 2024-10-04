@@ -356,8 +356,10 @@
 // CHECK-HF-DAG: "-target-cpu" "arm1176jzf-s"
 
 // RUN: %clang -target armv7-apple-darwin -x assembler %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=ASM %s
-// ASM-NOT: -target-feature
+// RUN:   | FileCheck --check-prefix=ASM-NEON %s
+// RUN: %clang -target armv7-windows -x assembler %s -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=ASM-NEON %s
+// ASM-NEON: "-target-feature" "+neon"
 
 // RUN: %clang -target armv8-linux-gnueabi -mfloat-abi=soft -mfpu=none %s -### -c 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-ABI-FP %s

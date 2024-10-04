@@ -132,6 +132,30 @@
 // CHECK-V7VE-DEFAULT-ABI-SOFT: #define __ARM_ARCH_EXT_IDIV__ 1
 // CHECK-V7VE-DEFAULT-ABI-SOFT: #define __ARM_FP 0xc
 
+// RUN: %clang -target x86_64-apple-macosx10.10 -arch armv7 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-DARWIN-V7 %s
+// CHECK-DARWIN-V7: #define __ARMEL__ 1
+// CHECK-DARWIN-V7: #define __ARM_ARCH 7
+// CHECK-DARWIN-V7: #define __ARM_ARCH_7A__ 1
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_CRC32
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
+// CHECK-DARWIN-V7-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
+// CHECK-DARWIN-V7: #define __ARM_FP 0xc
+// CHECK-DARWIN-V7: #define __ARM_NEON 1
+// CHECK-DARWIN-V7: #define __ARM_NEON_FP 0x4
+// CHECK-DARWIN-V7: #define __ARM_NEON__ 1
+
+// RUN: %clang -target armv7-windows -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-WINDOWS-V7 %s
+// CHECK-WINDOWS-V7: #define __ARMEL__ 1
+// CHECK-WINDOWS-V7: #define __ARM_ARCH 7
+// CHECK-WINDOWS-V7: #define __ARM_ARCH_7A__ 1
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_CRC32
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
+// CHECK-WINDOWS-V7-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
+// CHECK-WINDOWS-V7: #define __ARM_FP 0xe
+// CHECK-WINDOWS-V7: #define __ARM_NEON 1
+// CHECK-WINDOWS-V7: #define __ARM_NEON_FP 0x6
+// CHECK-WINDOWS-V7: #define __ARM_NEON__ 1
+
 // RUN: %clang -target x86_64-apple-macosx10.10 -arch armv7s -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V7S %s
 // CHECK-V7S: #define __ARMEL__ 1
 // CHECK-V7S: #define __ARM_ARCH 7
@@ -140,6 +164,9 @@
 // CHECK-V7S-NOT: __ARM_FEATURE_NUMERIC_MAXMIN
 // CHECK-V7S-NOT: __ARM_FEATURE_DIRECTED_ROUNDING
 // CHECK-V7S: #define __ARM_FP 0xe
+// CHECK-V7S: #define __ARM_NEON 1
+// CHECK-V7S: #define __ARM_NEON_FP 0x6
+// CHECK-V7S: #define __ARM_NEON__ 1
 
 // RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=soft -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
 // RUN: %clang -target arm-arm-none-eabi -march=armv7-m -mfloat-abi=softfp -x c -E -dM %s | FileCheck -match-full-lines --check-prefix=CHECK-VFP-FP %s
