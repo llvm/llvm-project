@@ -589,9 +589,7 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
 } // namespace
 
 static mlir::Type getComplexEleTy(mlir::Type complex) {
-  if (auto cc = mlir::dyn_cast<mlir::ComplexType>(complex))
-    return cc.getElementType();
-  return mlir::cast<fir::ComplexType>(complex).getElementType();
+  return mlir::cast<mlir::ComplexType>(complex).getElementType();
 }
 
 namespace {
