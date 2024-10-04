@@ -1404,7 +1404,7 @@ size_t ArmCmseSGSection::getSize() const {
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents() {
+void ArmCmseSGSection::finalizeContents(Ctx &) {
   if (sgVeneers.empty())
     return;
 
@@ -1472,7 +1472,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
     osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
     osec->size = isec->getSize();
-    isec->finalizeContents();
+    isec->finalizeContents(ctx);
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }

@@ -247,7 +247,7 @@ void OutputSection::finalizeInputSections(Ctx &ctx) {
       commitSection(ctx, s);
   }
   for (auto *ms : mergeSections)
-    ms->finalizeContents();
+    ms->finalizeContents(ctx);
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,
