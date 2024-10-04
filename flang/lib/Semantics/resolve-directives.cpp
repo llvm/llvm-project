@@ -455,7 +455,8 @@ public:
     return false;
   }
   bool Pre(const parser::OmpClause::Lastprivate &x) {
-    ResolveOmpObjectList(x.v, Symbol::Flag::OmpLastPrivate);
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpLastPrivate);
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -2888,8 +2889,7 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
   default:
     warnStr = "OpenMP directive '" + dirName + "' has been deprecated.";
   }
-  if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-    context_.Say(source, "%s"_warn_en_US, warnStr);
-  }
+  context_.Warn(
+      common::UsageWarning::OpenMPUsage, source, "%s"_warn_en_US, warnStr);
 }
 } // namespace Fortran::semantics

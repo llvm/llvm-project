@@ -27,6 +27,7 @@ class GlobalObject;
 class Module;
 class UnaryInstruction;
 class CmpInst;
+class IntrinsicInst;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
@@ -156,6 +157,7 @@ protected:
   friend class ConstantExpr;          // For `Val`.
   friend class Utils;                 // For `Val`.
   friend class Module;                // For `Val`.
+  friend class IntrinsicInst;         // For `Val`.
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;

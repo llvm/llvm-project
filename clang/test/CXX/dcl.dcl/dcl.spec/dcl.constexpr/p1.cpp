@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++17 %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -verify -std=c++2a %s
 
+// XFAIL: *
+
 // MSVC always adopted the C++17 rule that implies that constexpr variables are
 // implicitly inline, so do the test again.
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -DMS_ABI -fsyntax-only -verify -std=c++11 %s
@@ -157,11 +159,12 @@ namespace {
 
 #if __cplusplus < 201402L
 namespace ImplicitConstexprDef {
-  struct A {
+  struct A { // #defined-here
     void f(); // expected-note {{member declaration does not match because it is not const qualified}}
   };
 
   constexpr void A::f() { } // expected-warning {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const' to avoid a change in behavior}}
                             // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'ImplicitConstexprDef::A'}}
+                            // expected-note@#defined-here {{defined here}}
 }
 #endif

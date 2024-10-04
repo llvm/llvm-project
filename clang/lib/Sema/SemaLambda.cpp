@@ -1950,6 +1950,9 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
+
+  maybeAddDeclWithEffects(LSI.CallOperator);
+
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
 }
 

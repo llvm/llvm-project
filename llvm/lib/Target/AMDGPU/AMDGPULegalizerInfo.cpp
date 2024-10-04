@@ -4802,7 +4802,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
                             MF.getTarget().Options.UnsafeFPMath;
 
-  if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
+  if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
       return false;
 

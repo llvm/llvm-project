@@ -1807,12 +1807,10 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   if (*this == Other)
     return *this;
 
-  // At least for now, only intersect lists with same number of params.
-  if (getNumAttrSets() != Other.getNumAttrSets())
-    return std::nullopt;
-
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  for (unsigned Idx : indexes()) {
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.

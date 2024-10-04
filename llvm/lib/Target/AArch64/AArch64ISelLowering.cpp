@@ -4301,6 +4301,29 @@ static SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) {
                      Op.getOperand(1));
 }
 
+// Converts SETCC (AND X Y) Z ULT -> SETCC (AND X (Y & ~(Z - 1)) 0 EQ when Y is
+// a power of 2. This is then lowered to ANDS X (Y & ~(Z - 1)) instead of SUBS
+// (AND X Y) Z which produces a better opt with EmitComparison
+static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
+                                SelectionDAG &DAG, const SDLoc dl) {
+  if (CC == ISD::SETULT && LHS.getOpcode() == ISD::AND && LHS->hasOneUse()) {
+    ConstantSDNode *LHSConstOp = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
+    if (LHSConstOp && RHSConst) {
+      uint64_t LHSConstValue = LHSConstOp->getZExtValue();
+      uint64_t RHSConstant = RHSConst->getZExtValue();
+      if (isPowerOf2_64(RHSConstant)) {
+        uint64_t NewMaskValue = LHSConstValue & ~(RHSConstant - 1);
+        LHS =
+            DAG.getNode(ISD::AND, dl, LHS.getValueType(), LHS.getOperand(0),
+                        DAG.getConstant(NewMaskValue, dl, LHS.getValueType()));
+        RHS = DAG.getConstant(0, dl, RHS.getValueType());
+        CC = ISD::SETEQ;
+      }
+    }
+  }
+}
+
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -5549,9 +5572,16 @@ static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
          "Only expect to cast between legal scalable predicate types!");
 
   // Return the operand if the cast isn't changing type,
-  // e.g. <n x 16 x i1> -> <n x 16 x i1>
   if (InVT == VT)
     return Op;
+
+  // Look through casts to <vscale x 16 x i1> when their input has more lanes
+  // than VT. This will increase the chances of removing casts that introduce
+  // new lanes, which have to be explicitly zero'd.
+  if (Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Op.getConstantOperandVal(0) == Intrinsic::aarch64_sve_convert_to_svbool &&
+      Op.getOperand(1).getValueType().bitsGT(VT))
+    Op = Op.getOperand(1);
 
   SDValue Reinterpret = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Op);
 
@@ -10590,6 +10620,9 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
+
+    simplifySetCCIntoEq(CC, LHS, RHS, DAG, dl);
+
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(
         LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);

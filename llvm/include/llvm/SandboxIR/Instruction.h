@@ -18,6 +18,9 @@
 
 namespace llvm::sandboxir {
 
+// Forward declaration for MSVC.
+class IntrinsicInst;
+
 /// A sandboxir::User with operands, opcode and linked with previous/next
 /// instructions in an instruction list.
 class Instruction : public User {
@@ -334,26 +337,6 @@ public:
   }
 
   // TODO: Missing functions.
-
-  bool isStackSaveOrRestoreIntrinsic() const {
-    auto *I = cast<llvm::Instruction>(Val);
-    return match(I,
-                 PatternMatch::m_Intrinsic<llvm::Intrinsic::stackrestore>()) ||
-           match(I, PatternMatch::m_Intrinsic<llvm::Intrinsic::stacksave>());
-  }
-
-  /// We consider \p I as a Memory Dependency Candidate instruction if it
-  /// reads/write memory or if it has side-effects. This is used by the
-  /// dependency graph.
-  bool isMemDepCandidate() const {
-    auto *I = cast<llvm::Instruction>(Val);
-    return I->mayReadOrWriteMemory() &&
-           (!isa<llvm::IntrinsicInst>(I) ||
-            (cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
-                 Intrinsic::sideeffect &&
-             cast<llvm::IntrinsicInst>(I)->getIntrinsicID() !=
-                 Intrinsic::pseudoprobe));
-  }
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -1442,13 +1425,13 @@ public:
   bool isInlineAsm() const { return cast<llvm::CallBase>(Val)->isInlineAsm(); }
 };
 
-class CallInst final : public CallBase {
+class CallInst : public CallBase {
   /// Use Context::createCallInst(). Don't call the
   /// constructor directly.
   CallInst(llvm::Instruction *I, Context &Ctx)
       : CallBase(ClassID::Call, Opcode::Call, I, Ctx) {}
-  friend class Context; // For accessing the constructor in
-                        // create*()
+  friend class Context;       // For accessing the constructor in create*()
+  friend class IntrinsicInst; // For constructor
 
 public:
   static CallInst *create(FunctionType *FTy, Value *Func,

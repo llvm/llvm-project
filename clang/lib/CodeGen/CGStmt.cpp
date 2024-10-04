@@ -1441,10 +1441,12 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 }
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
+  const Stmt *Else = S.getElse();
+
   // The else branch of a consteval if statement is always the only branch that
   // can be runtime evaluated.
   if (S.isConsteval()) {
-    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : S.getElse();
+    const Stmt *Executed = S.isNegatedConsteval() ? S.getThen() : Else;
     if (Executed) {
       RunCleanupsScope ExecutedScope(*this);
       EmitStmt(Executed);
@@ -1470,8 +1472,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
                                    S.isConstexpr())) {
     // Figure out which block (then or else) is executed.
     const Stmt *Executed = S.getThen();
-    const Stmt *Skipped  = S.getElse();
-    if (!CondConstant)  // Condition false?
+    const Stmt *Skipped = Else;
+    if (!CondConstant) // Condition false?
       std::swap(Executed, Skipped);
 
     // If the skipped block has no labels in it, just emit the executed block.
@@ -1492,7 +1494,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   llvm::BasicBlock *ThenBlock = createBasicBlock("if.then");
   llvm::BasicBlock *ContBlock = createBasicBlock("if.end");
   llvm::BasicBlock *ElseBlock = ContBlock;
-  if (S.getElse())
+  if (Else)
     ElseBlock = createBasicBlock("if.else");
 
   // Prefer the PGO based weights over the likelihood attribute.
@@ -1510,7 +1512,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   uint64_t ThenCount = getProfileCount(S.getThen());
   if (!ThenCount && !getCurrentProfileCount() &&
       CGM.getCodeGenOpts().OptimizationLevel)
-    LH = Stmt::getLikelihood(S.getThen(), S.getElse());
+    LH = Stmt::getLikelihood(S.getThen(), Else);
 
   // When measuring MC/DC, always fully evaluate the condition up front using
   // EvaluateExprAsBool() so that the test vector bitmap can be updated prior to
@@ -1538,7 +1540,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   EmitBranch(ContBlock);
 
   // Emit the 'else' code if present.
-  if (const Stmt *Else = S.getElse()) {
+  if (Else) {
     {
       // There is no need to emit line number for an unconditional branch.
       auto NL = ApplyDebugLocation::CreateEmpty(*this);

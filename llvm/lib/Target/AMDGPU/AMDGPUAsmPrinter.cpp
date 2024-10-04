@@ -330,7 +330,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     emitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
     emitLinkage(GV, GVSym);
-    auto TS = getTargetStreamer();
+    auto *TS = getTargetStreamer();
     TS->emitAMDGPULDS(GVSym, Size, Alignment);
     return;
   }
@@ -356,6 +356,7 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       report_fatal_error("Unexpected code object version");
     }
   }
+
   return AsmPrinter::doInitialization(M);
 }
 
@@ -371,6 +372,28 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
     getTargetStreamer()->EmitCodeEnd(STI);
   }
 
+// FIXME needs AMDGPUResource patch
+#if 0//<<<<<<< HEAD
+  // Assign expressions which can only be resolved when all other functions are
+  // known.
+  RI.finalize(OutContext);
+
+  // Switch section and emit all GPR maximums within the processed module.
+  OutStreamer->pushSection();
+  MCSectionELF *MaxGPRSection =
+      OutContext.getELFSection(".AMDGPU.gpr_maximums", ELF::SHT_PROGBITS, 0);
+  OutStreamer->switchSection(MaxGPRSection);
+  getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
+                                              RI.getMaxAGPRSymbol(OutContext),
+                                              RI.getMaxSGPRSymbol(OutContext));
+  OutStreamer->popSection();
+
+  for (Function &F : M.functions())
+    validateMCResourceInfo(F);
+
+  RI.reset();
+
+#endif//>>>>>>> 7b9c6a7c3c64
   return AsmPrinter::doFinalization(M);
 }
 
@@ -1069,8 +1092,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     // return ((Dst & ~Mask) | (Value << Shift))
     auto SetBits = [&Ctx](const MCExpr *Dst, const MCExpr *Value, uint32_t Mask,
                           uint32_t Shift) {
-      auto Shft = MCConstantExpr::create(Shift, Ctx);
-      auto Msk = MCConstantExpr::create(Mask, Ctx);
+      const auto *Shft = MCConstantExpr::create(Shift, Ctx);
+      const auto *Msk = MCConstantExpr::create(Mask, Ctx);
       Dst = MCBinaryExpr::createAnd(Dst, MCUnaryExpr::createNot(Msk, Ctx), Ctx);
       Dst = MCBinaryExpr::createOr(
           Dst, MCBinaryExpr::createShl(Value, Shft, Ctx), Ctx);
@@ -1245,7 +1268,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
        const SIProgramInfo &CurrentProgramInfo) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto CC = MF.getFunction().getCallingConv();
-  auto MD = getTargetStreamer()->getPALMetadata();
+  auto *MD = getTargetStreamer()->getPALMetadata();
   auto &Ctx = MF.getContext();
 
   MD->setEntryPoint(CC, MF.getFunction().getName());

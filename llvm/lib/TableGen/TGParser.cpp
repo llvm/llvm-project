@@ -328,12 +328,11 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  ArrayRef<std::pair<Record *, SMRange>> SCs = SC->getSuperClasses();
-  for (const auto &SCPair : SCs) {
-    if (CurRec->isSubClassOf(SCPair.first))
+  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
+    if (CurRec->isSubClassOf(SC))
       return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SCPair.first->getName() + "'!\n");
-    CurRec->addSuperClass(SCPair.first, SCPair.second);
+                   "Already subclass of '" + SC->getName() + "'!\n");
+    CurRec->addSuperClass(SC, Loc);
   }
 
   if (CurRec->isSubClassOf(SC))
@@ -542,7 +541,7 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
 /// Resolve the record fully and add it to the record keeper.
 bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   Init *NewName = nullptr;
-  if (Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
+  if (const Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
     if (!Rec->isAnonymous()) {
       PrintError(Rec->getLoc(),
                  "def already exists: " + Rec->getNameInitAsString());
@@ -1109,7 +1108,7 @@ const RecTy *TGParser::ParseType() {
       Lex.Lex();
       return I->second;
     }
-    if (Record *R = ParseClassID())
+    if (const Record *R = ParseClassID())
       return RecordRecTy::get(R);
     TokError("unknown class name");
     return nullptr;
@@ -2720,7 +2719,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
 
     if (TrackReferenceLocs)
       Class->appendReferenceLoc(NameLoc);
-    return VarDefInit::get(Class, Args)->Fold();
+    return VarDefInit::get(NameLoc.Start, Class, Args)->Fold();
   }
   case tgtok::l_brace: {           // Value ::= '{' ValueList '}'
     SMLoc BraceLoc = Lex.getLoc();
@@ -3001,7 +3000,8 @@ Init *TGParser::ParseValue(Record *CurRec, const RecTy *ItemType,
       // Add a reference to this field if we know the record class.
       if (TrackReferenceLocs) {
         if (auto *DI = dyn_cast<DefInit>(Result)) {
-          DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
+          const RecordVal *V = DI->getDef()->getValue(FieldName);
+          const_cast<RecordVal *>(V)->addReferenceLoc(FieldNameLoc);
         } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
           if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
             for (const Record *R : RecTy->getClasses())
