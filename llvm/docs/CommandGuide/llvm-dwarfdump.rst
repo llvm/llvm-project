@@ -45,6 +45,16 @@ OPTIONS
 
             Use colors in output.
 
+.. option:: --error-display=<value>       
+
+            Set the level of detail and summary to display when verifying.
+            Implies :option:`--verify`. The supported values are:
+
+            `quiet`   - Only display whether errors occurred.
+            `summary` - Display only a summary of the errors found.
+            `details` - Display each error in detail but no summary.
+            `full`    - Display each error as well as a summary. [default]
+
 .. option:: -f <name>, --find=<name>
 
             Search for the exact text <name> in the accelerator tables
