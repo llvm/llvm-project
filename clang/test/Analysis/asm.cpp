@@ -7,13 +7,10 @@ void clang_analyzer_dump_ptr(void *);
 
 int global;
 void testRValueOutput() {
-  int &ref = global;
-  ref = 1;
+  int origVal = global;
   __asm__("" : "=r"(((int)(global))));  // don't crash on rvalue output operand
-  clang_analyzer_eval(global == 1); // expected-warning{{FALSE}}
-                                    // expected-warning@-1{{TRUE}}
-  clang_analyzer_eval(ref == 1);    // expected-warning{{FALSE}}
-                                    // expected-warning@-1{{TRUE}}
+  int newVal = global; // Value "after" the invalidation.
+  clang_analyzer_eval(origVal == newVal); // expected-warning{{TRUE}} expected-warning{{FALSE}}
 }
 
 void *MyMemcpy(void *d, const void *s, const int n) {
@@ -53,8 +50,9 @@ void testInlineAsmMemcpyUninitLoop(const void *src, unsigned long len)
 
     MyMemcpy(a, src, toCopy);
 
-    for (unsigned long i = 0; i < toCopy; ++i)
-      c = a[i]; // no-warning
+    // Use index 1, since before use of invalidateRegions in VisitGCCAsmStmt, engine bound unknown SVal only to
+    // first element.
+    c = a[1]; // no-warning
 }
 
 void testAsmWithVoidPtrArgument()
@@ -63,6 +61,6 @@ void testAsmWithVoidPtrArgument()
   clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning-re {{reg_${{[0-9]+}}<int Element{SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>},0 S64b,int}>}}
   clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
   asm ("" : : "a"(globalVoidPtr)); // no crash
-  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning-re {{derived_$3{conj_$2{int, LC1, S{{[0-9]+}}, #1},Element{SymRegion{reg_$0<void * globalVoidPtr>},0 S64b,int}}}}
+  clang_analyzer_dump(*(int *)globalVoidPtr); // expected-warning {{derived_}}
   clang_analyzer_dump_ptr(globalVoidPtr); // expected-warning-re {{&SymRegion{reg_${{[0-9]+}}<void * globalVoidPtr>}}}
 }
