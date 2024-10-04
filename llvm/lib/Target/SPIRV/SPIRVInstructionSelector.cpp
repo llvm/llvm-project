@@ -44,20 +44,6 @@ using ExtInstList =
 
 namespace {
 
-uint64_t getUnsignedConstantValueFromReg(llvm::Register Reg,
-                                         const llvm::MachineRegisterInfo &MRI) {
-  llvm::SPIRVType *ConstTy = MRI.getVRegDef(Reg);
-  assert(ConstTy);
-  if (ConstTy->getOpcode() == llvm::SPIRV::ASSIGN_TYPE) {
-    assert(ConstTy->getOperand(1).isReg());
-    Reg = ConstTy->getOperand(1).getReg();
-  }
-  const llvm::MachineInstr *Const = MRI.getVRegDef(Reg);
-  assert(Const && Const->getOpcode() == llvm::TargetOpcode::G_CONSTANT);
-  const llvm::APInt &Val = Const->getOperand(1).getCImm()->getValue();
-  return Val.getZExtValue();
-}
-
 #define GET_GLOBALISEL_PREDICATE_BITSET
 #include "SPIRVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATE_BITSET
@@ -2588,12 +2574,9 @@ void SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        const SPIRVType *ResType,
                                                        MachineInstr &I) const {
 
-  uint32_t Set =
-      getUnsignedConstantValueFromReg(I.getOperand(2).getReg(), *MRI);
-  uint32_t Binding =
-      getUnsignedConstantValueFromReg(I.getOperand(3).getReg(), *MRI);
-  uint32_t ArraySize =
-      getUnsignedConstantValueFromReg(I.getOperand(4).getReg(), *MRI);
+  uint32_t Set = foldImm(I.getOperand(2), MRI);
+  uint32_t Binding = foldImm(I.getOperand(3), MRI);
+  uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
 
   MachineIRBuilder MIRBuilder(I);
   Register VarReg =
@@ -2918,8 +2901,7 @@ bool SPIRVInstructionSelector::selectSpvThreadId(Register ResVReg,
   // Get Thread ID index. Expecting operand is a constant immediate value,
   // wrapped in a type assignment.
   assert(I.getOperand(2).isReg());
-  Register ThreadIdReg = I.getOperand(2).getReg();
-  const uint32_t ThreadId = getUnsignedConstantValueFromReg(ThreadIdReg, *MRI);
+  const uint32_t ThreadId = foldImm(I.getOperand(2), MRI);
 
   // Extract the thread ID from the loaded vector value.
   MachineBasicBlock &BB = *I.getParent();
