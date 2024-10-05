@@ -115,7 +115,6 @@ add_integration_test(
   SRCS
     pthread_name_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.pthread
     libc.src.errno.errno
     libc.src.pthread.pthread_create
