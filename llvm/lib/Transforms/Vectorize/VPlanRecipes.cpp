@@ -2185,6 +2185,9 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
     // predicated iteration inserts its generated value in the correct vector.
     State.reset(getOperand(0), VPhi);
   } else {
+    if (vputils::onlyFirstLaneUsed(this) && !State.Lane->isFirstLane())
+      return;
+
     Type *PredInstType = getOperand(0)->getUnderlyingValue()->getType();
     PHINode *Phi = State.Builder.CreatePHI(PredInstType, 2);
     Phi->addIncoming(PoisonValue::get(ScalarPredInst->getType()),
