@@ -277,7 +277,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 };
 
 struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
-  LDSBarrierOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  LDSBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -335,7 +335,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 };
 
 struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
-  SchedBarrierOpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  SchedBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<SchedBarrierOp>(converter), chipset(chipset) {}
 
   Chipset chipset;
@@ -725,7 +725,7 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 namespace {
 struct ExtPackedFp8OpLowering final
     : public ConvertOpToLLVMPattern<ExtPackedFp8Op> {
-  ExtPackedFp8OpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  ExtPackedFp8OpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<amdgpu::ExtPackedFp8Op>(converter),
         chipset(chipset) {}
   Chipset chipset;
@@ -737,7 +737,8 @@ struct ExtPackedFp8OpLowering final
 
 struct PackedTrunc2xFp8OpLowering final
     : public ConvertOpToLLVMPattern<PackedTrunc2xFp8Op> {
-  PackedTrunc2xFp8OpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  PackedTrunc2xFp8OpLowering(const LLVMTypeConverter &converter,
+                             Chipset chipset)
       : ConvertOpToLLVMPattern<amdgpu::PackedTrunc2xFp8Op>(converter),
         chipset(chipset) {}
   Chipset chipset;
@@ -749,7 +750,8 @@ struct PackedTrunc2xFp8OpLowering final
 
 struct PackedStochRoundFp8OpLowering final
     : public ConvertOpToLLVMPattern<PackedStochRoundFp8Op> {
-  PackedStochRoundFp8OpLowering(LLVMTypeConverter &converter, Chipset chipset)
+  PackedStochRoundFp8OpLowering(const LLVMTypeConverter &converter,
+                                Chipset chipset)
       : ConvertOpToLLVMPattern<amdgpu::PackedStochRoundFp8Op>(converter),
         chipset(chipset) {}
   Chipset chipset;
@@ -880,7 +882,7 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
 // Implement the AMDGPU_DPPLowering class that will convert the amdgpu.dpp
 // operation into the corresponding ROCDL instructions.
 struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
-  AMDGPUDPPLowering(LLVMTypeConverter &converter, Chipset chipset)
+  AMDGPUDPPLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<DPPOp>(converter), chipset(chipset) {}
   Chipset chipset;
 
@@ -1052,9 +1054,9 @@ struct ConvertAMDGPUToROCDLPass
 };
 } // namespace
 
-void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
-                                                   RewritePatternSet &patterns,
-                                                   Chipset chipset) {
+void mlir::populateAMDGPUToROCDLConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    Chipset chipset) {
   patterns
       .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
            RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
