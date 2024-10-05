@@ -17,8 +17,6 @@ class SettingsUseSourceCacheTestCase(TestBase):
         """Test that after 'set use-source-cache false', files are not locked."""
         self.set_use_source_cache_and_test(False)
 
-    @skipIf(hostoslist=no_match(["windows"]))
-    @skipIf(oslist=["windows"])  # Fails on windows 11
     def test_set_use_source_cache_true(self):
         """Test that after 'set use-source-cache false', files are locked."""
         self.set_use_source_cache_and_test(True)
@@ -43,16 +41,15 @@ class SettingsUseSourceCacheTestCase(TestBase):
             self, "calc"
         )
 
-        # Show the source file contents to make sure LLDB loads src file.
-        self.runCmd("source list")
+        # Ensure that the source file is loaded.
+        self.expect("step", patterns=["-> .+ int x4 ="])
 
         # Try deleting the source file.
         is_file_removed = self.removeFile(src)
 
         if is_cache_enabled:
-            self.assertFalse(
-                is_file_removed, "Source cache is enabled, but delete file succeeded"
-            )
+            # Regardless of whether the file is removed, its contents should be displayed.
+            self.expect("step", patterns=["-> .+ int x5 ="])
 
         if not is_cache_enabled:
             self.assertTrue(
