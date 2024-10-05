@@ -9,6 +9,7 @@
 #include "Diagnostics.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "Compiler.h"
+#include "NoLintFixes.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
@@ -311,8 +312,18 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   OS << D.Message;
-  if (Opts.DisplayFixesCount && !D.Fixes.empty())
-    OS << " (" << (D.Fixes.size() > 1 ? "fixes" : "fix") << " available)"; // TODO
+
+  // NOLINT fixes are somewhat not real fixes and to say "(fix available)" when
+  // the fixes is just to suppress could be misleading.
+  int RealFixCount = D.Fixes.size();
+  for (auto const &Fix : D.Fixes) {
+    if (isClangTidyNoLintFixes(Fix)) {
+      RealFixCount--;
+    }
+  }
+
+  if (Opts.DisplayFixesCount && RealFixCount > 0)
+    OS << " (" << (RealFixCount > 1 ? "fixes" : "fix") << " available)";
   // If notes aren't emitted as structured info, add them to the message.
   if (!Opts.EmitRelatedLocations)
     for (auto &Note : D.Notes) {
@@ -795,8 +806,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
-    LastDiag->Fixes.push_back(
-        Fix{std::string(Message), std::move(Edits), {}});
+    LastDiag->Fixes.push_back(Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 

@@ -23,6 +23,7 @@
 #include "HeuristicResolver.h"
 #include "IncludeCleaner.h"
 #include "IncludeFixer.h"
+#include "NoLintFixes.h"
 #include "Preamble.h"
 #include "SourceCode.h"
 #include "TidyProvider.h"
@@ -67,7 +68,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <iterator>
 #include <memory>
@@ -401,61 +401,6 @@ filterFastTidyChecks(const tidy::ClangTidyCheckFactories &All,
 }
 
 } // namespace
-
-std::vector<Fix>
-clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
-                     const clang::Diagnostic &Info, const Diag &Diag) {
-  auto RuleName = CTContext.getCheckName(Diag.ID);
-  if (
-      // If this isn't a clang-tidy diag
-      RuleName.empty() ||
-      // NOLINT does not work on Serverity Error or above
-      Diag.Severity >= DiagnosticsEngine::Error ||
-      // No point adding extra fixes if the Diag is for a different file
-      !Diag.InsideMainFile) {
-    return {};
-  }
-
-  auto &SrcMgr = Info.getSourceManager();
-  auto &DiagLoc = Info.getLocation();
-
-  auto F = Fix{};
-  F.Message = llvm::formatv("ignore [{0}] for this line", RuleName);
-  auto &E = F.Edits.emplace_back();
-
-  auto File = SrcMgr.getFileID(DiagLoc);
-  auto CodeTilDiag = toSourceCode(
-      SrcMgr, SourceRange(SrcMgr.getLocForStartOfFile(File), DiagLoc));
-
-  auto StartCurLine = CodeTilDiag.find_last_of('\n') + 1;
-  auto CurLine = CodeTilDiag.substr(StartCurLine);
-  auto Indent = CurLine.take_while([](char C) { return std::isspace(C); });
-
-  auto ExistingNoLintNextLineInsertPos = std::optional<int>();
-  if (StartCurLine > 0) {
-    auto StartPrevLine = CodeTilDiag.find_last_of('\n', StartCurLine - 1) + 1;
-    auto PrevLine =
-        CodeTilDiag.substr(StartPrevLine, StartCurLine - StartPrevLine - 1);
-    auto NLPos = PrevLine.find("NOLINTNEXTLINE(");
-    if (NLPos != StringRef::npos) {
-      ExistingNoLintNextLineInsertPos =
-          std::make_optional(PrevLine.find(")", NLPos));
-    }
-  }
-
-  auto InsertPos = sourceLocToPosition(SrcMgr, DiagLoc);
-  if (ExistingNoLintNextLineInsertPos) {
-    E.newText = llvm::formatv(", {0}", RuleName);
-    InsertPos.line -= 1;
-    InsertPos.character = *ExistingNoLintNextLineInsertPos;
-  } else {
-    E.newText = llvm::formatv("{0}// NOLINTNEXTLINE({1})\n", Indent, RuleName);
-    InsertPos.character = 0;
-  }
-  E.range = {InsertPos, InsertPos};
-
-  return {F};
-}
 
 std::optional<ParsedAST>
 ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
