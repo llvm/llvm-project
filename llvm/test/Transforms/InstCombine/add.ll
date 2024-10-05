@@ -1608,7 +1608,7 @@ define i8 @fold_add_constant_preserve_nuw(i8 %x) {
 define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
 ; CHECK-LABEL: @sdiv_to_udiv(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242048
 ; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
@@ -4249,10 +4249,7 @@ define i64 @shrink_add_rhs_constant1(i64 %x) {
 ; CHECK-LABEL: @shrink_add_rhs_constant1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[V30:%.*]], 9223372036854775806
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[AND]], -1
-; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[ADD]], -2
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[AND1]], 2
-; CHECK-NEXT:    ret i64 [[ADD2]]
+; CHECK-NEXT:    ret i64 [[AND]]
 ;
 entry:
   %and1 = and i64 %x, 9223372036854775806
@@ -4265,8 +4262,7 @@ entry:
 define i32 @shrink_add_rhs_constant2(i32 %x) {
 ; CHECK-LABEL: @shrink_add_rhs_constant2(
 ; CHECK-NEXT:    [[X:%.*]] = shl i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = and i32 [[X]], -4
-; CHECK-NEXT:    [[ADD_I:%.*]] = add nsw i32 [[MUL]], 7
+; CHECK-NEXT:    [[ADD_I:%.*]] = add nsw i32 [[X]], 4
 ; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[ADD_I]], -8
 ; CHECK-NEXT:    ret i32 [[AND_I]]
 ;
@@ -4279,9 +4275,7 @@ define i32 @shrink_add_rhs_constant2(i32 %x) {
 
 define i64 @shrink_add_rhs_constant3(i64 %x) {
 ; CHECK-LABEL: @shrink_add_rhs_constant3(
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0:%.*]], 23
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 15
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -8
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -4295,9 +4289,7 @@ define i64 @shrink_add_rhs_constant3(i64 %x) {
 define i64 @shrink_add_rhs_constant4(i64 %x) {
 ; CHECK-LABEL: @shrink_add_rhs_constant4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0:%.*]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 23
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP5]], -16
-; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 24
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %shl = shl nsw i64 %x, 4
@@ -4310,10 +4302,7 @@ define i64 @shrink_add_rhs_constant4(i64 %x) {
 define i64 @shrink_add_rhs_constant5(i64 %x) {
 ; CHECK-LABEL: @shrink_add_rhs_constant5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP5]], -8
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP4]], -8
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 16
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   %shl = shl nsw i64 %x, 3
