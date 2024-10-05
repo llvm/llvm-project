@@ -21,9 +21,8 @@ add_header_library(
   HDRS
     linux_extension_errors.h
   DEPENDS
-    libc.include.errno
     libc.src.__support.StringUtil.message_mapper
-    libc.src.errno.libc_errno
+    libc.src.errno.errno
 )
 
 add_header_library(

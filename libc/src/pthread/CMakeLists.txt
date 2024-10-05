@@ -221,7 +221,7 @@ add_entrypoint_object(
     pthread_mutexattr_destroy.h
   DEPENDS
     .pthread_mutexattr
-    libc.include.errno
+    libc.src.errno.errno
     libc.include.pthread
 )
 
@@ -279,7 +279,7 @@ add_entrypoint_object(
     pthread_mutex_init.h
   DEPENDS
     .pthread_mutexattr
-    libc.include.errno
+    libc.src.errno.errno
     libc.include.pthread
     libc.src.__support.threads.mutex
 )
@@ -449,8 +449,8 @@ add_entrypoint_object(
   HDRS
     pthread_getspecific.h
   DEPENDS
-    libc.include.errno
     libc.include.pthread
+    libc.src.errno.errno
     libc.src.__support.threads.thread
 )
 
