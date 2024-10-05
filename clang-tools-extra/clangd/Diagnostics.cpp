@@ -317,7 +317,7 @@ std::string mainMessage(const Diag &D, const ClangdDiagnosticOptions &Opts) {
   // the fixes is just to suppress could be misleading.
   int RealFixCount = D.Fixes.size();
   for (auto const &Fix : D.Fixes) {
-    if (isClangTidyNoLintFixes(Fix)) {
+    if (isNoLintFixes(Fix)) {
       RealFixCount--;
     }
   }

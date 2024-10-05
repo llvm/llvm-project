@@ -22,12 +22,13 @@ namespace clangd {
 
 /// Suggesting to insert "\\ NOLINTNEXTLINE(...)" to suppress clang-tidy
 /// diagnostics.
-std::vector<Fix>
-clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
-                     const clang::Diagnostic &Info, const Diag &Diag);
+std::vector<Fix> noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
+                             const clang::Diagnostic &Info, const Diag &Diag);
+
+const auto NoLintFixMsgRegexStr = std::string("ignore \\[.*\\] for this line");
 
 /// Check if a fix created by clangTidyNoLintFixes().
-bool isClangTidyNoLintFixes(const Fix &F);
+bool isNoLintFixes(const Fix &F);
 
 } // namespace clangd
 } // namespace clang

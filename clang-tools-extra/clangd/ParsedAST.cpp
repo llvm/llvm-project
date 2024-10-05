@@ -660,7 +660,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           [&FixIncludes, &CTContext](const Diag &Diag,
                                      const clang::Diagnostic &Info) {
             auto Fixes = std::vector<Fix>();
-            auto NoLintFixes = clangTidyNoLintFixes(*CTContext, Info, Diag);
+            auto NoLintFixes = noLintFixes(*CTContext, Info, Diag);
             Fixes.insert(Fixes.end(), NoLintFixes.begin(), NoLintFixes.end());
             auto IncludeFixes = FixIncludes->fix(Diag.Severity, Info);
             Fixes.insert(Fixes.end(), IncludeFixes.begin(), IncludeFixes.end());
