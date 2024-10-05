@@ -99,6 +99,16 @@ public:
     return *this;
   }
 
+  constexpr void operator++(int) { next(); }
+
+  constexpr iterator operator++(int)
+    requires forward_range<__maybe_const<Const, First>>
+  {
+    auto tmp = *this;
+    next();
+    return tmp;
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
