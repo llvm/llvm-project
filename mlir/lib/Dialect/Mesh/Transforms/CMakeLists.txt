@@ -25,4 +25,5 @@ add_mlir_dialect_library(MLIRMeshTransforms
   MLIRPass
   MLIRSupport
   MLIRTensorDialect
+  MLIRTosaShardingInterfaceImpl
 )

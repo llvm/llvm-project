@@ -73,6 +73,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
+  MLIRTensorTilingInterfaceImpl
   MLIRTransforms
   MLIRTransformUtils
   MLIRValueBoundsOpInterface

@@ -34,8 +34,10 @@ add_mlir_dialect_library(MLIRTosaShardingInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRMeshDialect
   MLIRShardingInterface
   MLIRSupport
+  MLIRTosaDialect
   )
 
 add_subdirectory(Transforms)

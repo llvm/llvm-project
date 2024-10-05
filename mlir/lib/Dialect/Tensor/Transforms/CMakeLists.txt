@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRArithUtils
@@ -32,6 +33,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRTensorUtils
+  MLIRTilingInterface
   MLIRTransforms
   MLIRVectorDialect
   MLIRVectorUtils
