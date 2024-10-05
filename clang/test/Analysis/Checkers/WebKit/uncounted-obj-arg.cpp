@@ -588,6 +588,8 @@ public:
     getFieldTrivial().nonTrivial23();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
+
+  void setField(RefCounted*);
 };
 
 class UnrelatedClass2 {
@@ -598,11 +600,24 @@ public:
   RefCounted &getFieldTrivialRecursively() { return getFieldTrivial().getFieldTrivial(); }
   RefCounted *getFieldTrivialTernary() { return Field ? Field->getFieldTernary() : nullptr; }
 
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::forward<AdditionalArgs>(args)...);
+  }
+
+  template<typename T, typename ... AdditionalArgs>
+  void callSetField2(T&& item, AdditionalArgs&&... args)
+  {
+    item.setField(std::move<AdditionalArgs>(args)...);
+  }
+
   void test() {
     getFieldTrivialRecursively().trivial1(); // no-warning
     getFieldTrivialTernary()->trivial2(); // no-warning
     getFieldTrivialRecursively().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    callSetField(getFieldTrivial(), refCountedObj()); // no-warning
   }
 };
 
