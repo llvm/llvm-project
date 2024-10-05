@@ -183,6 +183,7 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   ProgramStateRef State = C.getState();
   SValBuilder &SVB = C.getSValBuilder();
   const Expr *CE = Call.getOriginExpr();
+  auto BoolTy = C.getASTContext().BoolTy;
 
   SVal Arg1 = Call.getArgSVal(0);
   SVal Arg2 = Call.getArgSVal(1);
@@ -194,7 +195,7 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
   auto [Overflow, NotOverflow] = checkOverflow(C, RetValMax, ResultType);
   if (NotOverflow) {
     ProgramStateRef StateNoOverflow =
-        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false));
+        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(false, BoolTy));
 
     if (auto L = Call.getArgSVal(2).getAs<Loc>()) {
       StateNoOverflow =
@@ -213,7 +214,7 @@ void BuiltinFunctionChecker::handleOverflowBuiltin(const CallEvent &Call,
 
   if (Overflow) {
     C.addTransition(
-        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true)),
+        State->BindExpr(CE, C.getLocationContext(), SVB.makeTruthVal(true, BoolTy)),
         createBuiltinOverflowNoteTag(C));
   }
 }
