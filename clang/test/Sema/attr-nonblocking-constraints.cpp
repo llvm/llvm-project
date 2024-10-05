@@ -162,8 +162,7 @@ int nb10b() [[clang::nonblocking]];
 
 int nb10c(bool x) [[clang::nonblocking]]
 {
-	// Warns that the expression is not nonblocking.
-	return (x ? nb10a : nb10b)();
+	return (x ? nb10a : nb10b)(); // No diagnostic.
 }
 
 // Interactions with nonblocking(false)
