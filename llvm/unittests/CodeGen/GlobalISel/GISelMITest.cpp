@@ -66,8 +66,7 @@ body: |
       .toNullTerminatedStringRef(S);
 }
 
-std::unique_ptr<TargetMachine>
-AMDGPUGISelMITest::createTargetMachine() const {
+std::unique_ptr<TargetMachine> AMDGPUGISelMITest::createTargetMachine() const {
   Triple TargetTriple("amdgcn-amd-amdhsa");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);

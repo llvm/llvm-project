@@ -57,8 +57,7 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                  legacy::PassManagerBase &PM,
                                  std::unique_ptr<MIRParser> &MIR,
-                                 const TargetMachine &TM,
-                                 StringRef MIRCode) {
+                                 const TargetMachine &TM, StringRef MIRCode) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);

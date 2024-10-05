@@ -10,9 +10,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -62,8 +62,8 @@ void CodeGenCommonTMImpl::initAsmInfo() {
   // we'll crash later.
   // Provide the user with a useful error message about what's wrong.
   assert(TmpAsmInfo && "MCAsmInfo not initialized. "
-         "Make sure you include the correct TargetSelect.h"
-         "and that InitializeAllTargetMCs() is being invoked!");
+                       "Make sure you include the correct TargetSelect.h"
+                       "and that InitializeAllTargetMCs() is being invoked!");
 
   if (Options.BinutilsVersion.first > 0)
     TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);

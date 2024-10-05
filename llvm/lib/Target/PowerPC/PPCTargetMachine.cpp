@@ -356,9 +356,9 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
     : CodeGenCommonTMImpl(T, getDataLayoutString(TT), TT, CPU,
-                        computeFSAdditions(FS, OL, TT), Options,
-                        getEffectiveRelocModel(TT, RM),
-                        getEffectivePPCCodeModel(TT, CM, JIT), OL),
+                          computeFSAdditions(FS, OL, TT), Options,
+                          getEffectiveRelocModel(TT, RM),
+                          getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       TargetABI(computeTargetABI(TT, Options)),
       Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {

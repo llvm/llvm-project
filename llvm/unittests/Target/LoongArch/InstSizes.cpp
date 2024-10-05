@@ -42,8 +42,8 @@ std::unique_ptr<LoongArchInstrInfo> createInstrInfo(TargetMachine *TM) {
 /// the \p InputMIRSnippet (global variables etc)
 /// Inspired by AArch64
 void runChecks(
-    TargetMachine *TM, LoongArchInstrInfo *II,
-    const StringRef InputIRSnippet, const StringRef InputMIRSnippet,
+    TargetMachine *TM, LoongArchInstrInfo *II, const StringRef InputIRSnippet,
+    const StringRef InputMIRSnippet,
     std::function<void(LoongArchInstrInfo &, MachineFunction &)> Checks) {
   LLVMContext Context;
 

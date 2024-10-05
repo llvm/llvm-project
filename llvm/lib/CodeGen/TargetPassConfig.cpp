@@ -574,8 +574,7 @@ TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
 
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
-TargetPassConfig::TargetPassConfig(TargetMachine &TM,
-                                   PassManagerBase &PM)
+TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
