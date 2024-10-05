@@ -20,6 +20,7 @@
 #include <functional>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -35,41 +36,27 @@ static_assert(NoExceptClear<std::flat_map<int, int>>);
 static_assert(
     NoExceptClear<std::flat_map<int, int, std::less<int>, ThrowOnMoveContainer<int>, ThrowOnMoveContainer<int>>>);
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+
+  M m = {{1, 2}, {2, 1}, {3, 3}, {4, 1}, {5, 0}};
+  assert(m.size() == 5);
+  ASSERT_NOEXCEPT(m.clear());
+  ASSERT_SAME_TYPE(decltype(m.clear()), void);
+  m.clear();
+  assert(m.size() == 0);
+}
+
 int main(int, char**) {
-  {
-    using M = std::flat_map<int, int>;
-    M m     = {{1, 2}, {2, 1}, {3, 3}, {4, 1}, {5, 0}};
-    assert(m.size() == 5);
-    ASSERT_NOEXCEPT(m.clear());
-    ASSERT_SAME_TYPE(decltype(m.clear()), void);
-    m.clear();
-    assert(m.size() == 0);
-  }
-  {
-    using M =
-        std::flat_map<int,
-                      int,
-                      std::greater<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::vector<int, min_allocator<int>>>;
-    M m = {{1, 2}, {2, 1}, {3, 3}, {4, 1}, {5, 0}};
-    assert(m.size() == 5);
-    ASSERT_NOEXCEPT(m.clear());
-    ASSERT_SAME_TYPE(decltype(m.clear()), void);
-    m.clear();
-    assert(m.size() == 0);
-  }
-#if 0
-  // vector<bool> is not supported
-  {
-    using M = std::flat_map<bool, bool>;
-    M m     = {{true, false}, {false, true}};
-    assert(m.size() == 2);
-    ASSERT_NOEXCEPT(m.clear());
-    ASSERT_SAME_TYPE(decltype(m.clear()), void);
-    m.clear();
-    assert(m.size() == 0);
-  }
-#endif
+  test<std::vector<int>, std::vector<int>>();
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
+
   return 0;
 }

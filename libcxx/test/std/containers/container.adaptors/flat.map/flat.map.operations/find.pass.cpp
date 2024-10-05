@@ -20,65 +20,36 @@
 #include <string>
 #include <utility>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    using M = std::flat_map<int, char>;
-    M m     = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
-    ASSERT_SAME_TYPE(decltype(m.find(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), M::const_iterator);
-    assert(m.find(0) == m.end());
-    assert(m.find(1) == m.begin());
-    assert(m.find(2) == m.begin() + 1);
-    assert(m.find(3) == m.end());
-    assert(m.find(4) == m.begin() + 2);
-    assert(m.find(5) == m.begin() + 3);
-    assert(m.find(6) == m.end());
-    assert(m.find(7) == m.end());
-    assert(std::as_const(m).find(8) == m.begin() + 4);
-    assert(std::as_const(m).find(9) == m.end());
-  }
-// std::string is not a sequence container
-#if 0
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
 
-  {
-    using M = std::flat_map<int, char, std::greater<int>, std::deque<int, min_allocator<int>>, std::string>;
-    M m = {{1,'a'}, {2,'b'}, {4,'d'}, {5,'e'}, {8,'h'}};
-    ASSERT_SAME_TYPE(decltype(m.find(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), M::const_iterator);
-    assert(m.find(0) == m.end());
-    assert(m.find(1) == m.begin() + 4);
-    assert(m.find(2) == m.begin() + 3);
-    assert(m.find(3) == m.end());
-    assert(m.find(4) == m.begin() + 2);
-    assert(m.find(5) == m.begin() + 1);
-    assert(m.find(6) == m.end());
-    assert(m.find(7) == m.end());
-    assert(std::as_const(m).find(8) == m.begin());
-    assert(std::as_const(m).find(9) == m.end());
-  }
-#endif
-#if 0
-  // vector<bool> is not supported
-  {
-    using M = std::flat_map<bool, bool>;
-    M m     = {{true, false}, {false, true}};
-    ASSERT_SAME_TYPE(decltype(m.find(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), M::const_iterator);
-    assert(m.find(true) == m.begin() + 1);
-    assert(m.find(false) == m.begin());
-    m = {{true, true}};
-    assert(m.find(true) == m.begin());
-    assert(m.find(false) == m.end());
-    m = {{false, false}};
-    assert(std::as_const(m).find(true) == m.end());
-    assert(std::as_const(m).find(false) == m.begin());
-    m.clear();
-    assert(m.find(true) == m.end());
-    assert(m.find(false) == m.end());
-  }
-#endif
+  M m = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
+  ASSERT_SAME_TYPE(decltype(m.find(0)), typename M::iterator);
+  ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), typename M::const_iterator);
+  assert(m.find(0) == m.end());
+  assert(m.find(1) == m.begin());
+  assert(m.find(2) == m.begin() + 1);
+  assert(m.find(3) == m.end());
+  assert(m.find(4) == m.begin() + 2);
+  assert(m.find(5) == m.begin() + 3);
+  assert(m.find(6) == m.end());
+  assert(m.find(7) == m.end());
+  assert(std::as_const(m).find(8) == m.begin() + 4);
+  assert(std::as_const(m).find(9) == m.end());
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<char>>();
+  test<std::deque<int>, std::vector<char>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+
   return 0;
 }

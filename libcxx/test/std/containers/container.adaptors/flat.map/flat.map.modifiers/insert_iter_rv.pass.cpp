@@ -15,6 +15,7 @@
 #include <cassert>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "../helpers.h"
@@ -50,50 +51,28 @@ void do_insert_iter_rv_test() {
   assert(r->first == 3);
   assert(r->second == 3);
 }
+
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  using P     = std::pair<Key, Value>;
+  using CP    = std::pair<const Key, Value>;
+
+  do_insert_iter_rv_test<M, P>();
+  do_insert_iter_rv_test<M, CP>();
+}
+
 int main(int, char**) {
-  do_insert_iter_rv_test<std::flat_map<int, MoveOnly>, std::pair<int, MoveOnly>>();
-  do_insert_iter_rv_test<std::flat_map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
-
-  {
-    using M =
-        std::flat_map<int,
-                      MoveOnly,
-                      std::less<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<MoveOnly, min_allocator<MoveOnly>>>;
-    using P  = std::pair<int, MoveOnly>;
-    using CP = std::pair<const int, MoveOnly>;
-    do_insert_iter_rv_test<M, P>();
-    do_insert_iter_rv_test<M, CP>();
-  }
-  {
-    using M = std::flat_map<int, MoveOnly>;
-    using R = typename M::iterator;
-    M m;
-    R r = m.insert(m.end(), {2, MoveOnly(2)});
-    assert(r == m.begin());
-    assert(m.size() == 1);
-    assert(r->first == 2);
-    assert(r->second == 2);
-
-    r = m.insert(m.end(), {1, MoveOnly(1)});
-    assert(r == m.begin());
-    assert(m.size() == 2);
-    assert(r->first == 1);
-    assert(r->second == 1);
-
-    r = m.insert(m.end(), {3, MoveOnly(3)});
-    assert(r == std::ranges::prev(m.end()));
-    assert(m.size() == 3);
-    assert(r->first == 3);
-    assert(r->second == 3);
-
-    r = m.insert(m.end(), {3, MoveOnly(3)});
-    assert(r == std::ranges::prev(m.end()));
-    assert(m.size() == 3);
-    assert(r->first == 3);
-    assert(r->second == 3);
-  }
+  test<std::vector<int>, std::vector<double>>();
+  test<std::vector<int>, std::vector<MoveOnly>>();
+  test<std::deque<int>, std::deque<double>>();
+  test<std::deque<int>, std::deque<MoveOnly>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<MoveOnly>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<MoveOnly, min_allocator<MoveOnly>>>();
 
   {
     auto insert_func = [](auto& m, auto key_arg, auto value_arg) {

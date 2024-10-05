@@ -17,8 +17,8 @@
 template <class T, class Iterator = random_access_iterator<T*>, class ConstIterator = random_access_iterator<const T*>>
 struct MinSequenceContainer {
   using value_type      = T;
-  using difference_type = short;
-  using size_type       = unsigned short;
+  using difference_type = int;
+  using size_type       = unsigned int;
   using iterator        = Iterator;
   using const_iterator  = ConstIterator;
 
@@ -38,21 +38,29 @@ struct MinSequenceContainer {
 
   template <class It>
   iterator insert(const_iterator p, It first, It last) {
-    auto it = data_.insert(p - cbegin() + data_.begin(), first, last);
-    return it - data_.begin() + begin();
+    return from_vector_iterator(data_.insert(to_vector_iterator(p), first, last));
   }
 
-  iterator insert(const_iterator p, int value) {
-    auto it = data_.insert(p - cbegin() + data_.begin(), value);
-    return it - data_.begin() + begin();
+  iterator insert(const_iterator p, T value) {
+    return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
   }
 
   iterator erase(const_iterator first, const_iterator last) {
-    auto it = data_.erase(first - cbegin() + data_.begin(), last - cbegin() + data_.begin());
-    return it - data_.begin() + begin();
+    return from_vector_iterator(data_.erase(to_vector_iterator(first), to_vector_iterator(last)));
+  }
+
+  iterator erase(const_iterator iter) { return from_vector_iterator(data_.erase(to_vector_iterator(iter))); }
+
+  template <class... Args>
+  iterator emplace(const_iterator pos, Args&&... args) {
+    return from_vector_iterator(data_.emplace(to_vector_iterator(pos), std::forward<Args>(args)...));
   }
 
 private:
+  std::vector<T>::const_iterator to_vector_iterator(const_iterator cit) const { return cit - cbegin() + data_.begin(); }
+
+  iterator from_vector_iterator(std::vector<T>::iterator it) { return it - data_.begin() + begin(); }
+
   std::vector<T> data_;
 };
 

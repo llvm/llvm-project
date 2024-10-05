@@ -15,12 +15,17 @@
 #include <ranges>
 #include <string>
 #include <vector>
+#include "MinSequenceContainer.h"
+#include "min_allocator.h"
 
+template <class KeyContainer, class ValueContainer>
 void test() {
   {
-    using C = std::flat_map<int, int, std::deque<int>, std::vector<int>>;
+    using Key   = typename KeyContainer::value_type;
+    using Value = typename ValueContainer::value_type;
+    using C     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
 
-    static_assert(std::same_as<std::ranges::iterator_t<C>, C::iterator>);
+    static_assert(std::same_as<std::ranges::iterator_t<C>, typename C::iterator>);
     static_assert(std::ranges::random_access_range<C>);
     static_assert(!std::ranges::contiguous_range<C>);
     static_assert(std::ranges::common_range<C>);
@@ -30,7 +35,7 @@ void test() {
     static_assert(!std::ranges::borrowed_range<C>);
     static_assert(std::ranges::viewable_range<C>);
 
-    static_assert(std::same_as<std::ranges::iterator_t<const C>, C::const_iterator>);
+    static_assert(std::same_as<std::ranges::iterator_t<const C>, typename C::const_iterator>);
     static_assert(std::ranges::random_access_range<const C>);
     static_assert(!std::ranges::contiguous_range<const C>);
     static_assert(std::ranges::common_range<const C>);
@@ -40,4 +45,11 @@ void test() {
     static_assert(!std::ranges::borrowed_range<const C>);
     static_assert(!std::ranges::viewable_range<const C>);
   }
+}
+
+void test() {
+  test<std::vector<int>, std::vector<char>>();
+  test<std::deque<int>, std::vector<char>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
 }

@@ -13,12 +13,14 @@
 // size_type max_size() const noexcept;
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <functional>
 #include <limits>
 #include <type_traits>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "test_allocator.h"
 #include "test_macros.h"
 

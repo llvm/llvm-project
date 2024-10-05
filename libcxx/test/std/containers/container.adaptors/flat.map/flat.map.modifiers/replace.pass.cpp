@@ -13,12 +13,15 @@
 // void replace(key_container_type&& key_cont, mapped_container_type&& mapped_cont);
 
 #include <algorithm>
+#include <deque>
 #include <concepts>
 #include <flat_map>
 #include <functional>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
+#include "min_allocator.h"
 
 template <class T, class... Args>
 concept CanReplace = requires(T t, Args&&... args) { t.replace(std::forward<Args>(args)...); };
@@ -29,19 +32,29 @@ static_assert(!CanReplace<Map, const std::vector<int>&, std::vector<int>>);
 static_assert(!CanReplace<Map, std::vector<int>, const std::vector<int>&>);
 static_assert(!CanReplace<Map, const std::vector<int>&, const std::vector<int>&>);
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+
+  M m                       = M({1, 2, 3}, {4, 5, 6});
+  KeyContainer new_keys     = {7, 8};
+  ValueContainer new_values = {9, 10};
+  auto expected_keys        = new_keys;
+  auto expected_values      = new_values;
+  m.replace(std::move(new_keys), std::move(new_values));
+  assert(m.size() == 2);
+  assert(std::ranges::equal(m.keys(), expected_keys));
+  assert(std::ranges::equal(m.values(), expected_values));
+}
+
 int main(int, char**) {
-  {
-    using M                     = std::flat_map<int, int>;
-    M m                         = M({1, 2, 3}, {4, 5, 6});
-    std::vector<int> new_keys   = {7, 8};
-    std::vector<int> new_values = {9, 10};
-    auto expected_keys          = new_keys;
-    auto expected_values        = new_values;
-    m.replace(std::move(new_keys), std::move(new_values));
-    assert(m.size() == 2);
-    assert(std::ranges::equal(m.keys(), expected_keys));
-    assert(std::ranges::equal(m.values(), expected_values));
-  }
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+
   {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     using KeyContainer   = std::vector<int>;

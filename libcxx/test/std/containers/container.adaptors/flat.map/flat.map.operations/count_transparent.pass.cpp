@@ -17,8 +17,10 @@
 #include <string>
 #include <utility>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
+#include "min_allocator.h"
 
 // Constraints: The qualified-id Compare::is_transparent is valid and denotes a type.
 template <class M>
@@ -30,21 +32,31 @@ static_assert(CanCount<const TransparentMap>);
 static_assert(!CanCount<NonTransparentMap>);
 static_assert(!CanCount<const NonTransparentMap>);
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
+
+  M m = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
+  ASSERT_SAME_TYPE(decltype(m.count(Transparent<std::string>{"abc"})), typename M::size_type);
+  ASSERT_SAME_TYPE(decltype(std::as_const(m).count(Transparent<std::string>{"b"})), typename M::size_type);
+  assert(m.count(Transparent<std::string>{"alpha"}) == 1);
+  assert(m.count(Transparent<std::string>{"beta"}) == 1);
+  assert(m.count(Transparent<std::string>{"epsilon"}) == 1);
+  assert(m.count(Transparent<std::string>{"eta"}) == 1);
+  assert(m.count(Transparent<std::string>{"gamma"}) == 1);
+  assert(m.count(Transparent<std::string>{"al"}) == 0);
+  assert(m.count(Transparent<std::string>{""}) == 0);
+  assert(m.count(Transparent<std::string>{"g"}) == 0);
+}
+
 int main(int, char**) {
-  {
-    using M = std::flat_map<std::string, int, TransparentComparator>;
-    M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
-    ASSERT_SAME_TYPE(decltype(m.count(Transparent<std::string>{"abc"})), M::size_type);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).count(Transparent<std::string>{"b"})), M::size_type);
-    assert(m.count(Transparent<std::string>{"alpha"}) == 1);
-    assert(m.count(Transparent<std::string>{"beta"}) == 1);
-    assert(m.count(Transparent<std::string>{"epsilon"}) == 1);
-    assert(m.count(Transparent<std::string>{"eta"}) == 1);
-    assert(m.count(Transparent<std::string>{"gamma"}) == 1);
-    assert(m.count(Transparent<std::string>{"al"}) == 0);
-    assert(m.count(Transparent<std::string>{""}) == 0);
-    assert(m.count(Transparent<std::string>{"g"}) == 0);
-  }
+  test<std::vector<std::string>, std::vector<int>>();
+  test<std::deque<std::string>, std::vector<int>>();
+  test<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
+  test<std::vector<std::string, min_allocator<std::string>>, std::vector<int, min_allocator<int>>>();
+
   {
     bool transparent_used = false;
     TransparentComparator c(transparent_used);
@@ -54,21 +66,6 @@ int main(int, char**) {
     assert(n == 1);
     assert(transparent_used);
   }
-#if 0
-// do we really want to support this weird comparator that gives different answer for Key and Kp?
-  {
-    using M = std::flat_map<std::string, int, StartsWith::Less>;
-    M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
-    ASSERT_SAME_TYPE(decltype(m.count(StartsWith('b'))), M::size_type);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).count(StartsWith('b'))), M::size_type);
-    assert(m.count("beta") == 1);
-    assert(m.count("delta") == 0);
-    assert(m.count("zeta") == 0);
-    assert(m.count(StartsWith('b')) == 1);
-    assert(m.count(StartsWith('d')) == 0);
-    assert(m.count(StartsWith('e')) == 2);
-    assert(m.count(StartsWith('z')) == 0);
-  }
-#endif
+
   return 0;
 }

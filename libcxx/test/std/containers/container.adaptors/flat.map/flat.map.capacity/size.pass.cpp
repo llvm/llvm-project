@@ -13,35 +13,37 @@
 // size_type size() const noexcept;
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
+#include <functional>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
+#include "min_allocator.h"
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using M = std::flat_map<int, char, std::less<int>, KeyContainer, ValueContainer>;
   {
-    using M   = std::flat_map<int, char>;
     const M m = {{1, 'a'}, {1, 'b'}, {4, 'd'}, {5, 'e'}, {5, 'h'}};
     ASSERT_SAME_TYPE(decltype(m.size()), std::size_t);
     ASSERT_NOEXCEPT(m.size());
     assert(m.size() == 3);
   }
   {
-    using M   = std::flat_map<int, char>;
     const M m = {{1, 'a'}};
     ASSERT_SAME_TYPE(decltype(m.size()), std::size_t);
     ASSERT_NOEXCEPT(m.size());
     assert(m.size() == 1);
   }
   {
-    using M = std::flat_map<int, char>;
     const M m;
     ASSERT_SAME_TYPE(decltype(m.size()), std::size_t);
     ASSERT_NOEXCEPT(m.size());
     assert(m.size() == 0);
   }
   {
-    using M = std::flat_map<int, char>;
     M m;
     std::size_t s = 1000000;
     for (auto i = 0u; i < s; ++i) {
@@ -51,6 +53,13 @@ int main(int, char**) {
     ASSERT_NOEXCEPT(m.size());
     assert(m.size() == s);
   }
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<char>>();
+  test<std::deque<int>, std::vector<char>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
 
   return 0;
 }

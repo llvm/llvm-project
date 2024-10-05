@@ -19,7 +19,9 @@
 #include <cassert>
 #include <functional>
 #include <deque>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "../helpers.h"
 #include "min_allocator.h"
@@ -62,10 +64,14 @@ static_assert(!CanTryEmplace<TransparentMap, TransparentMapConstIter, NonConvert
 static_assert(!CanTryEmplace<NonTransparentMap, TransparentMapConstIter, NonConvertibleTransparent<int>, Emplaceable>);
 static_assert(!CanTryEmplace<TransparentMap, TransparentMapConstIter, ConvertibleTransparent<int>, int>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
+
   { // pair<iterator, bool> try_emplace(K&& k, Args&&... args);
-    using M = std::flat_map<int, Moveable, TransparentComparator>;
-    using R = std::pair<M::iterator, bool>;
+    using R = std::pair<typename M::iterator, bool>;
     M m;
     for (int i = 0; i < 20; i += 2)
       m.emplace(i, Moveable(i, (double)i));
@@ -106,13 +112,12 @@ int main(int, char**) {
   }
 
   { // iterator try_emplace(const_iterator hint, K&& k, Args&&... args);
-    using M = std::flat_map<int, Moveable, TransparentComparator>;
     using R = typename M::iterator;
     M m;
     for (int i = 0; i < 20; i += 2)
       m.try_emplace(i, Moveable(i, (double)i));
     assert(m.size() == 10);
-    M::const_iterator it = m.find(2);
+    typename M::const_iterator it = m.find(2);
 
     Moveable mv1(3, 3.0);
     for (int i = 0; i < 20; i += 2) {
@@ -129,6 +134,13 @@ int main(int, char**) {
     assert(r2->first == 3);        // key
     assert(r2->second.get() == 3); // value
   }
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<Moveable>>();
+  test<std::deque<int>, std::vector<Moveable>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
   {
     bool transparent_used = false;

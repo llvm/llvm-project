@@ -14,6 +14,7 @@
 #include <cassert>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "test_macros.h"
@@ -95,10 +96,14 @@ static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<Value>, Trans
                                      ConvertibleTransparent<int>,
                                      Value>);
 
-int main(int, char**) {
-  { // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
-    using M = std::flat_map<int, Moveable, TransparentComparator>;
-    using R = std::pair<M::iterator, bool>;
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
+  {
+    // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
+    using R = std::pair<typename M::iterator, bool>;
     M m;
     for (int i = 0; i < 20; i += 2)
       m.emplace(i, Moveable(i, (double)i));
@@ -138,15 +143,14 @@ int main(int, char**) {
     assert(r4.first->first == 117);       // key
     assert(r4.first->second.get() == -1); // value
   }
-
-  { // iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);
-    using M = std::flat_map<int, Moveable, TransparentComparator>;
-    M m;
+  {
+    // iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);
     using R = M::iterator;
+    M m;
     for (int i = 0; i < 20; i += 2)
       m.emplace(i, Moveable(i, (double)i));
     assert(m.size() == 10);
-    M::const_iterator it = m.find(2);
+    typename M::const_iterator it = m.find(2);
 
     Moveable mv1(3, 3.0);
     std::same_as<R> decltype(auto) r1 = m.insert_or_assign(it, ConvertibleTransparent<int>{2}, std::move(mv1));
@@ -209,6 +213,14 @@ int main(int, char**) {
     assert(r8->first == 9);         // key
     assert(r8->second.get() == 17); // value
   }
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<Moveable>>();
+  test<std::deque<int>, std::vector<Moveable>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
+
   {
     bool transparent_used = false;
     TransparentComparator c(transparent_used);

@@ -19,15 +19,19 @@
 #include <functional>
 #include <utility>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
   {
-    using M = std::flat_map<int, char>;
+    using M = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
     M m     = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
-    ASSERT_SAME_TYPE(decltype(m.upper_bound(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).upper_bound(0)), M::const_iterator);
+    ASSERT_SAME_TYPE(decltype(m.upper_bound(0)), typename M::iterator);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).upper_bound(0)), typename M::const_iterator);
     assert(m.upper_bound(0) == m.begin());
     assert(m.upper_bound(1) == m.begin() + 1);
     assert(m.upper_bound(2) == m.begin() + 2);
@@ -39,16 +43,12 @@ int main(int, char**) {
     assert(std::as_const(m).upper_bound(8) == m.end());
     assert(std::as_const(m).upper_bound(9) == m.end());
   }
+
   {
-    using M =
-        std::flat_map<int,
-                      char,
-                      std::greater<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<char, min_allocator<char>>>;
-    M m = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
-    ASSERT_SAME_TYPE(decltype(m.upper_bound(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).upper_bound(0)), M::const_iterator);
+    using M = std::flat_map<Key, Value, std::greater<Key>, KeyContainer, ValueContainer>;
+    M m     = {{1, 'a'}, {2, 'b'}, {4, 'd'}, {5, 'e'}, {8, 'h'}};
+    ASSERT_SAME_TYPE(decltype(m.upper_bound(0)), typename M::iterator);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).upper_bound(0)), typename M::const_iterator);
     assert(m.upper_bound(0) == m.end());
     assert(m.upper_bound(1) == m.end());
     assert(m.upper_bound(2) == m.begin() + 4);
@@ -60,25 +60,13 @@ int main(int, char**) {
     assert(std::as_const(m).upper_bound(8) == m.begin() + 1);
     assert(std::as_const(m).upper_bound(9) == m.begin());
   }
-#if 0
-  // vector<bool> is not supported
-  {
-    using M = std::flat_map<bool, bool>;
-    M m     = {{true, false}, {false, true}};
-    ASSERT_SAME_TYPE(decltype(m.upper_bound(0)), M::iterator);
-    ASSERT_SAME_TYPE(decltype(std::as_const(m).upper_bound(0)), M::const_iterator);
-    assert(m.upper_bound(true) == m.end());
-    assert(m.upper_bound(false) == m.begin() + 1);
-    m = {{true, true}};
-    assert(m.upper_bound(true) == m.end());
-    assert(m.upper_bound(false) == m.begin());
-    m = {{false, false}};
-    assert(std::as_const(m).upper_bound(true) == m.end());
-    assert(std::as_const(m).upper_bound(false) == m.end());
-    m.clear();
-    assert(m.upper_bound(true) == m.end());
-    assert(m.upper_bound(false) == m.end());
-  }
-#endif
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<char>>();
+  test<std::deque<int>, std::vector<char>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<char>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<char, min_allocator<char>>>();
+
   return 0;
 }

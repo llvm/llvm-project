@@ -17,62 +17,43 @@
 #include <functional>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  using V     = std::pair<const int, double>;
+
+  M m = {{1, 1}, {1, 1.5}, {1, 2}, {3, 1}, {3, 1.5}, {3, 2}};
+  m.insert({
+      {4, 1},
+      {4, 1.5},
+      {4, 2},
+      {1, 1},
+      {1, 1.5},
+      {1, 2},
+      {2, 1},
+      {2, 1.5},
+      {2, 2},
+  });
+  assert(m.size() == 4);
+  assert(std::distance(m.begin(), m.end()) == 4);
+  assert(*m.begin() == V(1, 1));
+  assert(*std::next(m.begin()) == V(2, 1));
+  assert(*std::next(m.begin(), 2) == V(3, 1));
+  assert(*std::next(m.begin(), 3) == V(4, 1));
+}
+
 int main(int, char**) {
-  {
-    using V                      = std::pair<const int, double>;
-    std::flat_map<int, double> m = {{1, 1}, {1, 1.5}, {1, 2}, {3, 1}, {3, 1.5}, {3, 2}};
-    m.insert({
-        {4, 1},
-        {4, 1.5},
-        {4, 2},
-        {1, 1},
-        {1, 1.5},
-        {1, 2},
-        {2, 1},
-        {2, 1.5},
-        {2, 2},
-    });
-    assert(m.size() == 4);
-    assert(std::distance(m.begin(), m.end()) == 4);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-    assert(*std::next(m.begin(), 3) == V(4, 1));
-  }
-  {
-    using V = std::pair<const int, double>;
-    using M =
-        std::flat_map<int,
-                      double,
-                      std::less<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<double, min_allocator<double>>>;
-    M m = {{1, 1}, {1, 1.5}, {1, 2}, {3, 1}, {3, 1.5}, {3, 2}};
-    m.insert({
-        {4, 1},
-        {4, 1.5},
-        {4, 2},
-        {1, 1},
-        {1, 1.5},
-        {1, 2},
-        {2, 1},
-        {2, 1.5},
-        {2, 2},
-        {2, 1},
-        {2, 1.5},
-        {2, 2},
-    });
-    assert(m.size() == 4);
-    assert(std::distance(m.begin(), m.end()) == 4);
-    assert(*m.begin() == V(1, 1));
-    assert(*std::next(m.begin()) == V(2, 1));
-    assert(*std::next(m.begin(), 2) == V(3, 1));
-    assert(*std::next(m.begin(), 3) == V(4, 1));
-  }
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   {
     auto insert_func = [](auto& m, const auto& newValues) {
