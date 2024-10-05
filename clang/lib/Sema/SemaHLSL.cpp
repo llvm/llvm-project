@@ -1963,6 +1963,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
           << 1 << /* integer ty */ 6 << ArgTy;
       return true;
     }
+
+    TheCall->setType(ArgTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_select: {

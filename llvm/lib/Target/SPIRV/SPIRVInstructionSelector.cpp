@@ -2676,9 +2676,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
     return selectSign(ResVReg, ResType, I);
-  case Intrinsic::spv_firstbituhigh:
+  case Intrinsic::spv_firstbituhigh: // There is no CL equivalent of FindUMsb
     return selectExtInst(ResVReg, ResType, I, GL::FindUMsb);
-  case Intrinsic::spv_firstbitshigh:
+  case Intrinsic::spv_firstbitshigh: // There is no CL equivalent of FindSMsb
     return selectExtInst(ResVReg, ResType, I, GL::FindSMsb);
   case Intrinsic::spv_group_memory_barrier_with_group_sync: {
     Register MemSemReg =
