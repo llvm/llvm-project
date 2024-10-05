@@ -92,9 +92,8 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
     if (Sign != '+' && Sign != '-')
       return std::nullopt;
     bool IsOn = Sign == '+';
-    auto [Loc, Inserted] = FeatureMap->try_emplace(Feature, IsOn);
     // Each feature can only show up at most once in target ID.
-    if (!Inserted)
+    if (!FeatureMap->try_emplace(Feature, IsOn).second)
       return std::nullopt;
     Features = Splits.second;
   }
