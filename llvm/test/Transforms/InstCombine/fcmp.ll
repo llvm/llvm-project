@@ -596,8 +596,8 @@ define i1 @is_signbit_set(double %x) {
 
 define i1 @is_signbit_set_1(double %x) {
 ; CHECK-LABEL: @is_signbit_set_1(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ult double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -607,8 +607,8 @@ define i1 @is_signbit_set_1(double %x) {
 
 define i1 @is_signbit_set_2(double %x) {
 ; CHECK-LABEL: @is_signbit_set_2(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ole double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -618,8 +618,8 @@ define i1 @is_signbit_set_2(double %x) {
 
 define i1 @is_signbit_set_3(double %x) {
 ; CHECK-LABEL: @is_signbit_set_3(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ule double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i64 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
@@ -640,12 +640,10 @@ define <2 x i1> @is_signbit_set_anyzero(<2 x double> %x) {
   ret <2 x i1> %r
 }
 
-; TODO: Handle different predicates.
-
 define i1 @is_signbit_clear(double %x) {
 ; CHECK-LABEL: @is_signbit_clear(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -655,8 +653,8 @@ define i1 @is_signbit_clear(double %x) {
 
 define i1 @is_signbit_clear_1(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_1(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ugt double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -666,8 +664,8 @@ define i1 @is_signbit_clear_1(double %x) {
 
 define i1 @is_signbit_clear_2(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_2(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -677,8 +675,8 @@ define i1 @is_signbit_clear_2(double %x) {
 
 define i1 @is_signbit_clear_3(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_3(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[S]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
@@ -701,20 +699,16 @@ define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
   ret i1 %r
 }
 
-; TODO: Handle non-zero compare constant.
-
 define i1 @is_signbit_clear_nonzero(double %x) {
 ; CHECK-LABEL: @is_signbit_clear_nonzero(
-; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 4.200000e+01, double [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ogt double [[S]], 1.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double -42.0, double %x)
   %r = fcmp ogt double %s, 1.0
   ret i1 %r
 }
-
-; TODO: Handle zero copysign constant.
 
 define i1 @is_signbit_set_simplify_zero(double %x) {
 ; CHECK-LABEL: @is_signbit_set_simplify_zero(
@@ -725,8 +719,6 @@ define i1 @is_signbit_set_simplify_zero(double %x) {
   ret i1 %r
 }
 
-; TODO: Handle NaN copysign constant.
-
 define i1 @is_signbit_set_simplify_nan(double %x) {
 ; CHECK-LABEL: @is_signbit_set_simplify_nan(
 ; CHECK-NEXT:    ret i1 false
@@ -734,6 +726,111 @@ define i1 @is_signbit_set_simplify_nan(double %x) {
   %s = call double @llvm.copysign.f64(double 0xffffffffffffffff, double %x)
   %r = fcmp ogt double %s, 0.0
   ret i1 %r
+}
+
+define i1 @test_oeq(float %a) {
+; CHECK-LABEL: @test_oeq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP0]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp oeq float %res, 1.0
+  ret i1 %cmp
+}
+
+define <2 x i1> @test_oeq_vec_splat(<2 x float> %a) {
+; CHECK-LABEL: @test_oeq_vec_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[TMP0]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+entry:
+  %res = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat(float 1.0), <2 x float> %a)
+  %cmp = fcmp oeq <2 x float> %res, splat(float 1.0)
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @test_oeq_vec_nonsplat(<2 x float> %a) {
+; CHECK-LABEL: @test_oeq_vec_nonsplat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+entry:
+  %res = call <2 x float> @llvm.copysign.v2f32(<2 x float> splat(float 1.0), <2 x float> %a)
+  %cmp = fcmp oeq <2 x float> %res, <float 0.0, float 2.0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @test_one(float %a) {
+; CHECK-LABEL: @test_one(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp one float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_ogt_false(float %a) {
+; CHECK-LABEL: @test_ogt_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp ogt float %res, 2.0
+  ret i1 %cmp
+}
+
+define i1 @test_olt_true(float %a) {
+; CHECK-LABEL: @test_olt_true(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 1.0, float %a)
+  %cmp = fcmp olt float %res, 2.0
+  ret i1 %cmp
+}
+
+define i1 @test_oeq_nan_false(float %a) {
+; CHECK-LABEL: @test_oeq_nan_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %a)
+  %cmp = fcmp oeq float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_uno_nan_true(float %a) {
+; CHECK-LABEL: @test_uno_nan_true(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %a)
+  %cmp = fcmp uno float %res, 1.0
+  ret i1 %cmp
+}
+
+define i1 @test_oge_zero_false(float %a) {
+; CHECK-LABEL: @test_oge_zero_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %res = call float @llvm.copysign.f32(float 0.0, float %a)
+  %cmp = fcmp oge float %res, 1.0
+  ret i1 %cmp
 }
 
 define <2 x i1> @lossy_oeq(<2 x float> %x) {
