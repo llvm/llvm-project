@@ -1539,7 +1539,7 @@ static Thunk *addThunkPPC64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   // If we are emitting stubs for NOTOC relocations, we need to tell
   // the PLT resolver that there can be multiple TOCs.
   if (type == R_PPC64_REL24_NOTOC)
-    getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt = 0x2;
+    ctx.target->ppc64DynamicSectionOpt = 0x2;
 
   if (s.isInPlt())
     return type == R_PPC64_REL24_NOTOC
