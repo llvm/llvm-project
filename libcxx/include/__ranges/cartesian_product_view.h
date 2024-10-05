@@ -10,6 +10,7 @@
 #define _LIBCPP___RANGES_CARTESIAN_PRODUCT_VIEW_H
 
 #include <__config>
+#include <__iterator/access.h> // begin
 #include <__memory/addressof.h>
 #include <__ranges/concepts.h> // forward_range, view, range_size_t, sized_range, ...
 #include <__ranges/zip_view.h> // tuple_transform
@@ -93,6 +94,11 @@ public:
     return __tuple_transform([](auto& i) -> decltype(auto) { return *i; }, current_);
   }
 
+  constexpr iterator& operator++() {
+    next();
+    return *this;
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
@@ -100,6 +106,18 @@ private:
 
   constexpr iterator(Parent& parent, decltype(current_) current)
       : parent_(std::addressof(parent)), current_(std::move(current)) {}
+
+  template <auto N = sizeof...(Vs)>
+  constexpr void next() {
+    const auto& v = std::get<N>(parent_->bases_);
+    auto& it      = std::get<N>(current_);
+    if (++it == std::end(v)) {
+      if constexpr (N != 0) {
+        it = std::ranges::begin(v);
+        next<N - 1>();
+      }
+    }
+  }
 };
 
 } // namespace ranges
