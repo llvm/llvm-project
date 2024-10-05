@@ -343,6 +343,52 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+InstructionCost
+RISCVTTIImpl::isMultipleInsertSubvector(VectorType *Tp, ArrayRef<int> Mask,
+                                        TTI::TargetCostKind CostKind) {
+  if (!isa<FixedVectorType>(Tp))
+    return InstructionCost::getInvalid();
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  if (LT.second.getScalarSizeInBits() == 1)
+    return InstructionCost::getInvalid();
+  unsigned Size = Mask.size();
+  if (!isPowerOf2_32(Size))
+    return InstructionCost::getInvalid();
+  // Try to guess subvector size.
+  unsigned SubVecSize;
+  for (unsigned I = 0; I != Size; ++I) {
+    if (static_cast<unsigned>(Mask[I]) == I)
+      continue;
+    if (Mask[I] == 0) {
+      SubVecSize = I;
+      break;
+    }
+    return InstructionCost::getInvalid();
+  }
+  if (Size % SubVecSize != 0)
+    return InstructionCost::getInvalid();
+  for (unsigned I = 0; I != Size; ++I)
+    if (static_cast<unsigned>(Mask[I]) != I % SubVecSize)
+      return InstructionCost::getInvalid();
+  InstructionCost Cost = 0;
+  unsigned NumSlides = Log2_32(Size / SubVecSize);
+  // The cost of extraction from a subvector is 0 if the index is 0.
+  for (unsigned I = 0; I != NumSlides; ++I) {
+    unsigned InsertIndex = SubVecSize * (1 << I);
+    FixedVectorType *SubTp =
+        FixedVectorType::get(Tp->getElementType(), InsertIndex);
+    FixedVectorType *DestTp =
+        FixedVectorType::getDoubleElementsVectorType(SubTp);
+    std::pair<InstructionCost, MVT> DestLT = getTypeLegalizationCost(DestTp);
+    // Add the cost of whole vector register move because the destination vector
+    // register group for vslideup cannot overlap the source.
+    Cost += DestLT.first * TLI->getLMULCost(DestLT.second);
+    Cost += getShuffleCost(TTI::SK_InsertSubvector, DestTp, {}, CostKind,
+                           InsertIndex, SubTp);
+  }
+  return Cost;
+}
+
 static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
                                         LLVMContext &C) {
   assert((DataVT.getScalarSizeInBits() != 8 ||
@@ -394,6 +440,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                         LT.second, CostKind);
           }
         }
+        if (InstructionCost Cost =
+                isMultipleInsertSubvector(Tp, Mask, CostKind);
+            Cost.isValid())
+          return Cost;
       }
       // vrgather + cost of generating the mask constant.
       // We model this for an unknown mask with a single vrgather.
