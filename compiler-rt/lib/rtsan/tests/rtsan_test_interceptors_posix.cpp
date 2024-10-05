@@ -29,6 +29,7 @@
 #endif
 
 #include <fcntl.h>
+#include <netdb.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -45,6 +46,11 @@
 using namespace testing;
 using namespace rtsan_testing;
 using namespace std::chrono_literals;
+
+// NOTE: In the socket tests we pass in bad info to the calls to ensure they
+//       fail which is why we EXPECT_NE 0 for their return codes.
+//       We just care that the call is intercepted
+const int kNotASocketFd = 0;
 
 void *FakeThreadEntryPoint(void *) { return nullptr; }
 
@@ -676,6 +682,49 @@ TEST_F(PthreadRwlockTest, PthreadRwlockWrlockSurvivesWhenNonRealtime) {
 /*
     Sockets
 */
+TEST(TestRtsanInterceptors, GetAddrInfoDiesWhenRealtime) {
+  auto Func = []() {
+    addrinfo *info{};
+    getaddrinfo("localhost", "http", nullptr, &info);
+  };
+  ExpectRealtimeDeath(Func, "getaddrinfo");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, GetNameInfoDiesWhenRealtime) {
+  auto Func = []() {
+    char host[NI_MAXHOST];
+    char serv[NI_MAXSERV];
+    getnameinfo(nullptr, 0, host, NI_MAXHOST, serv, NI_MAXSERV, 0);
+  };
+  ExpectRealtimeDeath(Func, "getnameinfo");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, BindingASocketDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(bind(kNotASocketFd, nullptr, 0), 0); };
+  ExpectRealtimeDeath(Func, "bind");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ListeningOnASocketDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(listen(kNotASocketFd, 0), 0); };
+  ExpectRealtimeDeath(Func, "listen");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, AcceptingASocketDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(accept(kNotASocketFd, nullptr, nullptr), 0); };
+  ExpectRealtimeDeath(Func, "accept");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ConnectingASocketDiesWhenRealtime) {
+  auto Func = []() { EXPECT_NE(connect(kNotASocketFd, nullptr, 0), 0); };
+  ExpectRealtimeDeath(Func, "connect");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsanInterceptors, OpeningASocketDiesWhenRealtime) {
   auto Func = []() { socket(PF_INET, SOCK_STREAM, 0); };
   ExpectRealtimeDeath(Func, "socket");
