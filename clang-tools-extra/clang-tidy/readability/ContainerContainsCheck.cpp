@@ -8,6 +8,7 @@
 
 #include "ContainerContainsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
@@ -31,10 +32,15 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
               ofClass(cxxRecordDecl(HasContainsMatchingParamType)))))
           .bind("call");
 
+  const auto Literal0 = integerLiteral(equals(0));
+  const auto Literal1 = integerLiteral(equals(1));
+
   const auto FindCall =
       cxxMemberCallExpr(
           anyOf(argumentCountIs(1),
-                allOf(argumentCountIs(2), hasArgument(1, cxxDefaultArgExpr()))),
+                allOf(argumentCountIs(2),
+                      hasArgument(1, anyOf(cxxDefaultArgExpr(),
+                                           ignoringParenImpCasts(Literal0))))),
           callee(cxxMethodDecl(
               hasName("find"),
               hasParameter(0, hasType(hasUnqualifiedDesugaredType(
@@ -50,14 +56,8 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
                         // before EndCall so 'parameterType' is properly bound.
                         ofClass(cxxRecordDecl(HasContainsMatchingParamType)))));
 
-  const auto Literal0 = integerLiteral(equals(0));
-  const auto Literal1 = integerLiteral(equals(1));
-
-  const auto StringLikeClass = cxxRecordDecl(
-      hasAnyName("::std::basic_string", "::std::basic_string_view",
-                 "::absl::string_view"));
-  const auto StringNpos = declRefExpr(
-      to(varDecl(hasName("npos"), hasDeclContext(StringLikeClass))));
+  const auto StringNpos = anyOf(declRefExpr(to(varDecl(hasName("npos")))),
+                                memberExpr(member(hasName("npos"))));
 
   auto AddSimpleMatcher = [&](auto Matcher) {
     Finder->addMatcher(
@@ -102,7 +102,7 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
           .bind("negativeComparison"));
 
-  // Find membership tests based on `find() == end() or find() == npos`.
+  // Find membership tests based on `find() == end()` or `find() == npos`.
   AddSimpleMatcher(
       binaryOperator(hasOperatorName("!="),
                      hasOperands(FindCall, anyOf(EndCall, StringNpos)))
