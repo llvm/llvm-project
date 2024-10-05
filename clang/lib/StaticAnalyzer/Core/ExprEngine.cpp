@@ -3771,24 +3771,29 @@ void ExprEngine::evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst,
     SVal V = state->getSVal(Ex, Pred->getLocationContext());
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
-      const std::pair<const ProgramPointTag *, const ProgramPointTag*> &tags =
-        geteagerlyAssumeBinOpBifurcationTags();
-
       ProgramStateRef StateTrue, StateFalse;
       std::tie(StateTrue, StateFalse) = state->assume(*SEV);
+
+      const ProgramPointTag *EagerTrueTag = nullptr;
+      const ProgramPointTag *EagerFalseTag = nullptr;
+
+      // Use the eager assumption tags if the choice was ambiguous.
+      if (StateTrue && StateFalse)
+        std::tie(EagerTrueTag, EagerFalseTag) =
+            geteagerlyAssumeBinOpBifurcationTags();
 
       // First assume that the condition is true.
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
         StateTrue = StateTrue->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, tags.first);
+        Bldr.generateNode(Ex, Pred, StateTrue, EagerTrueTag);
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
         StateFalse = StateFalse->BindExpr(Ex, Pred->getLocationContext(), Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, tags.second);
+        Bldr.generateNode(Ex, Pred, StateFalse, EagerFalseTag);
       }
     }
   }

@@ -42,8 +42,7 @@ void test_alnum_symbolic(int x) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}} \
-  // bugpath-note{{Left side of '&&' is true}} \
-  // bugpath-note{{'x' is <= 255}}
+  // bugpath-note{{Left side of '&&' is true}}
 }
 
 void test_alnum_symbolic2(int x) {
@@ -76,8 +75,7 @@ void test_toupper_symbolic(int x) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}} \
-  // bugpath-note{{Left side of '&&' is true}} \
-  // bugpath-note{{'x' is <= 255}}
+  // bugpath-note{{Left side of '&&' is true}}
 }
 
 void test_toupper_symbolic2(int x) {
@@ -110,8 +108,7 @@ void test_tolower_symbolic(int x) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}} \
-  // bugpath-note{{Left side of '&&' is true}} \
-  // bugpath-note{{'x' is <= 255}}
+  // bugpath-note{{Left side of '&&' is true}}
 }
 
 void test_tolower_symbolic2(int x) {
@@ -144,8 +141,7 @@ void test_toascii_symbolic(int x) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}} \
-  // bugpath-note{{Left side of '&&' is true}} \
-  // bugpath-note{{'x' is <= 255}}
+  // bugpath-note{{Left side of '&&' is true}}
 }
 
 void test_toascii_symbolic2(int x) {
@@ -173,8 +169,7 @@ void test_notnull_symbolic(FILE *fp, int *buf) {
   clang_analyzer_eval(buf != 0); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}} \
-  // bugpath-note{{'buf' is not equal to null}}
+  // bugpath-note{{TRUE}}
 }
 void test_notnull_symbolic2(FILE *fp, int *buf) {
   if (!buf)                          // bugpath-note{{Assuming 'buf' is null}} \
@@ -218,8 +213,7 @@ void test_notnull_buffer_3(void *buf) {
   clang_analyzer_eval(buf != 0); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}} \
-  // bugpath-note{{'buf' is not equal to null}}
+  // bugpath-note{{TRUE}}
 }
 
 void test_no_node_after_bug(FILE *fp, size_t size, size_t n, void *buf) {
@@ -299,8 +293,7 @@ void test_buf_size_symbolic(int s) {
   clang_analyzer_eval(s <= 3); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}} \
-  // bugpath-note{{'s' is <= 3}}
+  // bugpath-note{{TRUE}}
 }
 void test_buf_size_symbolic_and_offset(int s) {
   char buf[3];
@@ -308,8 +301,7 @@ void test_buf_size_symbolic_and_offset(int s) {
   clang_analyzer_eval(s <= 2); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
-  // bugpath-note{{TRUE}} \
-  // bugpath-note{{'s' is <= 2}}
+  // bugpath-note{{TRUE}}
 }
 
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);

@@ -40,8 +40,7 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   // CHECK-NEXT:   ] }
 
   (void)(1 / !C);
-  // expected-note@-1 {{'C' is non-null}}
-  // expected-note@-2 {{Division by zero}}
-  // expected-warning@-3 {{Division by zero}}
+  // expected-note@-1 {{Division by zero}}
+  // expected-warning@-2 {{Division by zero}}
 }
 

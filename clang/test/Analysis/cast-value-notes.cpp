@@ -168,9 +168,8 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
     // expected-note@-2 {{Taking true branch}}
 
     (void)(1 / !C);
-    // expected-note@-1 {{'C' is non-null}}
-    // expected-note@-2 {{Division by zero}}
-    // expected-warning@-3 {{Division by zero}}
+    // expected-note@-1 {{Division by zero}}
+    // expected-warning@-2 {{Division by zero}}
   }
 }
 
@@ -226,9 +225,8 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
     // expected-note@-2 {{Taking true branch}}
 
     (void)(1 / !C);
-    // expected-note@-1 {{'C' is non-null}}
-    // expected-note@-2 {{Division by zero}}
-    // expected-warning@-3 {{Division by zero}}
+    // expected-note@-1 {{Division by zero}}
+    // expected-warning@-2 {{Division by zero}}
   }
 }
 
@@ -243,9 +241,8 @@ void evalNonNullParamNullReturn(const Shape *S) {
     // expected-note@-4 {{Taking true branch}}
 
     (void)(1 / !T);
-    // expected-note@-1 {{'T' is non-null}}
-    // expected-note@-2 {{Division by zero}}
-    // expected-warning@-3 {{Division by zero}}
+    // expected-note@-1 {{Division by zero}}
+    // expected-warning@-2 {{Division by zero}}
   }
 }
 
@@ -265,9 +262,8 @@ void evalZeroParamNonNullReturnPointer(const Shape *S) {
   // expected-note@-2 {{'C' initialized here}}
 
   (void)(1 / !C);
-  // expected-note@-1 {{'C' is non-null}}
-  // expected-note@-2 {{Division by zero}}
-  // expected-warning@-3 {{Division by zero}}
+  // expected-note@-1 {{Division by zero}}
+  // expected-warning@-2 {{Division by zero}}
 }
 
 void evalZeroParamNonNullReturn(const Shape &S) {
