@@ -5217,6 +5217,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   Expr *lhsExpr = E->getTrueExpr();
   Expr *rhsExpr = E->getFalseExpr();
 
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+
   // If the condition constant folds and can be elided, try to avoid emitting
   // the condition and the dead arm.
   bool CondExprBool;

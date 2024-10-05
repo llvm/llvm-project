@@ -7827,9 +7827,9 @@ ExpectedStmt ASTNodeImporter::VisitConditionalOperator(ConditionalOperator *E) {
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) ConditionalOperator(
-      ToCond, ToQuestionLoc, ToLHS, ToColonLoc, ToRHS, ToType,
-      E->getValueKind(), E->getObjectKind());
+  return ConditionalOperator::Create(
+      Importer.getToContext(), ToCond, ToQuestionLoc, ToLHS, ToColonLoc, ToRHS,
+      ToType, E->getValueKind(), E->getObjectKind(), E->getFPFeatures());
 }
 
 ExpectedStmt

@@ -2997,9 +2997,9 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
         *Context, sizeofExpr, limit, BO_LE, Context->IntTy, VK_PRValue,
         OK_Ordinary, SourceLocation(), FPOptionsOverride());
     // (sizeof(returnType) <= 8 ? objc_msgSend(...) : objc_msgSend_stret(...))
-    ConditionalOperator *CondExpr = new (Context) ConditionalOperator(
-        lessThanExpr, SourceLocation(), CE, SourceLocation(), STCE, returnType,
-        VK_PRValue, OK_Ordinary);
+    ConditionalOperator *CondExpr = ConditionalOperator::Create(
+        *Context, lessThanExpr, SourceLocation(), CE, SourceLocation(), STCE,
+        returnType, VK_PRValue, OK_Ordinary, FPOptionsOverride());
     ReplacingStmt = new (Context) ParenExpr(SourceLocation(), SourceLocation(),
                                             CondExpr);
   }
@@ -3738,9 +3738,10 @@ Stmt *RewriteObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp) {
     Expr *RHSExp = CEXPR->getRHS();
     Stmt *RHSStmt = SynthesizeBlockCall(Exp, RHSExp);
     Expr *CONDExp = CEXPR->getCond();
-    ConditionalOperator *CondExpr = new (Context) ConditionalOperator(
-        CONDExp, SourceLocation(), cast<Expr>(LHSStmt), SourceLocation(),
-        cast<Expr>(RHSStmt), Exp->getType(), VK_PRValue, OK_Ordinary);
+    ConditionalOperator *CondExpr = ConditionalOperator::Create(
+        *Context, CONDExp, SourceLocation(), cast<Expr>(LHSStmt),
+        SourceLocation(), cast<Expr>(RHSStmt), Exp->getType(), VK_PRValue,
+        OK_Ordinary, FPOptionsOverride());
     return CondExpr;
   } else if (const ObjCIvarRefExpr *IRE = dyn_cast<ObjCIvarRefExpr>(BlockExp)) {
     CPT = IRE->getType()->getAs<BlockPointerType>();

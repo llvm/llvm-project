@@ -3870,6 +3870,8 @@ FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
     return BO->getFPFeaturesInEffect(LO);
   if (auto Cast = dyn_cast<CastExpr>(this))
     return Cast->getFPFeaturesInEffect(LO);
+  if (auto CO = dyn_cast<ConditionalOperator>(this))
+    return CO->getFPFeaturesInEffect(LO);
   return FPOptions::defaultWithoutTrailingStorage(LO);
 }
 
@@ -4890,6 +4892,26 @@ CompoundAssignOperator::Create(const ASTContext &C, Expr *lhs, Expr *rhs,
   return new (Mem)
       CompoundAssignOperator(C, lhs, rhs, opc, ResTy, VK, OK, opLoc, FPFeatures,
                              CompLHSType, CompResultType);
+}
+
+ConditionalOperator *
+ConditionalOperator::Create(const ASTContext &C, Expr *cond,
+                            SourceLocation QLoc, Expr *lhs, SourceLocation CLoc,
+                            Expr *rhs, QualType t, ExprValueKind VK,
+                            ExprObjectKind OK, FPOptionsOverride FPFeatures) {
+  bool HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  void *Mem = C.Allocate(totalSizeToAlloc<FPOptionsOverride>(HasFPFeatures),
+                         alignof(ConditionalOperator));
+  return new (Mem)
+      ConditionalOperator(cond, QLoc, lhs, CLoc, rhs, t, VK, OK, FPFeatures);
+}
+
+ConditionalOperator *ConditionalOperator::CreateEmpty(const ASTContext &C,
+                                                      EmptyShell Empty,
+                                                      bool HasFPFeatures) {
+  void *Mem = C.Allocate(totalSizeToAlloc<FPOptionsOverride>(HasFPFeatures),
+                         alignof(ConditionalOperator));
+  return new (Mem) ConditionalOperator(EmptyShell(), HasFPFeatures);
 }
 
 UnaryOperator *UnaryOperator::CreateEmpty(const ASTContext &C,

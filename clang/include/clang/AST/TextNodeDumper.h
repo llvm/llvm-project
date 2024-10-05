@@ -286,6 +286,7 @@ public:
   void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
   void VisitBinaryOperator(const BinaryOperator *Node);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
+  void VisitConditionalOperator(const ConditionalOperator *Node);
   void VisitAddrLabelExpr(const AddrLabelExpr *Node);
   void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);

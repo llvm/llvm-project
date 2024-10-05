@@ -658,6 +658,16 @@ protected:
     SourceLocation OpLoc;
   };
 
+  class ConditionalOperatorBitfields {
+    friend class ConditionalOperator;
+
+    unsigned : NumExprBits;
+
+    /// This is only meaningful when the second and third operands have floating
+    /// point types.
+    unsigned HasFPFeatures : 1;
+  };
+
   class InitListExprBitfields {
     friend class InitListExpr;
 
@@ -1233,6 +1243,7 @@ protected:
     MemberExprBitfields MemberExprBits;
     CastExprBitfields CastExprBits;
     BinaryOperatorBitfields BinaryOperatorBits;
+    ConditionalOperatorBitfields ConditionalOperatorBits;
     InitListExprBitfields InitListExprBits;
     ParenListExprBitfields ParenListExprBits;
     GenericSelectionExprBitfields GenericSelectionExprBits;

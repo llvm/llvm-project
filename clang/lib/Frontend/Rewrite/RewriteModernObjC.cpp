@@ -4568,9 +4568,10 @@ Stmt *RewriteModernObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp
     Expr *RHSExp = CEXPR->getRHS();
     Stmt *RHSStmt = SynthesizeBlockCall(Exp, RHSExp);
     Expr *CONDExp = CEXPR->getCond();
-    ConditionalOperator *CondExpr = new (Context) ConditionalOperator(
-        CONDExp, SourceLocation(), cast<Expr>(LHSStmt), SourceLocation(),
-        cast<Expr>(RHSStmt), Exp->getType(), VK_PRValue, OK_Ordinary);
+    ConditionalOperator *CondExpr = ConditionalOperator::Create(
+        *Context, CONDExp, SourceLocation(), cast<Expr>(LHSStmt),
+        SourceLocation(), cast<Expr>(RHSStmt), Exp->getType(), VK_PRValue,
+        OK_Ordinary, FPOptionsOverride());
     return CondExpr;
   } else if (const ObjCIvarRefExpr *IRE = dyn_cast<ObjCIvarRefExpr>(BlockExp)) {
     CPT = IRE->getType()->getAs<BlockPointerType>();

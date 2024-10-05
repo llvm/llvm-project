@@ -1145,11 +1145,16 @@ void ASTStmtReader::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
 
 void ASTStmtReader::VisitConditionalOperator(ConditionalOperator *E) {
   VisitExpr(E);
+  bool HasFPFeatures = Record.readInt();
+  assert(HasFPFeatures == E->hasStoredFPFeatures());
   E->SubExprs[ConditionalOperator::COND] = Record.readSubExpr();
   E->SubExprs[ConditionalOperator::LHS] = Record.readSubExpr();
   E->SubExprs[ConditionalOperator::RHS] = Record.readSubExpr();
   E->QuestionLoc = readSourceLocation();
   E->ColonLoc = readSourceLocation();
+  if (HasFPFeatures)
+    E->setStoredFPFeatures(
+        FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
 }
 
 void
@@ -3182,7 +3187,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     }
 
     case EXPR_CONDITIONAL_OPERATOR:
-      S = new (Context) ConditionalOperator(Empty);
+      S = ConditionalOperator::CreateEmpty(
+          Context, Empty, Record[ASTStmtReader::NumExprFields]);
       break;
 
     case EXPR_BINARY_CONDITIONAL_OPERATOR:

@@ -1091,11 +1091,14 @@ void ASTStmtWriter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
 
 void ASTStmtWriter::VisitConditionalOperator(ConditionalOperator *E) {
   VisitExpr(E);
+  Record.push_back(E->hasStoredFPFeatures());
   Record.AddStmt(E->getCond());
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
   Record.AddSourceLocation(E->getQuestionLoc());
   Record.AddSourceLocation(E->getColonLoc());
+  if (E->hasStoredFPFeatures())
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_CONDITIONAL_OPERATOR;
 }
 

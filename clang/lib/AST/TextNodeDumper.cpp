@@ -1518,6 +1518,11 @@ void TextNodeDumper::VisitCompoundAssignOperator(
     printFPOptions(Node->getStoredFPFeatures());
 }
 
+void TextNodeDumper::VisitConditionalOperator(const ConditionalOperator *Node) {
+  if (Node->hasStoredFPFeatures())
+    printFPOptions(Node->getStoredFPFeatures());
+}
+
 void TextNodeDumper::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
   OS << " " << Node->getLabel()->getName();
   dumpPointer(Node->getLabel());

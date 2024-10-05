@@ -14330,10 +14330,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Expr *Cond = AssertSuccess(SemaRef.BuildBinOp(
         CurScope, {}, BO_LE,
         AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr)), Zero));
-    Expr *MinOne = new (Context) ConditionalOperator(
-        Cond, {}, One, {},
+    Expr *MinOne = ConditionalOperator::Create(
+        Context, Cond, {}, One, {},
         AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr)), DimTy,
-        VK_PRValue, OK_Ordinary);
+        VK_PRValue, OK_Ordinary, FPOptionsOverride());
     return MinOne;
   };
 
@@ -18858,9 +18858,9 @@ static bool actOnOMPReductionKindClause(
                 S.BuildBinOp(Stack->getCurScope(), ReductionId.getBeginLoc(),
                              BO_Assign, LHSDRE, ReductionOp.get());
           } else {
-            auto *ConditionalOp = new (Context)
-                ConditionalOperator(ReductionOp.get(), ELoc, LHSDRE, ELoc,
-                                    RHSDRE, Type, VK_LValue, OK_Ordinary);
+            auto *ConditionalOp = ConditionalOperator::Create(
+                Context, ReductionOp.get(), ELoc, LHSDRE, ELoc, RHSDRE, Type,
+                VK_LValue, OK_Ordinary, FPOptionsOverride());
             ReductionOp =
                 S.BuildBinOp(Stack->getCurScope(), ReductionId.getBeginLoc(),
                              BO_Assign, LHSDRE, ConditionalOp);

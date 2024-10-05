@@ -8795,9 +8795,9 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
                                          Context);
 
   if (!commonExpr)
-    return new (Context)
-        ConditionalOperator(Cond.get(), QuestionLoc, LHS.get(), ColonLoc,
-                            RHS.get(), result, VK, OK);
+    return ConditionalOperator::Create(Context, Cond.get(), QuestionLoc,
+                                       LHS.get(), ColonLoc, RHS.get(), result,
+                                       VK, OK, CurFPFeatureOverrides());
 
   return new (Context) BinaryConditionalOperator(
       commonExpr, opaqueValue, Cond.get(), LHS.get(), RHS.get(), QuestionLoc,

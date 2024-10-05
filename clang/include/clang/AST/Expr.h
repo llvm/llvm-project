@@ -4210,26 +4210,45 @@ public:
 
 /// ConditionalOperator - The ?: ternary operator.  The GNU "missing
 /// middle" extension is a BinaryConditionalOperator.
-class ConditionalOperator : public AbstractConditionalOperator {
+class ConditionalOperator final
+    : public AbstractConditionalOperator,
+      private llvm::TrailingObjects<ConditionalOperator, FPOptionsOverride> {
   enum { COND, LHS, RHS, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // Left/Middle/Right hand sides.
 
   friend class ASTStmtReader;
-public:
+
   ConditionalOperator(Expr *cond, SourceLocation QLoc, Expr *lhs,
                       SourceLocation CLoc, Expr *rhs, QualType t,
-                      ExprValueKind VK, ExprObjectKind OK)
+                      ExprValueKind VK, ExprObjectKind OK,
+                      FPOptionsOverride FPFeatures)
       : AbstractConditionalOperator(ConditionalOperatorClass, t, VK, OK, QLoc,
                                     CLoc) {
     SubExprs[COND] = cond;
     SubExprs[LHS] = lhs;
     SubExprs[RHS] = rhs;
+    ConditionalOperatorBits.HasFPFeatures =
+        FPFeatures.requiresTrailingStorage();
+    if (hasStoredFPFeatures())
+      setStoredFPFeatures(FPFeatures);
     setDependence(computeDependence(this));
   }
 
   /// Build an empty conditional operator.
-  explicit ConditionalOperator(EmptyShell Empty)
-    : AbstractConditionalOperator(ConditionalOperatorClass, Empty) { }
+  ConditionalOperator(EmptyShell Empty, bool HasFPFeatures)
+      : AbstractConditionalOperator(ConditionalOperatorClass, Empty) {
+    ConditionalOperatorBits.HasFPFeatures = HasFPFeatures;
+  }
+
+public:
+  static ConditionalOperator *CreateEmpty(const ASTContext &C, EmptyShell Empty,
+                                          bool HasFPFeatures);
+
+  static ConditionalOperator *Create(const ASTContext &C, Expr *cond,
+                                     SourceLocation QLoc, Expr *lhs,
+                                     SourceLocation CLoc, Expr *rhs, QualType t,
+                                     ExprValueKind VK, ExprObjectKind OK,
+                                     FPOptionsOverride FPFeatures);
 
   /// getCond - Return the expression representing the condition for
   ///   the ?: operator.
@@ -4265,6 +4284,44 @@ public:
   const_child_range children() const {
     return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
   }
+
+  /// Is FPFeatures in trailing storage?
+  bool hasStoredFPFeatures() const {
+    return ConditionalOperatorBits.HasFPFeatures;
+  }
+  /// Get FPFeatures from trailing storage.
+  FPOptionsOverride getStoredFPFeatures() const {
+    return *getTrailingFPFeatures();
+  }
+
+  // Get the FP features status of this operator. Only meaningful for
+  // operations on floating point types.
+  FPOptions getFPFeaturesInEffect(const LangOptions &LO) const {
+    if (hasStoredFPFeatures())
+      return getStoredFPFeatures().applyOverrides(LO);
+    return FPOptions::defaultWithoutTrailingStorage(LO);
+  }
+  FPOptionsOverride getFPFeatures() const {
+    return hasStoredFPFeatures() ? getStoredFPFeatures() : FPOptionsOverride();
+  }
+
+private:
+  /// Set FPFeatures in trailing storage, used only by Serialization.
+  void setStoredFPFeatures(FPOptionsOverride F) {
+    *getTrailingFPFeatures() = F;
+  }
+
+  FPOptionsOverride *getTrailingFPFeatures() {
+    assert(ConditionalOperatorBits.HasFPFeatures);
+    return getTrailingObjects<FPOptionsOverride>();
+  }
+
+  const FPOptionsOverride *getTrailingFPFeatures() const {
+    assert(ConditionalOperatorBits.HasFPFeatures);
+    return getTrailingObjects<FPOptionsOverride>();
+  }
+
+  friend class TrailingObjects;
 };
 
 /// BinaryConditionalOperator - The GNU extension to the conditional
