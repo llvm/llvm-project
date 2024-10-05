@@ -1,6 +1,6 @@
 // RUN: fir-opt --lower-workshare --allow-unregistered-dialect %s 2>&1 | FileCheck %s
 
-// CHECK: warning: omp workshare with unstructured control flow currently unsupported and will be serialized.
+// CHECK: warning: omp workshare with unstructured control flow is currently unsupported and will be serialized.
 
 // CHECK: omp.parallel
 // CHECK-NEXT: omp.single

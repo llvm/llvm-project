@@ -14,3 +14,12 @@ func.func @foo() {
   }
   return
 }
+
+// CHECK:    omp.single nowait
+// CHECK:      fir.allocmem
+// CHECK:      fir.shape
+// CHECK:      fir.declare
+// CHECK:      fir.freemem
+// CHECK:      omp.terminator
+// CHECK:    }
+// CHECK:    omp.barrier

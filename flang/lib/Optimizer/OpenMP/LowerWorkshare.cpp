@@ -249,7 +249,12 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       if (isSafeToParallelize(&op)) {
         singleBuilder.clone(op, singleMapping);
         if (llvm::all_of(op.getOperands(), [&](Value opr) {
-              return rootMapping.contains(opr);
+              // Either we have already remapped it
+              bool remapped = rootMapping.contains(opr);
+              // Or it is available because it dominates `sr`
+              bool dominates =
+                  di.properlyDominates(opr.getDefiningOp(), &*sr.begin);
+              return remapped || dominates;
             })) {
           // Safe to parallelize operations which have all operands available in
           // the root parallel block can be executed there.
