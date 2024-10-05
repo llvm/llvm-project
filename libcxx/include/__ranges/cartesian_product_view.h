@@ -131,6 +131,13 @@ public:
     return *this;
   }
 
+  constexpr iterator operator--(int)
+requires cartesian_product_is_bidirectional <Const, First, Vs...> {
+      auto tmp = *this;
+    prev();
+    return tmp;
+}
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
