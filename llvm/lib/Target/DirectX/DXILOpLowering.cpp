@@ -628,6 +628,193 @@ public:
     });
   }
 
+  Value *GenerateRawBufLd(Value *handle, Value *bufIdx, Value *offset, Type *Ty,
+                          IRBuilder<> &Builder, unsigned NumComponents,
+                          Constant *alignment) {
+    if (bufIdx == nullptr) {
+      // This is actually a byte address buffer load with a struct template
+      // type. The call takes only one coordinates for the offset.
+      bufIdx = offset;
+      offset = UndefValue::get(offset->getType());
+    }
+
+    // NumComponents 1: mask = 1  // Mask_X;
+    // NumComponents 2: mask = 3  // Mask_X | Mask_Y
+    // NumComponents 3: mask = 7  // Mask_X | Mask_Y | Mask_Z
+    // NumComponents 4: mask = 15 // Mask_X | Mask_Y | Mask_Z | Mask_W
+    assert((NumComponents) > 0 && (NumComponents < 5));
+    Constant *mask =
+        ConstantInt::get(Builder.getInt8Ty(), ((1 << NumComponents) - 1));
+
+    Value *Args[] = {handle, bufIdx, offset, mask, alignment};
+    Type *NewRetTy = OpBuilder.getResRetType(Ty->getScalarType());
+    Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+        OpCode::RawBufferLoad, Args, "", NewRetTy); // TODO: Need name argument?
+    if (Error E = OpCall.takeError())
+      return nullptr;
+
+    return *OpCall;
+  }
+
+  void TranslateRawBufVecLd(Type *Ty, unsigned ElemCount, IRBuilder<> &Builder,
+                            Value *handle, Value *bufIdx, Value *baseOffset,
+                            const DataLayout &DL, std::vector<Value *> &bufLds,
+                            unsigned baseAlign, bool isScalarTy) {
+    Type *VecEltTy = Ty->getScalarType();
+
+    unsigned EltSize = DL.getTypeAllocSize(VecEltTy);
+    unsigned alignment = std::min(baseAlign, EltSize);
+    Constant *alignmentVal =
+        ConstantInt::get(M.getContext(), APInt(32, alignment));
+
+    if (baseOffset == nullptr) {
+      baseOffset = ConstantInt::get(Builder.getInt32Ty(), 0);
+    }
+
+    std::vector<Value *> elts(ElemCount);
+    unsigned rest = (ElemCount % 4);
+    for (unsigned i = 0; i < ElemCount - rest; i += 4) {
+      Value *bufLd = GenerateRawBufLd(handle, bufIdx, baseOffset, Ty, Builder,
+                                      4, alignmentVal);
+      bufLds.emplace_back(bufLd);
+
+      baseOffset = Builder.CreateAdd(
+          baseOffset, ConstantInt::get(Builder.getInt32Ty(), 4 * EltSize));
+    }
+
+    if (rest) {
+      Value *bufLd = GenerateRawBufLd(handle, bufIdx, baseOffset, Ty, Builder,
+                                      rest, alignmentVal);
+      bufLds.emplace_back(bufLd);
+    }
+  }
+
+  Error replaceMultiResRetsUses(CallInst *Intrin,
+                                std::vector<Value *> &bufLds) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    // TODO: HasCheckBit????
+
+    Type *OldTy = Intrin->getType();
+
+    // For scalars, we just extract the first element.
+    if (!isa<FixedVectorType>(OldTy)) {
+      CallInst *Op = dyn_cast<CallInst>(bufLds[0]);
+      assert(Op != nullptr);
+      Value *EVI = IRB.CreateExtractValue(Op, 0);
+
+      Intrin->replaceAllUsesWith(EVI);
+      Intrin->eraseFromParent();
+
+      return Error::success();
+    }
+
+    const auto *VecTy = cast<FixedVectorType>(OldTy);
+    const unsigned N = VecTy->getNumElements();
+
+    std::vector<Value *> Extracts(N);
+
+    // The users of the operation should all be scalarized, so we attempt to
+    // replace the extractelements with extractvalues directly.
+    for (Use &U : make_early_inc_range(Intrin->uses())) {
+      if (auto *EEI = dyn_cast<ExtractElementInst>(U.getUser())) {
+        if (auto *IndexOp = dyn_cast<ConstantInt>(EEI->getIndexOperand())) {
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < N && "Index into buffer load out of range");
+          if (!Extracts[IndexVal]) {
+            CallInst *Op = dyn_cast<CallInst>(bufLds[IndexVal / 4]);
+            assert(Op != nullptr);
+            Extracts[IndexVal] = IRB.CreateExtractValue(Op, IndexVal % 4);
+          }
+          EEI->replaceAllUsesWith(Extracts[IndexVal]);
+          EEI->eraseFromParent();
+        } else {
+          // Need to handle DynamicAccesses here???
+        }
+      }
+    }
+
+    // If there's a dynamic access we need to round trip through stack memory so
+    // that we don't leave vectors around.
+    //
+    // TODO: dynamic access for rawbuffer??????
+    //
+
+    // If we still have uses, then we're not fully scalarized and need to
+    // recreate the vector. This should only happen for things like exported
+    // functions from libraries.
+    if (!Intrin->use_empty()) {
+      for (int I = 0, E = N; I != E; ++I)
+        if (!Extracts[I]) {
+          CallInst *Op = dyn_cast<CallInst>(bufLds[I / 4]);
+          assert(Op != nullptr);
+          Extracts[I] = IRB.CreateExtractValue(Op, I % 4);
+        }
+
+      Value *Vec = UndefValue::get(OldTy);
+      for (int I = 0, E = N; I != E; ++I)
+        Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
+
+      Intrin->replaceAllUsesWith(Vec);
+    }
+
+    // TODO:
+    // Remove the dx.op.rawbufferload without any uses now?
+
+    Intrin->eraseFromParent();
+
+    return Error::success();
+  }
+
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+#if 0
+      auto *It = DRM.find(dyn_cast<CallInst>(CI->getArgOperand(0)));
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+
+      assert((RI.getResourceKind() == dxil::ResourceKind::StructuredBuffer) ||
+             (RI.getResourceKind() == dxil::ResourceKind::RawBuffer));
+#else
+      ResourceKind RCKind = dxil::ResourceKind::StructuredBuffer;
+#endif
+
+      Type *Ty = CI->getType();
+      std::vector<Value *> bufLds;
+      // TODO: Need check Bool type load???
+
+      unsigned numComponents = 1;
+      if (Ty->isVectorTy()) {
+        numComponents = dyn_cast<FixedVectorType>(Ty)->getNumElements();
+      }
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *bufIdx = CI->getArgOperand(1);
+      Value *baseOffset = CI->getArgOperand(2);
+
+      bool isScalarTy = !Ty->isVectorTy();
+
+      if (RCKind == dxil::ResourceKind::StructuredBuffer) {
+        TranslateRawBufVecLd(Ty, numComponents, IRB, Handle, bufIdx, baseOffset,
+                             F.getDataLayout(), bufLds,
+                             /*baseAlign (in bytes)*/ 8, isScalarTy);
+      } else {
+        TranslateRawBufVecLd(Ty, numComponents, IRB, Handle, bufIdx, baseOffset,
+                             F.getDataLayout(), bufLds,
+                             /*baseAlign (in bytes)*/ 4, isScalarTy);
+      }
+
+      if (Error E = replaceMultiResRetsUses(CI, bufLds))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -646,6 +833,9 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_handle_fromBinding:
         HasErrors |= lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_rawBufferLoad:
+        HasErrors |= lowerRawBufferLoad(F);
         break;
       case Intrinsic::dx_typedBufferLoad:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);

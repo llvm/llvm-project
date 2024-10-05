@@ -854,6 +854,17 @@ def AnnotateHandle : DXILOp<216, annotateHandle> {
   let stages = [Stages<DXIL1_6, [all_stages]>];
 }
 
+def RawBufferLoad : DXILOp<139, rawBufferLoad> {
+  let Doc = "reads from a ByteAddressBuffer or StructuredBuffer";
+  // Handle, Coord0, Coord1, mask, alignment
+  let arguments = [HandleTy, Int32Ty, Int32Ty, Int8Ty, Int32Ty];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
 def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let Doc = "create resource handle from binding";
   let arguments = [ResBindTy, Int32Ty, Int1Ty];
