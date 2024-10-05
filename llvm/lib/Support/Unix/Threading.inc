@@ -33,7 +33,6 @@
 #include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
-
 // Must be included after Threading.inc to provide definition for llvm::thread
 // because FreeBSD's condvar.h (included by user.h) misuses the "thread"
 // keyword.
