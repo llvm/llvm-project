@@ -1007,6 +1007,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("friend ostream& ::operator<<(ostream& lhs, foo& rhs);");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::lessless, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
