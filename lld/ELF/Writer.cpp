@@ -1424,7 +1424,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
   }
 }
 
-static void finalizeSynthetic(SyntheticSection *sec) {
+static void finalizeSynthetic(Ctx &ctx, SyntheticSection *sec) {
   if (sec && sec->isNeeded() && sec->getParent()) {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections", sec->name);
     sec->finalizeContents(ctx);
@@ -1438,7 +1438,7 @@ static void finalizeSynthetic(SyntheticSection *sec) {
 template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
   ThunkCreator tc(ctx);
-  AArch64Err843419Patcher a64p;
+  AArch64Err843419Patcher a64p(ctx);
   ARMErr657417Patcher a32p;
   ctx.script->assignAddresses();
 
@@ -1449,7 +1449,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   // section order.
   const auto finalizeOrderDependentContent = [this] {
     for (Partition &part : ctx.partitions)
-      finalizeSynthetic(part.armExidx.get());
+      finalizeSynthetic(ctx, part.armExidx.get());
     resolveShfLinkOrder();
   };
   finalizeOrderDependentContent();
@@ -1486,7 +1486,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= a32p.createFixes();
     }
 
-    finalizeSynthetic(ctx.in.got.get());
+    finalizeSynthetic(ctx, ctx.in.got.get());
     if (ctx.in.mipsGot)
       ctx.in.mipsGot->updateAllocSize();
 
@@ -1783,7 +1783,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     {
       llvm::TimeTraceScope timeScope("Finalize .eh_frame");
       for (Partition &part : ctx.partitions)
-        finalizeSynthetic(part.ehFrame.get());
+        finalizeSynthetic(ctx, part.ehFrame.get());
     }
   }
 
@@ -1983,20 +1983,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
 
-    finalizeSynthetic(ctx.in.bss.get());
-    finalizeSynthetic(ctx.in.bssRelRo.get());
-    finalizeSynthetic(ctx.in.symTabShndx.get());
-    finalizeSynthetic(ctx.in.shStrTab.get());
-    finalizeSynthetic(ctx.in.strTab.get());
-    finalizeSynthetic(ctx.in.got.get());
-    finalizeSynthetic(ctx.in.mipsGot.get());
-    finalizeSynthetic(ctx.in.igotPlt.get());
-    finalizeSynthetic(ctx.in.gotPlt.get());
-    finalizeSynthetic(ctx.in.relaPlt.get());
-    finalizeSynthetic(ctx.in.plt.get());
-    finalizeSynthetic(ctx.in.iplt.get());
-    finalizeSynthetic(ctx.in.ppc32Got2.get());
-    finalizeSynthetic(ctx.in.partIndex.get());
+    finalizeSynthetic(ctx, ctx.in.bss.get());
+    finalizeSynthetic(ctx, ctx.in.bssRelRo.get());
+    finalizeSynthetic(ctx, ctx.in.symTabShndx.get());
+    finalizeSynthetic(ctx, ctx.in.shStrTab.get());
+    finalizeSynthetic(ctx, ctx.in.strTab.get());
+    finalizeSynthetic(ctx, ctx.in.got.get());
+    finalizeSynthetic(ctx, ctx.in.mipsGot.get());
+    finalizeSynthetic(ctx, ctx.in.igotPlt.get());
+    finalizeSynthetic(ctx, ctx.in.gotPlt.get());
+    finalizeSynthetic(ctx, ctx.in.relaPlt.get());
+    finalizeSynthetic(ctx, ctx.in.plt.get());
+    finalizeSynthetic(ctx, ctx.in.iplt.get());
+    finalizeSynthetic(ctx, ctx.in.ppc32Got2.get());
+    finalizeSynthetic(ctx, ctx.in.partIndex.get());
 
     // Dynamic section must be the last one in this list and dynamic
     // symbol table section (dynSymTab) must be the first one.
@@ -2005,25 +2005,25 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         part.relaDyn->mergeRels();
         // Compute DT_RELACOUNT to be used by part.dynamic.
         part.relaDyn->partitionRels();
-        finalizeSynthetic(part.relaDyn.get());
+        finalizeSynthetic(ctx, part.relaDyn.get());
       }
       if (part.relrDyn) {
         part.relrDyn->mergeRels();
-        finalizeSynthetic(part.relrDyn.get());
+        finalizeSynthetic(ctx, part.relrDyn.get());
       }
       if (part.relrAuthDyn) {
         part.relrAuthDyn->mergeRels();
-        finalizeSynthetic(part.relrAuthDyn.get());
+        finalizeSynthetic(ctx, part.relrAuthDyn.get());
       }
 
-      finalizeSynthetic(part.dynSymTab.get());
-      finalizeSynthetic(part.gnuHashTab.get());
-      finalizeSynthetic(part.hashTab.get());
-      finalizeSynthetic(part.verDef.get());
-      finalizeSynthetic(part.ehFrameHdr.get());
-      finalizeSynthetic(part.verSym.get());
-      finalizeSynthetic(part.verNeed.get());
-      finalizeSynthetic(part.dynamic.get());
+      finalizeSynthetic(ctx, part.dynSymTab.get());
+      finalizeSynthetic(ctx, part.gnuHashTab.get());
+      finalizeSynthetic(ctx, part.hashTab.get());
+      finalizeSynthetic(ctx, part.verDef.get());
+      finalizeSynthetic(ctx, part.ehFrameHdr.get());
+      finalizeSynthetic(ctx, part.verSym.get());
+      finalizeSynthetic(ctx, part.verNeed.get());
+      finalizeSynthetic(ctx, part.dynamic.get());
     }
   }
 
@@ -2061,10 +2061,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     llvm::TimeTraceScope timeScope("Finalize synthetic sections");
     // finalizeAddressDependentContent may have added local symbols to the
     // static symbol table.
-    finalizeSynthetic(ctx.in.symTab.get());
-    finalizeSynthetic(ctx.in.debugNames.get());
-    finalizeSynthetic(ctx.in.ppc64LongBranchTarget.get());
-    finalizeSynthetic(ctx.in.armCmseSGSection.get());
+    finalizeSynthetic(ctx, ctx.in.symTab.get());
+    finalizeSynthetic(ctx, ctx.in.debugNames.get());
+    finalizeSynthetic(ctx, ctx.in.ppc64LongBranchTarget.get());
+    finalizeSynthetic(ctx, ctx.in.armCmseSGSection.get());
   }
 
   // Relaxation to delete inter-basic block jumps created by basic block
