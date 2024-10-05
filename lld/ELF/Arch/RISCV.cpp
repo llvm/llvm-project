@@ -1328,7 +1328,4 @@ void elf::mergeRISCVAttributesSections(Ctx &) {
                            mergeAttributesSection(sections));
 }
 
-TargetInfo *elf::getRISCVTargetInfo(Ctx &ctx) {
-  static RISCV target(ctx);
-  return &target;
-}
+void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }

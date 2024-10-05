@@ -893,7 +893,6 @@ void LoongArch::finalizeRelax(int passes) const {
   }
 }
 
-TargetInfo *elf::getLoongArchTargetInfo(Ctx &ctx) {
-  static LoongArch target(ctx);
-  return &target;
+void elf::setLoongArchTargetInfo(Ctx &ctx) {
+  ctx.target.reset(new LoongArch(ctx));
 }

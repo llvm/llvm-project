@@ -404,7 +404,4 @@ int64_t Hexagon::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-TargetInfo *elf::getHexagonTargetInfo(Ctx &ctx) {
-  static Hexagon target(ctx);
-  return &target;
-}
+void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }

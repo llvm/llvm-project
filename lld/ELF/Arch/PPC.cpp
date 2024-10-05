@@ -525,7 +525,4 @@ void PPC::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   }
 }
 
-TargetInfo *elf::getPPCTargetInfo(Ctx &ctx) {
-  static PPC target(ctx);
-  return &target;
-}
+void elf::setPPCTargetInfo(Ctx &ctx) { ctx.target.reset(new PPC(ctx)); }
