@@ -161,6 +161,10 @@ void call_atexit_callbacks(ThreadAttributes *attrib) {
   }
 }
 
+bool add_atexit_callback(void (*callback)(void *), void *obj) {
+  return atexit_callback_mgr.add_callback(callback, obj) == 0;
+}
+
 } // namespace internal
 
 cpp::optional<unsigned int> new_tss_key(TSSDtor *dtor) {

@@ -246,6 +246,9 @@ namespace internal {
 // returned by this function.
 ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr();
 
+// Interal implementation of the __cxa_thread_atexit_impl function. This
+bool add_atexit_callback(void (*callback)(void *), void *obj);
+
 // Call the currently registered thread specific atexit callbacks. Useful for
 // implementing the thread_exit function.
 void call_atexit_callbacks(ThreadAttributes *attrib);

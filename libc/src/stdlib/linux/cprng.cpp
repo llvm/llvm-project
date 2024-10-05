@@ -15,12 +15,9 @@
 #include "src/__support/libc_assert.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/raw_mutex.h"
+#include "src/__support/threads/thread.h"
+#include "src/stdlib/atexit.h"
 #include "src/sys/auxv/getauxval.h"
-
-extern "C" int __cxa_thread_atexit_impl(void (*)(void *), void *, void *);
-extern "C" int __cxa_atexit(void (*)(void *), void *, void *);
-extern "C" [[gnu::weak, gnu::visibility("hidden")]] void *__dso_handle =
-    nullptr;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cprng {
@@ -250,11 +247,9 @@ MonotonicStatePool *MonotonicStatePool::instance() {
     if (!config)
       return;
     new (pool) MonotonicStatePool(*config);
-    is_valid = !__cxa_atexit(
-        [](void *) {
-          reinterpret_cast<MonotonicStatePool *>(pool)->~MonotonicStatePool();
-        },
-        nullptr, __dso_handle);
+    is_valid = !atexit([]() {
+      reinterpret_cast<MonotonicStatePool *>(pool)->~MonotonicStatePool();
+    });
   });
   if (!is_valid)
     return nullptr;
@@ -293,14 +288,15 @@ public:
       remaining_trials--;
       local_state = pool->get();
       if (local_state) {
-        if (__cxa_thread_atexit_impl(
+        if (!internal::add_atexit_callback(
                 [](void *opaque) {
                   auto *state = static_cast<ThreadLocalState *>(opaque);
                   state->destroy();
                 },
-                this, __dso_handle) != 0) {
+                this)) {
           pool->recycle(local_state);
           local_state = nullptr;
+          release();
         }
       }
     }
@@ -332,21 +328,23 @@ size_t fill_buffer_impl(G generator, char *buffer, size_t length) {
 size_t fill_buffer(char *buffer, size_t length) {
   void *state = local_state.acquire();
   if (state) {
-    // Given state is valid, state_size shall be valid.
+    // Given state is valid, state_size shall be valid and the vDSO symbol shall
+    // be defined.
     size_t state_size = MonotonicStatePool::instance()->state_size();
     auto impl = [state, state_size](char *cursor, size_t len) {
       TypedSymbol<VDSOSym::GetRandom> vgetrandom;
       return vgetrandom(cursor, len, 0, state, state_size);
     };
+    local_state.release();
     return fill_buffer_impl(impl, buffer, length);
   } else {
     auto impl = [](char *cursor, size_t len) {
       // use syscall to avoid errno handling
       return syscall_impl<int>(SYS_getrandom, cursor, len, 0);
     };
+    local_state.release();
     return fill_buffer_impl(impl, buffer, length);
   }
-  local_state.release();
 }
 } // namespace cprng
 } // namespace LIBC_NAMESPACE_DECL
