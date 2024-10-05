@@ -15,6 +15,7 @@
 #include "FeatureModule.h"
 #include "LSPBinder.h"
 #include "LSPClient.h"
+#include "NoLintFixes.h"
 #include "TestFS.h"
 #include "support/Function.h"
 #include "support/Logger.h"
@@ -32,6 +33,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <cassert>
 #include <condition_variable>
 #include <cstddef>
@@ -39,6 +41,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <regex>
 #include <thread>
 #include <utility>
 
@@ -222,7 +225,7 @@ TEST_F(LSPTest, ClangTidyRename) {
   ASSERT_TRUE(Diags && !Diags->empty());
   auto RenameDiag = Diags->front();
 
-  auto RenameCommand =
+  auto Fixes =
       (*Client
             .call("textDocument/codeAction",
                   llvm::json::Object{
@@ -232,9 +235,16 @@ TEST_F(LSPTest, ClangTidyRename) {
                            {"diagnostics", llvm::json::Array{RenameDiag}}}},
                       {"range", Source.range()}})
             .takeValue()
-            .getAsArray())[0];
+            .getAsArray());
+  const auto NoLintRegex = std::regex("Apply fix: " + NoLintFixMsgRegexStr);
+  const auto &RenameCommand = *std::find_if(
+      Fixes.begin(), Fixes.end(), [&](decltype(Fixes)::value_type &Fix) {
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+        return !std::regex_match((*Fix.getAsObject())["title"].getAsString()->data(), NoLintRegex);
+      });
+
+  ASSERT_EQ((*RenameCommand.getAsObject()).get("title")->getAsString(),
+            "change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
   Client.call("workspace/executeCommand", RenameCommand);

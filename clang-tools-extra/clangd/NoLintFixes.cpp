@@ -39,7 +39,7 @@ namespace clang {
 namespace clangd {
 
 std::vector<Fix>
-clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
+noLintFixes(const clang::tidy::ClangTidyContext &CTContext,
                      const clang::Diagnostic &Info, const Diag &Diag) {
   auto RuleName = CTContext.getCheckName(Diag.ID);
   if (
@@ -93,9 +93,9 @@ clangTidyNoLintFixes(const clang::tidy::ClangTidyContext &CTContext,
   return {F};
 }
 
-const auto MsgRegex = std::regex("ignore \\[.*\\] for this line");
-bool isClangTidyNoLintFixes(const Fix &F) {
-  return std::regex_match(F.Message, MsgRegex);
+const auto Regex = std::regex(NoLintFixMsgRegexStr);
+bool isNoLintFixes(const Fix &F) {
+  return std::regex_match(F.Message, Regex);
 }
 
 } // namespace clangd
