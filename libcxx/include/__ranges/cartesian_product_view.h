@@ -31,6 +31,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+template <bool Const, class First, class... Vs>
+concept cartesian_product_is_random_access =
+    (random_access_range<__maybe_const<Const, First>> && ... &&
+     (random_access_range<__maybe_const<Const, Vs>> && sized_range<__maybe_const<Const, Vs>>));
+
 template <class R>
 concept cartesian_product_common_arg = common_range<R> || (sized_range<R> && random_access_range<R>);
 
@@ -97,6 +102,7 @@ public:
   using value_type = tuple<range_value_t<__maybe_const<Const, First>>, range_value_t<__maybe_const<Const, Vs>>...>;
   using reference =
       tuple<range_reference_t<__maybe_const<Const, First>>, range_reference_t<__maybe_const<Const, Vs>>...>;
+  using difference_type = std::common_type_t<range_difference_t<First>, range_difference_t<Vs>...>;
 
   iterator() = default;
 
@@ -132,11 +138,26 @@ public:
   }
 
   constexpr iterator operator--(int)
-requires cartesian_product_is_bidirectional <Const, First, Vs...> {
-      auto tmp = *this;
+    requires cartesian_product_is_bidirectional<Const, First, Vs...>
+  {
+    auto tmp = *this;
     prev();
     return tmp;
-}
+  }
+
+  constexpr iterator& operator+=(difference_type x)
+    requires cartesian_product_is_random_access<Const, First, Vs...>
+  {
+    advance(x);
+    return *this;
+  }
+
+  constexpr iterator& operator-=(difference_type x)
+    requires cartesian_product_is_random_access<Const, First, Vs...>
+  {
+    advance(x);
+    return *this;
+  }
 
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
@@ -168,6 +189,37 @@ private:
       }
     }
     --it;
+  }
+
+  template <std::size_t N = sizeof...(Vs)>
+  constexpr void advance(difference_type x) {
+    if (x == 0)
+      return;
+
+    const auto& v    = std::get<N>(parent_->bases_);
+    auto& it         = std::get<N>(current_);
+    const auto sz    = static_cast<difference_type>(std::ranges::size(v));
+    const auto first = begin(v);
+
+    const auto idx = static_cast<difference_type>(it - first);
+    x += idx;
+
+    auto div = sz ? x / sz : 0;
+    auto mod = sz ? x % sz : 0;
+
+    if constexpr (N != 0) {
+      if (mod < 0) {
+        mod += sz;
+        div--;
+      }
+      advance<N - 1>(div);
+    } else {
+      if (div > 0) {
+        mod = sz;
+      }
+    }
+    using D = std::iter_difference_t<decltype(first)>;
+    it      = first + static_cast<D>(mod);
   }
 };
 
