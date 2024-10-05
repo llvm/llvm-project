@@ -84,7 +84,7 @@ void C3::Layer::Initialize() {
 // CHECK: cir.func @_ZN2C35Layer10InitializeEv
 
 // CHECK:  cir.scope {
-// CHECK:    %2 = cir.base_class_addr(%1 : !cir.ptr<!ty_C33A3ALayer>) -> !cir.ptr<!ty_C23A3ALayer>
+// CHECK:    %2 = cir.base_class_addr(%1 : !cir.ptr<!ty_C33A3ALayer> nonnull) [0] -> !cir.ptr<!ty_C23A3ALayer>
 // CHECK:    %3 = cir.get_member %2[1] {name = "m_C1"} : !cir.ptr<!ty_C23A3ALayer> -> !cir.ptr<!cir.ptr<!ty_C2_>>
 // CHECK:    %4 = cir.load %3 : !cir.ptr<!cir.ptr<!ty_C2_>>, !cir.ptr<!ty_C2_>
 // CHECK:    %5 = cir.const #cir.ptr<null> : !cir.ptr<!ty_C2_>
@@ -99,7 +99,7 @@ enumy C3::Initialize() {
 
 // CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_C3_>, !cir.ptr<!cir.ptr<!ty_C3_>>
 // CHECK:     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_C3_>>, !cir.ptr<!ty_C3_>
-// CHECK:     %3 = cir.base_class_addr(%2 : !cir.ptr<!ty_C3_>) -> !cir.ptr<!ty_C2_>
+// CHECK:     %3 = cir.base_class_addr(%2 : !cir.ptr<!ty_C3_> nonnull) [0] -> !cir.ptr<!ty_C2_>
 // CHECK:     %4 = cir.call @_ZN2C210InitializeEv(%3) : (!cir.ptr<!ty_C2_>) -> !s32i
 
 void vcall(C1 &c1) {
@@ -144,7 +144,7 @@ public:
 // CHECK:   %1 = cir.load deref %0 : !cir.ptr<!cir.ptr<!ty_B>>, !cir.ptr<!ty_B>
 // CHECK:   cir.scope {
 // CHECK:     %2 = cir.alloca !ty_A, !cir.ptr<!ty_A>, ["ref.tmp0"] {alignment = 8 : i64}
-// CHECK:     %3 = cir.base_class_addr(%1 : !cir.ptr<!ty_B>) -> !cir.ptr<!ty_A>
+// CHECK:     %3 = cir.base_class_addr(%1 : !cir.ptr<!ty_B> nonnull) [0] -> !cir.ptr<!ty_A>
 
 // Call @A::A(A const&)
 // CHECK:     cir.call @_ZN1AC2ERKS_(%2, %3) : (!cir.ptr<!ty_A>, !cir.ptr<!ty_A>) -> ()
@@ -171,4 +171,29 @@ int test_ref() {
   int x = 42;
   C c(x);
   return c.ref;
+}
+
+// Multiple base classes, to test non-zero offsets
+struct Base1 { int a; };
+struct Base2 { int b; };
+struct Derived : Base1, Base2 { int c; };
+void test_multi_base() {
+  Derived d;
+
+  Base2& bref = d; // no null check needed
+  // CHECK: %6 = cir.base_class_addr(%0 : !cir.ptr<!ty_Derived> nonnull) [4] -> !cir.ptr<!ty_Base2_>
+
+  Base2* bptr = &d; // has null pointer check
+  // CHECK: %7 = cir.base_class_addr(%0 : !cir.ptr<!ty_Derived>) [4] -> !cir.ptr<!ty_Base2_>
+
+  int a = d.a;
+  // CHECK: %8 = cir.base_class_addr(%0 : !cir.ptr<!ty_Derived> nonnull) [0] -> !cir.ptr<!ty_Base1_>
+  // CHECK: %9 = cir.get_member %8[0] {name = "a"} : !cir.ptr<!ty_Base1_> -> !cir.ptr<!s32i>
+
+  int b = d.b;
+  // CHECK: %11 = cir.base_class_addr(%0 : !cir.ptr<!ty_Derived> nonnull) [4] -> !cir.ptr<!ty_Base2_>
+  // CHECK: %12 = cir.get_member %11[0] {name = "b"} : !cir.ptr<!ty_Base2_> -> !cir.ptr<!s32i>
+
+  int c = d.c;
+  // CHECK: %14 = cir.get_member %0[2] {name = "c"} : !cir.ptr<!ty_Derived> -> !cir.ptr<!s32i>
 }

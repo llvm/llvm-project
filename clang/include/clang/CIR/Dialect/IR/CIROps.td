@@ -2960,23 +2960,37 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
-    base class given a derived class pointer.
+    non-virtual base class given a derived class pointer. The offset in bytes
+    of the base class must be passed in, since it is easier for the front end
+    to calculate that than the MLIR passes. The operation contains a flag for
+    whether or not the operand may be nullptr. That depends on the context and
+    cannot be known by the operation, and that information affects how the
+    operation is lowered.
 
     Example:
+    ```c++
+    struct Base { };
+    struct Derived : Base { };
+    Derived d;
+    Base& b = d;
+    ```
+    will generate
     ```mlir
-    TBD
+    %3 = cir.base_class_addr (%1 : !cir.ptr<!ty_Derived> nonnull) [0] -> !cir.ptr<!ty_Base>
     ```
   }];
 
   let arguments = (ins
-    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr);
+    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr,
+    IndexAttr:$offset, UnitAttr:$assume_not_null);
 
   let results = (outs Res<CIR_PointerType, "">:$base_addr);
 
   let assemblyFormat = [{
     `(`
       $derived_addr `:` qualified(type($derived_addr))
-    `)` `->` qualified(type($base_addr)) attr-dict
+      (`nonnull` $assume_not_null^)?
+    `)` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 
   // FIXME: add verifier.

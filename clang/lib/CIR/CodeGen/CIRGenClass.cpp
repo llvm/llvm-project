@@ -530,17 +530,9 @@ Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
   else
     Offset = Layout.getBaseClassOffset(Base);
 
-  // Shift and cast down to the base type.
-  // TODO: for complete types, this should be possible with a GEP.
-  Address V = This;
-  if (!Offset.isZero()) {
-    mlir::Value OffsetVal = builder.getSInt32(Offset.getQuantity(), loc);
-    mlir::Value VBaseThisPtr = builder.create<mlir::cir::PtrStrideOp>(
-        loc, This.getPointer().getType(), This.getPointer(), OffsetVal);
-    V = Address(VBaseThisPtr, CXXABIThisAlignment);
-  }
-  V = builder.createElementBitCast(loc, V, ConvertType(Base));
-  return V;
+  return builder.createBaseClassAddr(loc, This, ConvertType(Base),
+                                     Offset.getQuantity(),
+                                     /*assume_not_null=*/true);
 }
 
 static void buildBaseInitializer(mlir::Location loc, CIRGenFunction &CGF,
@@ -680,10 +672,17 @@ static Address ApplyNonVirtualAndVirtualOffset(
     baseOffset = virtualOffset;
   }
 
-  // Apply the base offset.
+  // Apply the base offset.  cir.ptr_stride adjusts by a number of elements,
+  // not bytes.  So the pointer must be cast to a byte pointer and back.
+
   mlir::Value ptr = addr.getPointer();
-  ptr = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(loc, ptr.getType(), ptr,
-                                                        baseOffset);
+  mlir::Type charPtrType = CGF.CGM.UInt8PtrTy;
+  mlir::Value charPtr = CGF.getBuilder().createCast(
+      mlir::cir::CastKind::bitcast, ptr, charPtrType);
+  mlir::Value adjusted = CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
+      loc, charPtrType, charPtr, baseOffset);
+  ptr = CGF.getBuilder().createCast(mlir::cir::CastKind::bitcast, adjusted,
+                                    ptr.getType());
 
   // If we have a virtual component, the alignment of the result will
   // be relative only to the known alignment of that vbase.
@@ -1481,7 +1480,7 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   // *start* with a step down to the correct virtual base subobject,
   // and hence will not require any further steps.
   if ((*Start)->isVirtual()) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("NYI: Cast to virtual base class");
   }
 
   // Compute the static offset of the ultimate destination within its
@@ -1494,55 +1493,51 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   // For now, that's limited to when the derived type is final.
   // TODO: "devirtualize" this for accesses to known-complete objects.
   if (VBase && Derived->hasAttr<FinalAttr>()) {
-    llvm_unreachable("NYI");
+    const ASTRecordLayout &layout = getContext().getASTRecordLayout(Derived);
+    CharUnits vBaseOffset = layout.getVBaseClassOffset(VBase);
+    NonVirtualOffset += vBaseOffset;
+    VBase = nullptr; // we no longer have a virtual step
   }
 
   // Get the base pointer type.
   auto BaseValueTy = convertType((PathEnd[-1])->getType());
   assert(!MissingFeatures::addressSpace());
-  // auto BasePtrTy = builder.getPointerTo(BaseValueTy);
-  // QualType DerivedTy = getContext().getRecordType(Derived);
-  // CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
 
-  // If the static offset is zero and we don't have a virtual step,
-  // just do a bitcast; null checks are unnecessary.
-  if (NonVirtualOffset.isZero() && !VBase) {
+  // If there is no virtual base, use cir.base_class_addr.  It takes care of
+  // the adjustment and the null pointer check.
+  if (!VBase) {
     if (sanitizePerformTypeCheck()) {
-      llvm_unreachable("NYI");
+      llvm_unreachable("NYI: sanitizePerformTypeCheck");
     }
-    return builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy);
+    return builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy,
+                                       NonVirtualOffset.getQuantity(),
+                                       /*assumeNotNull=*/not NullCheckValue);
   }
 
-  // Skip over the offset (and the vtable load) if we're supposed to
-  // null-check the pointer.
-  if (NullCheckValue) {
-    llvm_unreachable("NYI");
-  }
+  // Conversion to a virtual base.  cir.base_class_addr can't handle this.
+  // Generate the code to look up the address in the virtual table.
 
-  if (sanitizePerformTypeCheck()) {
-    llvm_unreachable("NYI");
-  }
+  llvm_unreachable("NYI: Cast to virtual base class");
 
-  // Compute the virtual offset.
-  mlir::Value VirtualOffset{};
-  if (VBase) {
-    llvm_unreachable("NYI");
-  }
-
-  // Apply both offsets.
+  // This is just an outline of what the code might look like, since I can't
+  // actually test it.
+#if 0
+  mlir::Value VirtualOffset = ...; // This is a dynamic expression.  Creating
+                                   // it requires calling an ABI-specific
+                                   // function.
   Value = ApplyNonVirtualAndVirtualOffset(getLoc(Loc), *this, Value,
                                           NonVirtualOffset, VirtualOffset,
                                           Derived, VBase);
-  // Cast to the destination type.
   Value = builder.createElementBitCast(Value.getPointer().getLoc(), Value,
                                        BaseValueTy);
-
-  // Build a phi if we needed a null check.
-  if (NullCheckValue) {
-    llvm_unreachable("NYI");
+  if (sanitizePerformTypeCheck()) {
+    // Do something here
   }
+  if (NullCheckValue) {
+    // Convert to 'derivedPtr == nullptr ? nullptr : basePtr'
+  }
+#endif
 
-  llvm_unreachable("NYI");
   return Value;
 }
 
