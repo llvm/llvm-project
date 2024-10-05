@@ -159,9 +159,11 @@ void nb10(
 // Expression involving indirection
 int nb10a() [[clang::nonblocking]];
 int nb10b() [[clang::nonblocking]];
+int blocking();
 
 int nb10c(bool x) [[clang::nonblocking]]
 {
+	int y = (x ? nb10a : blocking)(); // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
 	return (x ? nb10a : nb10b)(); // No diagnostic.
 }
 
