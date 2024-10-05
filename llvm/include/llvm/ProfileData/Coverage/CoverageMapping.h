@@ -359,15 +359,19 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t ExecutionCount;
   uint64_t FalseExecutionCount;
   bool Folded;
-
-  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
-      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(0), Folded(false) {}
+  bool HasSingleByteCoverage;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
-                uint64_t FalseExecutionCount)
+                bool HasSingleByteCoverage)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
-        FalseExecutionCount(FalseExecutionCount), Folded(false) {}
+        FalseExecutionCount(0), Folded(false),
+        HasSingleByteCoverage(HasSingleByteCoverage) {}
+
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
+                uint64_t FalseExecutionCount, bool HasSingleByteCoverage)
+      : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
+        FalseExecutionCount(FalseExecutionCount), Folded(false),
+        HasSingleByteCoverage(HasSingleByteCoverage) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -698,12 +702,9 @@ struct FunctionRecord {
   std::vector<MCDCRecord> MCDCRecords;
   /// The number of times this function was executed.
   uint64_t ExecutionCount = 0;
-  bool SingleByteCoverage;
 
-  FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames,
-                 bool SingleByteCoverage)
-      : Name(Name), Filenames(Filenames.begin(), Filenames.end()),
-        SingleByteCoverage(SingleByteCoverage) {}
+  FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames)
+      : Name(Name), Filenames(Filenames.begin(), Filenames.end()) {}
 
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
@@ -713,10 +714,11 @@ struct FunctionRecord {
   }
 
   void pushRegion(CounterMappingRegion Region, uint64_t Count,
-                  uint64_t FalseCount) {
+                  uint64_t FalseCount, bool HasSingleByteCoverage) {
     if (Region.Kind == CounterMappingRegion::BranchRegion ||
         Region.Kind == CounterMappingRegion::MCDCBranchRegion) {
-      CountedBranchRegions.emplace_back(Region, Count, FalseCount);
+      CountedBranchRegions.emplace_back(Region, Count, FalseCount,
+                                        HasSingleByteCoverage);
       // If both counters are hard-coded to zero, then this region represents a
       // constant-folded branch.
       if (Region.Count.isZero() && Region.FalseCount.isZero())
@@ -725,7 +727,8 @@ struct FunctionRecord {
     }
     if (CountedRegions.empty())
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount);
+    CountedRegions.emplace_back(Region, Count, FalseCount,
+                                HasSingleByteCoverage);
   }
 };
 

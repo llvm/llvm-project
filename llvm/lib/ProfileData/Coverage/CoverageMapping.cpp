@@ -856,7 +856,7 @@ Error CoverageMapping::loadFunctionRecord(
     return Error::success();
 
   MCDCDecisionRecorder MCDCDecisions;
-  FunctionRecord Function(OrigFuncName, Record.Filenames, SingleByteCoverage);
+  FunctionRecord Function(OrigFuncName, Record.Filenames);
   for (const auto &Region : Record.MappingRegions) {
     // MCDCDecisionRegion should be handled first since it overlaps with
     // others inside.
@@ -874,10 +874,10 @@ Error CoverageMapping::loadFunctionRecord(
       consumeError(std::move(E));
       return Error::success();
     }
-    assert(!SingleByteCoverage ||
-           (0 <= *ExecutionCount && *ExecutionCount <= 1 &&
-            0 <= *AltExecutionCount && *AltExecutionCount <= 1));
-    Function.pushRegion(Region, *ExecutionCount, *AltExecutionCount);
+    Function.pushRegion(
+        Region, (SingleByteCoverage && *ExecutionCount ? 1 : *ExecutionCount),
+        (SingleByteCoverage && *AltExecutionCount ? 1 : *AltExecutionCount),
+        SingleByteCoverage);
 
     // Record ExpansionRegion.
     if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
@@ -1273,8 +1273,7 @@ class SegmentBuilder {
 
   /// Combine counts of regions which cover the same area.
   static ArrayRef<CountedRegion>
-  combineRegions(MutableArrayRef<CountedRegion> Regions,
-                 bool SingleByteCoverage) {
+  combineRegions(MutableArrayRef<CountedRegion> Regions) {
     if (Regions.empty())
       return Regions;
     auto Active = Regions.begin();
@@ -1301,7 +1300,9 @@ class SegmentBuilder {
       // We add counts of the regions of the same kind as the active region
       // to handle the both situations.
       if (I->Kind == Active->Kind) {
-        if (SingleByteCoverage)
+        assert(I->HasSingleByteCoverage == Active->HasSingleByteCoverage &&
+               "Regions are generated in different coverage modes");
+        if (I->HasSingleByteCoverage)
           Active->ExecutionCount = Active->ExecutionCount || I->ExecutionCount;
         else
           Active->ExecutionCount += I->ExecutionCount;
@@ -1313,14 +1314,12 @@ class SegmentBuilder {
 public:
   /// Build a sorted list of CoverageSegments from a list of Regions.
   static std::vector<CoverageSegment>
-  buildSegments(MutableArrayRef<CountedRegion> Regions,
-                bool SingleByteCoverage) {
+  buildSegments(MutableArrayRef<CountedRegion> Regions) {
     std::vector<CoverageSegment> Segments;
     SegmentBuilder Builder(Segments);
 
     sortNestedRegions(Regions);
-    ArrayRef<CountedRegion> CombinedRegions =
-        combineRegions(Regions, SingleByteCoverage);
+    ArrayRef<CountedRegion> CombinedRegions = combineRegions(Regions);
 
     LLVM_DEBUG({
       dbgs() << "Combined regions:\n";
@@ -1407,14 +1406,10 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   // the filename, we may get back some records that are not in the file.
   ArrayRef<unsigned> RecordIndices =
       getImpreciseRecordIndicesForFilename(Filename);
-  std::optional<bool> SingleByteCoverage;
   for (unsigned RecordIndex : RecordIndices) {
     const FunctionRecord &Function = Functions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
-    assert(!SingleByteCoverage ||
-           *SingleByteCoverage == Function.SingleByteCoverage);
-    SingleByteCoverage = Function.SingleByteCoverage;
     for (const auto &CR : Function.CountedRegions)
       if (FileIDs.test(CR.FileID)) {
         Regions.push_back(CR);
@@ -1432,8 +1427,7 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
-  FileCoverage.Segments =
-      SegmentBuilder::buildSegments(Regions, *SingleByteCoverage);
+  FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FileCoverage;
 }
@@ -1489,8 +1483,7 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
-  FunctionCoverage.Segments =
-      SegmentBuilder::buildSegments(Regions, Function.SingleByteCoverage);
+  FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return FunctionCoverage;
 }
@@ -1500,12 +1493,8 @@ CoverageData CoverageMapping::getCoverageForExpansion(
   CoverageData ExpansionCoverage(
       Expansion.Function.Filenames[Expansion.FileID]);
   std::vector<CountedRegion> Regions;
-  std::optional<bool> SingleByteCoverage;
   for (const auto &CR : Expansion.Function.CountedRegions)
     if (CR.FileID == Expansion.FileID) {
-      assert(!SingleByteCoverage ||
-             *SingleByteCoverage == Expansion.Function.SingleByteCoverage);
-      SingleByteCoverage = Expansion.Function.SingleByteCoverage;
       Regions.push_back(CR);
       if (isExpansion(CR, Expansion.FileID))
         ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
@@ -1517,8 +1506,7 @@ CoverageData CoverageMapping::getCoverageForExpansion(
 
   LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
                     << Expansion.FileID << "\n");
-  ExpansionCoverage.Segments =
-      SegmentBuilder::buildSegments(Regions, *SingleByteCoverage);
+  ExpansionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
   return ExpansionCoverage;
 }

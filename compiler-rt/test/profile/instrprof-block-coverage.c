@@ -49,4 +49,4 @@ int main(int argc, char *argv[]) {
 
 // CHECK-ERROR-NOT: warning: {{.*}}: Found inconsistent block coverage
 
-// COUNTS: Maximum function count: 1
+// COUNTS: Maximum function count: 4

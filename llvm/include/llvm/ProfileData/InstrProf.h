@@ -830,7 +830,6 @@ struct InstrProfValueSiteRecord {
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
-  bool SingleByteCoverage = false;
   std::vector<uint8_t> BitmapBytes;
 
   InstrProfRecord() = default;
@@ -840,15 +839,13 @@ struct InstrProfRecord {
       : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Counts(RHS.Counts), SingleByteCoverage(RHS.SingleByteCoverage),
-        BitmapBytes(RHS.BitmapBytes),
+      : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
-    SingleByteCoverage = RHS.SingleByteCoverage;
     BitmapBytes = RHS.BitmapBytes;
     if (!RHS.ValueData) {
       ValueData = nullptr;
