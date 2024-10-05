@@ -38,7 +38,7 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
   const auto FindCall =
       cxxMemberCallExpr(
           anyOf(argumentCountIs(1),
-                allOf(argumentCountIs(2),
+                allOf(argumentCountIs(2), // string::find takes two arguments
                       hasArgument(1, anyOf(cxxDefaultArgExpr(),
                                            ignoringParenImpCasts(Literal0))))),
           callee(cxxMethodDecl(
