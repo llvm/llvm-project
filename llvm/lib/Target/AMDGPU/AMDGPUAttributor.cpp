@@ -1018,8 +1018,7 @@ struct AAAMDGPUNoAGPR
 const char AAAMDGPUNoAGPR::ID = 0;
 
 static unsigned getMaxNumPreloadArgs(const Function &F, const DataLayout &DL,
-                                     const TargetMachine &TM) {
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+                                     const GCNSubtarget &ST) {
   unsigned Offset = 0;
   unsigned ArgsToPreload = 0;
   for (const auto &Arg : F.args()) {
@@ -1054,7 +1053,7 @@ static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
     // Defaults with no CL option.
     if (ST.defaultEnabledKernargPreload())
       PreloadCount =
-          getMaxNumPreloadArgs(F, F.getParent()->getDataLayout(), TM);
+          getMaxNumPreloadArgs(F, F.getParent()->getDataLayout(), ST);
     else
       PreloadCount = 0;
   }
