@@ -47893,7 +47893,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       if (auto *RawC = getTargetConstantFromNode(N->getOperand(1)))
         if (auto *SplatC = RawC->getSplatValue())
-          C = &(SplatC->getUniqueInteger());
+          if (auto *SplatCI = dyn_cast<ConstantInt>(SplatC))
+            C = &(SplatCI->getValue());
 
     if (!C || C->getBitWidth() != VT.getScalarSizeInBits())
       return SDValue();
