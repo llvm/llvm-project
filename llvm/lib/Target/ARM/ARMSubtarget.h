@@ -318,7 +318,9 @@ public:
   }
   bool isTargetGNUAEABI() const {
     return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
+            TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64) &&
            !isTargetDarwin() && !isTargetWindows();
   }
   bool isTargetMuslAEABI() const {
