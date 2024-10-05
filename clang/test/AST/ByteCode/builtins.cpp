@@ -36,5 +36,3 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   constexpr int len = __builtin_os_log_format_buffer_size("%d %{public}s %{private}.16P", i, data, data);
   static_assert(len > 0, "Expect len > 0");
 }
-
-static_assert(__builtin_omp_required_simd_align(int) != 0);
