@@ -63,7 +63,7 @@ public:
 };
 
 TEST(IntrinsicNameLookup, Basic) {
-  static constexpr const char *const NameTable1[] = {
+  static constexpr const char *const NameTable[] = {
       "llvm.foo", "llvm.foo.a", "llvm.foo.b", "llvm.foo.b.a", "llvm.foo.c",
   };
 
@@ -74,13 +74,72 @@ TEST(IntrinsicNameLookup, Basic) {
   };
 
   for (const auto &[Name, ExpectedIdx] : Tests) {
-    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name);
+    int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
     EXPECT_EQ(ExpectedIdx, Idx);
     if (!StringRef(Name).starts_with("llvm.foo"))
       continue;
-    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, Name, "foo");
+    Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name, "foo");
     EXPECT_EQ(ExpectedIdx, Idx);
   }
+}
+
+// Test case to demonstrate potential conflicts between overloaded and non-
+// overloaded intrinsics. The name match works by essentially dividing then
+// name into . separated components and doing successive search for each
+// component. When a search fails, the lowest component of the matching
+// range for the previous component is returned.
+TEST(IntrinsicNameLookup, OverloadConflict) {
+  // Assume possible mangled type strings are just .f32 and .i32.
+  static constexpr const char *const NameTable[] = {
+      "llvm.foo",
+      "llvm.foo.f32",
+      "llvm.foo.i32",
+  };
+
+  // Here, first we match llvm.foo and our search window is [0,2]. Then we try
+  // to match llvm.foo.f64 and there is no match, so it returns the low of the
+  // last match. So this lookup works as expected.
+  int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, "llvm.foo.f64");
+  EXPECT_EQ(Idx, 0);
+
+  // Now imagine if llvm.foo has 2 mangling suffixes, .f32 and .f64. The search
+  // will first match llvm.foo to [0, 2] and then llvm.foo.f32 to [1,1] and then
+  // not find any match for llvm.foo.f32.f64. So it will return the low of the
+  // last match, which is llvm.foo.f32. However, the intent was to match
+  // llvm.foo. So the presence of llvm.foo.f32 eliminated the possibility of
+  // matching with llvm.foo. So it seems if we have an intrinsic llvm.foo,
+  // another one with the same suffix and a single .suffix is not going to
+  // cause problems. If there exists another one with 2 or more suffixes,
+  // .suffix0 and .suffix1, its possible that the mangling suffix for llvm.foo
+  // might match with .suffix0 and then the match will fail to match llvm.foo.
+  // .suffix1 won't be a problem because its the last one so the matcher will
+  // try an exact match (in which case exact name in the table was searched for,
+  // so its expected to match that entry).
+  //
+  // This example leads the the following rule: if we have an overloaded
+  // intrinsic with name `llvm.foo` and another one with same prefix and one or
+  // more suffixes, `llvm.foo[.<suffixN>]+`, then the name search will try to
+  // first match against suffix0, then suffix1 etc. If suffix0 can match a
+  // mangled type, then the search for an `llvm.foo` with a mangling suffix can
+  // match against suffix0, preventing a match with `llvm.foo`. If suffix0
+  // cannot match a mangled type, then that cannot happen, so we do not need to
+  // check for later suffixes. Generalizing, the `llvm.foo[.suffixN]+` will
+  // cause a conflict if the first suffix (.suffix0) can match a mangled type
+  // (and then we do not need to check later suffixes) and will not cause a
+  // conflict if it cannot (and then again, we do not need to check for later
+  // suffixes.)
+  Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, "llvm.foo.f32.f64");
+  EXPECT_EQ(Idx, 1);
+
+  // Here .bar and .f33 do not conflict with the manging suffixes, so the search
+  // should match against llvm.foo.
+  static constexpr const char *const NameTable1[] = {
+      "llvm.foo",
+      "llvm.foo.bar",
+      "llvm.foo.f33",
+  };
+  Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable1, "llvm.foo.f32.f64");
+  EXPECT_EQ(Idx, 0);
 }
 
 // Tests to verify getIntrinsicForClangBuiltin.

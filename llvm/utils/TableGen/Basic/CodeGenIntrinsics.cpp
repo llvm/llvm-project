@@ -76,6 +76,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
 
   CheckDuplicateIntrinsics();
   CheckTargetIndependentIntrinsics();
+  CheckOverloadSuffixConflicts();
 }
 
 // Check for duplicate intrinsic names.
@@ -121,6 +122,132 @@ void CodeGenIntrinsicTable::CheckTargetIndependentIntrinsics() const {
                         "' has prefix `llvm." + Prefix +
                         "` that conflicts with intrinsics for target `" +
                         Prefix + "`");
+  }
+}
+
+// Return true if the given Suffix looks like mangled type. Note that this
+// check is conservative, but allows all existing LLVM intrinsic suffixes to be
+// consider as not looking like a mangling suffix.
+static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
+  // Try to match against possible mangling suffixes for various types.
+  // See getMangledTypeStr() for the mangling suffixes possible. It includes
+  //  pointer       : p[0-9]+
+  //  array         : a[0-9]+[.+]
+  //  struct:       : s_/sl_[.+]
+  //  function      : f_[.+]
+  //  vector        : v/nxv[0-9]+[.+]
+  //  target type   : t[.*]
+  //  integer       : i[0-9]+
+  //  named types   : See `NamedTypes` below.
+
+  // Match anything with an _, so match function and struct types.
+  if (Suffix.contains('_'))
+    return true;
+
+  // [a|v][0-9|$][.*] // $ is end of string.
+  if (is_contained("av", Suffix[0]) &&
+      (Suffix.size() == 1 || isDigit(Suffix[1])))
+    return true;
+
+  // nxv[0-9|$][.*]
+  if (Suffix.starts_with("nxv") && (Suffix.size() == 3 || isDigit(Suffix[3])))
+    return true;
+  // t[.*]
+  if (Suffix.starts_with('t'))
+    return false;
+
+  // [p|i][0-9]+
+  if ((Suffix[0] == 'i' || Suffix[0] == 'p') &&
+      all_of(Suffix.drop_front(), isDigit))
+    return true;
+
+  // Match one of the named types.
+  static constexpr StringLiteral NamedTypes[] = {
+      "isVoid", "Metadata", "f16",  "f32",     "f64",
+      "f80",    "f128",     "bf16", "ppcf128", "x86amx"};
+  return is_contained(NamedTypes, Suffix);
+}
+
+// Check for conflicts with overloaded intrinsics. If there exists an overloaded
+// intrinsic with base name `llvm.target.foo`, LLVM will add a mangling suffix
+// to it to encode the overload types. This mangling suffix is 1 or more .
+// prefixed mangled type string as defined in `getMangledTypeStr`. If there
+// exists another intrinsic `llvm.target.foo[.<suffixN>]+`, which has the same
+// prefix as the overloaded intrinsic, its possible that there may be a name
+// conflict with the overloaded intrinsic and either one may interfere with name
+// lookup for the other, leading to wrong intrinsic ID being assigned.
+//
+// The actual name lookup in the intrinsic name table is done by a search
+// on each successive '.' separted component of the intrinsic name (see
+// `lookupLLVMIntrinsicByName`). Consider first the case where there exists a
+// non-overloaded intrinsic `llvm.target.foo[.suffix]+`. For the non-overloaded
+// intrinsics, the name lookup is an exact match, so the presence of the
+// overloaded intrinsic with the same prefix will not interfere with the
+// search. However, a lookup intended to match the overloaded intrinsic might be
+// affected by the presence of another entry in the name table with the same
+// prefix. See the `OverloadConflict` sub-test in IntrinsicsTest.cpp to
+// demonstrate the cases where there is a conflict and for the exact check
+// (replicated below) for when the conflict can or cannot happen.
+//
+// Since LLVM's name lookup first selects the target specific (or target
+// independent) slice of the name table to look into, intrinsics in 2 different
+// slices cannot conflict with each other. Within a specific slice,
+// if we have an overloaded intrinsic with name `llvm.target.foo` and another
+// one with same prefix and one or more suffixes `llvm.target.foo[.<suffixN>]+`,
+// then the name search will try to first match against suffix0, then suffix1
+// etc. If suffix0 can match a mangled type, then the search for an
+// `llvm.target.foo` with a mangling suffix can match against suffix0,
+// preventing a match with `llvm.target.foo`. If suffix0 cannot match a mangled
+// type, then that cannot happen, so we do not need to check for later suffixes.
+//
+// Generalizing, the `llvm.target.foo[.suffixN]+` will cause a conflict if the
+// first suffix (.suffix0) can match a mangled type (and then we do not need to
+// check later suffixes) and will not cause a conflict if it cannot (and then
+// again, we do not need to check for later suffixes.)
+void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
+  for (const TargetSet &Set : Targets) {
+    const CodeGenIntrinsic *Overloaded = nullptr;
+    for (const CodeGenIntrinsic &Int : (*this)[Set]) {
+      // If we do not have an overloaded intrinsic to check against, nothing
+      // to do except potentially identifying this as a candidate for checking
+      // against in future iteration.
+      if (!Overloaded) {
+        if (Int.isOverloaded)
+          Overloaded = &Int;
+        continue;
+      }
+
+      StringRef Name = Int.Name;
+      StringRef OverloadName = Overloaded->Name;
+      // If we have an overloaded intrinsic to check again, check if its name is
+      // a proper prefix of this intrinsic.
+      if (Name.starts_with(OverloadName) && Name[OverloadName.size()] == '.') {
+        // If yes, verify suffixes and flag an error.
+        StringRef Suffixes = Name.drop_front(OverloadName.size() + 1);
+
+        // Only need to look at the first suffix.
+        StringRef Suffix0 = Suffixes.split('.').first;
+
+        if (!doesSuffixLookLikeMangledType(Suffix0))
+          continue;
+
+        unsigned SuffixSize = OverloadName.size() + 1 + Suffix0.size();
+        // If suffix looks like mangling suffix, flag it as an error.
+        PrintError(Int.TheDef->getLoc(),
+                   "intrinsic `" + Name + "` cannot share prefix `" +
+                       Name.take_front(SuffixSize) +
+                       "` with another overloaded intrinsic `" + OverloadName +
+                       "`");
+        PrintNote(Overloaded->TheDef->getLoc(),
+                  "Overloaded intrinsic `" + OverloadName + "` defined here");
+        continue;
+      }
+
+      // If we find an intrinsic that is not a proper prefix, any later
+      // intrinsic is also not going to be a proper prefix, so invalidate the
+      // overloaded to check against.
+      Overloaded = nullptr;
+    }
   }
 }
 

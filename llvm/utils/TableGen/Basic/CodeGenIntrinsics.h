@@ -186,6 +186,9 @@ public:
   auto begin() const { return Intrinsics.begin(); }
   auto end() const { return Intrinsics.end(); }
   CodeGenIntrinsic &operator[](size_t Pos) { return Intrinsics[Pos]; }
+  ArrayRef<CodeGenIntrinsic> operator[](const TargetSet &Set) const {
+    return ArrayRef(&Intrinsics[Set.Offset], Set.Count);
+  }
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];
   }
@@ -193,6 +196,7 @@ public:
 private:
   void CheckDuplicateIntrinsics() const;
   void CheckTargetIndependentIntrinsics() const;
+  void CheckOverloadSuffixConflicts() const;
 };
 
 // This class builds `CodeGenIntrinsic` on demand for a given Def.
