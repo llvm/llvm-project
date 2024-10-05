@@ -279,7 +279,7 @@ void loop_suppress_in_third_iteration_logical_and(int len, int flag) {
     // short-circuiting operator '&&'.
     // I have seen a real-world FP that looks like this, but it is much rarer
     // than the basic setup.
-    buf[i] = 1; // expected-warning{{Out of bound access to memory}}
+    buf[i] = 1; // no-warning
   }
 }
 
@@ -311,7 +311,7 @@ void loop_suppress_in_third_iteration_cast(int len) {
     // assumption. There are already many differences between analysis with and
     // without eager assumptions, so it would be pointless to write more
     // complicated code to eliminate these rare differences.
-    buf[i] = 1; // eagerlyassume-warning{{Out of bound access to memory}}
+    buf[i] = 1; // no-warning
   }
 }
 

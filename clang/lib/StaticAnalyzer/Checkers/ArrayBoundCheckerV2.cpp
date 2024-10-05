@@ -28,8 +28,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -42,15 +45,34 @@ using llvm::formatv;
 namespace {
 
 class SuppressReportsHavingWeakLoopAssumption : public BugReporterVisitor {
+public:
+  SuppressReportsHavingWeakLoopAssumption(const PathSensitiveBugReport &R)
+      : OrigCursor(R.getErrorNode()) {}
+
 private:
   friend class BugReporterVisitor;
+
+  // The exploded node we are currently visiting, but in the original exploded
+  // graph. This graph is not trimmed, unlike the one we usually visit.
+  const ExplodedNode *OrigCursor;
+
   llvm::DenseSet<const Stmt *> LoopsSeen;
-  llvm::DenseMap<const Expr *, unsigned> EagerlyAssumedTrue;
-  llvm::DenseMap<const Expr *, unsigned> EagerlyAssumedFalse;
+  llvm::DenseMap<const Expr *, unsigned> NumTimesTakenTrueDecision;
+  llvm::DenseMap<const Expr *, unsigned> NumTimesTakenFalseDecision;
 
   void Profile(llvm::FoldingSetNodeID &ID) const final {
     static const bool Tag = 0;
     ID.AddPointer(&Tag);
+  }
+
+  static const ExplodedNode *selectMatchingPred(const ExplodedNode *OrigSucc,
+                                                unsigned SoughtPredId) {
+    auto MatchesSoughtId = [SoughtPredId](const ExplodedNode *N) {
+      return N->getID() == SoughtPredId;
+    };
+    auto It = llvm::find_if(OrigSucc->preds(), MatchesSoughtId);
+    assert(It != OrigSucc->pred_end());
+    return *It;
   }
 
   static bool isLoopAndNonNull(const Stmt *S) {
@@ -74,21 +96,33 @@ private:
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) final {
+    OrigCursor = selectMatchingPred(OrigCursor, Succ->getID());
+    assert(OrigCursor->getID() == Succ->getID());
+
     registerLoopStatements(Succ);
 
     auto AsPostStmt = Succ->getLocationAs<PostStmt>();
     const Expr *CurrExpr =
         AsPostStmt ? dyn_cast<Expr>(AsPostStmt->getStmt()) : nullptr;
 
-    const auto *Tag = Succ->getLocation().getTag();
-    if (!Tag)
+    bool IsSplittingTwoWays = OrigCursor->succ_size() == 2;
+
+    if (!CurrExpr || !IsSplittingTwoWays)
       return nullptr;
 
-    StringRef TagDesc = Tag->getTagDescription();
-    if (TagDesc == "ExprEngine : Eagerly Assume True")
-      registerOccurrence(EagerlyAssumedTrue, CurrExpr);
-    if (TagDesc == "ExprEngine : Eagerly Assume False")
-      registerOccurrence(EagerlyAssumedFalse, CurrExpr);
+    const ExplodedNode *Next = Succ->getFirstSucc();
+    SValBuilder &SVB = Succ->getState()->getStateManager().getSValBuilder();
+    auto Query = SVB.evalCast(Succ->getSVal(CurrExpr), SVB.getConditionType(),
+                              CurrExpr->getType())
+                     .getAs<DefinedOrUnknownSVal>();
+    if (!Query)
+      return nullptr;
+
+    ProgramStateRef TakenTrueBranch = Next->getState()->assume(*Query, true);
+    registerOccurrence(TakenTrueBranch ? NumTimesTakenTrueDecision
+                                       : NumTimesTakenFalseDecision,
+                       CurrExpr);
+
     return nullptr;
   }
 
@@ -110,30 +144,26 @@ private:
 
   void trySuppressReport(PathSensitiveBugReport &R, const Stmt *Loop,
                          const Expr *CondSubExpr) const {
-    auto NumEagerlyTrue = EagerlyAssumedTrue.lookup(CondSubExpr);
-    auto NumEagerlyFalse = EagerlyAssumedFalse.lookup(CondSubExpr);
+    unsigned NumTimesTakenLoopBody =
+        NumTimesTakenTrueDecision.lookup(CondSubExpr);
+    unsigned NumTimesNotTakenLoopBody =
+        NumTimesTakenFalseDecision.lookup(CondSubExpr);
+
+    // Adjust for do-while loops, where the loop body is always taken.
+    if (isa<DoStmt>(Loop))
+      NumTimesTakenLoopBody += 1;
 
     // Suppress the report if it avoided a loop with an eager assumption.
-    if (NumEagerlyTrue == 0 && NumEagerlyFalse == 1) {
+    if (NumTimesTakenLoopBody == 0 && NumTimesNotTakenLoopBody == 1) {
+      // llvm::errs() << "eagerly decided never taking the loop body\n";
       R.markInvalid("eagerly decided never taking the loop body", CondSubExpr);
-      return;
-    }
-
-    // Account for do-while loops where the body is already "taken"
-    // unconditionally for the first round.
-    if (isa<DoStmt>(Loop)) {
-      // Suppress the report if we have taken the loop body for the second time
-      // with an eager assumption.
-      if (NumEagerlyTrue > 1 && NumEagerlyFalse == 0) {
-        R.markInvalid("eagerly taken the do-while body at least 2 times",
-                      CondSubExpr);
-      }
       return;
     }
 
     // Suppress the report if it iterates with eager assumptions 3 or more
     // times.
-    if (NumEagerlyTrue > 2 && NumEagerlyFalse == 0) {
+    if (NumTimesTakenLoopBody > 2 && NumTimesNotTakenLoopBody == 0) {
+      // llvm::errs() << "eagerly taken the loop body at least 2 times\n";
       R.markInvalid("eagerly taken the loop body at least 2 times",
                     CondSubExpr);
     }
@@ -854,7 +884,7 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &C,
   if (Extent)
     markPartsInteresting(*BR, ErrorState, *Extent, IsTaintBug);
 
-  BR->addVisitor<SuppressReportsHavingWeakLoopAssumption>();
+  BR->addVisitor<SuppressReportsHavingWeakLoopAssumption>(*BR);
   C.emitReport(std::move(BR));
 }
 
