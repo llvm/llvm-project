@@ -261,6 +261,9 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::OMPInteropDirectiveClass:
   case Stmt::OMPDispatchDirectiveClass:
   case Stmt::OMPGenericLoopDirectiveClass:
+  case Stmt::OMPReverseDirectiveClass:
+  case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass: {
     llvm::errs() << "CIR codegen for '" << S->getStmtClassName()
                  << "' not implemented\n";

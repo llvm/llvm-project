@@ -390,6 +390,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
 
   case Type::Builtin: {
     switch (cast<BuiltinType>(Ty)->getKind()) {
+    case BuiltinType::HLSLResource:
+      llvm_unreachable("NYI");
     case BuiltinType::SveBoolx2:
     case BuiltinType::SveBoolx4:
     case BuiltinType::SveCount:
