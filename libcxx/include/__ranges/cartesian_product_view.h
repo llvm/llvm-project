@@ -31,12 +31,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
+template <class R>
+concept cartesian_product_common_arg = common_range<R> || (sized_range<R> && random_access_range<R>);
+
+template <bool Const, class First, class... Vs>
+concept cartesian_product_is_bidirectional =
+    (bidirectional_range<__maybe_const<Const, First>> && ... &&
+     (bidirectional_range<__maybe_const<Const, Vs>> && cartesian_product_common_arg<__maybe_const<Const, Vs>>));
+
+template <cartesian_product_common_arg R>
+constexpr auto cartesian_common_arg_end(R& r) {
+  if constexpr (common_range<R>) {
+    return ranges::end(r);
+  } else {
+    return ranges::begin(r) + ranges::distance(r);
+  }
+}
+
 template <input_range First, forward_range... Vs>
   requires(view<First> && ... && view<Vs>)
 class cartesian_product_view : public view_interface<cartesian_product_view<First, Vs...>> {
-private:
-
-public: // fixme: remove me
+public: // fixme: make private
   tuple<First, Vs...> bases_;
 
   template <bool Const>
@@ -109,6 +124,13 @@ public:
     return tmp;
   }
 
+  constexpr iterator& operator--()
+    requires cartesian_product_is_bidirectional<Const, First, Vs...>
+  {
+    prev();
+    return *this;
+  }
+
 private:
   using Parent    = __maybe_const<Const, cartesian_product_view>;
   Parent* parent_ = nullptr;
@@ -127,6 +149,18 @@ private:
         next<N - 1>();
       }
     }
+  }
+
+  template <auto N = sizeof...(Vs)>
+  constexpr void prev() {
+    auto& it = std::get<N>(current_);
+    if constexpr (N > 0) {
+      if (const auto& v = std::get<N>(parent_->bases_); it == ranges::begin(v)) {
+        it = cartesian_common_arg_end(v);
+        prev<N - 1>();
+      }
+    }
+    --it;
   }
 };
 
