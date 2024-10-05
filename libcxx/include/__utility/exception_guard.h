@@ -138,7 +138,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exce
 }
 
 template <class _Rollback>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard_exceptions<_Rollback> __make_scoped_guard(_Rollback __rollback) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __exception_guard_exceptions<_Rollback> __make_scoped_guard(_Rollback __rollback) {
   return __exception_guard_exceptions<_Rollback>(std::move(__rollback));
 }
 
