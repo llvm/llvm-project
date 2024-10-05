@@ -90,11 +90,11 @@ public:
         Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>(Machine.get());
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, MMI->getContext(), FunctionNum);
+    MF = std::make_unique<MachineFunction>(*F, *Machine, STI, MMI->getContext(),
+                                           FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.

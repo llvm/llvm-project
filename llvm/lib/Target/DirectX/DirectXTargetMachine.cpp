@@ -105,11 +105,11 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T,
-                        "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
-                        "f32:32-f64:64-n8:16:32:64",
-                        TT, CPU, FS, Options, Reloc::Static, CodeModel::Small,
-                        OL),
+    : CodeGenCommonTMImpl(
+          T,
+          "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
+          "f32:32-f64:64-n8:16:32:64",
+          TT, CPU, FS, Options, Reloc::Static, CodeModel::Small, OL),
       TLOF(std::make_unique<DXILTargetObjectFile>()),
       Subtarget(std::make_unique<DirectXSubtarget>(TT, CPU, FS, *this)) {
   initAsmInfo();

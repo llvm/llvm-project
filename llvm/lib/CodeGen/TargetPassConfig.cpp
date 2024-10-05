@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -510,7 +511,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 }
 
 void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                                   LLVMTargetMachine &LLVMTM) {
+                                   TargetMachine &TM) {
 
   // Register a callback for disabling passes.
   PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
@@ -573,8 +574,9 @@ TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
 
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
-TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
-    : ImmutablePass(ID), PM(&pm), TM(&TM) {
+TargetPassConfig::TargetPassConfig(TargetMachine &TM,
+                                   PassManagerBase &PM)
+    : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
   // Register all target independent codegen passes to activate their PassIDs,
@@ -620,7 +622,7 @@ void TargetPassConfig::insertPass(AnalysisID TargetPassID,
 /// addPassToEmitX methods for generating a pipeline of CodeGen passes.
 ///
 /// Targets may override this to extend TargetPassConfig.
-TargetPassConfig *LLVMTargetMachine::createPassConfig(PassManagerBase &PM) {
+TargetPassConfig *CodeGenCommonTMImpl::createPassConfig(PassManagerBase &PM) {
   return new TargetPassConfig(*this, PM);
 }
 

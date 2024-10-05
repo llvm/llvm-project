@@ -1,18 +1,18 @@
-//===-- LLVMTargetMachine.cpp - Implement the LLVMTargetMachine class -----===//
+//===-- CodeGenCommonTMImpl.cpp - CodeGenCommonTMImpl implementation ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the LLVMTargetMachine class.
-//
+///
+/// \file This file implements the CodeGenCommonTMImpl class.
+///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/Passes.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -42,7 +42,7 @@ static cl::opt<bool> EnableNoTrapAfterNoreturn(
     cl::desc("Do not emit a trap instruction for 'unreachable' IR instructions "
              "after noreturn calls, even if --trap-unreachable is set."));
 
-void LLVMTargetMachine::initAsmInfo() {
+void CodeGenCommonTMImpl::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
   assert(MRI && "Unable to create reg info");
   MII.reset(TheTarget.createMCInstrInfo());
@@ -85,12 +85,10 @@ void LLVMTargetMachine::initAsmInfo() {
   AsmInfo.reset(TmpAsmInfo);
 }
 
-LLVMTargetMachine::LLVMTargetMachine(const Target &T,
-                                     StringRef DataLayoutString,
-                                     const Triple &TT, StringRef CPU,
-                                     StringRef FS, const TargetOptions &Options,
-                                     Reloc::Model RM, CodeModel::Model CM,
-                                     CodeGenOptLevel OL)
+CodeGenCommonTMImpl::CodeGenCommonTMImpl(
+    const Target &T, StringRef DataLayoutString, const Triple &TT,
+    StringRef CPU, StringRef FS, const TargetOptions &Options, Reloc::Model RM,
+    CodeModel::Model CM, CodeGenOptLevel OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;
@@ -103,13 +101,13 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
 }
 
 TargetTransformInfo
-LLVMTargetMachine::getTargetTransformInfo(const Function &F) const {
+CodeGenCommonTMImpl::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(BasicTTIImpl(this, F));
 }
 
 /// addPassesToX helper drives creation and initialization of TargetPassConfig.
 static TargetPassConfig *
-addPassesToGenerateCode(LLVMTargetMachine &TM, PassManagerBase &PM,
+addPassesToGenerateCode(CodeGenCommonTMImpl &TM, PassManagerBase &PM,
                         bool DisableVerify,
                         MachineModuleInfoWrapperPass &MMIWP) {
   // Targets may override createPassConfig to provide a target-specific
@@ -127,11 +125,11 @@ addPassesToGenerateCode(LLVMTargetMachine &TM, PassManagerBase &PM,
   return PassConfig;
 }
 
-bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
-                                      raw_pwrite_stream &Out,
-                                      raw_pwrite_stream *DwoOut,
-                                      CodeGenFileType FileType,
-                                      MCContext &Context) {
+bool CodeGenCommonTMImpl::addAsmPrinter(PassManagerBase &PM,
+                                        raw_pwrite_stream &Out,
+                                        raw_pwrite_stream *DwoOut,
+                                        CodeGenFileType FileType,
+                                        MCContext &Context) {
   Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
       createMCStreamer(Out, DwoOut, FileType, Context);
   if (auto Err = MCStreamerOrErr.takeError())
@@ -147,7 +145,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
   return false;
 }
 
-Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
+Expected<std::unique_ptr<MCStreamer>> CodeGenCommonTMImpl::createMCStreamer(
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
     MCContext &Context) {
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
@@ -208,7 +206,7 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
   return std::move(AsmStreamer);
 }
 
-bool LLVMTargetMachine::addPassesToEmitFile(
+bool CodeGenCommonTMImpl::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
@@ -238,9 +236,10 @@ bool LLVMTargetMachine::addPassesToEmitFile(
 /// code is not supported. It fills the MCContext Ctx pointer which can be
 /// used to build custom MCStreamer.
 ///
-bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
-                                          raw_pwrite_stream &Out,
-                                          bool DisableVerify) {
+bool CodeGenCommonTMImpl::addPassesToEmitMC(PassManagerBase &PM,
+                                            MCContext *&Ctx,
+                                            raw_pwrite_stream &Out,
+                                            bool DisableVerify) {
   // Add common CodeGen passes.
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(this);
   TargetPassConfig *PassConfig =

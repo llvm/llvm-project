@@ -16,13 +16,13 @@
 #define LLVM_LIB_TARGET_XTENSA_XTENSATARGETMACHINE_H
 
 #include "XtensaSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include <optional>
 
 namespace llvm {
 extern Target TheXtensaTarget;
 
-class XtensaTargetMachine : public LLVMTargetMachine {
+class XtensaTargetMachine : public CodeGenCommonTMImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 public:
   XtensaTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

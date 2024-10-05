@@ -100,7 +100,7 @@ static bool isCallableFunction(const MachineFunction &MF) {
 bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const LLVMTargetMachine &TM = MF.getTarget();
+  const TargetMachine &TM = MF.getTarget();
 
   LLVM_DEBUG(dbgs() << " -------------------- " << getPassName()
                     << " -------------------- \nFunction Name : "

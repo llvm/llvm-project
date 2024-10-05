@@ -47,9 +47,9 @@ protected:
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+    TM = std::unique_ptr<TargetMachine>(
         T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive)));
+                               std::nullopt, CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();
 

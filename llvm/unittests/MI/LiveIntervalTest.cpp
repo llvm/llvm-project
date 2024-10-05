@@ -41,7 +41,7 @@ void initLLVM() {
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AMDGPU" to be able to test normal and subregister
 /// liveranges.
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   Triple TargetTriple("amdgcn--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -49,15 +49,15 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       T->createTargetMachine("AMDGPU", "gfx900", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOptLevel::Aggressive)));
+                             std::nullopt, CodeGenOptLevel::Aggressive));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
                                  legacy::PassManagerBase &PM,
                                  std::unique_ptr<MIRParser> &MIR,
-                                 const LLVMTargetMachine &TM,
+                                 const TargetMachine &TM,
                                  StringRef MIRCode) {
   SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);

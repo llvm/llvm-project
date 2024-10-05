@@ -47,9 +47,9 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
 
   // When compilation is done on a cpp file by clang, the exception model info
   // is stored in LangOptions, which is later used to set the info in
-  // TargetOptions and then MCAsmInfo in LLVMTargetMachine::initAsmInfo(). But
-  // this process does not happen when compiling bitcode directly with clang, so
-  // we make sure this info is set correctly.
+  // TargetOptions and then MCAsmInfo in CodeGenTargetMachine::initAsmInfo().
+  // But this process does not happen when compiling bitcode directly with
+  // clang, so we make sure this info is set correctly.
   if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
     ExceptionsType = ExceptionHandling::Wasm;
 }

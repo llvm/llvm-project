@@ -74,7 +74,7 @@ parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
   return M;
 }
 static std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
+createDummyModule(LLVMContext &Context, const TargetMachine &TM,
                   StringRef MIRString, const char *FuncName) {
   std::unique_ptr<MIRParser> MIR;
   auto MMI = std::make_unique<MachineModuleInfo>(&TM);

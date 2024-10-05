@@ -60,10 +60,10 @@ LanaiTargetMachine::LanaiTargetMachine(
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CodeModel, CodeGenOptLevel OptLevel,
     bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(), TT, Cpu, FeatureString, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CodeModel, CodeModel::Medium),
-                        OptLevel),
+    : CodeGenCommonTMImpl(T, computeDataLayout(), TT, Cpu, FeatureString,
+                          Options, getEffectiveRelocModel(RM),
+                          getEffectiveCodeModel(CodeModel, CodeModel::Medium),
+                          OptLevel),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
                 OptLevel),
       TLOF(new LanaiTargetObjectFile()) {

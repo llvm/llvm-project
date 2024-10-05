@@ -17,12 +17,12 @@
 #include "LanaiInstrInfo.h"
 #include "LanaiSelectionDAGInfo.h"
 #include "LanaiSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenCommonTMImpl.h"
 #include <optional>
 
 namespace llvm {
 
-class LanaiTargetMachine : public LLVMTargetMachine {
+class LanaiTargetMachine : public CodeGenCommonTMImpl {
   LanaiSubtarget Subtarget;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 

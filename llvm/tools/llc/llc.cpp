@@ -685,9 +685,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     const char *argv0 = argv[0];
-    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
     MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(&LLVMTM);
+        new MachineModuleInfoWrapperPass(Target.get());
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
