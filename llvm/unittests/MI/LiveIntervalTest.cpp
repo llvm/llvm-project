@@ -206,7 +206,7 @@ static void doTest(StringRef MIRFunc,
                    typename TestPassT<AnalysisType>::TestFx T,
                    bool ShouldPass = true) {
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   // This test is designed for the X86 backend; stop if it is not available.
   if (!TM)
     return;

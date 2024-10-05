@@ -7,7 +7,7 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("aarch64--"));
   std::string CPU("generic");
   std::string FS("+sme");
@@ -33,7 +33,7 @@ std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
 }
 
 TEST(MatrixRegisterAliasing, Aliasing) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 

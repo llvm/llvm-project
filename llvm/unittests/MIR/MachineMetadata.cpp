@@ -66,7 +66,7 @@ protected:
     });
   }
 
-  std::unique_ptr<LLVMTargetMachine>
+  std::unique_ptr<TargetMachine>
   createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);

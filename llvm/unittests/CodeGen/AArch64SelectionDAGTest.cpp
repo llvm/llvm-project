@@ -82,7 +82,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<TargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   std::unique_ptr<MachineFunction> MF;

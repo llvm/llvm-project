@@ -20,7 +20,7 @@
 #include <random>
 
 namespace llvm {
-static std::unique_ptr<LLVMTargetMachine> initTM() {
+static std::unique_ptr<TargetMachine> initTM() {
   LLVMInitializeX86TargetInfo();
   LLVMInitializeX86Target();
   LLVMInitializeX86TargetMC();

@@ -15,7 +15,7 @@
 
 using namespace llvm;
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
+std::unique_ptr<TargetMachine> createTargetMachine(const std::string &CPU) {
   auto TT(Triple::normalize("aarch64--"));
 
   LLVMInitializeAArch64TargetInfo();
@@ -52,7 +52,7 @@ static bool isInstructionSupportedByCPU(unsigned Opcode,
 
 void runSVEPseudoTestForCPU(const std::string &CPU) {
 
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine(CPU);
+  std::unique_ptr<TargetMachine> TM = createTargetMachine(CPU);
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
   ASSERT_TRUE(II);

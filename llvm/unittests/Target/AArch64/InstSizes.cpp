@@ -12,7 +12,7 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("aarch64--"));
   std::string CPU("generic");
   std::string FS("+pauth,+mops,+mte");
@@ -88,7 +88,7 @@ void runChecks(
 } // anonymous namespace
 
 TEST(InstSizes, Authenticated) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
@@ -120,7 +120,7 @@ TEST(InstSizes, Authenticated) {
 }
 
 TEST(InstSizes, STACKMAP) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
@@ -135,7 +135,7 @@ TEST(InstSizes, STACKMAP) {
 }
 
 TEST(InstSizes, PATCHPOINT) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
@@ -150,7 +150,7 @@ TEST(InstSizes, PATCHPOINT) {
 }
 
 TEST(InstSizes, STATEPOINT) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
@@ -163,7 +163,7 @@ TEST(InstSizes, STATEPOINT) {
 }
 
 TEST(InstSizes, SPACE) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
@@ -178,7 +178,7 @@ TEST(InstSizes, SPACE) {
 }
 
 TEST(InstSizes, TLSDESC_CALLSEQ) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(
@@ -192,7 +192,7 @@ TEST(InstSizes, TLSDESC_CALLSEQ) {
 }
 
 TEST(InstSizes, StoreSwiftAsyncContext) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(
@@ -206,7 +206,7 @@ TEST(InstSizes, StoreSwiftAsyncContext) {
 }
 
 TEST(InstSizes, SpeculationBarrierISBDSBEndBB) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(
@@ -220,7 +220,7 @@ TEST(InstSizes, SpeculationBarrierISBDSBEndBB) {
 }
 
 TEST(InstSizes, SpeculationBarrierSBEndBB) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(
@@ -234,7 +234,7 @@ TEST(InstSizes, SpeculationBarrierSBEndBB) {
 }
 
 TEST(InstSizes, JumpTable) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
@@ -252,7 +252,7 @@ TEST(InstSizes, JumpTable) {
 }
 
 TEST(InstSizes, MOPSMemoryPseudos) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
