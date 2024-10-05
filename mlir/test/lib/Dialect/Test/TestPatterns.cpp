@@ -1076,6 +1076,7 @@ struct TestUpdateConsumerType : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    llvm::errs() << "TestUpdateConsumerType operand: " << operands.front() << "\n";
     // Verify that the incoming operand has been successfully remapped to F64.
     if (!operands[0].getType().isF64())
       return failure();

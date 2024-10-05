@@ -14,40 +14,6 @@ using namespace mlir;
 using namespace mlir::func;
 
 //===----------------------------------------------------------------------===//
-// Helper functions
-//===----------------------------------------------------------------------===//
-
-/// If the given value can be decomposed with the type converter, decompose it.
-/// Otherwise, return the given value.
-// TODO: Value decomposition should happen automatically through a 1:N adaptor.
-// This function will disappear when the 1:1 and 1:N drivers are merged.
-static SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc,
-                                         Value value,
-                                         const TypeConverter *converter) {
-  // Try to convert the given value's type. If that fails, just return the
-  // given value.
-  SmallVector<Type> convertedTypes;
-  if (failed(converter->convertType(value.getType(), convertedTypes)))
-    return {value};
-  if (convertedTypes.empty())
-    return {};
-
-  // If the given value's type is already legal, just return the given value.
-  TypeRange convertedTypeRange(convertedTypes);
-  if (convertedTypeRange == TypeRange(value.getType()))
-    return {value};
-
-  // Try to materialize a target conversion. If the materialization did not
-  // produce values of the requested type, the materialization failed. Just
-  // return the given value in that case.
-  SmallVector<Value> result = converter->materializeTargetConversion(
-      builder, loc, convertedTypeRange, value);
-  if (result.empty())
-    return {value};
-  return result;
-}
-
-//===----------------------------------------------------------------------===//
 // DecomposeCallGraphTypesForFuncArgs
 //===----------------------------------------------------------------------===//
 
@@ -102,16 +68,11 @@ struct DecomposeCallGraphTypesForReturnOp
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+  matchAndRewrite(ReturnOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     SmallVector<Value, 2> newOperands;
-    for (Value operand : adaptor.getOperands()) {
-      // TODO: We can directly take the values from the adaptor once this is a
-      // 1:N conversion pattern.
-      llvm::append_range(newOperands,
-                         decomposeValue(rewriter, operand.getLoc(), operand,
-                                        getTypeConverter()));
-    }
+    for (ValueRange operand : adaptor.getOperands())
+      llvm::append_range(newOperands, operand);
     rewriter.replaceOpWithNewOp<ReturnOp>(op, newOperands);
     return success();
   }
@@ -128,18 +89,13 @@ struct DecomposeCallGraphTypesForCallOp : public OpConversionPattern<CallOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(CallOp op, OpAdaptor adaptor,
+  matchAndRewrite(CallOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
 
     // Create the operands list of the new `CallOp`.
     SmallVector<Value, 2> newOperands;
-    for (Value operand : adaptor.getOperands()) {
-      // TODO: We can directly take the values from the adaptor once this is a
-      // 1:N conversion pattern.
-      llvm::append_range(newOperands,
-                         decomposeValue(rewriter, operand.getLoc(), operand,
-                                        getTypeConverter()));
-    }
+    for (ValueRange operand : adaptor.getOperands())
+      llvm::append_range(newOperands, operand);
 
     // Create the new result types for the new `CallOp` and track the number of
     // replacement types for each original op result.
