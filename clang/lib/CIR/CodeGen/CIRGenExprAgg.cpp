@@ -896,13 +896,20 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
 
   auto &builder = CGF.getBuilder();
   auto scopeLoc = CGF.getLoc(E->getSourceRange());
-  [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
+  mlir::OpBuilder::InsertPoint scopeBegin;
+  builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        CIRGenFunction::LexicalScope lexScope{CGF, loc,
-                                              builder.getInsertionBlock()};
-        Visit(E->getSubExpr());
+        scopeBegin = b.saveInsertionPoint();
       });
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeBegin);
+    CIRGenFunction::LexicalScope lexScope{CGF, scopeLoc,
+                                          builder.getInsertionBlock()};
+    Visit(E->getSubExpr());
+  }
 }
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {

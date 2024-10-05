@@ -298,6 +298,10 @@ void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
   // struct), which can later be broken down in other CIR levels (or prior
   // to dialect codegen).
   (void)DestIsVolatile;
+  // Stored result for the callers of this function expected to be in the same
+  // scope as the value, don't make assumptions about current insertion point.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(Val.getDefiningOp());
   builder.createStore(*currSrcLoc, Val, Dest);
 }
 
