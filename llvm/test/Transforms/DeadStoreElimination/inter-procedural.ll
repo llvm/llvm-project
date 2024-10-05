@@ -138,16 +138,32 @@ define i16 @p2_no_init_alias_caller() {
   ret i16 %l
 }
 
+; Althrough the 2nd parameter of `p2_no_dead_on_unwind` doesn't have
+; the 'dead_on_unwind' attribute, it's invisble to caller on unwind.
+; DSE still uses the 'initializes' attribute and kill the dead store.
 ; Function Attrs: mustprogress nounwind uwtable
-define i16 @p2_no_dead_on_unwind_alias_caller() {
-; CHECK-LABEL: @p2_no_dead_on_unwind_alias_caller(
+define i16 @p2_no_dead_on_unwind_but_invisble_to_caller_alias_caller() {
+; CHECK-LABEL: @p2_no_dead_on_unwind_but_invisble_to_caller_alias_caller(
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    store i16 0, ptr [[PTR]], align 2
 ; CHECK-NEXT:    call void @p2_no_dead_on_unwind(ptr [[PTR]], ptr [[PTR]])
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret i16 [[L]]
 ;
   %ptr = alloca i16
+  store i16 0, ptr %ptr
+  call void @p2_no_dead_on_unwind(ptr %ptr, ptr %ptr)
+  %l = load i16, ptr %ptr
+  ret i16 %l
+}
+
+; Function Attrs: mustprogress nounwind uwtable
+define i16 @p2_no_dead_on_unwind_alias_caller(ptr %ptr) {
+; CHECK-LABEL: @p2_no_dead_on_unwind_alias_caller(
+; CHECK-NEXT:    store i16 0, ptr [[PTR:%.*]], align 2
+; CHECK-NEXT:    call void @p2_no_dead_on_unwind(ptr [[PTR]], ptr [[PTR]])
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[PTR]], align 2
+; CHECK-NEXT:    ret i16 [[L]]
+;
   store i16 0, ptr %ptr
   call void @p2_no_dead_on_unwind(ptr %ptr, ptr %ptr)
   %l = load i16, ptr %ptr

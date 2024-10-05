@@ -853,7 +853,7 @@ bool hasInitializesAttr(Instruction *I) {
 
 struct ArgumentInitInfo {
   unsigned Idx;
-  bool HasDeadOnUnwindAttr;
+  bool IsDeadOnUnwind;
   ConstantRangeList Inits;
 };
 
@@ -869,87 +869,17 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
   // To address unwind, the function should have nounwind attribute or the
   // arguments have dead_on_unwind attribute. Otherwise, return empty.
   for (const auto &Arg : Args) {
-    if (!CallHasNoUnwindAttr && !Arg.HasDeadOnUnwindAttr)
+    if (!CallHasNoUnwindAttr && !Arg.IsDeadOnUnwind)
       return {};
     if (Arg.Inits.empty())
       return {};
   }
-
-  if (Args.size() == 1)
-    return Args[0].Inits;
 
   ConstantRangeList IntersectedIntervals = Args.front().Inits;
   for (auto &Arg : Args.drop_front())
     IntersectedIntervals = IntersectedIntervals.intersectWith(Arg.Inits);
 
   return IntersectedIntervals;
-}
-
-// Return the locations written by the initializes attribute.
-// Note that this function considers:
-// 1. Unwind edge: apply "initializes" attribute only if the callee has
-//    "nounwind" attribute or the argument has "dead_on_unwind" attribute.
-// 2. Argument alias: for aliasing arguments, the "initializes" attribute is
-//    the intersected range list of their "initializes" attributes.
-SmallVector<MemoryLocation, 1>
-getInitializesArgMemLoc(const Instruction *I, BatchAAResults &BatchAA) {
-  const CallBase *CB = dyn_cast<CallBase>(I);
-  if (!CB)
-    return {};
-
-  // Collect aliasing arguments and their initializes ranges.
-  SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
-  for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
-    ConstantRangeList Inits;
-    Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
-    if (InitializesAttr.isValid())
-      Inits = InitializesAttr.getValueAsConstantRangeList();
-
-    bool HasDeadOnUnwindAttr = CB->paramHasAttr(Idx, Attribute::DeadOnUnwind);
-    ArgumentInitInfo InitInfo{Idx, HasDeadOnUnwindAttr, Inits};
-    Value *CurArg = CB->getArgOperand(Idx);
-    bool FoundAliasing = false;
-    for (auto &[Arg, AliasList] : Arguments) {
-      auto AAR = BatchAA.alias(MemoryLocation::getBeforeOrAfter(Arg),
-                               MemoryLocation::getBeforeOrAfter(CurArg));
-      if (AAR == AliasResult::NoAlias) {
-        continue;
-      } else if (AAR == AliasResult::MustAlias) {
-        FoundAliasing = true;
-        AliasList.push_back(InitInfo);
-      } else {
-        // For PartialAlias and MayAlias, there is an offset or may be an
-        // unknown offset between the arguments and we insert an empty init
-        // range to discard the entire initializes info while intersecting.
-        FoundAliasing = true;
-        AliasList.push_back(
-            ArgumentInitInfo{Idx, HasDeadOnUnwindAttr, ConstantRangeList()});
-      }
-    }
-    if (!FoundAliasing)
-      Arguments[CurArg] = {InitInfo};
-  }
-
-  SmallVector<MemoryLocation, 1> Locations;
-  for (const auto &[_, Args] : Arguments) {
-    auto IntersectedRanges =
-        getIntersectedInitRangeList(Args, CB->doesNotThrow());
-    if (IntersectedRanges.empty())
-      continue;
-
-    for (const auto &Arg : Args) {
-      for (const auto &Range : IntersectedRanges) {
-        int64_t Start = Range.getLower().getSExtValue();
-        int64_t End = Range.getUpper().getSExtValue();
-        // For now, we only handle locations starting at offset 0.
-        if (Start == 0)
-          Locations.push_back(MemoryLocation(CB->getArgOperand(Arg.Idx),
-                                             LocationSize::precise(End - Start),
-                                             CB->getAAMetadata()));
-      }
-    }
-  }
-  return Locations;
 }
 
 struct DSEState {
@@ -1281,7 +1211,7 @@ struct DSEState {
       Locations.push_back(std::make_pair(*Loc, false));
 
     if (ConsiderInitializesAttr) {
-      for (auto &MemLoc : getInitializesArgMemLoc(I, BatchAA)) {
+      for (auto &MemLoc : getInitializesArgMemLoc(I)) {
         Locations.push_back(std::make_pair(MemLoc, true));
       }
     }
@@ -2312,6 +2242,16 @@ struct DSEState {
     return MadeChange;
   }
 
+  // Return the locations written by the initializes attribute.
+  // Note that this function considers:
+  // 1. Unwind edge: use "initializes" attribute only if the callee has
+  //    "nounwind" attribute, or the argument has "dead_on_unwind" attribute,
+  //    or the argument is invisble to caller on unwind. That is, we don't
+  //    perform incorrect DSE on unwind edges in the current function.
+  // 2. Argument alias: for aliasing arguments, the "initializes" attribute is
+  //    the intersected range list of their "initializes" attributes.
+  SmallVector<MemoryLocation, 1> getInitializesArgMemLoc(const Instruction *I);
+
   // Try to eliminate dead defs that access `KillingLocWrapper.MemLoc` and are
   // killed by `KillingLocWrapper.MemDef`. Return whether
   // any changes were made, and whether `KillingLocWrapper.DefInst` was deleted.
@@ -2322,6 +2262,75 @@ struct DSEState {
   // change state: whether make any change.
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
+
+SmallVector<MemoryLocation, 1>
+DSEState::getInitializesArgMemLoc(const Instruction *I) {
+  const CallBase *CB = dyn_cast<CallBase>(I);
+  if (!CB)
+    return {};
+
+  // Collect aliasing arguments and their initializes ranges.
+  SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
+  for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
+    ConstantRangeList Inits;
+    Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
+    if (InitializesAttr.isValid())
+      Inits = InitializesAttr.getValueAsConstantRangeList();
+
+    Value *CurArg = CB->getArgOperand(Idx);
+    // We don't perform incorrect DSE on unwind edges in the current function,
+    // and use the "initialize" attribute to kill dead stores if :
+    // - The call does not throw exceptions, "CB->doesNotThrow()".
+    // - Or the argument has "dead_on_unwind" attribute.
+    // - Or the argument is invisble to caller on unwind, and CB isa<CallInst>
+    // which means no unwind edges.
+    bool IsDeadOnUnwind =
+        CB->paramHasAttr(Idx, Attribute::DeadOnUnwind) ||
+        (isInvisibleToCallerOnUnwind(CurArg) && isa<CallInst>(CB));
+    ArgumentInitInfo InitInfo{Idx, IsDeadOnUnwind, Inits};
+    bool FoundAliasing = false;
+    for (auto &[Arg, AliasList] : Arguments) {
+      auto AAR = BatchAA.alias(MemoryLocation::getBeforeOrAfter(Arg),
+                               MemoryLocation::getBeforeOrAfter(CurArg));
+      if (AAR == AliasResult::NoAlias) {
+        continue;
+      } else if (AAR == AliasResult::MustAlias) {
+        FoundAliasing = true;
+        AliasList.push_back(InitInfo);
+      } else {
+        // For PartialAlias and MayAlias, there is an offset or may be an
+        // unknown offset between the arguments and we insert an empty init
+        // range to discard the entire initializes info while intersecting.
+        FoundAliasing = true;
+        AliasList.push_back(
+            ArgumentInitInfo{Idx, IsDeadOnUnwind, ConstantRangeList()});
+      }
+    }
+    if (!FoundAliasing)
+      Arguments[CurArg] = {InitInfo};
+  }
+
+  SmallVector<MemoryLocation, 1> Locations;
+  for (const auto &[_, Args] : Arguments) {
+    auto IntersectedRanges =
+        getIntersectedInitRangeList(Args, CB->doesNotThrow());
+    if (IntersectedRanges.empty())
+      continue;
+
+    for (const auto &Arg : Args) {
+      for (const auto &Range : IntersectedRanges) {
+        int64_t Start = Range.getLower().getSExtValue();
+        int64_t End = Range.getUpper().getSExtValue();
+        // For now, we only handle locations starting at offset 0.
+        if (Start == 0)
+          Locations.push_back(MemoryLocation(CB->getArgOperand(Arg.Idx),
+                                             LocationSize::precise(End - Start),
+                                             CB->getAAMetadata()));
+      }
+    }
+  }
+  return Locations;
+}
 
 std::pair<bool, bool>
 DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
