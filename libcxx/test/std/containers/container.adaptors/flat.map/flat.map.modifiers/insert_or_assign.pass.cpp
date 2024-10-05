@@ -14,6 +14,7 @@
 #include <cassert>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "test_macros.h"
@@ -76,10 +77,13 @@ static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructAndAssignFrom<V
 static_assert(!CanInsertOrAssignIter<std::flat_map<int, ConstructFrom<Value>>, int&&, Value>);
 static_assert(!CanInsertOrAssignIter<std::flat_map<int, AssignFrom<Value>>, int&&, Value>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test_cv_key() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
   { // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
-    using M = std::flat_map<int, Moveable>;
-    using R = std::pair<M::iterator, bool>;
+    using R = std::pair<typename M::iterator, bool>;
     M m;
     for (int i = 0; i < 20; i += 2)
       m.emplace(i, Moveable(i, (double)i));
@@ -119,42 +123,14 @@ int main(int, char**) {
     assert(r4.first->first == 117);       // key
     assert(r4.first->second.get() == -1); // value
   }
-  { // pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);
-    using M = std::flat_map<Moveable, Moveable>;
-    using R = std::pair<M::iterator, bool>;
-    M m;
-    for (int i = 0; i < 20; i += 2)
-      m.emplace(Moveable(i, (double)i), Moveable(i + 1, (double)i + 1));
-    assert(m.size() == 10);
 
-    Moveable mvkey1(2, 2.0);
-    Moveable mv1(4, 4.0);
-    std::same_as<R> decltype(auto) r1 = m.insert_or_assign(std::move(mvkey1), std::move(mv1));
-    assert(m.size() == 10);
-    assert(!r1.second);                  // was not inserted
-    assert(!mvkey1.moved());             // was not moved from
-    assert(mv1.moved());                 // was moved from
-    assert(r1.first->first == mvkey1);   // key
-    assert(r1.first->second.get() == 4); // value
-
-    Moveable mvkey2(3, 3.0);
-    Moveable mv2(5, 5.0);
-    std::same_as<R> decltype(auto) r2 = m.try_emplace(std::move(mvkey2), std::move(mv2));
-    assert(m.size() == 11);
-    assert(r2.second);                   // was inserted
-    assert(mv2.moved());                 // was moved from
-    assert(mvkey2.moved());              // was moved from
-    assert(r2.first->first.get() == 3);  // key
-    assert(r2.first->second.get() == 5); // value
-  }
   { // iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);
-    using M = std::flat_map<int, Moveable>;
     M m;
     using R = M::iterator;
     for (int i = 0; i < 20; i += 2)
       m.emplace(i, Moveable(i, (double)i));
     assert(m.size() == 10);
-    M::const_iterator it = m.find(2);
+    typename M::const_iterator it = m.find(2);
 
     Moveable mv1(3, 3.0);
     std::same_as<R> decltype(auto) r1 = m.insert_or_assign(it, 2, std::move(mv1));
@@ -215,14 +191,48 @@ int main(int, char**) {
     assert(r8->first == 9);         // key
     assert(r8->second.get() == 17); // value
   }
+}
+
+template <class KeyContainer, class ValueContainer>
+void test_rv_key() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
+
+  { // pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);
+    using R = std::pair<typename M::iterator, bool>;
+    M m;
+    for (int i = 0; i < 20; i += 2)
+      m.emplace(Moveable(i, (double)i), Moveable(i + 1, (double)i + 1));
+    assert(m.size() == 10);
+
+    Moveable mvkey1(2, 2.0);
+    Moveable mv1(4, 4.0);
+    std::same_as<R> decltype(auto) r1 = m.insert_or_assign(std::move(mvkey1), std::move(mv1));
+    assert(m.size() == 10);
+    assert(!r1.second);                  // was not inserted
+    assert(!mvkey1.moved());             // was not moved from
+    assert(mv1.moved());                 // was moved from
+    assert(r1.first->first == mvkey1);   // key
+    assert(r1.first->second.get() == 4); // value
+
+    Moveable mvkey2(3, 3.0);
+    Moveable mv2(5, 5.0);
+    std::same_as<R> decltype(auto) r2 = m.try_emplace(std::move(mvkey2), std::move(mv2));
+    assert(m.size() == 11);
+    assert(r2.second);                   // was inserted
+    assert(mv2.moved());                 // was moved from
+    assert(mvkey2.moved());              // was moved from
+    assert(r2.first->first.get() == 3);  // key
+    assert(r2.first->second.get() == 5); // value
+  }
   { // iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);
-    using M = std::flat_map<Moveable, Moveable>;
     using R = M::iterator;
     M m;
     for (int i = 0; i < 20; i += 2)
       m.emplace(Moveable(i, (double)i), Moveable(i + 1, (double)i + 1));
     assert(m.size() == 10);
-    M::const_iterator it = std::next(m.cbegin());
+    typename M::const_iterator it = std::next(m.cbegin());
 
     Moveable mvkey1(2, 2.0);
     Moveable mv1(4, 4.0);
@@ -299,6 +309,18 @@ int main(int, char**) {
     assert(r8->first.get() == 11);  // key
     assert(r8->second.get() == 13); // value
   }
+}
+
+int main(int, char**) {
+  test_cv_key<std::vector<int>, std::vector<Moveable>>();
+  test_cv_key<std::deque<int>, std::vector<Moveable>>();
+  test_cv_key<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
+  test_cv_key<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
+
+  test_rv_key<std::vector<Moveable>, std::vector<Moveable>>();
+  test_rv_key<std::deque<Moveable>, std::vector<Moveable>>();
+  test_rv_key<MinSequenceContainer<Moveable>, MinSequenceContainer<Moveable>>();
+  test_rv_key<std::vector<Moveable, min_allocator<Moveable>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
   return 0;
 }

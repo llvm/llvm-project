@@ -13,9 +13,12 @@
 // mapped_type& operator[](const key_type& k);
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <functional>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "min_allocator.h"
 #include "test_macros.h"
@@ -27,7 +30,8 @@ concept CanIndex = requires(M m, Input k) { m[k]; };
 static_assert(CanIndex<std::flat_map<int, double>, const int&>);
 static_assert(!CanIndex<std::flat_map<int, NoDefaultCtr>, const int&>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
   using P = std::pair<int, double>;
   P ar[]  = {
       P(1, 1.5),
@@ -39,57 +43,26 @@ int main(int, char**) {
       P(8, 8.5),
   };
   const int one = 1;
-  {
-    std::flat_map<int, double> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    ASSERT_SAME_TYPE(decltype(m[one]), double&);
-    assert(m.size() == 7);
-    assert(m[one] == 1.5);
-    assert(m.size() == 7);
-    m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
-    m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
-  }
-  {
-    // allocator
-    using A1 = min_allocator<int>;
-    using A2 = min_allocator<double>;
-    using M  = std::flat_map<int, double, std::less<int>, std::vector<int, A1>, std::vector<double, A2>>;
-    M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    ASSERT_SAME_TYPE(decltype(m[one]), double&);
-    assert(m.size() == 7);
-    assert(m[1] == 1.5);
-    assert(m.size() == 7);
-    const int i = 1;
-    m[i]        = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
-    m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
-  }
-  {
-    std::flat_map<int, double, std::less<>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    ASSERT_SAME_TYPE(decltype(m[one]), double&);
+  std::flat_map<int, double, std::less<int>, KeyContainer, ValueContainer> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+  ASSERT_SAME_TYPE(decltype(m[one]), double&);
+  assert(m.size() == 7);
+  assert(m[one] == 1.5);
+  assert(m.size() == 7);
+  m[1] = -1.5;
+  assert(m[1] == -1.5);
+  assert(m.size() == 7);
+  assert(m[6] == 0);
+  assert(m.size() == 8);
+  m[6] = 6.5;
+  assert(m[6] == 6.5);
+  assert(m.size() == 8);
+}
 
-    assert(m.size() == 7);
-    assert(m[1] == 1.5);
-    assert(m.size() == 7);
-    m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 7);
-    assert(m[6] == 0);
-    assert(m.size() == 8);
-    m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 8);
-  }
+int main(int, char**) {
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   {
     auto index_func = [](auto& m, auto key_arg, auto value_arg) {

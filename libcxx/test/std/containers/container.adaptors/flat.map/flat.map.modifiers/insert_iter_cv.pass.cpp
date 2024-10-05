@@ -17,15 +17,18 @@
 #include <functional>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "../helpers.h"
 #include "min_allocator.h"
 
-template <class Container>
-void do_insert_iter_cv_test() {
-  using M  = Container;
-  using R  = typename M::iterator;
-  using VT = typename M::value_type;
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+  using R     = typename M::iterator;
+  using VT    = typename M::value_type;
 
   M m;
   const VT v1(2, 2.5);
@@ -58,16 +61,10 @@ void do_insert_iter_cv_test() {
 }
 
 int main(int, char**) {
-  do_insert_iter_cv_test<std::flat_map<int, double> >();
-  {
-    using M =
-        std::flat_map<int,
-                      double,
-                      std::less<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<double, min_allocator<double>>>;
-    do_insert_iter_cv_test<M>();
-  }
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   {
     auto insert_func = [](auto& m, auto key_arg, auto value_arg) {

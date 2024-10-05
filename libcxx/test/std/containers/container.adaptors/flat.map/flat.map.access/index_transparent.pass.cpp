@@ -13,9 +13,12 @@
 // template<class K> mapped_type& operator[](K&& x);
 
 #include <cassert>
+#include <deque>
 #include <flat_map>
 #include <functional>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -46,7 +49,8 @@ static_assert(!CanIndex<const TransparentNoDefaultCtrValueMap, ConvertibleTransp
 static_assert(!CanIndex<TransparentMap, TransparentMap::iterator>);
 static_assert(!CanIndex<TransparentMap, TransparentMap::const_iterator>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
   using P = std::pair<int, double>;
   P ar[]  = {
       P(1, 1.5),
@@ -60,7 +64,8 @@ int main(int, char**) {
   const ConvertibleTransparent<int> one{1};
   const ConvertibleTransparent<int> six{6};
   {
-    std::flat_map<int, double, TransparentComparator> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+    std::flat_map<int, double, TransparentComparator, KeyContainer, ValueContainer> m(
+        ar, ar + sizeof(ar) / sizeof(ar[0]));
     ASSERT_SAME_TYPE(decltype(m[one]), double&);
     assert(m.size() == 7);
     assert(m[one] == 1.5);
@@ -74,41 +79,13 @@ int main(int, char**) {
     assert(m[six] == 6.5);
     assert(m.size() == 8);
   }
-  {
-    // allocator
-    using A1 = min_allocator<int>;
-    using A2 = min_allocator<double>;
-    using M  = std::flat_map<int, double, TransparentComparator, std::vector<int, A1>, std::vector<double, A2>>;
-    M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    ASSERT_SAME_TYPE(decltype(m[one]), double&);
-    assert(m.size() == 7);
-    assert(m[one] == 1.5);
-    assert(m.size() == 7);
-    m[one] = -1.5;
-    assert(m[one] == -1.5);
-    assert(m.size() == 7);
-    assert(m[six] == 0);
-    assert(m.size() == 8);
-    m[six] = 6.5;
-    assert(m[six] == 6.5);
-    assert(m.size() == 8);
-  }
-  {
-    std::flat_map<int, double, TransparentComparator> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
-    ASSERT_SAME_TYPE(decltype(m[one]), double&);
+}
 
-    assert(m.size() == 7);
-    assert(m[one] == 1.5);
-    assert(m.size() == 7);
-    m[one] = -1.5;
-    assert(m[one] == -1.5);
-    assert(m.size() == 7);
-    assert(m[six] == 0);
-    assert(m.size() == 8);
-    m[six] = 6.5;
-    assert(m[six] == 6.5);
-    assert(m.size() == 8);
-  }
+int main(int, char**) {
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
   {
     bool transparent_used = false;
     TransparentComparator c(transparent_used);

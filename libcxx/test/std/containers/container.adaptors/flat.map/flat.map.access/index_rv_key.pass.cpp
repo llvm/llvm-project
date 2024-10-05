@@ -13,9 +13,11 @@
 // mapped_type& operator[](key_type&& k);
 
 #include <flat_map>
+#include <deque>
 #include <functional>
 #include <cassert>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "MoveOnly.h"
@@ -28,42 +30,30 @@ concept CanIndex = requires(M m, Input k) { m[k]; };
 static_assert(CanIndex<std::flat_map<int, double>, int&&>);
 static_assert(!CanIndex<std::flat_map<int, NoDefaultCtr>, int&&>);
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  {
+    std::flat_map<MoveOnly, double, std::less<MoveOnly>, KeyContainer, ValueContainer> m;
+    ASSERT_SAME_TYPE(decltype(m[MoveOnly{}]), double&);
+    assert(m.size() == 0);
+    assert(m[1] == 0.0);
+    assert(m.size() == 1);
+    m[1] = -1.5;
+    assert(m[1] == -1.5);
+    assert(m.size() == 1);
+    assert(m[6] == 0);
+    assert(m.size() == 2);
+    m[6] = 6.5;
+    assert(m[6] == 6.5);
+    assert(m.size() == 2);
+  }
+}
+
 int main(int, char**) {
-  {
-    std::flat_map<MoveOnly, double> m;
-    ASSERT_SAME_TYPE(decltype(m[MoveOnly{}]), double&);
-    assert(m.size() == 0);
-    assert(m[1] == 0.0);
-    assert(m.size() == 1);
-    m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 1);
-    assert(m[6] == 0);
-    assert(m.size() == 2);
-    m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 2);
-  }
-  {
-    std::flat_map< MoveOnly,
-                   double,
-                   std::less<>,
-                   std::vector<MoveOnly, min_allocator<MoveOnly>>,
-                   std::vector<double, min_allocator<double>>>
-        m;
-    ASSERT_SAME_TYPE(decltype(m[MoveOnly{}]), double&);
-    assert(m.size() == 0);
-    assert(m[1] == 0.0);
-    assert(m.size() == 1);
-    m[1] = -1.5;
-    assert(m[1] == -1.5);
-    assert(m.size() == 1);
-    assert(m[6] == 0);
-    assert(m.size() == 2);
-    m[6] = 6.5;
-    assert(m[6] == 6.5);
-    assert(m.size() == 2);
-  }
+  test<std::vector<MoveOnly>, std::vector<double>>();
+  test<std::deque<MoveOnly>, std::vector<double>>();
+  test<MinSequenceContainer<MoveOnly>, MinSequenceContainer<double>>();
+  test<std::vector<MoveOnly, min_allocator<MoveOnly>>, std::vector<double, min_allocator<double>>>();
 
   {
     auto index_func = [](auto& m, auto key_arg, auto value_arg) {

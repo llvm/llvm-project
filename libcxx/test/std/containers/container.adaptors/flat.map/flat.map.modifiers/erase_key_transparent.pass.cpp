@@ -19,7 +19,9 @@
 #include <functional>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -47,68 +49,56 @@ struct HeterogeneousKey {
   It it_;
 };
 
+template <class KeyContainer, class ValueContainer>
+void test_simple() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
+
+  M m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}};
+  ASSERT_SAME_TYPE(decltype(m.erase(9)), typename M::size_type);
+  auto n = m.erase(3); // erase(K&&) [with K=int]
+  assert(n == 1);
+  assert((m == M{{1, 1}, {2, 2}, {4, 4}}));
+  typename M::key_type lvalue = 2;
+  n                           = m.erase(lvalue); // erase(K&&) [with K=int&]
+  assert(n == 1);
+  assert((m == M{{1, 1}, {4, 4}}));
+  const typename M::key_type const_lvalue = 1;
+  n                                       = m.erase(const_lvalue); // erase(const key_type&)
+  assert(n == 1);
+  assert((m == M{{4, 4}}));
+}
+
+template <class KeyContainer, class ValueContainer>
+void test_transparent_comparator() {
+  using M = std::flat_map<std::string, int, TransparentComparator, KeyContainer, ValueContainer>;
+  M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
+  ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), typename M::size_type);
+
+  auto n = m.erase(Transparent<std::string>{"epsilon"});
+  assert(n == 1);
+
+  M expected = {{"alpha", 1}, {"beta", 2}, {"eta", 4}, {"gamma", 5}};
+  assert(m == expected);
+
+  auto n2 = m.erase(Transparent<std::string>{"aaa"});
+  assert(n2 == 0);
+  assert(m == expected);
+}
+
 int main(int, char**) {
-  {
-    using M = std::flat_map<std::string, int, TransparentComparator>;
-    M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
-    ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), M::size_type);
+  test_simple<std::vector<int>, std::vector<double>>();
+  test_simple<std::deque<int>, std::vector<double>>();
+  test_simple<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test_simple<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-    auto n = m.erase(Transparent<std::string>{"epsilon"});
-    assert(n == 1);
+  test_transparent_comparator<std::vector<std::string>, std::vector<int>>();
+  test_transparent_comparator<std::deque<std::string>, std::vector<int>>();
+  test_transparent_comparator<MinSequenceContainer<std::string>, MinSequenceContainer<int>>();
+  test_transparent_comparator<std::vector<std::string, min_allocator<std::string>>,
+                              std::vector<int, min_allocator<int>>>();
 
-    M expected = {{"alpha", 1}, {"beta", 2}, {"eta", 4}, {"gamma", 5}};
-    assert(m == expected);
-
-    auto n2 = m.erase(Transparent<std::string>{"aaa"});
-    assert(n2 == 0);
-    assert(m == expected);
-  }
-#if 0
-// do we really want to support this weird comparator that gives different answer for Key and Kp?
-  {
-    using M = std::flat_map<std::string, int, StartsWith::Less>;
-    M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
-    ASSERT_SAME_TYPE(decltype(m.erase(StartsWith('b'))), M::size_type);
-    M::size_type n = m.erase(StartsWith('e'));
-    assert(n == 2);
-    assert((m == M{{"alpha", 1}, {"beta", 2}, {"gamma", 5}}));
-    n = m.erase(StartsWith('d'));
-    assert(n == 0);
-    assert((m == M{{"alpha", 1}, {"beta", 2}, {"gamma", 5}}));
-  }
-#endif
-  {
-    using M = std::flat_map<int, int, std::less<>>;
-    M m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}};
-    ASSERT_SAME_TYPE(decltype(m.erase(9)), M::size_type);
-    auto n = m.erase(3); // erase(K&&) [with K=int]
-    assert(n == 1);
-    assert((m == M{{1, 1}, {2, 2}, {4, 4}}));
-    M::key_type lvalue = 2;
-    n                  = m.erase(lvalue); // erase(K&&) [with K=int&]
-    assert(n == 1);
-    assert((m == M{{1, 1}, {4, 4}}));
-    const M::key_type const_lvalue = 1;
-    n                              = m.erase(const_lvalue); // erase(const key_type&)
-    assert(n == 1);
-    assert((m == M{{4, 4}}));
-  }
-  {
-    using M = std::flat_map<int, int, std::less<>, std::deque<int, min_allocator<int>>, std::deque<int>>;
-    M m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}};
-    ASSERT_SAME_TYPE(decltype(m.erase(9)), M::size_type);
-    auto n = m.erase(3); // erase(K&&) [with K=int]
-    assert(n == 1);
-    assert((m == M{{1, 1}, {2, 2}, {4, 4}}));
-    M::key_type lvalue = 2;
-    n                  = m.erase(lvalue); // erase(K&&) [with K=int&]
-    assert(n == 1);
-    assert((m == M{{1, 1}, {4, 4}}));
-    const M::key_type const_lvalue = 1;
-    n                              = m.erase(const_lvalue); // erase(const key_type&)
-    assert(n == 1);
-    assert((m == M{{4, 4}}));
-  }
   {
     // P2077's HeterogeneousKey example
     using M                           = std::flat_map<int, int, std::less<>>;

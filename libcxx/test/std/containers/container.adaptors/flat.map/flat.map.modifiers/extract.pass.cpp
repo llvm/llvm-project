@@ -14,11 +14,15 @@
 
 #include <algorithm>
 #include <concepts>
+#include <deque>
 #include <flat_map>
 #include <functional>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
+#include "min_allocator.h"
 
 template <class T>
 concept CanExtract = requires(T&& t) { std::forward<T>(t).extract(); };
@@ -28,19 +32,27 @@ static_assert(!CanExtract<std::flat_map<int, int>&>);
 static_assert(!CanExtract<std::flat_map<int, int> const&>);
 static_assert(!CanExtract<std::flat_map<int, int> const&&>);
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using M = std::flat_map<int, int, std::less<int>, KeyContainer, ValueContainer>;
+  M m     = M({1, 2, 3}, {4, 5, 6});
+
+  std::same_as<typename M::containers> auto containers = std::move(m).extract();
+
+  auto expected_keys   = {1, 2, 3};
+  auto expected_values = {4, 5, 6};
+  assert(std::ranges::equal(containers.keys, expected_keys));
+  assert(std::ranges::equal(containers.values, expected_values));
+  LIBCPP_ASSERT(m.empty());
+  LIBCPP_ASSERT(m.keys().size() == 0);
+  LIBCPP_ASSERT(m.values().size() == 0);
+}
+
 int main(int, char**) {
-  {
-    using M                                     = std::flat_map<int, int>;
-    M m                                         = M({1, 2, 3}, {4, 5, 6});
-    std::same_as<M::containers> auto containers = std::move(m).extract();
-    auto expected_keys                          = {1, 2, 3};
-    auto expected_values                        = {4, 5, 6};
-    assert(std::ranges::equal(containers.keys, expected_keys));
-    assert(std::ranges::equal(containers.values, expected_values));
-    LIBCPP_ASSERT(m.empty());
-    LIBCPP_ASSERT(m.keys().size() == 0);
-    LIBCPP_ASSERT(m.values().size() == 0);
-  }
+  test<std::vector<int>, std::vector<int>>();
+  test<std::deque<int>, std::vector<int>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
   {
     // extracted object maintains invariant if one of underlying container does not clear after move
     using M = std::flat_map<int, int, std::less<>, std::vector<int>, CopyOnlyVector<int>>;

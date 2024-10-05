@@ -18,13 +18,17 @@
 #include <functional>
 #include <utility>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
   {
-    using M = std::flat_map<int, const char*>;
-    M m     = {{1, ""}, {2, ""}, {4, ""}, {5, ""}, {8, ""}};
+    using M = std::flat_map<Key, Value, std::less<>, KeyContainer, ValueContainer>;
+    M m     = {{1, 1}, {2, 2}, {4, 4}, {5, 5}, {8, 8}};
     assert(!m.contains(0));
     assert(m.contains(1));
     assert(m.contains(2));
@@ -39,7 +43,7 @@ int main(int, char**) {
     assert(!m.contains(1));
   }
   {
-    using M = std::flat_map<int, int, std::greater<int>, std::deque<int, min_allocator<int>>>;
+    using M = std::flat_map<Key, Value, std::greater<int>, KeyContainer, ValueContainer>;
     M m     = {{1, 0}, {2, 0}, {4, 0}, {5, 0}, {8, 0}};
     assert(!m.contains(0));
     assert(m.contains(1));
@@ -54,23 +58,13 @@ int main(int, char**) {
     m.clear();
     assert(!m.contains(1));
   }
-#if 0
-  // vector<bool> is not supported
-  {
-    using M = std::flat_map<bool, int>;
-    M m     = {{true, 1}, {false, 2}};
-    assert(m.contains(true));
-    assert(m.contains(false));
-    m = {{true, 3}};
-    assert(m.contains(true));
-    assert(!m.contains(false));
-    m = {{false, 4}};
-    assert(!std::as_const(m).contains(true));
-    assert(std::as_const(m).contains(false));
-    m.clear();
-    assert(!m.contains(true));
-    assert(!m.contains(false));
-  }
-#endif
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<int>>();
+  test<std::deque<int>, std::vector<int>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
+
   return 0;
 }

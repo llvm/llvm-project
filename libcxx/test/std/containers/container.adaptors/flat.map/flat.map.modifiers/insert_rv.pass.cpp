@@ -18,6 +18,7 @@
 #include <cassert>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "MoveOnly.h"
 #include "min_allocator.h"
 #include "test_macros.h"
@@ -58,22 +59,25 @@ void do_insert_rv_test() {
   assert(r.first->second == 3);
 }
 
-int main(int, char**) {
-  do_insert_rv_test<std::flat_map<int, MoveOnly>, std::pair<int, MoveOnly>>();
-  do_insert_rv_test<std::flat_map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
 
-  {
-    using M =
-        std::flat_map<int,
-                      MoveOnly,
-                      std::less<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<MoveOnly, min_allocator<MoveOnly>>>;
-    using P  = std::pair<int, MoveOnly>;
-    using CP = std::pair<const int, MoveOnly>;
-    do_insert_rv_test<M, P>();
-    do_insert_rv_test<M, CP>();
-  }
+  using P  = std::pair<Key, Value>;
+  using CP = std::pair<const Key, Value>;
+
+  do_insert_rv_test<M, P>();
+  do_insert_rv_test<M, CP>();
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<MoveOnly>>();
+  test<std::deque<int>, std::vector<MoveOnly>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<MoveOnly>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<MoveOnly, min_allocator<MoveOnly>>>();
+
   {
     using M = std::flat_map<int, MoveOnly>;
     using R = std::pair<M::iterator, bool>;

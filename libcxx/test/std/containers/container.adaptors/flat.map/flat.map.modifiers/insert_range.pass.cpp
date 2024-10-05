@@ -20,6 +20,7 @@
 #include <ranges>
 #include <vector>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "MoveOnly.h"
 #include "test_macros.h"
@@ -37,10 +38,14 @@ static_assert(CanInsertRange<Map, std::ranges::subrange<std::pair<short, double>
 static_assert(!CanInsertRange<Map, std::ranges::subrange<int*>>);
 static_assert(!CanInsertRange<Map, std::ranges::subrange<double*>>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+
   {
     using P                 = std::pair<int, int>;
-    using M                 = std::flat_map<int, int>;
+    using M                 = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
     using It                = forward_iterator<const P*>;
     M m                     = {{10, 1}, {8, 2}, {5, 3}, {2, 4}, {1, 5}};
     P ar[]                  = {{3, 1}, {1, 2}, {4, 3}, {1, 4}, {5, 5}, {9, 6}};
@@ -51,7 +56,7 @@ int main(int, char**) {
   }
   {
     using P                 = std::pair<int, int>;
-    using M                 = std::flat_map<int, int, std::greater<>, std::deque<int, min_allocator<int>>>;
+    using M                 = std::flat_map<Key, Value, std::greater<>, KeyContainer, ValueContainer>;
     using It                = cpp20_input_iterator<const P*>;
     M m                     = {{8, 1}, {5, 2}, {3, 3}, {2, 4}};
     P ar[]                  = {{3, 1}, {1, 2}, {4, 3}, {1, 4}, {5, 5}, {9, 6}};
@@ -66,24 +71,19 @@ int main(int, char**) {
       bool operator()(int a, int b) const { return (a % 10) < (b % 10); }
     };
     using P = std::pair<int, int>;
-    using M = std::flat_map<int, int, ModTen>;
+    using M = std::flat_map<Key, Value, ModTen, KeyContainer, ValueContainer>;
     M m     = {{21, 0}, {43, 0}, {15, 0}, {37, 0}};
     P ar[]  = {{33, 1}, {18, 1}, {55, 1}, {18, 1}, {42, 1}};
     m.insert_range(ar);
     assert((m == M{{21, 0}, {42, 1}, {43, 0}, {15, 0}, {37, 0}, {18, 1}}));
   }
-  {
-    // The "uniquing" part uses the comparator, not operator==.
-    struct ModTen {
-      bool operator()(int a, int b) const { return (a % 10) < (b % 10); }
-    };
-    using P = std::pair<int, int>;
-    using M = std::flat_map<int, int, ModTen>;
-    M m     = {{21, 0}, {43, 0}, {15, 0}, {37, 0}};
-    P ar[]  = {{33, 1}, {18, 1}, {55, 1}, {28, 1}, {42, 1}};
-    m.insert_range(ar);
-    LIBCPP_ASSERT((m == M{{21, 0}, {42, 1}, {43, 0}, {15, 0}, {37, 0}, {18, 1}}));
-  }
+}
+
+int main(int, char**) {
+  test<std::vector<int>, std::vector<int>>();
+  test<std::deque<int>, std::vector<int>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
   {
     // Items are forwarded correctly from the input range (P2767).
     std::pair<MoveOnly, MoveOnly> a[] = {{3, 3}, {1, 1}, {4, 4}, {1, 1}, {5, 5}};

@@ -17,35 +17,31 @@
 #include <deque>
 #include <functional>
 #include <utility>
+#include <vector>
 
+#include "MinSequenceContainer.h"
 #include "test_macros.h"
 #include "min_allocator.h"
 
+template <class KeyContainer, class ValueContainer>
+void test() {
+  using M = std::flat_map<int, double, std::less<int>, KeyContainer, ValueContainer>;
+  M m;
+  ASSERT_SAME_TYPE(decltype(m.empty()), bool);
+  ASSERT_NOEXCEPT(m.empty());
+  assert(m.empty());
+  assert(std::as_const(m).empty());
+  m = {{1, 1.0}};
+  assert(!m.empty());
+  m.clear();
+  assert(m.empty());
+}
+
 int main(int, char**) {
-  {
-    typedef std::flat_map<int, int> M;
-    M m;
-    ASSERT_SAME_TYPE(decltype(m.empty()), bool);
-    ASSERT_NOEXCEPT(m.empty());
-    assert(m.empty());
-    assert(std::as_const(m).empty());
-    m = {{1, 1}};
-    assert(!m.empty());
-    m.clear();
-    assert(m.empty());
-  }
-  {
-    typedef std::flat_map<int, int, std::less<int>, std::deque<int, min_allocator<int>>> M;
-    M m;
-    ASSERT_SAME_TYPE(decltype(m.empty()), bool);
-    ASSERT_NOEXCEPT(m.empty());
-    assert(m.empty());
-    assert(std::as_const(m).empty());
-    m = {{1, 1}};
-    assert(!m.empty());
-    m.clear();
-    assert(m.empty());
-  }
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   return 0;
 }

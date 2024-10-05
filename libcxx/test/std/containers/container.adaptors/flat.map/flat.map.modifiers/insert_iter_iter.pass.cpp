@@ -18,6 +18,7 @@
 #include <functional>
 #include <deque>
 
+#include "MinSequenceContainer.h"
 #include "../helpers.h"
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -35,8 +36,11 @@ static_assert(CanInsert<Map, cpp17_input_iterator<Pair*>, cpp17_input_iterator<P
 static_assert(!CanInsert<Map, int, int>);
 static_assert(!CanInsert<Map, cpp20_input_iterator<Pair*>, cpp20_input_iterator<Pair*>>);
 
-int main(int, char**) {
+template <class KeyContainer, class ValueContainer>
+void test() {
   using P = std::pair<int, double>;
+  using M = std::flat_map<int, double, std::less<int>, KeyContainer, ValueContainer>;
+
   P ar1[] = {
       P(2, 1),
       P(2, 1.5),
@@ -59,36 +63,23 @@ int main(int, char**) {
       P(0, 1.5),
       P(0, 2),
   };
-  {
-    using M = std::flat_map<int, double>;
-    M m;
-    m.insert(cpp17_input_iterator<P*>(ar1), cpp17_input_iterator<P*>(ar1 + sizeof(ar1) / sizeof(ar1[0])));
-    assert(m.size() == 3);
-    M expected{{1, 1}, {2, 1}, {3, 1}};
-    assert(m == expected);
 
-    m.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
-    assert(m.size() == 5);
-    M expected2{{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
-    assert(m == expected2);
-  }
-  {
-    using M =
-        std::flat_map<int,
-                      double,
-                      std::less<int>,
-                      std::deque<int, min_allocator<int>>,
-                      std::deque<double, min_allocator<double>>>;
-    M m;
-    m.insert(cpp17_input_iterator<P*>(ar1), cpp17_input_iterator<P*>(ar1 + sizeof(ar1) / sizeof(ar1[0])));
-    assert(m.size() == 3);
-    M expected{{1, 1}, {2, 1}, {3, 1}};
-    assert(m == expected);
-    m.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
-    assert(m.size() == 5);
-    M expected2{{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
-    assert(m == expected2);
-  }
+  M m;
+  m.insert(cpp17_input_iterator<P*>(ar1), cpp17_input_iterator<P*>(ar1 + sizeof(ar1) / sizeof(ar1[0])));
+  assert(m.size() == 3);
+  M expected{{1, 1}, {2, 1}, {3, 1}};
+  assert(m == expected);
+
+  m.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
+  assert(m.size() == 5);
+  M expected2{{0, 1}, {1, 1}, {2, 1}, {3, 1}, {4, 1}};
+  assert(m == expected2);
+}
+int main(int, char**) {
+  test<std::vector<int>, std::vector<double>>();
+  test<std::deque<int>, std::vector<double>>();
+  test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
+  test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
   {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
