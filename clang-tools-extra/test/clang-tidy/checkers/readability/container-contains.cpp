@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-container-contains %t -- \
+// RUN:   -- -isystem %clang_tidy_headers
+
+#include <string>
 
 // Some *very* simplified versions of `map` etc.
 namespace std {
@@ -29,42 +32,7 @@ struct multimap {
   bool contains(const Key &K) const;
 };
 
-using size_t = decltype(sizeof(int));
 
-// Lightweight standin for std::string_view.
-template <typename C>
-class basic_string_view {
-public:
-  basic_string_view();
-  basic_string_view(const basic_string_view &);
-  basic_string_view(const C *);
-  ~basic_string_view();
-  int find(basic_string_view s, int pos = 0);
-  int find(const C *s, int pos = 0);
-  int find(const C *s, int pos, int n);
-  int find(char c, int pos = 0);
-  static constexpr size_t npos = -1;
-};
-typedef basic_string_view<char> string_view;
-
-// Lightweight standin for std::string.
-template <typename C>
-class basic_string {
-public:
-  basic_string();
-  basic_string(const basic_string &);
-  basic_string(const C *);
-  ~basic_string();
-  int find(basic_string s, int pos = 0);
-  int find(const C *s, int pos = 0);
-  int find(const C *s, int pos, int n);
-  int find(char c, int pos = 0);
-  bool contains(const C *s) const;
-  bool contains(C s) const;
-  bool contains(basic_string_view<C> s) const;
-  static constexpr size_t npos = -1;
-};
-typedef basic_string<char> string;
 
 } // namespace std
 
@@ -491,7 +459,7 @@ void testOperandPermutations(std::map<int, int>& Map) {
   // CHECK-FIXES: if (!Map.contains(0)) {};
 }
 
-void testStringNops(std::string Str, std::string SubStr) {
+void testStringNops(std::string Str, std::string SubStr, std::string_view StrView) {
   if (Str.find("test") == std::string::npos) {};
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (!Str.contains("test")) {};
@@ -499,6 +467,20 @@ void testStringNops(std::string Str, std::string SubStr) {
   if (Str.find('c') != std::string::npos) {};
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
   // CHECK-FIXES: if (Str.contains('c')) {};
-  
-  if (Str.find(SubStr) != std::string::npos) {};
+
+  if (Str.find('c') != Str.npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (Str.contains('c')) {};
+
+  if (StrView.find("test") == std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (!StrView.contains("test")) {};
+
+  if (StrView.find('c') != std::string::npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
+
+  if (StrView.find('c') != StrView.npos) {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'contains' to check for membership [readability-container-contains]
+  // CHECK-FIXES: if (StrView.contains('c')) {};
 }
