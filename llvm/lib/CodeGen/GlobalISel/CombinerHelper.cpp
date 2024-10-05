@@ -40,6 +40,7 @@
 #include <cmath>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -472,6 +473,56 @@ bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   return false;
 }
 
+bool CombinerHelper::matchVectorMaskSequence(
+    MachineInstr &MI, SmallVectorImpl<Register> &Ops, const Register DstReg,
+    const std::pair<Register, Register> SrcRegs, ArrayRef<int> Mask) {
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcRegs.first);
+
+  // Check that the shuffle mask can be broken evenly between the
+  // different sources.
+  const unsigned DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
+  const unsigned SrcNumElts = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
+  if (DstNumElts % SrcNumElts != 0)
+    return false;
+
+  // Mask length is a multiple of the source vector length.
+  // Check if the shuffle is some kind of concatenation of the input
+  // vectors.
+  unsigned NumConcat = DstNumElts / SrcNumElts;
+  SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
+  for (unsigned i = 0; i != DstNumElts; ++i) {
+    int Idx = Mask[i];
+    // Undef value.
+    if (Idx < 0)
+      continue;
+    // Ensure the indices in each SrcType sized piece are sequential and that
+    // the same source is used for the whole piece.
+    if ((Idx % SrcNumElts != (i % SrcNumElts)) ||
+        (ConcatSrcs[i / SrcNumElts] >= 0 &&
+         ConcatSrcs[i / SrcNumElts] != (int)(Idx / SrcNumElts)))
+      return false;
+    // Remember which source this index came from.
+    ConcatSrcs[i / SrcNumElts] = Idx / SrcNumElts;
+  }
+
+  // The shuffle is concatenating multiple vectors together.
+  // Collect the different operands for that.
+  Register UndefReg;
+  for (auto Src : ConcatSrcs) {
+    if (Src < 0) {
+      if (!UndefReg) {
+        Builder.setInsertPt(*MI.getParent(), MI);
+        UndefReg = Builder.buildUndef(SrcTy).getReg(0);
+      }
+      Ops.push_back(UndefReg);
+    } else if (Src == 0)
+      Ops.push_back(SrcRegs.first);
+    else
+      Ops.push_back(SrcRegs.second);
+  }
+  return true;
+}
 bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
                                                SmallVectorImpl<Register> &Ops) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
@@ -503,49 +554,10 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   if (DstNumElts < 2 * SrcNumElts && DstNumElts != 1)
     return false;
 
-  // Check that the shuffle mask can be broken evenly between the
-  // different sources.
-  if (DstNumElts % SrcNumElts != 0)
-    return false;
-
-  // Mask length is a multiple of the source vector length.
-  // Check if the shuffle is some kind of concatenation of the input
-  // vectors.
-  unsigned NumConcat = DstNumElts / SrcNumElts;
-  SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
-  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-  for (unsigned i = 0; i != DstNumElts; ++i) {
-    int Idx = Mask[i];
-    // Undef value.
-    if (Idx < 0)
-      continue;
-    // Ensure the indices in each SrcType sized piece are sequential and that
-    // the same source is used for the whole piece.
-    if ((Idx % SrcNumElts != (i % SrcNumElts)) ||
-        (ConcatSrcs[i / SrcNumElts] >= 0 &&
-         ConcatSrcs[i / SrcNumElts] != (int)(Idx / SrcNumElts)))
-      return false;
-    // Remember which source this index came from.
-    ConcatSrcs[i / SrcNumElts] = Idx / SrcNumElts;
-  }
-
-  // The shuffle is concatenating multiple vectors together.
-  // Collect the different operands for that.
-  Register UndefReg;
-  Register Src2 = MI.getOperand(2).getReg();
-  for (auto Src : ConcatSrcs) {
-    if (Src < 0) {
-      if (!UndefReg) {
-        Builder.setInsertPt(*MI.getParent(), MI);
-        UndefReg = Builder.buildUndef(SrcType).getReg(0);
-      }
-      Ops.push_back(UndefReg);
-    } else if (Src == 0)
-      Ops.push_back(Src1);
-    else
-      Ops.push_back(Src2);
-  }
-  return true;
+  return matchVectorMaskSequence(
+      MI, Ops, MI.getOperand(0).getReg(),
+      std::make_pair(MI.getOperand(1).getReg(), MI.getOperand(2).getReg()),
+      MI.getOperand(3).getShuffleMask());
 }
 
 void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,

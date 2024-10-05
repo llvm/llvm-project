@@ -249,6 +249,17 @@ public:
   /// or an implicit_def if \p Ops is empty.
   void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
 
+  /// Check if an instruction whose operations can be represented
+  /// by a vector mask can be replaced by a concat_vectors.
+  /// \p Ops will contain the operands to produce the flattened
+  /// concat_vectors.
+  /// \p Mask is an array to numbers that represent the order that
+  /// the elements of \p SrcRegs will be put into \p DstReg.
+  bool matchVectorMaskSequence(MachineInstr &MI, SmallVectorImpl<Register> &Ops,
+                               const Register DstReg,
+                               const std::pair<Register, Register> SrcRegs,
+                               ArrayRef<int> Mask);
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///
