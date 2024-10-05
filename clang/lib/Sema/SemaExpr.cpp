@@ -20220,7 +20220,8 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
   if (parenLoc.isInvalid() || parenLoc.isMacroID())
     return;
   // Don't warn for dependent expressions.
-  if (ParenE->isTypeDependent())
+  if (ParenE->isTypeDependent() ||
+      ParenE->getTransformConstraint() == ParenExpr::Preserve)
     return;
 
   Expr *E = ParenE->IgnoreParens();

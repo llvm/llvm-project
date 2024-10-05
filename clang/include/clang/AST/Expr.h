@@ -2171,10 +2171,15 @@ class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
 public:
+  enum TransformConstraint : uint8_t {
+    None = 0,     // No specific preservation required
+    Preserve = 1, // Parentheses have always to be preserved
+  };
+
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
-        L(l), R(r), Val(val) {
+        L(l), R(r), Val(val), TC(TransformConstraint::None) {
     setDependence(computeDependence(this));
   }
 
@@ -2206,6 +2211,14 @@ public:
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
   }
+
+  TransformConstraint getTransformConstraint() const { return TC; }
+  void setTransformConstraint(TransformConstraint Constraint) {
+    TC = Constraint;
+  }
+
+private:
+  TransformConstraint TC;
 };
 
 /// UnaryOperator - This represents the unary-expression's (except sizeof and

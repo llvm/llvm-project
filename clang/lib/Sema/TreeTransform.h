@@ -15609,14 +15609,6 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
-  // When there's only one expansion, the parentheses can be safely eliminated
-  // to avoid any extra redundancy that may result in incorrect checks.
-  // For example, transforming (((args == 0) || ...)) into (args == 0)
-  // allows the omission of parentheses while ensuring precise representation
-  // and avoiding warnings regarding redundant parentheses.
-  if (*NumExpansions == 1 && !E->isTypeDependent())
-    Pattern = Pattern->IgnoreParens();
-
   for (unsigned I = 0; I != *NumExpansions; ++I) {
     Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(
         getSema(), LeftFold ? I : *NumExpansions - I - 1);
@@ -15667,6 +15659,11 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
         E->getEllipsisLoc(), Out.get(), E->getEndLoc(), OrigNumExpansions);
     if (Result.isInvalid())
       return true;
+  }
+
+  if (*NumExpansions == 1) {
+    if (ParenExpr *PE = dyn_cast<ParenExpr>(Result.get()))
+      PE->setTransformConstraint(ParenExpr::Preserve);
   }
 
   // If we had no init and an empty pack, and we're not retaining an expansion,
