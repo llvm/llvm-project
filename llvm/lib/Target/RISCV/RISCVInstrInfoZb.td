@@ -237,13 +237,6 @@ class RVBShift_ri<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVBShiftW_ri<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
-                   string opcodestr>
-    : RVInstIShiftW<imm11_5, funct3, opcode, (outs GPR:$rd),
-                    (ins GPR:$rs1, uimm5:$shamt), opcodestr,
-                    "$rd, $rs1, $shamt">;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -285,7 +278,7 @@ def ROL   : ALU_rr<0b0110000, 0b001, "rol">,
 def ROR   : ALU_rr<0b0110000, 0b101, "ror">,
             Sched<[WriteRotateReg, ReadRotateReg, ReadRotateReg]>;
 
-def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">,
+def RORI  : Shift_ri<0b01100, 0b101, "rori">,
             Sched<[WriteRotateImm, ReadRotateImm]>;
 } // Predicates = [HasStdExtZbbOrZbkb]
 
@@ -295,7 +288,7 @@ def ROLW  : ALUW_rr<0b0110000, 0b001, "rolw">,
 def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">,
             Sched<[WriteRotateReg32, ReadRotateReg32, ReadRotateReg32]>;
 
-def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">,
+def RORIW : ShiftW_ri<0b0110000, 0b101, "roriw">,
             Sched<[WriteRotateImm32, ReadRotateImm32]>;
 } // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
@@ -310,14 +303,14 @@ let IsSignExtendingOpW = 1 in
 def BEXT : ALU_rr<0b0100100, 0b101, "bext">,
            Sched<[WriteBEXT, ReadSingleBit, ReadSingleBit]>;
 
-def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">,
+def BCLRI : Shift_ri<0b01001, 0b001, "bclri">,
             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
-def BSETI : RVBShift_ri<0b00101, 0b001, OPC_OP_IMM, "bseti">,
+def BSETI : Shift_ri<0b00101, 0b001, "bseti">,
             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
-def BINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "binvi">,
+def BINVI : Shift_ri<0b01101, 0b001, "binvi">,
             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 let IsSignExtendingOpW = 1 in
-def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">,
+def BEXTI : Shift_ri<0b01001, 0b101, "bexti">,
             Sched<[WriteBEXTI, ReadSingleBitImm]>;
 } // Predicates = [HasStdExtZbs]
 
