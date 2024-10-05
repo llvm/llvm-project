@@ -33,6 +33,7 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   sandboxir::RegionPassManager *RPM;
 
   bool runImpl(Function &F);
+
 public:
   SandboxVectorizerPass();
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
