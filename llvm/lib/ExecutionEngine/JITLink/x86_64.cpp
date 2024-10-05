@@ -42,6 +42,10 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "NegDelta64";
   case NegDelta32:
     return "NegDelta32";
+  case Size64:
+    return "Size64";
+  case Size32:
+    return "Size32";
   case Delta64FromGOT:
     return "Delta64FromGOT";
   case PCRel32:
