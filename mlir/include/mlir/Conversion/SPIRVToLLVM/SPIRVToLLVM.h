@@ -29,12 +29,6 @@ public:
                         const LLVMTypeConverter &typeConverter,
                         PatternBenefit benefit = 1)
       : OpConversionPattern<SPIRVOp>(typeConverter, context, benefit) {}
-
-protected:
-  const LLVMTypeConverter *getTypeConverter() const {
-    return static_cast<const LLVMTypeConverter *>(
-        ConversionPattern::getTypeConverter());
-  }
 };
 
 /// Encodes global variable's descriptor set and binding into its name if they
