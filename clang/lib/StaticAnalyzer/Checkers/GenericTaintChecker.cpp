@@ -402,6 +402,7 @@ public:
                                CheckerContext &C) const;
 
   bool isTaintReporterCheckerEnabled = false;
+  bool AggressiveTaintPropagation = false;
   std::optional<BugType> BT;
 
 private:
@@ -898,9 +899,6 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
           HasTaintedParam || isTaintedOrPointsToTainted(State, C.getSVal(E));
     }
     llvm::errs() << "\nHasTaintedParam:" << HasTaintedParam << "\n";
-    bool AggressiveTaintPropagation =
-      C.getAnalysisManager().getAnalyzerOptions().getCheckerBooleanOption(
-          this, "AggressiveTaintPropagation");
     if (HasTaintedParam && !TaintArgs && AggressiveTaintPropagation) {
       llvm::errs() << "Making return value and writable params tainted.\n";
       llvm::errs() << "Number of params:" << CallNumArgs;
@@ -1191,6 +1189,10 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
 /// Checker registration
 void ento::registerTaintPropagationChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<GenericTaintChecker>();
+  GenericTaintChecker *checker = Mgr.getChecker<GenericTaintChecker>();
+  checker->AggressiveTaintPropagation =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(checker,
+                                                  "AggressiveTaintPropagation");
 }
 
 bool ento::shouldRegisterTaintPropagationChecker(const CheckerManager &mgr) {

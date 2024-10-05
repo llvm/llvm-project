@@ -1685,23 +1685,21 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
-                  Released>
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def GenericTaintChecker : Checker<"GenericTaint">,
-  HelpText<"Reports potential injection vulnerabilities">,
-  CheckerOptions<[
+                  Released>,
     CmdLineOption<Boolean,
                   "AggressiveTaintPropagation",
                   "If set to true and if a called function cannot be inlined, "
                   "taintedness will be propagated to the return value and to non-const "
                   "reference parameters",
                   "false",
-                  Released,
-                  Hide>,
+                  Released>
+
   ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
   Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
