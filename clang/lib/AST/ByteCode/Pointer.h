@@ -524,9 +524,7 @@ public:
       return false;
 
     assert(isBlockPointer());
-    if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
-      return VD->isWeak();
-    return false;
+    return asBlockPointer().Pointee->isWeak();
   }
   /// Checks if an object was initialized.
   bool isInitialized() const;
