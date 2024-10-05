@@ -89,8 +89,8 @@ Blocking functions
 Calls to system library functions such as ``malloc`` are automatically caught by
 RealtimeSanitizer. Real-time programmers may also write their own blocking
 (real-time unsafe) functions that they wish RealtimeSanitizer to be aware of.
-RealtimeSanitizer will raise an error if any function attributed with
-``[[clang::blocking]]`` is called in a ``[[clang::nonblocking]]`` context.
+RealtimeSanitizer will raise an error at run time if any function attributed
+with ``[[clang::blocking]]`` is called in a ``[[clang::nonblocking]]`` context.
 
 .. code-block:: console
 
