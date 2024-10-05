@@ -4245,5 +4245,84 @@ define i32 @fold_zext_nneg_add_const_fail2(i8 %x) {
   ret i32 %r
 }
 
+define i64 @shrink_add_rhs_constant1(i64 %x) {
+; CHECK-LABEL: @shrink_add_rhs_constant1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[V30:%.*]], 9223372036854775806
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[AND]], -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i64 [[ADD]], -2
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[AND1]], 2
+; CHECK-NEXT:    ret i64 [[ADD2]]
+;
+entry:
+  %and1 = and i64 %x, 9223372036854775806
+  %add1 = add i64 %and1, -1
+  %and2 = and i64 %add1, -2
+  %add2 = add i64 %and2, 2
+  ret i64 %add2
+}
+
+define i32 @shrink_add_rhs_constant2(i32 %x) {
+; CHECK-LABEL: @shrink_add_rhs_constant2(
+; CHECK-NEXT:    [[X:%.*]] = shl i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = and i32 [[X]], -4
+; CHECK-NEXT:    [[ADD_I:%.*]] = add nsw i32 [[MUL]], 7
+; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[ADD_I]], -8
+; CHECK-NEXT:    ret i32 [[AND_I]]
+;
+  %shl = shl i32 %x, 1
+  %mul = and i32 %shl, -4
+  %add = add nsw i32 %mul, 7
+  %and = and i32 %add, -8
+  ret i32 %and
+}
+
+define i64 @shrink_add_rhs_constant3(i64 %x) {
+; CHECK-LABEL: @shrink_add_rhs_constant3(
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0:%.*]], 23
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -8
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], -8
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %add1 = add i64 %x, 23
+  %and1 = and i64 %add1, -8
+  %add2 = add i64 %and1, 15
+  %and2 = and i64 %add2, -8
+  ret i64 %and2
+}
+
+define i64 @shrink_add_rhs_constant4(i64 %x) {
+; CHECK-LABEL: @shrink_add_rhs_constant4(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0:%.*]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 23
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP5]], -16
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP4]], 8
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %shl = shl nsw i64 %x, 4
+  %add = add i64 %shl, 23
+  %and = and i64 %add, -16
+  %or = or disjoint i64 %and, 8
+  ret i64 %or
+}
+
+define i64 @shrink_add_rhs_constant5(i64 %x) {
+; CHECK-LABEL: @shrink_add_rhs_constant5(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP5]], -8
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP4]], -8
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %shl = shl nsw i64 %x, 3
+  %add1 = add i64 %shl, 15
+  %and1 = and i64 %add1, -8
+  %add2 = add i64 %and1, 15
+  %and2 = and i64 %add2, -8
+  ret i64 %and2
+}
+
 declare void @llvm.assume(i1)
 declare void @fake_func(i32)
