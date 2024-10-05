@@ -2,17 +2,11 @@
 ; RUN: opt -passes='print<access-info>' -disable-output < %s  2>&1 | FileCheck %s
 
 ; Loop guard for %off guarantees the accesses in the loop do not overlap.
-; TODO: currently missed by LAA
 define void @access_after_via_loop_guard(ptr %a, i64 %off) {
 ; CHECK-LABEL: 'access_after_via_loop_guard'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep.after, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -203,17 +197,11 @@ exit:
 }
 
 ; Loop guard for %off guarantees the accesses in the loop do not overlap.
-; TODO: currently missed by LAA
 define void @access_after_via_loop_guard_eq_loop_cond(ptr %a, i64 %off) {
 ; CHECK-LABEL: 'access_after_via_loop_guard_eq_loop_cond'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l = load i32, ptr %gep.after, align 4 ->
-; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
