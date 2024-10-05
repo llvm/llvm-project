@@ -1709,12 +1709,12 @@ void DAGTypeLegalizer::ExpandFloatRes_FCEIL(SDNode *N,
 
 void DAGTypeLegalizer::ExpandFloatRes_FCOPYSIGN(SDNode *N,
                                                 SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                        RTLIB::COPYSIGN_F32,
-                                        RTLIB::COPYSIGN_F64,
-                                        RTLIB::COPYSIGN_F80,
-                                        RTLIB::COPYSIGN_F128,
-                                        RTLIB::COPYSIGN_PPCF128), Lo, Hi);
+
+  EVT VT = N->getValueType(0);
+  ExpandFloatRes_Binary(
+      N,
+      (VT == MVT::ppcf128 ? RTLIB::COPYSIGN_PPCF128 : RTLIB::UNKNOWN_LIBCALL),
+      Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FCOS(SDNode *N,
