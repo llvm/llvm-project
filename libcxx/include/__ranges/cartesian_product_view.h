@@ -141,11 +141,11 @@ private:
 
   template <auto N = sizeof...(Vs)>
   constexpr void next() {
-    const auto& v = std::get<N>(parent_->bases_);
-    auto& it      = std::get<N>(current_);
-    if (++it == std::end(v)) {
-      if constexpr (N != 0) {
-        it = std::ranges::begin(v);
+    auto& it = std::get<N>(current_);
+    ++it;
+    if constexpr (N > 0) {
+      if (const auto& v = std::get<N>(parent_->bases_); it == ranges::end(v)) {
+        it = ranges::begin(v);
         next<N - 1>();
       }
     }
