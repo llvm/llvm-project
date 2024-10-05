@@ -50,10 +50,9 @@ struct ProfiledCallGraphNode {
   using edges = std::set<edge, ProfiledCallGraphEdgeComparer>;
   using iterator = edges::iterator;
   using const_iterator = edges::const_iterator;
-  
-  ProfiledCallGraphNode(FunctionId FName = FunctionId()) : Name(FName)
-  {}
-  
+
+  ProfiledCallGraphNode(FunctionId FName = FunctionId()) : Name(FName) {}
+
   FunctionId Name;
   edges Edges;
 };
@@ -133,29 +132,53 @@ public:
   iterator begin() { return Root.Edges.begin(); }
   iterator end() { return Root.Edges.end(); }
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
-  
+
   void addProfiledFunction(FunctionId Name) {
+    addProfiledFunction(PrehashedFunctionId{Name});
+  }
+
+private:
+  // A helper to not recalculate FunctionId hash
+  class PrehashedFunctionId {
+  public:
+    PrehashedFunctionId() = default;
+
+    PrehashedFunctionId(FunctionId FId) : Id(FId), Hash(hash_value(Id)) {}
+
+    const FunctionId &GetId() const { return Id; }
+
+    // Implicit conversion for hash_value(PrehashedFunctionId) to work.
+    // You are not supposed to use it directly, since it converts into
+    // hash-represeting FunctionId and thus drops the Name, use `GetId` instead.
+    operator FunctionId() const { return FunctionId{Hash}; }
+
+  private:
+    FunctionId Id;
+    uint64_t Hash;
+  };
+
+  void addProfiledFunction(const PrehashedFunctionId &Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
       // Store the pointer of the node because the map can be rehashed.
-      auto &Node =
-          ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name));
+      auto &Node = ProfiledCallGraphNodeList.emplace_back(
+          ProfiledCallGraphNode(Name.GetId()));
       ProfiledFunctions[Name] = &Node;
       Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
     }
   }
 
-private:
-  void addProfiledCall(FunctionId CallerName, FunctionId CalleeName,
+  void addProfiledCall(const PrehashedFunctionId &CallerName,
+                       const PrehashedFunctionId &CalleeName,
                        uint64_t Weight = 0) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
-    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
-                               CalleeIt->second, Weight);
-    auto &Edges = ProfiledFunctions[CallerName]->Edges;
+    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName], CalleeIt->second,
+                               Weight);
+    auto &Edges = Edge.Source->Edges;
     auto [EdgeIt, Inserted] = Edges.insert(Edge);
     if (!Inserted) {
       // Accumulate weight to the existing edge.
@@ -166,19 +189,21 @@ private:
   }
 
   void addProfiledCalls(const FunctionSamples &Samples) {
-    addProfiledFunction(Samples.getFunction());
+    const PrehashedFunctionId SamplesFunction{Samples.getFunction()};
+
+    addProfiledFunction(SamplesFunction);
 
     for (const auto &Sample : Samples.getBodySamples()) {
       for (const auto &[Target, Frequency] : Sample.second.getCallTargets()) {
         addProfiledFunction(Target);
-        addProfiledCall(Samples.getFunction(), Target, Frequency);
+        addProfiledCall(SamplesFunction, Target, Frequency);
       }
     }
 
     for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
       for (const auto &InlinedSamples : CallsiteSamples.second) {
         addProfiledFunction(InlinedSamples.first);
-        addProfiledCall(Samples.getFunction(), InlinedSamples.first,
+        addProfiledCall(SamplesFunction, InlinedSamples.first,
                         InlinedSamples.second.getHeadSamplesEstimate());
         addProfiledCalls(InlinedSamples.second);
       }
@@ -206,7 +231,7 @@ private:
   ProfiledCallGraphNode Root;
   // backing buffer for ProfiledCallGraphNodes.
   std::list<ProfiledCallGraphNode> ProfiledCallGraphNodeList;
-  HashKeyMap<llvm::DenseMap, FunctionId, ProfiledCallGraphNode*>
+  HashKeyMap<llvm::DenseMap, PrehashedFunctionId, ProfiledCallGraphNode *>
       ProfiledFunctions;
 };
 
