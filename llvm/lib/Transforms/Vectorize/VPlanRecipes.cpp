@@ -275,7 +275,10 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
 }
 
 /// Return the underlying instruction to be used for computing \p R's cost via
-/// the legacy cost model. Return nullptr if there's no suitable instruction.
+/// the legacy cost model. Return nullptr if there's no suitable instruction or
+/// computeCost is already implemented for the recipe and there is no need for
+/// the underlying instruction, i.e. it does not need to be skipped for cost
+/// computations.
 static Instruction *getInstructionForCost(const VPRecipeBase *R) {
   if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
     return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
@@ -295,7 +298,7 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = InstructionCost(ForceTargetInstructionCost);
   // Max cost is used as a sentinel value to detect recipes without underlying
   // instructions for which no forced target instruction cost should be applied.
-  if (RecipeCost == InstructionCost::getMax())
+  else if (RecipeCost == InstructionCost::getMax())
     RecipeCost = 0;
 
   LLVM_DEBUG({
@@ -308,16 +311,18 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
 InstructionCost VPRecipeBase::computeCost(ElementCount VF,
                                           VPCostContext &Ctx) const {
   // Compute the cost for the recipe falling back to the legacy cost model using
-  // the underlying instruction. If there is no underlying instruction, returns
-  // 0.
+  // the underlying instruction. If there is no underlying instruction or the
+  // cost is computed by the recipe's computeCost, returns
+  // InstructionCost::getMax. It is used as  a sentinel value to detect recipes
+  // without underlying instructions for which no forced target instruction cost
+  // should be applied.
+
   Instruction *UI = getInstructionForCost(this);
   if (UI && isa<VPReplicateRecipe>(this)) {
     // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
     // transform, avoid computing their cost multiple times for now.
     Ctx.SkipCostComputation.insert(UI);
   }
-  // Max cost is used as a sentinel value to detect recipes without underlying
-  // instructions for which no forced target instruction cost should be applied.
   return UI ? Ctx.getLegacyCost(UI, VF) : InstructionCost::getMax();
 }
 
