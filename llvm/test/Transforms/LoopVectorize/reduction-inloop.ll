@@ -1316,8 +1316,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP19]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP21:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    [[DOTSCALE:%.*]] = shl nsw i32 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP21:%.*]] = sext i32 [[DOTSCALE]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> poison, i32 [[TMP23]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -1326,8 +1327,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP19]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_LOAD_IF1:%.*]], label [[PRED_LOAD_CONTINUE2:%.*]]
 ; CHECK:       pred.load.if1:
-; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP27]]
+; CHECK-NEXT:    [[DOTSCALE7:%.*]] = shl nsw i32 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP27:%.*]] = sext i32 [[DOTSCALE7]] to i64
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> [[TMP25]], i32 [[TMP29]], i64 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE2]]
@@ -1336,8 +1338,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP19]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
 ; CHECK:       pred.load.if3:
-; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP33]]
+; CHECK-NEXT:    [[DOTSCALE8:%.*]] = shl nsw i32 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[DOTSCALE8]] to i64
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP34]], align 4
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP35]], i64 2
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
@@ -1346,8 +1349,9 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i1> [[TMP19]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.if5:
-; CHECK-NEXT:    [[TMP39:%.*]] = sext i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [0 x %struct.e], ptr [[B]], i64 0, i64 [[TMP39]]
+; CHECK-NEXT:    [[DOTSCALE9:%.*]] = shl nsw i32 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP39:%.*]] = sext i32 [[DOTSCALE9]] to i64
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP39]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i32, ptr [[TMP40]], align 4
 ; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP41]], i64 3
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
@@ -1355,8 +1359,8 @@ define i32 @predicated_or_dominates_reduction(ptr %b) {
 ; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i32> [ [[TMP37]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP42]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = icmp ne <4 x i32> [[TMP43]], zeroinitializer
 ; CHECK-NEXT:    [[NOT_:%.*]] = xor <4 x i1> [[TMP19]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[DOTNOT7:%.*]] = select <4 x i1> [[NOT_]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[TMP44]]
-; CHECK-NEXT:    [[TMP45:%.*]] = bitcast <4 x i1> [[DOTNOT7]] to i4
+; CHECK-NEXT:    [[DOTNOT10:%.*]] = select <4 x i1> [[NOT_]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[TMP44]]
+; CHECK-NEXT:    [[TMP45:%.*]] = bitcast <4 x i1> [[DOTNOT10]] to i4
 ; CHECK-NEXT:    [[TMP46:%.*]] = call range(i4 0, 5) i4 @llvm.ctpop.i4(i4 [[TMP45]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = zext nneg i4 [[TMP46]] to i32
 ; CHECK-NEXT:    [[TMP48]] = add i32 [[VEC_PHI]], [[TMP47]]
