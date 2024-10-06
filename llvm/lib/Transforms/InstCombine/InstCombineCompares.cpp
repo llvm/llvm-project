@@ -3183,22 +3183,27 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
                         Builder.CreateAdd(X, ConstantInt::get(Ty, *C2 - C - 1)),
                         ConstantInt::get(Ty, ~C));
 
-  // zext(V) + C2 <u C -> V + trunc(C2) <u trunc(C) iff C2 s<0 && C s>0
+  // zext(V) + C2 pred C -> V + C3 pred' C4
   Value *V;
-  if (Pred == ICmpInst::ICMP_ULT && match(X, m_ZExt(m_Value(V)))) {
+  if (match(X, m_ZExt(m_Value(V)))) {
     Type *NewCmpTy = V->getType();
+    unsigned CmpBW = Ty->getScalarSizeInBits();
     unsigned NewCmpBW = NewCmpTy->getScalarSizeInBits();
-    if (shouldChangeType(Ty, NewCmpTy) &&
-        C2->getSignificantBits() <= NewCmpBW &&
-        C.getSignificantBits() <= NewCmpBW) {
-      APInt TruncatedOffset = C2->trunc(NewCmpBW);
-      APInt TruncatedRHS = C.trunc(NewCmpBW);
-      if (TruncatedOffset.isNegative() && TruncatedRHS.isNonNegative()) {
-        Value *TruncatedOffsetV = ConstantInt::get(NewCmpTy, TruncatedOffset);
-        Value *TruncatedRV = ConstantInt::get(NewCmpTy, TruncatedRHS);
-        return new ICmpInst(ICmpInst::ICMP_ULT,
-                            Builder.CreateAdd(V, TruncatedOffsetV),
-                            TruncatedRV);
+    if (shouldChangeType(Ty, NewCmpTy)) {
+      if (auto ZExtCR = CR.exactIntersectWith(ConstantRange(
+              APInt::getZero(CmpBW), APInt::getOneBitSet(CmpBW, NewCmpBW)))) {
+        ConstantRange SrcCR = ZExtCR->truncate(NewCmpBW);
+        CmpInst::Predicate EquivPred;
+        APInt EquivInt;
+        APInt EquivOffset;
+
+        SrcCR.getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+        return new ICmpInst(
+            EquivPred,
+            EquivOffset.isZero()
+                ? V
+                : Builder.CreateAdd(V, ConstantInt::get(NewCmpTy, EquivOffset)),
+            ConstantInt::get(NewCmpTy, EquivInt));
       }
     }
   }
