@@ -231,8 +231,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   std::memcpy(args, &kernel_args, sizeof(args_t));
 
   // Initialize the necessary implicit arguments to the proper values.
-  bool dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
-              (params.num_blocks_z * params.num_threads_z != 1);
+  int dims = 1 + (params.num_blocks_y * params.num_threads_y != 1) +
+             (params.num_blocks_z * params.num_threads_z != 1);
   implicit_args_t *implicit_args = reinterpret_cast<implicit_args_t *>(
       reinterpret_cast<uint8_t *>(args) + sizeof(args_t));
   implicit_args->grid_dims = dims;
@@ -281,6 +281,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
   uint16_t header =
+      1u << HSA_PACKET_HEADER_BARRIER |
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
@@ -540,11 +541,11 @@ int load(int argc, const char **argv, const char **envp, void *image,
     }
   }
 
-  // Obtain a queue with the minimum (power of two) size, used to send commands
+  // Obtain a queue with the maximum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
   uint64_t queue_size;
   if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &queue_size))
+          dev_agent, HSA_AGENT_INFO_QUEUE_MAX_SIZE, &queue_size))
     handle_error(err);
   hsa_queue_t *queue = nullptr;
   if (hsa_status_t err =

@@ -17,20 +17,20 @@
 # INTEL: {evex} kmovq	k2, k1
 0x62,0xf1,0xfc,0x08,0x90,0xd1
 
-# ATT:   {evex} kmovb   -16(%rax), %k0
-# INTEL: {evex} kmovb   k0, byte ptr [rax - 16]
+# ATT:   kmovb	-16(%rax), %k0
+# INTEL: kmovb	k0, byte ptr [rax - 16]
 0x62,0xf1,0x7d,0x08,0x90,0x40,0xf0
 
-# ATT:   {evex} kmovw   -16(%rax), %k0
-# INTEL: {evex} kmovw   k0, word ptr [rax - 16]
+# ATT:   kmovw	-16(%rax), %k0
+# INTEL: kmovw	k0, word ptr [rax - 16]
 0x62,0xf1,0x7c,0x08,0x90,0x40,0xf0
 
-# ATT:   {evex} kmovd   -16(%rax), %k0
-# INTEL: {evex} kmovd   k0, dword ptr [rax - 16]
+# ATT:   kmovd	-16(%rax), %k0
+# INTEL: kmovd	k0, dword ptr [rax - 16]
 0x62,0xf1,0xfd,0x08,0x90,0x40,0xf0
 
-# ATT:   {evex} kmovq   -16(%rax), %k0
-# INTEL: {evex} kmovq   k0, qword ptr [rax - 16]
+# ATT:   kmovq	-16(%rax), %k0
+# INTEL: kmovq	k0, qword ptr [rax - 16]
 0x62,0xf1,0xfc,0x08,0x90,0x40,0xf0
 
 # ATT-NOT: {evex}

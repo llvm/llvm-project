@@ -1581,7 +1581,7 @@ Expr ScriptParser::readPrimary() {
     // script, it must happen before this DEFINED.
     auto order = ctx.scriptSymOrderCounter++;
     return [=, &ctx = this->ctx] {
-      Symbol *s = symtab.find(name);
+      Symbol *s = ctx.symtab->find(name);
       return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
                                                                          : 0;
     };
@@ -1647,7 +1647,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return cmd->size; };
   }
   if (tok == "SIZEOF_HEADERS")
-    return [=] { return elf::getHeaderSize(); };
+    return [=, &ctx = ctx] { return elf::getHeaderSize(ctx); };
 
   // Tok is the dot.
   if (tok == ".")

@@ -77,7 +77,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
 // SHF_INFO_LINK and SHF_GROUP are normally resolved and not copied to the
 // output section. However, for relocatable linking without
 // --force-group-allocation, the SHF_GROUP flag and section groups are retained.
-static uint64_t getFlags(uint64_t flags) {
+static uint64_t getFlags(Ctx &ctx, uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
   if (ctx.arg.resolveGroups)
     flags &= ~(uint64_t)SHF_GROUP;
@@ -88,7 +88,7 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
                                    const typename ELFT::Shdr &hdr,
                                    StringRef name, Kind sectionKind)
-    : InputSectionBase(&file, getFlags(hdr.sh_flags), hdr.sh_type,
+    : InputSectionBase(&file, getFlags(ctx, hdr.sh_flags), hdr.sh_type,
                        hdr.sh_entsize, hdr.sh_link, hdr.sh_info,
                        hdr.sh_addralign, getSectionContents(file, hdr), name,
                        sectionKind) {
@@ -101,7 +101,7 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
 
 size_t InputSectionBase::getSize() const {
   if (auto *s = dyn_cast<SyntheticSection>(this))
-    return s->getSize();
+    return s->getSize(ctx);
   return size - bytesDropped;
 }
 
@@ -893,7 +893,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return symVA - p + getPPC64GlobalEntryToLocalEntryOffset(sym.stOther);
   }
   case R_PPC64_TOCBASE:
-    return getPPC64TocBase() + a;
+    return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
   case R_PPC64_RELAX_GOT_PC:
     return sym.getVA(a) - p;
@@ -1129,7 +1129,7 @@ static void switchMorestackCallsToMorestackNonSplit(
   // If the target adjusted a function's prologue, all calls to
   // __morestack inside that function should be switched to
   // __morestack_non_split.
-  Symbol *moreStackNonSplit = symtab.find("__morestack_non_split");
+  Symbol *moreStackNonSplit = ctx.symtab->find("__morestack_non_split");
   if (!moreStackNonSplit) {
     error("mixing split-stack objects requires a definition of "
           "__morestack_non_split");

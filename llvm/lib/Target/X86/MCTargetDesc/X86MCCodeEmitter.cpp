@@ -568,8 +568,10 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
   if (FixupKind == FK_PCRel_4 ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_movq_load_rex2) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax) ||
       FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex) ||
+      FixupKind == MCFixupKind(X86::reloc_riprel_4byte_relax_rex2) ||
       FixupKind == MCFixupKind(X86::reloc_branch_4byte_pcrel)) {
     ImmOffset -= 4;
     // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
@@ -637,12 +639,11 @@ void X86MCCodeEmitter::emitMemModRMByte(
       default:
         return X86::reloc_riprel_4byte;
       case X86::MOV64rm:
-        // movq loads is a subset of reloc_riprel_4byte_relax_rex. It is a
+        // movq loads is a subset of reloc_riprel_4byte_relax_rex/rex2. It is a
         // special case because COFF and Mach-O don't support ELF's more
-        // flexible R_X86_64_REX_GOTPCRELX relaxation.
-        // TODO: Support new relocation for REX2.
-        assert(Kind == REX || Kind == REX2);
-        return X86::reloc_riprel_4byte_movq_load;
+        // flexible R_X86_64_REX_GOTPCRELX/R_X86_64_REX2_GOTPCRELX relaxation.
+        return Kind == REX2 ? X86::reloc_riprel_4byte_movq_load_rex2
+                            : X86::reloc_riprel_4byte_movq_load;
       case X86::ADC32rm:
       case X86::ADD32rm:
       case X86::AND32rm:
@@ -665,11 +666,9 @@ void X86MCCodeEmitter::emitMemModRMByte(
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm:
-        // We haven't support relocation for REX2 prefix, so temporarily use REX
-        // relocation.
-        // TODO: Support new relocation for REX2.
-        return (Kind == REX || Kind == REX2) ? X86::reloc_riprel_4byte_relax_rex
-                                             : X86::reloc_riprel_4byte_relax;
+        return Kind == REX2  ? X86::reloc_riprel_4byte_relax_rex2
+               : Kind == REX ? X86::reloc_riprel_4byte_relax_rex
+                             : X86::reloc_riprel_4byte_relax;
       }
     }();
 

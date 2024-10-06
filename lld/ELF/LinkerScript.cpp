@@ -230,7 +230,7 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   Defined newSym(createInternalFile(cmd->location), cmd->name, STB_GLOBAL,
                  visibility, value.type, symValue, 0, sec);
 
-  Symbol *sym = symtab.insert(cmd->name);
+  Symbol *sym = ctx.symtab->insert(cmd->name);
   sym->mergeProperties(newSym);
   newSym.overwrite(*sym);
   sym->isUsedInRegularObj = true;
@@ -249,7 +249,7 @@ static void declareSymbol(SymbolAssignment *cmd) {
 
   // If the symbol is already defined, its order is 0 (with absence indicating
   // 0); otherwise it's assigned the order of the SymbolAssignment.
-  Symbol *sym = symtab.insert(cmd->name);
+  Symbol *sym = ctx.symtab->insert(cmd->name);
   if (!sym->isDefined())
     ctx.scriptSymOrder.insert({sym, cmd->symOrder});
 
@@ -1343,7 +1343,7 @@ void LinkerScript::adjustOutputSections() {
     if (isEmpty) {
       sec->flags =
           flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) | SHF_WRITE);
-      sec->sortRank = getSectionRank(*sec);
+      sec->sortRank = getSectionRank(ctx, *sec);
     }
 
     // The code below may remove empty output sections. We should save the
@@ -1442,7 +1442,7 @@ void LinkerScript::allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs) {
         return cmd.hasPhdrs || cmd.hasFilehdr;
       });
   bool paged = !ctx.arg.omagic && !ctx.arg.nmagic;
-  uint64_t headerSize = getHeaderSize();
+  uint64_t headerSize = getHeaderSize(ctx);
 
   uint64_t base = 0;
   // If SECTIONS is present and the linkerscript is not explicit about program
@@ -1491,7 +1491,7 @@ LinkerScript::assignAddresses() {
     dot = ctx.target->getImageBase();
     ctx.out.elfHeader->addr = dot;
     ctx.out.programHeaders->addr = dot + ctx.out.elfHeader->size;
-    dot += getHeaderSize();
+    dot += getHeaderSize(ctx);
   }
 
   OutputSection *changedOsec = nullptr;
@@ -1682,7 +1682,7 @@ ExprValue LinkerScript::getSymbolValue(StringRef name, const Twine &loc) {
     return 0;
   }
 
-  if (Symbol *sym = symtab.find(name)) {
+  if (Symbol *sym = ctx.symtab->find(name)) {
     if (auto *ds = dyn_cast<Defined>(sym)) {
       ExprValue v{ds->section, false, ds->value, loc};
       // Retain the original st_type, so that the alias will get the same
@@ -1781,8 +1781,8 @@ void LinkerScript::checkFinalScriptConditions() const {
 void LinkerScript::addScriptReferencedSymbolsToSymTable() {
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
-  auto reference = [](StringRef name) {
-    Symbol *sym = symtab.addUnusedUndefined(name);
+  auto reference = [&ctx = ctx](StringRef name) {
+    Symbol *sym = ctx.symtab->addUnusedUndefined(name);
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
   };
@@ -1811,6 +1811,6 @@ void LinkerScript::addScriptReferencedSymbolsToSymTable() {
 }
 
 bool LinkerScript::shouldAddProvideSym(StringRef symName) {
-  Symbol *sym = symtab.find(symName);
+  Symbol *sym = elf::ctx.symtab->find(symName);
   return sym && !sym->isDefined() && !sym->isCommon();
 }
