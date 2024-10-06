@@ -15,6 +15,31 @@ using namespace llvm;
 
 namespace {
 
+// Exhaustive testing is expensive in debug builds, so we only do it when
+// optimizations are enabled. We don't use EXPENSIVE_CHECKS here because it's
+// not enabled by default in optimized builds.
+#if defined(__GNUC__)
+// GCC and GCC-compatible compilers define __OPTIMIZE__ when optimizations are
+// enabled.
+#if defined(__OPTIMIZE__)
+#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
+#else
+#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 0
+#endif
+#elif defined(_MSC_VER)
+// MSVC doesn't have a predefined macro indicating if optimizations are enabled.
+// Use _DEBUG instead. This macro actually corresponds to the choice between
+// debug and release CRTs, but it is a reasonable proxy.
+#if defined(_DEBUG)
+#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 0
+#else
+#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
+#endif
+#else
+// Otherwise, for an unknown compiler, assume this is an optimized build.
+#define LLVM_ENABLE_CFR_EXPENSIVE_CHECKS 1
+#endif
+
 class ConstantFPRangeTest : public ::testing::Test {
 protected:
   static const fltSemantics &Sem;
@@ -435,6 +460,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
   EXPECT_EQ(SomePos.getSignBit(), false);
   EXPECT_EQ(SomeNeg.getSignBit(), true);
 
+#if LLVM_ENABLE_CFR_EXPENSIVE_CHECKS
   EnumerateConstantFPRanges(
       [](const ConstantFPRange &CR) {
         unsigned Mask = fcNone;
@@ -458,6 +484,7 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
         EXPECT_EQ(Mask, CR.classify()) << CR;
       },
       /*Exhaustive=*/true);
+#endif
 }
 
 TEST_F(ConstantFPRangeTest, Print) {
@@ -500,6 +527,7 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 #endif
 
 TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+#if LLVM_ENABLE_CFR_EXPENSIVE_CHECKS
   for (auto Pred : FCmpInst::predicates()) {
     EnumerateConstantFPRanges(
         [Pred](const ConstantFPRange &CR) {
@@ -529,6 +557,7 @@ TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
         },
         /*Exhaustive=*/false);
   }
+#endif
 }
 
 } // anonymous namespace
