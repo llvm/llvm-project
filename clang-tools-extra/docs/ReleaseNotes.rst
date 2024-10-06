@@ -192,21 +192,13 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
-  member function calls too.
-
-- Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check to only expand macros
-  starting with ``PRI`` and ``__PRI`` from ``<inttypes.h>`` in the format
-  string.
+  member function calls too and to only expand macros starting with ``PRI``
+  and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to support replacing
-  member function calls too.
-
-- Improved :doc:`modernize-use-std-print
-  <clang-tidy/checks/modernize/use-std-print>` check to only expand macros
-  starting with ``PRI`` and ``__PRI`` from ``<inttypes.h>`` in the format
-  string.
+  member function calls too and to only expand macros starting with ``PRI``
+  and ``__PRI`` from ``<inttypes.h>`` in the format string.
 
 - Improved :doc:`performance-avoid-endl
   <clang-tidy/checks/performance/avoid-endl>` check to use ``std::endl`` as
