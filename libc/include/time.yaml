@@ -54,7 +54,7 @@ functions:
   - name: localtime_s
     standard:
       - stdc
-    return_type: struct tm *
+    return_type: int
     arguments:
       - type: const time_t *
       - type: struct tm *
