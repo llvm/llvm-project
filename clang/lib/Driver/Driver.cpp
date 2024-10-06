@@ -95,6 +95,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
+#include <cstring>
 #include <map>
 #include <memory>
 #include <optional>
@@ -1221,6 +1222,24 @@ bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   CfgFileName = Triple + ".cfg";
   if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
     return readConfigFile(CfgFilePath, ExpCtx);
+
+  // On Darwin, try a major-versioned triple then an unversioned triple.
+  auto pos = Triple.find("-apple-darwin");
+  auto kernelVersionStart = pos + std::strlen("-apple-darwin");
+  if (pos != Triple.npos && Triple.length() > kernelVersionStart) {
+    // First, find the major-versioned triple (e.g. arm64-apple-darwin24).
+    auto T = Triple.substr(0, Triple.find(".", kernelVersionStart));
+    CfgFileName = T + ".cfg";
+    if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+      return readConfigFile(CfgFilePath, ExpCtx);
+
+    // If that is not available, try an unversioned triple
+    // (e.g. arm64-apple-darwin).
+    T = Triple.substr(0, kernelVersionStart);
+    CfgFileName = T + ".cfg";
+    if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+      return readConfigFile(CfgFilePath, ExpCtx);
+  }
 
   // If we were unable to find a config file deduced from executable name,
   // that is not an error.
