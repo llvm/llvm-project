@@ -49789,13 +49789,13 @@ static unsigned convertIntLogicToFPLogicOpcode(unsigned Opcode) {
 /// If both input operands of a logic op are being cast from floating-point
 /// types or FP compares, try to convert this into a floating-point logic node
 /// to avoid unnecessary moves from SSE to integer registers.
-static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
+static SDValue convertIntLogicToFPLogic(unsigned Opc, const SDLoc &DL, EVT VT,
+                                        SDValue N0, SDValue N1,
+                                        SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  SDLoc DL(N);
+  assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
+         "Unexpected bit opcode");
 
   if (!((N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST) ||
         (N0.getOpcode() == ISD::SETCC && N1.getOpcode() == ISD::SETCC)))
@@ -49813,7 +49813,7 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   if (N0.getOpcode() == ISD::BITCAST && !DCI.isBeforeLegalizeOps()) {
-    unsigned FPOpcode = convertIntLogicToFPLogicOpcode(N->getOpcode());
+    unsigned FPOpcode = convertIntLogicToFPLogicOpcode(Opc);
     SDValue FPLogic = DAG.getNode(FPOpcode, DL, N00Type, N00, N10);
     return DAG.getBitcast(VT, FPLogic);
   }
@@ -49847,7 +49847,7 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
   SDValue Vec11 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, N11);
   SDValue Setcc0 = DAG.getSetCC(DL, BoolVecVT, Vec00, Vec01, CC0);
   SDValue Setcc1 = DAG.getSetCC(DL, BoolVecVT, Vec10, Vec11, CC1);
-  SDValue Logic = DAG.getNode(N->getOpcode(), DL, BoolVecVT, Setcc0, Setcc1);
+  SDValue Logic = DAG.getNode(Opc, DL, BoolVecVT, Setcc0, Setcc1);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Logic, ZeroIndex);
 }
 
@@ -50521,7 +50521,8 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithPACK(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
 
-  if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
+  if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
+                                                 DAG, DCI, Subtarget))
     return FPLogic;
 
   if (SDValue R = combineAndShuffleNot(N, DAG, Subtarget))
@@ -51306,7 +51307,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithPACK(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
 
-  if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
+  if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), dl, VT, N0, N1,
+                                                 DAG, DCI, Subtarget))
     return FPLogic;
 
   if (DCI.isBeforeLegalizeOps())
@@ -53623,7 +53625,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithPACK(N->getOpcode(), DL, VT, N0, N1, DAG))
     return R;
 
-  if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
+  if (SDValue FPLogic = convertIntLogicToFPLogic(N->getOpcode(), DL, VT, N0, N1,
+                                                 DAG, DCI, Subtarget))
     return FPLogic;
 
   if (SDValue R = combineXorSubCTLZ(N, DL, DAG, Subtarget))
