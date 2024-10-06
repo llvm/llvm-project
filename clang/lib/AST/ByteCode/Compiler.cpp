@@ -763,6 +763,9 @@ bool Compiler<Emitter>::VisitFixedPointLiteral(const FixedPointLiteral *E) {
   assert(E->getType()->isFixedPointType());
   assert(classifyPrim(E) == PT_FixedPoint);
 
+  if (DiscardResult)
+    return true;
+
   auto Sem = Ctx.getASTContext().getFixedPointSemantics(E->getType());
   APInt Value = E->getValue();
   return this->emitConstFixedPoint(FixedPoint(Value, Sem), E);
@@ -1542,19 +1545,30 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
     return true;
   };
 
+  auto MaybeCastToBool = [&](bool Result) {
+    if (!Result)
+      return false;
+    PrimType T = classifyPrim(E);
+    if (DiscardResult)
+      return this->emitPop(T, E);
+    if (T != PT_Bool)
+      return this->emitCast(PT_Bool, T, E);
+    return true;
+  };
+
   switch (E->getOpcode()) {
   case BO_EQ:
-    return this->emitEQFixedPoint(E);
+    return MaybeCastToBool(this->emitEQFixedPoint(E));
   case BO_NE:
-    return this->emitNEFixedPoint(E);
+    return MaybeCastToBool(this->emitNEFixedPoint(E));
   case BO_LT:
-    return this->emitLTFixedPoint(E);
+    return MaybeCastToBool(this->emitLTFixedPoint(E));
   case BO_LE:
-    return this->emitLEFixedPoint(E);
+    return MaybeCastToBool(this->emitLEFixedPoint(E));
   case BO_GT:
-    return this->emitGTFixedPoint(E);
+    return MaybeCastToBool(this->emitGTFixedPoint(E));
   case BO_GE:
-    return this->emitGEFixedPoint(E);
+    return MaybeCastToBool(this->emitGEFixedPoint(E));
   case BO_Add:
     return ConvertResult(this->emitAddFixedPoint(E));
   case BO_Sub:
@@ -2112,6 +2126,13 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       return this->emitConst(N, E);
     }
     return this->emitConst(1, E);
+  }
+
+  if (Kind == UETT_OpenMPRequiredSimdAlign) {
+    assert(E->isArgumentType());
+    unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
+
+    return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
   }
 
   return false;

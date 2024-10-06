@@ -1091,6 +1091,7 @@ cc_library(
         "//lldb:Utility",
         "//lldb:UtilityPrivateHeaders",
         "//llvm:Core",
+        "//llvm:Support",
         "//llvm:TargetParser",
     ],
 )

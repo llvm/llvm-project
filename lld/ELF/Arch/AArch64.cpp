@@ -28,6 +28,38 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
   return expr & ~static_cast<uint64_t>(0xFFF);
 }
 
+// A BTI landing pad is a valid target for an indirect branch when the Branch
+// Target Identification has been enabled.  As linker generated branches are
+// via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
+// PACIBSP.
+bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+  // PLT entries accessed indirectly have a BTI c.
+  if (s.isInPlt())
+    return true;
+  Defined *d = dyn_cast<Defined>(&s);
+  if (!isa_and_nonnull<InputSection>(d->section))
+    // All places that we cannot disassemble are responsible for making
+    // the target a BTI landing pad.
+    return true;
+  InputSection *isec = cast<InputSection>(d->section);
+  uint64_t off = d->value + a;
+  // Likely user error, but protect ourselves against out of bounds
+  // access.
+  if (off >= isec->getSize())
+    return true;
+  const uint8_t *buf = isec->content().begin();
+  const uint32_t instr = read32le(buf + off);
+  // All BTI instructions are HINT instructions which all have same encoding
+  // apart from bits [11:5]
+  if ((instr & 0xd503201f) == 0xd503201f &&
+      is_contained({/*PACIASP*/ 0xd503233f, /*PACIBSP*/ 0xd503237f,
+                    /*BTI C*/ 0xd503245f, /*BTI J*/ 0xd503249f,
+                    /*BTI JC*/ 0xd50324df},
+                   instr))
+    return true;
+  return false;
+}
+
 namespace {
 class AArch64 : public TargetInfo {
 public:
@@ -59,9 +91,10 @@ private:
 };
 
 struct AArch64Relaxer {
+  Ctx &ctx;
   bool safeToRelaxAdrpLdr = false;
 
-  AArch64Relaxer(ArrayRef<Relocation> relocs);
+  AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs);
   bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
                        uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
@@ -718,7 +751,8 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
+AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs)
+    : ctx(ctx) {
   if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
@@ -877,7 +911,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  AArch64Relaxer relaxer(sec.relocs());
+  AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
     uint8_t *loc = buf + rel.offset;
@@ -1117,13 +1151,13 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // Ideally, this isn't a problem, as any TU that imports or exports tagged
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
-void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
+void elf::createTaggedSymbols(Ctx &ctx) {
   assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.
   DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
-  for (InputFile* file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::ObjKind)
       continue;
     for (InputSectionBase *section : file->getSections()) {
@@ -1139,7 +1173,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // definitions to a symbol exceeds the amount of times they're marked as
   // tagged, it means we have an objfile that uses the untagged variant of the
   // symbol.
-  for (InputFile *file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::BinaryKind &&
         file->kind() != InputFile::ObjKind)
       continue;
