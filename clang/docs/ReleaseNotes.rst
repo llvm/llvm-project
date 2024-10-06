@@ -615,6 +615,7 @@ clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Adds ``TemplateNames`` option.
 
 libclang
 --------
@@ -627,10 +628,17 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
+- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
+
 - MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
   attributes with class names different from "malloc". Clang static analyzer now reports an error
   if class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
+
+- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
+  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+  attribute, the compiler can generate warnings about the use of any language features, or calls to
+  other functions, which may block.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

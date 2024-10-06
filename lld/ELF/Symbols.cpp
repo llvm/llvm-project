@@ -109,7 +109,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t addend) {
     // a symbol value as-is (.dynamic section, `Elf_Ehdr::e_entry`
     // field etc) do the same trick as compiler uses to mark microMIPS
     // for CPU - set the less-significant bit.
-    if (ctx.arg.emachine == EM_MIPS && isMicroMips() &&
+    if (ctx.arg.emachine == EM_MIPS && isMicroMips(ctx) &&
         ((sym.stOther & STO_MIPS_MICROMIPS) || sym.hasFlag(NEEDS_COPY)))
       va |= 1;
 
@@ -177,7 +177,7 @@ uint64_t Symbol::getPltVA() const {
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
   // See detailed comment in the `getSymVA` function.
-  if (ctx.arg.emachine == EM_MIPS && isMicroMips())
+  if (ctx.arg.emachine == EM_MIPS && isMicroMips(ctx))
     outVA |= 1;
   return outVA;
 }
