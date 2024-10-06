@@ -146,7 +146,8 @@ LIBC_INLINE int localtime_s(const time_t *t_ptr, struct tm *input) {
   if (input == NULL)
     return -1;
 
-  if ((*t_ptr < 0 || *t_ptr > cpp::numeric_limits<int64_t>::max()) && input != NULL) {
+  if ((*t_ptr < 0 || *t_ptr > cpp::numeric_limits<int64_t>::max()) &&
+      input != NULL) {
     // setting values to -1 for compatibility reasons
     // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
     input->tm_sec = -1;
