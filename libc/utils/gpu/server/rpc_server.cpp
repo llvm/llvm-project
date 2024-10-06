@@ -319,12 +319,12 @@ rpc_status_t handle_server_impl(
   }
   case RPC_HOST_CALL: {
     uint64_t sizes[lane_size] = {0};
-    long long results[lane_size] = {0};
+    unsigned long long results[lane_size] = {0};
     void *args[lane_size] = {nullptr};
     port->recv_n(args, sizes,
                  [&](uint64_t size) { return temp_storage.alloc(size); });
     port->recv([&](rpc::Buffer *buffer, uint32_t id) {
-      using func_ptr_t = long long (*)(void *);
+      using func_ptr_t = unsigned long long (*)(void *);
       auto func = reinterpret_cast<func_ptr_t>(buffer->data[0]);
       results[id] = func(args[id]);
     });
