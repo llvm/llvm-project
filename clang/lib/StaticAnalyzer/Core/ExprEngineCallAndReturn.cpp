@@ -1078,6 +1078,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   AnalysisDeclContextManager &ADCMgr = AMgr.getAnalysisDeclContextManager();
   AnalysisDeclContext *CalleeADC = ADCMgr.getContext(D);
 
+  bool TaintRelatedFun=false;
 
   if (Opts.AnalyzerInlineTaintOnly) {
       std::set<FunctionDecl*> TaintedFunctions = AMgr.getTaintRelatedFunctions();
@@ -1089,6 +1090,7 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
         llvm::errs() << FD->getNameInfo().getAsString() << "\n";
         return false;
       } else {
+        TaintRelatedFun=true;
         llvm::errs()
             << "tyring to inline taint related function:\n";
         llvm::errs() << FD->getNameInfo().getAsString() << "\n";
@@ -1137,15 +1139,17 @@ bool ExprEngine::shouldInlineCall(const CallEvent &Call, const Decl *D,
   }
 
   // Do not inline if recursive or we've reached max stack frame count.
+  // We skip this bound if the function is taint related
   bool IsRecursive = false;
   unsigned StackDepth = 0;
   examineStackFrames(D, Pred->getLocationContext(), IsRecursive, StackDepth);
-  if ((StackDepth >= Opts.InlineMaxStackDepth) &&
+  if (!(Opts.AnalyzerAlwaysInlineTainted && TaintRelatedFun) && (StackDepth >= Opts.InlineMaxStackDepth) &&
       (!isSmall(CalleeADC) || IsRecursive))
     return false;
 
   // Do not inline large functions too many times.
-  if ((Engine.FunctionSummaries->getNumTimesInlined(D) >
+  // We skip this bound if the function is taint related
+  if (!(Opts.AnalyzerAlwaysInlineTainted && TaintRelatedFun) && (Engine.FunctionSummaries->getNumTimesInlined(D) >
        Opts.MaxTimesInlineLarge) &&
       isLarge(CalleeADC)) {
     NumReachedInlineCountMax++;

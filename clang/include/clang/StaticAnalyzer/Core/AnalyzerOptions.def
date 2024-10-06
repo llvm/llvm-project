@@ -418,6 +418,9 @@ ANALYZER_OPTION(bool, AnalyzerInlineTaintOnly, "analyzer-inline-taint-only",
 ANALYZER_OPTION(bool, AnalyzerFocusedTaint, "analyzer-focused-taint",
                 "Only inline top-level functions on a call-path to a taint source or sink", false)
 
+ANALYZER_OPTION(bool, AnalyzerAlwaysInlineTainted, "analyzer-always-inline-tainted",
+                "Always inline taint related functions", false)
+
 
 ANALYZER_OPTION(unsigned, MaxTimesInlineLarge, "max-times-inline-large",
                 "The maximum times a large function could be inlined.", 32)
