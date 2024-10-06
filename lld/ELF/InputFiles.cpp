@@ -102,7 +102,7 @@ static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
 // For ARM only, to set the EF_ARM_ABI_FLOAT_SOFT or EF_ARM_ABI_FLOAT_HARD
 // flag in the ELF Header we need to look at Tag_ABI_VFP_args to find out how
 // the input objects have been compiled.
-static void updateARMVFPArgs(const ARMAttributeParser &attributes,
+static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
                              const InputFile *f) {
   std::optional<unsigned> attr =
       attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
@@ -150,7 +150,8 @@ static void updateARMVFPArgs(const ARMAttributeParser &attributes,
 // at compile time. We follow the convention that if at least one input object
 // is compiled with an architecture that supports these features then lld is
 // permitted to use them.
-static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
+static void updateSupportedARMFeatures(Ctx &ctx,
+                                       const ARMAttributeParser &attributes) {
   std::optional<unsigned> attr =
       attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
   if (!attr)
@@ -212,7 +213,7 @@ InputFile::InputFile(Kind k, MemoryBufferRef m)
     ++nextGroupId;
 }
 
-std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
+std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
   llvm::TimeTraceScope timeScope("Load input files", path);
 
   // The --chroot option changes our virtual root directory.
@@ -264,14 +265,14 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-static bool isCompatible(InputFile *file) {
+static bool isCompatible(Ctx &ctx, InputFile *file) {
   if (!file->isElf() && !isa<BitcodeFile>(file))
     return true;
 
   if (file->ekind == ctx.arg.ekind && file->emachine == ctx.arg.emachine) {
     if (ctx.arg.emachine != EM_MIPS)
       return true;
-    if (isMipsN32Abi(file) == ctx.arg.mipsN32Abi)
+    if (isMipsN32Abi(ctx, *file) == ctx.arg.mipsN32Abi)
       return true;
   }
 
@@ -297,7 +298,7 @@ static bool isCompatible(InputFile *file) {
 }
 
 template <class ELFT> static void doParseFile(Ctx &ctx, InputFile *file) {
-  if (!isCompatible(file))
+  if (!isCompatible(ctx, file))
     return;
 
   // Lazy object file
@@ -418,12 +419,13 @@ StringRef InputFile::getNameForScript() const {
 // the various ways that a library can be specified to LLD. This ELF extension
 // is a form of autolinking and is called `dependent libraries`. It is currently
 // unique to LLVM and lld.
-static void addDependentLibrary(StringRef specifier, const InputFile *f) {
+static void addDependentLibrary(Ctx &ctx, StringRef specifier,
+                                const InputFile *f) {
   if (!ctx.arg.dependentLibraries)
     return;
-  if (std::optional<std::string> s = searchLibraryBaseName(specifier))
+  if (std::optional<std::string> s = searchLibraryBaseName(ctx, specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
-  else if (std::optional<std::string> s = findFromSearchPaths(specifier))
+  else if (std::optional<std::string> s = findFromSearchPaths(ctx, specifier))
     ctx.driver.addFile(saver().save(*s), /*withLOption=*/true);
   else if (fs::exists(specifier))
     ctx.driver.addFile(specifier, /*withLOption=*/false);
@@ -611,7 +613,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       } else {
         for (const char *d = data.begin(), *e = data.end(); d < e;) {
           StringRef s(d);
-          addDependentLibrary(s, this);
+          addDependentLibrary(ctx, s, this);
           d += s.size() + 1;
         }
       }
@@ -631,8 +633,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         InputSection isec(*this, sec, name);
         warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
       } else {
-        updateSupportedARMFeatures(attributes);
-        updateARMVFPArgs(attributes, this);
+        updateSupportedARMFeatures(ctx, attributes);
+        updateARMVFPArgs(ctx, attributes, this);
 
         // FIXME: Retain the first attribute section we see. The eglibc ARM
         // dynamic loaders require the presence of an attribute section for
@@ -1357,7 +1359,7 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
 
 unsigned SharedFile::vernauxNum;
 
-SharedFile::SharedFile(MemoryBufferRef m, StringRef defaultSoName)
+SharedFile::SharedFile(Ctx &ctx, MemoryBufferRef m, StringRef defaultSoName)
     : ELFFileBase(SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
       isNeeded(!ctx.arg.asNeeded) {}
 
@@ -1696,7 +1698,7 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(BitcodeKind, mb) {
   this->archiveName = archiveName;
@@ -1704,7 +1706,7 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
 
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.arg.thinLTOIndexOnly)
-    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
+    path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
@@ -1738,9 +1740,10 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
   llvm_unreachable("unknown visibility");
 }
 
-static void
-createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
-                    const lto::InputFile::Symbol &objSym, BitcodeFile &f) {
+static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
+                                const std::vector<bool> &keptComdats,
+                                const lto::InputFile::Symbol &objSym,
+                                BitcodeFile &f) {
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
@@ -1791,13 +1794,13 @@ void BitcodeFile::parse() {
   // ObjFile<ELFT>::initializeSymbols.
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (!irSym.isUndefined())
-      createBitcodeSymbol(symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
     if (irSym.isUndefined())
-      createBitcodeSymbol(symbols[i], keptComdats, irSym, *this);
+      createBitcodeSymbol(ctx, symbols[i], keptComdats, irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
-    addDependentLibrary(l, this);
+    addDependentLibrary(ctx, l, this);
 }
 
 void BitcodeFile::parseLazy() {
@@ -1900,10 +1903,11 @@ template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   // resolve() may trigger this->extract() if an existing symbol is an undefined
   // symbol. If that happens, this function has served its purpose, and we can
   // exit from the loop early.
+  auto *symtab = ctx.symtab.get();
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     if (eSyms[i].st_shndx == SHN_UNDEF)
       continue;
-    symbols[i] = ctx.symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
+    symbols[i] = symtab->insert(CHECK(eSyms[i].getName(stringTable), this));
     symbols[i]->resolve(LazySymbol{*this});
     if (!lazy)
       break;
@@ -1917,7 +1921,7 @@ bool InputFile::shouldExtractForCommon(StringRef name) const {
   return isNonCommonDef(mb, name, archiveName);
 }
 
-std::string elf::replaceThinLTOSuffix(StringRef path) {
+std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {
   auto [suffix, repl] = ctx.arg.thinLTOObjectSuffixReplace;
   if (path.consume_back(suffix))
     return (path + repl).str();

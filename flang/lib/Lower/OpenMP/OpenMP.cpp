@@ -590,9 +590,11 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   mlir::Operation *marker = insertMarker(firOpBuilder);
 
   // If it is an unstructured region, create empty blocks for all evaluations.
-  if (info.eval.lowerAsUnstructured())
+  if (lower::omp::isLastItemInQueue(item, queue) &&
+      info.eval.lowerAsUnstructured()) {
     lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp, mlir::omp::YieldOp>(
         firOpBuilder, info.eval.getNestedEvaluations());
+  }
 
   // Start with privatization, so that the lowering of the nested
   // code will use the right symbols.
@@ -966,7 +968,8 @@ static void genBodyOfTargetOp(
 
   // Create blocks for unstructured regions. This has to be done since
   // blocks are initially allocated with the function as the parent region.
-  if (eval.lowerAsUnstructured()) {
+  if (lower::omp::isLastItemInQueue(item, queue) &&
+      eval.lowerAsUnstructured()) {
     lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp, mlir::omp::YieldOp>(
         firOpBuilder, eval.getNestedEvaluations());
   }

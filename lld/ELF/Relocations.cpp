@@ -97,7 +97,7 @@ static std::string getLocation(Ctx &ctx, InputSectionBase &s, const Symbol &sym,
   return msg + s.getObjMsg(off);
 }
 
-void elf::reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
+void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
                            const Twine &v, int64_t min, uint64_t max) {
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
   std::string hint;
@@ -392,7 +392,7 @@ template <class ELFT> static void addCopyRelSymbol(Ctx &ctx, SharedSymbol &ss) {
     osec->commands.push_back(make<InputSectionDescription>(""));
   auto *isd = cast<InputSectionDescription>(osec->commands.back());
   isd->sections.push_back(sec);
-  osec->commitSection(sec);
+  osec->commitSection(ctx, sec);
 
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
@@ -600,7 +600,7 @@ static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
 // Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
-static const Symbol *getAlternativeSpelling(const Undefined &sym,
+static const Symbol *getAlternativeSpelling(Ctx &ctx, const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
@@ -777,7 +777,7 @@ static void reportUndefinedSymbol(Ctx &ctx, const UndefinedDiag &undef,
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
-            getAlternativeSpelling(sym, pre_hint, post_hint)) {
+            getAlternativeSpelling(ctx, sym, pre_hint, post_hint)) {
       msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
       if (corrected->file)
         msg += "\n>>> defined in: " + toString(corrected->file);
@@ -875,9 +875,9 @@ RelType RelocationScanner::getMipsN32RelType(RelTy *&rel) const {
 }
 
 template <bool shard = false>
-static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
-                             Symbol &sym, int64_t addend, RelExpr expr,
-                             RelType type) {
+static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
+                             uint64_t offsetInSec, Symbol &sym, int64_t addend,
+                             RelExpr expr, RelType type) {
   Partition &part = isec.getPartition();
 
   if (sym.isTagged()) {
@@ -944,7 +944,8 @@ void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
   if (!ctx.arg.isPic || isAbsolute(sym))
     ctx.in.got->addConstant({R_ABS, ctx.target->symbolicRel, off, 0, &sym});
   else
-    addRelativeReloc(*ctx.in.got, off, sym, 0, R_ABS, ctx.target->symbolicRel);
+    addRelativeReloc(ctx, *ctx.in.got, off, sym, 0, R_ABS,
+                     ctx.target->symbolicRel);
 }
 
 static void addTpOffsetGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1151,7 +1152,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     RelType rel = ctx.target->getDynRel(type);
     if (oneof<R_GOT, R_LOONGARCH_GOT>(expr) ||
         (rel == ctx.target->symbolicRel && !sym.isPreemptible)) {
-      addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
+      addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
       return;
     }
     if (rel != 0) {
@@ -1437,7 +1438,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       // R_GOT needs a relative relocation for PIC on i386 and Hexagon.
       if (expr == R_GOT && ctx.arg.isPic &&
           !ctx.target->usesOnlyLowPageBits(type))
-        addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
+        addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
@@ -1479,7 +1480,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   if (LLVM_UNLIKELY(ctx.arg.emachine == EM_MIPS))
     addend += computeMipsAddend<ELFT>(rel, expr, sym.isLocal());
   else if (ctx.arg.emachine == EM_PPC64 && ctx.arg.isPic && type == R_PPC64_TOC)
-    addend += getPPC64TocBase();
+    addend += getPPC64TocBase(ctx);
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
@@ -2019,14 +2020,15 @@ static void forEachInputSectionDescription(
 // This may invalidate any output section offsets stored outside of InputSection
 void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
   forEachInputSectionDescription(
-      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
+      outputSections,
+      [&, &ctx = ctx](OutputSection *os, InputSectionDescription *isd) {
         if (isd->thunkSections.empty())
           return;
 
         // Remove any zero sized precreated Thunks.
         llvm::erase_if(isd->thunkSections,
-                       [](const std::pair<ThunkSection *, uint32_t> &ts) {
-                         return ts.first->getSize() == 0;
+                       [&ctx](const std::pair<ThunkSection *, uint32_t> &ts) {
+                         return ts.first->getSize(ctx) == 0;
                        });
 
         // ISD->ThunkSections contains all created ThunkSections, including
@@ -2079,7 +2081,7 @@ ThunkSection *ThunkCreator::getISDThunkSec(OutputSection *os,
   for (std::pair<ThunkSection *, uint32_t> tp : isd->thunkSections) {
     ThunkSection *ts = tp.first;
     uint64_t tsBase = os->addr + ts->outSecOff - pcBias;
-    uint64_t tsLimit = tsBase + ts->getSize();
+    uint64_t tsLimit = tsBase + ts->getSize(ctx);
     if (ctx.target->inBranchRange(rel.type, src,
                                   (src > tsLimit) ? tsBase : tsLimit))
       return ts;

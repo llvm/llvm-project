@@ -19,6 +19,11 @@
 // CHECK-HARD: -mfloat-abi=hard
 // CHECK-HARD: -mfpu=fpv5-d16
 
+// RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -mabi=aapcs | FileCheck --check-prefix=CHECK-ABI-AAPCS %s
+// RUN: %clang -print-multi-flags-experimental --target=aarch64-none-elf -mabi=aapcs-soft | FileCheck --check-prefix=CHECK-ABI-AAPCS-SOFT %s
+// CHECK-ABI-AAPCS: -mabi=aapcs
+// CHECK-ABI-AAPCS-SOFT: -mabi=aapcs-soft
+
 // RUN: %clang -print-multi-flags-experimental --target=arm-none-eabi -mfloat-abi=soft -march=armv8-m.main+nofp | FileCheck --check-prefix=CHECK-V8MMAIN-NOFP %s
 // CHECK-V8MMAIN-NOFP: --target=thumbv8m.main-unknown-none-eabi
 // CHECK-V8MMAIN-NOFP: -mfloat-abi=soft

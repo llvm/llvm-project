@@ -3335,10 +3335,8 @@ define i1 @icmp_eq_or_z_or_pow2orz_fail_bad_pred2(i8 %x, i8 %y) {
 
 define i1 @and_slt_to_mask(i8 %x) {
 ; CHECK-LABEL: @and_slt_to_mask(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], -124
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[AND2:%.*]] = icmp eq i8 [[TMP1]], -128
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp = icmp slt i8 %x, -124
@@ -3365,10 +3363,8 @@ define i1 @and_slt_to_mask_off_by_one(i8 %x) {
 
 define i1 @and_sgt_to_mask(i8 %x) {
 ; CHECK-LABEL: @and_sgt_to_mask(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 123
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[AND2:%.*]] = icmp eq i8 [[TMP1]], 124
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp = icmp sgt i8 %x, 123
@@ -3395,10 +3391,8 @@ define i1 @and_sgt_to_mask_off_by_one(i8 %x) {
 
 define i1 @and_ugt_to_mask(i8 %x) {
 ; CHECK-LABEL: @and_ugt_to_mask(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 2
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[CMP]], [[CMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[AND2:%.*]] = icmp eq i8 [[TMP1]], -4
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %cmp = icmp ugt i8 %x, -5
