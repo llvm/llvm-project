@@ -1622,17 +1622,16 @@ entry:
 define i1 @ctpop32_eq_one_nonzero(i32 %x) {
 ; RV64I-LABEL: ctpop32_eq_one_nonzero:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addiw a1, a0, -1
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop32_eq_one_nonzero:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    cpopw a0, a0
-; RV64ZBB-NEXT:    addi a0, a0, -1
-; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
 ; RV64ZBB-NEXT:    ret
 entry:
   %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
@@ -1643,18 +1642,17 @@ entry:
 define i1 @ctpop32_ne_one_nonzero(i32 %x) {
 ; RV64I-LABEL: ctpop32_ne_one_nonzero:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    addiw a1, a0, -1
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    addi a1, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop32_ne_one_nonzero:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    cpopw a0, a0
-; RV64ZBB-NEXT:    addi a0, a0, -1
-; RV64ZBB-NEXT:    snez a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
+; RV64ZBB-NEXT:    xori a0, a0, 1
 ; RV64ZBB-NEXT:    ret
 entry:
   %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
@@ -1666,15 +1664,14 @@ define i1 @ctpop64_eq_one_nonzero(i64 %x) {
 ; RV64I-LABEL: ctpop64_eq_one_nonzero:
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi a1, a0, -1
-; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: ctpop64_eq_one_nonzero:
 ; RV64ZBB:       # %bb.0: # %entry
 ; RV64ZBB-NEXT:    cpop a0, a0
-; RV64ZBB-NEXT:    addi a0, a0, -1
-; RV64ZBB-NEXT:    seqz a0, a0
+; RV64ZBB-NEXT:    sltiu a0, a0, 2
 ; RV64ZBB-NEXT:    ret
 entry:
   %popcnt = call range(i64 1, 65) i64 @llvm.ctpop.i64(i64 %x)

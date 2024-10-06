@@ -1446,15 +1446,14 @@ define i1 @ctpop32_eq_one_nonzero(i32 %x) {
 ; RV32I-LABEL: ctpop32_eq_one_nonzero:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi a1, a0, -1
-; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: ctpop32_eq_one_nonzero:
 ; RV32ZBB:       # %bb.0: # %entry
 ; RV32ZBB-NEXT:    cpop a0, a0
-; RV32ZBB-NEXT:    addi a0, a0, -1
-; RV32ZBB-NEXT:    seqz a0, a0
+; RV32ZBB-NEXT:    sltiu a0, a0, 2
 ; RV32ZBB-NEXT:    ret
 entry:
   %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
@@ -1466,16 +1465,15 @@ define i1 @ctpop32_ne_one_nonzero(i32 %x) {
 ; RV32I-LABEL: ctpop32_ne_one_nonzero:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    addi a1, a0, -1
-; RV32I-NEXT:    xor a0, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: ctpop32_ne_one_nonzero:
 ; RV32ZBB:       # %bb.0: # %entry
 ; RV32ZBB-NEXT:    cpop a0, a0
-; RV32ZBB-NEXT:    addi a0, a0, -1
-; RV32ZBB-NEXT:    snez a0, a0
+; RV32ZBB-NEXT:    sltiu a0, a0, 2
+; RV32ZBB-NEXT:    xori a0, a0, 1
 ; RV32ZBB-NEXT:    ret
 entry:
   %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)

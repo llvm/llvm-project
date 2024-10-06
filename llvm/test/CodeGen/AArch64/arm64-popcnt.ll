@@ -282,23 +282,21 @@ define i1 @ctpop32_eq_one_nonzero(i32 %x) {
 ; CHECK-LABEL: ctpop32_eq_one_nonzero:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w0, #1
-; CHECK-NEXT:    eor w9, w0, w8
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    tst w0, w8
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: ctpop32_eq_one_nonzero:
 ; CHECK-NONEON:       // %bb.0: // %entry
 ; CHECK-NONEON-NEXT:    sub w8, w0, #1
-; CHECK-NONEON-NEXT:    eor w9, w0, w8
-; CHECK-NONEON-NEXT:    cmp w9, w8
-; CHECK-NONEON-NEXT:    cset w0, hi
+; CHECK-NONEON-NEXT:    tst w0, w8
+; CHECK-NONEON-NEXT:    cset w0, eq
 ; CHECK-NONEON-NEXT:    ret
 ;
 ; CHECK-CSSC-LABEL: ctpop32_eq_one_nonzero:
 ; CHECK-CSSC:       // %bb.0: // %entry
-; CHECK-CSSC-NEXT:    cnt w8, w0
-; CHECK-CSSC-NEXT:    cmp w8, #1
+; CHECK-CSSC-NEXT:    sub w8, w0, #1
+; CHECK-CSSC-NEXT:    tst w0, w8
 ; CHECK-CSSC-NEXT:    cset w0, eq
 ; CHECK-CSSC-NEXT:    ret
 entry:
@@ -311,23 +309,21 @@ define i1 @ctpop32_ne_one_nonzero(i32 %x) {
 ; CHECK-LABEL: ctpop32_ne_one_nonzero:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub w8, w0, #1
-; CHECK-NEXT:    eor w9, w0, w8
-; CHECK-NEXT:    cmp w9, w8
-; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    tst w0, w8
+; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NONEON-LABEL: ctpop32_ne_one_nonzero:
 ; CHECK-NONEON:       // %bb.0: // %entry
 ; CHECK-NONEON-NEXT:    sub w8, w0, #1
-; CHECK-NONEON-NEXT:    eor w9, w0, w8
-; CHECK-NONEON-NEXT:    cmp w9, w8
-; CHECK-NONEON-NEXT:    cset w0, ls
+; CHECK-NONEON-NEXT:    tst w0, w8
+; CHECK-NONEON-NEXT:    cset w0, ne
 ; CHECK-NONEON-NEXT:    ret
 ;
 ; CHECK-CSSC-LABEL: ctpop32_ne_one_nonzero:
 ; CHECK-CSSC:       // %bb.0: // %entry
-; CHECK-CSSC-NEXT:    cnt w8, w0
-; CHECK-CSSC-NEXT:    cmp w8, #1
+; CHECK-CSSC-NEXT:    sub w8, w0, #1
+; CHECK-CSSC-NEXT:    tst w0, w8
 ; CHECK-CSSC-NEXT:    cset w0, ne
 ; CHECK-CSSC-NEXT:    ret
 entry:

@@ -223,14 +223,19 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
 
 
 define i1 @ctpop32_eq_one_nonzero(i32 %x) {
-; CHECK-LABEL: ctpop32_eq_one_nonzero:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal -1(%rdi), %eax
-; CHECK-NEXT:    xorl %eax, %edi
-; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    seta %al
-; CHECK-NEXT:    retq
+; CHECK-NOBMI-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    sete %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    sete %al
+; CHECK-BMI2-NEXT:    retq
 entry:
   %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %popcnt, 1
@@ -238,14 +243,19 @@ entry:
 }
 
 define i1 @ctpop32_ne_one_nonzero(i32 %x) {
-; CHECK-LABEL: ctpop32_ne_one_nonzero:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal -1(%rdi), %eax
-; CHECK-NEXT:    xorl %eax, %edi
-; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    setbe %al
-; CHECK-NEXT:    retq
+; CHECK-NOBMI-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-NOBMI:       # %bb.0: # %entry
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    leal -1(%rdi), %eax
+; CHECK-NOBMI-NEXT:    testl %eax, %edi
+; CHECK-NOBMI-NEXT:    setne %al
+; CHECK-NOBMI-NEXT:    retq
+;
+; CHECK-BMI2-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-BMI2:       # %bb.0: # %entry
+; CHECK-BMI2-NEXT:    blsrl %edi, %eax
+; CHECK-BMI2-NEXT:    setne %al
+; CHECK-BMI2-NEXT:    retq
 entry:
   %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %popcnt, 1
