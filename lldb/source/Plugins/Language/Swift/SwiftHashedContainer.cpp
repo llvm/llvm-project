@@ -532,7 +532,7 @@ bool NativeHashedStorageHandler::IsValid() {
 uint64_t
 NativeHashedStorageHandler::GetMetadataWord(int index, Status &error) {
   if (static_cast<size_t>(index) >= GetWordCount()) {
-    error.SetErrorToGenericError();
+    error = Status::FromErrorString("index out of bounds");
     return 0;
   }
   const lldb::addr_t effective_ptr = m_metadata_ptr + (index * m_ptr_size);

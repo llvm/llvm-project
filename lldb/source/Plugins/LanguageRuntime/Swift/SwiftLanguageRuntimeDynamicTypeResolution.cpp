@@ -501,7 +501,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
       instance_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts) {
     if (error)
-      error->SetErrorString("not a Swift type");
+      *error = Status::FromErrorString("not a Swift type");
     return {};
   }
 
@@ -518,7 +518,7 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteMirrors(
       if (member_name.getAsInteger(10, tuple_idx) ||
           tuple_idx >= ti->getNumFields()) {
         if (error)
-          error->SetErrorString("tuple index out of bounds");
+          *error = Status::FromErrorString("tuple index out of bounds");
         return {};
       }
       return fields[tuple_idx].Offset;
@@ -607,7 +607,7 @@ std::optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
     LLDB_LOG(GetLog(LLDBLog::Types), "[GetMemberVariableOffset] failed for {0}",
              member_name);
     if (error)
-      error->SetErrorStringWithFormat("could not resolve member offset");
+      *error = Status::FromErrorString("could not resolve member offset");
   }
   return offset;
 }

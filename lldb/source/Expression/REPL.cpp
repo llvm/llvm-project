@@ -406,6 +406,12 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             add_to_code = false;
             [[fallthrough]];
           case lldb::eExpressionDiscarded:
+            // FIXME: BEGIN SWIFT
+            if (error.Success() && result_valobj_sp)
+              error_sp->Printf("%s\n",
+                               result_valobj_sp->GetError().AsCString());
+            else
+            // END SWIFT
             error_sp->Printf("%s\n", error.AsCString());
             break;
 
