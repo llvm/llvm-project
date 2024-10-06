@@ -270,18 +270,24 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   return 0;
 }
 
-int calculate_dst(struct tm *tm) {
-  int sunday = tm->tm_mday - tm->tm_wday;
+void set_dst(struct tm *tm) {
+  int dst;
+  int sunday;
+
+  dst = 0;
+  sunday = tm->tm_mday - tm->tm_wday;
 
   if (tm->tm_mon < 3 || tm->tm_mon > 11) {
-    return 0;
+    dst = 0;
   } else if (tm->tm_mon > 3 && tm->tm_mon < 11) {
-    return 1;
+    dst = 1;
   } else if (tm->tm_mon == 3) {
-    return sunday >= 8;
+    dst = sunday >= 8;
+  } else {
+    dst = sunday <= 0;
   }
 
-  return sunday <= 0;
+  tm->tm_isdst = dst;
 }
 
 } // namespace time_utils

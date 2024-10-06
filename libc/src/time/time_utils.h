@@ -45,8 +45,9 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
-int64_t update_from_seconds(time_t total_seconds, tm *tm);
+extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
 extern int calculate_dst(struct tm *tm);
+extern void set_dst(struct tm *tm);
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
@@ -120,51 +121,48 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
     return nullptr;
   }
 
-  int isdst = calculate_dst(&result);
-  result.tm_isdst = isdst;
+  set_dst(&result);
 
   return &result;
 }
 
 LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
                                           struct tm *input) {
-  static struct tm result;
   int64_t t = *t_ptr;
 
-  result.tm_sec = input->tm_sec;
-  result.tm_min = input->tm_min;
-  result.tm_hour = input->tm_hour;
-  result.tm_mday = input->tm_mday;
-  result.tm_mon = input->tm_mon;
-  result.tm_year = input->tm_year;
-  result.tm_wday = input->tm_wday;
-  result.tm_yday = input->tm_yday;
-  result.tm_isdst = input->tm_isdst;
-
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(t, &result) < 0) {
+  if (update_from_seconds(t, input) < 0) {
     out_of_range();
     return nullptr;
   }
 
-  int isdst = calculate_dst(&result);
-  result.tm_isdst = isdst;
+  set_dst(input);
 
-  return &result;
+  return input;
 }
 
 // for windows only, implemented on gnu/linux for compatibility reasons
 LIBC_INLINE int localtime_s(const time_t *t_ptr, struct tm *input) {
-  static struct tm *result = localtime_internal(t_ptr, input);
-  time_t t = LIBC_NAMESPACE::mktime(result);
+  if (input == NULL)
+    return -1;
 
-  if (*t_ptr < t) {
+  if ((*t_ptr < 0 || *t_ptr > cpp::numeric_limits<int64_t>::max()) && input != NULL) {
+    // setting values to -1 for compatibility reasons
+    // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
+    input->tm_sec = -1;
+    input->tm_min = -1;
+    input->tm_hour = -1;
+    input->tm_mday = -1;
+    input->tm_mon = -1;
+    input->tm_year = -1;
+    input->tm_wday = -1;
+    input->tm_yday = -1;
+    input->tm_isdst = -1;
+
     return -1;
   }
 
-  if (*t_ptr > t) {
-    return 1;
-  }
+  localtime_internal(t_ptr, input);
 
   return 0;
 }
