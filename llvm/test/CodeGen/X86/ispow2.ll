@@ -220,3 +220,34 @@ define <4 x i1> @neither_pow2_non_zero_4xv64_x_maybe_z(<4 x i64> %x) {
   %r = icmp ne <4 x i64> %cnt, <i64 1, i64 1, i64 1, i64 1>
   ret <4 x i1> %r
 }
+
+
+define i1 @ctpop32_eq_one_nonzero(i32 %x) {
+; CHECK-LABEL: ctpop32_eq_one_nonzero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal -1(%rdi), %eax
+; CHECK-NEXT:    xorl %eax, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
+entry:
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_ne_one_nonzero(i32 %x) {
+; CHECK-LABEL: ctpop32_ne_one_nonzero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal -1(%rdi), %eax
+; CHECK-NEXT:    xorl %eax, %edi
+; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    retq
+entry:
+  %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %popcnt, 1
+  ret i1 %cmp
+}

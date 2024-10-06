@@ -15,7 +15,7 @@ define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
 ; CHECK-NONEON-LABEL: cnt32_advsimd:
 ; CHECK-NONEON:       // %bb.0:
 ; CHECK-NONEON-NEXT:    lsr w9, w0, #1
-; CHECK-NONEON-NEXT:    mov w8, #16843009
+; CHECK-NONEON-NEXT:    mov w8, #16843009 // =0x1010101
 ; CHECK-NONEON-NEXT:    and w9, w9, #0x55555555
 ; CHECK-NONEON-NEXT:    sub w9, w0, w9
 ; CHECK-NONEON-NEXT:    lsr w10, w9, #2
@@ -50,7 +50,7 @@ define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ; CHECK-NONEON-LABEL: cnt32_advsimd_2:
 ; CHECK-NONEON:       // %bb.0:
 ; CHECK-NONEON-NEXT:    lsr w9, w0, #1
-; CHECK-NONEON-NEXT:    mov w8, #16843009
+; CHECK-NONEON-NEXT:    mov w8, #16843009 // =0x1010101
 ; CHECK-NONEON-NEXT:    and w9, w9, #0x55555555
 ; CHECK-NONEON-NEXT:    sub w9, w0, w9
 ; CHECK-NONEON-NEXT:    lsr w10, w9, #2
@@ -86,7 +86,7 @@ define i64 @cnt64_advsimd(i64 %x) nounwind readnone {
 ; CHECK-NONEON-LABEL: cnt64_advsimd:
 ; CHECK-NONEON:       // %bb.0:
 ; CHECK-NONEON-NEXT:    lsr x9, x0, #1
-; CHECK-NONEON-NEXT:    mov x8, #72340172838076673
+; CHECK-NONEON-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; CHECK-NONEON-NEXT:    and x9, x9, #0x5555555555555555
 ; CHECK-NONEON-NEXT:    sub x9, x0, x9
 ; CHECK-NONEON-NEXT:    lsr x10, x9, #2
@@ -114,7 +114,7 @@ define i32 @cnt32(i32 %x) nounwind readnone noimplicitfloat {
 ; CHECK-LABEL: cnt32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w9, w0, #1
-; CHECK-NEXT:    mov w8, #16843009
+; CHECK-NEXT:    mov w8, #16843009 // =0x1010101
 ; CHECK-NEXT:    and w9, w9, #0x55555555
 ; CHECK-NEXT:    sub w9, w0, w9
 ; CHECK-NEXT:    lsr w10, w9, #2
@@ -130,7 +130,7 @@ define i32 @cnt32(i32 %x) nounwind readnone noimplicitfloat {
 ; CHECK-NONEON-LABEL: cnt32:
 ; CHECK-NONEON:       // %bb.0:
 ; CHECK-NONEON-NEXT:    lsr w9, w0, #1
-; CHECK-NONEON-NEXT:    mov w8, #16843009
+; CHECK-NONEON-NEXT:    mov w8, #16843009 // =0x1010101
 ; CHECK-NONEON-NEXT:    and w9, w9, #0x55555555
 ; CHECK-NONEON-NEXT:    sub w9, w0, w9
 ; CHECK-NONEON-NEXT:    lsr w10, w9, #2
@@ -155,7 +155,7 @@ define i64 @cnt64(i64 %x) nounwind readnone noimplicitfloat {
 ; CHECK-LABEL: cnt64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x9, x0, #1
-; CHECK-NEXT:    mov x8, #72340172838076673
+; CHECK-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; CHECK-NEXT:    and x9, x9, #0x5555555555555555
 ; CHECK-NEXT:    sub x9, x0, x9
 ; CHECK-NEXT:    lsr x10, x9, #2
@@ -171,7 +171,7 @@ define i64 @cnt64(i64 %x) nounwind readnone noimplicitfloat {
 ; CHECK-NONEON-LABEL: cnt64:
 ; CHECK-NONEON:       // %bb.0:
 ; CHECK-NONEON-NEXT:    lsr x9, x0, #1
-; CHECK-NONEON-NEXT:    mov x8, #72340172838076673
+; CHECK-NONEON-NEXT:    mov x8, #72340172838076673 // =0x101010101010101
 ; CHECK-NONEON-NEXT:    and x9, x9, #0x5555555555555555
 ; CHECK-NONEON-NEXT:    sub x9, x0, x9
 ; CHECK-NONEON-NEXT:    lsr x10, x9, #2
@@ -275,6 +275,64 @@ define i1 @ctpop32_ne_one(i32 %x) nounwind readnone {
 ; CHECK-CSSC-NEXT:    ret
   %count = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %count, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_eq_one_nonzero(i32 %x) {
+; CHECK-LABEL: ctpop32_eq_one_nonzero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub w8, w0, #1
+; CHECK-NEXT:    eor w9, w0, w8
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+;
+; CHECK-NONEON-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-NONEON:       // %bb.0: // %entry
+; CHECK-NONEON-NEXT:    sub w8, w0, #1
+; CHECK-NONEON-NEXT:    eor w9, w0, w8
+; CHECK-NONEON-NEXT:    cmp w9, w8
+; CHECK-NONEON-NEXT:    cset w0, hi
+; CHECK-NONEON-NEXT:    ret
+;
+; CHECK-CSSC-LABEL: ctpop32_eq_one_nonzero:
+; CHECK-CSSC:       // %bb.0: // %entry
+; CHECK-CSSC-NEXT:    cnt w8, w0
+; CHECK-CSSC-NEXT:    cmp w8, #1
+; CHECK-CSSC-NEXT:    cset w0, eq
+; CHECK-CSSC-NEXT:    ret
+entry:
+  %popcnt = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %popcnt, 1
+  ret i1 %cmp
+}
+
+define i1 @ctpop32_ne_one_nonzero(i32 %x) {
+; CHECK-LABEL: ctpop32_ne_one_nonzero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub w8, w0, #1
+; CHECK-NEXT:    eor w9, w0, w8
+; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    cset w0, ls
+; CHECK-NEXT:    ret
+;
+; CHECK-NONEON-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-NONEON:       // %bb.0: // %entry
+; CHECK-NONEON-NEXT:    sub w8, w0, #1
+; CHECK-NONEON-NEXT:    eor w9, w0, w8
+; CHECK-NONEON-NEXT:    cmp w9, w8
+; CHECK-NONEON-NEXT:    cset w0, ls
+; CHECK-NONEON-NEXT:    ret
+;
+; CHECK-CSSC-LABEL: ctpop32_ne_one_nonzero:
+; CHECK-CSSC:       // %bb.0: // %entry
+; CHECK-CSSC-NEXT:    cnt w8, w0
+; CHECK-CSSC-NEXT:    cmp w8, #1
+; CHECK-CSSC-NEXT:    cset w0, ne
+; CHECK-CSSC-NEXT:    ret
+entry:
+  %popcnt = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %popcnt, 1
   ret i1 %cmp
 }
 
