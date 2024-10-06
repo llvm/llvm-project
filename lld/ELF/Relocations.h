@@ -144,7 +144,7 @@ struct JumpInstrMod {
 // the diagnostics.
 template <class ELFT> void scanRelocations(Ctx &ctx);
 template <class ELFT> void checkNoCrossRefs(Ctx &ctx);
-void reportUndefinedSymbols();
+void reportUndefinedSymbols(Ctx &);
 void postScanRelocations(Ctx &ctx);
 void addGotEntry(Ctx &ctx, Symbol &sym);
 

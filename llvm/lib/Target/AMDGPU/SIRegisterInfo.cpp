@@ -561,6 +561,37 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
   return getAlignedHighSGPRForRC(MF, /*Align=*/4, &AMDGPU::SGPR_128RegClass);
 }
 
+std::pair<unsigned, unsigned>
+SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
+  unsigned MaxNumAGPRs = MaxNumVGPRs;
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
+  // a wave may have up to 512 total vector registers combining together both
+  // VGPRs and AGPRs. Hence, in an entry function without calls and without
+  // AGPRs used within it, it is possible to use the whole vector register
+  // budget for VGPRs.
+  //
+  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (ST.hasGFX90AInsts()) {
+    if (MFI->usesAGPRs(MF)) {
+      MaxNumVGPRs /= 2;
+      MaxNumAGPRs = MaxNumVGPRs;
+    } else {
+      if (MaxNumVGPRs > TotalNumVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
+        MaxNumVGPRs = TotalNumVGPRs;
+      } else
+        MaxNumAGPRs = 0;
+    }
+  }
+
+  return std::pair(MaxNumVGPRs, MaxNumAGPRs);
+}
+
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::MODE);
@@ -668,30 +699,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve VGPRs/AGPRs.
   //
-  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
-
-  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
-  // a wave may have up to 512 total vector registers combining together both
-  // VGPRs and AGPRs. Hence, in an entry function without calls and without
-  // AGPRs used within it, it is possible to use the whole vector register
-  // budget for VGPRs.
-  //
-  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
-  //       register file accordingly.
-  if (ST.hasGFX90AInsts()) {
-    if (MFI->usesAGPRs(MF)) {
-      MaxNumVGPRs /= 2;
-      MaxNumAGPRs = MaxNumVGPRs;
-    } else {
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
-      } else
-        MaxNumAGPRs = 0;
-    }
-  }
+  auto [MaxNumVGPRs, MaxNumAGPRs] = getMaxNumVectorRegs(MF);
 
   for (const TargetRegisterClass *RC : regclasses()) {
     if (RC->isBaseClass() && isVGPRClass(RC)) {
@@ -722,6 +730,18 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // VGPR available at all times.
   if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
     reserveRegisterTuples(Reserved, MFI->getVGPRForAGPRCopy());
+  }
+
+  // During wwm-regalloc, reserve the registers for perlane VGPR allocation. The
+  // MFI->getNonWWMRegMask() field will have a valid bitmask only during
+  // wwm-regalloc and it would be empty otherwise.
+  BitVector NonWWMRegMask = MFI->getNonWWMRegMask();
+  if (!NonWWMRegMask.empty()) {
+    for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
+         RegI < RegE; ++RegI) {
+      if (NonWWMRegMask.test(RegI))
+        reserveRegisterTuples(Reserved, RegI);
+    }
   }
 
   for (Register Reg : MFI->getWWMReservedRegs())

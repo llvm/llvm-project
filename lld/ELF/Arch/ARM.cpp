@@ -1261,7 +1261,7 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // name with __acle_se_.
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
-void elf::processArmCmseSymbols() {
+void elf::processArmCmseSymbols(Ctx &ctx) {
   if (!ctx.arg.cmseImplib)
     return;
   // Only symbols with external linkage end up in ctx.symtab, so no need to do

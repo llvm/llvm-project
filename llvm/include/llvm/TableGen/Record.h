@@ -226,8 +226,9 @@ public:
 ///
 /// The list of superclasses is non-redundant, i.e. only contains classes that
 /// are not the superclass of some other listed class.
-class RecordRecTy final : public RecTy, public FoldingSetNode,
-                          public TrailingObjects<RecordRecTy, Record *> {
+class RecordRecTy final : public RecTy,
+                          public FoldingSetNode,
+                          public TrailingObjects<RecordRecTy, const Record *> {
   friend class Record;
   friend detail::RecordKeeperImpl;
 
@@ -248,23 +249,23 @@ public:
   }
 
   /// Get the record type with the given non-redundant list of superclasses.
-  static RecordRecTy *get(RecordKeeper &RK, ArrayRef<Record *> Classes);
-  static RecordRecTy *get(Record *Class);
+  static RecordRecTy *get(RecordKeeper &RK, ArrayRef<const Record *> Classes);
+  static RecordRecTy *get(const Record *Class);
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  ArrayRef<Record *> getClasses() const {
-    return ArrayRef(getTrailingObjects<Record *>(), NumClasses);
+  ArrayRef<const Record *> getClasses() const {
+    return ArrayRef(getTrailingObjects<const Record *>(), NumClasses);
   }
 
-  using const_record_iterator = Record * const *;
+  using const_record_iterator = const Record *const *;
 
   const_record_iterator classes_begin() const { return getClasses().begin(); }
   const_record_iterator classes_end() const { return getClasses().end(); }
 
   std::string getAsString() const override;
 
-  bool isSubClassOf(Record *Class) const;
+  bool isSubClassOf(const Record *Class) const;
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 
   bool typeIsA(const RecTy *RHS) const override;
@@ -1763,7 +1764,7 @@ public:
   bool hasDirectSuperClass(const Record *SuperClass) const;
 
   /// Append the direct superclasses of this record to Classes.
-  void getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const;
+  void getDirectSuperClasses(SmallVectorImpl<const Record *> &Classes) const;
 
   bool isTemplateArg(Init *Name) const {
     return llvm::is_contained(TemplateArgs, Name);

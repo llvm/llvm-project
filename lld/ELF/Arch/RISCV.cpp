@@ -1305,7 +1305,7 @@ void RISCVAttributesSection::writeTo(uint8_t *buf) {
   }
 }
 
-void elf::mergeRISCVAttributesSections() {
+void elf::mergeRISCVAttributesSections(Ctx &) {
   // Find the first input SHT_RISCV_ATTRIBUTES; return if not found.
   size_t place =
       llvm::find_if(ctx.inputSections,
