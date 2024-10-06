@@ -7,7 +7,7 @@ def GPUExtensions : StandardSpec<"GPUExtensions"> {
     [
         FunctionSpec<
             "rpc_host_call",
-            RetValSpec<LongLongType>,
+            RetValSpec<UnsignedLongLongType>,
             [ArgSpec<VoidPtr>, ArgSpec<VoidPtr>, ArgSpec<SizeTType>]
         >,
     ]
