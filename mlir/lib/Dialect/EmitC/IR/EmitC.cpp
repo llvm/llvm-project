@@ -530,7 +530,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
     return;
   assert(type.getNumInputs() == argAttrs.size());
   function_interface_impl::addArgAndResultAttrs(
-      builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
+      builder, state, argAttrs, /*resultAttrs=*/{},
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }
 
