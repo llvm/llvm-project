@@ -273,7 +273,7 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
   if (errorToBool(fatLTOData.takeError()))
     return false;
   files.push_back(
-      make<BitcodeFile>(*fatLTOData, archiveName, offsetInArchive, lazy));
+      make<BitcodeFile>(ctx, *fatLTOData, archiveName, offsetInArchive, lazy));
   return true;
 }
 
@@ -300,7 +300,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     if (inWholeArchive) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
-          files.push_back(make<BitcodeFile>(p.first, path, p.second, false));
+          files.push_back(
+              make<BitcodeFile>(ctx, p.first, path, p.second, false));
         else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(p.first, path));
       }
@@ -329,7 +330,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
         if (!tryAddFatLTOFile(p.first, path, p.second, true))
           files.push_back(createObjFile(p.first, path, true));
       } else if (magic == file_magic::bitcode)
-        files.push_back(make<BitcodeFile>(p.first, path, p.second, true));
+        files.push_back(make<BitcodeFile>(ctx, p.first, path, p.second, true));
       else
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
              "' is neither ET_REL nor LLVM bitcode");
@@ -357,7 +358,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::bitcode:
-    files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
+    files.push_back(make<BitcodeFile>(ctx, mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
     if (!tryAddFatLTOFile(mbref, "", 0, inLib))
@@ -2059,7 +2060,7 @@ void LinkerDriver::inferMachineType() {
       inferred = true;
       ctx.arg.ekind = f->ekind;
       ctx.arg.emachine = f->emachine;
-      ctx.arg.mipsN32Abi = ctx.arg.emachine == EM_MIPS && isMipsN32Abi(f);
+      ctx.arg.mipsN32Abi = ctx.arg.emachine == EM_MIPS && isMipsN32Abi(ctx, *f);
     }
     ctx.arg.osabi = f->osabi;
     if (f->osabi != ELFOSABI_NONE)
@@ -3155,7 +3156,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   if (canHaveMemtagGlobals()) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
-    createTaggedSymbols(ctx.objectFiles);
+    createTaggedSymbols(ctx);
   }
 
   // Create synthesized sections such as .got and .plt. This is called before
