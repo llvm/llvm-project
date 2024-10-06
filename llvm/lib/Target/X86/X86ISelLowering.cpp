@@ -51206,10 +51206,10 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
-static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
+static SDValue combineOrXorWithSETCC(unsigned Opc, const SDLoc &DL, EVT VT,
+                                     SDValue N0, SDValue N1,
                                      SelectionDAG &DAG) {
-  assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::OR) &&
-         "Unexpected opcode");
+  assert((Opc == ISD::XOR || Opc == ISD::OR) && "Unexpected opcode");
 
   // Delegate to combineAddOrSubToADCOrSBB if we have:
   //
@@ -51220,23 +51220,19 @@ static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
   if (N0.getOpcode() == ISD::ZERO_EXTEND &&
       N0.getOperand(0).getOpcode() == X86ISD::SETCC && N0.hasOneUse()) {
     if (auto *N1C = dyn_cast<ConstantSDNode>(N1)) {
-      bool IsSub = N->getOpcode() == ISD::XOR;
+      bool IsSub = Opc == ISD::XOR;
       bool N1COdd = N1C->getZExtValue() & 1;
-      if (IsSub ? N1COdd : !N1COdd) {
-        SDLoc DL(N);
-        EVT VT = N->getValueType(0);
+      if (IsSub ? N1COdd : !N1COdd)
         if (SDValue R = combineAddOrSubToADCOrSBB(IsSub, DL, VT, N1, N0, DAG))
           return R;
-      }
     }
   }
 
   // not(pcmpeq(and(X,CstPow2),0)) -> pcmpeq(and(X,CstPow2),CstPow2)
-  if (N->getOpcode() == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
+  if (Opc == ISD::XOR && N0.getOpcode() == X86ISD::PCMPEQ &&
       N0.getOperand(0).getOpcode() == ISD::AND &&
       ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode()) &&
       ISD::isBuildVectorAllOnes(N1.getNode())) {
-    MVT VT = N->getSimpleValueType(0);
     APInt UndefElts;
     SmallVector<APInt> EltBits;
     if (getTargetConstantBitsFromNode(N0.getOperand(0).getOperand(1),
@@ -51247,7 +51243,7 @@ static SDValue combineOrXorWithSETCC(SDNode *N, SDValue N0, SDValue N1,
         IsPow2OrUndef &= UndefElts[I] || EltBits[I].isPowerOf2();
 
       if (IsPow2OrUndef)
-        return DAG.getNode(X86ISD::PCMPEQ, SDLoc(N), VT, N0.getOperand(0),
+        return DAG.getNode(X86ISD::PCMPEQ, DL, VT, N0.getOperand(0),
                            N0.getOperand(0).getOperand(1));
     }
   }
@@ -51409,7 +51405,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     if (SDValue R = foldMaskedMerge(N, DAG))
       return R;
 
-  if (SDValue R = combineOrXorWithSETCC(N, N0, N1, DAG))
+  if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
 
   return SDValue();
@@ -53638,7 +53634,7 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue SetCC = foldXor1SetCC(N, DAG))
     return SetCC;
 
-  if (SDValue R = combineOrXorWithSETCC(N, N0, N1, DAG))
+  if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), DL, VT, N0, N1, DAG))
     return R;
 
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
