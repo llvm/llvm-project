@@ -497,6 +497,7 @@ clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
