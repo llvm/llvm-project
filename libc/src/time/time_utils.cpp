@@ -118,17 +118,17 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
   return years;
 }
 
-volatile int lock = 0;
+volatile int file_usage = 0;
 
 void release_file(FILE *fp) {
-  lock = 0;
+  file_usage = 0;
   fclose(fp);
 }
 
 void acquire_file(FILE *fp, char *timezone) {
   while (1) {
-    if (lock == 0) {
-      lock = 1;
+    if (file_usage == 0) {
+      file_usage = 1;
       break;
     }
   }
@@ -251,7 +251,8 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
     acquire_file(fp, timezone);
   }
 
-  if (lock == 0) {
+  if (file_usage == 0) {
+    release_file(fp);
     return time_utils::out_of_range();
   }
 
