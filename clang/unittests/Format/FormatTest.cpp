@@ -20014,12 +20014,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
   Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = false;
   verifyFormat("unsigned int f1(void);\n"
                "void f2(void);\n"
-               "size_t f3(void);\n",
-               Alignment);
-  Alignment.AlignConsecutiveDeclarations.AlignFunctionDeclarations = true;
-  verifyFormat("unsigned int f1(void);\n"
-               "void         f2(void);\n"
-               "size_t       f3(void);\n",
+               "size_t f3(void);",
                Alignment);
 }
 

@@ -302,11 +302,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     Style.FIELD.Enabled = true;                                                \
     CHECK_PARSE(                                                               \
         #FIELD ": None", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+        FormatStyle::AlignConsecutiveStyle({}));                               \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -331,11 +327,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(                                                               \
         #FIELD ": false", FIELD,                                               \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+        FormatStyle::AlignConsecutiveStyle({}));                               \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
@@ -349,6 +341,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
+    CHECK_PARSE_NESTED_BOOL(FIELD. AlignFunctionDeclarations);                 \
   } while (false)
 
   CHECK_ALIGN_CONSECUTIVE(AlignConsecutiveAssignments);
