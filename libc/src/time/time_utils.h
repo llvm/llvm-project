@@ -109,8 +109,6 @@ LIBC_INLINE struct tm *localtime(const time_t *t_ptr) {
     return nullptr;
   }
 
-  set_dst(&result);
-
   return &result;
 }
 
@@ -123,8 +121,6 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *t_ptr,
     out_of_range();
     return nullptr;
   }
-
-  set_dst(input);
 
   return input;
 }
