@@ -384,6 +384,8 @@ enum EdgeKind_aarch64 : Edge::Kind {
   ///     phase will result in an assert/unreachable during the fixup phase.
   ///
   RequestTLSDescEntryAndTransformToPageOffset12,
+  // First platform specific relocation.
+  FirstPlatformRelocation
 };
 
 /// Returns a string name for the given aarch64 edge. For debugging purposes
