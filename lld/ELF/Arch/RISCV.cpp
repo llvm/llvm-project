@@ -29,7 +29,7 @@ namespace {
 
 class RISCV final : public TargetInfo {
 public:
-  RISCV();
+  RISCV(Ctx &);
   uint32_t calcEFlags() const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -107,7 +107,7 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
          (extractBits(imm, 4, 0) << 7);
 }
 
-RISCV::RISCV() {
+RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_RISCV_COPY;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
@@ -1047,8 +1047,8 @@ public:
   RISCVAttributesSection()
       : SyntheticSection(0, SHT_RISCV_ATTRIBUTES, 1, ".riscv.attributes") {}
 
-  size_t getSize() const override { return size; }
-  void writeTo(uint8_t *buf) override;
+  size_t getSize(Ctx &) const override { return size; }
+  void writeTo(Ctx &, uint8_t *buf) override;
 
   static constexpr StringRef vendor = "riscv";
   DenseMap<unsigned, unsigned> intAttr;
@@ -1276,8 +1276,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
   return &merged;
 }
 
-void RISCVAttributesSection::writeTo(uint8_t *buf) {
-  const size_t size = getSize();
+void RISCVAttributesSection::writeTo(Ctx &ctx, uint8_t *buf) {
+  const size_t size = getSize(ctx);
   uint8_t *const end = buf + size;
   *buf = ELFAttrs::Format_Version;
   write32(buf + 1, size - 1);
@@ -1305,7 +1305,7 @@ void RISCVAttributesSection::writeTo(uint8_t *buf) {
   }
 }
 
-void elf::mergeRISCVAttributesSections() {
+void elf::mergeRISCVAttributesSections(Ctx &) {
   // Find the first input SHT_RISCV_ATTRIBUTES; return if not found.
   size_t place =
       llvm::find_if(ctx.inputSections,
@@ -1328,7 +1328,7 @@ void elf::mergeRISCVAttributesSections() {
                            mergeAttributesSection(sections));
 }
 
-TargetInfo *elf::getRISCVTargetInfo() {
-  static RISCV target;
+TargetInfo *elf::getRISCVTargetInfo(Ctx &ctx) {
+  static RISCV target(ctx);
   return &target;
 }

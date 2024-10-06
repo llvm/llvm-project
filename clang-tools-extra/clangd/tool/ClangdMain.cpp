@@ -919,6 +919,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.CodeComplete.EnableFunctionArgSnippets = EnableFunctionArgSnippets;
   Opts.CodeComplete.RunParser = CodeCompletionParse;
   Opts.CodeComplete.RankingModel = RankingModel;
+  // FIXME: If we're using C++20 modules, force the lookup process to load
+  // external decls, since currently the index doesn't support C++20 modules.
+  Opts.CodeComplete.ForceLoadPreamble = ExperimentalModulesSupport;
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;

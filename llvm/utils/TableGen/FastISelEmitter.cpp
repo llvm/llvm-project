@@ -269,7 +269,7 @@ struct OperandsSignature {
       if (Op.getSimpleType(0) != VT)
         return false;
 
-      DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
+      const DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
       if (!OpDI)
         return false;
       const Record *OpLeafRec = OpDI->getDef();
@@ -509,7 +509,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
       if (!Dst.getChild(1).isLeaf())
         continue;
 
-      DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
+      const DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
       if (SR)
         SubRegNo = getQualifiedName(SR->getDef());
       else

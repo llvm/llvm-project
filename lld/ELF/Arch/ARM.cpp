@@ -28,7 +28,7 @@ using namespace llvm::object;
 namespace {
 class ARM final : public TargetInfo {
 public:
-  ARM();
+  ARM(Ctx &);
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -54,7 +54,7 @@ enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 
 static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
-ARM::ARM() {
+ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_ARM_COPY;
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
@@ -491,9 +491,10 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 // Helper to produce message text when LLD detects that a CALL relocation to
 // a non STT_FUNC symbol that may result in incorrect interworking between ARM
 // or Thumb.
-static void stateChangeWarning(uint8_t *loc, RelType relt, const Symbol &s) {
+static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
+                               const Symbol &s) {
   assert(!s.isFunc());
-  const ErrorPlace place = getErrorPlace(loc);
+  const ErrorPlace place = getErrorPlace(ctx, loc);
   std::string hint;
   if (!place.srcLoc.empty())
     hint = "; " + place.srcLoc;
@@ -630,7 +631,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
@@ -687,7 +688,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == useThumb)
-      stateChangeWarning(loc, rel.type, *rel.sym);
+      stateChangeWarning(ctx, loc, rel.type, *rel.sym);
     if ((rel.sym->isFunc() || rel.sym->isInPlt()) ? !useThumb : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done
@@ -1260,7 +1261,7 @@ static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
 // name with __acle_se_.
 // Both these symbols are Thumb function symbols with external linkage.
 // <sym> may be redefined in .gnu.sgstubs.
-void elf::processArmCmseSymbols() {
+void elf::processArmCmseSymbols(Ctx &ctx) {
   if (!ctx.arg.cmseImplib)
     return;
   // Only symbols with external linkage end up in ctx.symtab, so no need to do
@@ -1379,7 +1380,7 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
   sgVeneers.emplace_back(ss);
 }
 
-void ArmCmseSGSection::writeTo(uint8_t *buf) {
+void ArmCmseSGSection::writeTo(Ctx &ctx, uint8_t *buf) {
   for (ArmCmseSGVeneer *s : sgVeneers) {
     uint8_t *p = buf + s->offset;
     write16(p + 0, 0xe97f); // SG
@@ -1396,14 +1397,14 @@ void ArmCmseSGSection::addMappingSymbol() {
   addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
 }
 
-size_t ArmCmseSGSection::getSize() const {
+size_t ArmCmseSGSection::getSize(Ctx &) const {
   if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
-void ArmCmseSGSection::finalizeContents() {
+void ArmCmseSGSection::finalizeContents(Ctx &) {
   if (sgVeneers.empty())
     return;
 
@@ -1468,10 +1469,10 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   for (auto &[osec, isec] : osIsPairs) {
     osec->sectionIndex = ++idx;
     osec->recordSection(isec);
-    osec->finalizeInputSections();
+    osec->finalizeInputSections(ctx);
     osec->shName = shstrtab->addString(osec->name);
-    osec->size = isec->getSize();
-    isec->finalizeContents();
+    osec->size = isec->getSize(ctx);
+    isec->finalizeContents(ctx);
     osec->offset = alignToPowerOf2(off, osec->addralign);
     off = osec->offset + osec->size;
   }
@@ -1524,7 +1525,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
   {
     parallel::TaskGroup tg;
     for (auto &[osec, _] : osIsPairs)
-      osec->template writeTo<ELFT>(buf + osec->offset, tg);
+      osec->template writeTo<ELFT>(ctx, buf + osec->offset, tg);
   }
 
   if (auto e = buffer->commit())
@@ -1532,8 +1533,8 @@ template <typename ELFT> void elf::writeARMCmseImportLib() {
           "': " + toString(std::move(e)));
 }
 
-TargetInfo *elf::getARMTargetInfo() {
-  static ARM target;
+TargetInfo *elf::getARMTargetInfo(Ctx &ctx) {
+  static ARM target(ctx);
   return &target;
 }
 

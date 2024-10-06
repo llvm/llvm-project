@@ -84,6 +84,76 @@ non-zero exit code.
     #14 0x0001958960dc  (<unknown module>)
     #15 0x2f557ffffffffffc  (<unknown module>)
 
+Run-time flags
+--------------
+
+RealtimeSanitizer supports a number of run-time flags, which can be specified in the ``RTSAN_OPTIONS`` environment variable:
+
+.. code-block:: console
+
+   % RTSAN_OPTIONS=option_1=true:path_option_2="/some/file.txt" ./a.out
+   ...
+
+Or at compile-time by providing the symbol ``__rtsan_default_options``:
+
+.. code-block:: c
+
+  __attribute__((__visibility__("default")))
+  extern "C" const char *__rtsan_default_options() {
+    return "symbolize=false:abort_on_error=0:log_to_syslog=0";
+  }
+
+You can see all sanitizer options (some of which are unsupported) by using the ``help`` flag:
+
+.. code-block:: console
+
+   % RTSAN_OPTIONS=help=true ./a.out
+
+A **partial** list of flags RealtimeSanitizer respects:
+
+.. list-table:: Run-time Flags
+   :widths: 20 10 10 70
+   :header-rows: 1
+
+   * - Flag name
+     - Default value
+     - Type
+     - Short description
+   * - ``halt_on_error``
+     - ``true``
+     - boolean
+     - Exit after first reported error. If false (continue after a detected error), deduplicates error stacks so errors appear only once.
+   * - ``print_stats_on_exit``
+     - ``false``
+     - boolean
+     - Print stats on exit. Includes total and unique errors.
+   * - ``color``
+     - ``"auto"``
+     - string
+     - Colorize reports: (always|never|auto).
+   * - ``fast_unwind_on_fatal``
+     - ``false``
+     - boolean
+     - If available, use the fast frame-pointer-based unwinder on detected errors. If true, ensure the code under test has been compiled with frame pointers with ``-fno-omit-frame-pointers`` or similar.
+   * - ``abort_on_error``
+     - OS dependent
+     - boolean
+     - If true, the tool calls abort() instead of _exit() after printing the error report. On some OSes (OSX, for exmple) this is beneficial because a better stack trace is emitted on crash.
+   * - ``symbolize``
+     - ``true``
+     - boolean
+     - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
+
+
+Some issues with flags can be debugged using the ``verbosity=$NUM`` flag:
+
+.. code-block:: console
+
+   % RTSAN_OPTIONS=verbosity=1:misspelled_flag=true ./a.out
+   WARNING: found 1 unrecognized flag(s):
+   misspelled_flag
+   ...
+
 Disabling
 ---------
 

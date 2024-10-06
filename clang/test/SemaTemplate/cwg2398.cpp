@@ -106,12 +106,10 @@ namespace type_pack3 {
   template<class T3> struct B;
 
   template<template<class T4              > class TT1, class T5              > struct B<TT1<T5        >>;
-  // new-note@-1 {{template is declared here}}
-  template<template<class T6, class ...T7s> class TT2, class T8, class ...T9s> struct B<TT2<T8, T9s...>>;
-  // old-note@-1 {{template is declared here}}
+
+  template<template<class T6, class ...T7s> class TT2, class T8, class ...T9s> struct B<TT2<T8, T9s...>> {};
 
   template struct B<A<int>>;
-  // expected-error@-1 {{explicit instantiation of undefined template}}
 } // namespace type_pack3
 
 namespace gcc_issue {
@@ -364,6 +362,73 @@ namespace classes {
   } // namespace defaulted
 } // namespace classes
 
+namespace packs {
+  namespace t1 {
+    // FIXME: This should be rejected
+    template<template<int, int...> class> struct A {};
+    // old-note@-1 {{previous non-type template parameter with type 'int' is here}}
+
+    template<char> struct B;
+    // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
+
+    template struct A<B>;
+    // old-error@-1 {{has different template parameters}}
+  } // namespace t1
+  namespace t2 {
+    template<template<char, int...> class> struct A {};
+    // old-note@-1 {{previous non-type template parameter with type 'char' is here}}
+
+    template<int> struct B;
+    // old-note@-1 {{template non-type parameter has a different type 'int' in template argument}}
+
+    template struct A<B>;
+    // old-error@-1 {{has different template parameters}}
+  } // namespace t2
+  namespace t3 {
+    // FIXME: This should be rejected
+    template<template<int...> class> struct A {};
+    // old-note@-1 {{previous non-type template parameter with type 'int' is here}}
+
+    template<char> struct B;
+    // old-note@-1 {{template non-type parameter has a different type 'char' in template argument}}
+
+    template struct A<B>;
+    // old-error@-1 {{has different template parameters}}
+  } // namespace t3
+  namespace t4 {
+    template<template<char...> class> struct A {};
+    // old-note@-1 {{previous non-type template parameter with type 'char' is here}}
+
+    template<int> struct B;
+    // old-note@-1 {{template non-type parameter has a different type 'int' in template argument}}
+
+    template struct A<B>;
+    // old-error@-1 {{has different template parameters}}
+  } // namespace t4
+} // namespace packs
+
+namespace partial {
+  namespace t1 {
+    template<template<class... T1s> class TT1> struct A {};
+
+    template<template<class T2> class TT2> struct A<TT2>;
+    // new-note@-1 {{template is declared here}}
+
+    template<class... T3s> struct B;
+    template struct A<B>;
+    // new-error@-1 {{explicit instantiation of undefined template}}
+  } // namespace t1
+  namespace t2 {
+    template<template<class... T1s> class TT1> struct A;
+
+    template<template<class T2> class TT2> struct A<TT2> {};
+
+    template<class T3> struct B;
+    template struct A<B>;
+  } // namespace t1
+
+} // namespace partial
+
 namespace regression1 {
   template <typename T, typename Y> struct map {};
   template <typename T> class foo {};
@@ -380,6 +445,93 @@ namespace regression1 {
   }
 } // namespace regression1
 
+namespace constraints {
+  template <class T> concept C1 = true;
+  // new-note@-1 {{similar constraint expression here}}
+  // new-note@-2 2{{similar constraint expressions not considered equivalent}}
+
+  template <class T> concept C2 = C1<T> && true;
+  // new-note@-1 2{{similar constraint expression here}}
+
+  template <class T> concept D1 = true;
+  // new-note@-1 {{similar constraint expressions not considered equivalent}}
+
+  namespace t1 {
+    template<template<C1, class... T1s> class TT1> // new-note {{TT1' declared here}}
+    struct A {};
+    template<D1, class T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t1
+  namespace t2 {
+    template<template<C2, class... T1s> class TT1> struct A {};
+    template<C1, class T2> struct B {};
+    template struct A<B>;
+  } // namespace t2
+  namespace t3 {
+    template<template<C1, class... T1s> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+    template<C2, class T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t2
+  namespace t4 {
+    // FIXME: This should be accepted.
+    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+    template<C1 T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t4
+  namespace t5 {
+    // FIXME: This should be accepted
+    template<template<C2... T1s> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+    template<C1 T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t5
+  namespace t6 {
+    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+    template<C2 T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t6
+  namespace t7 {
+    template<template<class... T1s> class TT1>
+    struct A {};
+    template<C1 T2> struct B {};
+    template struct A<B>;
+  } // namespace t7
+  namespace t8 {
+    template<template<C1... T1s> class TT1>
+    struct A {};
+    template<class T2> struct B {};
+    template struct A<B>;
+  } // namespace t8
+  namespace t9 {
+    template<template<C1... T1s> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+    template<D1 T2> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t9
+  namespace t10 {
+    template<template<class...> requires C1<int> class TT1> // new-note {{'TT1' declared here}}
+    struct A {};
+
+    template<class> requires C2<int> struct B {}; // new-note {{'B' declared here}}
+    template struct A<B>;
+    // new-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
+  } // namespace t10
+  namespace t11 {
+    template<template<class...> requires C2<int> class TT1> struct A {};
+    template<class> requires C1<int> struct B {};
+    template struct A<B>;
+  } // namespace t11
+} // namespace constraints
+
 namespace regression2 {
   template <class> struct D {};
 
@@ -389,3 +541,9 @@ namespace regression2 {
   template <typename, int> struct Matrix;
   template struct D<Matrix<double, 3>>;
 } // namespace regression2
+
+namespace regression3 {
+  template <template <auto...> class TT> struct A {};
+  template <auto, int> struct B;
+  template struct A<B>;
+} // namespace regression3

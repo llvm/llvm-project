@@ -41,9 +41,11 @@ define half @fabs_f16(half %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvt s0, h0
-; CHECK-GI-NOFP16-NEXT:    fabs s0, s0
-; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-GI-NOFP16-NEXT:    fmov w8, s0
+; CHECK-GI-NOFP16-NEXT:    and w8, w8, #0x7fff
+; CHECK-GI-NOFP16-NEXT:    fmov s0, w8
+; CHECK-GI-NOFP16-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_f16:
@@ -160,22 +162,8 @@ define <7 x half> @fabs_v7f16(<7 x half> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_v7f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[0], v0.h[4]
-; CHECK-GI-NOFP16-NEXT:    fabs v1.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
-; CHECK-GI-NOFP16-NEXT:    fabs v2.4s, v2.4s
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v1.h[2]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[3], v1.h[3]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[4], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[5], v2.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[6], v2.h[2]
+; CHECK-GI-NOFP16-NEXT:    mvni v1.8h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v7f16:
@@ -200,9 +188,8 @@ define <4 x half> @fabs_v4f16(<4 x half> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_v4f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fabs v0.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-GI-NOFP16-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v4f16:
@@ -227,12 +214,8 @@ define <8 x half> @fabs_v8f16(<8 x half> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_v8f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NOFP16-NEXT:    fabs v1.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    fabs v2.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
+; CHECK-GI-NOFP16-NEXT:    mvni v1.8h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v8f16:
@@ -259,18 +242,9 @@ define <16 x half> @fabs_v16f16(<16 x half> %a) {
 ;
 ; CHECK-GI-NOFP16-LABEL: fabs_v16f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
-; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl v3.4s, v1.4h
-; CHECK-GI-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-GI-NOFP16-NEXT:    fabs v2.4s, v2.4s
-; CHECK-GI-NOFP16-NEXT:    fabs v3.4s, v3.4s
-; CHECK-GI-NOFP16-NEXT:    fabs v4.4s, v0.4s
-; CHECK-GI-NOFP16-NEXT:    fabs v5.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v2.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v3.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn2 v0.8h, v4.4s
-; CHECK-GI-NOFP16-NEXT:    fcvtn2 v1.8h, v5.4s
+; CHECK-GI-NOFP16-NEXT:    mvni v2.8h, #128, lsl #8
+; CHECK-GI-NOFP16-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NOFP16-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fabs_v16f16:

@@ -57,6 +57,9 @@ def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
 def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
+def riscv_sw_guarded_call : SDNode<"RISCVISD::SW_GUARDED_CALL", SDT_RISCVCall,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                    SDNPVariadic]>;
 def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
@@ -69,6 +72,9 @@ def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
 def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
+def riscv_sw_guarded_tail : SDNode<"RISCVISD::SW_GUARDED_TAIL", SDT_RISCVCall,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
+                                    SDNPVariadic]>;
 def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
                                     SDTBrind, [SDNPHasChain]>;
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
@@ -514,8 +520,8 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class Load_ri<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_LOAD, (outs GPR:$rd), (ins GPRMem:$rs1, simm12:$imm12),
+class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
+    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins GPRMem:$rs1, simm12:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -529,9 +535,9 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 // reflecting the order these fields are specified in the instruction
 // encoding.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-class Store_rri<bits<3> funct3, string opcodestr>
+class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstS<funct3, OPC_STORE, (outs),
-              (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12),
+              (ins rty:$rs2, GPRMem:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>
@@ -1555,10 +1561,15 @@ let Predicates = [NoStdExtZicfilp] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
                                 [(riscv_call GPRJALR:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in
+let Predicates = [HasStdExtZicfilp] in {
 def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
                                      [(riscv_call GPRJALRNonX7:$rs1)]>,
                               PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+// For large code model, non-indirect calls could be software-guarded
+def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
+                                  [(riscv_sw_guarded_call GPRX7:$rs1)]>,
+                           PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
+}
 }
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1579,10 +1590,15 @@ let Predicates = [NoStdExtZicfilp] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                                 [(riscv_tail GPRTC:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in
+let Predicates = [HasStdExtZicfilp] in {
 def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
                                      [(riscv_tail GPRTCNonX7:$rs1)]>,
                               PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+// For large code model, non-indirect calls could be software-guarded
+def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
+                                  [(riscv_sw_guarded_tail GPRX7:$rs1)]>,
+                           PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
+}
 }
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
@@ -1880,6 +1896,7 @@ def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 // Select W instructions if only the lower 32 bits of the result are used.
 def : PatGprGpr<binop_allwusers<add>, ADDW>;
 def : PatGprSimm12<binop_allwusers<add>, ADDIW>;
+def : PatGprImm<binop_allwusers<add>, ADDIW, u32simm12>;
 def : PatGprGpr<binop_allwusers<sub>, SUBW>;
 def : PatGprImm<binop_allwusers<shl>, SLLIW, uimm5>;
 
@@ -1893,14 +1910,10 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 // SimplifyDemandedBits.
 def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
           (COPY GPR:$rs1)>;
-def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
-          (ANDI GPR:$rs1, u32simm12:$imm)>;
+def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
+def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
+def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
-def : Pat<(binop_allwusers<or> GPR:$rs1, u32simm12:$imm),
-          (ORI GPR:$rs1, u32simm12:$imm)>;
-
-def : Pat<(binop_allwusers<xor> GPR:$rs1, u32simm12:$imm),
-          (XORI GPR:$rs1, u32simm12:$imm)>;
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
