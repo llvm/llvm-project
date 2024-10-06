@@ -119,7 +119,6 @@ add_entrypoint_object(
     .time_utils
     libc.hdr.types.time_t
     libc.include.time
-    libc.src.time.mktime
 )
 
 add_entrypoint_object(
