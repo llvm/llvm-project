@@ -22,7 +22,7 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp0) {
   char *result;
   t = 0;
   result = LIBC_NAMESPACE::ctime(&t);
-  ASSERT_STREQ("Thu Jan  1 01:00:00 1970\n", result);
+  ASSERT_STREQ("Thu Jan  1 00:00:00 1970\n", result);
 }
 
 TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
@@ -30,7 +30,7 @@ TEST(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   char *result;
   t = 2147483647;
   result = LIBC_NAMESPACE::ctime(&t);
-  ASSERT_STREQ("Tue Jan 19 04:14:07 2038\n", result);
+  ASSERT_STREQ("Tue Jan 19 03:14:07 2038\n", result);
 }
 
 TEST(LlvmLibcCtime, InvalidArgument) {
