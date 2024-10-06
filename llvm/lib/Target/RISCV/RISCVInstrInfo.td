@@ -606,6 +606,16 @@ class Priv_rr<string opcodestr, bits<7> funct7>
   let rd = 0;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class Unary_r<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class UnaryW_r<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
