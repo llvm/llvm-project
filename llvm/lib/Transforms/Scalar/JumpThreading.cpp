@@ -2380,7 +2380,10 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   // Build BPI/BFI before any changes are made to IR.
   bool HasProfile = doesBlockHaveProfileData(BB);
   auto *BFI = getOrCreateBFI(HasProfile);
-  auto *BPI = getOrCreateBPI(BFI != nullptr);
+  BranchProbabilityInfo *BPI = nullptr;
+  if (BFI) {
+    BPI = getOrCreateBPI(true);
+  }
 
   // And finally, do it!  Start by factoring the predecessors if needed.
   BasicBlock *PredBB;
@@ -2520,7 +2523,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
                                                      BlockFrequencyInfo *BFI,
                                                      BranchProbabilityInfo *BPI,
                                                      bool HasProfile) {
-  assert(((BFI && BPI) || (!BFI && !BFI)) &&
+  assert(((BFI && BPI) || (!BFI && !BPI)) &&
          "Both BFI & BPI should either be set or unset");
 
   if (!BFI) {
