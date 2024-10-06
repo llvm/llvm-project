@@ -5204,7 +5204,8 @@ bool Sema::CheckTemplateArgument(
     unsigned ArgumentPackIndex,
     SmallVectorImpl<TemplateArgument> &SugaredConverted,
     SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-    CheckTemplateArgumentKind CTAK, bool *MatchedPackOnParmToNonPackOnArg) {
+    CheckTemplateArgumentKind CTAK, bool PartialOrdering,
+    bool *MatchedPackOnParmToNonPackOnArg) {
   // Check template type parameters.
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
     return CheckTemplateTypeArgument(TTP, Arg, SugaredConverted,
@@ -5419,8 +5420,7 @@ bool Sema::CheckTemplateArgument(
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
-    if (CheckTemplateTemplateArgument(TempParm, Params, Arg,
-                                      /*IsDeduced=*/CTAK != CTAK_Specified,
+    if (CheckTemplateTemplateArgument(TempParm, Params, Arg, PartialOrdering,
                                       MatchedPackOnParmToNonPackOnArg))
       return true;
 
@@ -5571,10 +5571,11 @@ bool Sema::CheckTemplateArgumentList(
 
     if (ArgIdx < NumArgs) {
       // Check the template argument we were given.
-      if (CheckTemplateArgument(
-              *Param, NewArgs[ArgIdx], Template, TemplateLoc, RAngleLoc,
-              SugaredArgumentPack.size(), SugaredConverted, CanonicalConverted,
-              CTAK_Specified, MatchedPackOnParmToNonPackOnArg))
+      if (CheckTemplateArgument(*Param, NewArgs[ArgIdx], Template, TemplateLoc,
+                                RAngleLoc, SugaredArgumentPack.size(),
+                                SugaredConverted, CanonicalConverted,
+                                CTAK_Specified, /*PartialOrdering=*/false,
+                                MatchedPackOnParmToNonPackOnArg))
         return true;
 
       CanonicalConverted.back().setIsDefaulted(
@@ -5732,7 +5733,7 @@ bool Sema::CheckTemplateArgumentList(
     // Check the default template argument.
     if (CheckTemplateArgument(*Param, Arg, Template, TemplateLoc, RAngleLoc, 0,
                               SugaredConverted, CanonicalConverted,
-                              CTAK_Specified,
+                              CTAK_Specified, /*PartialOrdering=*/false,
                               /*MatchedPackOnParmToNonPackOnArg=*/nullptr))
       return true;
 
@@ -7325,7 +7326,7 @@ static void DiagnoseTemplateParameterListArityMismatch(
 
 bool Sema::CheckTemplateTemplateArgument(
     TemplateTemplateParmDecl *Param, TemplateParameterList *Params,
-    TemplateArgumentLoc &Arg, bool IsDeduced,
+    TemplateArgumentLoc &Arg, bool PartialOrdering,
     bool *MatchedPackOnParmToNonPackOnArg) {
   TemplateName Name = Arg.getArgument().getAsTemplateOrTemplatePattern();
   auto [Template, DefaultArgs] = Name.getTemplateDeclAndDefaultArgs();
@@ -7370,8 +7371,8 @@ bool Sema::CheckTemplateTemplateArgument(
   //   A template-argument matches a template template-parameter P when P
   //   is at least as specialized as the template-argument A.
   if (!isTemplateTemplateParameterAtLeastAsSpecializedAs(
-          Params, Param, Template, DefaultArgs, Arg.getLocation(), IsDeduced,
-          MatchedPackOnParmToNonPackOnArg))
+          Params, Param, Template, DefaultArgs, Arg.getLocation(),
+          PartialOrdering, MatchedPackOnParmToNonPackOnArg))
     return true;
   // P2113
   // C++20[temp.func.order]p2
