@@ -124,7 +124,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   // intrinsics like dbg.value.
   using TargetSet = CodeGenIntrinsicTable::TargetSet;
   const TargetSet *Set = nullptr;
-  for (const auto &Target : Ints.Targets) {
+  for (const auto &Target : Ints.getTargets()) {
     if (Target.Name == IntrinsicPrefix) {
       Set = &Target;
       break;
@@ -132,7 +132,7 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
   }
   if (!Set) {
     // The first entry is for target independent intrinsics, so drop it.
-    auto KnowTargets = ArrayRef<TargetSet>(Ints.Targets).drop_front();
+    auto KnowTargets = Ints.getTargets().drop_front();
     PrintFatalError([KnowTargets](raw_ostream &OS) {
       OS << "tried to generate intrinsics for unknown target "
          << IntrinsicPrefix << "\nKnown targets are: ";
@@ -230,7 +230,7 @@ struct IntrinsicTargetInfo {
 };
 static constexpr IntrinsicTargetInfo TargetInfos[] = {
 )";
-  for (const auto [Name, Offset, Count] : Ints.Targets)
+  for (const auto [Name, Offset, Count] : Ints.getTargets())
     OS << formatv("  {{\"{}\", {}, {}},\n", Name, Offset, Count);
   OS << R"(};
 #endif

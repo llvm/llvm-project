@@ -1231,7 +1231,7 @@ void elf::writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
 }
 
 void PPC64PltCallStub::writeTo(uint8_t *buf) {
-  int64_t offset = destination.getGotPltVA() - getPPC64TocBase();
+  int64_t offset = destination.getGotPltVA() - getPPC64TocBase(ctx);
   // Save the TOC pointer to the save-slot reserved in the call frame.
   write32(buf + 0, 0xf8410018); // std     r2,24(r1)
   writePPC64LoadAndBranch(buf + 4, offset);
@@ -1257,7 +1257,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     write32(buf + 4, 0x48000000 | (offset & 0x03fffffc)); // b    <offset>
   } else if (isInt<34>(offset)) {
     int nextInstOffset;
-    uint64_t tocOffset = destination.getVA() - getPPC64TocBase();
+    uint64_t tocOffset = destination.getVA() - getPPC64TocBase(ctx);
     if (tocOffset >> 16 > 0) {
       const uint64_t addi = ADDI_R12_TO_R12_NO_DISP | (tocOffset & 0xffff);
       const uint64_t addis =
@@ -1276,7 +1276,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
     ctx.in.ppc64LongBranchTarget->addEntry(&destination, addend);
     const int64_t offsetFromTOC =
         ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-        getPPC64TocBase();
+        getPPC64TocBase(ctx);
     writePPC64LoadAndBranch(buf + 4, offsetFromTOC);
   }
 }
@@ -1303,8 +1303,8 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
   if (ctx.arg.power10Stubs) {
     const uint64_t imm = (((offset >> 16) & 0x3ffff) << 32) | (offset & 0xffff);
     // pld 12, func@plt@pcrel or  paddi r12, 0, func@pcrel
-    writePrefixedInstruction(
-        buf, (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
+    writePrefixedInst(ctx, buf,
+                      (gotPlt ? PLD_R12_NO_DISP : PADDI_R12_NO_DISP) | imm);
     nextInstOffset = 8;
   } else {
     uint32_t off = offset - 8;
@@ -1338,7 +1338,7 @@ bool PPC64R12SetupStub::isCompatibleWith(const InputSection &isec,
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
   int64_t offset =
       ctx.in.ppc64LongBranchTarget->getEntryVA(&destination, addend) -
-      getPPC64TocBase();
+      getPPC64TocBase(ctx);
   writePPC64LoadAndBranch(buf, offset);
 }
 
@@ -1514,7 +1514,7 @@ static Thunk *addThunkAVR(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
 }
 
 static Thunk *addThunkMips(Ctx &ctx, RelType type, Symbol &s) {
-  if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6())
+  if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6(ctx))
     return make<MicroMipsR6Thunk>(ctx, s);
   if (s.stOther & STO_MIPS_MICROMIPS)
     return make<MicroMipsThunk>(ctx, s);
@@ -1539,7 +1539,7 @@ static Thunk *addThunkPPC64(Ctx &ctx, RelType type, Symbol &s, int64_t a) {
   // If we are emitting stubs for NOTOC relocations, we need to tell
   // the PLT resolver that there can be multiple TOCs.
   if (type == R_PPC64_REL24_NOTOC)
-    getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt = 0x2;
+    ctx.target->ppc64DynamicSectionOpt = 0x2;
 
   if (s.isInPlt())
     return type == R_PPC64_REL24_NOTOC

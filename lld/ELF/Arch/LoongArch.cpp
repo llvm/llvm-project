@@ -212,7 +212,7 @@ LoongArch::LoongArch(Ctx &ctx) : TargetInfo(ctx) {
   ipltEntrySize = 16;
 }
 
-static uint32_t getEFlags(const InputFile *f) {
+static uint32_t getEFlags(Ctx &ctx, const InputFile *f) {
   if (ctx.arg.is64)
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
@@ -242,7 +242,7 @@ uint32_t LoongArch::calcEFlags() const {
       continue;
 
     // Take the first non-zero e_flags as the reference.
-    uint32_t flags = getEFlags(f);
+    uint32_t flags = getEFlags(ctx, f);
     if (target == 0 && flags != 0) {
       target = flags;
       targetFile = f;
@@ -825,7 +825,7 @@ bool LoongArch::relaxOnce(int pass) const {
     return false;
 
   if (pass == 0)
-    initSymbolAnchors();
+    initSymbolAnchors(ctx);
 
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
