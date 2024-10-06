@@ -194,9 +194,11 @@ multiclass VOP2Inst_e64_VOPD<string opName,
 }
 
 multiclass VOP2Inst_sdwa<string opName,
-                         VOPProfile P> {
+                         VOPProfile P,
+                         string revOp = opName> {
     if P.HasExtSDWA then
-      def _sdwa : VOP2_SDWA_Pseudo <opName, P>;
+      def _sdwa : VOP2_SDWA_Pseudo <opName, P>,
+                  Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)>;
 }
 
 multiclass VOP2Inst<string opName,
@@ -205,7 +207,7 @@ multiclass VOP2Inst<string opName,
                     string revOp = opName> :
     VOP2Inst_e32<opName, P, node, revOp>,
     VOP2Inst_e64<opName, P, node, revOp>,
-    VOP2Inst_sdwa<opName, P> {
+    VOP2Inst_sdwa<opName, P, revOp> {
     if P.HasExtDPP then
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
 }
@@ -252,7 +254,7 @@ multiclass VOP2Inst_VOPD<string opName,
                          string revOp = opName> :
     VOP2Inst_e32_VOPD<opName, P, VOPDOp, VOPDName, node, revOp>,
     VOP2Inst_e64_VOPD<opName, P, VOPDOp, VOPDName, node, revOp>,
-    VOP2Inst_sdwa<opName, P> {
+    VOP2Inst_sdwa<opName, P, revOp> {
     if P.HasExtDPP then
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
 }
@@ -270,7 +272,8 @@ multiclass VOP2bInst <string opName,
         }
 
         if P.HasExtSDWA then
-          def _sdwa  : VOP2_SDWA_Pseudo <opName, P> {
+          def _sdwa  : VOP2_SDWA_Pseudo <opName, P>,
+                       Commutable_REV<revOp#"_sdwa", !eq(revOp, opName)> {
             let AsmMatchConverter = "cvtSdwaVOP2b";
           }
         if P.HasExtDPP then

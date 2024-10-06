@@ -95,6 +95,22 @@ func.func @static_alloca() -> memref<32x18xf32> {
 
 // -----
 
+// CHECK-LABEL: func @static_alloca_zero()
+func.func @static_alloca_zero() -> memref<32x0x18xf32> {
+// CHECK: %[[sz1:.*]] = llvm.mlir.constant(32 : index) : i64
+// CHECK: %[[sz2:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[sz3:.*]] = llvm.mlir.constant(18 : index) : i64
+// CHECK: %[[st1:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[st2:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[num_elems:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[allocated:.*]] = llvm.alloca %[[num_elems]] x f32 : (i64) -> !llvm.ptr
+ %0 = memref.alloca() : memref<32x0x18xf32>
+
+ return %0 : memref<32x0x18xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @static_dealloc
 func.func @static_dealloc(%static: memref<10x8xf32>) {
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
