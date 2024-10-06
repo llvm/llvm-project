@@ -56448,10 +56448,8 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
 // condition comes from the subtract node that produced -X. This matches the
 // cmov expansion for absolute value. By swapping the operands we convert abs
 // to nabs.
-static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
+static SDValue combineSubABS(EVT VT, const SDLoc &DL, SDValue N0, SDValue N1,
+                             SelectionDAG &DAG) {
   if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
     return SDValue();
 
@@ -56463,8 +56461,6 @@ static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
   SDValue FalseOp = N1.getOperand(0);
   SDValue TrueOp = N1.getOperand(1);
   X86::CondCode CC = (X86::CondCode)N1.getConstantOperandVal(2);
-  MVT VT = N->getSimpleValueType(0);
-  SDLoc DL(N);
 
   // ABS condition should come from a negate operation.
   if ((CC == X86::COND_S || CC == X86::COND_NS) &&
@@ -56557,6 +56553,7 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
@@ -56579,7 +56576,6 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
       !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
       Op1->hasOneUse()) {
-    EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
                                  DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
     SDValue NewAdd =
@@ -56587,7 +56583,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
   }
 
-  if (SDValue V = combineSubABS(N, DAG))
+  if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))
     return V;
 
   // Try to synthesize horizontal subs from subs of shuffles.
@@ -56609,8 +56605,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     assert(!Op1->hasAnyUseOfValue(1) && "Overflow bit in use");
     SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
                               Op1.getOperand(1), Op1.getOperand(2));
-    return DAG.getNode(ISD::SUB, DL, Op0.getValueType(), ADC.getValue(0),
-                       Op1.getOperand(0));
+    return DAG.getNode(ISD::SUB, DL, VT, ADC.getValue(0), Op1.getOperand(0));
   }
 
   if (SDValue V = combineXorSubCTLZ(N, DL, DAG, Subtarget))
