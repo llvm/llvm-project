@@ -1621,15 +1621,21 @@ void VPlanTransforms::createInterleaveGroups(
     auto *Start =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
     VPValue *Addr = Start->getAddr();
-    if (!VPDT.properlyDominates(Addr->getDefiningRecipe(), InsertPos)) {
+    VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
+    if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
+      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
+      // InsertPos or sink loads above zero members to join it.
       bool InBounds = false;
       if (auto *Gep = dyn_cast<GetElementPtrInst>(
               getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
         InBounds = Gep->isInBounds();
 
-      // We cannot re-use the address of the first member because it does not
-      // dominate the insert position. Use the address of the insert position
-      // and create a PtrAdd to adjust the index to start at the first member.
+      // We cannot re-use the address of member zero because it does not
+      // dominate the insert position. Instead, use the address of the insert
+      // position and create a PtrAdd adjusting it to the address of member
+      // zero.
+      assert(IG->getIndex(IRInsertPos) != 0 &&
+             "index of insert position shouldn't be zero");
       APInt Offset(32,
                    getLoadStoreType(IRInsertPos)->getScalarSizeInBits() / 8 *
                        IG->getIndex(IRInsertPos),

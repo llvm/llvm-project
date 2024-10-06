@@ -1307,11 +1307,10 @@ public:
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
 
-  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags = {false},
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
-                            ArrayRef<VPValue *>({Ptr, Offset}),
-                            GEPFlagsTy(Flags), DL),
+                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
         Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
