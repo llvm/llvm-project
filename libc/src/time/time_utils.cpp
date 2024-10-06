@@ -118,6 +118,26 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
   return years;
 }
 
+volatile int lock = 0;
+
+void release_file(FILE *fp) {
+  lock = 0;
+  fclose(fp);
+}
+
+void acquire_file(FILE *fp, char *timezone) {
+  while (1) {
+    if (lock == 0) {
+      lock = 1;
+      break;
+    }
+  }
+
+  if (fgets(timezone, sizeof(timezone), fp) == NULL) {
+    release_file(fp);
+  }
+}
+
 // First, divide "total_seconds" by the number of seconds in a day to get the
 // number of days since Jan 1 1970. The remainder will be used to calculate the
 // number of Hours, Minutes and Seconds.
@@ -222,13 +242,18 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
 
   char timezone[128];
 
-  FILE *fp;
+  FILE *fp = NULL;
   fp = fopen("/etc/timezone", "rb");
   if (fp == NULL) {
     // TODO: implement getting timezone from `TZ` environment variable and
     // storing the value in `timezone`
-  } else if (fgets(timezone, sizeof(timezone), fp) == NULL)
+  } else {
+    acquire_file(fp, timezone);
+  }
+
+  if (lock == 0) {
     return time_utils::out_of_range();
+  }
 
   // UTC = 0
   int offset = 0;
@@ -267,7 +292,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   }
   tm->tm_hour += offset;
 
-  fclose(fp);
+  release_file(fp);
 
   return 0;
 }
