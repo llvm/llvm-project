@@ -1075,8 +1075,14 @@ int main() {
 }
 
 namespace GH100394 {
-struct C {
-  void f(this const C);
-  void f() const ;      // ok
+struct C1 {
+  void f(this const C1);
+  void f() const;        // ok
+};
+
+struct C2 {
+  void f(this const C2);    // expected-note {{previous declaration is here}}
+  void f(this volatile C2); // expected-error {{class member cannot be redeclared}} \
+                            // expected-warning {{volatile-qualified parameter type 'volatile C2' is deprecated}}
 };
 }

@@ -1511,8 +1511,11 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       auto NewObjectType = New->getFunctionObjectParameterReferenceType();
       auto OldObjectType = Old->getFunctionObjectParameterReferenceType();
 
-      if (NewObjectType.isConstQualified() != OldObjectType.isConstQualified())
-        return false;
+      if (Old->isExplicitObjectMemberFunction() &&
+          OldObjectType.getQualifiers() != NewObjectType.getQualifiers())
+        return OldObjectType.isConstQualified() &&
+               (NewObjectType.isConstQualified() ||
+                NewObjectType.isVolatileQualified());
 
       auto IsImplicitWithNoRefQual = [](const CXXMethodDecl *F) {
         return F->getRefQualifier() == RQ_None &&
