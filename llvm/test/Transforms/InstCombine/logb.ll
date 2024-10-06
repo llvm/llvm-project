@@ -37,5 +37,23 @@ define double @logb_zero() {
   ret double %r
 }
 
+define float @logbf_neg_zero() {
+; CHECK-LABEL: define float @logbf_neg_zero() {
+; CHECK-NEXT:    [[R:%.*]] = call float @logbf(float -0.000000e+00)
+; CHECK-NEXT:    ret float [[R]]
+;
+  %r = call float @logbf(float -0.000000e+00)
+  ret float %r
+}
+
+define double @logb_neg_zero() {
+; CHECK-LABEL: define double @logb_neg_zero() {
+; CHECK-NEXT:    [[R:%.*]] = call double @logb(double -0.000000e+00)
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = call double @logb(double -0.000000e+00)
+  ret double %r
+}
+
 declare float @logbf(float)
 declare double @logb(double)
