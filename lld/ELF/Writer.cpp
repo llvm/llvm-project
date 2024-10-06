@@ -186,7 +186,7 @@ void elf::addReservedSymbols(Ctx &ctx) {
     // support Small Data Area, define it arbitrarily as 0.
     addOptionalRegular(ctx, "_SDA_BASE_", nullptr, 0, STV_HIDDEN);
   } else if (ctx.arg.emachine == EM_PPC64) {
-    addPPC64SaveRestore();
+    addPPC64SaveRestore(ctx);
   }
 
   // The Power Architecture 64-bit v2 ABI defines a TableOfContents (TOC) which
@@ -377,7 +377,7 @@ template <class ELFT> void Writer<ELFT>::run() {
             "': " + toString(std::move(e)));
 
     if (!ctx.arg.cmseOutputLib.empty())
-      writeARMCmseImportLib<ELFT>();
+      writeARMCmseImportLib<ELFT>(ctx);
   }
 }
 
@@ -2082,7 +2082,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   ctx.script->checkFinalScriptConditions();
 
   if (ctx.arg.emachine == EM_ARM && !ctx.arg.isLE && ctx.arg.armBe8) {
-    addArmInputSectionMappingSymbols();
+    addArmInputSectionMappingSymbols(ctx);
     sortArmMappingSymbols();
   }
 }
