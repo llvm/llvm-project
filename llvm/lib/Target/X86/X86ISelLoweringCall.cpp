@@ -283,9 +283,10 @@ uint64_t X86TargetLowering::getByValTypeAlignment(Type *Ty,
 /// target-independent logic.
 /// For vector ops we check that the overall size isn't larger than our
 /// preferred vector width.
-EVT X86TargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
-  if (!FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
+EVT X86TargetLowering::getOptimalMemOpType(const MemOp &Op,
+                                           const AttributeList &FuncAttributes,
+                                           bool PreferIntScalar) const {
+  if (!PreferIntScalar) {
     if (Op.size() >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() || Op.isAligned(Align(16)))) {
       // FIXME: Check if unaligned 64-byte accesses are slow.

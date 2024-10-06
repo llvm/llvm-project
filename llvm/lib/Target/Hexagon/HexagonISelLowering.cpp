@@ -3783,7 +3783,8 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
 /// does not need to be loaded.  It returns EVT::Other if the type should be
 /// determined using generic target-independent logic.
 EVT HexagonTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    bool PreferIntScalar) const {
   if (Op.size() >= 8 && Op.isAligned(Align(8)))
     return MVT::i64;
   if (Op.size() >= 4 && Op.isAligned(Align(4)))

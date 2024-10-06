@@ -19198,12 +19198,11 @@ bool ARMTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned,
   return false;
 }
 
-
-EVT ARMTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+EVT ARMTargetLowering::getOptimalMemOpType(const MemOp &Op,
+                                           const AttributeList &FuncAttributes,
+                                           bool PreferIntScalar) const {
   // See if we can use NEON instructions for this...
-  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
-      !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
+  if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON()) {
     unsigned Fast;
     if (Op.size() >= 16 &&
         (Op.isAligned(Align(16)) ||

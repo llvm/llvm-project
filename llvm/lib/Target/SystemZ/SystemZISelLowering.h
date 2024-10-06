@@ -493,8 +493,8 @@ public:
   findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
                            const MemOp &Op, unsigned DstAS, unsigned SrcAS,
                            const AttributeList &FuncAttributes) const override;
-  EVT getOptimalMemOpType(const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override;
+  EVT getOptimalMemOpType(const MemOp &Op, const AttributeList &FuncAttributes,
+                          bool PreferIntScalar) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
 
