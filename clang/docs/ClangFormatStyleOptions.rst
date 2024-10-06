@@ -249,7 +249,7 @@ the configuration (without a prefix: ``Auto``).
 .. _AlignArrayOfStructures:
 
 **AlignArrayOfStructures** (``ArrayInitializerAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <AlignArrayOfStructures>`
-  if not ``None``, when using initialization for an array of structs
+  If not ``None``, when using initialization for an array of structs
   aligns the fields into columns.
 
 
@@ -307,11 +307,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -449,11 +450,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -591,11 +593,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -734,11 +737,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -996,11 +1000,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -1136,11 +1141,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
@@ -1276,11 +1282,12 @@ the configuration (without a prefix: ``Auto``).
   Alignment options.
 
   They can also be read as a whole for compatibility. The choices are:
-  - None
-  - Consecutive
-  - AcrossEmptyLines
-  - AcrossComments
-  - AcrossEmptyLinesAndComments
+
+  * ``None``
+  * ``Consecutive``
+  * ``AcrossEmptyLines``
+  * ``AcrossComments``
+  * ``AcrossEmptyLinesAndComments``
 
   For example, to align across empty lines and not across comments, either
   of these work.
