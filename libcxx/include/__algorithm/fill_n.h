@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_FILL_N_H
 #define _LIBCPP___ALGORITHM_FILL_N_H
 
+#include <__algorithm/for_each.h>
 #include <__algorithm/min.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
@@ -17,7 +18,6 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__utility/convert_to_integral.h>
-#include <__algorithm/for_each.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
