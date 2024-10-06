@@ -230,14 +230,14 @@ static void writePltHeaderLong(Ctx &ctx, uint8_t *buf) {
 
 // True if we should use Thumb PLTs, which currently require Thumb2, and are
 // only used if the target does not have the ARM ISA.
-static bool useThumbPLTs() {
+static bool useThumbPLTs(Ctx &ctx) {
   return ctx.arg.armHasThumb2ISA && !ctx.arg.armHasArmISA;
 }
 
 // The default PLT header requires the .got.plt to be within 128 Mb of the
 // .plt in the positive direction.
 void ARM::writePltHeader(uint8_t *buf) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     // The instruction sequence for thumb:
     //
     // 0: b500          push    {lr}
@@ -295,7 +295,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
 }
 
 void ARM::addPltHeaderSymbols(InputSection &isec) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     addSyntheticLocal("$t", STT_NOTYPE, 0, 0, isec);
     addSyntheticLocal("$d", STT_NOTYPE, 12, 0, isec);
   } else {
@@ -320,8 +320,7 @@ static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
 // .plt in the positive direction.
 void ARM::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
-
-  if (!useThumbPLTs()) {
+  if (!useThumbPLTs(ctx)) {
     uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 8;
 
     // The PLT entry is similar to the example given in Appendix A of ELF for
@@ -373,7 +372,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
-  if (useThumbPLTs()) {
+  if (useThumbPLTs(ctx)) {
     addSyntheticLocal("$t", STT_NOTYPE, off, 0, isec);
   } else {
     addSyntheticLocal("$a", STT_NOTYPE, off, 0, isec);
@@ -399,7 +398,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_JUMP24:
     // Source is ARM, all PLT entries are ARM so no interworking required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 set (Thumb).
-    assert(!useThumbPLTs() &&
+    assert(!useThumbPLTs(ctx) &&
            "If the source is ARM, we should not need Thumb PLTs");
     if (s.isFunc() && expr == R_PC && (s.getVA() & 1))
       return true;
@@ -413,7 +412,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_JUMP24:
     // Source is Thumb, when all PLT entries are ARM interworking is required.
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
-    if ((expr == R_PLT_PC && !useThumbPLTs()) ||
+    if ((expr == R_PLT_PC && !useThumbPLTs(ctx)) ||
         (s.isFunc() && (s.getVA() & 1) == 0))
       return true;
     [[fallthrough]];
@@ -683,7 +682,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // PLT entries are always ARM state so we know we need to interwork.
     assert(rel.sym); // R_ARM_THM_CALL is always reached via relocate().
     bool bit0Thumb = val & 1;
-    bool useThumb = bit0Thumb || useThumbPLTs();
+    bool useThumb = bit0Thumb || useThumbPLTs(ctx);
     bool isBlx = (read16(loc + 2) & 0x1000) == 0;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
@@ -1330,7 +1329,8 @@ private:
 ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
-                       /*alignment=*/32, ".gnu.sgstubs") {
+                       /*alignment=*/32, ".gnu.sgstubs"),
+      ctx(ctx) {
   entsize = ACLESESYM_SIZE;
   // The range of addresses used in the CMSE import library should be fixed.
   for (auto &[_, sym] : ctx.symtab->cmseImportLib) {

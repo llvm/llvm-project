@@ -1322,6 +1322,7 @@ public:
   uint64_t impLibMaxAddr = 0;
 
 private:
+  Ctx &ctx;
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
   SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
   uint64_t newEntries = 0;

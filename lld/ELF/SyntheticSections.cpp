@@ -2302,7 +2302,7 @@ void SymbolTableSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
       Symbol *sym = ent.sym;
       if (sym->isInPlt() && sym->hasFlag(NEEDS_COPY))
         eSym->st_other |= STO_MIPS_PLT;
-      if (isMicroMips()) {
+      if (isMicroMips(ctx)) {
         // We already set the less-significant bit for symbols
         // marked by the `STO_MIPS_MICROMIPS` flag and for microMIPS PLT
         // records. That allows us to distinguish such symbols in
