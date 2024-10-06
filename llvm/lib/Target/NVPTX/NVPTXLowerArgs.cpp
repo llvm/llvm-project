@@ -623,33 +623,13 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
     Value *ArgInParam = new AddrSpaceCastInst(
         Arg, PointerType::get(Arg->getContext(), ADDRESS_SPACE_PARAM),
         Arg->getName(), FirstInst);
-    // Create an opaque type of same size as StructType but without padding
-    // holes as this could have been a union.
-    const auto StructBytes = *AllocA->getAllocationSize(DL);
-    SmallVector<Type *, 5> ChunkTypes;
-    if (StructBytes >= 16) {
-        Type *IntType = Type::getInt64Ty(Func->getContext());
-        Type *ChunkType = VectorType::get(IntType, 2, false);
-        Type *OpaqueType = StructBytes < 32 ? ChunkType :
-                           ArrayType::get(ChunkType, StructBytes / 16);
-        ChunkTypes.push_back(OpaqueType);
-    }
-    for (const auto ChunkBytes: {8, 4, 2, 1}) {
-      if (StructBytes & ChunkBytes) {
-          Type *ChunkType = Type::getIntNTy(Func->getContext(), 8 * ChunkBytes);
-          ChunkTypes.push_back(ChunkType);
-      }
-    }
-    Type * OpaqueType = ChunkTypes.size() == 1 ? ChunkTypes[0] :
-                        StructType::create(ChunkTypes);
     // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
     // addrspacecast preserves alignment.  Since params are constant, this load
     // is definitely not volatile.
-    LoadInst *LI =
-        new LoadInst(OpaqueType, ArgInParam, Arg->getName(),
-                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA,
-                  /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
+    const auto ArgSize = *AllocA->getAllocationSize(DL);
+    IRBuilder<> IRB(&*FirstInst);
+    IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParam, AllocA->getAlign(),
+                     ArgSize);
   }
 }
 
