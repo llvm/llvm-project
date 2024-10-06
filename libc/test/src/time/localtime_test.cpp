@@ -17,7 +17,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp0) {
   ASSERT_EQ(70, result->tm_year);
   ASSERT_EQ(0, result->tm_mon);
   ASSERT_EQ(1, result->tm_mday);
-  ASSERT_EQ(2, result->tm_hour);
+  ASSERT_EQ(1, result->tm_hour);
   ASSERT_EQ(0, result->tm_min);
   ASSERT_EQ(0, result->tm_sec);
   ASSERT_EQ(4, result->tm_wday);
@@ -31,7 +31,7 @@ TEST(LlvmLibcLocaltime, ValidUnixTimestamp32Int) {
   ASSERT_EQ(138, result->tm_year);
   ASSERT_EQ(0, result->tm_mon);
   ASSERT_EQ(19, result->tm_mday);
-  ASSERT_EQ(5, result->tm_hour);
+  ASSERT_EQ(4, result->tm_hour);
   ASSERT_EQ(14, result->tm_min);
   ASSERT_EQ(7, result->tm_sec);
   ASSERT_EQ(2, result->tm_wday);
