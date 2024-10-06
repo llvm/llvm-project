@@ -395,7 +395,7 @@ const_mem_fun_ref_t<S,T>    mem_fun_ref(S (T::*f)() const);                     
 template <class S, class T, class A>
 const_mem_fun1_ref_t<S,T,A> mem_fun_ref(S (T::*f)(A) const);                    // deprecated in C++11, removed in C++17
 
-template<class R, class T> constexpr unspecified mem_fn(R T::*);                // constexpr in C++20
+template<class R, class T> constexpr unspecified mem_fn(R T::*) noexcept;       // constexpr in C++20
 
 class bad_function_call
     : public exception
