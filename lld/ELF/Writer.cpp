@@ -1439,7 +1439,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   llvm::TimeTraceScope timeScope("Finalize address dependent content");
   ThunkCreator tc(ctx);
   AArch64Err843419Patcher a64p(ctx);
-  ARMErr657417Patcher a32p;
+  ARMErr657417Patcher a32p(ctx);
   ctx.script->assignAddresses();
 
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they

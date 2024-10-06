@@ -48,15 +48,6 @@ void addReservedSymbols(Ctx &ctx);
 bool includeInSymtab(const Symbol &b);
 unsigned getSectionRank(Ctx &, OutputSection &osec);
 
-template <class ELFT> uint32_t calcMipsEFlags(Ctx &);
-
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
-
-bool isMipsN32Abi(Ctx &, const InputFile &f);
-bool isMicroMips();
-bool isMipsR6(Ctx &);
-
 } // namespace lld::elf
 
 #endif
