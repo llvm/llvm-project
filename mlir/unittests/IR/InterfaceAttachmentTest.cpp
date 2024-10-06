@@ -39,7 +39,7 @@ struct Model
   static unsigned staticGetSomeValuePlusArg(unsigned arg) { return 42 + arg; }
 };
 
-/// External interface model for the float type. Provides non-deafult and
+/// External interface model for the float type. Provides non-default and
 /// overrides default methods.
 struct OverridingModel
     : public TestExternalTypeInterface::ExternalModel<OverridingModel,
@@ -277,7 +277,7 @@ struct TestExternalOpModel
   }
 };
 
-/// External interface model for the func operation. Provides non-deafult and
+/// External interface model for the func operation. Provides non-default and
 /// overrides default methods.
 struct TestExternalOpOverridingModel
     : public TestExternalOpInterface::FallbackModel<
@@ -306,7 +306,7 @@ TEST(InterfaceAttachment, Operation) {
       builder.create<ModuleOp>(UnknownLoc::get(&context));
   ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp->getOperation()));
 
-  // We can attach an external interface and now the operaiton has it.
+  // We can attach an external interface and now the operation has it.
   ModuleOp::attachInterface<TestExternalOpModel>(context);
   auto iface = dyn_cast<TestExternalOpInterface>(moduleOp->getOperation());
   ASSERT_TRUE(iface != nullptr);

@@ -699,7 +699,7 @@ Pattern {
 }
 ```
 
-Below are the set of contexts in which result type inferrence is supported:
+Below are the set of contexts in which result type inference is supported:
 
 ##### Inferred Results of Replacement Operation
 

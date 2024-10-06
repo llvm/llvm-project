@@ -60,7 +60,7 @@ void getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
 /// - `cloneOperationIntoRegion` is a callback that allows caller to specify
 ///   if the operation defining an `OpOperand` needs to be cloned into the
 ///   region. Then the operands of this operation become part of the captured
-///   values set (unless the operations that define the operands themeselves
+///   values set (unless the operations that define the operands themselves
 ///   are to be cloned). The cloned operations are added to the entry block
 ///   of the region.
 /// Return the set of captured values for the operation.

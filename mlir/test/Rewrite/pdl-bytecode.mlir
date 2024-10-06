@@ -638,7 +638,7 @@ module @ir attributes { test.check_types_1 } {
 //===----------------------------------------------------------------------===//
 
 // Unused operation to force loading the `arithmetic` dialect for the
-// test of type inferrence.
+// test of type inference.
 arith.constant 10
 
 // Test support for inferring the types of an operation.

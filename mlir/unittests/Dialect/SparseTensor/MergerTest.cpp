@@ -791,7 +791,7 @@ TEST_P(MergerTest3T1L, vector_cmp) {
                             loopsToBits({{l0, t1}}));
 }
 
-/// Vector element-wise comparsion (disjunction) of 2 vectors, i.e.;
+/// Vector element-wise comparison (disjunction) of 2 vectors, i.e.;
 ///   a(i) = b(i) cmp c(i)
 /// which should form the 3 lattice points
 /// {

@@ -24,13 +24,13 @@ Dialect::~Dialect() = default;
 std::pair<Operation *, bool>
 Dialect::insertOperation(StringRef name, StringRef summary, StringRef desc,
                          StringRef nativeClassName,
-                         bool supportsResultTypeInferrence, llvm::SMLoc loc) {
+                         bool supportsResultTypeInference, llvm::SMLoc loc) {
   std::unique_ptr<Operation> &operation = operations[name];
   if (operation)
     return std::make_pair(&*operation, /*wasInserted*/ false);
 
   operation.reset(new Operation(name, summary, desc, nativeClassName,
-                                supportsResultTypeInferrence, loc));
+                                supportsResultTypeInference, loc));
   return std::make_pair(&*operation, /*wasInserted*/ true);
 }
 
