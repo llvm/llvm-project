@@ -333,9 +333,15 @@ void LinkerDriver::addFile(StringRef path) {
     return;
   }
   case file_magic::bitcode:
-  case file_magic::wasm_object:
-    files.push_back(createObjectFile(mbref, "", 0, inLib));
+  case file_magic::wasm_object: {
+    auto obj = createObjectFile(mbref, "", 0, inLib);
+    if (config->isStatic && isa<SharedFile>(obj)) {
+      error("attempted static link of dynamic object " + path);
+      break;
+    }
+    files.push_back(obj);
     break;
+  }
   case file_magic::unknown:
     if (mbref.getBuffer().starts_with("#STUB")) {
       files.push_back(make<StubFile>(mbref));
@@ -910,17 +916,6 @@ static void createSyntheticSymbols() {
         make<SyntheticFunction>(
             is64 ? i64ArgSignature : i32ArgSignature,
             "__wasm_init_tls"));
-  }
-
-  if (ctx.isPic ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-    // For PIC code, or when dynamically importing addresses, we create
-    // synthetic functions that apply relocations.  These get called from
-    // __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyDataRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_data_relocs",
-        WASM_SYMBOL_VISIBILITY_DEFAULT | WASM_SYMBOL_EXPORTED,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_data_relocs"));
   }
 }
 

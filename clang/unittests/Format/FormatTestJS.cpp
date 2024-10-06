@@ -579,8 +579,13 @@ TEST_F(FormatTestJS, GoogScopes) {
                "});");
 }
 
-TEST_F(FormatTestJS, GoogAnonymousClass) {
+TEST_F(FormatTestJS, ClassExtends) {
   verifyFormat("a = class extends goog.structs.a {\n"
+               "  a() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};");
+  verifyFormat("a = class Foo extends goog.structs.a {\n"
                "  a() {\n"
                "    return 0;\n"
                "  }\n"
@@ -2848,6 +2853,28 @@ TEST_F(FormatTestJS, DontBreakFieldsAsGoToLabels) {
   verifyFormat("export type Params = Config&{\n"
                "  columns: Column[];\n"
                "};");
+}
+
+TEST_F(FormatTestJS, BreakAfterOpenBracket) {
+  auto Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  EXPECT_EQ(Style.AlignAfterOpenBracket, FormatStyle::BAS_AlwaysBreak);
+  verifyFormat("ctrl.onCopy(/** @type {!WizEvent}*/ (\n"
+               "    {event, targetElement: {el: () => selectedElement}}));",
+               Style);
+  verifyFormat("failedUserIds.push(...subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(!subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("failedUserIds.push(await subscriptioxxxxxxxxxxxxnSubset.map(\n"
+               "    subscxxxxxxxxxxxxription => subscription.getUserId()));",
+               Style);
+  verifyFormat("for await (const packageId of ops.api.iterateEmbeddedFiles(\n"
+               "    this.getFileId().getDriveFile(),\n"
+               "    )) {\n"
+               "}",
+               Style);
 }
 
 } // namespace format

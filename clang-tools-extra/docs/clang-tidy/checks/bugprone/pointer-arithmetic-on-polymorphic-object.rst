@@ -19,20 +19,28 @@ Example:
 .. code-block:: c++
 
   struct Base {
-    virtual void ~Base();
+    virtual ~Base();
+    int i;
   };
 
   struct Derived : public Base {};
 
-  void foo() {
-    Base *b = new Derived[10];
-
+  void foo(Base* b) {
     b += 1;
     // warning: pointer arithmetic on class that declares a virtual function can
     // result in undefined behavior if the dynamic type differs from the
     // pointer type
+  }
 
-    delete[] static_cast<Derived*>(b);
+  int bar(const Derived d[]) {
+    return d[1].i; // warning due to pointer arithmetic on polymorphic object
+  }
+
+  // Making Derived final suppresses the warning
+  struct FinalDerived final : public Base {};
+
+  int baz(const FinalDerived d[]) {
+    return d[1].i; // no warning as FinalDerived is final
   }
 
 Options
@@ -47,17 +55,9 @@ Options
 
   .. code-block:: c++
   
-    void bar() {
-      Base *b = new Base[10];
+    void bar(Base b[], Derived d[]) {
       b += 1; // warning, as Base declares a virtual destructor
-  
-      delete[] b;
-  
-      Derived *d = new Derived[10]; // Derived overrides the destructor, and
-                                    // declares no other virtual functions
       d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
-  
-      delete[] d;
     }
 
 References

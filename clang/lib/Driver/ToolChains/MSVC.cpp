@@ -138,7 +138,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
 
-  if (C.getDriver().IsFlangMode()) {
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
     addFortranRuntimeLibs(TC, Args, CmdArgs);
 

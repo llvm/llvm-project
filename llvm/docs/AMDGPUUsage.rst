@@ -361,7 +361,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - tgsplit           flat          - *rocm-amdhsa* - AMD Instinct MI250 Accelerator
                                                     - xnack             scratch       - *rocm-amdhsa* - AMD Instinct MI250X Accelerator
                                                     - kernarg preload - Packed
-                                                                        work-item
+                                                      (except MI210)    work-item
                                                                         IDs
 
      ``gfx90c``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  - Ryzen 7 4700G
@@ -492,6 +492,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -609,9 +611,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1152``
 
                                                                                                 SALU floating point instructions
-                                                                                                and single-use VGPR hint
-                                                                                                instructions are not available
-                                                                                                on:
+                                                                                                are not available on:
 
                                                                                                 - ``gfx1150``
                                                                                                 - ``gfx1151``
@@ -1756,6 +1756,55 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target specific
                                            result of all its arguments.
 
      =================== ================= ========================================================
+
+Function Resource Usage
+-----------------------
+
+A function's resource usage depends on each of its callees' resource usage. The
+expressions used to denote resource usage reflect this by propagating each
+callees' equivalent expressions. Said expressions are emitted as symbols by the
+compiler when compiling to either assembly or object format and should not be
+overwritten or redefined.
+
+The following describes all emitted function resource usage symbols:
+
+  .. table:: Function Resource Usage:
+     :name: function-usage-table
+
+     ===================================== ========= ========================================= ===============================================================================
+     Symbol                                Type      Description                               Example
+     ===================================== ========= ========================================= ===============================================================================
+     <function_name>.num_vgpr              Integer   Number of VGPRs used by <function_name>,  .set foo.num_vgpr, max(32, bar.num_vgpr, baz.num_vgpr)
+                                                     worst case of itself and its callees'
+                                                     VGPR use
+     <function_name>.num_agpr              Integer   Number of AGPRs used by <function_name>,  .set foo.num_agpr, max(35, bar.num_agpr)
+                                                     worst case of itself and its callees'
+                                                     AGPR use
+     <function_name>.numbered_sgpr         Integer   Number of SGPRs used by <function_name>,  .set foo.num_sgpr, 21
+                                                     worst case of itself and its callees'
+                                                     SGPR use (without any of the implicitly
+                                                     used SGPRs)
+     <function_name>.private_seg_size      Integer   Total stack size required for             .set foo.private_seg_size, 16+max(bar.private_seg_size, baz.private_seg_size)
+                                                     <function_name>, expression is the
+                                                     locally used stack size + the worst case
+                                                     callee
+     <function_name>.uses_vcc              Bool      Whether <function_name>, or any of its    .set foo.uses_vcc, or(0, bar.uses_vcc)
+                                                     callees, uses vcc
+     <function_name>.uses_flat_scratch     Bool      Whether <function_name>, or any of its    .set foo.uses_flat_scratch, 1
+                                                     callees, uses flat scratch or not
+     <function_name>.has_dyn_sized_stack   Bool      Whether <function_name>, or any of its    .set foo.has_dyn_sized_stack, 1
+                                                     callees, is dynamically sized
+     <function_name>.has_recursion         Bool      Whether <function_name>, or any of its    .set foo.has_recursion, 0
+                                                     callees, contains recursion
+     <function_name>.has_indirect_call     Bool      Whether <function_name>, or any of its    .set foo.has_indirect_call, max(0, bar.has_indirect_call)
+                                                     callees, contains an indirect call
+     ===================================== ========= ========================================= ===============================================================================
+
+Futhermore, three symbols are additionally emitted describing the compilation
+unit's worst case (i.e, maxima) ``num_vgpr``, ``num_agpr``, and
+``numbered_sgpr`` which may be referenced and used by the aforementioned
+symbolic expressions. These three symbols are ``amdgcn.max_num_vgpr``,
+``amdgcn.max_num_agpr``, and ``amdgcn.max_num_sgpr``.
 
 .. _amdgpu-elf-code-object:
 
@@ -17546,8 +17595,8 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
-[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_
-and [AMD-GCN-GFX11-RDNA3]_.
+[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
 
 Operands
 ~~~~~~~~
@@ -18345,6 +18394,7 @@ Additional Documentation
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
+.. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

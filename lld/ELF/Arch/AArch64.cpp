@@ -28,10 +28,42 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
   return expr & ~static_cast<uint64_t>(0xFFF);
 }
 
+// A BTI landing pad is a valid target for an indirect branch when the Branch
+// Target Identification has been enabled.  As linker generated branches are
+// via x16 the BTI landing pads are defined as: BTI C, BTI J, BTI JC, PACIASP,
+// PACIBSP.
+bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
+  // PLT entries accessed indirectly have a BTI c.
+  if (s.isInPlt())
+    return true;
+  Defined *d = dyn_cast<Defined>(&s);
+  if (!isa_and_nonnull<InputSection>(d->section))
+    // All places that we cannot disassemble are responsible for making
+    // the target a BTI landing pad.
+    return true;
+  InputSection *isec = cast<InputSection>(d->section);
+  uint64_t off = d->value + a;
+  // Likely user error, but protect ourselves against out of bounds
+  // access.
+  if (off >= isec->getSize())
+    return true;
+  const uint8_t *buf = isec->content().begin();
+  const uint32_t instr = read32le(buf + off);
+  // All BTI instructions are HINT instructions which all have same encoding
+  // apart from bits [11:5]
+  if ((instr & 0xd503201f) == 0xd503201f &&
+      is_contained({/*PACIASP*/ 0xd503233f, /*PACIBSP*/ 0xd503237f,
+                    /*BTI C*/ 0xd503245f, /*BTI J*/ 0xd503249f,
+                    /*BTI JC*/ 0xd50324df},
+                   instr))
+    return true;
+  return false;
+}
+
 namespace {
 class AArch64 : public TargetInfo {
 public:
-  AArch64();
+  AArch64(Ctx &);
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
@@ -59,9 +91,10 @@ private:
 };
 
 struct AArch64Relaxer {
+  Ctx &ctx;
   bool safeToRelaxAdrpLdr = false;
 
-  AArch64Relaxer(ArrayRef<Relocation> relocs);
+  AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs);
   bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
                        uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
@@ -76,7 +109,7 @@ static uint64_t getBits(uint64_t val, int start, int end) {
   return (val >> start) & mask;
 }
 
-AArch64::AArch64() {
+AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_AARCH64_COPY;
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
@@ -322,11 +355,11 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
 }
 
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64(buf, in.plt->getVA());
+  write64(buf, ctx.in.plt->getVA());
 }
 
 void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  if (config->writeAddends)
+  if (ctx.arg.writeAddends)
     write64(buf, s.getVA());
 }
 
@@ -343,8 +376,8 @@ void AArch64::writePltHeader(uint8_t *buf) const {
   };
   memcpy(buf, pltData, sizeof(pltData));
 
-  uint64_t got = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t got = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
   relocateNoSym(buf + 4, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(got + 16) - getAArch64Page(plt + 4));
   relocateNoSym(buf + 8, R_AARCH64_LDST64_ABS_LO12_NC, got + 16);
@@ -718,8 +751,9 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
-  if (!config->relax)
+AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs)
+    : ctx(ctx) {
+  if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // always appear in pairs.
@@ -749,7 +783,7 @@ bool AArch64Relaxer::tryRelaxAdrpAdd(const Relocation &adrpRel,
   // to
   // NOP
   // ADR xn, sym
-  if (!config->relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
+  if (!ctx.arg.relax || adrpRel.type != R_AARCH64_ADR_PREL_PG_HI21 ||
       addRel.type != R_AARCH64_ADD_ABS_LO12_NC)
     return false;
   // Check if the relocations apply to consecutive instructions.
@@ -836,7 +870,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   // GOT references to absolute symbols can't be relaxed to use ADRP/ADD in
   // position-independent code because these instructions produce a relative
   // address.
-  if (config->isPic && !cast<Defined>(sym).section)
+  if (ctx.arg.isPic && !cast<Defined>(sym).section)
     return false;
   // Check if the address difference is within 4GB range.
   int64_t val =
@@ -877,7 +911,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  AArch64Relaxer relaxer(sec.relocs());
+  AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
     uint8_t *loc = buf + rel.offset;
@@ -960,7 +994,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 namespace {
 class AArch64BtiPac final : public AArch64 {
 public:
-  AArch64BtiPac();
+  AArch64BtiPac(Ctx &);
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -971,8 +1005,8 @@ private:
 };
 } // namespace
 
-AArch64BtiPac::AArch64BtiPac() {
-  btiHeader = (config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
+AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
+  btiHeader = (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI);
   // A BTI (Branch Target Indicator) Plt Entry is only required if the
   // address of the PLT entry can be taken by the program, which permits an
   // indirect jump to the PLT entry. This can happen when the address
@@ -982,7 +1016,7 @@ AArch64BtiPac::AArch64BtiPac() {
   // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  pacEntry = config->zPacPlt;
+  pacEntry = ctx.arg.zPacPlt;
 
   if (btiHeader || pacEntry) {
     pltEntrySize = 24;
@@ -1003,8 +1037,8 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   };
   const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
 
-  uint64_t got = in.gotPlt->getVA();
-  uint64_t plt = in.plt->getVA();
+  uint64_t got = ctx.in.gotPlt->getVA();
+  uint64_t plt = ctx.in.plt->getVA();
 
   if (btiHeader) {
     // PltHeader is called indirectly by plt[N]. Prefix pltData with a BTI C
@@ -1073,18 +1107,6 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     memcpy(buf + sizeof(addrInst) + sizeof(stdBr), nopData, sizeof(nopData));
 }
 
-static TargetInfo *getTargetInfo() {
-  if ((config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
-      config->zPacPlt) {
-    static AArch64BtiPac t;
-    return &t;
-  }
-  static AArch64 t;
-  return &t;
-}
-
-TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }
-
 template <class ELFT>
 static void
 addTaggedSymbolReferences(InputSectionBase &sec,
@@ -1129,13 +1151,13 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // Ideally, this isn't a problem, as any TU that imports or exports tagged
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
-void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
+void elf::createTaggedSymbols(Ctx &ctx) {
   assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.
   DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
-  for (InputFile* file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::ObjKind)
       continue;
     for (InputSectionBase *section : file->getSections()) {
@@ -1151,7 +1173,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // definitions to a symbol exceeds the amount of times they're marked as
   // tagged, it means we have an objfile that uses the untagged variant of the
   // symbol.
-  for (InputFile *file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::BinaryKind &&
         file->kind() != InputFile::ObjKind)
       continue;
@@ -1175,7 +1197,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // `addTaggedSymbolReferences` has already checked that we have RELA
   // relocations, the only other way to get written addends is with
   // --apply-dynamic-relocs.
-  if (!taggedSymbolReferenceCount.empty() && config->writeAddends)
+  if (!taggedSymbolReferenceCount.empty() && ctx.arg.writeAddends)
     error("--apply-dynamic-relocs cannot be used with MTE globals");
 
   // Now, `taggedSymbolReferenceCount` should only contain symbols that are
@@ -1186,4 +1208,14 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
             "Symbol is defined as tagged more times than it's used");
     symbol->setIsTagged(true);
   }
+}
+
+TargetInfo *elf::getAArch64TargetInfo(Ctx &ctx) {
+  if ((ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      ctx.arg.zPacPlt) {
+    static AArch64BtiPac t(ctx);
+    return &t;
+  }
+  static AArch64 t(ctx);
+  return &t;
 }

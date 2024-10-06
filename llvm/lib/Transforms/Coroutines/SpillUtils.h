@@ -29,8 +29,6 @@ struct AllocaInfo {
         MayWriteBeforeCoroBegin(MayWriteBeforeCoroBegin) {}
 };
 
-bool isSuspendBlock(BasicBlock *BB);
-
 void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
                            const SuspendCrossingInfo &Checker);
 void collectSpillsAndAllocasFromInsts(

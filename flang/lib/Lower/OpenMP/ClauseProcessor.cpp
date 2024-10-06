@@ -684,7 +684,7 @@ void TypeInfo::typeScan(mlir::Type ty) {
     typeScan(pty.getEleTy());
   } else {
     // The scan ends when reaching any built-in or record type.
-    assert(ty.isIntOrIndexOrFloat() || mlir::isa<fir::ComplexType>(ty) ||
+    assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
            mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty));
   }
 }
@@ -1007,6 +1007,49 @@ bool ClauseProcessor::processMap(
                                *ptrMapSyms, mapSymTypes, mapSymLocs);
 
   return clauseFound;
+}
+
+bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
+                                           mlir::omp::MapClauseOps &result) {
+  std::map<const semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+
+  auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
+    mlir::Location clauseLocation = converter.genLocation(source);
+
+    // TODO Support motion modifiers: present, mapper, iterator.
+    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+        std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+    processMapObjects(stmtCtx, clauseLocation, std::get<ObjectList>(clause.t),
+                      mapTypeBits, parentMemberIndices, result.mapVars,
+                      &mapSymbols);
+  };
+
+  bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
+  clauseFound =
+      findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  return clauseFound;
+}
+
+bool ClauseProcessor::processNontemporal(
+    mlir::omp::NontemporalClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Nontemporal>(
+      [&](const omp::clause::Nontemporal &clause, const parser::CharBlock &) {
+        for (const Object &object : clause.v) {
+          semantics::Symbol *sym = object.sym();
+          mlir::Value symVal = converter.getSymbolAddress(*sym);
+          result.nontemporalVars.push_back(symVal);
+        }
+      });
 }
 
 bool ClauseProcessor::processReduction(

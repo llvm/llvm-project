@@ -84,7 +84,7 @@ public:
 
 private:
   bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                         const DeadLaneDetector &DLD);
+                         const DeadLaneDetector *DLD);
   bool handleSubReg(MachineFunction &MF, MachineInstr &MI,
                     const DeadLaneDetector &DLD);
   bool fixupIllOperand(MachineInstr *MI, MachineOperand &MO);
@@ -98,7 +98,7 @@ INITIALIZE_PASS(InitUndef, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
 char &llvm::InitUndefID = InitUndef::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
-  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
+  return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {
     return DefMO.isReg() && DefMO.isEarlyClobber();
   });
 }
@@ -120,8 +120,6 @@ bool InitUndef::handleReg(MachineInstr *MI) {
       continue;
     if (!UseMO.getReg().isVirtual())
       continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
-      continue;
 
     if (UseMO.isUndef() || findImplictDefMIFromReg(UseMO.getReg(), MRI))
       Changed |= fixupIllOperand(MI, UseMO);
@@ -139,8 +137,6 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     if (!UseMO.getReg().isVirtual())
       continue;
     if (UseMO.isTied())
-      continue;
-    if (!TRI->doesRegClassHavePseudoInitUndef(MRI->getRegClass(UseMO.getReg())))
       continue;
 
     Register Reg = UseMO.getReg();
@@ -210,7 +206,7 @@ bool InitUndef::fixupIllOperand(MachineInstr *MI, MachineOperand &MO) {
 }
 
 bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
-                                  const DeadLaneDetector &DLD) {
+                                  const DeadLaneDetector *DLD) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
     MachineInstr &MI = *I;
@@ -236,7 +232,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 
     if (isEarlyClobberMI(MI)) {
       if (MRI->subRegLivenessEnabled())
-        Changed |= handleSubReg(MF, MI, DLD);
+        Changed |= handleSubReg(MF, MI, *DLD);
       Changed |= handleReg(&MI);
     }
   }
@@ -246,13 +242,9 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
 bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget();
 
-  // supportsInitUndef is implemented to reflect if an architecture has support
-  // for the InitUndef pass. Support comes from having the relevant Pseudo
-  // instructions that can be used to initialize the register. The function
-  // returns false by default so requires an implementation per architecture.
-  // Support can be added by overriding the function in a way that best fits
-  // the architecture.
-  if (!ST->supportsInitUndef())
+  // The pass is only needed if early-clobber defs and undef ops cannot be
+  // allocated to the same register.
+  if (!ST->requiresDisjointEarlyClobberAndUndef())
     return false;
 
   MRI = &MF.getRegInfo();
@@ -260,15 +252,19 @@ bool InitUndef::runOnMachineFunction(MachineFunction &MF) {
   TRI = MRI->getTargetRegisterInfo();
 
   bool Changed = false;
-  DeadLaneDetector DLD(MRI, TRI);
-  DLD.computeSubRegisterLaneBitInfo();
+  std::unique_ptr<DeadLaneDetector> DLD;
+  if (MRI->subRegLivenessEnabled()) {
+    DLD = std::make_unique<DeadLaneDetector>(MRI, TRI);
+    DLD->computeSubRegisterLaneBitInfo();
+  }
 
   for (MachineBasicBlock &BB : MF)
-    Changed |= processBasicBlock(MF, BB, DLD);
+    Changed |= processBasicBlock(MF, BB, DLD.get());
 
   for (auto *DeadMI : DeadInsts)
     DeadMI->eraseFromParent();
   DeadInsts.clear();
+  NewRegs.clear();
 
   return Changed;
 }

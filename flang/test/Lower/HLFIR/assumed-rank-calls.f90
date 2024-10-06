@@ -1,7 +1,7 @@
 ! Test passing of assumed-ranks that require creating a
 ! a new descriptor for the dummy argument (different lower bounds,
 ! attribute, or dynamic type)
-! RUN: bbc -emit-hlfir -allow-assumed-rank -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test_alloc_to_nonalloc(x)
   real, allocatable ::  x(..)

@@ -3648,6 +3648,15 @@ struct OmpAtomicDefaultMemOrderClause {
       OmpAtomicDefaultMemOrderClause, common::OmpAtomicDefaultMemOrderType);
 };
 
+// OMP 5.0 2.19.4.5 lastprivate-clause ->
+//                    LASTPRIVATE ([lastprivate-modifier :] list)
+//                  lastprivate-modifier -> CONDITIONAL
+struct OmpLastprivateClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLastprivateClause);
+  ENUM_CLASS(LastprivateModifier, Conditional);
+  std::tuple<std::optional<LastprivateModifier>, OmpObjectList> t;
+};
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);
