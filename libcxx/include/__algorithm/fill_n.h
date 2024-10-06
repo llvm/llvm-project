@@ -17,6 +17,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__utility/convert_to_integral.h>
+#include <__algorithm/for_each.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,9 +29,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // fill_n isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
-template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value);
 
 template <class _OutputIterator,
           class _Size,
@@ -109,7 +107,7 @@ template <class _OutputIterator,
           __enable_if_t<__is_segmented_iterator<_OutputIterator>::value, int> >
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value) {
-  std::fill(__first, __first + __n, __value);
+  std::for_each(__first, __first + __n, [__value](_Tp& __val) { __val = __value; });
   return __n > 0 ? __first + __n : __first;
 }
 
