@@ -50027,17 +50027,14 @@ static SDValue getIndexFromUnindexedLoad(LoadSDNode *Ld) {
     return SDValue();
 
   SDValue Base = Ld->getBasePtr();
-
   if (Base.getOpcode() != ISD::ADD)
     return SDValue();
 
   SDValue ShiftedIndex = Base.getOperand(0);
-
   if (ShiftedIndex.getOpcode() != ISD::SHL)
     return SDValue();
 
   return ShiftedIndex.getOperand(0);
-
 }
 
 static bool hasBZHI(const X86Subtarget &Subtarget, MVT VT) {
@@ -50066,22 +50063,21 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
 
   // Try matching the pattern for both operands.
   for (unsigned i = 0; i < 2; i++) {
-    SDValue N = Node->getOperand(i);
-    LoadSDNode *Ld = dyn_cast<LoadSDNode>(N.getNode());
-
-     // continue if the operand is not a load instruction
+    // continue if the operand is not a load instruction
+    auto *Ld = dyn_cast<LoadSDNode>(Node->getOperand(i));
     if (!Ld)
-      return SDValue();
-
+      continue;
     const Value *MemOp = Ld->getMemOperand()->getValue();
-
     if (!MemOp)
-      return SDValue();
+      continue;
+    // Get the Node which indexes into the array.
+    SDValue Index = getIndexFromUnindexedLoad(Ld);
+    if (!Index)
+      continue;
 
-    if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(MemOp)) {
-      if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0))) {
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(MemOp)) {
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0))) {
         if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
-
           Constant *Init = GV->getInitializer();
           Type *Ty = Init->getType();
           if (!isa<ConstantDataArray>(Init) ||
@@ -50109,21 +50105,15 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
           // -> (and (load arr[idx]), inp)
           // <- (and (srl 0xFFFFFFFF, (sub 32, idx)))
           //    that will be replaced with one bzhi instruction.
-          SDValue Inp = (i == 0) ? Node->getOperand(1) : Node->getOperand(0);
+          SDValue Inp = Node->getOperand(i == 0 ? 1 : 0);
           SDValue SizeC = DAG.getConstant(VT.getSizeInBits(), dl, MVT::i32);
 
-          // Get the Node which indexes into the array.
-          SDValue Index = getIndexFromUnindexedLoad(Ld);
-          if (!Index)
-            return SDValue();
           Index = DAG.getZExtOrTrunc(Index, dl, MVT::i32);
-
           SDValue Sub = DAG.getNode(ISD::SUB, dl, MVT::i32, SizeC, Index);
           Sub = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Sub);
 
           SDValue AllOnes = DAG.getAllOnesConstant(dl, VT);
           SDValue LShr = DAG.getNode(ISD::SRL, dl, VT, AllOnes, Sub);
-
           return DAG.getNode(ISD::AND, dl, VT, Inp, LShr);
         }
       }
