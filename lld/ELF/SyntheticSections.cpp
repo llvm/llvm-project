@@ -2645,7 +2645,7 @@ PPC32GlinkSection::PPC32GlinkSection() {
 }
 
 void PPC32GlinkSection::writeTo(Ctx &ctx, uint8_t *buf) {
-  writePPC32GlinkSection(buf, entries.size());
+  writePPC32GlinkSection(ctx, buf, entries.size());
 }
 
 size_t PPC32GlinkSection::getSize(Ctx &ctx) const {
@@ -4870,7 +4870,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   }
 
   if (ctx.arg.emachine == EM_ARM) {
-    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
+    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
     add(*ctx.in.armCmseSGSection);
   }
 

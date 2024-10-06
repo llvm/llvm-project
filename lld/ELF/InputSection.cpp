@@ -893,7 +893,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return symVA - p + getPPC64GlobalEntryToLocalEntryOffset(sym.stOther);
   }
   case R_PPC64_TOCBASE:
-    return getPPC64TocBase() + a;
+    return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
   case R_PPC64_RELAX_GOT_PC:
     return sym.getVA(a) - p;

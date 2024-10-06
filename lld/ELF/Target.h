@@ -210,7 +210,7 @@ static inline std::string getErrorLocation(const uint8_t *loc) {
 
 void processArmCmseSymbols(Ctx &);
 
-void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
+void writePPC32GlinkSection(Ctx &, uint8_t *buf, size_t numEntries);
 
 unsigned getPPCDFormOp(unsigned secondaryOp);
 unsigned getPPCDSFormOp(unsigned secondaryOp);
@@ -227,22 +227,22 @@ unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t stOther);
 // Write a prefixed instruction, which is a 4-byte prefix followed by a 4-byte
 // instruction (regardless of endianness). Therefore, the prefix is always in
 // lower memory than the instruction.
-void writePrefixedInstruction(uint8_t *loc, uint64_t insn);
+void writePrefixedInst(Ctx &, uint8_t *loc, uint64_t insn);
 
-void addPPC64SaveRestore();
-uint64_t getPPC64TocBase();
+void addPPC64SaveRestore(Ctx &);
+uint64_t getPPC64TocBase(Ctx &ctx);
 uint64_t getAArch64Page(uint64_t expr);
 bool isAArch64BTILandingPad(Symbol &s, int64_t a);
-template <typename ELFT> void writeARMCmseImportLib();
+template <typename ELFT> void writeARMCmseImportLib(Ctx &);
 uint64_t getLoongArchPageDelta(uint64_t dest, uint64_t pc, RelType type);
 void riscvFinalizeRelax(int passes);
 void mergeRISCVAttributesSections(Ctx &);
-void addArmInputSectionMappingSymbols();
+void addArmInputSectionMappingSymbols(Ctx &);
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
 void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
-void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
-void initSymbolAnchors();
+void createTaggedSymbols(Ctx &);
+void initSymbolAnchors(Ctx &);
 
 TargetInfo *getTarget(Ctx &);
 
