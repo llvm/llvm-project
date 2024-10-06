@@ -122,7 +122,6 @@ add_libc_unittest(
   DEPENDS
     libc.include.time
     libc.hdr.types.time_t
-    libc.src.time.mktime
     libc.src.time.localtime_s
     libc.src.time.time_utils
 )
