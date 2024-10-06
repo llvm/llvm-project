@@ -397,13 +397,11 @@ private:
     if (!IsOffsetKnown) {
       AliasOffetMap[&I].reset();
     } else {
-      auto Itr = AliasOffetMap.find(&I);
-      if (Itr == AliasOffetMap.end()) {
-        AliasOffetMap[&I] = Offset;
-      } else if (Itr->second && *Itr->second != Offset) {
+      auto [Itr, Inserted] = AliasOffetMap.try_emplace(&I, Offset);
+      if (!Inserted && Itr->second && *Itr->second != Offset) {
         // If we have seen two different possible values for this alias, we set
         // it to empty.
-        AliasOffetMap[&I].reset();
+        Itr->second.reset();
       }
     }
   }

@@ -264,8 +264,7 @@ define <2 x i64> @test_vbslq_u64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounw
 define <8 x i8> @same_param_all(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: same_param_all:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vorr d0, d1, d1
-; CHECK-NEXT:    vbsl d0, d1, d1
+; CHECK-NEXT:    vmov.f64 d0, d1
 ; CHECK-NEXT:    bx lr
   %vbsl.i = tail call <8 x i8> @llvm.arm.neon.vbsl.v8i8(<8 x i8> %b, <8 x i8> %b, <8 x i8> %b)
   ret <8 x i8> %vbsl.i
@@ -274,7 +273,7 @@ define <8 x i8> @same_param_all(<8 x i8> %a, <8 x i8> %b) {
 define <8 x i8> @same_param_12(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: same_param_12:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vbsl d0, d1, d1
+; CHECK-NEXT:    vmov.f64 d0, d1
 ; CHECK-NEXT:    bx lr
   %vbsl.i = tail call <8 x i8> @llvm.arm.neon.vbsl.v8i8(<8 x i8> %a, <8 x i8> %b, <8 x i8> %b)
   ret <8 x i8> %vbsl.i
