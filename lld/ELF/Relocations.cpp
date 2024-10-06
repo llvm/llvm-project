@@ -1480,7 +1480,7 @@ void RelocationScanner::scanOne(typename Relocs<RelTy>::const_iterator &i) {
   if (LLVM_UNLIKELY(ctx.arg.emachine == EM_MIPS))
     addend += computeMipsAddend<ELFT>(rel, expr, sym.isLocal());
   else if (ctx.arg.emachine == EM_PPC64 && ctx.arg.isPic && type == R_PPC64_TOC)
-    addend += getPPC64TocBase();
+    addend += getPPC64TocBase(ctx);
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
