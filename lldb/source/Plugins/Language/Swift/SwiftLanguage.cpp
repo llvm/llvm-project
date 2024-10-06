@@ -1621,11 +1621,11 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
         valobj_type.GetTypeName() == g_SwiftBool) {
       ValueObjectSP your_value_sp(valobj.GetChildMemberWithName(g_value, true));
       if (!your_value_sp) {
-        error.SetErrorString("unexpected data layout");
+        error = Status::FromErrorString("unexpected data layout");
         return eLazyBoolNo;
       } else {
         if (!your_value_sp->ResolveValue(scalar_value)) {
-          error.SetErrorString("unexpected data layout");
+          error = Status::FromErrorString("unexpected data layout");
           return eLazyBoolNo;
         } else {
           error.Clear();
@@ -1638,7 +1638,7 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
     }
   }
 
-  error.SetErrorString("not a Swift boolean type");
+  error = Status::FromErrorString("not a Swift boolean type");
   return eLazyBoolNo;
 }
 

@@ -121,26 +121,43 @@ public:
     }
     bool IsUnboundPack() const { return m_is_unbound_pack; }
 
-    VariableInfo() : m_lookup_error(llvm::Error::success()) {}
+    VariableInfo() = default;
     VariableInfo(CompilerType type, swift::Identifier name,
                  VariableMetadataSP metadata,
                  swift::VarDecl::Introducer introducer,
                  bool is_capture_list = false, bool is_unbound_pack = false)
         : m_type(type), m_name(name), m_metadata(metadata),
-          m_var_introducer(introducer), m_lookup_error(llvm::Error::success()),
-          m_is_capture_list(is_capture_list),
+          m_var_introducer(introducer), m_is_capture_list(is_capture_list),
           m_is_unbound_pack(is_unbound_pack) {}
+    VariableInfo(const VariableInfo &other)
+        : m_type(other.m_type), m_name(other.m_name),
+          m_metadata(other.m_metadata), m_decl(other.m_decl),
+          m_var_introducer(other.m_var_introducer),
+          m_lookup_error(other.m_lookup_error.Clone()),
+          m_is_capture_list(other.m_is_capture_list),
+          m_is_unbound_pack(other.m_is_unbound_pack) {}
 
     VariableInfo(CompilerType type, swift::Identifier name,
                  swift::VarDecl *decl)
-        : m_type(type), m_name(name), m_decl(decl),
-          m_lookup_error(llvm::Error::success()) {}
+        : m_type(type), m_name(name), m_decl(decl) {}
+
+    VariableInfo &operator=(const VariableInfo &other) {
+      m_type = other.m_type;
+      m_name = other.m_name;
+      m_metadata = other.m_metadata;
+      m_decl = other.m_decl;
+      m_var_introducer = other.m_var_introducer;
+      m_lookup_error = other.m_lookup_error.Clone();
+      m_is_capture_list = other.m_is_capture_list;
+      m_is_unbound_pack = other.m_is_unbound_pack;
+      return *this;
+    }
 
     void Print(Stream &stream) const;
 
     void SetType(CompilerType new_type) { m_type = new_type; }
     void SetLookupError(llvm::Error &&error) {
-      m_lookup_error = std::move(error);
+      m_lookup_error = Status::FromError(std::move(error));
     }
     llvm::Error TakeLookupError() { return m_lookup_error.ToError(); }
 

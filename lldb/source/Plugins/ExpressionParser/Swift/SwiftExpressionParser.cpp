@@ -1065,16 +1065,6 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
 
 namespace {
 
-/// This error indicates that the error has already been diagnosed.
-struct PropagatedError : public llvm::ErrorInfo<PropagatedError> {
-  static char ID;
-
-  void log(llvm::raw_ostream &OS) const override { OS << "Propagated"; }
-  std::error_code convertToErrorCode() const override {
-    return inconvertibleErrorCode();
-  }
-};
-
 /// This indicates an error in the SwiftASTContext.
 struct SwiftASTContextError : public llvm::ErrorInfo<SwiftASTContextError> {
   static char ID;
@@ -1102,7 +1092,6 @@ struct ModuleImportError : public llvm::ErrorInfo<ModuleImportError> {
   }
 };
 
-char PropagatedError::ID = 0;
 char SwiftASTContextError::ID = 0;
 char ModuleImportError::ID = 0;
 } // namespace
@@ -1394,7 +1383,7 @@ SwiftExpressionParser::ParseAndImport(
     std::string msg = llvm::toString(expr_diagnostics.GetAllErrors());
     if (StringRef(msg).contains(": could not build module "))
       return make_error<ModuleImportError>(msg);
-    return llvm::createStringError(msg);
+    return expr_diagnostics.GetAsExpressionError(lldb::eExpressionParseError);
   }
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
@@ -1728,7 +1717,12 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         [&](const StringError &SE) {
           diagnostic_manager.PutString(eSeverityError, SE.getMessage());
         },
-        [](const PropagatedError &P) {});
+        [&](const ExpressionError &E) {
+          // FIXME: We're losing the DiagnosticOrigin here.
+          for (auto &detail : E.GetDetails())
+            diagnostic_manager.AddDiagnostic(std::make_unique<Diagnostic>(
+                eDiagnosticOriginSwift, 0, detail));
+        });
 
     // Signal that we want to retry the expression exactly once with a
     // fresh SwiftASTContext initialized with the flags from the
@@ -2178,7 +2172,7 @@ Status SwiftExpressionParser::DoPrepareForExecution(
   Log *log = GetLog(LLDBLog::Expressions);
 
   if (!m_module) {
-    err.SetErrorString("Can't prepare a NULL module for execution");
+    err = Status::FromErrorString("Can't prepare a NULL module for execution");
     return err;
   }
 
@@ -2196,8 +2190,8 @@ Status SwiftExpressionParser::DoPrepareForExecution(
   ConstString function_name;
 
   if (!FindFunctionInModule(function_name, m_module.get(), orig_name, exact)) {
-    err.SetErrorToGenericError();
-    err.SetErrorStringWithFormat("Couldn't find %s() in the module", orig_name);
+    err = Status::FromErrorStringWithFormatv(
+        "Couldn't find {0}() in the module", orig_name);
     return err;
   } else {
     LLDB_LOG(log, "Found function {0} for {1}", function_name, "$__lldb_expr");

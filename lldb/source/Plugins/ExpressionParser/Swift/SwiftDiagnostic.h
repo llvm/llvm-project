@@ -29,9 +29,9 @@ public:
     return diag->getKind() == eDiagnosticOriginSwift;
   }
 
-  SwiftDiagnostic(const char *message, lldb::Severity severity,
-                  uint32_t compiler_id, uint32_t buffer_id)
-      : Diagnostic(message, severity, eDiagnosticOriginSwift, compiler_id),
+  SwiftDiagnostic(DiagnosticDetail detail, uint32_t compiler_id,
+                  uint32_t buffer_id)
+      : Diagnostic(eDiagnosticOriginSwift, compiler_id, detail),
         m_buffer_id(buffer_id) {}
 
   virtual ~SwiftDiagnostic() = default;

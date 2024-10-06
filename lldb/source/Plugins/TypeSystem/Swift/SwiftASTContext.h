@@ -467,9 +467,7 @@ public:
   bool HasClangImporterErrors() const;
 
   void AddDiagnostic(lldb::Severity severity, llvm::StringRef message);
-  void RaiseFatalError(std::string msg) const {
-    m_fatal_errors.SetErrorString(msg);
-  }
+  void RaiseFatalError(std::string msg) const { m_fatal_errors = Status(msg); }
   static bool HasFatalErrors(swift::ASTContext *ast_context);
   bool HasFatalErrors() const {
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
@@ -480,8 +478,6 @@ public:
   /// Notify the Process about any Swift or ClangImporter errors.
   void DiagnoseWarnings(Process &process,
                         const SymbolContext &sc) const override;
-
-  bool SetColorizeDiagnostics(bool b);
 
   void PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                         uint32_t bufferID = UINT32_MAX, uint32_t first_line = 0,
@@ -519,8 +515,11 @@ public:
     std::optional<ErrorKind> GetOptionalErrorKind() const;
     bool HasErrors() const;
     /// Return all errors and warnings that happened during the lifetime of this
-    /// object.
+    /// object as a StringError.
     llvm::Error GetAllErrors() const;
+    /// Return all errors and warnings that happened during the lifetime of this
+    /// object an ExpressionError.
+    llvm::Error GetAsExpressionError(lldb::ExpressionResults result) const;
   };
   std::unique_ptr<ScopedDiagnostics> getScopedDiagnosticConsumer();
   /// \}

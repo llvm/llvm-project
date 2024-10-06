@@ -1090,17 +1090,16 @@ public:
             llvm::toString(std::move(error)).c_str());
         return;
       }
-    auto ts = *type_system_or_err;
-    if (!ts) {
-      err = Status::FromErrorStringWithFormat(
-          "Couldn't dematerialize a result variable: "
-          "couldn't corresponding type system is "
-          "no longer live.");
-      return;
-    }
+      auto ts = *type_system_or_err;
+      if (!ts) {
+        err = Status::FromErrorStringWithFormat(
+            "Couldn't dematerialize a result variable: "
+            "couldn't corresponding type system is "
+            "no longer live.");
+        return;
+      }
       persistent_state = ts->GetPersistentExpressionState();
     }
-
     if (!persistent_state) {
       err = Status::FromErrorString(
           "Couldn't dematerialize a result variable: "

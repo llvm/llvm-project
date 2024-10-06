@@ -952,6 +952,13 @@ llvm::Error SwiftASTContext::ScopedDiagnostics::GetAllErrors() const {
   return llvm::createStringError(diagnostic_manager.GetString());
 }
 
+llvm::Error SwiftASTContext::ScopedDiagnostics::GetAsExpressionError(
+    lldb::ExpressionResults result) const {
+  DiagnosticManager diagnostic_manager;
+  PrintDiagnostics(diagnostic_manager);
+  return diagnostic_manager.GetAsError(result);
+}
+
 SwiftASTContext::ScopedDiagnostics::~ScopedDiagnostics() {
   auto &consumer = *static_cast<StoringDiagnosticConsumer *>(&m_consumer);
   auto &lldb_diags = consumer.m_diagnostics;
@@ -2060,10 +2067,10 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
-#if !defined(__APPLE__)
-  return {};
-#else
-  auto sdk_or_err = PlatformDarwin::GetSDKPathFromDebugInfo(module);
+  auto platform_sp = Platform::GetHostPlatform();
+  if (!platform_sp)
+    return {};
+  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(module);
   if (!sdk_or_err) {
     Debugger::ReportError("Error while parsing SDK path from debug-info: " +
                           toString(sdk_or_err.takeError()));
@@ -2079,7 +2086,6 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
                       module.GetFileSpec().GetFilename().GetCString());
 
   return GetSDKPath(m_description, std::move(sdk));
-#endif
 }
 
 static std::vector<llvm::StringRef>
@@ -3118,12 +3124,13 @@ Status SwiftASTContext::GetFatalErrors() const {
 }
 
 Status SwiftASTContext::GetAllDiagnostics() const {
-  Status error = m_fatal_errors;
+  Status error = m_fatal_errors.Clone();
   if (error.Success()) {
     // Retrieve the error message from the DiagnosticConsumer.
     DiagnosticManager diagnostic_manager;
     PrintDiagnostics(diagnostic_manager);
-    error.SetErrorString(diagnostic_manager.GetString());
+    // FIXME: Use diagnostic_manager.GetAsError()
+    error = Status(diagnostic_manager.GetString());
     static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
         ->Clear();
   }
@@ -3132,7 +3139,7 @@ Status SwiftASTContext::GetAllDiagnostics() const {
 
 void SwiftASTContext::StreamAllDiagnostics(
     std::optional<lldb::user_id_t> debugger_id) const {
-  Status error = m_fatal_errors;
+  Status error = m_fatal_errors.Clone();
   if (!error.Success()) {
     Debugger::ReportWarning(error.AsCString(), debugger_id,
                             &m_swift_diags_streamed);
@@ -3769,19 +3776,19 @@ SwiftASTContext::CreateModule(const SourceModule &module, Status &error,
                               swift::ImplicitImportInfo importInfo) {
   VALID_OR_RETURN(nullptr);
   if (!module.path.size()) {
-    error.SetErrorStringWithFormat("invalid module name (empty)");
+    error = Status::FromErrorString("invalid module name (empty)");
     return nullptr;
   }
 
   if (swift::ModuleDecl *module_decl = GetCachedModule(module)) {
-    error.SetErrorStringWithFormat("module already exists for \"%s\"",
-                                   module.path.front().GetCString());
+    error = Status::FromErrorStringWithFormatv(
+        "module already exists for \"{0}\"", module.path.front());
     return nullptr;
   }
 
   ThreadSafeASTContext ast = GetASTContext();
   if (!ast) {
-    error.SetErrorStringWithFormat("invalid swift AST (nullptr)");
+    error = Status::FromErrorString("invalid swift AST (nullptr)");
     return nullptr;
   }
 
@@ -3790,8 +3797,8 @@ SwiftASTContext::CreateModule(const SourceModule &module, Status &error,
       ast->getIdentifier(module.path.front().GetCString()));
   auto *module_decl = swift::ModuleDecl::create(module_id, **ast, importInfo);
   if (!module_decl) {
-    error.SetErrorStringWithFormat("failed to create module for \"%s\"",
-                                   module.path.front().GetCString());
+    error = Status::FromErrorStringWithFormatv(
+        "failed to create module for \"{0}\"", module.path.front());
     return nullptr;
   }
 
@@ -3827,7 +3834,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
 
   if (module.path.front().IsEmpty()) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "empty module name");
-    error.SetErrorString("invalid module name (empty)");
+    error = Status::FromErrorString("invalid module name (empty)");
     return nullptr;
   }
 
@@ -3843,7 +3850,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") invalid ASTContext",
                module.path.front().GetCString());
 
-    error.SetErrorString("invalid swift::ASTContext");
+    error = Status::FromErrorString("invalid swift::ASTContext");
     return nullptr;
   }
 
@@ -3853,10 +3860,11 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
                            swift::SourceLoc());
 
   if (HasFatalErrors()) {
-    error.SetErrorStringWithFormat("failed to get module \"%s\" from AST "
-                                   "context:\nAST context is in a fatal "
-                                   "error state",
-                                   module.path.front().GetCString());
+    error = Status::FromErrorStringWithFormatv(
+        "failed to get module \"{0}\" from AST "
+        "context:\nAST context is in a fatal "
+        "error state",
+        module.path.front());
     return nullptr;
   }
 
@@ -3901,9 +3909,9 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     DiagnosticManager diagnostic_manager;
     import_diags->PrintDiagnostics(diagnostic_manager);
     std::string diagnostic = diagnostic_manager.GetString();
-    error.SetErrorStringWithFormat(
-        "failed to get module \"%s\" from AST context:\n%s",
-        module.path.front().GetCString(), diagnostic.c_str());
+    error = Status::FromErrorStringWithFormatv(
+        "failed to get module \"{0}\" from AST context:\n{1}",
+        module.path.front(), diagnostic);
 
     LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- %s",
                module.path.front().GetCString(), diagnostic.c_str());
@@ -3913,9 +3921,8 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   if (!module_decl) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "failed with no error");
 
-    error.SetErrorStringWithFormat(
-        "failed to get module \"%s\" from AST context",
-        module.path.front().GetCString());
+    error = Status::FromErrorStringWithFormatv(
+        "failed to get module \"{0}\" from AST context", module.path.front());
     return nullptr;
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "(\"%s\") -- found %s",
@@ -3947,7 +3954,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
         LOG_PRINTF(GetLog(LLDBLog::Types),
                    "((FileSpec)\"%s\") -- no ClangImporter so giving up",
                    module_spec.GetPath().c_str());
-        error.SetErrorStringWithFormat("couldn't get a ClangImporter");
+        error = Status::FromErrorString("couldn't get a ClangImporter");
         return nullptr;
       }
 
@@ -3983,23 +3990,22 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
                    "((FileSpec)\"%s\") -- couldn't get from AST context",
                    module_spec.GetPath().c_str());
 
-        error.SetErrorStringWithFormat(
-            "failed to get module \"%s\" from AST context",
-            module_basename.GetCString());
+        error = Status::FromErrorStringWithFormatv(
+            "failed to get module \"{0}\" from AST context", module_basename);
       }
     } else {
       LOG_PRINTF(GetLog(LLDBLog::Types), "((FileSpec)\"%s\") -- doesn't exist",
                  module_spec.GetPath().c_str());
 
-      error.SetErrorStringWithFormat("module \"%s\" doesn't exist",
-                                     module_spec.GetPath().c_str());
+      error = Status::FromErrorStringWithFormatv("module \"{0}\" doesn't exist",
+                                                 module_spec.GetPath());
     }
   } else {
     LOG_PRINTF(GetLog(LLDBLog::Types), "((FileSpec)\"%s\") -- no basename",
                module_spec.GetPath().c_str());
 
-    error.SetErrorStringWithFormat("no module basename in \"%s\"",
-                                   module_spec.GetPath().c_str());
+    error = Status::FromErrorStringWithFormatv("no module basename in \"{0}\"",
+                                               module_spec.GetPath());
   }
   return NULL;
 }
@@ -4078,7 +4084,8 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     std::string library_name = link_lib.getName().str();
 
     if (library_name.empty()) {
-      error.SetErrorString("Empty library name passed to addLinkLibrary");
+      error = Status::FromErrorString(
+          "Empty library name passed to addLinkLibrary");
       return;
     }
 
@@ -4250,16 +4257,16 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     if (runtime)
       runtime->AddToLibraryNegativeCache(library_name);
 
-    current_error.SetErrorStringWithFormat(
-        "Failed to load linked library %s of module %s - errors:\n%s\n",
-        library_name.c_str(), swift_module->getName().str().str().c_str(),
+    current_error = Status::FromErrorStringWithFormatv(
+        "Failed to load linked library {0} of module {1} - errors:\n{2}\n",
+        library_name, swift_module->getName().str().str(),
         all_dlopen_errors.GetData());
   };
 
   for (auto import : swift::namelookup::getAllImports(swift_module)) {
     import.importedModule->collectLinkLibraries(addLinkLibrary);
   }
-  error = current_error;
+  error = current_error.Clone();
 }
 
 bool SwiftASTContext::LoadLibraryUsingPaths(
@@ -4396,7 +4403,7 @@ void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
       bool success = LoadLibraryUsingPaths(process, library_name, search_paths,
                                            false, errors);
       if (!success) {
-        error.SetErrorString(errors.GetData());
+        error = Status::FromErrorString(errors.GetData());
       }
     }
   }
@@ -5030,7 +5037,8 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   auto swift_ast_ctx = ts.dyn_cast_or_null<SwiftASTContext>();
 
   if (!swift_ast_ctx && (!ts || !ts.isa_and_nonnull<TypeSystemSwift>())) {
-    error.SetErrorString("Can't import clang type into a Swift ASTContext.");
+    error = Status::FromErrorString(
+        "Can't import clang type into a Swift ASTContext.");
     return CompilerType();
   } else if (swift_ast_ctx.get() == this) {
     // This is the same AST context, so the type is already imported.
@@ -5291,21 +5299,14 @@ void SwiftASTContext::AddDiagnostic(lldb::Severity severity,
     return;
 
   auto diagnostic = std::make_unique<Diagnostic>(
-      message, severity, eDiagnosticOriginLLDB, LLDB_INVALID_COMPILER_ID);
+      eDiagnosticOriginLLDB, LLDB_INVALID_COMPILER_ID,
+      DiagnosticDetail{{}, severity, message.str(), message.str()});
   static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
       ->AddDiagnostic(std::move(diagnostic));
 }
 
 bool SwiftASTContext::HasFatalErrors(swift::ASTContext *ast_context) {
   return (ast_context && ast_context->Diags.hasFatalErrorOccurred());
-}
-
-bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
-  assert(m_diagnostic_consumer_ap.get());
-  return static_cast<StoringDiagnosticConsumer *>(
-             m_diagnostic_consumer_ap.get())
-      ->SetColorize(b);
-  return false;
 }
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,

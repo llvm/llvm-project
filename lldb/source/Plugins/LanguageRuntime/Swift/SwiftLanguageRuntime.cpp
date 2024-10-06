@@ -2140,8 +2140,8 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
+        error = Status::FromErrorStringWithFormat(
+            "invalid short option character '%c'", short_option);
         break;
       }
 
