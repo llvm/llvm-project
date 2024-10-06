@@ -28,6 +28,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/TGTimer.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -746,7 +747,7 @@ Init *ListInit::convertInitializerTo(const RecTy *Ty) const {
   return nullptr;
 }
 
-Record *ListInit::getElementAsRecord(unsigned i) const {
+const Record *ListInit::getElementAsRecord(unsigned i) const {
   assert(i < NumValues && "List element index out of range!");
   DefInit *DI = dyn_cast<DefInit>(getElement(i));
   if (!DI)
@@ -871,7 +872,7 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
 
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
-        Record *D = RK.getDef(Name->getValue());
+        const Record *D = RK.getDef(Name->getValue());
         if (!D && CurRec) {
           // Self-references are allowed, but their resolution is delayed until
           // the final resolve to ensure that we get the correct type for them.
@@ -1713,7 +1714,7 @@ Init *TernOpInit::Fold(Record *CurRec) const {
     StringInit *RHSs = dyn_cast<StringInit>(RHS);
 
     if (LHSd && MHSd && RHSd) {
-      Record *Val = RHSd->getDef();
+      const Record *Val = RHSd->getDef();
       if (LHSd->getAsString() == RHSd->getAsString())
         Val = MHSd->getDef();
       return Val->getDefInit();
@@ -2113,7 +2114,7 @@ Init *ExistsOpInit::Fold(Record *CurRec, bool IsFinal) const {
   if (StringInit *Name = dyn_cast<StringInit>(Expr)) {
 
     // Look up all defined records to see if we can find one.
-    Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
+    const Record *D = CheckType->getRecordKeeper().getDef(Name->getValue());
     if (D) {
       // Check if types are compatible.
       return IntInit::get(getRecordKeeper(),
@@ -2265,7 +2266,7 @@ Init *VarBitInit::resolveReferences(Resolver &R) const {
   return const_cast<VarBitInit*>(this);
 }
 
-DefInit::DefInit(Record *D)
+DefInit::DefInit(const Record *D)
     : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
 Init *DefInit::convertInitializerTo(const RecTy *Ty) const {
@@ -2292,11 +2293,12 @@ static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
     ID.AddPointer(I);
 }
 
-VarDefInit::VarDefInit(Record *Class, unsigned N)
-    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Class(Class),
+VarDefInit::VarDefInit(SMLoc Loc, Record *Class, unsigned N)
+    : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Loc(Loc), Class(Class),
       NumArgs(N) {}
 
-VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
+VarDefInit *VarDefInit::get(SMLoc Loc, Record *Class,
+                            ArrayRef<ArgumentInit *> Args) {
   FoldingSetNodeID ID;
   ProfileVarDefInit(ID, Class, Args);
 
@@ -2307,7 +2309,7 @@ VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
 
   void *Mem = RK.Allocator.Allocate(
       totalSizeToAlloc<ArgumentInit *>(Args.size()), alignof(VarDefInit));
-  VarDefInit *I = new (Mem) VarDefInit(Class, Args.size());
+  VarDefInit *I = new (Mem) VarDefInit(Loc, Class, Args.size());
   std::uninitialized_copy(Args.begin(), Args.end(),
                           I->getTrailingObjects<ArgumentInit *>());
   RK.TheVarDefInitPool.InsertNode(I, IP);
@@ -2323,9 +2325,8 @@ DefInit *VarDefInit::instantiate() {
     return Def;
 
   RecordKeeper &Records = Class->getRecords();
-  auto NewRecOwner =
-      std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
-                               Records, Record::RK_AnonymousDef);
+  auto NewRecOwner = std::make_unique<Record>(
+      Records.getNewAnonymousName(), Loc, Records, Record::RK_AnonymousDef);
   Record *NewRec = NewRecOwner.get();
 
   // Copy values from class to instance
@@ -2357,9 +2358,8 @@ DefInit *VarDefInit::instantiate() {
   NewRec->resolveReferences(R);
 
   // Add superclasses.
-  ArrayRef<std::pair<Record *, SMRange>> SCs = Class->getSuperClasses();
-  for (const auto &SCPair : SCs)
-    NewRec->addSuperClass(SCPair.first, SCPair.second);
+  for (const auto &[SC, Loc] : Class->getSuperClasses())
+    NewRec->addSuperClass(SC, Loc);
 
   NewRec->addSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
@@ -2390,7 +2390,7 @@ Init *VarDefInit::resolveReferences(Resolver &R) const {
   }
 
   if (Changed) {
-    auto New = VarDefInit::get(Class, NewArgs);
+    auto *New = VarDefInit::get(Loc, Class, NewArgs);
     if (!UR.foundUnresolved())
       return New->instantiate();
     return New;
@@ -2445,7 +2445,7 @@ Init *FieldInit::resolveReferences(Resolver &R) const {
 
 Init *FieldInit::Fold(Record *CurRec) const {
   if (DefInit *DI = dyn_cast<DefInit>(Rec)) {
-    Record *Def = DI->getDef();
+    const Record *Def = DI->getDef();
     if (Def == CurRec)
       PrintFatalError(CurRec->getLoc(),
                       Twine("Attempting to access field '") +
@@ -2656,7 +2656,7 @@ void DagInit::Profile(FoldingSetNodeID &ID) const {
                  ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames));
 }
 
-Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
+const Record *DagInit::getOperatorAsDef(ArrayRef<SMLoc> Loc) const {
   if (DefInit *DefI = dyn_cast<DefInit>(Val))
     return DefI->getDef();
   PrintFatalError(Loc, "Expected record as operator");
@@ -2837,8 +2837,8 @@ const RecordRecTy *Record::getType() const {
 
 DefInit *Record::getDefInit() const {
   if (!CorrespondingDefInit) {
-    CorrespondingDefInit = new (TrackedRecords.getImpl().Allocator)
-        DefInit(const_cast<Record *>(this));
+    CorrespondingDefInit =
+        new (TrackedRecords.getImpl().Allocator) DefInit(this);
   }
   return CorrespondingDefInit;
 }
@@ -2869,7 +2869,7 @@ void Record::setName(Init *NewName) {
 // so we can step through the direct superclasses in reverse order.
 
 bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   for (int I = SCs.size() - 1; I >= 0; --I) {
     const Record *SC = SCs[I].first;
@@ -2883,10 +2883,10 @@ bool Record::hasDirectSuperClass(const Record *Superclass) const {
 
 void Record::getDirectSuperClasses(
     SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
 
   while (!SCs.empty()) {
-    Record *SC = SCs.back().first;
+    const Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
     Classes.push_back(SC);
   }
@@ -2965,11 +2965,11 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<Record *, SMRange>> SC = R.getSuperClasses();
+  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
   if (!SC.empty()) {
     OS << "\t//";
-    for (const auto &SuperPair : SC)
-      OS << " " << SuperPair.first->getNameInitAsString();
+    for (const auto &[SC, _] : SC)
+      OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";
 
@@ -3047,22 +3047,8 @@ ListInit *Record::getValueAsListInit(StringRef FieldName) const {
                                 "' exists but does not have a list value");
 }
 
-std::vector<Record*>
-Record::getValueAsListOfDefs(StringRef FieldName) const {
-  ListInit *List = getValueAsListInit(FieldName);
-  std::vector<Record*> Defs;
-  for (Init *I : List->getValues()) {
-    if (DefInit *DI = dyn_cast<DefInit>(I))
-      Defs.push_back(DI->getDef());
-    else
-      PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
-        FieldName + "' list is not entirely DefInit!");
-  }
-  return Defs;
-}
-
 std::vector<const Record *>
-Record::getValueAsListOfConstDefs(StringRef FieldName) const {
+Record::getValueAsListOfDefs(StringRef FieldName) const {
   ListInit *List = getValueAsListInit(FieldName);
   std::vector<const Record *> Defs;
   for (const Init *I : List->getValues()) {
@@ -3122,7 +3108,7 @@ Record::getValueAsListOfStrings(StringRef FieldName) const {
   return Strings;
 }
 
-Record *Record::getValueAsDef(StringRef FieldName) const {
+const Record *Record::getValueAsDef(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -3134,7 +3120,7 @@ Record *Record::getValueAsDef(StringRef FieldName) const {
     FieldName + "' does not have a def initializer!");
 }
 
-Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
+const Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())
     PrintFatalError(getLoc(), "Record `" + getName() +
@@ -3147,7 +3133,6 @@ Record *Record::getValueAsOptionalDef(StringRef FieldName) const {
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have either a def initializer or '?'!");
 }
-
 
 bool Record::getValueAsBit(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
@@ -3198,11 +3183,19 @@ void Record::checkRecordAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
+  bool AnyFailed = false;
   for (const auto &Assertion : getAssertions()) {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
-    CheckAssert(Assertion.Loc, Condition, Message);
+    AnyFailed |= CheckAssert(Assertion.Loc, Condition, Message);
   }
+
+  if (!AnyFailed)
+    return;
+
+  // If any of the record assertions failed, print some context that will
+  // help see where the record that caused these assert failures is defined.
+  PrintError(this, "assertion failed in this record");
 }
 
 void Record::emitRecordDumps() {
@@ -3226,7 +3219,9 @@ void Record::checkUnusedTemplateArgs() {
 }
 
 RecordKeeper::RecordKeeper()
-    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)) {}
+    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)),
+      Timer(std::make_unique<TGTimer>()) {}
+
 RecordKeeper::~RecordKeeper() = default;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3250,65 +3245,20 @@ Init *RecordKeeper::getNewAnonymousName() {
   return AnonymousNameInit::get(*this, getImpl().AnonCounter++);
 }
 
-// These functions implement the phase timing facility. Starting a timer
-// when one is already running stops the running one.
-
-void RecordKeeper::startTimer(StringRef Name) const {
-  if (TimingGroup) {
-    if (LastTimer && LastTimer->isRunning()) {
-      LastTimer->stopTimer();
-      if (BackendTimer) {
-        LastTimer->clear();
-        BackendTimer = false;
-      }
-    }
-
-    LastTimer = new Timer("", Name, *TimingGroup);
-    LastTimer->startTimer();
-  }
-}
-
-void RecordKeeper::stopTimer() {
-  if (TimingGroup) {
-    assert(LastTimer && "No phase timer was started");
-    LastTimer->stopTimer();
-  }
-}
-
-void RecordKeeper::startBackendTimer(StringRef Name) {
-  if (TimingGroup) {
-    startTimer(Name);
-    BackendTimer = true;
-  }
-}
-
-void RecordKeeper::stopBackendTimer() {
-  if (TimingGroup) {
-    if (BackendTimer) {
-      stopTimer();
-      BackendTimer = false;
-    }
-  }
-}
-
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
+ArrayRef<const Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
   // We cache the record vectors for single classes. Many backends request
   // the same vectors multiple times.
-  auto Pair = Cache.try_emplace(ClassName.str());
-  if (Pair.second)
-    Pair.first->second =
-        getAllDerivedDefinitionsImpl<VecTy>(ArrayRef(ClassName));
-
-  return Pair.first->second;
+  auto [Iter, Inserted] = Cache.try_emplace(ClassName.str());
+  if (Inserted)
+    Iter->second = getAllDerivedDefinitions(ArrayRef(ClassName));
+  return Iter->second;
 }
 
-template <typename VecTy>
-VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
-    ArrayRef<StringRef> ClassNames) const {
+std::vector<const Record *>
+RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
   SmallVector<const Record *, 2> ClassRecs;
-  VecTy Defs;
+  std::vector<const Record *> Defs;
 
   assert(ClassNames.size() > 0 && "At least one class must be passed.");
   for (const auto &ClassName : ClassNames) {
@@ -3328,46 +3278,11 @@ VecTy RecordKeeper::getAllDerivedDefinitionsImpl(
   return Defs;
 }
 
-template <typename VecTy>
-const VecTy &RecordKeeper::getAllDerivedDefinitionsIfDefinedImpl(
-    StringRef ClassName, std::map<std::string, VecTy> &Cache) const {
-  return getClass(ClassName)
-             ? getAllDerivedDefinitionsImpl<VecTy>(ClassName, Cache)
-             : Cache[""];
-}
-
-ArrayRef<const Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassName,
-                                                             ClassRecordsMap);
-}
-
-std::vector<const Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const {
-  return getAllDerivedDefinitionsImpl<std::vector<const Record *>>(ClassNames);
-}
-
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) {
-  return getAllDerivedDefinitionsImpl<std::vector<Record *>>(ClassNames);
-}
-
 ArrayRef<const Record *>
 RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<const Record *>>(
-      ClassName, ClassRecordsMapConst);
-}
-
-const std::vector<Record *> &
-RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) {
-  return getAllDerivedDefinitionsIfDefinedImpl<std::vector<Record *>>(
-      ClassName, ClassRecordsMap);
+  if (getClass(ClassName))
+    return getAllDerivedDefinitions(ClassName);
+  return Cache[""];
 }
 
 void RecordKeeper::dumpAllocationStats(raw_ostream &OS) const {

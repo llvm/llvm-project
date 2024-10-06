@@ -1597,40 +1597,40 @@ func.func @_QPtest_real10(%arg0: !fir.box<!fir.array<?x?xf80>> {fir.bindc_name =
 // CHECK:           } else {
 // CHECK:             fir.do_loop
 
-func.func @_QPtest_complex10(%arg0: !fir.box<!fir.array<?x?x!fir.complex<10>>> {fir.bindc_name = "a"}) -> !fir.complex<10> {
+func.func @_QPtest_complex10(%arg0: !fir.box<!fir.array<?x?xcomplex<f80>>> {fir.bindc_name = "a"}) -> complex<f80> {
   %c10 = arith.constant 10 : index
   %c1 = arith.constant 1 : index
   %cst = arith.constant 0.000000e+00 : f80
-  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_complex10Ea"} : (!fir.box<!fir.array<?x?x!fir.complex<10>>>) -> !fir.box<!fir.array<?x?x!fir.complex<10>>>
-  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?x!fir.complex<10>>>) -> !fir.box<!fir.array<?x?x!fir.complex<10>>>
+  %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest_complex10Ea"} : (!fir.box<!fir.array<?x?xcomplex<f80>>>) -> !fir.box<!fir.array<?x?xcomplex<f80>>>
+  %1 = fir.rebox %0 : (!fir.box<!fir.array<?x?xcomplex<f80>>>) -> !fir.box<!fir.array<?x?xcomplex<f80>>>
   %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_complex10Ei"}
   %3 = fir.declare %2 {uniq_name = "_QFtest_complex10Ei"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %4 = fir.alloca !fir.complex<10> {bindc_name = "res", uniq_name = "_QFtest_complex10Eres"}
-  %5 = fir.declare %4 {uniq_name = "_QFtest_complex10Eres"} : (!fir.ref<!fir.complex<10>>) -> !fir.ref<!fir.complex<10>>
+  %4 = fir.alloca complex<f80> {bindc_name = "res", uniq_name = "_QFtest_complex10Eres"}
+  %5 = fir.declare %4 {uniq_name = "_QFtest_complex10Eres"} : (!fir.ref<complex<f80>>) -> !fir.ref<complex<f80>>
   %6 = fir.address_of(@_QFtest_complex10ECxdp) : !fir.ref<i32>
   %7 = fir.declare %6 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_complex10ECxdp"} : (!fir.ref<i32>) -> !fir.ref<i32>
-  %8 = fir.undefined !fir.complex<10>
-  %9 = fir.insert_value %8, %cst, [0 : index] : (!fir.complex<10>, f80) -> !fir.complex<10>
-  %10 = fir.insert_value %9, %cst, [1 : index] : (!fir.complex<10>, f80) -> !fir.complex<10>
-  fir.store %10 to %5 : !fir.ref<!fir.complex<10>>
+  %8 = fir.undefined complex<f80>
+  %9 = fir.insert_value %8, %cst, [0 : index] : (complex<f80>, f80) -> complex<f80>
+  %10 = fir.insert_value %9, %cst, [1 : index] : (complex<f80>, f80) -> complex<f80>
+  fir.store %10 to %5 : !fir.ref<complex<f80>>
   %11 = fir.convert %c1 : (index) -> i32
   %12:2 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %11) -> (index, i32) {
     fir.store %arg2 to %3 : !fir.ref<i32>
-    %14 = fir.load %5 : !fir.ref<!fir.complex<10>>
+    %14 = fir.load %5 : !fir.ref<complex<f80>>
     %15 = fir.load %3 : !fir.ref<i32>
     %16 = fir.convert %15 : (i32) -> i64
-    %17 = fir.array_coor %1 %16, %16 : (!fir.box<!fir.array<?x?x!fir.complex<10>>>, i64, i64) -> !fir.ref<!fir.complex<10>>
-    %18 = fir.load %17 : !fir.ref<!fir.complex<10>>
-    %19 = fir.addc %14, %18 {fastmath = #arith.fastmath<contract>} : !fir.complex<10>
-    fir.store %19 to %5 : !fir.ref<!fir.complex<10>>
+    %17 = fir.array_coor %1 %16, %16 : (!fir.box<!fir.array<?x?xcomplex<f80>>>, i64, i64) -> !fir.ref<complex<f80>>
+    %18 = fir.load %17 : !fir.ref<complex<f80>>
+    %19 = fir.addc %14, %18 {fastmath = #arith.fastmath<contract>} : complex<f80>
+    fir.store %19 to %5 : !fir.ref<complex<f80>>
     %20 = arith.addi %arg1, %c1 : index
     %21 = fir.load %3 : !fir.ref<i32>
     %22 = arith.addi %21, %11 : i32
     fir.result %20, %22 : index, i32
   }
   fir.store %12#1 to %3 : !fir.ref<i32>
-  %13 = fir.load %5 : !fir.ref<!fir.complex<10>>
-  return %13 : !fir.complex<10>
+  %13 = fir.load %5 : !fir.ref<complex<f80>>
+  return %13 : complex<f80>
 }
 // CHECK-LABEL:   func.func @_QPtest_complex10(
 // CHECK:           fir.if

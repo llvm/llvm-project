@@ -28,6 +28,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -771,11 +772,11 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
-  assert(Prop == AttributeProperty::IntersectPreserve ||
-         Prop == AttributeProperty::IntersectAnd ||
-         Prop == AttributeProperty::IntersectMin ||
-         Prop == AttributeProperty::IntersectCustom &&
-             "Unknown intersect property");
+  assert((Prop == AttributeProperty::IntersectPreserve ||
+          Prop == AttributeProperty::IntersectAnd ||
+          Prop == AttributeProperty::IntersectMin ||
+          Prop == AttributeProperty::IntersectCustom) &&
+         "Unknown intersect property");
   return (getAttributeProperties(Kind) &
           AttributeProperty::IntersectPropertyMask) == Prop;
 }
@@ -1799,12 +1800,10 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   if (*this == Other)
     return *this;
 
-  // At least for now, only intersect lists with same number of params.
-  if (getNumAttrSets() != Other.getNumAttrSets())
-    return std::nullopt;
-
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  for (unsigned Idx : indexes()) {
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.
@@ -2296,12 +2295,8 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
 bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
+  return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
 
 /// Which attributes cannot be applied to a type.

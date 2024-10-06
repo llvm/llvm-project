@@ -51,6 +51,7 @@ class RecordVal;
 class Resolver;
 class StringInit;
 class TypedInit;
+class TGTimer;
 
 //===----------------------------------------------------------------------===//
 //  Type Classes
@@ -783,7 +784,7 @@ public:
     return cast<ListRecTy>(getType())->getElementType();
   }
 
-  Record *getElementAsRecord(unsigned i) const;
+  const Record *getElementAsRecord(unsigned i) const;
 
   Init *convertInitializerTo(const RecTy *Ty) const override;
 
@@ -1316,9 +1317,9 @@ public:
 class DefInit : public TypedInit {
   friend class Record;
 
-  Record *Def;
+  const Record *Def;
 
-  explicit DefInit(Record *D);
+  explicit DefInit(const Record *D);
 
 public:
   DefInit(const DefInit &) = delete;
@@ -1330,7 +1331,7 @@ public:
 
   Init *convertInitializerTo(const RecTy *Ty) const override;
 
-  Record *getDef() const { return Def; }
+  const Record *getDef() const { return Def; }
 
   const RecTy *getFieldType(StringInit *FieldName) const override;
 
@@ -1347,11 +1348,12 @@ public:
 class VarDefInit final : public TypedInit,
                          public FoldingSetNode,
                          public TrailingObjects<VarDefInit, ArgumentInit *> {
+  SMLoc Loc;
   Record *Class;
   DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
 
-  explicit VarDefInit(Record *Class, unsigned N);
+  explicit VarDefInit(SMLoc Loc, Record *Class, unsigned N);
 
   DefInit *instantiate();
 
@@ -1365,7 +1367,8 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static VarDefInit *get(Record *Class, ArrayRef<ArgumentInit *> Args);
+  static VarDefInit *get(SMLoc Loc, Record *Class,
+                         ArrayRef<ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1473,7 +1476,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   Init *getOperator() const { return Val; }
-  Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
+  const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
 
   StringInit *getName() const { return ValName; }
 
@@ -1660,7 +1663,7 @@ private:
   // this record.
   SmallVector<SMLoc, 4> Locs;
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
-  SmallVector<SMRange, 0> ReferenceLocs;
+  mutable SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1668,7 +1671,7 @@ private:
 
   // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
-  SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
+  SmallVector<std::pair<const Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
@@ -1729,7 +1732,7 @@ public:
   }
 
   /// Add a reference to this record value.
-  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+  void appendReferenceLoc(SMRange Loc) const { ReferenceLocs.push_back(Loc); }
 
   /// Return the references of this record value.
   ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
@@ -1758,7 +1761,7 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<Record *, SMRange>> getSuperClasses() const {
+  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
     return SuperClasses;
   }
 
@@ -1783,11 +1786,13 @@ public:
   }
 
   RecordVal *getValue(const Init *Name) {
-    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getValue(Name));
   }
 
   RecordVal *getValue(StringRef Name) {
-    return const_cast<RecordVal *>(static_cast<const Record *>(this)->getValue(Name));
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getValue(Name));
   }
 
   void addTemplateArg(Init *Name) {
@@ -1832,25 +1837,25 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const auto &SCPair : SuperClasses)
-      if (SCPair.first == R)
+    for (const auto &[SC, _] : SuperClasses)
+      if (SC == R)
         return true;
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &SCPair : SuperClasses) {
-      if (const auto *SI = dyn_cast<StringInit>(SCPair.first->getNameInit())) {
+    for (const auto &[SC, _] : SuperClasses) {
+      if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
-      } else if (SCPair.first->getNameInitAsString() == Name) {
+      } else if (SC->getNameInitAsString() == Name) {
         return true;
       }
     }
     return false;
   }
 
-  void addSuperClass(Record *R, SMRange Range) {
+  void addSuperClass(const Record *R, SMRange Range) {
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
@@ -1916,10 +1921,7 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// vector of records, throwing an exception if the field does not exist or
   /// if the value is not the right type.
-  std::vector<Record*> getValueAsListOfDefs(StringRef FieldName) const;
-  // Temporary function to help staged migration to const Record pointers.
-  std::vector<const Record *>
-  getValueAsListOfConstDefs(StringRef FieldName) const;
+  std::vector<const Record *> getValueAsListOfDefs(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// vector of integers, throwing an exception if the field does not exist or
@@ -1934,13 +1936,13 @@ public:
   /// This method looks up the specified field and returns its value as a
   /// Record, throwing an exception if the field does not exist or if the value
   /// is not the right type.
-  Record *getValueAsDef(StringRef FieldName) const;
+  const Record *getValueAsDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// Record, returning null if the field exists but is "uninitialized" (i.e.
   /// set to `?`), and throwing an exception if the field does not exist or if
   /// its value is not the right type.
-  Record *getValueAsOptionalDef(StringRef FieldName) const;
+  const Record *getValueAsOptionalDef(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a bit,
   /// throwing an exception if the field does not exist or if the value is not
@@ -1994,14 +1996,14 @@ public:
   }
 
   /// Get the concrete record with the specified name.
-  Record *getDef(StringRef Name) const {
+  const Record *getDef(StringRef Name) const {
     auto I = Defs.find(Name);
     return I == Defs.end() ? nullptr : I->second.get();
   }
 
   /// Get the \p Init value of the specified global variable.
   Init *getGlobal(StringRef Name) const {
-    if (Record *R = getDef(Name))
+    if (const Record *R = getDef(Name))
       return R->getDefInit();
     auto It = ExtraGlobals.find(Name);
     return It == ExtraGlobals.end() ? nullptr : It->second;
@@ -2034,55 +2036,24 @@ public:
 
   Init *getNewAnonymousName();
 
-  /// Start phase timing; called if the --time-phases option is specified.
-  void startPhaseTiming() {
-    TimingGroup = new TimerGroup("TableGen", "TableGen Phase Timing");
-  }
-
-  /// Start timing a phase. Automatically stops any previous phase timer.
-  void startTimer(StringRef Name) const;
-
-  /// Stop timing a phase.
-  void stopTimer();
-
-  /// Start timing the overall backend. If the backend itself starts a timer,
-  /// then this timer is cleared.
-  void startBackendTimer(StringRef Name);
-
-  /// Stop timing the overall backend.
-  void stopBackendTimer();
-
-  /// Stop phase timing and print the report.
-  void stopPhaseTiming() {
-    if (TimingGroup)
-      delete TimingGroup;
-  }
+  TGTimer &getTimer() const { return *Timer; }
 
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
-  // Non-const methods return std::vector<Record *> by value or reference.
-  // Const methods return std::vector<const Record *> by value or
-  // ArrayRef<const Record *>.
-
   /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
   ArrayRef<const Record *> getAllDerivedDefinitions(StringRef ClassName) const;
-  const std::vector<Record *> &getAllDerivedDefinitions(StringRef ClassName);
 
   /// Get all the concrete records that inherit from all the specified
   /// classes. The classes must be defined.
   std::vector<const Record *>
   getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames) const;
-  std::vector<Record *>
-  getAllDerivedDefinitions(ArrayRef<StringRef> ClassNames);
 
   /// Get all the concrete records that inherit from specified class, if the
   /// class is defined. Returns an empty vector if the class is not defined.
   ArrayRef<const Record *>
   getAllDerivedDefinitionsIfDefined(StringRef ClassName) const;
-  const std::vector<Record *> &
-  getAllDerivedDefinitionsIfDefined(StringRef ClassName);
 
   void dump() const;
 
@@ -2094,36 +2065,14 @@ private:
   RecordKeeper &operator=(RecordKeeper &&) = delete;
   RecordKeeper &operator=(const RecordKeeper &) = delete;
 
-  // Helper template functions for backend accessors.
-  template <typename VecTy>
-  const VecTy &
-  getAllDerivedDefinitionsImpl(StringRef ClassName,
-                               std::map<std::string, VecTy> &Cache) const;
-
-  template <typename VecTy>
-  VecTy getAllDerivedDefinitionsImpl(ArrayRef<StringRef> ClassNames) const;
-
-  template <typename VecTy>
-  const VecTy &getAllDerivedDefinitionsIfDefinedImpl(
-      StringRef ClassName, std::map<std::string, VecTy> &Cache) const;
-
   std::string InputFilename;
   RecordMap Classes, Defs;
-  mutable std::map<std::string, std::vector<const Record *>>
-      ClassRecordsMapConst;
-  mutable std::map<std::string, std::vector<Record *>> ClassRecordsMap;
+  mutable std::map<std::string, std::vector<const Record *>> Cache;
   GlobalMap ExtraGlobals;
-
-  // TODO: Move timing related code out of RecordKeeper.
-  // These members are for the phase timing feature. We need a timer group,
-  // the last timer started, and a flag to say whether the last timer
-  // is the special "backend overall timer."
-  mutable TimerGroup *TimingGroup = nullptr;
-  mutable Timer *LastTimer = nullptr;
-  mutable bool BackendTimer = false;
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;
+  std::unique_ptr<TGTimer> Timer;
 };
 
 /// Sorting predicate to sort record pointers by name.
