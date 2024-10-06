@@ -1571,7 +1571,7 @@ DynamicSection<ELFT>::computeContents() {
   }
 
   if (ctx.arg.emachine == EM_PPC64)
-    addInt(DT_PPC64_OPT, getPPC64TargetInfo(ctx)->ppc64DynamicSectionOpt);
+    addInt(DT_PPC64_OPT, ctx.target->ppc64DynamicSectionOpt);
 
   addInt(DT_NULL, 0);
   return entries;
@@ -2302,7 +2302,7 @@ void SymbolTableSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
       Symbol *sym = ent.sym;
       if (sym->isInPlt() && sym->hasFlag(NEEDS_COPY))
         eSym->st_other |= STO_MIPS_PLT;
-      if (isMicroMips()) {
+      if (isMicroMips(ctx)) {
         // We already set the less-significant bit for symbols
         // marked by the `STO_MIPS_MICROMIPS` flag and for microMIPS PLT
         // records. That allows us to distinguish such symbols in
@@ -2645,7 +2645,7 @@ PPC32GlinkSection::PPC32GlinkSection() {
 }
 
 void PPC32GlinkSection::writeTo(Ctx &ctx, uint8_t *buf) {
-  writePPC32GlinkSection(buf, entries.size());
+  writePPC32GlinkSection(ctx, buf, entries.size());
 }
 
 size_t PPC32GlinkSection::getSize(Ctx &ctx) const {
@@ -4870,7 +4870,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   }
 
   if (ctx.arg.emachine == EM_ARM) {
-    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>();
+    ctx.in.armCmseSGSection = std::make_unique<ArmCmseSGSection>(ctx);
     add(*ctx.in.armCmseSGSection);
   }
 

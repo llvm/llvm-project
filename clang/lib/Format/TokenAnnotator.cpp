@@ -3738,6 +3738,13 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
+
+  if (Prev->is(tok::coloncolon))
+    Prev = Prev->Previous;
+
+  if (!Prev)
+    return false;
+
   const auto &Previous = *Prev;
 
   if (const auto *PrevPrev = Previous.getPreviousNonComment();

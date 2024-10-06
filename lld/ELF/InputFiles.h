@@ -40,7 +40,7 @@ class InputSection;
 class Symbol;
 
 // Opens a given file.
-std::optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(Ctx &, StringRef path);
 
 // Add symbols in File to the symbol table.
 void parseFile(Ctx &, InputFile *file);
@@ -326,7 +326,7 @@ private:
 
 class BitcodeFile : public InputFile {
 public:
-  BitcodeFile(MemoryBufferRef m, StringRef archiveName,
+  BitcodeFile(Ctx &, MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
@@ -339,7 +339,7 @@ public:
 // .so file.
 class SharedFile : public ELFFileBase {
 public:
-  SharedFile(MemoryBufferRef m, StringRef defaultSoName);
+  SharedFile(Ctx &, MemoryBufferRef m, StringRef defaultSoName);
 
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;

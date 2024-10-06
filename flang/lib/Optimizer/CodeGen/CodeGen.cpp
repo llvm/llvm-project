@@ -3823,7 +3823,7 @@ fir::createLLVMDialectToLLVMPass(llvm::raw_ostream &output,
 }
 
 void fir::populateFIRToLLVMConversionPatterns(
-    fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
     fir::FIRToLLVMPassOptions &options) {
   patterns.insert<
       AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,

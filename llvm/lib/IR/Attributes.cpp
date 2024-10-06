@@ -772,11 +772,11 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
-  assert(Prop == AttributeProperty::IntersectPreserve ||
-         Prop == AttributeProperty::IntersectAnd ||
-         Prop == AttributeProperty::IntersectMin ||
-         Prop == AttributeProperty::IntersectCustom &&
-             "Unknown intersect property");
+  assert((Prop == AttributeProperty::IntersectPreserve ||
+          Prop == AttributeProperty::IntersectAnd ||
+          Prop == AttributeProperty::IntersectMin ||
+          Prop == AttributeProperty::IntersectCustom) &&
+         "Unknown intersect property");
   return (getAttributeProperties(Kind) &
           AttributeProperty::IntersectPropertyMask) == Prop;
 }

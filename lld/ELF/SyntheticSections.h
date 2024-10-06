@@ -1311,7 +1311,7 @@ class ArmCmseSGVeneer;
 
 class ArmCmseSGSection final : public SyntheticSection {
 public:
-  ArmCmseSGSection();
+  ArmCmseSGSection(Ctx &ctx);
   bool isNeeded() const override { return !entries.empty(); }
   size_t getSize(Ctx &) const override;
   void writeTo(Ctx &, uint8_t *buf) override;
@@ -1322,6 +1322,7 @@ public:
   uint64_t impLibMaxAddr = 0;
 
 private:
+  Ctx &ctx;
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
   SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
   uint64_t newEntries = 0;

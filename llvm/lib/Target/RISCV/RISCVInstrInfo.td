@@ -558,8 +558,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_ri<bits<5> imm11_7, bits<3> funct3, string opcodestr>
     : RVInstIShift<imm11_7, funct3, OPC_OP_IMM, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
-                   "$rd, $rs1, $shamt">,
-      Sched<[WriteShiftImm, ReadShiftImm]>;
+                   "$rd, $rs1, $shamt">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
@@ -586,8 +585,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ShiftW_ri<bits<7> imm11_5, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<imm11_5, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
-                    "$rd, $rs1, $shamt">,
-      Sched<[WriteShiftImm32, ReadShiftImm32]>;
+                    "$rd, $rs1, $shamt">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr,
@@ -607,6 +605,16 @@ class Priv_rr<string opcodestr, bits<7> funct7>
               opcodestr, "$rs1, $rs2"> {
   let rd = 0;
 }
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class Unary_r<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class UnaryW_r<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -666,9 +674,12 @@ def ORI   : ALU_ri<0b110, "ori">;
 
 def ANDI  : ALU_ri<0b111, "andi">;
 
-def SLLI : Shift_ri<0b00000, 0b001, "slli">;
-def SRLI : Shift_ri<0b00000, 0b101, "srli">;
-def SRAI : Shift_ri<0b01000, 0b101, "srai">;
+def SLLI : Shift_ri<0b00000, 0b001, "slli">,
+           Sched<[WriteShiftImm, ReadShiftImm]>;
+def SRLI : Shift_ri<0b00000, 0b101, "srli">,
+           Sched<[WriteShiftImm, ReadShiftImm]>;
+def SRAI : Shift_ri<0b01000, 0b101, "srai">,
+           Sched<[WriteShiftImm, ReadShiftImm]>;
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
@@ -764,9 +775,12 @@ def ADDIW : RVInstI<0b000, OPC_OP_IMM_32, (outs GPR:$rd),
                     "addiw", "$rd, $rs1, $imm12">,
             Sched<[WriteIALU32, ReadIALU32]>;
 
-def SLLIW : ShiftW_ri<0b0000000, 0b001, "slliw">;
-def SRLIW : ShiftW_ri<0b0000000, 0b101, "srliw">;
-def SRAIW : ShiftW_ri<0b0100000, 0b101, "sraiw">;
+def SLLIW : ShiftW_ri<0b0000000, 0b001, "slliw">,
+            Sched<[WriteShiftImm32, ReadShiftImm32]>;
+def SRLIW : ShiftW_ri<0b0000000, 0b101, "srliw">,
+            Sched<[WriteShiftImm32, ReadShiftImm32]>;
+def SRAIW : ShiftW_ri<0b0100000, 0b101, "sraiw">,
+            Sched<[WriteShiftImm32, ReadShiftImm32]>;
 
 def ADDW  : ALUW_rr<0b0000000, 0b000, "addw", Commutable=1>,
             Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
@@ -1896,6 +1910,7 @@ def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
 // Select W instructions if only the lower 32 bits of the result are used.
 def : PatGprGpr<binop_allwusers<add>, ADDW>;
 def : PatGprSimm12<binop_allwusers<add>, ADDIW>;
+def : PatGprImm<binop_allwusers<add>, ADDIW, u32simm12>;
 def : PatGprGpr<binop_allwusers<sub>, SUBW>;
 def : PatGprImm<binop_allwusers<shl>, SLLIW, uimm5>;
 
