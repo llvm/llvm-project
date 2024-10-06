@@ -194,12 +194,28 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::EABI, T.getEnvironment());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("arm-none-none-eabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::EABIHF, T.getEnvironment());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("arm-none-linux-musleabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::MuslEABI, T.getEnvironment());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("arm-none-linux-musleabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::MuslEABIHF, T.getEnvironment());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("armv6hl-none-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
@@ -207,6 +223,7 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
   EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_FALSE(T.isHardFloatABI());
 
   T = Triple("armv7hl-none-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
@@ -214,6 +231,15 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::GNUEABI, T.getEnvironment());
   EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_FALSE(T.isHardFloatABI());
+
+  T = Triple("armv7hl-none-linux-gnueabihf");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::GNUEABIHF, T.getEnvironment());
+  EXPECT_FALSE(T.isTime64ABI());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("amdil-unknown-unknown");
   EXPECT_EQ(Triple::amdil, T.getArch());
@@ -1313,6 +1339,7 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::GNUEABIHFT64, T.getEnvironment());
   EXPECT_TRUE(T.isTime64ABI());
+  EXPECT_TRUE(T.isHardFloatABI());
 
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());

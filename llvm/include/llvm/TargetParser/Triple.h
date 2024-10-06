@@ -1072,6 +1072,15 @@ public:
            Env == Triple::GNUEABIHFT64;
   }
 
+  /// Tests if the target forces hardfloat.
+  bool isHardFloatABI() const {
+    EnvironmentType Env = getEnvironment();
+    return Env == llvm::Triple::GNUEABIHF ||
+           Env == llvm::Triple::GNUEABIHFT64 ||
+           Env == llvm::Triple::MuslEABIHF ||
+           Env == llvm::Triple::EABIHF;
+  }
+
   /// Tests whether the target supports comdat
   bool supportsCOMDAT() const {
     return !(isOSBinFormatMachO() || isOSBinFormatXCOFF() ||
