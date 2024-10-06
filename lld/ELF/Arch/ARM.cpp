@@ -214,7 +214,7 @@ void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
-static void writePltHeaderLong(uint8_t *buf) {
+static void writePltHeaderLong(Ctx &ctx, uint8_t *buf) {
   write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
   write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
   write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
@@ -280,7 +280,7 @@ void ARM::writePltHeader(uint8_t *buf) const {
     uint64_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA() - 4;
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
-      writePltHeaderLong(buf);
+      writePltHeaderLong(ctx, buf);
       return;
     }
     write32(buf + 0, pltData[0]);
@@ -1048,7 +1048,7 @@ void elf::sortArmMappingSymbols() {
   }
 }
 
-void elf::addArmInputSectionMappingSymbols() {
+void elf::addArmInputSectionMappingSymbols(Ctx &ctx) {
   // Collect mapping symbols for every executable input sections.
   // The linker generated mapping symbols for all the synthetic
   // sections are adding into the sectionmap through the function
@@ -1327,7 +1327,7 @@ private:
   const std::optional<uint64_t> entAddr;
 };
 
-ArmCmseSGSection::ArmCmseSGSection()
+ArmCmseSGSection::ArmCmseSGSection(Ctx &ctx)
     : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
                        /*alignment=*/32, ".gnu.sgstubs") {
@@ -1440,7 +1440,7 @@ void ArmCmseSGSection::finalizeContents(Ctx &) {
 // in the executable output by this link.
 // See Arm® v8-M Security Extensions: Requirements on Development Tools
 // https://developer.arm.com/documentation/ecm0359818/latest
-template <typename ELFT> void elf::writeARMCmseImportLib() {
+template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   StringTableSection *shstrtab =
       make<StringTableSection>(".shstrtab", /*dynamic=*/false);
   StringTableSection *strtab =
@@ -1538,10 +1538,10 @@ TargetInfo *elf::getARMTargetInfo(Ctx &ctx) {
   return &target;
 }
 
-template void elf::writeARMCmseImportLib<ELF32LE>();
-template void elf::writeARMCmseImportLib<ELF32BE>();
-template void elf::writeARMCmseImportLib<ELF64LE>();
-template void elf::writeARMCmseImportLib<ELF64BE>();
+template void elf::writeARMCmseImportLib<ELF32LE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF32BE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF64LE>(Ctx &);
+template void elf::writeARMCmseImportLib<ELF64BE>(Ctx &);
 
 template void ObjFile<ELF32LE>::importCmseSymbols();
 template void ObjFile<ELF32BE>::importCmseSymbols();
