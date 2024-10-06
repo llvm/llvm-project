@@ -1161,14 +1161,14 @@ void PPC64::writePltHeader(uint8_t *buf) const {
 
 void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t /*pltEntryAddr*/) const {
-  int32_t offset = pltHeaderSize + sym.getPltIdx() * pltEntrySize;
+  int32_t offset = pltHeaderSize + sym.getPltIdx(ctx) * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
 }
 
 void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
                       uint64_t /*pltEntryAddr*/) const {
-  writePPC64LoadAndBranch(buf, sym.getGotPltVA() - getPPC64TocBase(ctx));
+  writePPC64LoadAndBranch(buf, sym.getGotPltVA(ctx) - getPPC64TocBase(ctx));
 }
 
 static std::pair<RelType, uint64_t> toAddr16Rel(RelType type, uint64_t val) {
@@ -1429,7 +1429,7 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     return false;
 
   // If a function is in the Plt it needs to be called with a call-stub.
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
 
   // This check looks at the st_other bits of the callee with relocation

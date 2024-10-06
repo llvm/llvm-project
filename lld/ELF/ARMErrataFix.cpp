@@ -215,7 +215,8 @@ static bool branchDestInFirstRegion(Ctx &ctx, const InputSection *isec,
   // find the destination address as the branch could be indirected via a thunk
   // or the PLT.
   if (r) {
-    uint64_t dst = (r->expr == R_PLT_PC) ? r->sym->getPltVA() : r->sym->getVA();
+    uint64_t dst =
+        (r->expr == R_PLT_PC) ? r->sym->getPltVA(ctx) : r->sym->getVA();
     // Account for Thumb PC bias, usually cancelled to 0 by addend of -4.
     destAddr = dst + r->addend + 4;
   } else {
@@ -443,8 +444,9 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       // The final target of the branch may be ARM or Thumb, if the target
       // is ARM then we write the patch in ARM state to avoid a state change
       // Thunk from the patch to the target.
-      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC) ? sr.rel->sym->getPltVA()
-                                                       : sr.rel->sym->getVA();
+      uint64_t dstSymAddr = (sr.rel->expr == R_PLT_PC)
+                                ? sr.rel->sym->getPltVA(ctx)
+                                : sr.rel->sym->getVA();
       destIsARM = (dstSymAddr & 1) == 0;
     }
     psec = make<Patch657417Section>(isec, sr.off, sr.instr, destIsARM);

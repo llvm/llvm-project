@@ -34,7 +34,7 @@ uint64_t elf::getAArch64Page(uint64_t expr) {
 // PACIBSP.
 bool elf::isAArch64BTILandingPad(Symbol &s, int64_t a) {
   // PLT entries accessed indirectly have a BTI c.
-  if (s.isInPlt())
+  if (s.isInPlt(ctx))
     return true;
   Defined *d = dyn_cast<Defined>(&s);
   if (!isa_and_nonnull<InputSection>(d->section))
@@ -394,7 +394,7 @@ void AArch64::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(gotPltEntryAddr) - getAArch64Page(pltEntryAddr));
   relocateNoSym(buf + 4, R_AARCH64_LDST64_ABS_LO12_NC, gotPltEntryAddr);
@@ -408,7 +408,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // be resolved as a branch to the next instruction. If it is hidden, its
   // binding has been converted to local, so we just check isUndefined() here. A
   // undefined non-weak symbol will have been errored.
-  if (s.isUndefined() && !s.isInPlt())
+  if (s.isUndefined() && !s.isInPlt(ctx))
     return false;
   // ELF for the ARM 64-bit architecture, section Call and Jump relocations
   // only permits range extension thunks for R_AARCH64_CALL26 and
@@ -416,7 +416,7 @@ bool AArch64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_AARCH64_CALL26 && type != R_AARCH64_JUMP26 &&
       type != R_AARCH64_PLT32)
     return false;
-  uint64_t dst = expr == R_PLT_PC ? s.getPltVA() : s.getVA(a);
+  uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(a);
   return !inBranchRange(type, branchAddr, dst);
 }
 
@@ -1089,7 +1089,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     pltEntryAddr += sizeof(btiData);
   }
 
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   memcpy(buf, addrInst, sizeof(addrInst));
   relocateNoSym(buf, R_AARCH64_ADR_PREL_PG_HI21,
                 getAArch64Page(gotPltEntryAddr) - getAArch64Page(pltEntryAddr));
