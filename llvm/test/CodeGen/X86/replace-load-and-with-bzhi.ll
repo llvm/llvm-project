@@ -26,6 +26,28 @@ entry:
   ret i32 %and
 }
 
+define i32 @f32_bzhi_commute(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_commute:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_commute:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl fill_table32(,%ecx,4), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [32 x i32], ptr @fill_table32, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %x, %0
+  ret i32 %and
+}
+
 define i32 @f32_bzhi_partial(i32 %x, i32 %y) local_unnamed_addr {
 ; X64-LABEL: f32_bzhi_partial:
 ; X64:       # %bb.0: # %entry
@@ -42,6 +64,28 @@ entry:
   %arrayidx = getelementptr inbounds [17 x i32], ptr @fill_table32_partial, i64 0, i64 %idxprom
   %0 = load i32, ptr %arrayidx, align 4
   %and = and i32 %0, %x
+  ret i32 %and
+}
+
+define i32 @f32_bzhi_partial_commute(i32 %x, i32 %y) local_unnamed_addr {
+; X64-LABEL: f32_bzhi_partial_commute:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movslq %esi, %rcx
+; X64-NEXT:    andl fill_table32_partial(,%rcx,4), %eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f32_bzhi_partial_commute:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl fill_table32_partial(,%ecx,4), %eax
+; X86-NEXT:    retl
+entry:
+  %idxprom = sext i32 %y to i64
+  %arrayidx = getelementptr inbounds [17 x i32], ptr @fill_table32_partial, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %and = and i32 %x, %0
   ret i32 %and
 }
 
@@ -66,6 +110,28 @@ entry:
   ret i64 %and
 }
 
+define i64 @f64_bzhi_commute(i64 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f64_bzhi_commute:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq fill_table64(,%rsi,8), %rax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f64_bzhi_commute:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andl fill_table64(,%ecx,8), %eax
+; X86-NEXT:    andl fill_table64+4(,%ecx,8), %edx
+; X86-NEXT:    retl
+entry:
+  %arrayidx = getelementptr inbounds [64 x i64], ptr @fill_table64, i64 0, i64 %y
+  %0 = load i64, ptr %arrayidx, align 8
+  %and = and i64 %x, %0
+  ret i64 %and
+}
+
 define i64 @f64_bzhi_partial(i64 %x, i64 %y) local_unnamed_addr {
 ; X64-LABEL: f64_bzhi_partial:
 ; X64:       # %bb.0: # %entry
@@ -87,3 +153,24 @@ entry:
   ret i64 %and
 }
 
+define i64 @f64_bzhi_partial_commute(i64 %x, i64 %y) local_unnamed_addr {
+; X64-LABEL: f64_bzhi_partial_commute:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq fill_table64_partial(,%rsi,8), %rax
+; X64-NEXT:    retq
+;
+; X86-LABEL: f64_bzhi_partial_commute:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andl fill_table64_partial(,%ecx,8), %eax
+; X86-NEXT:    andl fill_table64_partial+4(,%ecx,8), %edx
+; X86-NEXT:    retl
+entry:
+  %arrayidx = getelementptr inbounds [51 x i64], ptr @fill_table64_partial, i64 0, i64 %y
+  %0 = load i64, ptr %arrayidx, align 8
+  %and = and i64 %x, %0
+  ret i64 %and
+}
