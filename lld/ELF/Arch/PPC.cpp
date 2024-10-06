@@ -64,15 +64,15 @@ private:
 static uint16_t lo(uint32_t v) { return v; }
 static uint16_t ha(uint32_t v) { return (v + 0x8000) >> 16; }
 
-static uint32_t readFromHalf16(const uint8_t *loc) {
+static uint32_t readFromHalf16(Ctx &ctx, const uint8_t *loc) {
   return read32(ctx.arg.isLE ? loc : loc - 2);
 }
 
-static void writeFromHalf16(uint8_t *loc, uint32_t insn) {
+static void writeFromHalf16(Ctx &ctx, uint8_t *loc, uint32_t insn) {
   write32(ctx.arg.isLE ? loc : loc - 2, insn);
 }
 
-void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
+void elf::writePPC32GlinkSection(Ctx &ctx, uint8_t *buf, size_t numEntries) {
   // Create canonical PLT entries for non-PIE code. Compilers don't generate
   // non-GOT-non-PLT relocations referencing external functions for -fpie/-fPIE.
   uint32_t glink = ctx.in.plt->getVA(); // VA of .glink
@@ -412,8 +412,8 @@ void PPC::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSGD16: {
     // addi rT, rA, x@got@tlsgd --> lwz rT, x@got@tprel(rA)
-    uint32_t insn = readFromHalf16(loc);
-    writeFromHalf16(loc, 0x80000000 | (insn & 0x03ff0000));
+    uint32_t insn = readFromHalf16(ctx, loc);
+    writeFromHalf16(ctx, loc, 0x80000000 | (insn & 0x03ff0000));
     relocateNoSym(loc, R_PPC_GOT_TPREL16, val);
     break;
   }
@@ -431,7 +431,7 @@ void PPC::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSGD16:
     // addi r3, r31, x@got@tlsgd --> addis r3, r2, x@tprel@ha
-    writeFromHalf16(loc, 0x3c620000 | ha(val));
+    writeFromHalf16(ctx, loc, 0x3c620000 | ha(val));
     break;
   case R_PPC_TLSGD:
     // bl __tls_get_addr(x@tldgd) --> add r3, r3, x@tprel@l
@@ -447,7 +447,7 @@ void PPC::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TLSLD16:
     // addi r3, rA, x@got@tlsgd --> addis r3, r2, 0
-    writeFromHalf16(loc, 0x3c620000);
+    writeFromHalf16(ctx, loc, 0x3c620000);
     break;
   case R_PPC_TLSLD:
     // r3+x@dtprel computes r3+x-0x8000, while we want it to compute r3+x@tprel
@@ -471,8 +471,8 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   switch (rel.type) {
   case R_PPC_GOT_TPREL16: {
     // lwz rT, x@got@tprel(rA) --> addis rT, r2, x@tprel@ha
-    uint32_t rt = readFromHalf16(loc) & 0x03e00000;
-    writeFromHalf16(loc, 0x3c020000 | rt | ha(val));
+    uint32_t rt = readFromHalf16(ctx, loc) & 0x03e00000;
+    writeFromHalf16(ctx, loc, 0x3c020000 | rt | ha(val));
     break;
   }
   case R_PPC_TLS: {

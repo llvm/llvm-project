@@ -150,15 +150,82 @@ static void EnumerateTwoInterestingConstantFPRanges(Fn TestFn,
 
 template <typename Fn>
 static void EnumerateValuesInConstantFPRange(const ConstantFPRange &CR,
-                                             Fn TestFn) {
+                                             Fn TestFn, bool IgnoreNaNPayload) {
   const fltSemantics &Sem = CR.getSemantics();
-  unsigned Bits = APFloat::semanticsSizeInBits(Sem);
-  assert(Bits < 32 && "Too many bits");
-  for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
-    APFloat V(Sem, APInt(Bits, I));
-    if (CR.contains(V))
-      TestFn(V);
+  if (IgnoreNaNPayload) {
+    if (CR.containsSNaN()) {
+      TestFn(APFloat::getSNaN(Sem, false));
+      TestFn(APFloat::getSNaN(Sem, true));
+    }
+    if (CR.containsQNaN()) {
+      TestFn(APFloat::getQNaN(Sem, false));
+      TestFn(APFloat::getQNaN(Sem, true));
+    }
+    if (CR.isNaNOnly())
+      return;
+    APFloat Lower = CR.getLower();
+    const APFloat &Upper = CR.getUpper();
+    auto Next = [&](APFloat &V) {
+      if (V.bitwiseIsEqual(Upper))
+        return false;
+      strictNext(V);
+      return true;
+    };
+    do
+      TestFn(Lower);
+    while (Next(Lower));
+  } else {
+    unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+    assert(Bits < 32 && "Too many bits");
+    for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
+      APFloat V(Sem, APInt(Bits, I));
+      if (CR.contains(V))
+        TestFn(V);
+    }
   }
+}
+
+template <typename Fn>
+static bool AnyOfValueInConstantFPRange(const ConstantFPRange &CR, Fn TestFn,
+                                        bool IgnoreNaNPayload) {
+  const fltSemantics &Sem = CR.getSemantics();
+  if (IgnoreNaNPayload) {
+    if (CR.containsSNaN()) {
+      if (TestFn(APFloat::getSNaN(Sem, false)))
+        return true;
+      if (TestFn(APFloat::getSNaN(Sem, true)))
+        return true;
+    }
+    if (CR.containsQNaN()) {
+      if (TestFn(APFloat::getQNaN(Sem, false)))
+        return true;
+      if (TestFn(APFloat::getQNaN(Sem, true)))
+        return true;
+    }
+    if (CR.isNaNOnly())
+      return false;
+    APFloat Lower = CR.getLower();
+    const APFloat &Upper = CR.getUpper();
+    auto Next = [&](APFloat &V) {
+      if (V.bitwiseIsEqual(Upper))
+        return false;
+      strictNext(V);
+      return true;
+    };
+    do {
+      if (TestFn(Lower))
+        return true;
+    } while (Next(Lower));
+  } else {
+    unsigned Bits = APFloat::semanticsSizeInBits(Sem);
+    assert(Bits < 32 && "Too many bits");
+    for (unsigned I = 0, E = (1U << Bits) - 1; I != E; ++I) {
+      APFloat V(Sem, APInt(Bits, I));
+      if (CR.contains(V) && TestFn(V))
+        return true;
+    }
+  }
+  return false;
 }
 
 TEST_F(ConstantFPRangeTest, Basics) {
@@ -372,13 +439,16 @@ TEST_F(ConstantFPRangeTest, FPClassify) {
       [](const ConstantFPRange &CR) {
         unsigned Mask = fcNone;
         bool HasPos = false, HasNeg = false;
-        EnumerateValuesInConstantFPRange(CR, [&](const APFloat &V) {
-          Mask |= V.classify();
-          if (V.isNegative())
-            HasNeg = true;
-          else
-            HasPos = true;
-        });
+        EnumerateValuesInConstantFPRange(
+            CR,
+            [&](const APFloat &V) {
+              Mask |= V.classify();
+              if (V.isNegative())
+                HasNeg = true;
+              else
+                HasPos = true;
+            },
+            /*IgnoreNaNPayload=*/true);
 
         std::optional<bool> SignBit = std::nullopt;
         if (HasPos != HasNeg)
@@ -428,5 +498,37 @@ TEST_F(ConstantFPRangeTest, MismatchedSemantics) {
 }
 #endif
 #endif
+
+TEST_F(ConstantFPRangeTest, makeAllowedFCmpRegion) {
+  for (auto Pred : FCmpInst::predicates()) {
+    EnumerateConstantFPRanges(
+        [Pred](const ConstantFPRange &CR) {
+          ConstantFPRange Res =
+              ConstantFPRange::makeAllowedFCmpRegion(Pred, CR);
+          ConstantFPRange Optimal =
+              ConstantFPRange::getEmpty(CR.getSemantics());
+          EnumerateValuesInConstantFPRange(
+              ConstantFPRange::getFull(CR.getSemantics()),
+              [&](const APFloat &V) {
+                if (AnyOfValueInConstantFPRange(
+                        CR,
+                        [&](const APFloat &U) {
+                          return FCmpInst::compare(V, U, Pred);
+                        },
+                        /*IgnoreNaNPayload=*/true))
+                  Optimal = Optimal.unionWith(ConstantFPRange(V));
+              },
+              /*IgnoreNaNPayload=*/true);
+
+          EXPECT_TRUE(Res.contains(Optimal))
+              << "Wrong result for makeAllowedFCmpRegion(" << Pred << ", " << CR
+              << "). Expected " << Optimal << ", but got " << Res;
+          EXPECT_EQ(Res, Optimal)
+              << "Suboptimal result for makeAllowedFCmpRegion(" << Pred << ", "
+              << CR << ")";
+        },
+        /*Exhaustive=*/false);
+  }
+}
 
 } // anonymous namespace

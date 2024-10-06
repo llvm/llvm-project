@@ -589,9 +589,7 @@ struct CallOpConversion : public fir::FIROpConversion<fir::CallOp> {
 } // namespace
 
 static mlir::Type getComplexEleTy(mlir::Type complex) {
-  if (auto cc = mlir::dyn_cast<mlir::ComplexType>(complex))
-    return cc.getElementType();
-  return mlir::cast<fir::ComplexType>(complex).getElementType();
+  return mlir::cast<mlir::ComplexType>(complex).getElementType();
 }
 
 namespace {
@@ -634,33 +632,6 @@ struct CmpcOpConversion : public fir::FIROpConversion<fir::CmpcOp> {
       break;
     }
     return mlir::success();
-  }
-};
-
-/// Lower complex constants
-struct ConstcOpConversion : public fir::FIROpConversion<fir::ConstcOp> {
-  using FIROpConversion::FIROpConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::ConstcOp conc, OpAdaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Location loc = conc.getLoc();
-    mlir::Type ty = convertType(conc.getType());
-    mlir::Type ety = convertType(getComplexEleTy(conc.getType()));
-    auto realPart = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, ety, getValue(conc.getReal()));
-    auto imPart = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, ety, getValue(conc.getImaginary()));
-    auto undef = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
-    auto setReal =
-        rewriter.create<mlir::LLVM::InsertValueOp>(loc, undef, realPart, 0);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(conc, setReal,
-                                                           imPart, 1);
-    return mlir::success();
-  }
-
-  inline llvm::APFloat getValue(mlir::Attribute attr) const {
-    return mlir::cast<fir::RealAttr>(attr).getValue();
   }
 };
 
@@ -3852,7 +3823,7 @@ fir::createLLVMDialectToLLVMPass(llvm::raw_ostream &output,
 }
 
 void fir::populateFIRToLLVMConversionPatterns(
-    fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
     fir::FIRToLLVMPassOptions &options) {
   patterns.insert<
       AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
@@ -3861,12 +3832,12 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
-      CmpcOpConversion, ConstcOpConversion, ConvertOpConversion,
-      CoordinateOpConversion, DTEntryOpConversion, DeclareOpConversion,
-      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
-      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
-      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
+      CmpcOpConversion, ConvertOpConversion, CoordinateOpConversion,
+      DTEntryOpConversion, DeclareOpConversion, DivcOpConversion,
+      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
+      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
+      InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
       NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
       SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,

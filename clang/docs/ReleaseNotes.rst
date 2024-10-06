@@ -104,6 +104,7 @@ ABI Changes in This Version
 
 - Fixed Microsoft name mangling of placeholder, auto and decltype(auto), return types for MSVC 1920+. This change resolves incompatibilities with code compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by earlier versions of Clang unless such code is built with the compiler option -fms-compatibility-version=19.14 to imitate the MSVC 1914 mangling behavior.
 - Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
+- Mangle member-like friend function templates as members of the enclosing class. (#GH110247, #GH110503)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -375,6 +376,8 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses when a ``requires`` expression has a local parameter of void type, aligning with the function parameter (#GH109831).
 
+- Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -466,7 +469,6 @@ Bug Fixes to C++ Support
   diagnosing a failed cast caused indirectly by a failed implicit conversion to the type of the constructor parameter.
 - Fixed an assertion failure by adjusting integral to boolean vector conversions (#GH108326)
 - Fixed an issue deducing non-type template arguments of reference type. (#GH73460)
-- Mangle friend function templates with a constraint that depends on a template parameter from an enclosing template as members of the enclosing class. (#GH110247)
 - Fixed an issue in constraint evaluation, where type constraints on the lambda expression
   containing outer unexpanded parameters were not correctly expanded. (#GH101754)
 - Fixed a bug in constraint expression comparison where the ``sizeof...`` expression was not handled properly
@@ -533,6 +535,10 @@ X86 Support
 - Support ISA of ``AVX10.2``.
   * Supported MINMAX intrinsics of ``*_(mask(z)))_minmax(ne)_p[s|d|h|bh]`` and
   ``*_(mask(z)))_minmax_s[s|d|h]``.
+
+- All intrinsics in adcintrin.h can now be used in constant expressions.
+
+- All intrinsics in adxintrin.h can now be used in constant expressions.
 
 - All intrinsics in lzcntintrin.h can now be used in constant expressions.
 
@@ -609,6 +615,7 @@ clang-format
 ------------
 
 - Adds ``BreakBinaryOperations`` option.
+- Adds ``TemplateNames`` option.
 
 libclang
 --------
@@ -621,10 +628,17 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
+- Now CSA models `__builtin_*_overflow` functions. (#GH102602)
+
 - MallocChecker now checks for ``ownership_returns(class, idx)`` and ``ownership_takes(class, idx)``
   attributes with class names different from "malloc". Clang static analyzer now reports an error
   if class of allocation and deallocation function mismatches.
   `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-mismatcheddeallocator-c-c>`__.
+
+- Function effects, e.g. the ``nonblocking`` and ``nonallocating`` "performance constraint" 
+  attributes, are now verified. For example, for functions declared with the ``nonblocking`` 
+  attribute, the compiler can generate warnings about the use of any language features, or calls to
+  other functions, which may block.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

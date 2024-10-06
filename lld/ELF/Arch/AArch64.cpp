@@ -91,9 +91,10 @@ private:
 };
 
 struct AArch64Relaxer {
+  Ctx &ctx;
   bool safeToRelaxAdrpLdr = false;
 
-  AArch64Relaxer(ArrayRef<Relocation> relocs);
+  AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs);
   bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
                        uint64_t secAddr, uint8_t *buf) const;
   bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
@@ -750,7 +751,8 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
+AArch64Relaxer::AArch64Relaxer(Ctx &ctx, ArrayRef<Relocation> relocs)
+    : ctx(ctx) {
   if (!ctx.arg.relax)
     return;
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
@@ -909,7 +911,7 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  AArch64Relaxer relaxer(sec.relocs());
+  AArch64Relaxer relaxer(ctx, sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
     uint8_t *loc = buf + rel.offset;
@@ -1149,13 +1151,13 @@ addTaggedSymbolReferences(InputSectionBase &sec,
 // Ideally, this isn't a problem, as any TU that imports or exports tagged
 // symbols should also be built with tagging. But, to handle these cases, we
 // demote the symbol to be untagged.
-void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
+void elf::createTaggedSymbols(Ctx &ctx) {
   assert(hasMemtag());
 
   // First, collect all symbols that are marked as tagged, and count how many
   // times they're marked as tagged.
   DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
-  for (InputFile* file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::ObjKind)
       continue;
     for (InputSectionBase *section : file->getSections()) {
@@ -1171,7 +1173,7 @@ void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
   // definitions to a symbol exceeds the amount of times they're marked as
   // tagged, it means we have an objfile that uses the untagged variant of the
   // symbol.
-  for (InputFile *file : files) {
+  for (InputFile *file : ctx.objectFiles) {
     if (file->kind() != InputFile::BinaryKind &&
         file->kind() != InputFile::ObjKind)
       continue;

@@ -14439,8 +14439,6 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
         Mangler->mangleThunk(Method, Thunk, /* elideOverrideInfo */ false,
                              mangledNameStream);
 
-      if (Thunks.find(ElidedName) == Thunks.end())
-        Thunks[ElidedName] = {};
       Thunks[ElidedName].push_back(std::string(MangledName));
     }
   }

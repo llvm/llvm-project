@@ -381,6 +381,11 @@ void TextNodeDumper::Visit(const OMPClause *C) {
     OS << " <implicit>";
 }
 
+void TextNodeDumper::VisitOpenACCAsteriskSizeExpr(
+    const OpenACCAsteriskSizeExpr *E) {
+  // Nothing to do here, only location exists, and that is printed elsewhere.
+}
+
 void TextNodeDumper::Visit(const OpenACCClause *C) {
   if (!C) {
     ColorScope Color(OS, ShowColors, NullColor);
@@ -414,6 +419,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
     case OpenACCClauseKind::Seq:
+    case OpenACCClauseKind::Tile:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
