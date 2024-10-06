@@ -2438,12 +2438,21 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   };
 
   TailFoldingStyle Style = Cost->getTailFoldingStyle();
-  if (Style == TailFoldingStyle::None)
-    CheckMinIters =
-        Builder.CreateICmp(P, Count, CreateStep(), "min.iters.check");
-  else if (VF.isScalable() &&
-           !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-           Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
+  if (Style == TailFoldingStyle::None) {
+    Value *Step = CreateStep();
+    ScalarEvolution &SE = *PSE.getSE();
+    // Check if we can prove that the trip count is >= the step.
+    const SCEV *TripCountSCEV = SE.getTripCountFromExitCount(
+        PSE.getBackedgeTakenCount(), CountTy, OrigLoop);
+    if (SE.isKnownPredicate(CmpInst::getInversePredicate(P),
+                            SE.applyLoopGuards(TripCountSCEV, OrigLoop),
+                            SE.getSCEV(Step)))
+      CheckMinIters = Builder.getFalse();
+    else
+      CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
+  } else if (VF.isScalable() &&
+             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
+             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
     // vscale is not necessarily a power-of-2, which means we cannot guarantee
     // an overflow to zero when updating induction variables and so an
     // additional overflow check is required before entering the vector loop.
