@@ -183,7 +183,7 @@ void SystemZ::writeGotHeader(uint8_t *buf) const {
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
-  write64be(buf, s.getPltVA() + 14);
+  write64be(buf, s.getPltVA(ctx) + 14);
 }
 
 void SystemZ::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
@@ -227,9 +227,9 @@ void SystemZ::writePlt(uint8_t *buf, const Symbol &sym,
   };
   memcpy(buf, inst, sizeof(inst));
 
-  write32be(buf + 2, (sym.getGotPltVA() - pltEntryAddr) >> 1);
+  write32be(buf + 2, (sym.getGotPltVA(ctx) - pltEntryAddr) >> 1);
   write32be(buf + 24, (ctx.in.plt->getVA() - pltEntryAddr - 22) >> 1);
-  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx());
+  write32be(buf + 28, ctx.in.relaPlt->entsize * sym.getPltIdx(ctx));
 }
 
 int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
@@ -451,7 +451,7 @@ bool SystemZ::relaxOnce(int pass) const {
         if (isInt<33>(v) && !(v & 1))
           continue;
         if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux();
+          rel.sym->allocateAux(ctx);
           addGotEntry(ctx, *rel.sym);
           changed = true;
         }

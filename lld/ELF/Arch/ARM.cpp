@@ -321,7 +321,7 @@ static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
 void ARM::writePlt(uint8_t *buf, const Symbol &sym,
                    uint64_t pltEntryAddr) const {
   if (!useThumbPLTs(ctx)) {
-    uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 8;
+    uint64_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - 8;
 
     // The PLT entry is similar to the example given in Appendix A of ELF for
     // the Arm Architecture. Instead of using the Group Relocations to find the
@@ -335,7 +335,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     };
     if (!llvm::isUInt<27>(offset)) {
       // We cannot encode the Offset, use the long form.
-      writePltLong(buf, sym.getGotPltVA(), pltEntryAddr);
+      writePltLong(buf, sym.getGotPltVA(ctx), pltEntryAddr);
       return;
     }
     write32(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
@@ -343,7 +343,7 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     write32(buf + 8, pltData[2] | (offset & 0xfff));
     memcpy(buf + 12, trapInstr.data(), 4); // Pad to 16-byte boundary
   } else {
-    uint64_t offset = sym.getGotPltVA() - pltEntryAddr - 12;
+    uint64_t offset = sym.getGotPltVA(ctx) - pltEntryAddr - 12;
     assert(llvm::isUInt<32>(offset) && "This should always fit into a 32-bit offset");
 
     // A PLT entry will be:
@@ -387,7 +387,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   // be resolved as a branch to the next instruction. If it is hidden, its
   // binding has been converted to local, so we just check isUndefined() here. A
   // undefined non-weak symbol will have been errored.
-  if (s.isUndefined() && !s.isInPlt())
+  if (s.isUndefined() && !s.isInPlt(ctx))
     return false;
   // A state change from ARM to Thumb and vice versa must go through an
   // interworking thunk if the relocation type is not R_ARM_CALL or
@@ -404,7 +404,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
       return true;
     [[fallthrough]];
   case R_ARM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
         (!ctx.arg.armHasBlx && (s.getVA() & 1));
   }
@@ -417,7 +417,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
       return true;
     [[fallthrough]];
   case R_ARM_THM_CALL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
+    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a) ||
         (!ctx.arg.armHasBlx && (s.getVA() & 1) == 0);;
   }
@@ -686,9 +686,9 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     bool isBlx = (read16(loc + 2) & 0x1000) == 0;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
-    if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == useThumb)
+    if (!rel.sym->isFunc() && !rel.sym->isInPlt(ctx) && isBlx == useThumb)
       stateChangeWarning(ctx, loc, rel.type, *rel.sym);
-    if ((rel.sym->isFunc() || rel.sym->isInPlt()) ? !useThumb : isBlx) {
+    if ((rel.sym->isFunc() || rel.sym->isInPlt(ctx)) ? !useThumb : isBlx) {
       // We are writing a BLX. Ensure BLX destination is 4-byte aligned. As
       // the BLX instruction may only be two byte aligned. This must be done
       // before overflow check.
