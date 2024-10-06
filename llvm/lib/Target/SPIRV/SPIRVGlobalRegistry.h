@@ -152,8 +152,9 @@ public:
   }
 
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
+                      const SPIRVInstrInfo *TII,
                       MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, MMI);
+    DT.buildDepsGraph(Graph, TII, MMI);
   }
 
   void setBound(unsigned V) { Bound = V; }
