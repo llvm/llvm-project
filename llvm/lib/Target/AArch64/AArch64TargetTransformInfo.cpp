@@ -2157,7 +2157,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
-  case Intrinsic::aarch64_sve_fcvt_bf16f32:
+  case Intrinsic::aarch64_sve_fcvt_bf16f32_v2:
   case Intrinsic::aarch64_sve_fcvt_f16f32:
   case Intrinsic::aarch64_sve_fcvt_f16f64:
   case Intrinsic::aarch64_sve_fcvt_f32f16:
@@ -2166,11 +2166,7 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_fcvt_f64f32:
   case Intrinsic::aarch64_sve_fcvtlt_f32f16:
   case Intrinsic::aarch64_sve_fcvtlt_f64f32:
-  case Intrinsic::aarch64_sve_fcvtnt_bf16f32:
-  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
-  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtx_f32f64:
-  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtzs:
   case Intrinsic::aarch64_sve_fcvtzs_i32f16:
   case Intrinsic::aarch64_sve_fcvtzs_i32f64:
@@ -2192,6 +2188,11 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_ucvtf_f32i64:
   case Intrinsic::aarch64_sve_ucvtf_f64i32:
     return instCombineSVEAllOrNoActiveUnary(IC, II);
+  case Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2:
+  case Intrinsic::aarch64_sve_fcvtnt_f16f32:
+  case Intrinsic::aarch64_sve_fcvtnt_f32f64:
+  case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
+    return instCombineSVENoActiveReplace(IC, II, true);
   case Intrinsic::aarch64_sve_st1_scatter:
   case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
   case Intrinsic::aarch64_sve_st1_scatter_sxtw:
@@ -3440,15 +3441,14 @@ InstructionCost AArch64TTIImpl::getAddressComputationCost(Type *Ty,
   return 1;
 }
 
-InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                                   Type *CondTy,
-                                                   CmpInst::Predicate VecPred,
-                                                   TTI::TargetCostKind CostKind,
-                                                   const Instruction *I) {
+InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
@@ -3527,7 +3527,8 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions

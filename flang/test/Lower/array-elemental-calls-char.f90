@@ -123,7 +123,7 @@ subroutine foo2b(i, j, c)
 ! CHECK:           %[[VAL_13:.*]] = fir.emboxchar %[[VAL_7]], %[[VAL_3]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 ! CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_9]], %[[VAL_5]] : index
 ! CHECK:           %[[VAL_15:.*]] = fir.array_coor %[[VAL_1]](%[[VAL_8]]) %[[VAL_14]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-! CHECK:           %[[VAL_16:.*]] = fir.call @_QPelem2(%[[VAL_13]], %[[VAL_15]]) fastmath<contract> : (!fir.boxchar<1>, !fir.ref<i32>) -> i32
+! CHECK:           %[[VAL_16:.*]] = fir.call @_QPelem2(%[[VAL_13]], %[[VAL_15]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.boxchar<1>, !fir.ref<i32>) -> i32
 ! CHECK:           %[[VAL_17:.*]] = fir.array_coor %[[VAL_0]](%[[VAL_8]]) %[[VAL_14]] : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 ! CHECK:           fir.store %[[VAL_16]] to %[[VAL_17]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_18:.*]] = arith.subi %[[VAL_10]], %[[VAL_5]] : index

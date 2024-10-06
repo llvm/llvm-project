@@ -366,9 +366,6 @@ define <2 x half> @fptrunc_v2f32_v2f16(<2 x float> %a) {
 ; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fptrunc <2 x float> %a to <2 x half>

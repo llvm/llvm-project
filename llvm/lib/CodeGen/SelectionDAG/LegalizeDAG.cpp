@@ -2205,7 +2205,8 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
-    SDValue Tmp = ExpandLibCall(LC, Node, false).first;
+    bool IsSignedArgument = Node->getOpcode() == ISD::FLDEXP;
+    SDValue Tmp = ExpandLibCall(LC, Node, IsSignedArgument).first;
     Results.push_back(Tmp);
   }
 }
@@ -5850,13 +5851,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
-  case ISD::VP_REDUCE_FADD:
-  case ISD::VP_REDUCE_FMUL:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
-  case ISD::VP_REDUCE_SEQ_FADD:
     Results.push_back(PromoteReduction(Node));
     break;
   }

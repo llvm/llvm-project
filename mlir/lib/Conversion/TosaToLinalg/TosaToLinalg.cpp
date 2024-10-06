@@ -1830,7 +1830,7 @@ public:
   LogicalResult matchAndRewrite(tosa::ReverseOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     auto inputTy = cast<ShapedType>(input.getType());
     auto resultTy = cast<ShapedType>(op.getType());
     auto axis = op.getAxis();
@@ -2161,7 +2161,7 @@ public:
   LogicalResult matchAndRewrite(tosa::TableOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-    Value input = op.getInput();
+    Value input = op.getInput1();
     Value table = op.getTable();
     auto inputTy = cast<ShapedType>(input.getType());
     auto tableTy = cast<ShapedType>(table.getType());
@@ -2588,7 +2588,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),

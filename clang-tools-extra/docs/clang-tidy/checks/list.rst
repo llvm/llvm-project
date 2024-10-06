@@ -81,6 +81,7 @@ Clang-Tidy Checks
    :doc:`bugprone-assert-side-effect <bugprone/assert-side-effect>`,
    :doc:`bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition>`,
    :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
+   :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
@@ -145,6 +146,7 @@ Clang-Tidy Checks
    :doc:`bugprone-suspicious-stringview-data-usage <bugprone/suspicious-stringview-data-usage>`,
    :doc:`bugprone-swapped-arguments <bugprone/swapped-arguments>`, "Yes"
    :doc:`bugprone-switch-missing-default-case <bugprone/switch-missing-default-case>`,
+   :doc:`bugprone-tagged-union-member-count <bugprone/tagged-union-member-count>`,
    :doc:`bugprone-terminating-continue <bugprone/terminating-continue>`, "Yes"
    :doc:`bugprone-throw-keyword-missing <bugprone/throw-keyword-missing>`,
    :doc:`bugprone-too-small-loop-variable <bugprone/too-small-loop-variable>`,

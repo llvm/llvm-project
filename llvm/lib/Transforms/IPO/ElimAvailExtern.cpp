@@ -135,7 +135,6 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
   if (!eliminateAvailableExternally(M, /*Convert=*/(CtxProf && !!(*CtxProf))))
-    ;
-  return PreservedAnalyses::all();
+    return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

@@ -3157,15 +3157,14 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
-                                               Type *CondTy,
-                                               CmpInst::Predicate VecPred,
-                                               TTI::TargetCostKind CostKind,
-                                               const Instruction *I) {
+InstructionCost X86TTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) {
   // Early out if this type isn't scalar/vector integer/float.
   if (!(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy()))
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     I);
+                                     Op1Info, Op2Info, I);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -3229,9 +3228,11 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // Use FCMP_UEQ expansion - FCMP_ONE should be the same.
         if (CondTy && !ST->hasAVX())
           return getCmpSelInstrCost(Opcode, ValTy, CondTy,
-                                    CmpInst::Predicate::FCMP_UNO, CostKind) +
+                                    CmpInst::Predicate::FCMP_UNO, CostKind,
+                                    Op1Info, Op2Info) +
                  getCmpSelInstrCost(Opcode, ValTy, CondTy,
-                                    CmpInst::Predicate::FCMP_OEQ, CostKind) +
+                                    CmpInst::Predicate::FCMP_OEQ, CostKind,
+                                    Op1Info, Op2Info) +
                  getArithmeticInstrCost(Instruction::Or, CondTy, CostKind);
 
         break;
@@ -3451,7 +3452,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->getScalarType()->isFloatingPointTy())
       return 3;
 
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }

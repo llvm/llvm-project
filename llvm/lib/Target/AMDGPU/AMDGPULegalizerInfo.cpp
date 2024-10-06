@@ -289,6 +289,7 @@ static const LLT F64 = LLT::float64();
 static const LLT S96 = LLT::scalar(96);
 static const LLT S128 = LLT::scalar(128);
 static const LLT S160 = LLT::scalar(160);
+static const LLT S192 = LLT::scalar(192);
 static const LLT S224 = LLT::scalar(224);
 static const LLT S256 = LLT::scalar(256);
 static const LLT S512 = LLT::scalar(512);
@@ -334,7 +335,7 @@ static const LLT V2S128 = LLT::fixed_vector(2, 128);
 static const LLT V4S128 = LLT::fixed_vector(4, 128);
 
 static std::initializer_list<LLT> AllScalarTypes = {
-    S32, S64, S96, S128, S160, S224, S256, S512, S1024};
+    S32, S64, S96, S128, S160, S192, S224, S256, S512, S1024};
 
 static std::initializer_list<LLT> AllS16Vectors{
     V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
@@ -4801,7 +4802,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
                             MF.getTarget().Options.UnsafeFPMath;
 
-  if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
+  if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
       return false;
 

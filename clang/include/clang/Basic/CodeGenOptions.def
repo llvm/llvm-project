@@ -111,6 +111,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+ENUM_CODEGENOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2,
+    CFBranchLabelSchemeKind::Default) ///< if -mcf-branch-label-scheme is set.
 CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
 CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
                                          ///< is set.

@@ -35451,11 +35451,11 @@ static MachineInstrBuilder createPHIsForCMOVsInSinkBB(
     if (MIIt->getOperand(3).getImm() == OppCC)
       std::swap(Op1Reg, Op2Reg);
 
-    if (RegRewriteTable.contains(Op1Reg))
-      Op1Reg = RegRewriteTable[Op1Reg].first;
+    if (auto It = RegRewriteTable.find(Op1Reg); It != RegRewriteTable.end())
+      Op1Reg = It->second.first;
 
-    if (RegRewriteTable.contains(Op2Reg))
-      Op2Reg = RegRewriteTable[Op2Reg].second;
+    if (auto It = RegRewriteTable.find(Op2Reg); It != RegRewriteTable.end())
+      Op2Reg = It->second.second;
 
     MIB =
         BuildMI(*SinkMBB, SinkInsertionPoint, MIMD, TII->get(X86::PHI), DestReg)
@@ -48499,7 +48499,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector())
       if (auto *RawC = getTargetConstantFromNode(N->getOperand(1)))
         if (auto *SplatC = RawC->getSplatValue())
-          C = &(SplatC->getUniqueInteger());
+          if (auto *SplatCI = dyn_cast<ConstantInt>(SplatC))
+            C = &(SplatCI->getValue());
 
     if (!C || C->getBitWidth() != VT.getScalarSizeInBits())
       return SDValue();
