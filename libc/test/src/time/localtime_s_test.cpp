@@ -42,14 +42,14 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp0) {
 TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
   time_t t_ptr = 2147483647;
   struct tm input = (struct tm){.tm_sec = 0,
-                                       .tm_min = 0,
-                                       .tm_hour = 0,
-                                       .tm_mday = 0,
-                                       .tm_mon = 0,
-                                       .tm_year = 0,
-                                       .tm_wday = 0,
-                                       .tm_yday = 0,
-                                       .tm_isdst = 0};
+                                .tm_min = 0,
+                                .tm_hour = 0,
+                                .tm_mday = 0,
+                                .tm_mon = 0,
+                                .tm_year = 0,
+                                .tm_wday = 0,
+                                .tm_yday = 0,
+                                .tm_isdst = 0};
   int result = LIBC_NAMESPACE::localtime_s(&t_ptr, &input);
   ASSERT_EQ(0, result);
 
@@ -67,14 +67,14 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32Int) {
 TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
   time_t t_ptr = 1627225465;
   struct tm input = (struct tm){.tm_sec = 0,
-                                       .tm_min = 0,
-                                       .tm_hour = 0,
-                                       .tm_mday = 0,
-                                       .tm_mon = 0,
-                                       .tm_year = 0,
-                                       .tm_wday = 0,
-                                       .tm_yday = 0,
-                                       .tm_isdst = 0};
+                                .tm_min = 0,
+                                .tm_hour = 0,
+                                .tm_mday = 0,
+                                .tm_mon = 0,
+                                .tm_year = 0,
+                                .tm_wday = 0,
+                                .tm_yday = 0,
+                                .tm_isdst = 0};
   int result = LIBC_NAMESPACE::localtime_s(&t_ptr, &input);
   ASSERT_EQ(0, result);
 
@@ -92,14 +92,14 @@ TEST(LlvmLibcLocaltimeS, ValidUnixTimestamp32IntDst) {
 TEST(LlvmLibcLocaltimeS, InvalidUnixTimestamp) {
   time_t t_ptr = -1;
   struct tm input = (struct tm){.tm_sec = 0,
-                                       .tm_min = 0,
-                                       .tm_hour = 0,
-                                       .tm_mday = 0,
-                                       .tm_mon = 0,
-                                       .tm_year = 0,
-                                       .tm_wday = 0,
-                                       .tm_yday = 0,
-                                       .tm_isdst = 0};
+                                .tm_min = 0,
+                                .tm_hour = 0,
+                                .tm_mday = 0,
+                                .tm_mon = 0,
+                                .tm_year = 0,
+                                .tm_wday = 0,
+                                .tm_yday = 0,
+                                .tm_isdst = 0};
   int result = LIBC_NAMESPACE::localtime_s(&t_ptr, &input);
   ASSERT_EQ(-1, result);
 
