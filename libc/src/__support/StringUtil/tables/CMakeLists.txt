@@ -3,7 +3,7 @@ add_header_library(
   HDRS
     stdc_errors.h
   DEPENDS
-    libc.src.errno.errno
+    libc.hdr.errno_macros
     libc.src.__support.StringUtil.message_mapper
 )
 
