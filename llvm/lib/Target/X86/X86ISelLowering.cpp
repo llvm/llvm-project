@@ -49888,14 +49888,11 @@ static SDValue combineBitOpWithMOVMSK(SDNode *N, SelectionDAG &DAG) {
 // Attempt to fold BITOP(SHIFT(X,Z),SHIFT(Y,Z)) -> SHIFT(BITOP(X,Y),Z).
 // NOTE: This is a very limited case of what SimplifyUsingDistributiveLaws
 // handles in InstCombine.
-static SDValue combineBitOpWithShift(SDNode *N, SelectionDAG &DAG) {
-  unsigned Opc = N->getOpcode();
+static SDValue combineBitOpWithShift(unsigned Opc, const SDLoc &DL, EVT VT,
+                                     SDValue N0, SDValue N1,
+                                     SelectionDAG &DAG) {
   assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
          "Unexpected bit opcode");
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  EVT VT = N->getValueType(0);
 
   // Both operands must be single use.
   if (!N0.hasOneUse() || !N1.hasOneUse())
@@ -49916,8 +49913,6 @@ static SDValue combineBitOpWithShift(SDNode *N, SelectionDAG &DAG) {
   case X86ISD::VSRAI: {
     if (BC0.getOperand(1) != BC1.getOperand(1))
       return SDValue();
-
-    SDLoc DL(N);
     SDValue BitOp =
         DAG.getNode(Opc, DL, BCVT, BC0.getOperand(0), BC1.getOperand(0));
     SDValue Shift = DAG.getNode(BCOpc, DL, BCVT, BitOp, BC0.getOperand(1));
@@ -50529,7 +50524,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
     return R;
 
-  if (SDValue R = combineBitOpWithShift(N, DAG))
+  if (SDValue R = combineBitOpWithShift(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
 
   if (SDValue R = combineBitOpWithPACK(N, DAG))
@@ -51314,7 +51309,7 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
     return R;
 
-  if (SDValue R = combineBitOpWithShift(N, DAG))
+  if (SDValue R = combineBitOpWithShift(N->getOpcode(), dl, VT, N0, N1, DAG))
     return R;
 
   if (SDValue R = combineBitOpWithPACK(N, DAG))
@@ -53631,7 +53626,7 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue R = combineBitOpWithMOVMSK(N, DAG))
     return R;
 
-  if (SDValue R = combineBitOpWithShift(N, DAG))
+  if (SDValue R = combineBitOpWithShift(N->getOpcode(), DL, VT, N0, N1, DAG))
     return R;
 
   if (SDValue R = combineBitOpWithPACK(N, DAG))
