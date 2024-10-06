@@ -1630,7 +1630,7 @@ def StdC : StandardSpec<"stdc"> {
           >,
           FunctionSpec<
               "localtime_s",
-              RetValSpec<StructTmPtr>,
+              RetValSpec<IntType>,
               [
                   ArgSpec<TimeTTypePtr>,
                   ArgSpec<StructTmPtr>,
