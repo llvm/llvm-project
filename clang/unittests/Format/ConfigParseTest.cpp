@@ -341,7 +341,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
-    CHECK_PARSE_NESTED_BOOL(FIELD. AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
   } while (false)
 
   CHECK_ALIGN_CONSECUTIVE(AlignConsecutiveAssignments);
