@@ -26,13 +26,14 @@ class UnresolvedUsingValueDecl;
 
 namespace clangd {
 
-// This class heuristic resolution of declarations and types in template code.
+// This class handles heuristic resolution of declarations and types in template
+// code.
 //
 // As a compiler, clang only needs to perform certain types of processing on
 // template code (such as resolving dependent names to declarations, or
 // resolving the type of a dependent expression) after instantiation. Indeed,
 // C++ language features such as template specialization mean such resolution
-// cannot be done accurately before instantiation
+// cannot be done accurately before instantiation.
 //
 // However, template code is written and read in uninstantiated form, and clangd
 // would like to provide editor features like go-to-definition in template code
