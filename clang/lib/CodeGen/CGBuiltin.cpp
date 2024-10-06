@@ -10214,6 +10214,11 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   auto *Load =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
+  if (auto *CastE = dyn_cast<CastExpr>(E->getArg(1))) {
+    CastKind CK = CastE->getCastKind();
+    if (CK == CK_BitCast)
+      TBAAInfo = CGM.genConservativeTBAA(LangPTy->getPointeeType());
+  }
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
   if (IsQuadLoad)
@@ -10266,6 +10271,11 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
   auto *Store =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Val, Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
+  if (auto *CastE = dyn_cast<CastExpr>(E->getArg(1))) {
+    CastKind CK = CastE->getCastKind();
+    if (CK == CK_BitCast)
+      TBAAInfo = CGM.genConservativeTBAA(LangPTy->getPointeeType());
+  }
   CGM.DecorateInstructionWithTBAA(Store, TBAAInfo);
   return Store;
 }

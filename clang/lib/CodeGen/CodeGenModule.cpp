@@ -1512,6 +1512,10 @@ TBAAAccessInfo CodeGenModule::getTBAAAccessInfo(QualType AccessType) {
   return TBAA->getAccessInfo(AccessType);
 }
 
+TBAAAccessInfo CodeGenModule::genConservativeTBAA(QualType AccessType) {
+  return TBAA->genConservativeTBAA(AccessType);
+}
+
 TBAAAccessInfo
 CodeGenModule::getTBAAVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
   if (!TBAA)
