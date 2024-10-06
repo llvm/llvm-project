@@ -2131,6 +2131,11 @@ void UnwrappedLineParser::parseStructuralElement(
         return;
       }
       break;
+    case tok::greater:
+      nextToken();
+      if (FormatTok->is(tok::l_brace))
+        FormatTok->Previous->setFinalizedType(TT_TemplateCloser);
+      break;
     default:
       nextToken();
       break;

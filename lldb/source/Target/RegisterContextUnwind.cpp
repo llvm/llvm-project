@@ -2100,6 +2100,12 @@ bool RegisterContextUnwind::ReadFrameAddress(
     UnwindLogMsg("No suitable CFA found");
     break;
   }
+  case UnwindPlan::Row::FAValue::isConstant: {
+    address = fa.GetConstant();
+    address = m_thread.GetProcess()->FixDataAddress(address);
+    UnwindLogMsg("CFA value set by constant is 0x%" PRIx64, address);
+    return true;
+  }
   default:
     return false;
   }

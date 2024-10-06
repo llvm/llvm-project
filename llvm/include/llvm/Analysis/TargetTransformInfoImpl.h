@@ -407,9 +407,13 @@ public:
   bool enableSelectOptimize() const { return true; }
 
   bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+    // A select with two constant operands will usually be better left as a
+    // select.
+    using namespace llvm::PatternMatch;
+    if (match(I, m_Select(m_Value(), m_Constant(), m_Constant())))
+      return false;
     // If the select is a logical-and/logical-or then it is better treated as a
     // and/or by the backend.
-    using namespace llvm::PatternMatch;
     return isa<SelectInst>(I) &&
            !match(I, m_CombineOr(m_LogicalAnd(m_Value(), m_Value()),
                                  m_LogicalOr(m_Value(), m_Value())));
