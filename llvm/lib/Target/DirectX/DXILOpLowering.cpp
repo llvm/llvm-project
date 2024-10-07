@@ -23,9 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-op-lower"
@@ -127,6 +125,30 @@ public:
 
       CI->replaceAllUsesWith(*OpCall);
       CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool replaceFunctionWithNamedStructOp(
+      Function &F, dxil::OpCode DXILOp, Type *NewRetTy,
+      llvm::function_ref<Error(CallInst *CI, CallInst *Op)> ReplaceUses) {
+    bool IsVectorArgExpansion = isVectorArgExpansion(F);
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      SmallVector<Value *> Args;
+      OpBuilder.getIRB().SetInsertPoint(CI);
+      if (IsVectorArgExpansion) {
+        SmallVector<Value *> NewArgs = argVectorFlatten(CI, OpBuilder.getIRB());
+        Args.append(NewArgs.begin(), NewArgs.end());
+      } else
+        Args.append(CI->arg_begin(), CI->arg_end());
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = ReplaceUses(CI, *OpCall))
+        return E;
+
       return Error::success();
     });
   }
@@ -267,20 +289,17 @@ public:
   }
 
   Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-
     for (Use &U : make_early_inc_range(Intrin->uses())) {
       if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
 
         if (EVI->getNumIndices() != 1)
           return createStringError(std::errc::invalid_argument,
                                    "Splitdouble has only 2 elements");
-
-        size_t IndexVal = EVI->getIndices()[0];
-
-        auto *OpEVI = IRB.CreateExtractValue(Op, IndexVal);
-        EVI->replaceAllUsesWith(OpEVI);
-        EVI->eraseFromParent();
+        EVI->setOperand(0, Op);
+      } else {
+        return make_error<StringError>(
+            "Splitdouble use is not ExtractValueInst",
+            inconvertibleErrorCode());
       }
     }
 
@@ -486,33 +505,6 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerSplitDouble(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-
-      Value *Arg0 = CI->getArgOperand(0);
-
-      if (Arg0->getType()->isVectorTy()) {
-        return make_error<StringError>(
-            "splitdouble doesn't support lowering vector types.",
-            inconvertibleErrorCode());
-      }
-
-      Type *NewRetTy = OpBuilder.getResSplitDoubleType(M.getContext());
-
-      std::array<Value *, 1> Args{Arg0};
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          OpCode::SplitDouble, Args, CI->getName(), NewRetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-      if (Error E = replaceSplitDoubleCallUsages(CI, *OpCall))
-        return E;
-
-      return Error::success();
-    });
-  }
-
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -541,8 +533,15 @@ public:
       case Intrinsic::dx_typedBufferStore:
         HasErrors |= lowerTypedBufferStore(F);
         break;
+      // TODO: this can be removed when
+      // https://github.com/llvm/llvm-project/issues/113192 is fixed
       case Intrinsic::dx_splitdouble:
-        HasErrors |= lowerSplitDouble(F);
+        HasErrors |= replaceFunctionWithNamedStructOp(
+            F, OpCode::SplitDouble,
+            OpBuilder.getSplitDoubleType(M.getContext()),
+            [&](CallInst *CI, CallInst *Op) {
+              return replaceSplitDoubleCallUsages(CI, Op);
+            });
         break;
       }
       Updated = true;

@@ -51,7 +51,7 @@ public:
   StructType *getResRetType(Type *ElementTy);
 
   /// Get the `%dx.types.splitdouble` type.
-  StructType *getResSplitDoubleType(LLVMContext &Context);
+  StructType *getSplitDoubleType(LLVMContext &Context);
 
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
