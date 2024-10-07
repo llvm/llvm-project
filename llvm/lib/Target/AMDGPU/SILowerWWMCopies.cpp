@@ -64,7 +64,7 @@ private:
 INITIALIZE_PASS_BEGIN(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies", false,
                     false)
 
@@ -105,7 +105,7 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  auto *VRMWrapper = getAnalysisIfAvailable<VirtRegMapWrapperPass>();
+  auto *VRMWrapper = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>();
   VRM = VRMWrapper ? &VRMWrapper->getVRM() : nullptr;
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();

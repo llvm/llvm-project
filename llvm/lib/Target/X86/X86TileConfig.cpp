@@ -50,7 +50,7 @@ struct X86TileConfig : public MachineFunctionPass {
   /// X86TileConfig analysis usage.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<VirtRegMapWrapperPass>();
+    AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -72,7 +72,7 @@ char X86TileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86TileConfig, DEBUG_TYPE, "Tile Register Configure",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(X86TileConfig, DEBUG_TYPE, "Tile Register Configure", false,
                     false)
 
@@ -87,7 +87,7 @@ bool X86TileConfig::runOnMachineFunction(MachineFunction &MF) {
   const TargetInstrInfo *TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperPass>().getVRM();
+  VirtRegMap &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
 
   if (VRM.isShapeMapEmpty())
     return false;

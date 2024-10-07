@@ -190,13 +190,13 @@ inline raw_ostream &operator<<(raw_ostream &OS, const VirtRegMap &VRM) {
   return OS;
 }
 
-class VirtRegMapWrapperPass : public MachineFunctionPass {
+class VirtRegMapWrapperLegacy : public MachineFunctionPass {
   VirtRegMap VRM;
 
 public:
   static char ID;
 
-  VirtRegMapWrapperPass() : MachineFunctionPass(ID) {}
+  VirtRegMapWrapperLegacy() : MachineFunctionPass(ID) {}
 
   void print(raw_ostream &OS, const Module *M = nullptr) const override {
     VRM.print(OS, M);
