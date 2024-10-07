@@ -1830,7 +1830,7 @@ void BitcodeFile::postParse() {
     int c = irSym.getComdatIndex();
     if (c != -1 && !keptComdats[c])
       continue;
-    reportDuplicate(sym, this, nullptr, 0);
+    reportDuplicate(ctx, sym, this, nullptr, 0);
   }
 }
 

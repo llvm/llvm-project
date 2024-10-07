@@ -688,7 +688,7 @@ bool GotSection::addTlsIndex() {
 }
 
 uint32_t GotSection::getTlsDescOffset(const Symbol &sym) const {
-  return sym.getTlsDescIdx() * ctx.arg.wordsize;
+  return sym.getTlsDescIdx(ctx) * ctx.arg.wordsize;
 }
 
 uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
@@ -696,11 +696,11 @@ uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
 }
 
 uint64_t GotSection::getGlobalDynAddr(const Symbol &b) const {
-  return this->getVA() + b.getTlsGdIdx() * ctx.arg.wordsize;
+  return this->getVA() + b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
 }
 
 uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
-  return b.getTlsGdIdx() * ctx.arg.wordsize;
+  return b.getTlsGdIdx(ctx) * ctx.arg.wordsize;
 }
 
 void GotSection::finalizeContents(Ctx &) {
@@ -1002,12 +1002,12 @@ void MipsGotSection::build() {
   // value later in the `sortMipsSymbols` function.
   for (auto &p : primGot->global) {
     if (p.first->auxIdx == 0)
-      p.first->allocateAux();
+      p.first->allocateAux(ctx);
     ctx.symAux.back().gotIdx = p.second;
   }
   for (auto &p : primGot->relocs) {
     if (p.first->auxIdx == 0)
-      p.first->allocateAux();
+      p.first->allocateAux(ctx);
     ctx.symAux.back().gotIdx = p.second;
   }
 
@@ -1608,8 +1608,8 @@ int64_t DynamicReloc::computeAddend() const {
     return addend;
   case AddendOnlyWithTargetVA:
   case AgainstSymbolWithTargetVA: {
-    uint64_t ca = InputSection::getRelocTargetVA(inputSec->file, type, addend,
-                                                 getOffset(), *sym, expr);
+    uint64_t ca = inputSec->getRelocTargetVA(
+        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
     return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
   }
   case MipsMultiGotPage:
@@ -2125,11 +2125,11 @@ static bool sortMipsSymbols(const SymbolTableEntry &l,
                             const SymbolTableEntry &r) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the beginning of a dynsym in arbitrary order.
-  if (l.sym->isInGot() && r.sym->isInGot())
-    return l.sym->getGotIdx() < r.sym->getGotIdx();
-  if (!l.sym->isInGot() && !r.sym->isInGot())
+  if (l.sym->isInGot(ctx) && r.sym->isInGot(ctx))
+    return l.sym->getGotIdx(ctx) < r.sym->getGotIdx(ctx);
+  if (!l.sym->isInGot(ctx) && !r.sym->isInGot(ctx))
     return false;
-  return !l.sym->isInGot();
+  return !l.sym->isInGot(ctx);
 }
 
 void SymbolTableBaseSection::finalizeContents(Ctx &) {
@@ -2300,7 +2300,7 @@ void SymbolTableSection<ELFT>::writeTo(Ctx &ctx, uint8_t *buf) {
 
     for (SymbolTableEntry &ent : symbols) {
       Symbol *sym = ent.sym;
-      if (sym->isInPlt() && sym->hasFlag(NEEDS_COPY))
+      if (sym->isInPlt(ctx) && sym->hasFlag(NEEDS_COPY))
         eSym->st_other |= STO_MIPS_PLT;
       if (isMicroMips(ctx)) {
         // We already set the less-significant bit for symbols
