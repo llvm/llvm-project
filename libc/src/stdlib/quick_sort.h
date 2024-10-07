@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // A simple quicksort implementation using the Hoare partition scheme.
-static size_t partition(const Array &array) {
+LIBC_INLINE size_t partition(const Array &array) {
   const size_t array_size = array.size();
   size_t pivot_index = array_size / 2;
   uint8_t *pivot = array.get(pivot_index);
