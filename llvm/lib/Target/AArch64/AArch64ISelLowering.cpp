@@ -1114,7 +1114,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
+  setTargetDAGCombine(
+      {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -24079,41 +24080,31 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
 
 static SDValue performMaskedGatherScatterCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
-  MaskedHistogramSDNode *HG;
-  MaskedGatherScatterSDNode *MGS;
-  if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
-    HG = cast<MaskedHistogramSDNode>(N);
-  } else {
-    MGS = cast<MaskedGatherScatterSDNode>(N);
-  }
-  assert((HG || MGS) &&
-         "Can only combine gather load, scatter store or histogram nodes");
-
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
   if (N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM) {
-    SDLoc DL(HG);
+    MaskedHistogramSDNode *HG = cast<MaskedHistogramSDNode>(N);
+    assert(HG &&
+           "Can only combine gather load, scatter store or histogram nodes");
+
     SDValue Index = HG->getIndex();
     if (ISD::isExtOpcode(Index->getOpcode())) {
-      SDValue Chain = HG->getChain();
-      SDValue Inc = HG->getInc();
-      SDValue Mask = HG->getMask();
-      SDValue BasePtr = HG->getBasePtr();
-      SDValue Scale = HG->getScale();
-      SDValue IntID = HG->getIntID();
-      EVT MemVT = HG->getMemoryVT();
-      MachineMemOperand *MMO = HG->getMemOperand();
-      ISD::MemIndexType IndexType = HG->getIndexType();
+      SDLoc DL(HG);
       SDValue ExtOp = Index.getOperand(0);
-      auto SrcType = ExtOp.getValueType();
-      auto TruncatedIndex = DAG.getAnyExtOrTrunc(Index, DL, SrcType);
-      SDValue Ops[] = {Chain, Inc, Mask, BasePtr, TruncatedIndex, Scale, IntID};
-      return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
-                                    MMO, IndexType);
+      SDValue Ops[] = {HG->getChain(),   HG->getInc(), HG->getMask(),
+                       HG->getBasePtr(), ExtOp,        HG->getScale(),
+                       HG->getIntID()};
+      return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other),
+                                    HG->getMemoryVT(), DL, Ops,
+                                    HG->getMemOperand(), HG->getIndexType());
     }
     return SDValue();
   }
+
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
+  assert(MGS &&
+         "Can only combine gather load, scatter store or histogram nodes");
 
   SDLoc DL(MGS);
   SDValue Chain = MGS->getChain();

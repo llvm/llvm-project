@@ -267,8 +267,8 @@ define void @histogram_i16_8_lane(ptr %base, <vscale x 8 x i32> %indices, i16 %i
   ret void
 }
 
-define void @histogram_i32_extend(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask) #0 {
-; CHECK-LABEL: histogram_i32_extend:
+define void @histogram_i32_zextend(ptr %base, <vscale x 4 x i32> %indices, <vscale x 4 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_i32_zextend:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
 ; CHECK-NEXT:    mov z3.s, #1 // =0x1
@@ -282,8 +282,9 @@ define void @histogram_i32_extend(ptr %base, <vscale x 4 x i32> %indices, <vscal
   call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> %buckets, i32 1, <vscale x 4 x i1> %mask)
   ret void
 }
-define void @histogram_i32_8_lane_extend(ptr %base, <vscale x 8 x i32> %indices, i32 %inc, <vscale x 8 x i1> %mask) #0 {
-; CHECK-LABEL: histogram_i32_8_lane_extend:
+
+define void @histogram_i32_8_lane_zextend(ptr %base, <vscale x 8 x i32> %indices, i32 %inc, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: histogram_i32_8_lane_zextend:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    mov z4.s, w1
