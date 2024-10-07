@@ -290,7 +290,7 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
     }
 
     if (ctx.arg.hasDynSymTab)
-      sym->isPreemptible = computeIsPreemptible(*sym);
+      sym->isPreemptible = computeIsPreemptible(ctx, *sym);
   }
 }
 
