@@ -533,6 +533,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
 
           // everything else is handled conservatively.
           HasIndirectCall = true;
+          break;
         }
       }
 
