@@ -191,7 +191,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // not ARMv4 output, we can just ignore it.
     return R_NONE;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -505,7 +505,7 @@ static void stateChangeWarning(Ctx &ctx, uint8_t *loc, RelType relt,
          " ; interworking not performed" + hint);
   } else {
     // Warn with hint on how to alter the symbol type.
-    warn(getErrorLocation(loc) + "branch and link relocation: " +
+    warn(getErrorLoc(ctx, loc) + "branch and link relocation: " +
          toString(relt) + " to non STT_FUNC symbol: " + s.getName() +
          " interworking not performed; consider using directive '.type " +
          s.getName() +
@@ -552,7 +552,7 @@ static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
     rot = (lz + 8) << 7;
   }
   if (check && imm > 0xff)
-    error(getErrorLocation(loc) + "unencodeable immediate " + Twine(val).str() +
+    error(getErrorLoc(ctx, loc) + "unencodeable immediate " + Twine(val).str() +
           " for relocation " + toString(rel.type));
   write32(loc, (read32(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
@@ -863,7 +863,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   case R_ARM_ABS32:

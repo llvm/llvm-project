@@ -663,7 +663,7 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
 
 // A TLS symbol's virtual address is relative to the TLS segment. Add a
 // target-specific adjustment to produce a thread-pointer-relative offset.
-static int64_t getTlsTpOffset(const Symbol &s) {
+static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
   // On targets that support TLSDESC, _TLS_MODULE_BASE_@tpoff = 0.
   if (&s == ctx.sym.tlsModuleBase)
     return 0;
@@ -906,12 +906,12 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     // loaders.
     if (r.sym->isUndefined())
       return a;
-    return getTlsTpOffset(*r.sym) + a;
+    return getTlsTpOffset(ctx, *r.sym) + a;
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_TPREL_NEG:
     if (r.sym->isUndefined())
       return a;
-    return -getTlsTpOffset(*r.sym) + a;
+    return -getTlsTpOffset(ctx, *r.sym) + a;
   case R_SIZE:
     return r.sym->getSize() + a;
   case R_TLSDESC:
