@@ -44,7 +44,6 @@ Implemented Papers
 - ``std::jthread`` and ``<stop_token>`` are not guarded behind ``-fexperimental-library`` anymore
 - P2674R1: A trait for implicit lifetime types (`Github <https://github.com/llvm/llvm-project/issues/105259>`__)
 
-
 Improvements and New Features
 -----------------------------
 
