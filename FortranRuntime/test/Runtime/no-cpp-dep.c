@@ -31,9 +31,7 @@ void RTNAME(ProgramStart)(
 int32_t RTNAME(ArgumentCount)();
 int32_t RTNAME(GetCommandArgument)(int32_t, const struct Descriptor *,
     const struct Descriptor *, const struct Descriptor *);
-int32_t RTNAME(GetEnvVariable)(const struct Descriptor *,
-    const struct Descriptor *, const struct Descriptor *, bool,
-    const struct Descriptor *, const char *, int);
+int32_t RTNAME(GetEnvVariable)();
 int64_t RTNAME(SystemClockCount)(int kind);
 
 int main() {
@@ -41,7 +39,7 @@ int main() {
   RTNAME(ProgramStart)(0, 0, 0, 0);
   int32_t c = RTNAME(ArgumentCount)();
   int32_t v = RTNAME(GetCommandArgument)(0, 0, 0, 0);
-  int32_t e = RTNAME(GetEnvVariable)(NULL, NULL, NULL, false, NULL, "FOO", 0);
+  int32_t e = RTNAME(GetEnvVariable)("FOO", 0, 0);
   int64_t t = RTNAME(SystemClockCount)(8);
   return x + c + v + e;
 }
