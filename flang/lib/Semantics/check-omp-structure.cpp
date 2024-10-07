@@ -2347,7 +2347,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     break;
   }
 
-  if (const parser::OmpObjectList *objList{GetOmpObjectList(x)}) {
+  if (const parser::OmpObjectList * objList{GetOmpObjectList(x)}) {
     SymbolSourceMap symbols;
     GetSymbolsInObjectList(*objList, symbols);
     for (const auto &[sym, source] : symbols) {
