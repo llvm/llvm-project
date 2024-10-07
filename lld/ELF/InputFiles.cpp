@@ -48,9 +48,6 @@ extern template void ObjFile<ELF32BE>::importCmseSymbols();
 extern template void ObjFile<ELF64LE>::importCmseSymbols();
 extern template void ObjFile<ELF64BE>::importCmseSymbols();
 
-bool InputFile::isInGroup;
-uint32_t InputFile::nextGroupId;
-
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string lld::toString(const InputFile *f) {
   static std::mutex mu;
@@ -206,11 +203,11 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
-    : mb(m), groupId(nextGroupId), fileKind(k) {
+    : mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
   // All files within the same --{start,end}-group get the same group ID.
   // Otherwise, a new file will get a new group ID.
-  if (!isInGroup)
-    ++nextGroupId;
+  if (!ctx.driver.isInGroup)
+    ++ctx.driver.nextGroupId;
 }
 
 std::optional<MemoryBufferRef> elf::readFile(Ctx &ctx, StringRef path) {
