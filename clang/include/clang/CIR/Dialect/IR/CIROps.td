@@ -4092,7 +4092,7 @@ def VAArgOp : CIR_Op<"va.arg">,
 }
 
 //===----------------------------------------------------------------------===//
-// AllocExceptionOp
+// AllocExceptionOp & FreeExceptionOp
 //===----------------------------------------------------------------------===//
 
 def AllocExceptionOp : CIR_Op<"alloc.exception"> {
@@ -4126,6 +4126,39 @@ def AllocExceptionOp : CIR_Op<"alloc.exception"> {
   }];
 
   // Constraints verified elsewhere.
+  let hasVerifier = 0;
+}
+
+def FreeExceptionOp : CIR_Op<"free.exception"> {
+  let summary = "Frees an exception according to Itanium ABI";
+  let description = [{
+    Implements a slightly higher level version of:
+    `void __cxa_free_exception(void *thrown_exception);`
+
+    Example:
+
+    ```mlir
+    %0 = cir.alloc.exception 16 -> !cir.ptr<!some_struct>
+    %1 = cir.get_global @d2 : !cir.ptr<!some_struct>
+    cir.try synthetic cleanup {
+      cir.call exception @_ZN7test2_DC1ERKS_(%0, %1) : (!cir.ptr<!some_struct>, !cir.ptr<!some_struct>) -> () cleanup {
+        %2 = cir.cast(bitcast, %0 : !cir.ptr<!some_struct>), !cir.ptr<!void>
+        cir.free.exception %2
+        cir.yield
+      }
+      ...
+    }
+    ```
+  }];
+
+  let arguments = (ins VoidPtr:$ptr);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $ptr attr-dict
+  }];
+
+  // Constraints already described.
   let hasVerifier = 0;
 }
 

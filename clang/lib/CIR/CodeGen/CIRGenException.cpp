@@ -214,7 +214,12 @@ struct FreeException final : EHScopeStack::Cleanup {
   mlir::Value exn;
   FreeException(mlir::Value exn) : exn(exn) {}
   void Emit(CIRGenFunction &CGF, Flags flags) override {
-    llvm_unreachable("call to cxa_free or equivalent op NYI");
+    // OG LLVM codegen emits a no unwind call, CIR emits an operation.
+    cir::CIRGenBuilderTy &builder = CGF.getBuilder();
+    mlir::Location loc =
+        CGF.currSrcLoc ? *CGF.currSrcLoc : builder.getUnknownLoc();
+    builder.create<mlir::cir::FreeExceptionOp>(
+        loc, builder.createBitcast(exn, builder.getVoidPtrTy()));
   }
 };
 } // end anonymous namespace

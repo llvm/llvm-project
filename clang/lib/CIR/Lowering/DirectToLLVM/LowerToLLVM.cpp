@@ -3789,6 +3789,27 @@ public:
   }
 };
 
+class CIRFreeExceptionOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::FreeExceptionOp> {
+public:
+  using OpConversionPattern<mlir::cir::FreeExceptionOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::FreeExceptionOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // Get or create `declare void @__cxa_free_exception(ptr)`
+    StringRef fnName = "__cxa_free_exception";
+    auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    auto voidTy = mlir::LLVM::LLVMVoidType::get(rewriter.getContext());
+    auto fnTy = mlir::LLVM::LLVMFunctionType::get(voidTy, {llvmPtrTy},
+                                                  /*isVarArg=*/false);
+    getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, mlir::TypeRange{}, fnName, mlir::ValueRange{adaptor.getPtr()});
+    return mlir::success();
+  }
+};
+
 class CIRThrowOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ThrowOp> {
 public:
@@ -3855,8 +3876,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
       CIRCmpThreeWayOpLowering, CIRClearCacheOpLowering, CIRUndefOpLowering,
       CIREhTypeIdOpLowering, CIRCatchParamOpLowering, CIRResumeOpLowering,
-      CIRAllocExceptionOpLowering, CIRThrowOpLowering, CIRIntrinsicCallLowering,
-      CIRBaseClassAddrOpLowering
+      CIRAllocExceptionOpLowering, CIRFreeExceptionOpLowering,
+      CIRThrowOpLowering, CIRIntrinsicCallLowering, CIRBaseClassAddrOpLowering
 #define GET_BUILTIN_LOWERING_LIST
 #include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
 #undef GET_BUILTIN_LOWERING_LIST
