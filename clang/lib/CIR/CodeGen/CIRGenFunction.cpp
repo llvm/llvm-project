@@ -814,7 +814,7 @@ void CIRGenFunction::buildCXXConstructorCall(
   // In LLVM: do nothing.
   // In CIR: emit as a regular call, other later passes should lower the
   // ctor call into trivial initialization.
-  assert(!MissingFeatures::isTrivialAndisDefaultConstructor());
+  assert(!MissingFeatures::isTrivialCtorOrDtor());
 
   if (isMemcpyEquivalentSpecialMember(D)) {
     assert(!MissingFeatures::isMemcpyEquivalentSpecialMember());
