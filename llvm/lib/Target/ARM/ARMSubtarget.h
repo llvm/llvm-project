@@ -91,13 +91,13 @@ public:
 
     /// R7 and LR must be adjacent, because R7 is the frame pointer, and must
     /// point to a frame record consisting of the previous frame pointer and the
-    /// retun address.
+    /// return address.
     /// push {r0-r7, lr}
     /// push {r8-r12}
     /// vpush {d8-d15}
     SplitR7,
 
-    /// When the stack frame size if not known (because of variable-sized
+    /// When the stack frame size is not known (because of variable-sized
     /// objects or realignment), Windows SEH requires the callee-saved registers
     /// to be stored in three regions, with R11 and LR below the floating-point
     /// registers.
