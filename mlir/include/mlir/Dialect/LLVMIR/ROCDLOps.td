@@ -59,7 +59,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::IntegerAttr":$max_flat_work_group_size,
      "::mlir::IntegerAttr":$waves_per_eu,
      "::mlir::BoolAttr":$unsafe_fp_atomics,
-     // Correspond to LLVM matadata of the same name
+     // Correspond to LLVM metadata of the same name
      "::mlir::UnitAttr":$last_use,
      "::mlir::UnitAttr":$no_remote_memory,
      "::mlir::UnitAttr":$no_fine_grained_memory,
