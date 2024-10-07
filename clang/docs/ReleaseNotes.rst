@@ -378,6 +378,8 @@ Improvements to Clang's diagnostics
 
 - Clang now emits a diagnostic note at the class declaration when the method definition does not match any declaration (#GH110638).
 
+- Clang now omits warnings for extra parentheses in fold expressions with single expansion (#GH101863).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
