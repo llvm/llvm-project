@@ -958,7 +958,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-protected:
   struct GEPFlagsTy {
     char IsInBounds : 1;
     GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
@@ -1308,6 +1307,12 @@ public:
         Opcode(Opcode), Name(Name.str()) {
     assert(Opcode == Instruction::Or && "only OR opcodes can be disjoint");
   }
+
+  VPInstruction(VPValue *Ptr, VPValue *Offset, GEPFlagsTy Flags,
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC,
+                            ArrayRef<VPValue *>({Ptr, Offset}), Flags, DL),
+        Opcode(VPInstruction::PtrAdd), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
