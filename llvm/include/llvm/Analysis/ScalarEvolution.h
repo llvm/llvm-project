@@ -2376,6 +2376,10 @@ public:
   /// Get the (predicated) symbolic max backedge count for the analyzed loop.
   const SCEV *getSymbolicMaxBackedgeTakenCount();
 
+  /// Returns the upper bound of the loop trip count as a normal unsigned
+  /// value, or 0 if the trip count is unknown.
+  unsigned getSmallConstantMaxTripCount();
+
   /// Adds a new predicate.
   void addPredicate(const SCEVPredicate &Pred);
 
@@ -2447,6 +2451,9 @@ private:
 
   /// The symbolic backedge taken count.
   const SCEV *SymbolicMaxBackedgeCount = nullptr;
+
+  /// The constant max trip count for the loop.
+  std::optional<unsigned> SmallConstantMaxTripCount;
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
