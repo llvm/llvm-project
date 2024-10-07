@@ -70,7 +70,8 @@ using namespace lld::elf;
 
 class elf::Patch657417Section final : public SyntheticSection {
 public:
-  Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
+  Patch657417Section(Ctx &, InputSection *p, uint64_t off, uint32_t instr,
+                     bool isARM);
 
   void writeTo(Ctx &, uint8_t *buf) override;
 
@@ -133,7 +134,7 @@ static bool is32bitBranch(uint32_t instr) {
   return isBcc(instr) || isB(instr) || isBL(instr) || isBLX(instr);
 }
 
-Patch657417Section::Patch657417Section(InputSection *p, uint64_t off,
+Patch657417Section::Patch657417Section(Ctx &ctx, InputSection *p, uint64_t off,
                                        uint32_t instr, bool isARM)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
@@ -449,7 +450,7 @@ static void implementPatch(ScanResult sr, InputSection *isec,
                                 : sr.rel->sym->getVA();
       destIsARM = (dstSymAddr & 1) == 0;
     }
-    psec = make<Patch657417Section>(isec, sr.off, sr.instr, destIsARM);
+    psec = make<Patch657417Section>(ctx, isec, sr.off, sr.instr, destIsARM);
     if (destIsARM) {
       // The patch will be in ARM state. Use an ARM relocation and account for
       // the larger ARM PC-bias of 8 rather than Thumb's 4.
@@ -467,7 +468,8 @@ static void implementPatch(ScanResult sr, InputSection *isec,
     // appropriate type to the patch at patcheeOffset.
 
     // The destination is ARM if we have a BLX.
-    psec = make<Patch657417Section>(isec, sr.off, sr.instr, isBLX(sr.instr));
+    psec =
+        make<Patch657417Section>(ctx, isec, sr.off, sr.instr, isBLX(sr.instr));
     RelType type;
     if (isBcc(sr.instr))
       type = R_ARM_THM_JUMP19;
