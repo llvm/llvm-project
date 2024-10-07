@@ -11,6 +11,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "Config.h"
 #include "Feature.h"
 #include "Matchers.h"
 #include "Protocol.h"
@@ -2595,10 +2596,10 @@ TEST(SignatureHelpTest, DynamicIndexDocumentation) {
               ElementsAre(AllOf(sig("foo() -> int"), sigDoc("Member doc"))));
 }
 
-TEST(CompletionTest, CompletionFunctionArgsDisabled) {
+TEST(CompletionTest, ArgumentListsPolicy) {
   CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
-  Opts.EnableFunctionArgSnippets = false;
+  Opts.ArgumentLists = Config::ArgumentListsPolicy::Delimiters;
 
   {
     auto Results = completions(
@@ -2669,6 +2670,26 @@ TEST(CompletionTest, CompletionFunctionArgsDisabled) {
         {}, Opts);
     EXPECT_THAT(Results.Completions, UnorderedElementsAre(AllOf(
                                          named("FOO"), snippetSuffix("($0)"))));
+  }
+  {
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::None;
+    auto Results = completions(
+        R"cpp(
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                UnorderedElementsAre(AllOf(named("xfoo"), snippetSuffix(""))));
+  }
+  {
+    Opts.ArgumentLists = Config::ArgumentListsPolicy::OpenDelimiter;
+    auto Results = completions(
+        R"cpp(
+      void xfoo(int x, int y);
+      void f() { xfo^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                UnorderedElementsAre(AllOf(named("xfoo"), snippetSuffix("("))));
   }
 }
 

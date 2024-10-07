@@ -641,6 +641,7 @@ clang-format
 
 - Adds ``BreakBinaryOperations`` option.
 - Adds ``TemplateNames`` option.
+- Adds ``AlignFunctionDeclarations`` option to ``AlignConsecutiveDeclarations``.
 
 libclang
 --------
