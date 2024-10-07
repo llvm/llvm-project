@@ -239,6 +239,10 @@ struct LocIndex {
   /// becomes a problem.
   static constexpr u32_location_t kWasmLocation = kFirstInvalidRegLocation + 2;
 
+  /// The first location that is reserved for VarLocs with locations of kind
+  /// VirtualRegisterKind.
+  static constexpr u32_location_t kFirstVirtualRegLocation = 1 << 31;
+
   LocIndex(u32_location_t Location, u32_index_t Index)
       : Location(Location), Index(Index) {}
 
@@ -810,9 +814,10 @@ private:
         VL.getDescribingRegs(Locations);
         assert(all_of(Locations,
                       [](auto RegNo) {
-                        return RegNo < LocIndex::kFirstInvalidRegLocation;
+                        return (RegNo < LocIndex::kFirstInvalidRegLocation) ||
+                               (LocIndex::kFirstVirtualRegLocation <= RegNo);
                       }) &&
-               "Physreg out of range?");
+               "Physical or virtual register out of range?");
         if (VL.containsSpillLocs())
           Locations.push_back(LocIndex::kSpillLocation);
         if (VL.containsWasmLocs())
@@ -1240,9 +1245,15 @@ void VarLocBasedLDV::getUsedRegs(const VarLocSet &CollectFrom,
       LocIndex::rawIndexForReg(LocIndex::kFirstRegLocation);
   uint64_t FirstInvalidIndex =
       LocIndex::rawIndexForReg(LocIndex::kFirstInvalidRegLocation);
+  uint64_t FirstVirtualRegIndex =
+      LocIndex::rawIndexForReg(LocIndex::kFirstVirtualRegLocation);
   for (auto It = CollectFrom.find(FirstRegIndex),
-            End = CollectFrom.find(FirstInvalidIndex);
-       It != End;) {
+            PhysEnd = CollectFrom.find(FirstInvalidIndex);
+       It != CollectFrom.end();) {
+    if (It == PhysEnd) {
+      It = CollectFrom.find(FirstVirtualRegIndex);
+      continue;
+    }
     // We found a VarLoc ID for a VarLoc that lives in a register. Figure out
     // which register and add it to UsedRegs.
     uint32_t FoundReg = LocIndex::fromRawInteger(*It).Location;
