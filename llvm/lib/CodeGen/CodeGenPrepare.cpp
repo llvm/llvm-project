@@ -2114,19 +2114,30 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
 /// Some targets have better codegen for `ctpop(X) u< 2` than `ctpop(X) == 1`.
 /// This function converts `ctpop(X) ==/!= 1` into `ctpop(X) u</u> 2/1` if the
 /// result cannot be zero.
-static bool adjustIsPower2Test(CmpInst *Cmp, const DataLayout &DL) {
+static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
+                               const TargetTransformInfo &TTI,
+                               const DataLayout &DL) {
   ICmpInst::Predicate Pred;
   if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
     return false;
   if (!ICmpInst::isEquality(Pred))
     return false;
   auto *II = cast<IntrinsicInst>(Cmp->getOperand(0));
+
+  // Check if it is profitable for the target
+  ICmpInst::Predicate NewPred =
+      Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGT;
+  if (TLI.isCtpopFast(TLI.getValueType(DL, II->getType())) &&
+      TTI.getCmpSelInstrCost(Instruction::ICmp, II->getType(), Cmp->getType(),
+                             Pred) <
+          TTI.getCmpSelInstrCost(Instruction::ICmp, II->getType(),
+                                 Cmp->getType(), NewPred))
+    return false;
+
   if (isKnownNonZero(II, DL)) {
-    if (Pred == ICmpInst::ICMP_EQ) {
-      Cmp->setPredicate(ICmpInst::ICMP_ULT);
+    if (Pred == ICmpInst::ICMP_EQ)
       Cmp->setOperand(1, ConstantInt::get(II->getType(), 2));
-    } else
-      Cmp->setPredicate(ICmpInst::ICMP_UGT);
+    Cmp->setPredicate(NewPred);
     return true;
   }
   return false;
@@ -2151,7 +2162,7 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (foldFCmpToFPClassTest(Cmp, *TLI, *DL))
     return true;
 
-  if (adjustIsPower2Test(Cmp, *DL))
+  if (adjustIsPower2Test(Cmp, *TLI, *TTI, *DL))
     return true;
 
   return false;
