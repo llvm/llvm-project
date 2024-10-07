@@ -1365,8 +1365,7 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   int64_t IntVal;
-  Reg = matchRegisterName(IntVal);
-  if (!Reg)
+  if (!(Reg = matchRegisterName(IntVal)))
     return ParseStatus::NoMatch;
   return ParseStatus::Success;
 }
