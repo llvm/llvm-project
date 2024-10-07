@@ -173,10 +173,21 @@ private:
     if (!HTMLReportPath.empty())
       writeHTML();
 
+    // Source File's path relative to compilation database.
     llvm::StringRef Path =
         SM.getFileEntryRefForID(SM.getMainFileID())->getName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
+
+    auto Cwd = getCompilerInstance()
+                   .getFileManager()
+                   .getVirtualFileSystem()
+                   .getCurrentWorkingDirectory();
+    if (Cwd.getError()) {
+      llvm::errs() << "Failed to get current working directory: "
+                   << Cwd.getError().message() << "\n";
+      return;
+    }
 
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
@@ -201,8 +212,17 @@ private:
       }
     }
 
-    if (!Results.Missing.empty() || !Results.Unused.empty())
-      EditedFiles.try_emplace(Path, Final);
+    if (!Results.Missing.empty() || !Results.Unused.empty()) {
+      auto Sept = llvm::sys::path::get_separator();
+      // Adjust the path to be absolute if it is not.
+      std::string FullPath;
+      if (llvm::sys::path::is_absolute(Path))
+        FullPath = Path.str();
+      else
+        FullPath = Cwd.get() + Sept.str() + Path.str();
+
+      EditedFiles.try_emplace(FullPath, Final);
+    }
   }
 
   void writeHTML() {
