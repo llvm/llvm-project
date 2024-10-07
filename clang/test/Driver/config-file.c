@@ -82,3 +82,13 @@
 // CHECK-TWO-CONFIGS: -isysroot
 // CHECK-TWO-CONFIGS-SAME: /opt/data
 // CHECK-TWO-CONFIGS-SAME: -Wall
+
+
+//--- clang-cl loads the correct triple
+// RUN: env -u CLANG_NO_DEFAULT_CONFIG %clang_cl /arm64EC --config-system-dir=%S/Inputs/config-cl --config-user-dir= -v 2>&1 | FileCheck %s -check-prefix CHECK-CL --implicit-check-not 'Configuration file:'
+// CHECK-CL: Configuration file: {{.*}}Inputs{{.}}config-cl{{.}}arm64ec-pc-windows-msvc.cfg
+
+//--- clang-cl configs support setting /arm64EC
+// RUN: %clang_cl --config-system-dir=%S/Inputs/config-cl --config-user-dir= --config=config-arm64ec-arg.cfg -v 2>&1 | FileCheck %s -check-prefix CHECK-CL-FLAG --implicit-check-not 'Configuration file:'
+// CHECK-CL-FLAG: Target: arm64ec-pc-windows-msvc
+// CHECK-CL-FLAG: Configuration file: {{.*}}Inputs{{.}}config-cl{{.}}config-arm64ec-arg.cfg
