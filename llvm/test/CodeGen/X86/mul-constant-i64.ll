@@ -1614,3 +1614,90 @@ define i64 @test_mul_spec(i64 %x) nounwind {
   %mul3 = mul nsw i64 %add, %add2
   ret i64 %mul3
 }
+
+define i64 @PR111325(i64 %a0, i1 %a1) {
+; X86-LABEL: PR111325:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpb $1, %cl
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    retl
+;
+; X86-NOOPT-LABEL: PR111325:
+; X86-NOOPT:       # %bb.0: # %entry
+; X86-NOOPT-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    andb $1, %cl
+; X86-NOOPT-NEXT:    xorl %eax, %eax
+; X86-NOOPT-NEXT:    xorl %edx, %edx
+; X86-NOOPT-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; X86-NOOPT-NEXT:    cmpb $1, %cl
+; X86-NOOPT-NEXT:    sbbl %eax, %eax
+; X86-NOOPT-NEXT:    orl %edx, %eax
+; X86-NOOPT-NEXT:    xorl %edx, %edx
+; X86-NOOPT-NEXT:    retl
+;
+; X64-HSW-LABEL: PR111325:
+; X64-HSW:       # %bb.0: # %entry
+; X64-HSW-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-HSW-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-HSW-NEXT:    imull %edi, %eax
+; X64-HSW-NEXT:    testb $1, %sil
+; X64-HSW-NEXT:    cmoveq %rcx, %rax
+; X64-HSW-NEXT:    retq
+;
+; X64-JAG-LABEL: PR111325:
+; X64-JAG:       # %bb.0: # %entry
+; X64-JAG-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-JAG-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-JAG-NEXT:    imull %edi, %eax
+; X64-JAG-NEXT:    testb $1, %sil
+; X64-JAG-NEXT:    cmoveq %rcx, %rax
+; X64-JAG-NEXT:    retq
+;
+; X64-SLM-LABEL: PR111325:
+; X64-SLM:       # %bb.0: # %entry
+; X64-SLM-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-SLM-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-SLM-NEXT:    imull %edi, %eax
+; X64-SLM-NEXT:    testb $1, %sil
+; X64-SLM-NEXT:    cmoveq %rcx, %rax
+; X64-SLM-NEXT:    retq
+;
+; X64-HSW-NOOPT-LABEL: PR111325:
+; X64-HSW-NOOPT:       # %bb.0: # %entry
+; X64-HSW-NOOPT-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-HSW-NOOPT-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-HSW-NOOPT-NEXT:    imull %edi, %eax
+; X64-HSW-NOOPT-NEXT:    testb $1, %sil
+; X64-HSW-NOOPT-NEXT:    cmoveq %rcx, %rax
+; X64-HSW-NOOPT-NEXT:    retq
+;
+; X64-JAG-NOOPT-LABEL: PR111325:
+; X64-JAG-NOOPT:       # %bb.0: # %entry
+; X64-JAG-NOOPT-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-JAG-NOOPT-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-JAG-NOOPT-NEXT:    imull %edi, %eax
+; X64-JAG-NOOPT-NEXT:    testb $1, %sil
+; X64-JAG-NOOPT-NEXT:    cmoveq %rcx, %rax
+; X64-JAG-NOOPT-NEXT:    retq
+;
+; X64-SLM-NOOPT-LABEL: PR111325:
+; X64-SLM-NOOPT:       # %bb.0: # %entry
+; X64-SLM-NOOPT-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; X64-SLM-NOOPT-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-SLM-NOOPT-NEXT:    imull %edi, %eax
+; X64-SLM-NOOPT-NEXT:    testb $1, %sil
+; X64-SLM-NOOPT-NEXT:    cmoveq %rcx, %rax
+; X64-SLM-NOOPT-NEXT:    retq
+entry:
+  %mul = mul i64 %a0, 4294967295
+  %mask = and i64 %mul, 4294967295
+  %sel = select i1 %a1, i64 %mask, i64 4294967295
+  ret i64 %sel
+}
