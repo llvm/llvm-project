@@ -319,7 +319,7 @@ template <class ELFT> void MIPS<ELFT>::writePltHeader(uint8_t *buf) const {
 template <class ELFT>
 void MIPS<ELFT>::writePlt(uint8_t *buf, const Symbol &sym,
                           uint64_t pltEntryAddr) const {
-  uint64_t gotPltEntryAddr = sym.getGotPltVA();
+  uint64_t gotPltEntryAddr = sym.getGotPltVA(ctx);
   if (isMicroMips(ctx)) {
     // Overwrite trap instructions written by Writer::writeTrapInstr.
     memset(buf, 0, pltEntrySize);
