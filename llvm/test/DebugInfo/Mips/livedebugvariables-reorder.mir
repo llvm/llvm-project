@@ -21,7 +21,6 @@
   target datalayout = "E-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
   target triple = "mips"
 
-  ; Function Attrs: nounwind
   define dso_local i32 @main() local_unnamed_addr #0 !dbg !8 {
   entry:
     ret i32 0, !dbg !21
@@ -29,11 +28,9 @@
 
   declare !dbg !22 dso_local i32 @foo() local_unnamed_addr
 
-  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
 
-  attributes #0 = { nounwind "frame-pointer"="all" }
-  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  attributes #0 = { "frame-pointer"="all" }
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!2, !3, !4, !5, !6}
