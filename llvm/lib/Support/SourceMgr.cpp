@@ -169,7 +169,8 @@ SourceMgr::SrcBuffer::getPointerForLineNumber(unsigned LineNo) const {
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
     : Buffer(std::move(Other.Buffer)), OffsetCache(Other.OffsetCache),
-      IncludeLoc(Other.IncludeLoc) {
+      BaseLine(Other.BaseLine), BaseCol(Other.BaseCol),
+      SourceFilename(Other.SourceFilename), IncludeLoc(Other.IncludeLoc) {
   Other.OffsetCache = nullptr;
 }
 
@@ -186,6 +187,25 @@ SourceMgr::SrcBuffer::~SrcBuffer() {
       delete static_cast<std::vector<uint64_t> *>(OffsetCache);
     OffsetCache = nullptr;
   }
+}
+
+StringRef SourceMgr::getDebugFilename(SMLoc Loc, unsigned BufferID) const {
+  if (!BufferID)
+    BufferID = FindBufferContainingLoc(Loc);
+  assert(BufferID && "Invalid location!");
+  auto &SB = getBufferInfo(BufferID);
+  return SB.SourceFilename;
+}
+
+std::pair<unsigned, unsigned>
+SourceMgr::getDebugLineAndColumn(SMLoc Loc, unsigned BufferID) const {
+  if (!BufferID)
+    BufferID = FindBufferContainingLoc(Loc);
+  assert(BufferID && "Invalid location!");
+  auto &SB = getBufferInfo(BufferID);
+  std::pair<unsigned, unsigned> LineAndCol = getLineAndColumn(Loc, BufferID);
+  return std::make_pair(LineAndCol.first + (SB.BaseLine ? SB.BaseLine : 1) - 1,
+                        LineAndCol.second + (SB.BaseCol ? SB.BaseCol : 1) - 1);
 }
 
 std::pair<unsigned, unsigned>
@@ -277,9 +297,10 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
   // First thing to do: find the current buffer containing the specified
   // location to pull out the source line.
   SmallVector<std::pair<unsigned, unsigned>, 4> ColRanges;
-  std::pair<unsigned, unsigned> LineAndCol;
+  std::pair<unsigned, unsigned> LineAndCol, DbgLineAndCol;
   StringRef BufferID = "<unknown>";
   StringRef LineStr;
+  StringRef DbgFN;
 
   if (Loc.isValid()) {
     unsigned CurBuf = FindBufferContainingLoc(Loc);
@@ -325,10 +346,13 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
     }
 
     LineAndCol = getLineAndColumn(Loc, CurBuf);
+    DbgLineAndCol = getDebugLineAndColumn(Loc, CurBuf);
+    DbgFN = getDebugFilename(Loc, CurBuf);
   }
 
   return SMDiagnostic(*this, Loc, BufferID, LineAndCol.first,
-                      LineAndCol.second - 1, Kind, Msg.str(), LineStr,
+                      LineAndCol.second - 1, DbgFN, DbgLineAndCol.first,
+                      DbgLineAndCol.second - 1, Kind, Msg.str(), LineStr,
                       ColRanges, FixIts);
 }
 
@@ -381,6 +405,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
                            ArrayRef<std::pair<unsigned, unsigned>> Ranges,
                            ArrayRef<SMFixIt> Hints)
     : SM(&sm), Loc(L), Filename(std::string(FN)), LineNo(Line), ColumnNo(Col),
+      SrcFilename(std::string(FN)), SrcLineNo(Line), SrcColumnNo(Col),
       Kind(Kind), Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
       FixIts(Hints) {
   llvm::sort(FixIts);
@@ -492,6 +517,16 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &OS, bool ShowColors,
       S << ProgName << ": ";
 
     if (ShowLocation && !Filename.empty()) {
+      if (Filename == "<inline asm>" && !SrcFilename.empty()) {
+        S << SrcFilename;
+        if (SrcLineNo != -1) {
+          S << ':' << SrcLineNo;
+          if (SrcColumnNo != -1)
+            S << ':' << (SrcColumnNo + 1);
+        }
+        S << ": ";
+      }
+
       if (Filename == "-")
         S << "<stdin>";
       else

@@ -59,6 +59,10 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
+    // Base Source LineNo and Column where this Buffer starts
+    unsigned BaseLine, BaseCol;
+    StringRef SourceFilename;
+
     /// Look up a given \p Ptr in the buffer, determining which line it came
     /// from.
     unsigned getLineNumber(const char *Ptr) const;
@@ -143,9 +147,16 @@ public:
   /// the memory buffer.
   unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F,
                               SMLoc IncludeLoc) {
+    return AddNewSourceBuffer(std::move(F), "", 0, 0, IncludeLoc);
+  }
+  unsigned AddNewSourceBuffer(std::unique_ptr<MemoryBuffer> F, StringRef SrcFN,
+                              unsigned Line, unsigned Col, SMLoc IncludeLoc) {
     SrcBuffer NB;
     NB.Buffer = std::move(F);
     NB.IncludeLoc = IncludeLoc;
+    NB.BaseLine = Line;
+    NB.BaseCol = Col;
+    NB.SourceFilename = SrcFN;
     Buffers.push_back(std::move(NB));
     return Buffers.size();
   }
@@ -201,6 +212,11 @@ public:
   /// specified file. This is not a fast method.
   std::pair<unsigned, unsigned> getLineAndColumn(SMLoc Loc,
                                                  unsigned BufferID = 0) const;
+  /// Similiar to `getLineAndColumn` but propagates debug info
+  std::pair<unsigned, unsigned>
+  getDebugLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
+  /// Get the source filename from debug info, return "" if no debug info found
+  StringRef getDebugFilename(SMLoc Loc, unsigned BufferID = 0) const;
 
   /// Get a string with the \p SMLoc filename and line number
   /// formatted in the standard style.
@@ -284,6 +300,9 @@ class SMDiagnostic {
   std::string Filename;
   int LineNo = 0;
   int ColumnNo = 0;
+  std::string SrcFilename;
+  int SrcLineNo = 0;
+  int SrcColumnNo = 0;
   SourceMgr::DiagKind Kind = SourceMgr::DK_Error;
   std::string Message, LineContents;
   std::vector<std::pair<unsigned, unsigned>> Ranges;
@@ -294,13 +313,24 @@ public:
   SMDiagnostic() = default;
   // Diagnostic with no location (e.g. file not found, command line arg error).
   SMDiagnostic(StringRef filename, SourceMgr::DiagKind Knd, StringRef Msg)
-      : Filename(filename), LineNo(-1), ColumnNo(-1), Kind(Knd), Message(Msg) {}
+      : Filename(filename), LineNo(-1), ColumnNo(-1), SrcFilename(filename),
+        SrcLineNo(-1), SrcColumnNo(-1), Kind(Knd), Message(Msg) {}
 
   // Diagnostic with a location.
   SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line, int Col,
                SourceMgr::DiagKind Kind, StringRef Msg, StringRef LineStr,
                ArrayRef<std::pair<unsigned, unsigned>> Ranges,
                ArrayRef<SMFixIt> FixIts = {});
+  SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line, int Col,
+               StringRef SrcFN, int SrcLine, int SrcCol,
+               SourceMgr::DiagKind Kind, StringRef Msg, StringRef LineStr,
+               ArrayRef<std::pair<unsigned, unsigned>> Ranges,
+               ArrayRef<SMFixIt> FixIts = {})
+      : SMDiagnostic(sm, L, FN, Line, Col, Kind, Msg, LineStr, Ranges, FixIts) {
+    SrcFilename = std::string(SrcFN);
+    SrcLineNo = SrcLine;
+    SrcColumnNo = SrcCol;
+  }
 
   const SourceMgr *getSourceMgr() const { return SM; }
   SMLoc getLoc() const { return Loc; }
