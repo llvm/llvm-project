@@ -265,7 +265,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
       if (!semanticsContext.IsEnabled(
               common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
         messages.Say(
-            "Actual argument scalar expression of type INTEGER(%d) cannot beimplicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
+            "Actual argument scalar expression of type INTEGER(%d) cannot be implicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
             actualType.type().kind(), dummyType.type().kind());
       } else if (semanticsContext.ShouldWarn(common::LanguageFeature::
                          ActualIntegerConvertedToSmallerKind)) {
