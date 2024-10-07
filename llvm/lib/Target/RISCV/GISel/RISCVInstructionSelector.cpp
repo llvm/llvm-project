@@ -825,9 +825,10 @@ bool RISCVInstructionSelector::earlySelect(MachineInstr &MI) {
     Register Scalar = MI.getOperand(1).getReg();
     bool IsGPRSplat = isRegInGprb(Scalar);
     const LLT sXLen = LLT::scalar(STI.getXLen());
-    if (IsGPRSplat && TypeSize::isKnownLT(MRI->getType(Scalar).getSizeInBits(),
-                                          sXLen.getSizeInBits()))
-      Scalar = MIB.buildAnyExt(sXLen, Scalar).getReg(0);
+    assert((!IsGPRSplat ||
+            TypeSize::isKnownGE(MRI->getType(Scalar).getSizeInBits(),
+                                sXLen.getSizeInBits())) &&
+           "Unexpected Scalar register Type or Size");
 
     // We create a IMPLICIT_DEF and a G_CONSTANT when we encounter a
     // G_SPLAT_VECTOR. We cannot select the G_CONSTANT until after the MI is
