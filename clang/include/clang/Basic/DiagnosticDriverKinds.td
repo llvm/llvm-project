@@ -829,7 +829,7 @@ def err_drv_triple_version_invalid : Error<
 def err_empty_option_value : Error<
   "empty value for %0 option">;
 
-def warn_use_fseed : Warning<"Fuzzing with seed: %0">,
+def warn_use_fseed : Warning<"fuzzing with seed: %0">,
   InGroup<DiagGroup<"fuzzing">>;
 
 def warn_missing_include_dirs : Warning<

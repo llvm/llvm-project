@@ -7657,6 +7657,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StatsFile.assign(Output.getFilename());
       llvm::sys::path::replace_extension(StatsFile, "stats");
     }
+  }
 
   // Forward -Xclang arguments to -cc1, and -mllvm arguments to the LLVM option
   // parser.
