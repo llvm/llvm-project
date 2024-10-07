@@ -815,7 +815,7 @@ struct SemiNCAInfo {
             LLVM_DEBUG(dbgs() << "\t\tMarking visited not affected "
                               << BlockNamePrinter(Succ) << "\n");
             UnaffectedOnCurrentLevel.push_back(SuccTN);
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
             II.VisitedUnaffected.push_back(SuccTN);
 #endif
           } else {
@@ -849,7 +849,7 @@ struct SemiNCAInfo {
       TN->setIDom(NCD);
     }
 
-#if defined(LLVM_ENABLE_ABI_BREAKING_CHECKS) && !defined(NDEBUG)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
     for (const TreeNodePtr TN : II.VisitedUnaffected)
       assert(TN->getLevel() == TN->getIDom()->getLevel() + 1 &&
              "TN should have been updated by an affected ancestor");

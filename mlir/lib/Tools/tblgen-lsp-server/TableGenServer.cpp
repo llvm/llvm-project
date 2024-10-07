@@ -112,7 +112,7 @@ getBaseValue(const Record *record, const RecordVal *value) {
   // Find a base value for the field in the super classes of the given record.
   // On success, `record` is updated to the new parent record.
   StringRef valueName = value->getName();
-  auto findValueInSupers = [&](const Record *&record) -> RecordVal * {
+  auto findValueInSupers = [&](const Record *&record) -> const RecordVal * {
     for (auto [parentRecord, loc] : record->getSuperClasses()) {
       if (auto *newBase = parentRecord->getValue(valueName)) {
         record = parentRecord;

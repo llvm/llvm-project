@@ -639,15 +639,17 @@ public:
   // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
   // on success and false otherwise.
   bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     return I != PrologEpilogSGPRSpills.end();
   }
 
   // Get the scratch SGPR if allocated to save/restore \p Reg.
   Register getScratchSGPRCopyDstReg(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     if (I != PrologEpilogSGPRSpills.end() &&
         I->second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
       return I->second.getReg();
@@ -676,8 +678,9 @@ public:
 
   const PrologEpilogSGPRSaveRestoreInfo &
   getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
-    auto I = find_if(PrologEpilogSGPRSpills,
-                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
+      return Spill.first == Reg;
+    });
     assert(I != PrologEpilogSGPRSpills.end());
 
     return I->second;
@@ -888,7 +891,7 @@ public:
   }
 
   MCRegister getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
-    auto Arg = std::get<0>(ArgInfo.getPreloadedValue(Value));
+    const auto *Arg = std::get<0>(ArgInfo.getPreloadedValue(Value));
     return Arg ? Arg->getRegister() : MCRegister();
   }
 

@@ -340,6 +340,29 @@ Value createAttrConstraint(OpBuilder &builder, tblgen::Constraint constraint) {
   return createPredicate(builder, constraint.getPredicate());
 }
 
+Value createRegionConstraint(OpBuilder &builder, tblgen::Region constraint) {
+  MLIRContext *ctx = builder.getContext();
+  const Record &predRec = constraint.getDef();
+
+  if (predRec.getName() == "AnyRegion") {
+    ValueRange entryBlockArgs = {};
+    auto op =
+        builder.create<irdl::RegionOp>(UnknownLoc::get(ctx), entryBlockArgs);
+    return op.getResult();
+  }
+
+  if (predRec.isSubClassOf("SizedRegion")) {
+    ValueRange entryBlockArgs = {};
+    auto ty = IntegerType::get(ctx, 32);
+    auto op = builder.create<irdl::RegionOp>(
+        UnknownLoc::get(ctx), entryBlockArgs,
+        IntegerAttr::get(ty, predRec.getValueAsInt("blocks")));
+    return op.getResult();
+  }
+
+  return createPredicate(builder, constraint.getPredicate());
+}
+
 /// Returns the name of the operation without the dialect prefix.
 static StringRef getOperatorName(tblgen::Operator &tblgenOp) {
   StringRef opName = tblgenOp.getDef().getValueAsString("opName");
@@ -406,6 +429,12 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
     attrNames.push_back(StringAttr::get(ctx, namedAttr.name));
   }
 
+  SmallVector<Value> regions;
+  for (auto namedRegion : tblgenOp.getRegions()) {
+    regions.push_back(
+        createRegionConstraint(consBuilder, namedRegion.constraint));
+  }
+
   // Create the operands and results operations.
   if (!operands.empty())
     consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands,
@@ -416,6 +445,8 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   if (!attributes.empty())
     consBuilder.create<irdl::AttributesOp>(UnknownLoc::get(ctx), attributes,
                                            ArrayAttr::get(ctx, attrNames));
+  if (!regions.empty())
+    consBuilder.create<irdl::RegionsOp>(UnknownLoc::get(ctx), regions);
 
   return op;
 }
@@ -453,8 +484,7 @@ static irdl::DialectOp createIRDLDialect(OpBuilder &builder) {
                                          StringAttr::get(ctx, selectedDialect));
 }
 
-static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
-                                raw_ostream &os) {
+static bool emitDialectIRDLDefs(const RecordKeeper &records, raw_ostream &os) {
   // Initialize.
   MLIRContext ctx;
   ctx.getOrLoadDialect<irdl::IRDLDialect>();
@@ -470,7 +500,7 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   builder = builder.atBlockBegin(&dialect.getBody().emplaceBlock());
 
   for (const Record *type :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("TypeDef")) {
+       records.getAllDerivedDefinitionsIfDefined("TypeDef")) {
     tblgen::TypeDef tblgenType(type);
     if (tblgenType.getDialect().getName() != selectedDialect)
       continue;
@@ -478,15 +508,14 @@ static bool emitDialectIRDLDefs(const RecordKeeper &recordKeeper,
   }
 
   for (const Record *attr :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("AttrDef")) {
+       records.getAllDerivedDefinitionsIfDefined("AttrDef")) {
     tblgen::AttrDef tblgenAttr(attr);
     if (tblgenAttr.getDialect().getName() != selectedDialect)
       continue;
     createIRDLAttr(builder, tblgenAttr);
   }
 
-  for (const Record *def :
-       recordKeeper.getAllDerivedDefinitionsIfDefined("Op")) {
+  for (const Record *def : records.getAllDerivedDefinitionsIfDefined("Op")) {
     tblgen::Operator tblgenOp(def);
     if (tblgenOp.getDialectName() != selectedDialect)
       continue;

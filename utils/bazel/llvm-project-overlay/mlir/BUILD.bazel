@@ -2800,6 +2800,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
+        ":Rewrite",
         ":SCFDialect",
         ":SCFPassIncGen",
         ":SCFUtils",
@@ -3749,9 +3750,10 @@ cc_library(
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
+        ":MaskableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
-        ":VectorOpsIncGen",
+        ":VectorDialect",
         ":ViewLikeInterface",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
@@ -6301,11 +6303,17 @@ gentbl_cc_library(
 
 cc_library(
     name = "NVVMDialect",
-    srcs = ["lib/Dialect/LLVMIR/IR/NVVMDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/LLVMIR/NVVMDialect.h"],
+    srcs = [
+        "lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp",
+        "lib/Dialect/LLVMIR/IR/NVVMDialect.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
+        "include/mlir/Dialect/LLVMIR/NVVMDialect.h",
+    ],
     includes = ["include"],
     deps = [
-        ":BasicPtxBuilderInterface",
+        ":BasicPtxBuilderIntGen",
         ":BytecodeOpInterface",
         ":ConvertToLLVMInterface",
         ":DialectUtils",
@@ -6504,21 +6512,6 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
     deps = [":NVVMOpsTdFiles"],
-)
-
-cc_library(
-    name = "BasicPtxBuilderInterface",
-    srcs = ["lib/Dialect/LLVMIR/IR/BasicPtxBuilderInterface.cpp"],
-    hdrs = [
-        "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BasicPtxBuilderIntGen",
-        ":IR",
-        ":LLVMDialect",
-        ":Support",
-    ],
 )
 
 cc_library(
@@ -13905,6 +13898,7 @@ cc_library(
         ":BufferViewFlowOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationEnumsIncGen",
+        ":FunctionInterfaces",
         ":IR",
         ":Support",
         "//llvm:Support",

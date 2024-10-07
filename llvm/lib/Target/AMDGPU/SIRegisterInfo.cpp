@@ -1959,8 +1959,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
 
   if (SpillToVGPR) {
 
-    assert(SB.NumSubRegs == VGPRSpills.size() &&
-           "Num of VGPR lanes should be equal to num of SGPRs spilled");
+    // Since stack slot coloring pass is trying to optimize SGPR spills,
+    // VGPR lanes (mapped from spill stack slot) may be shared for SGPR
+    // spills of different sizes. This accounts for number of VGPR lanes alloted
+    // equal to the largest SGPR being spilled in them.
+    assert(SB.NumSubRegs <= VGPRSpills.size() &&
+           "Num of SGPRs spilled should be less than or equal to num of "
+           "the VGPR lanes.");
 
     for (unsigned i = 0, e = SB.NumSubRegs; i < e; ++i) {
       Register SubReg =
@@ -2673,12 +2678,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       Register TmpReg;
 
+      // FIXME: Scavenger should figure out that the result register is
+      // available. Also should do this for the v_add case.
+      if (OtherOp.isReg() && OtherOp.getReg() != DstOp.getReg())
+        TmpReg = DstOp.getReg();
+
       if (FrameReg && !ST.enableFlatScratch()) {
         // FIXME: In the common case where the add does not also read its result
         // (i.e. this isn't a reg += fi), it's not finding the dest reg as
         // available.
-        TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass, MI,
-                                               false, 0);
+        if (!TmpReg)
+          TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                 MI, false, 0);
         BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
             .addDef(TmpReg, RegState::Renamable)
             .addReg(FrameReg)
@@ -2706,7 +2717,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (!TmpReg && MaterializedReg == FrameReg) {
           TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                 MI, false, 0);
+                                                 MI, /*RestoreAfter=*/false, 0,
+                                                 /*AllowSpill=*/false);
           DstReg = TmpReg;
         }
 
