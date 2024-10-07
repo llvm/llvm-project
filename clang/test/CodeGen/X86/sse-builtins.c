@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -84,7 +86,7 @@ __m128 test_mm_cmp_ps_ord_q(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cmp_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i8 7)
   return _mm_cmp_ss(A, B, _CMP_ORD_Q);
 }
 
@@ -274,43 +276,43 @@ __m128 test_mm_cmpunord_ss(__m128 __a, __m128 __b) {
 
 int test_mm_comieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comieq_ss
-  // CHECK: call i32 @llvm.x86.sse.comieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comieq_ss(A, B);
 }
 
 int test_mm_comige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comige_ss
-  // CHECK: call i32 @llvm.x86.sse.comige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comige_ss(A, B);
 }
 
 int test_mm_comigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comigt_ss
-  // CHECK: call i32 @llvm.x86.sse.comigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comigt_ss(A, B);
 }
 
 int test_mm_comile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comile_ss
-  // CHECK: call i32 @llvm.x86.sse.comile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comile_ss(A, B);
 }
 
 int test_mm_comilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comilt_ss
-  // CHECK: call i32 @llvm.x86.sse.comilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comilt_ss(A, B);
 }
 
 int test_mm_comineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_comineq_ss
-  // CHECK: call i32 @llvm.x86.sse.comineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.comineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_comineq_ss(A, B);
 }
 
 int test_mm_cvt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvt_ss2si
-  // CHECK: call i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
   return _mm_cvt_ss2si(A);
 }
 
@@ -338,34 +340,34 @@ float test_mm_cvtss_f32(__m128 A) {
 
 int test_mm_cvtss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si32
-  // CHECK: call i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvtss2si(<4 x float> %{{.*}})
   return _mm_cvtss_si32(A);
 }
 
 #ifdef __x86_64__
 long long test_mm_cvtss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si64
-  // CHECK: call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
   return _mm_cvtss_si64(A);
 }
 #endif
 
 int test_mm_cvtt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvtt_ss2si
-  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvtt_ss2si(A);
 }
 
 int test_mm_cvttss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si32
-  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvttss_si32(A);
 }
 
 #ifdef __x86_64__
 long long test_mm_cvttss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si64
-  // CHECK: call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
   return _mm_cvttss_si64(A);
 }
 #endif
@@ -530,7 +532,7 @@ __m128 test_mm_movelh_ps(__m128 A, __m128 B) {
 
 int test_mm_movemask_ps(__m128 A) {
   // CHECK-LABEL: test_mm_movemask_ps
-  // CHECK: call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
   return _mm_movemask_ps(A);
 }
 
@@ -563,25 +565,25 @@ void test_mm_prefetch(char const* p) {
 
 __m128 test_mm_rcp_ps(__m128 x) {
   // CHECK-LABEL: test_mm_rcp_ps
-  // CHECK: call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rcp.ps(<4 x float> {{.*}})
   return _mm_rcp_ps(x);
 }
 
 __m128 test_mm_rcp_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rcp_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rcp.ss(<4 x float> {{.*}})
   return _mm_rcp_ss(x);
 }
 
 __m128 test_mm_rsqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ps
-  // CHECK: call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> {{.*}})
   return _mm_rsqrt_ps(x);
 }
 
 __m128 test_mm_rsqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ss
-  // CHECK: call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
   return _mm_rsqrt_ss(x);
 }
 
@@ -701,7 +703,7 @@ __m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
 
 __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ps
-  // CHECK: call <4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
   return _mm_sqrt_ps(x);
 }
 
@@ -810,37 +812,37 @@ void test_MM_TRANSPOSE4_PS(__m128 *A, __m128 *B, __m128 *C, __m128 *D) {
 
 int test_mm_ucomieq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomieq_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomieq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomieq_ss(A, B);
 }
 
 int test_mm_ucomige_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomige_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomige.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomige_ss(A, B);
 }
 
 int test_mm_ucomigt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomigt_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomigt_ss(A, B);
 }
 
 int test_mm_ucomile_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomile_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomile.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomile_ss(A, B);
 }
 
 int test_mm_ucomilt_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomilt_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomilt_ss(A, B);
 }
 
 int test_mm_ucomineq_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_ucomineq_ss
-  // CHECK: call i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call {{.*}}i32 @llvm.x86.sse.ucomineq.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}})
   return _mm_ucomineq_ss(A, B);
 }
 

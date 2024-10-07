@@ -152,8 +152,9 @@ public:
   }
 
   void buildDepsGraph(std::vector<SPIRV::DTSortableEntry *> &Graph,
+                      const SPIRVInstrInfo *TII,
                       MachineModuleInfo *MMI = nullptr) {
-    DT.buildDepsGraph(Graph, MMI);
+    DT.buildDepsGraph(Graph, TII, MMI);
   }
 
   void setBound(unsigned V) { Bound = V; }
@@ -405,6 +406,8 @@ public:
 
   // Gets the storage class of the pointer type assigned to this vreg.
   SPIRV::StorageClass::StorageClass getPointerStorageClass(Register VReg) const;
+  SPIRV::StorageClass::StorageClass
+  getPointerStorageClass(const SPIRVType *Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }

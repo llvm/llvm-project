@@ -265,8 +265,8 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [10,10,10,10,10,10,10,10]
 ; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [3,3,3,3,3,3,3,3]
-; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
