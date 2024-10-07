@@ -11039,8 +11039,9 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 
   if (TVA) {
     llvm::SmallVector<StringRef, 8> Feats;
+    ParsedTargetAttr ParseInfo;
     if (S.getASTContext().getTargetInfo().getTriple().isRISCV()) {
-      ParsedTargetAttr ParseInfo =
+      ParseInfo =
           S.getASTContext().getTargetInfo().parseTargetAttr(TVA->getName());
       for (auto &Feat : ParseInfo.Features)
         Feats.push_back(StringRef{Feat}.substr(1));
