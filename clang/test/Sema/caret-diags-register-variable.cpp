@@ -6,7 +6,7 @@ struct foo {
 
 //CHECK: {{.*}}: error: bad type for named register variable
 //CHECK-NEXT: {{^}}register struct foo bar asm("esp");
-//CHECK-NEXT: {{^}}         ^{{$}}
+//CHECK-NEXT: {{^}}         ^~~~~~~~~~{{$}}
 register struct foo bar asm("esp");
 
 //CHECK: {{.*}}: error: register 'edi' unsuitable for global register variables on this target
