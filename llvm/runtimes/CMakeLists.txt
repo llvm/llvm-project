@@ -281,6 +281,7 @@ function(runtime_default_target)
                            PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 CUDA # For runtimes that may look for the CUDA SDK (libc, offload)
+                                                FLANG_RUNTIME # Shared between Flang and FortranRuntime
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
