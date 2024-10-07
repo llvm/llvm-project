@@ -13,7 +13,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-#include <span>
+
 using namespace llvm;
 
 struct SeedBundleTest : public testing::Test {
