@@ -44,17 +44,7 @@ us to override the module import logic to suit our needs. This does that.
 Older swig versions will simply ignore this setting.
 */
 %define MODULEIMPORT
-"import sys
-if sys.platform == "win32" and sys.version_info >= (3, 8):
-    from pathlib import Path
-    dll_paths_file = Path(__file__).parent / "dll_dependents_paths.txt"
-    if dll_paths_file.exists():
-        with dll_paths_file.open("r") as f:
-            dirs = [line.strip() for line in f if Path(line.strip()).is_dir()]
-            for d in dirs:
-                import os
-                os.add_dll_directory(d)
-try:
+"try:
     # Try an absolute import first.  If we're being loaded from lldb,
     # _lldb should be a built-in module.
     import $module

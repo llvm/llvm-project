@@ -198,16 +198,13 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
       COMMENT "Copying Python DLL to LLDB binaries directory.")
   endif()
 
-  # Since Python3.8 the Windows runtime now longer loads dependent DLLs from Path or CWD. Instead,
-  # candidate locations must be set explicit via os.add_dll_directory(). Here, we add a file with
-  # all such paths to lldb-python. Module import code reads and registers them.
+  # Since Python3.8 the Windows runtime loads dependent DLLs only from the directory of the binary
+  # itself (and not Path). Thus, we must copy all our DLLs into the Python package. This is a best
+  # practice on Windows anyway.
   if (WIN32)
-    add_custom_command(
-      TARGET ${swig_target}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E echo "${LLVM_SHLIB_OUTPUT_INTDIR}" > ${lldb_python_target_dir}/dll_dependents_paths.txt
-      COMMENT "Generating dll_dependents_paths.txt"
-      VERBATIM)
+    add_custom_command(TARGET ${swig_target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy -t ${lldb_python_target_dir}> $<TARGET_RUNTIME_DLLS:liblldb>
+      COMMAND_EXPAND_LISTS)
   endif()
 
 endfunction()
