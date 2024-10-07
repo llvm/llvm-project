@@ -172,7 +172,7 @@ uint32_t RISCV::calcEFlags() const {
 int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
-    internalLinkerError(getErrorLocation(buf),
+    internalLinkerError(getErrorLoc(ctx, buf),
                         "cannot read addend for relocation " + toString(type));
     return 0;
   case R_RISCV_32:
@@ -325,7 +325,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return R_RISCV_LEB128;
   default:
-    error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
+    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
@@ -831,10 +831,12 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       remove = nextLoc - ((loc + align - 1) & -align);
       // If we can't satisfy this alignment, we've found a bad input.
       if (LLVM_UNLIKELY(static_cast<int32_t>(remove) < 0)) {
-        errorOrWarn(getErrorLocation((const uint8_t*)loc) +
+        errorOrWarn(getErrorLoc(ctx, (const uint8_t *)loc) +
                     "insufficient padding bytes for " + lld::toString(r.type) +
-                    ": " + Twine(r.addend) + " bytes available "
-                    "for requested alignment of " + Twine(align) + " bytes");
+                    ": " + Twine(r.addend) +
+                    " bytes available "
+                    "for requested alignment of " +
+                    Twine(align) + " bytes");
         remove = 0;
       }
       break;
