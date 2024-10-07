@@ -6,23 +6,54 @@
 #
 #===------------------------------------------------------------------------===#
 
+# Add GTest if not already present.
+# Using a function so include_directories/LLVM_SUBPROJECT_TITLE does not propagate
 function (build_gtest)
   include_directories("${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
   set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
-  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest")
 endfunction ()
-
-# Add GTest if not already present
 if (NOT TARGET llvm_gtest)
   build_gtest()
 endif ()
 
-# Target that depends on all unittests
-add_custom_target(FortranRuntimeUnitTests)
-set_target_properties(FortranRuntimeUnitTests PROPERTIES FOLDER "Fortran Runtime/Tests")
+
 
 # Required because LLVMSupport is compiled with this option (by default).
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+
+if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_compile_options("-Wno-suggest-override")
+endif()
+
+
+# Target that depends on all unittests
+add_custom_target(FortranRuntimeUnitTests)
+set_target_properties(FortranRuntimeUnitTests PROPERTIES FOLDER "Fortran Runtime/Meta")
+
+
+function(add_flang_unittest_offload_properties target)
+  # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
+  if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+    set_target_properties(${target}
+      PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON
+      )
+  endif()
+
+  # Enable OpenMP offload during linking. We may need to replace
+  # LINK_OPTIONS with COMPILE_OPTIONS when there are OpenMP offload
+  # unittests.
+  #
+  # FIXME: replace 'native' in --offload-arch option with the list
+  #        of targets that Fortran Runtime was built for.
+  if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
+    set_target_properties(${target}
+      PROPERTIES LINK_OPTIONS
+      "-fopenmp;--offload-arch=native"
+      )
+  endif()
+endfunction()
+
 
 function(add_fortranruntime_unittest test_dirname)
   cmake_parse_arguments(ARG
@@ -36,6 +67,7 @@ function(add_fortranruntime_unittest test_dirname)
   target_include_directories(${test_dirname} PRIVATE "${FORTRANRUNTIME_SOURCE_DIR}/include")
   target_include_directories(${test_dirname} PRIVATE "${FLANG_SOURCE_DIR}/include")
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
+  add_flang_unittest_offload_properties(${test_dirname})
 endfunction()
 
 function(add_fortranruntime_nongtest_unittest test_name)
@@ -61,6 +93,7 @@ function(add_fortranruntime_nongtest_unittest test_name)
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FortranRuntimeUnitTests ${test_name}${suffix})
   endif()
+  add_flang_unittest_offload_properties(${test_name}${suffix})
 endfunction()
 
 add_subdirectory(Common)

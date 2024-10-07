@@ -62,13 +62,27 @@ endif ()
 # Build Options #
 #################
 
-option(FORTRANRUNTIME_INCLUDE_TESTS
-         "Generate build targets for the FortranRuntime unit tests."
-         ${LLVM_INCLUDE_TESTS})
+option(FORTRANRUNTIME_INCLUDE_TESTS "Generate build targets for the FortranRuntime unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 
-option(FLANG_EXPERIMENTAL_CUDA_RUNTIME "Compile Fortran runtime as CUDA sources (experimental)" OFF)
-if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
-  message(FATAL_ERROOR "FLANG_EXPERIMENTAL_CUDA_RUNTIME currently not supported")
+set(FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT "" CACHE STRING "Compile FortranRuntime with GPU support (CUDA or OpenMP)")
+set_property(CACHE FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT PROPERTY STRINGS
+  ""
+  CUDA
+  OpenMP)
+if (NOT FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT)
+elseif (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  set(FORTRANRUNTIME_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
+  option(FORTRANRUNTIME_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
+elseif (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
+set(FORTRANRUNTIME_DEVICE_ARCHITECTURES "all" CACHE STRING
+  "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
+else ()
+  message(FATAL_ERROR "Invalid value '${FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
+endif ()
+
+option(FORTRANRUNTIME_ENABLE_CUF "Compile CUDA Fortran runtime sources" OFF)
+if (FORTRANRUNTIME_ENABLE_CUF)
+  find_package(CUDAToolkit REQUIRED)
 endif()
 
 
@@ -90,23 +104,35 @@ check_cxx_source_compiles(
   HAVE_DECL_STRERROR_S)
 
 
-# Search for clang_rt.builtins
-execute_process(
-    COMMAND "${CMAKE_CXX_COMPILER}" "-print-libgcc-file-name" "-rtlib=compiler-rt"
-    RESULT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE
-    OUTPUT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT
-    ERROR_QUIET
-  )
-if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
-  string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FORTRANRUNTIME_LIBCALL)
-else ()
-  set(FORTRANRUNTIME_LIBCALL "")
+# Search for clang_rt.builtins library.
+if (WIN32)
+  execute_process(
+      COMMAND "${CMAKE_CXX_COMPILER}" "-print-libgcc-file-name" "-rtlib=compiler-rt"
+      RESULT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE
+      OUTPUT_VARIABLE CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT
+      ERROR_QUIET
+    )
+  if (NOT CXX_COMPILER_PRINT_LIBGCC_PATH_FAILURE AND CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT)
+    string(STRIP "${CXX_COMPILER_PRINT_LIBGCC_PATH_RESULT}" FORTRANRUNTIME_LIBCALL)
+  else ()
+    set(FORTRANRUNTIME_LIBCALL "")
+  endif ()
 endif ()
 
 
 #####################
 # Build Preparation #
 #####################
+
+if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT AND FORTRANRUNTIME_INCLUDE_TESTS)
+  # If Fortran runtime is built as CUDA library, the linking
+  # of targets that link FortranRuntime must be done
+  # with CUDA_RESOLVE_DEVICE_SYMBOLS.
+  # CUDA language must be enabled for CUDA_RESOLVE_DEVICE_SYMBOLS
+  # to take effect.
+  enable_language(CUDA)
+endif()
+
 
 # C++17 required for FortranRuntime, user or other runtimes may override this.
 # GTest included later also requires C++17.

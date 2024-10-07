@@ -1,21 +1,15 @@
-option(FLANG_EXPERIMENTAL_CUDA_RUNTIME
-  "Compile Fortran runtime as CUDA sources (experimental)" OFF
-  )
 
-option(FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS
-  "Do not compile global variables' definitions when producing PTX library" OFF
-  )
 
-set(FLANG_LIBCUDACXX_PATH "" CACHE PATH "Path to libcu++ package installation")
 
-set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
-  "Compile Fortran runtime as OpenMP target offload sources (experimental). Valid options are 'off', 'host_device', 'nohost'")
 
-set(FLANG_OMP_DEVICE_ARCHITECTURES "all" CACHE STRING
-  "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
+
+
+
+
+
 
 macro(enable_cuda_compilation name files)
-  if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
+  if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
     if (BUILD_SHARED_LIBS)
       message(FATAL_ERROR
         "BUILD_SHARED_LIBS is not supported for CUDA build of Fortran runtime"
@@ -50,17 +44,17 @@ macro(enable_cuda_compilation name files)
       "${CUDA_COMPILE_OPTIONS}"
       )
 
-    if (EXISTS "${FLANG_LIBCUDACXX_PATH}/include")
+    if (EXISTS "${FORTRANRUNTIME_LIBCUDACXX_PATH}/include")
       # When using libcudacxx headers files, we have to use them
       # for all files of F18 runtime.
-      include_directories(AFTER ${FLANG_LIBCUDACXX_PATH}/include)
+      include_directories(AFTER ${FORTRANRUNTIME_LIBCUDACXX_PATH}/include)
       add_compile_definitions(RT_USE_LIBCUDACXX=1)
     endif()
 
     # Add an OBJECT library consisting of CUDA PTX.
     llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
     set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
-    if (FLANG_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
+    if (FORTRANRUNTIME_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS)
       target_compile_definitions(obj.${name}PTX
         PRIVATE FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
         )
@@ -69,24 +63,9 @@ macro(enable_cuda_compilation name files)
 endmacro()
 
 macro(enable_omp_offload_compilation files)
-  if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "off")
-    # 'host_device' build only works with Clang compiler currently.
-    # The build is done with the CMAKE_C/CXX_COMPILER, i.e. it does not use
-    # the in-tree built Clang. We may have a mode that would use the in-tree
-    # built Clang.
-    #
-    # 'nohost' is supposed to produce an LLVM Bitcode library,
-    # and it has to be done with a C/C++ compiler producing LLVM Bitcode
-    # compatible with the LLVM toolchain version distributed with the Flang
-    # compiler.
-    # In general, the in-tree built Clang should be used for 'nohost' build.
-    # Note that 'nohost' build does not produce the host version of Flang
-    # runtime library, so there will be two separate distributable objects.
-    # 'nohost' build is a TODO.
+  if (FORTRANRUNTIME_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
+    # OpenMP offload build only works with Clang compiler currently.
 
-    if (NOT FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD STREQUAL "host_device")
-      message(FATAL_ERROR "Unsupported OpenMP offload build of Flang runtime")
-    endif()
     if (BUILD_SHARED_LIBS)
       message(FATAL_ERROR
         "BUILD_SHARED_LIBS is not supported for OpenMP offload build of Fortran runtime"
@@ -111,13 +90,13 @@ macro(enable_omp_offload_compilation files)
         "${all_amdgpu_architectures};${all_nvptx_architectures}"
         )
       # TODO: support auto detection on the build system.
-      if (FLANG_OMP_DEVICE_ARCHITECTURES STREQUAL "all")
-        set(FLANG_OMP_DEVICE_ARCHITECTURES ${all_gpu_architectures})
+      if (FORTRANRUNTIME_DEVICE_ARCHITECTURES STREQUAL "all")
+        set(FORTRANRUNTIME_DEVICE_ARCHITECTURES ${all_gpu_architectures})
       endif()
-      list(REMOVE_DUPLICATES FLANG_OMP_DEVICE_ARCHITECTURES)
+      list(REMOVE_DUPLICATES FORTRANRUNTIME_DEVICE_ARCHITECTURES)
 
       string(REPLACE ";" "," compile_for_architectures
-        "${FLANG_OMP_DEVICE_ARCHITECTURES}"
+        "${FORTRANRUNTIME_DEVICE_ARCHITECTURES}"
         )
 
       set(OMP_COMPILE_OPTIONS
@@ -138,7 +117,7 @@ macro(enable_omp_offload_compilation files)
         )
     else()
       message(FATAL_ERROR
-        "Flang runtime build is not supported for these compilers:\n"
+        "FortranRuntime build with OpenMP offload is not supported for these compilers:\n"
         "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}\n"
         "CMAKE_C_COMPILER_ID: ${CMAKE_C_COMPILER_ID}")
     endif()

@@ -111,7 +111,7 @@ endif()
 
 
 
-if (NOT DEFINED WIN32)
+if (NOT WIN32)
   add_fortranruntime_library(FortranRuntime STATIC
     ${sources}
     INSTALL_WITH_TOOLCHAIN
@@ -158,4 +158,8 @@ else()
       FortranRuntime.dynamic
       FortranRuntime.dynamic_dbg
     )
+endif()
+
+if (FORTRANRUNTIME_ENABLE_CUF)
+  add_subdirectory(CUDA)
 endif()
