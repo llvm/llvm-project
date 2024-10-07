@@ -259,7 +259,7 @@ private:
   /// Convert a 1D vector type into an LLVM vector type.
   FailureOr<Type> convertVectorType(VectorType type) const;
 
-  /// Convert AMX tile type x86_amx type.
+  /// Convert an AMX tile type to the x86_amx type.
   Type convertAMXTileType(amx::TileType type) const;
 
   /// Options for customizing the llvm lowering.

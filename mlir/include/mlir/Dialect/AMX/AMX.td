@@ -73,7 +73,7 @@ def AMX_TileTypeElementType : AnyTypeOf<[F32, F16, BF16, I32, I8]> {
   let cppFunctionName = "isValidTileTypeElementType";
 }
 
-def AMX_TileType : AMX_Type<"Tile", "amx.tile", [ShapedTypeInterface, ValueSemantics]> {
+def AMX_TileType : AMX_Type<"Tile", "tile", [ShapedTypeInterface, ValueSemantics]> {
   let summary = "AMX 2D tile to be used by AMX opertaions.";
 
   let description = [{
@@ -111,14 +111,22 @@ def AMX_TileType : AMX_Type<"Tile", "amx.tile", [ShapedTypeInterface, ValueSeman
   let skipDefaultBuilders = 1;
 }
 
-def IsAMXTilePred : CPred<"::llvm::isa<::mlir::amx::TileType>($_self)">;
-
-def IsAMX2DTilePred : And<[IsAMXTilePred,
+def IsAMXTilePred : And<[CPred<"::llvm::isa<::mlir::amx::TileType>($_self)">,
   CPred<[{::llvm::cast<::mlir::amx::TileType>($_self).getRank() == 2}]>]>;
 
-class AMX2DTileOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsAMX2DTilePred, "tile",
+class AMXTileOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsAMXTilePred, "tile",
                       "::mlir::amx::TileType">;
+
+def AnyAMXTile : AMXTileOf<[F32, F16, BF16, I32, I8]>;
+
+def AMXTileF32 : AMXTileOf<[F32]>;
+
+def AMXTileF16OrBF16 : AMXTileOf<[F16, BF16]>;
+
+def AMXTileI32 : AMXTileOf<[I32]>;
+
+def AMXTileI8 : AMXTileOf<[I8]>;
 
 //===----------------------------------------------------------------------===//
 // AMX Op and IntrOp definitions.
@@ -151,17 +159,16 @@ def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
     Example:
 
     ```mlir
-      %0 = amx.tile_zero : <16x16xbf16>
+      %0 = amx.tile_zero : !amx.tile<16x16xbf16>
     ```
   }];
-  let results = (outs
-    AMX2DTileOf<[F32, F16, BF16, I32, I8]>:$res);
+  let results = (outs AnyAMXTile:$res);
   let extraClassDeclaration = [{
     TileType getTileType() {
       return ::llvm::cast<TileType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "attr-dict `:` type($res)";
+  let assemblyFormat = "attr-dict `:` qualified(type($res))";
   let hasVerifier = 1;
 }
 
@@ -180,13 +187,12 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
     Example:
 
     ```mlir
-      %0 = amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into <16x64xi8>
+      %0 = amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into !amx.tile<16x64xi8>
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
                    Variadic<Index>:$indices);
-  let results = (outs
-    AMX2DTileOf<[F32, F16, BF16, I32, I8]>:$res);
+  let results = (outs AnyAMXTile:$res);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -196,7 +202,7 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
     }
   }];
   let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
-                       "type($base) `into` type($res)";
+                       "type($base) `into` qualified(type($res))";
   let hasVerifier = 1;
 }
 
@@ -211,12 +217,12 @@ def TileStoreOp : AMX_Op<"tile_store"> {
     Example:
 
     ```mlir
-      amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, <16x64xi8>
+      amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, !amx.tile<16x64xi8>
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
                    Variadic<Index>:$indices,
-                   AMX2DTileOf<[F32, F16, BF16, I32, I8]>:$val);
+                   AnyAMXTile:$val);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -226,7 +232,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
     }
   }];
   let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
-                       "type($base) `,` type($val)";
+                       "type($base) `,` qualified(type($val))";
   let hasVerifier = 1;
 }
 
@@ -246,13 +252,14 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
     Example:
 
     ```mlir
-      %0 = amx.tile_mulf %a, %b, %c : <16x32xbf16>, <16x32xbf16>, <16x16xf32>
+      %0 = amx.tile_mulf %a, %b, %c
+        : !amx.tile<16x32xbf16>, !amx.tile<16x32xbf16>, !amx.tile<16x16xf32>
     ```
   }];
-  let arguments = (ins AMX2DTileOf<[F16, BF16]>:$lhs,
-                       AMX2DTileOf<[F16, BF16]>:$rhs,
-                       AMX2DTileOf<[F32]>:$acc);
-  let results = (outs AMX2DTileOf<[F32]>:$res);
+  let arguments = (ins AMXTileF16OrBF16:$lhs,
+                       AMXTileF16OrBF16:$rhs,
+                       AMXTileF32:$acc);
+  let results = (outs AMXTileF32:$res);
   let extraClassDeclaration = [{
     TileType getLhsTileType() {
       return ::llvm::cast<TileType>(getLhs().getType());
@@ -265,7 +272,8 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
     }
   }];
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
-                       "type($lhs) `,` type($rhs) `,` type($acc) ";
+                       "qualified(type($lhs)) `,` qualified(type($rhs))"
+                       " `,` qualified(type($acc)) ";
   let hasVerifier = 1;
 }
 
@@ -284,16 +292,17 @@ def TileMulIOp : AMX_Op<"tile_muli", [
     Example:
 
     ```mlir
-      %0 = amx.tile_muli %a zext, %b zext, %c : <16x64xi8>, <16x64xi8>, <16x16xi32>
+      %0 = amx.tile_muli %a zext, %b zext, %c
+        : !amx.tile<16x64xi8>, !amx.tile<16x64xi8>, !amx.tile<16x16xi32>
     ```
   }];
-  let arguments = (ins AMX2DTileOf<[I8]>:$lhs,
-                       AMX2DTileOf<[I8]>:$rhs,
-                       AMX2DTileOf<[I32]>:$acc,
+  let arguments = (ins AMXTileI8:$lhs,
+                       AMXTileI8:$rhs,
+                       AMXTileI32:$acc,
                        UnitAttr:$isZextLhs,
                        UnitAttr:$isZextRhs
                        );
-  let results = (outs AMX2DTileOf<[I32]>:$res);
+  let results = (outs AMXTileI32:$res);
   let extraClassDeclaration = [{
     TileType getLhsTileType() {
       return ::llvm::cast<TileType>(getLhs().getType());
@@ -306,7 +315,7 @@ def TileMulIOp : AMX_Op<"tile_muli", [
     }
   }];
   let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "
-                       "type($lhs) `,` type($rhs) `,` type($acc) ";
+                       "qualified(type($lhs)) `,` qualified(type($rhs)) `,` qualified(type($acc)) ";
   let hasVerifier = 1;
 }
 

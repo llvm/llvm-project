@@ -158,10 +158,12 @@ struct TileMulFConversion : public ConvertOpToLLVMPattern<TileMulFOp> {
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpbf16ps>(
           op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
           adaptor.getLhs(), adaptor.getRhs());
-    else
+    else if (aType.getElementType().isF16())
       rewriter.replaceOpWithNewOp<amx::x86_amx_tdpfp16ps>(
           op, resType, tsza.first, tszb.second, tsza.second, adaptor.getAcc(),
           adaptor.getLhs(), adaptor.getRhs());
+    else
+      llvm_unreachable("Unexpected element type for amx.mulf");
     return success();
   }
 };
