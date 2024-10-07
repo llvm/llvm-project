@@ -240,19 +240,20 @@ void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
   APFixedPoint ValWithFract(
       APInt(Sema.getWidth(),
             relativeShr(IntPart, Sema.getLsbWeight()) + FullFactPart,
-            Sema.isSigned()),
+            Sema.isSigned(), /*implicitTrunc=*/true),
       Sema);
   ASSERT_EQ(ValWithFract.getIntPart(), IntPart);
 
   // Just fraction
-  APFixedPoint JustFract(APInt(Sema.getWidth(), FullFactPart, Sema.isSigned()),
+  APFixedPoint JustFract(APInt(Sema.getWidth(), FullFactPart, Sema.isSigned(),
+                               /*implicitTrunc=*/true),
                          Sema);
   ASSERT_EQ(JustFract.getIntPart(), 0);
 
   // Whole number
   APFixedPoint WholeNum(APInt(Sema.getWidth(),
                               relativeShr(IntPart, Sema.getLsbWeight()),
-                              Sema.isSigned()),
+                              Sema.isSigned(), /*implicitTrunc=*/true),
                         Sema);
   ASSERT_EQ(WholeNum.getIntPart(), IntPart);
 
@@ -260,7 +261,7 @@ void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
   if (Sema.isSigned()) {
     APFixedPoint Negative(APInt(Sema.getWidth(),
                                 relativeShr(IntPart, Sema.getLsbWeight()),
-                                Sema.isSigned()),
+                                Sema.isSigned(), /*implicitTrunc=*/true),
                           Sema);
     ASSERT_EQ(Negative.getIntPart(), IntPart);
   }

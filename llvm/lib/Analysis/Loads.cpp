@@ -95,10 +95,8 @@ static bool isDereferenceableAndAlignedPointer(
 
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
-    APInt KnownDerefBytes(Size.getBitWidth(),
-                          V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                            CheckForFreed));
-    if (!KnownDerefBytes.getBoolValue() || !KnownDerefBytes.uge(Size) ||
+    if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                    CheckForFreed)) ||
         CheckForFreed)
       return false;
     if (CheckForNonNull &&

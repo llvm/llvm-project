@@ -2099,8 +2099,9 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
   unsigned VTableSize =
       ComponentSize * Layout.getVTableSize(AddressPoint.VTableIndex);
   unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
-  llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
-                              llvm::APInt(32, VTableSize - Offset, true));
+  llvm::ConstantRange InRange(
+      llvm::APInt(32, (int)-Offset, true),
+      llvm::APInt(32, (int)(VTableSize - Offset), true));
   return llvm::ConstantExpr::getGetElementPtr(
       VTable->getValueType(), VTable, Indices, /*InBounds=*/true, InRange);
 }
