@@ -19,21 +19,33 @@ class LibcxxOptionalDataFormatterSimulatorTestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp")
         )
-        self.expect_var_path("maybe_int", summary=' Has Value=true ',
-                             children=[ValueCheck(name="Value", summary=None, value="42")])
-        self.expect_var_path("maybe_string", summary=' Has Value=true ',
-                             children=[ValueCheck(name="Value", summary='"Hello"')])
+        self.expect_var_path(
+            "maybe_int",
+            summary=" Has Value=true ",
+            children=[ValueCheck(name="Value", summary=None, value="42")],
+        )
+        self.expect_var_path(
+            "maybe_string",
+            summary=" Has Value=true ",
+            children=[ValueCheck(name="Value", summary='"Hello"')],
+        )
 
-        self.expect_expr("maybe_int", result_summary=' Has Value=true ',
-                         result_children=[ValueCheck(name="Value", summary=None, value="42")])
+        self.expect_expr(
+            "maybe_int",
+            result_summary=" Has Value=true ",
+            result_children=[ValueCheck(name="Value", summary=None, value="42")],
+        )
 
-        self.expect_expr("maybe_string", result_summary=' Has Value=true ',
-                         result_children=[ValueCheck(name="Value", summary='"Hello"')])
+        self.expect_expr(
+            "maybe_string",
+            result_summary=" Has Value=true ",
+            result_children=[ValueCheck(name="Value", summary='"Hello"')],
+        )
 
 
 for r in range(2):
-    name = f'test_r{r}'
-    defines = [f'REVISION={r}']
+    name = f"test_r{r}"
+    defines = [f"REVISION={r}"]
     f = functools.partialmethod(
         LibcxxOptionalDataFormatterSimulatorTestCase._run_test, defines
     )
