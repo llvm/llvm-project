@@ -2919,6 +2919,8 @@ static int getPriorityFromAttrString(StringRef AttrStr) {
     }
   }
 
+  assert(Priority >= 0);
+
   return Priority;
 }
 

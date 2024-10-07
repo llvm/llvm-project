@@ -3073,7 +3073,7 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
           DuplicateAttr = true;
         HasPriority = true;
         int Digit;
-        if (AttrStr.getAsInteger(0, Digit))
+        if (AttrStr.getAsInteger(0, Digit) || Digit < 0)
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
       } else {
@@ -3227,7 +3227,7 @@ bool Sema::checkTargetClonesAttrString(
         } else if (AttrStr.consume_front("priority=")) {
           IsPriority = true;
           int Digit;
-          if (AttrStr.getAsInteger(0, Digit))
+          if (AttrStr.getAsInteger(0, Digit) || Digit < 0)
             return Diag(CurLoc, diag::warn_unsupported_target_attribute)
                    << Unsupported << None << Str << TargetClones;
         } else {
