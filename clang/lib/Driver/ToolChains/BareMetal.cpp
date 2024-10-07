@@ -200,10 +200,27 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
     return;
   D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
+
+  // If multilib selection didn't complete successfully, report a list
+  // of all the configurations the user could have provided.
   for (const Multilib &Multilib : Result.Multilibs)
     if (!Multilib.isError())
       ss << "\n" << llvm::join(Multilib.flags(), " ");
   D.Diag(clang::diag::note_drv_available_multilibs) << ss.str();
+
+  // Now report any custom error messages requested by the YAML. We do
+  // this after displaying the list of available multilibs, because
+  // that list is probably large, and (in interactive use) risks
+  // scrolling the useful error message off the top of the user's
+  // terminal.
+  for (const Multilib &Multilib : Result.SelectedMultilibs)
+    if (Multilib.isError())
+      D.Diag(clang::diag::err_drv_multilib_custom_error)
+          << Multilib.getErrorMessage();
+
+  // If there was an error, clear the SelectedMultilibs vector, in
+  // case it contains partial data.
+  Result.SelectedMultilibs.clear();
 }
 
 static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
