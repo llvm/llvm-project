@@ -222,6 +222,12 @@ Changes in existing checks
   by adding the option `UseUpperCaseLiteralSuffix` to select the
   case of the literal suffix in fixes.
 
+- Improved :doc:`readability-redundant-casting
+  <clang-tidy/checks/readability/redundant-casting>` check by fixing
+  false negatives related to ``enum`` when setting ``IgnoreTypeAliases``
+  to true.
+
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check to
   remove `->`, when redundant `get()` is removed.

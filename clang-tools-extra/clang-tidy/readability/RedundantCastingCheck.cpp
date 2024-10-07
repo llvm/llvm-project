@@ -40,8 +40,15 @@ static bool areTypesEqual(QualType S, QualType D) {
 
 static bool areTypesEqual(QualType TypeS, QualType TypeD,
                           bool IgnoreTypeAliases) {
-  const QualType CTypeS = TypeS.getCanonicalType();
   const QualType CTypeD = TypeD.getCanonicalType();
+
+  QualType CTypeS;
+  const auto *const EnumTypeS = TypeS->getAs<EnumType>();
+  if (EnumTypeS != nullptr && !EnumTypeS->getDecl()->isScoped())
+    CTypeS = EnumTypeS->getDecl()->getIntegerType();
+  else
+    CTypeS = TypeS.getCanonicalType();
+
   if (CTypeS != CTypeD)
     return false;
 
